@@ -1,6 +1,6 @@
 #include "oImage.h"
 
-extern Camera* cam;
+
 
 
 oImage::oImage()

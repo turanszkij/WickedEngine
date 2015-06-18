@@ -13,14 +13,13 @@
 #define MAX_CONTROLLERS 4  // XInput handles up to 4 controllers 
 #define INPUT_DEADZONE  ( 0.24f * FLOAT(0x7FFF) )  // Default to 24% of the +/- 32767 range.   This is a reasonable default value but can be altered if needed.
 
-
 class XInput
 {
 private:
 
 	struct CONTROLLER_STATE
 	{
-		XINPUT_STATE* state;
+		//XINPUT_STATE state;
 		bool bConnected;
 	};
 

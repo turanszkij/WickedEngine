@@ -16,7 +16,7 @@ HRESULT XInput::UpdateControllerState()
     for( DWORD i = 0; i < MAX_CONTROLLERS; i++ )
     {
         // Simply get the state of the controller from XInput.
-		dwResult = XInputGetState( i, controllers[i].state );
+		//dwResult = XInputGetState( i, &controllers[i].state );
 
         if( dwResult == ERROR_SUCCESS )
             controllers[i].bConnected = true;
@@ -30,25 +30,18 @@ HRESULT XInput::UpdateControllerState()
 
 DWORD XInput::GetButtons(SHORT newPlayerIndex)
 {
-	if(controllers[newPlayerIndex].bConnected)
-		return controllers[newPlayerIndex].state->Gamepad.wButtons;
+	//if(controllers[newPlayerIndex].bConnected)
+	//	return controllers[newPlayerIndex].state.Gamepad.wButtons;
 	return 0;
 }
 DWORD XInput::GetDirections(short newPlayerIndex){
-	if(controllers[newPlayerIndex].bConnected)
-		return controllers[newPlayerIndex].state->Gamepad.wButtons;
+	//if(controllers[newPlayerIndex].bConnected)
+	//	return controllers[newPlayerIndex].state.Gamepad.wButtons;
 	return 0;
-
-	/*if(dir == (XINPUT_GAMEPAD_DPAD_LEFT || XINPUT_GAMEPAD_DPAD_RIGHT || XINPUT_GAMEPAD_DPAD_UP || XINPUT_GAMEPAD_DPAD_DOWN ||
-		XINPUT_GAMEPAD_DPAD_LEFT+XINPUT_GAMEPAD_DPAD_UP || XINPUT_GAMEPAD_DPAD_RIGHT+XINPUT_GAMEPAD_DPAD_DOWN || XINPUT_GAMEPAD_DPAD_UP+XINPUT_GAMEPAD_DPAD_RIGHT || XINPUT_GAMEPAD_DPAD_DOWN+XINPUT_GAMEPAD_DPAD_LEFT)
-		)
-		return dir;*/ 
-	//TODO!!!
-	//return dir;
 }
 bool XInput::isButtonDown(short newPlayerIndex,DWORD checkforButton){
-	if(controllers[newPlayerIndex].bConnected)
-		return controllers[newPlayerIndex].state->Gamepad.wButtons & checkforButton;
+	//if(controllers[newPlayerIndex].bConnected)
+	//	return controllers[newPlayerIndex].state.Gamepad.wButtons & checkforButton;
 	return false;
 }
 

@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-extern Camera* cam;
+
 
 int Character::Script_getParamCount(const char* script){
 	if(!strcmp("move",script)) return 6;
@@ -309,7 +309,7 @@ void Character::Script_Sound(MoveListItem& move, int scriptI, float currentFrame
 	}
 }
 void Character::Script_Cam(MoveListItem& move, int scriptI, float currentFrame){
-	static Camera* camMemory = new Camera(1280,720,cam->zNearP,cam->zFarP,XMVectorSet(0,0,0,1));
+	static Camera* camMemory = new Camera(1280,720,Renderer::cam->zNearP,Renderer::cam->zFarP,XMVectorSet(0,0,0,1));
 
 	string cn = move.scripts[scriptI].params[0];
 	int f1s = atoi(move.scripts[scriptI].params[1].c_str());
@@ -333,11 +333,11 @@ void Character::Script_Cam(MoveListItem& move, int scriptI, float currentFrame){
 		at=XMVectorSet(0,-1,0,1);
 		up=XMVectorSet(0,0,1,1);
 		if((int)currentFrame<=f1s){ //SAVE CAMERA
-			camMemory->Eye=cam->Eye;
-			camMemory->refEye=cam->refEye;
-			camMemory->leftrightRot=cam->leftrightRot;
-			camMemory->updownRot=cam->updownRot;
-			camMemory->Up=cam->Up;
+			camMemory->Eye=Renderer::cam->Eye;
+			camMemory->refEye=Renderer::cam->refEye;
+			camMemory->leftrightRot=Renderer::cam->leftrightRot;
+			camMemory->updownRot=Renderer::cam->updownRot;
+			camMemory->Up=Renderer::cam->Up;
 			StopTime();
 		}
 		else if(currentFrame>f1s && currentFrame<f2e){
@@ -368,20 +368,20 @@ void Character::Script_Cam(MoveListItem& move, int scriptI, float currentFrame){
 			at=XMVector3Transform(at, MR );
 			at+=eye;
 			
-			cam->View = XMMatrixLookAtLH(eye,at,up);
-			cam->Eye=eye;
+			Renderer::cam->View = XMMatrixLookAtLH(eye,at,up);
+			Renderer::cam->Eye=eye;
 			XMVECTOR refEye = XMVectorMultiply(eye,XMVectorSet(1,-1,1,1));
 			XMVECTOR refAt = XMVectorMultiply(at,XMVectorSet(1,-1,1,1));
 			XMVECTOR camRight = XMVector3Transform(XMVectorSet(1,0,0,0),MR);
 			XMVECTOR invUp = XMVector3Cross(camRight,XMVectorSubtract(refAt,refEye));
-			cam->refView = XMMatrixLookAtLH(refEye,refAt,up);
+			Renderer::cam->refView = XMMatrixLookAtLH(refEye,refAt,up);
 		}
 		else{ //RESTORE CAMERA
-			cam->Eye=camMemory->Eye;
-			cam->refEye=camMemory->refEye;
-			cam->leftrightRot=camMemory->leftrightRot;
-			cam->updownRot=camMemory->updownRot;
-			cam->Up=camMemory->Up;
+			Renderer::cam->Eye=camMemory->Eye;
+			Renderer::cam->refEye=camMemory->refEye;
+			Renderer::cam->leftrightRot=camMemory->leftrightRot;
+			Renderer::cam->updownRot=camMemory->updownRot;
+			Renderer::cam->Up=camMemory->Up;
 
 			UnStopTime();
 			Script_Remove(move,scriptI);

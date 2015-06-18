@@ -1,4 +1,6 @@
-#pragma once
+#ifndef MAIN_CAMERA_H
+#define MAIN_CAMERA_H
+
 #include "WickedEngine.h"
 
 class Camera
@@ -28,4 +30,6 @@ public:
 	void CameraRelease();
 
 }; 
+#endif
+
 

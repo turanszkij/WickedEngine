@@ -1,8 +1,6 @@
 #include "Renderer.h"
 #include "skinningDEF.h"
 
-extern Camera* cam;
-
 #pragma region STATICS
 D3D_DRIVER_TYPE						Renderer::driverType;
 D3D_FEATURE_LEVEL					Renderer::featureLevel;
@@ -51,6 +49,7 @@ float Renderer::GameSpeed=1,Renderer::overrideGameSpeed=1;
 int Renderer::visibleCount;
 float Renderer::shBias;
 RenderTarget Renderer::normalMapRT,Renderer::imagesRT,Renderer::imagesRTAdd;
+Camera *Renderer::cam;
 
 vector<Renderer::TextureView> Renderer::textureSlotsPS(D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
 Renderer::PixelShader Renderer::boundPS=nullptr;
@@ -327,6 +326,8 @@ void Renderer::SetUpStaticComponents()
 
 	hullShader=NULL;
 	domainShader=NULL;
+
+	cam = new Camera(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800, XMVectorSet(0, 0, 0, 1));
 	
 	noiseTex = (ID3D11ShaderResourceView*)ResourceManager::add("images/noise.png");
 	trailDistortTex = (ID3D11ShaderResourceView*)ResourceManager::add("images/normalmap1.jpg");
@@ -1975,11 +1976,11 @@ void Renderer::UpdateObjects(){
 		//		XMMATRIX bbMat = XMMatrixIdentity();
 		//		if(everyObject[i]->mesh->billboardAxis.x || everyObject[i]->mesh->billboardAxis.y || everyObject[i]->mesh->billboardAxis.z){
 		//			float angle = 0;
-		//			angle = atan2(everyObject[i]->translation.x - XMVectorGetX(cam->Eye), everyObject[i]->translation.z - XMVectorGetZ(cam->Eye)) * (180.0 / XM_PI);
+		//			angle = atan2(everyObject[i]->translation.x - XMVectorGetX(Renderer::cam->Eye), everyObject[i]->translation.z - XMVectorGetZ(Renderer::cam->Eye)) * (180.0 / XM_PI);
 		//			bbMat = XMMatrixRotationAxis(XMLoadFloat3(&everyObject[i]->mesh->billboardAxis), angle * 0.0174532925f );
 		//		}
 		//		else
-		//			bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&everyObject[i]->translation)-cam->Eye,XMVectorSet(0,1,0,0)));
+		//			bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&everyObject[i]->translation)-Renderer::cam->Eye,XMVectorSet(0,1,0,0)));
 		//			
 		//		world *= bbMat * XMMatrixRotationQuaternion(XMLoadFloat4(&everyObject[i]->rotation));
 		//	}
@@ -2007,11 +2008,11 @@ void Renderer::UpdateObjects(){
 			XMMATRIX bbMat = XMMatrixIdentity();
 			if(everyObject[i]->mesh->billboardAxis.x || everyObject[i]->mesh->billboardAxis.y || everyObject[i]->mesh->billboardAxis.z){
 				float angle = 0;
-				angle = atan2(everyObject[i]->translation.x - XMVectorGetX(cam->Eye), everyObject[i]->translation.z - XMVectorGetZ(cam->Eye)) * (180.0 / XM_PI);
+				angle = atan2(everyObject[i]->translation.x - XMVectorGetX(Renderer::cam->Eye), everyObject[i]->translation.z - XMVectorGetZ(Renderer::cam->Eye)) * (180.0 / XM_PI);
 				bbMat = XMMatrixRotationAxis(XMLoadFloat3(&everyObject[i]->mesh->billboardAxis), angle * 0.0174532925f );
 			}
 			else
-				bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMVectorSubtract(XMLoadFloat3(&everyObject[i]->translation),cam->Eye),XMVectorSet(0,1,0,0)));
+				bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMVectorSubtract(XMLoadFloat3(&everyObject[i]->translation),Renderer::cam->Eye),XMVectorSet(0,1,0,0)));
 					
 			XMMATRIX w = XMMatrixScalingFromVector(XMLoadFloat3(&everyObject[i]->scale)) * 
 						bbMat * 
@@ -2154,10 +2155,10 @@ void Renderer::DrawDebugSpheres(const XMMATRIX& newView, ID3D11DeviceContext* co
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			LineBuffer sb;
 			sb.mWorldViewProjection=XMMatrixTranspose(
-				XMMatrixRotationX(cam->updownRot)*XMMatrixRotationY(cam->leftrightRot)*
+				XMMatrixRotationX(Renderer::cam->updownRot)*XMMatrixRotationY(Renderer::cam->leftrightRot)*
 				XMMatrixScaling( spheres[i]->radius,spheres[i]->radius,spheres[i]->radius ) *
 				XMMatrixTranslationFromVector( XMLoadFloat3(&spheres[i]->translation) )
-				*newView*cam->Projection
+				*newView*Renderer::cam->Projection
 				);
 
 			XMFLOAT4A propColor;
@@ -2209,7 +2210,7 @@ void Renderer::DrawDebugLines(const XMMATRIX& newView, ID3D11DeviceContext* cont
 			LineBuffer sb;
 			sb.mWorldViewProjection=XMMatrixTranspose(
 				XMLoadFloat4x4(&boneLines[i].desc.transform)
-				*newView*cam->Projection
+				*newView*Renderer::cam->Projection
 				);
 			sb.color=boneLines[i].desc.color;
 
@@ -2288,7 +2289,7 @@ void Renderer::DrawDebugBoxes(const XMMATRIX& newView, ID3D11DeviceContext* cont
 		for(int i=0;i<cubes.size();i++){
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			LineBuffer sb;
-			sb.mWorldViewProjection=XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*newView*cam->Projection);
+			sb.mWorldViewProjection=XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*newView*Renderer::cam->Projection);
 			sb.color=cubes[i].desc.color;
 
 			UpdateBuffer(lineBuffer,&sb,context);
@@ -2502,9 +2503,9 @@ void Renderer::DrawLights(const XMMATRIX& newView, ID3D11DeviceContext* context
 	
 	Frustum frustum = Frustum();
 	XMFLOAT4X4 proj,view;
-	XMStoreFloat4x4( &proj,cam->Projection );
+	XMStoreFloat4x4( &proj,Renderer::cam->Projection );
 	XMStoreFloat4x4( &view,newView );
-	frustum.ConstructFrustum(cam->zFarP,proj,view);
+	frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 	
 	CulledList culledObjects;
 	if(spTree_lights)
@@ -2632,9 +2633,9 @@ void Renderer::DrawVolumeLights(const XMMATRIX& newView, ID3D11DeviceContext* co
 	
 		Frustum frustum = Frustum();
 		XMFLOAT4X4 proj,view;
-		XMStoreFloat4x4( &proj,cam->Projection );
+		XMStoreFloat4x4( &proj,Renderer::cam->Projection );
 		XMStoreFloat4x4( &view,newView );
-		frustum.ConstructFrustum(cam->zFarP,proj,view);
+		frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 		
 		CulledList culledObjects;
@@ -2677,15 +2678,15 @@ void Renderer::DrawVolumeLights(const XMMATRIX& newView, ID3D11DeviceContext* co
 					//	sca = 10000;
 					//	world = XMMatrixTranspose(
 					//		XMMatrixScaling(sca,sca,sca)*
-					//		XMMatrixRotationX(cam->updownRot)*XMMatrixRotationY(cam->leftrightRot)*
-					//		XMMatrixTranslationFromVector( XMVector3Transform(cam->Eye+XMVectorSet(0,100000,0,0),XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))) )
+					//		XMMatrixRotationX(Renderer::cam->updownRot)*XMMatrixRotationY(Renderer::cam->leftrightRot)*
+					//		XMMatrixTranslationFromVector( XMVector3Transform(Renderer::cam->Eye+XMVectorSet(0,100000,0,0),XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))) )
 					//		);
 					//}
 					if(type==1){ //point
 						sca = l->enerDis.y*l->enerDis.x*0.01;
 						world = XMMatrixTranspose(
 							XMMatrixScaling(sca,sca,sca)*
-							XMMatrixRotationX(cam->updownRot)*XMMatrixRotationY(cam->leftrightRot)*
+							XMMatrixRotationX(Renderer::cam->updownRot)*XMMatrixRotationY(Renderer::cam->leftrightRot)*
 							XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
 							);
 					}
@@ -2722,9 +2723,9 @@ void Renderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResource
 	
 	Frustum frustum = Frustum();
 	XMFLOAT4X4 proj,view;
-	XMStoreFloat4x4( &proj,cam->Projection );
-	XMStoreFloat4x4( &view,cam->View );
-	frustum.ConstructFrustum(cam->zFarP,proj,view);
+	XMStoreFloat4x4( &proj,Renderer::cam->Projection );
+	XMStoreFloat4x4( &view,Renderer::cam->View );
+	frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 		
 	CulledList culledObjects;
@@ -2750,9 +2751,9 @@ void Renderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResource
 							)*100000;
 			}
 			
-			XMVECTOR flarePos = XMVector3Project(POS,0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
+			XMVECTOR flarePos = XMVector3Project(POS,0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
 
-			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,cam->Eye),cam->At ))>0 )
+			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,Renderer::cam->Eye),Renderer::cam->At ))>0 )
 				LensFlare::Draw(depth,context,flarePos,l->lensFlareRimTextures);
 
 		}
@@ -2773,9 +2774,9 @@ void Renderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 	Frustum frustum = Frustum();
 	XMFLOAT4X4 proj,view;
-	XMStoreFloat4x4( &proj,cam->Projection );
-	XMStoreFloat4x4( &view,cam->View );
-	frustum.ConstructFrustum(cam->zFarP,proj,view);
+	XMStoreFloat4x4( &proj,Renderer::cam->Projection );
+	XMStoreFloat4x4( &view,Renderer::cam->View );
+	frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 		
 	CulledList culledLights;
@@ -2843,7 +2844,7 @@ void Renderer::DrawForShadowMap(ID3D11DeviceContext* context)
 				XMFLOAT4X4 proj,view;
 				XMStoreFloat4x4( &proj,XMLoadFloat4x4(&l->shadowCam[index].Projection) );
 				XMStoreFloat4x4( &view,XMLoadFloat4x4(&l->shadowCam[index].View) );
-				frustum.ConstructFrustum(cam->zFarP,proj,view);
+				frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 				if(spTree)
 					SPTree::getVisible(spTree->root,frustum,culledObjects);
 			}
@@ -2981,7 +2982,7 @@ void Renderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 			set<Light*,Cullable> orderedLights;
 			for(Light* l : pointLightsSaved){
-				l->lastSquaredDistMulThousand=(long)(WickedMath::DistanceEstimated(l->translation,XMFLOAT3(XMVectorGetX(cam->Eye),XMVectorGetY(cam->Eye),XMVectorGetZ(cam->Eye)))*1000);
+				l->lastSquaredDistMulThousand=(long)(WickedMath::DistanceEstimated(l->translation,XMFLOAT3(XMVectorGetX(Renderer::cam->Eye),XMVectorGetY(Renderer::cam->Eye),XMVectorGetZ(Renderer::cam->Eye)))*1000);
 				orderedLights.insert(l);
 			}
 
@@ -3004,7 +3005,7 @@ void Renderer::DrawForShadowMap(ID3D11DeviceContext* context)
 				XMFLOAT4X4 proj,view;
 				XMStoreFloat4x4( &proj,XMLoadFloat4x4(&l->shadowCam[index].Projection) );
 				XMStoreFloat4x4( &view,XMLoadFloat4x4(&l->shadowCam[index].View) );
-				frustum.ConstructFrustum(cam->zFarP,proj,view);
+				frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 				//D3D11_MAPPED_SUBRESOURCE mappedResource;
 				pLightBuffer lcb;
@@ -3163,9 +3164,9 @@ void Renderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3D1
 
 	Frustum frustum = Frustum();
 	XMFLOAT4X4 proj,view;
-	XMStoreFloat4x4( &proj,cam->Projection );
+	XMStoreFloat4x4( &proj,Renderer::cam->Projection );
 	XMStoreFloat4x4( &view,newView );
-	frustum.ConstructFrustum(cam->zFarP,proj,view);
+	frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -3181,8 +3182,8 @@ void Renderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3D1
 			if(grass){
 				for(HairParticle* hair : ((Object*)object)->hParticleSystems){
 					XMFLOAT3 eye;
-					XMStoreFloat3(&eye,cam->Eye);
-					hair->Draw(eye,newView,cam->Projection,context);
+					XMStoreFloat3(&eye,Renderer::cam->Eye);
+					hair->Draw(eye,newView,Renderer::cam->Projection,context);
 				}
 			}
 		}
@@ -3396,9 +3397,9 @@ void Renderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceView*
 
 	Frustum frustum = Frustum();
 	XMFLOAT4X4 proj,view;
-	XMStoreFloat4x4( &proj,cam->Projection );
+	XMStoreFloat4x4( &proj,Renderer::cam->Projection );
 	XMStoreFloat4x4( &view,newView );
-	frustum.ConstructFrustum(cam->zFarP,proj,view);
+	frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -3549,9 +3550,9 @@ void Renderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResourc
 
 	Frustum frustum = Frustum();
 	XMFLOAT4X4 proj,view;
-	XMStoreFloat4x4( &proj,cam->Projection );
+	XMStoreFloat4x4( &proj,Renderer::cam->Projection );
 	XMStoreFloat4x4( &view,newView );
-	frustum.ConstructFrustum(cam->zFarP,proj,view);
+	frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -3746,9 +3747,9 @@ void Renderer::DrawDecals(const XMMATRIX& newView, DeviceContext context, Textur
 	if(!decals.empty()){
 		Frustum frustum = Frustum();
 		XMFLOAT4X4 proj,view;
-		XMStoreFloat4x4( &proj,cam->Projection );
+		XMStoreFloat4x4( &proj,Renderer::cam->Projection );
 		XMStoreFloat4x4( &view,newView );
-		frustum.ConstructFrustum(cam->zFarP,proj,view);
+		frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 		BindTexturePS(depth,1,context);
 		BindSamplerPS(ssClampAni,0,context);
@@ -3775,7 +3776,7 @@ void Renderer::DrawDecals(const XMMATRIX& newView, DeviceContext context, Textur
 					XMMatrixTranspose(
 						XMLoadFloat4x4(&decal->world)
 						*newView
-						*cam->Projection
+						*Renderer::cam->Projection
 					);
 				UpdateBuffer(decalCbVS,&dcbvs,context);
 
@@ -3789,7 +3790,7 @@ void Renderer::DrawDecals(const XMMATRIX& newView, DeviceContext context, Textur
 					dcbps->hasTexNor|=0x0000001;
 				if(decal->normal!=nullptr)
 					dcbps->hasTexNor|=0x0000010;
-				XMStoreFloat3(&dcbps->eye,cam->Eye);
+				XMStoreFloat3(&dcbps->eye,Renderer::cam->Eye);
 				dcbps->opacity=WickedMath::Clamp((decal->life<=-2?1:decal->life<decal->fadeStart?decal->life/decal->fadeStart:1),0,1);
 				dcbps->front=decal->front;
 				UpdateBuffer(decalCbPS,dcbps,context);
@@ -3831,8 +3832,8 @@ void Renderer::UpdatePerWorldCB(ID3D11DeviceContext* context){
 }
 void Renderer::UpdatePerFrameCB(ID3D11DeviceContext* context){
 	ViewPropCB cb;
-	cb.mZFarP=cam->zFarP;
-	cb.mZNearP=cam->zNearP;
+	cb.mZFarP=Renderer::cam->zFarP;
+	cb.mZNearP=Renderer::cam->zNearP;
 	UpdateBuffer(viewPropCB,&cb,context);
 	
 	BindConstantBufferPS(viewPropCB,10,context);
@@ -3840,7 +3841,7 @@ void Renderer::UpdatePerFrameCB(ID3D11DeviceContext* context){
 void Renderer::UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF){
 	if(tessF){
 		TessBuffer tb;
-		tb.g_f4Eye = cam->Eye;
+		tb.g_f4Eye = Renderer::cam->Eye;
 		tb.g_f4TessFactors = XMFLOAT4A( tessF,2,4,6 );
 		UpdateBuffer(tessBuf,&tb,context);
 	}
@@ -3848,7 +3849,7 @@ void Renderer::UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF){
 	//D3D11_MAPPED_SUBRESOURCE mappedResource;
 	//if(tessF){
 	//	TessBuffer tb;
-	//	tb.g_f4Eye = cam->Eye;
+	//	tb.g_f4Eye = Renderer::cam->Eye;
 	//	tb.g_f4TessFactors = XMFLOAT4A( tessF,2,4,6 );
 	//	TessBuffer* dataPtr;
 	//	context->Map(tessBuf,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
@@ -3988,32 +3989,32 @@ void Renderer::SetUpLights()
 			float lerp1 = 0.12f;
 			float lerp2 = 0.016f;
 			XMVECTOR a0,a,b0,b;
-			a0=XMVector3Unproject(XMVectorSet(0,RENDERHEIGHT,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
-			a=XMVector3Unproject(XMVectorSet(0,RENDERHEIGHT,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
-			b0=XMVector3Unproject(XMVectorSet(RENDERWIDTH,RENDERHEIGHT,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
-			b=XMVector3Unproject(XMVectorSet(RENDERWIDTH,RENDERHEIGHT,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
+			a0=XMVector3Unproject(XMVectorSet(0,RENDERHEIGHT,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
+			a=XMVector3Unproject(XMVectorSet(0,RENDERHEIGHT,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
+			b0=XMVector3Unproject(XMVectorSet(RENDERWIDTH,RENDERHEIGHT,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
+			b=XMVector3Unproject(XMVectorSet(RENDERWIDTH,RENDERHEIGHT,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
 			float size=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp),XMVectorLerp(a0,a,lerp))));
 			float size1=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp1),XMVectorLerp(a0,a,lerp1))));
 			float size2=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp2),XMVectorLerp(a0,a,lerp2))));
 			XMVECTOR rot = XMQuaternionIdentity();
 
-			l->shadowCam.push_back(SHCAM(size,rot,0,cam->zFarP));
-			l->shadowCam.push_back(SHCAM(size1,rot,0,cam->zFarP));
-			l->shadowCam.push_back(SHCAM(size2,rot,0,cam->zFarP));
+			l->shadowCam.push_back(SHCAM(size,rot,0,Renderer::cam->zFarP));
+			l->shadowCam.push_back(SHCAM(size1,rot,0,Renderer::cam->zFarP));
+			l->shadowCam.push_back(SHCAM(size2,rot,0,Renderer::cam->zFarP));
 
 		}
 		else if(l->type==Light::SPOT && l->shadowMap.size()){
-			l->shadowCam.push_back( SHCAM(l->rotation,cam->zNearP,l->enerDis.y,l->enerDis.z) );
+			l->shadowCam.push_back( SHCAM(l->rotation,Renderer::cam->zNearP,l->enerDis.y,l->enerDis.z) );
 		}
 		else if(l->type==Light::POINT && l->shadowMap.size()){
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5,-0.5,-0.5,-0.5),cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //+x
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5,0.5,0.5,-0.5),cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //-x
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5,-0.5,-0.5,-0.5),Renderer::cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //+x
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5,0.5,0.5,-0.5),Renderer::cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //-x
 
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(1,0,0,-0),cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //+y
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0,0,-1),cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //-y
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(1,0,0,-0),Renderer::cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //+y
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0,0,-1),Renderer::cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //-y
 
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.707,0,0,-0.707),cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //+z
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0.707,0.707,0),cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //-z
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.707,0,0,-0.707),Renderer::cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //+z
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0.707,0.707,0),Renderer::cam->zNearP,l->enerDis.y,XM_PI/2.0) ); //-z
 		}
 	}
 
@@ -4043,8 +4044,8 @@ void Renderer::UpdateLights()
 			float lerp1 = 0.12f;//second slice distance from cam (percentage)
 			float lerp2 = 0.016f;//first slice distance from cam (percentage)
 			XMVECTOR c,d,e,e1,e2;
-			c=XMVector3Unproject(XMVectorSet(RENDERWIDTH/2,RENDERHEIGHT/2,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
-			d=XMVector3Unproject(XMVectorSet(RENDERWIDTH/2,RENDERHEIGHT/2,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
+			c=XMVector3Unproject(XMVectorSet(RENDERWIDTH/2,RENDERHEIGHT/2,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
+			d=XMVector3Unproject(XMVectorSet(RENDERWIDTH/2,RENDERHEIGHT/2,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
 			
 			float f = l->shadowCam[0].size/(float)SHADOWMAPRES;
 			e=	XMVectorFloor( XMVectorLerp(d,c,lerp)/f	)*f;
@@ -4068,7 +4069,7 @@ void Renderer::UpdateLights()
 				}
 			}
 			
-			l->bounds.createFromHalfWidth(XMFLOAT3(XMVectorGetX(cam->Eye),XMVectorGetY(cam->Eye),XMVectorGetZ(cam->Eye)),XMFLOAT3(10000,10000,10000));
+			l->bounds.createFromHalfWidth(XMFLOAT3(XMVectorGetX(Renderer::cam->Eye),XMVectorGetY(Renderer::cam->Eye),XMVectorGetZ(Renderer::cam->Eye)),XMFLOAT3(10000,10000,10000));
 		}
 		else if(l->type==Light::SPOT){
 			if(!l->shadowCam.empty()){
@@ -4107,9 +4108,9 @@ void Renderer::UpdateLights()
 Renderer::Picked Renderer::Pick(long cursorX, long cursorY, PICKTYPE pickType)
 {
 	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet(cursorX,cursorY,0,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
+		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
 	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet(cursorX,cursorY,1,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
+		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
 	XMVECTOR& rayOrigin = lineStart, rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
 	RAY ray = RAY(lineStart,rayDirection);
 
@@ -4186,9 +4187,9 @@ Renderer::Picked Renderer::Pick(long cursorX, long cursorY, PICKTYPE pickType)
 
 RAY Renderer::getPickRay(long cursorX, long cursorY){
 	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet(cursorX,cursorY,0,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
+		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
 	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet(cursorX,cursorY,1,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,cam->Projection,cam->View,XMMatrixIdentity());
+		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,Renderer::cam->Projection,Renderer::cam->View,XMMatrixIdentity());
 	XMVECTOR& rayOrigin = lineStart, rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
 	return RAY(lineStart,rayDirection);
 }

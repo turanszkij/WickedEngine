@@ -1,7 +1,5 @@
 #include "HairParticle.h"
 
-extern Camera* cam;
-
 
 
 ID3D11InputLayout* HairParticle::il;

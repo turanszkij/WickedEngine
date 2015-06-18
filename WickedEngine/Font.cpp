@@ -1,6 +1,5 @@
 #include "Font.h"
 
-extern Camera* cam;
 
 
 ID3D11Buffer		*Font::vertexBuffer,*Font::indexBuffer;
@@ -346,7 +345,7 @@ void Font::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa,
 
 
 		ConstantBuffer* cb = new ConstantBuffer();
-		cb->mProjection = XMMatrixTranspose( cam->Oprojection );
+		cb->mProjection = XMMatrixTranspose( Renderer::cam->Oprojection );
 		cb->mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSizSpa.x,newPosSizSpa.y,0) );
 		cb->mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,0,0);
 		

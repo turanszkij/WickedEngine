@@ -1,6 +1,6 @@
 #include "Renderer.h"
 
-extern Camera* cam;
+
 
 
 extern FLOAT shBias;

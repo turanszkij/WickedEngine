@@ -1,7 +1,6 @@
 #include "Renderer.h"
 //#include "GameComponents.h"
 
-extern Camera* cam;
 
 
 extern FLOAT shBias;

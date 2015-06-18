@@ -1,6 +1,5 @@
 #include "Image.h"
 
-extern Camera* cam;
 
 #pragma region STATICS
 mutex Image::MUTEX;
@@ -270,13 +269,13 @@ void Image::Draw(Renderer::TextureView texture, const ImageEffects& effects,ID3D
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			ConstantBuffer cb;
 			if(effects.typeFlag==SCREEN){
-				cb.mViewProjection = XMMatrixTranspose( cam->Oprojection );
+				cb.mViewProjection = XMMatrixTranspose( Renderer::cam->Oprojection );
 				cb.mTrans = XMMatrixTranspose( XMMatrixTranslation(RENDERWIDTH/2-effects.siz.x/2,-RENDERHEIGHT/2+effects.siz.y/2,0) * XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(-RENDERWIDTH/2+effects.pos.x+effects.siz.x*0.5f,RENDERHEIGHT/2 + effects.pos.y-effects.siz.y*0.5f,0) ); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
 				cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,effects.siz.x,effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
-				cb.mViewProjection = XMMatrixTranspose( cam->View * cam->Projection );
+				cb.mViewProjection = XMMatrixTranspose( Renderer::cam->View * Renderer::cam->Projection );
 				XMMATRIX faceRot = XMMatrixIdentity();
 				if(effects.lookAt.w){
 					XMVECTOR vvv = (effects.lookAt.x==1 && !effects.lookAt.y && !effects.lookAt.z)?XMVectorSet(0,1,0,0):XMVectorSet(1,0,0,0);
@@ -290,12 +289,12 @@ void Image::Draw(Renderer::TextureView texture, const ImageEffects& effects,ID3D
 					;
 				}
 				else
-					faceRot=XMMatrixRotationX(cam->updownRot)*XMMatrixRotationY(cam->leftrightRot);
+					faceRot=XMMatrixRotationX(Renderer::cam->updownRot)*XMMatrixRotationY(Renderer::cam->leftrightRot);
 				cb.mTrans = XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x,effects.scale.y,1)
 					*XMMatrixRotationZ(effects.rotation)
 					*faceRot
-					//*XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&effects.pos)-cam->Eye,XMVectorSet(0,1,0,0)))
+					//*XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&effects.pos)-Renderer::cam->Eye,XMVectorSet(0,1,0,0)))
 					*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
 					);
 				cb.mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
@@ -546,11 +545,11 @@ void Image::DrawDeferred(Renderer::TextureView texture
 
 	DeferredBuffer cb;
 	//cb.mSun=XMVector3Normalize(Renderer::GetSunPosition());
-	//cb.mEye=cam->Eye;
+	//cb.mEye=Renderer::cam->Eye;
 	cb.mAmbient=Renderer::worldInfo.ambient;
 	//cb.mBiasResSoftshadow=shadowProps;
 	cb.mHorizon=Renderer::worldInfo.horizon;
-	cb.mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(cam->View*cam->Projection) );
+	cb.mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(Renderer::cam->View*Renderer::cam->Projection) );
 	cb.mFogSEH=Renderer::worldInfo.fogSEH;
 
 	Renderer::UpdateBuffer(deferredCb,&cb,context);
@@ -641,7 +640,7 @@ void Image::DrawModifiedTexCoords(Renderer::TextureView texture, Renderer::Textu
 void Image::DrawOffset(Renderer::TextureView texture, const XMFLOAT4& newPosSiz, XMFLOAT2 newOffset)
 {
 	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( cam->Oprojection );
+	cb.mViewProjection = XMMatrixTranspose( Renderer::cam->Oprojection );
 	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
 	cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,newPosSiz.z,newPosSiz.w);
 	cb.mOffsetMirFade = XMFLOAT4(newOffset.x,newOffset.y,1,0);
@@ -682,7 +681,7 @@ void Image::DrawOffset(Renderer::TextureView texture, const XMFLOAT4& newPosSiz,
 void Image::DrawOffset(Renderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, XMFLOAT2 newOffset)
 {
 	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( cam->Oprojection );
+	cb.mViewProjection = XMMatrixTranspose( Renderer::cam->Oprojection );
 	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
 	cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,newPosSiz.z,newPosSiz.w);
 	cb.mOffsetMirFade = XMFLOAT4(newOffset.x,newOffset.y,1,0);
@@ -699,7 +698,7 @@ void Image::DrawOffset(Renderer::TextureView texture, const XMFLOAT4& newPosSiz,
 void Image::DrawAdditive(Renderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec)
 {
 	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( cam->Oprojection );
+	cb.mViewProjection = XMMatrixTranspose( Renderer::cam->Oprojection );
 	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
 	cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,newPosSiz.z,newPosSiz.w);
 	cb.mOffsetMirFade = XMFLOAT4(0,0,1,0);

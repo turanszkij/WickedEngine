@@ -93,3 +93,12 @@ enum POVENUM{ //NUMPAD SORTING
 
 #define SETTINGSFILE "settings/ProgramSettings.ini"
 
+#pragma comment(lib,"WickedEngine.lib")
+#pragma comment(lib,"d3d11.lib")
+#pragma comment(lib,"lib32/libmysql.lib")
+#pragma comment(lib,"ws2_32.lib")
+#pragma comment(lib,"comctl32.lib")
+#pragma comment(lib,"d3dcompiler.lib")
+#pragma comment(lib,"dxguid.lib")
+#pragma comment(lib,"winmm.lib")
+#pragma comment(lib,"pdh.lib")

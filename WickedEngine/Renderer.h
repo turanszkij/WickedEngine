@@ -33,6 +33,7 @@ class  SPTree;
 class  TaskThread;
 struct Cullable;
 class  PHYSICS;
+class  Camera;
 
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string,Material*> MaterialCollection;
@@ -962,7 +963,7 @@ public:
 	static void resetVertexCount(){vertexCount=0;}
 	static int getVisibleObjectCount(){return visibleCount;}
 	static void resetVisibleObjectCount(){visibleCount=0;}
-	static void setResolution(int w, int h, int W, int H){RENDERWIDTH=w;RENDERHEIGHT=h;SCREENWIDTH=W;SCREENHEIGHT=H;};
+	static void setRenderResolution(int w, int h){RENDERWIDTH=w;RENDERHEIGHT=h;};
 
 	static void FinishLoading();
 	static SPTree* spTree;
@@ -996,7 +997,7 @@ public:
 
 	static RenderTarget normalMapRT,imagesRT,imagesRTAdd;
 	
-	
+	static Camera* cam;
 
 
 	float getSphereRadius(const int& index);

@@ -1,6 +1,5 @@
 #include "EmittedParticle.h"
 
-extern Camera* cam;
 
 //ID3D11Buffer		*EmittedParticle::vertexBuffer;
 ID3D11InputLayout   *EmittedParticle::vertexLayout;
@@ -229,9 +228,9 @@ void EmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11De
 		
 		Frustum frustum = Frustum();
 		XMFLOAT4X4 proj,view;
-		XMStoreFloat4x4( &proj,cam->Projection );
+		XMStoreFloat4x4( &proj,Renderer::cam->Projection );
 		XMStoreFloat4x4( &view,newView );
-		frustum.ConstructFrustum(cam->zFarP,proj,view);
+		frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
 
 		if(frustum.CheckBox(bounding_box->corners)){
 			
@@ -255,7 +254,7 @@ void EmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11De
 
 			ConstantBuffer cb;
 			cb.mView = XMMatrixTranspose(newView);
-			cb.mProjection = XMMatrixTranspose( cam->Projection );
+			cb.mProjection = XMMatrixTranspose( Renderer::cam->Projection );
 			cb.mCamPos = eye;
 			cb.mAdd.x = additive;
 			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);

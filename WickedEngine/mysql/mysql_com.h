@@ -17,6 +17,8 @@
 ** Common definition between mysql server & client
 */
 
+#include <winsock.h>
+
 #ifndef _mysql_com_h
 #define _mysql_com_h
 

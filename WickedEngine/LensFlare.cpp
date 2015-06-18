@@ -1,6 +1,6 @@
 #include "LensFlare.h"
 
-extern Camera* cam;
+
 
 ID3D11Buffer* LensFlare::constantBuffer;
 ID3D11PixelShader* LensFlare::pixelShader;
