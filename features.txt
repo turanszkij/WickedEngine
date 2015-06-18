@@ -1,0 +1,56 @@
+Feature list
+------------
+
+Image rendering,animation : 2D,3D space
+Font rendering
+Server connection (MYSQL)
+Client-server multiplayer (TCP)
+Blender-exporter: 3D meshes,objects,armatures,animation,materials,lights,hitspheres,wind,world info,dynamic cameras,ribbon trails,particle systems
+3D vertex mesh rendering
+Keyframe-based skeletal animation for 3D meshes (skinning on CPU or GPU), objects and lights
+Multiple material support
+Animated texturing
+Normal mapping
+Displacement mapping
+Real time planar reflections
+Static reflections (cube-mapping)
+Refractions
+Interactive Water
+Gaussian Blur
+Bloom
+Edge outline
+Motion Blur
+Lens Flare
+God rays
+Depth of field
+Wind effect
+Multithreaded rendering on DX11-level hardware (Deferred device contexts)
+Tessellation: silhouette smoothing + displacement mapping
+Emitted particle systems using geometry shader
+Soft offscreen particles
+Hair particle systems (grass)
+Hardware geometry instancing
+MSAA (Forward rendering only), FXAA, Supersampling
+Deferred shading
+Directional lights + cascaded shadow maps
+Spotlights + shadow maps
+Point lights + shadow cubemaps
+Diffuse, specular lighting for all lights
+Soft shadows
+Rigid body physics simulation (HAVOK)
+Rigid body physics simulation (BULLET)
+Soft body physics simulation (BULLET)
+Sound (Xaudio2)
+Frustum culling
+QuadTree culling
+Octree culling
+Input: Windows Keyboard,Windows Mouse,DirectInput(Joypad,Keyboard,Mouse),XINPUT(Joypad)
+Scripting: movement,logic,dynamic cameras,images,sound,animation,ribbon trails, particle systems
+Backlog: log,input,scripting(TODO)
+Gamma correction
+Resource Manager
+Screen Space Ambient Occlusion
+Skin shader (Subsurface scattering approximation)
+Stencil layering
+Deferred decals
+Color Grading
