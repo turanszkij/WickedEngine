@@ -1,3 +1,5 @@
+#pragma once
+
 #include <dinput.h>
 
 #define POV_IDLE 4294967292

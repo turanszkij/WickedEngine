@@ -62,9 +62,10 @@ TODOs: |
 _________________________________________________________
 
 	Priority:
+		- FIX XINPUT
+	Other:
 		- Cleanup
 		- Documentation
 		- HDR pipeline
-	Optional:
 		- Forward rendering pipeline
 __________________________________________________________
