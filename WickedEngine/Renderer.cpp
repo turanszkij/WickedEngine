@@ -31,7 +31,7 @@ ID3D11VertexShader		*Renderer::vertexShader10, *Renderer::vertexShader, *Rendere
 	,*Renderer::waterVS,*Renderer::lightVS[3],*Renderer::vSpotLightVS,*Renderer::vPointLightVS,*Renderer::cubeShVS,*Renderer::sOVS,*Renderer::decalVS;
 ID3D11PixelShader		*Renderer::pixelShader, *Renderer::shPS, *Renderer::linePS, *Renderer::trailPS, *Renderer::simplestPS,*Renderer::blackoutPS
 	,*Renderer::textureonlyPS,*Renderer::waterPS,*Renderer::transparentPS,*Renderer::lightPS[3],*Renderer::vLightPS,*Renderer::cubeShPS
-	,*Renderer::decalPS;
+	,*Renderer::decalPS,*Renderer::fowardSimplePS;
 ID3D11GeometryShader *Renderer::cubeShGS,*Renderer::sOGS;
 ID3D11HullShader		*Renderer::hullShader;
 ID3D11DomainShader		*Renderer::domainShader;
@@ -50,6 +50,9 @@ int Renderer::visibleCount;
 float Renderer::shBias;
 RenderTarget Renderer::normalMapRT,Renderer::imagesRT,Renderer::imagesRTAdd;
 Camera *Renderer::cam;
+PHYSICS* Renderer::physicsEngine = nullptr;
+Wind Renderer::wind;
+WorldInfo Renderer::worldInfo;
 
 vector<Renderer::TextureView> Renderer::textureSlotsPS(D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
 Renderer::PixelShader Renderer::boundPS=nullptr;
@@ -327,7 +330,7 @@ void Renderer::SetUpStaticComponents()
 	hullShader=NULL;
 	domainShader=NULL;
 
-	cam = new Camera(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800, XMVectorSet(0, 0, 0, 1));
+	cam = new Camera(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800, XMVectorSet(0, 4, -4, 1));
 	
 	noiseTex = (ID3D11ShaderResourceView*)ResourceManager::add("images/noise.png");
 	trailDistortTex = (ID3D11ShaderResourceView*)ResourceManager::add("images/normalmap1.jpg");
@@ -404,6 +407,7 @@ void Renderer::SetUpStaticComponents()
 }
 void Renderer::CleanUpStatic()
 {
+	SafeRelease(fowardSimplePS);
 	if(shVS) shVS->Release(); shVS=NULL;
 	if(shPS) shPS->Release(); shPS=NULL;
 	if(shCb) shCb->Release(); shCb=NULL;
@@ -527,9 +531,14 @@ void Renderer::CleanUpStatic()
 	//ResourceManager::del("images/noise.png");
 	//ResourceManager::del("images/normalmap1.jpg");
 	ResourceManager::del("images/clipbox.png");
+
+	if (physicsEngine) physicsEngine->CleanUp();
 }
 void Renderer::CleanUpStaticTemp(){
 	
+	if (physicsEngine)
+		physicsEngine->ClearWorld();
+
 	Renderer::resetVertexCount();
 	
 	for(int i=0;i<images.size();i++)
@@ -1012,7 +1021,11 @@ void Renderer::LoadBasicShaders()
 	
 	if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_simplest.cso",0,0);}
 	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
+
+	if (FAILED(D3DReadFileToBlob(L"shaders/effectPS_forwardSimple.cso", &pPSBlob))){ MessageBox(0, L"Failed To load effectPS_forwardSimple.cso", 0, 0); }
+	else Renderer::graphicsDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &fowardSimplePS);
+	if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
 	
 	if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_blackout.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_blackout.cso",0,0);}
 	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blackoutPS );
@@ -1921,10 +1934,13 @@ void Renderer::Update(float amount)
 }
 void Renderer::UpdateRenderInfo(ID3D11DeviceContext* context)
 {
+	UpdateObjects();
+
+	if (context == nullptr)
+		return;
 
 	UpdatePerWorldCB(context);
 		
-	UpdateObjects();
 
 	//if(GetGameSpeed())
 	{
@@ -3155,7 +3171,7 @@ void Renderer::DrawForSO(ID3D11DeviceContext* context)
 }
 
 void Renderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3D11DeviceContext* context
-				  , bool BlackOut, bool shaded
+				  , bool BlackOut, SHADED_TYPE shaded
 				  , ID3D11ShaderResourceView* refRes, bool grass, int passIdentifier)
 {
 	
@@ -3207,7 +3223,22 @@ void Renderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3D1
 			BindDS(domainShader,context);
 		else		//context->DSSetShader( 0, NULL, 0 );
 			BindDS(nullptr,context);
-		BindPS( wireRender?simplestPS:(BlackOut?blackoutPS:(shaded?pixelShader:textureonlyPS)),context);
+
+		if (wireRender)
+			BindPS(simplestPS, context);
+		else
+			if (BlackOut)
+				BindPS(blackoutPS, context);
+			else if (shaded == SHADED_NONE)
+				BindPS(textureonlyPS, context);
+			else if (shaded == SHADED_DEFERRED)
+				BindPS(pixelShader, context);
+			else if (shaded == SHADED_FORWARD_SIMPLE)
+				BindPS(fowardSimplePS, context);
+			else
+				return;
+
+		//BindPS( wireRender?simplestPS:(BlackOut?blackoutPS:(shaded?pixelShader:textureonlyPS)),context);
 	
 
 		//context->VSSetSamplers(0, 1, &texSampler);
@@ -3352,7 +3383,8 @@ void Renderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3D1
 					MaterialCB* mcb = new MaterialCB(*iMat,m);
 
 					UpdateBuffer(matCb,mcb,context);
-					_aligned_free(mcb);
+					
+					delete mcb;
 
 					if(!wireRender) BindTexturePS(iMat->texture,3,context);
 					if(!wireRender) BindTexturePS(iMat->refMap,4,context);
@@ -3933,9 +3965,9 @@ void Renderer::UpdatePerViewCB(ID3D11DeviceContext* context, const XMMATRIX& new
 	//memcpy(dataPtr2,&lcb,sizeof(LightStaticCB));
 	//context->Unmap(lightStaticCb,0);
 }
-void Renderer::UpdatePerEffectCB(ID3D11DeviceContext* context, bool BlackOut, bool BlackWhite, bool InvertCol, const XMFLOAT4 colorMask){
+void Renderer::UpdatePerEffectCB(ID3D11DeviceContext* context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask){
 	FxCB* fb = (FxCB*)_aligned_malloc(sizeof(FxCB),16);
-	fb->mFx=XMFLOAT4(BlackOut,BlackWhite,InvertCol,0);
+	fb->mFx = blackoutBlackWhiteInvCol;
 	fb->colorMask=colorMask;
 	UpdateBuffer(fxCb,fb,context);
 	_aligned_free(fb);
@@ -3951,25 +3983,32 @@ void Renderer::UpdatePerEffectCB(ID3D11DeviceContext* context, bool BlackOut, bo
 }
 
 void Renderer::FinishLoading(){
-	everyObject.reserve(objects.size()+objects_trans.size()+objects_water.size());
-	everyObject.insert(everyObject.end(),objects.begin(),objects.end());
-	everyObject.insert(everyObject.end(),objects_trans.begin(),objects_trans.end());
-	everyObject.insert(everyObject.end(),objects_water.begin(),objects_water.end());
+	everyObject.reserve(objects.size() + objects_trans.size() + objects_water.size());
+	everyObject.insert(everyObject.end(), objects.begin(), objects.end());
+	everyObject.insert(everyObject.end(), objects_trans.begin(), objects_trans.end());
+	everyObject.insert(everyObject.end(), objects_water.begin(), objects_water.end());
 
-	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter)
+	for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter)
 		addVertexCount(iter->second->vertices.size());
 
-	for(Object* o : everyObject)
-		for(EmittedParticle* e:o->eParticleSystems){
+	physicsEngine->FirstRunWorld();
+	physicsEngine->addWind(wind.direction);
+
+	for (Object* o : everyObject){
+		for (EmittedParticle* e : o->eParticleSystems){
 			emitterSystems[e->name].push_back(e);
-			if(e->light!=nullptr)
+			if (e->light != nullptr)
 				lights.push_back(e->light);
 		}
+		if (physicsEngine){
+			physicsEngine->registerObject(o);
+		}
+	}
 
 	SetUpLights();
 
 	Update();
-	UpdateRenderInfo(deferredContexts[0]);
+	UpdateRenderInfo(nullptr);
 	UpdateLights();
 	GenerateSPTree(spTree,vector<Cullable*>(objects.begin(),objects.end()),GENERATE_OCTREE);
 	GenerateSPTree(spTree_trans,vector<Cullable*>(objects_trans.begin(),objects_trans.end()),GENERATE_OCTREE);
@@ -3977,6 +4016,7 @@ void Renderer::FinishLoading(){
 	GenerateSPTree(spTree_lights,vector<Cullable*>(lights.begin(),lights.end()),GENERATE_OCTREE);
 	SetUpCubes();
 	SetUpBoneLines();
+
 }
 
 
@@ -4203,7 +4243,7 @@ void Renderer::LoadModel(const string& dir, const string& name, const XMMATRIX& 
 	idss<<"_"/*<<unique_identifier<<"_"*/<<ident;
 
 	LoadFromDisk(dir,name,idss.str(),armatures,materials,newObjects,newObjects_trans,newObjects_water
-		,meshes,newLights,vector<HitSphere*>(),WorldInfo(),Wind(),vector<ActionCamera>()
+		,meshes,newLights,vector<HitSphere*>(),worldInfo,wind,vector<ActionCamera>()
 		,vector<Armature*>(),everyObject,transforms,decals);
 
 
@@ -4264,6 +4304,54 @@ void Renderer::LoadModel(const string& dir, const string& name, const XMMATRIX& 
 	unique_identifier++;
 }
 
+
+void Renderer::SychronizeWithPhysicsEngine()
+{
+	if (physicsEngine && GetGameSpeed()){
+
+		UpdateSoftBodyPinning();
+		for (Object* object : everyObject){
+			int pI = object->physicsObjectI;
+			if (pI >= 0){
+				if (object->mesh->softBody){
+					physicsEngine->connectSoftBodyToVertices(
+						object->mesh, pI
+						);
+				}
+				if (object->kinematic){
+					XMVECTOR s, r, t;
+					XMMatrixDecompose(&s, &r, &t, XMLoadFloat4x4(&object->world));
+					XMFLOAT3 T;
+					XMFLOAT4 R;
+					XMStoreFloat4(&R, r);
+					XMStoreFloat3(&T, t);
+					physicsEngine->transformBody(R, T, pI);
+				}
+			}
+		}
+
+		physicsEngine->Update();
+
+		for (Object* object : everyObject){
+			int pI = object->physicsObjectI;
+			if (pI >= 0 && !object->kinematic){
+				PHYSICS::Transform* transform(physicsEngine->getObject(pI));
+				object->translation_rest = transform->position;
+				object->rotation_rest = transform->rotation;
+
+				if (object->mesh->softBody){
+					object->scale_rest = XMFLOAT3(1, 1, 1);
+					physicsEngine->connectVerticesToSoftBody(
+						object->mesh, pI
+						);
+				}
+			}
+		}
+
+
+		physicsEngine->NextRunWorld();
+	}
+}
 
 Renderer::MaterialCB::MaterialCB(const Material& mat,UINT materialIndex){
 	difColor=XMFLOAT4(mat.diffuseColor.x,mat.diffuseColor.y,mat.diffuseColor.z,mat.alpha);

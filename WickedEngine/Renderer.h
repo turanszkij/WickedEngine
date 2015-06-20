@@ -242,7 +242,7 @@ protected:
 	static ID3D11VertexShader*		vertexShader10, *vertexShader,*shVS,*lineVS,*trailVS,*waterVS
 		,*lightVS[3],*vSpotLightVS,*vPointLightVS,*cubeShVS,*sOVS,*decalVS;
 	static ID3D11PixelShader*		pixelShader,*shPS,*linePS,*trailPS,*simplestPS,*blackoutPS,*textureonlyPS,*waterPS,*transparentPS
-		,*lightPS[3],*vLightPS,*cubeShPS,*decalPS;
+		,*lightPS[3],*vLightPS,*cubeShPS,*decalPS,*fowardSimplePS;
 	static ID3D11GeometryShader* cubeShGS,*sOGS;
 	static ID3D11HullShader*		hullShader;
 	static ID3D11DomainShader*		domainShader;
@@ -320,6 +320,10 @@ public:
 	static bool GetToDrawDebugBoxes(){return debugBoxes;};
 	static TextureView GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(TextureView tex){colorGrading=tex?tex:colorGrading;};
+	static void SetEnviromentMap(TextureView tex){ enviroMap = tex; }
+	static TextureView GetEnviromentMap(){ return enviroMap; }
+	static void SetNoiseTexture(TextureView tex){ noiseTex = tex; }
+	static TextureView GetNoiseTexture(){ return noiseTex; }
 	
 private:
 	static vector<TextureView> textureSlotsPS;
@@ -926,12 +930,18 @@ public:
 	static void UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF);
 	static void UpdatePerViewCB(ID3D11DeviceContext* context, const XMMATRIX& newView, const XMMATRIX& newRefView, const XMMATRIX& newProjection
 							 , const XMVECTOR& newEye, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
-	static void UpdatePerEffectCB(ID3D11DeviceContext* context, bool BlackOut, bool BlackWhite, bool InvertCol, const XMFLOAT4 colorMask);
+	static void UpdatePerEffectCB(ID3D11DeviceContext* context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
 
+	enum SHADED_TYPE
+	{
+		SHADED_NONE=0,
+		SHADED_DEFERRED=1,
+		SHADED_FORWARD_SIMPLE=2
+	};
 	
 	static void DrawSky(const XMVECTOR&, ID3D11DeviceContext* context);
 	static void DrawWorld(const XMMATRIX&, bool DX11Eff, int tessF, ID3D11DeviceContext* context
-		, bool BlackOut, bool shaded, ID3D11ShaderResourceView* refRes, bool grass, int passIdentifier=1); //passidentifier is >1 (0 is for shadows)
+		, bool BlackOut, SHADED_TYPE shaded, ID3D11ShaderResourceView* refRes, bool grass, int passIdentifier = 1); //passidentifier is >1 (0 is for shadows)
 	static void DrawForSO(ID3D11DeviceContext* context);
 	static void ClearShadowMaps(ID3D11DeviceContext* context);
 	static void DrawForShadowMap(ID3D11DeviceContext* context);
@@ -1020,10 +1030,9 @@ public:
 	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);
 	static RAY getPickRay(long cursorX, long cursorY);
 
+	static PHYSICS* physicsEngine;
+	static void SychronizeWithPhysicsEngine();
+
 	static void LoadModel(const string& dir, const string& name, const XMMATRIX& transform = XMMatrixIdentity(), const string& ident = "common", PHYSICS* physicsEngine = nullptr);
 };
 
-
-#include "Entity.h"
-#include "Level.h"
-#include "Character.h"

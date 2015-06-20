@@ -133,11 +133,11 @@ void Image::LoadShaders()
 	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ssssPS );
 	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 	
-	if(FAILED(D3DReadFileToBlob(L"shaders/linDepth.cso", &pPSBlob))){MessageBox(0,L"Failed To load linDepth.cso",0,0);}
+	if(FAILED(D3DReadFileToBlob(L"shaders/linDepthPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load linDepthPS.cso",0,0);}
 	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &linDepthPS );
 	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 	
-	if(FAILED(D3DReadFileToBlob(L"shaders/colorGrade.cso", &pPSBlob))){MessageBox(0,L"Failed To load colorGrade.cso",0,0);}
+	if(FAILED(D3DReadFileToBlob(L"shaders/colorGradePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load colorGradePS.cso",0,0);}
 	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &colorGradePS );
 	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 	

@@ -31,6 +31,27 @@
     <Filter Include="BULLET\BulletDynamics">
       <UniqueIdentifier>{a12a2d79-a95b-4785-a405-45974671efac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{822405d0-3768-4fa8-8b16-ea6eeb114333}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\grass">
+      <UniqueIdentifier>{32751786-e587-4ae6-8016-1989c21d5b70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\headers">
+      <UniqueIdentifier>{d0646830-e228-4973-9e90-d5887bbc861f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\image">
+      <UniqueIdentifier>{69819e00-83c4-47e3-94e8-39feb5e7ba94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\lighting">
+      <UniqueIdentifier>{9cc92e3a-deea-4d6b-adb3-e58e5207029e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\streamOutput">
+      <UniqueIdentifier>{79277734-8644-4bb0-a380-71a2ceabd177}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\shadow">
+      <UniqueIdentifier>{55c88699-1823-47ee-af0c-a3ebcfc16e38}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BackLog.cpp">
@@ -55,9 +76,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Character.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Client.cpp">
@@ -102,9 +120,6 @@
     <ClCompile Include="LensFlare.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Level.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Lines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -123,13 +138,7 @@
     <ClCompile Include="RenderTarget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Requirements.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ResourceManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ScriptEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Server.cpp">
@@ -605,9 +614,6 @@
     <ClInclude Include="Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Character.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Client.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -624,9 +630,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EmittedParticle.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Entity.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Font.h">
@@ -654,9 +657,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LensFlare.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Level.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Lines.h">
@@ -1370,9 +1370,329 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />
+    <None Include="grassHF_GS.hlsli">
+      <Filter>shaders\grass</Filter>
+    </None>
+    <None Include="grassHF_PS.hlsli">
+      <Filter>shaders\grass</Filter>
+    </None>
+    <None Include="sOHF.hlsli">
+      <Filter>shaders\streamOutput</Filter>
+    </None>
+    <None Include="dirLightHF.hlsli">
+      <Filter>shaders\lighting</Filter>
+    </None>
+    <None Include="pointLightHF.hlsli">
+      <Filter>shaders\lighting</Filter>
+    </None>
+    <None Include="spotLightHF.hlsli">
+      <Filter>shaders\lighting</Filter>
+    </None>
+    <None Include="volumeLightHF.hlsli">
+      <Filter>shaders\lighting</Filter>
+    </None>
+    <None Include="fxaa.hlsli">
+      <Filter>shaders\image</Filter>
+    </None>
+    <None Include="blurHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="circle.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="cone.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="cube.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="depthConvertHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="effectHF_PS.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="effectHF_PSVS.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="effectHF_VS.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="effectInputLayoutHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="fogHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="gammaHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="globalsHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="icosphere.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="imageHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="lightHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="normalsCompressHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="postProcessHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="quad.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="reconstructPositionHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="samplersHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="skinningHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="specularHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="tangentComputeHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="toonHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="viewProp.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
+    <None Include="windHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\readme.txt" />
     <Text Include="..\features.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="circleGS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="circlePS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="circleVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="decalPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="decalVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectDS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectHS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectPS_blackout.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectPS_simplest.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectPS_textureonly.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectPS_transparent.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectVS10.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="fontPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="fontVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="lensFlareGS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="lensFlarePS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="lensFlareVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="linesPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="linesVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspriteGS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspritePS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspritePS_simplest.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspriteVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="skyPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="skyVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="trailPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="trailVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="waterPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="waterVS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="grassL0GS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="grassL1GS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="grassL2GS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="grassPS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="grassVS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassLCloseGS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassLDistGS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassPS.hlsl">
+      <Filter>shaders\grass</Filter>
+    </FxCompile>
+    <FxCompile Include="sOVS.hlsl">
+      <Filter>shaders\streamOutput</Filter>
+    </FxCompile>
+    <FxCompile Include="sOGS.hlsl">
+      <Filter>shaders\streamOutput</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowGS.hlsl">
+      <Filter>shaders\shadow</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowPS.hlsl">
+      <Filter>shaders\shadow</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowVS.hlsl">
+      <Filter>shaders\shadow</Filter>
+    </FxCompile>
+    <FxCompile Include="shadowPS.hlsl">
+      <Filter>shaders\shadow</Filter>
+    </FxCompile>
+    <FxCompile Include="shadowVS.hlsl">
+      <Filter>shaders\shadow</Filter>
+    </FxCompile>
+    <FxCompile Include="dirLightPS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="dirLightVS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="pointLightVS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="pointLightPS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="spotLightPS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="spotLightVS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="volumeLightPS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="vPointLightVS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="vSpotLightVS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="bloomSeparatePS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="deferredPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="depthofFieldPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="horizontalBlurPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="imageVS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="lightShaftPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="motionBlurPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="outlinePS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="screenVS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="ssao.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="ssss.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="verticalBlurPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="colorGradePS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="linDepthPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="fxaa.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="effectPS_forwardSimple.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

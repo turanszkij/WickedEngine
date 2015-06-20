@@ -60,7 +60,7 @@ public:
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
-	static void Settings(int,int,int);
+	static void Settings(int lod0,int lod1,int lod2);
 
 	Object* object;
 	vector<Patch*> patches;

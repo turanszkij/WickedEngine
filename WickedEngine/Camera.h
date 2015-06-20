@@ -29,6 +29,8 @@ public:
 	void Reset();
 	void CameraRelease();
 
+	void SetDefaultPosition(const XMVECTOR& newDefaultEye){ defaultEye = newDefaultEye; Reset(); }
+
 }; 
 #endif
 

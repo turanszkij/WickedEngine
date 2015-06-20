@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WICKED_ENGINE_VERSION
+#define WICKED_ENGINE_VERSION "1.0"
 
 #include "targetver.h"
 #include "resource.h"
@@ -100,5 +101,9 @@ enum POVENUM{ //NUMPAD SORTING
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"d3dcompiler.lib")
 #pragma comment(lib,"dxguid.lib")
+#pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"winmm.lib")
 #pragma comment(lib,"pdh.lib")
+
+
+#endif

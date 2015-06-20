@@ -1,12 +1,26 @@
 #include "RenderTarget.h"
 
 
-RenderTarget::RenderTarget()
-{
+void RenderTarget::clear(){
 	numViews = 0;
 	viewPort = D3D11_VIEWPORT();
 	depth = NULL;
-	retargetted=false;
+	retargetted = false;
+}
+
+RenderTarget::RenderTarget()
+{
+	clear();
+}
+RenderTarget::RenderTarget(int width, int height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ, DXGI_FORMAT format)
+{
+	clear();
+	Initialize(width, height, numViews, hasDepth, MSAAC, MSAAQ, format);
+}
+RenderTarget::RenderTarget(int width, int height, int numViews, bool hasDepth)
+{
+	clear();
+	Initialize(width, height, numViews, hasDepth);
 }
 
 

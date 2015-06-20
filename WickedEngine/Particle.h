@@ -1,6 +1,6 @@
 #pragma once
 #include "WickedEngine.h"
-#define MAX_PARTICLES 1000
+#define MAX_PARTICLES 10000
 
 
 struct SkinnedVertex;

@@ -1,37 +1,70 @@
-#################
-# Wicked Engine #
-#################
+##################################
+## Wicked Engine				##
+## Created by Turánszki János	##
+##################################
 
-Use with Visual Studio 2012+
-WindowsSDK - DirectX11 (no legacy)
-Platform toolset 110+
+________________
+Requirements:   |
+_____________________________________________________________________
 
-Additional Include Directories: 
-	./WickedEngine
-	./WickedEngine/BULLET
+Visual Studio 2012+
+WindowsSDK
+DirectX11 SDK (included in Windows SDK)(legacy SDK not supported)
+_____________________________________________________________________
 
-Additional Library Directories:
-	Directory of your built .lib file (Debug or Release directory in the solution by default)
-	./WickedEngine/mysql
+___________
+Hardware:  |
+__________________________________
 
+DirectX 10+ Graphics card
+__________________________________
+
+________
+Usage:  |
+_______________________________________________________________________________________________________________
+
+Set the following dependencies to this library in Visual Studio this way in the implementing project:
+
+1.) Open Project Properties -> Configuration Properties
+2.) C/C++ -> General -> Additional Include Directories: 
+		./WickedEngine
+		./WickedEngine/BULLET
+3.) Linker -> General -> Additional Library Directories:
+		Directory of your built .lib file (Debug or Release directory in the solution by default)
+		./WickedEngine/mysql
+_______________________________________________________________________________________________________________
 
 __________
 Contents: |
 ________________________________________________________________________________________________
 
-	WickedEngine.sln 			- Visual Studio Solution;
-
-	WickedEngine/WickedEngine.vcxproj	- Visual Studio Project;
-
-	WickedEngine/BULLET/			- Bullet 2.82 Source files;
-
-	WickedEngine/mysql/			- MYSQL C++ libraries;
-
-	WickedEngine/ 				- Other source files;
-
-	io_export_wicked_wi_bin.py 		- Blender script to export scene;
+	./WickedEngine.sln 						- Visual Studio Solution;
+	./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project;
+	./WickedEngine/BULLET/					- Bullet 2.82 Source files;
+	./WickedEngine/mysql/					- MYSQL C++ libraries;
+	./WickedEngine/shaders/					- Binary shaders output;
+	./WickedEngine/ 						- C++ and shader source files;
+	./io_export_wicked_wi_bin.py 			- Blender 2.72 script to export scene;
 ________________________________________________________________________________________________
 
-#################
-Turánszki János #
-#################
+
+__________
+Overview: |
+________________________________________________________________________________________________________________________
+
+Wicked Engine is an open-source game engine written in C++ for Windows PC. For list of features, see features.txt.
+Documentation is not yet available, but hopefully it will be someday.
+________________________________________________________________________________________________________________________
+
+
+_______
+TODOs: |
+_________________________________________________________
+
+	Priority:
+		- Cleanup
+		- Documentation
+		- HDR pipeline
+	Optional:
+		- Forward rendering pipeline
+__________________________________________________________

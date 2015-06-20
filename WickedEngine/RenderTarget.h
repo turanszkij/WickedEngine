@@ -10,6 +10,7 @@ private:
 	int numViews;
 	bool retargetted;
 	vector<ID3D11ShaderResourceView*>	SAVEDshaderResource;
+	void clear();
 public:
 	D3D11_VIEWPORT						viewPort;
 	vector<ID3D11Texture2D*>			texture2D;
@@ -18,6 +19,8 @@ public:
 	DepthTarget*						depth;
 
 	RenderTarget();
+	RenderTarget(int width, int height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ, DXGI_FORMAT format);
+	RenderTarget(int width, int height, int numViews, bool hasDepth);
 	~RenderTarget();
 
 	void Initialize(int width, int height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ, DXGI_FORMAT format);
