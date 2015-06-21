@@ -21,11 +21,11 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 	if (!shadeless.x)
 	{
 		float4 spec = specular;
+		float3 normal = normalize(PSIn.nor);
+		float3 eyevector = normalize(PSIn.cam - PSIn.pos3D);
 
 		baseColor = pow(baseColor, GAMMA);
 		//NORMALMAP
-		float3 normal = normalize(PSIn.nor);
-		float3 eyevector = normalize(PSIn.cam - PSIn.pos3D);
 		float3 bumpColor = 0;
 		if (hasNor){
 			float4 nortex = xTextureNor.Sample(texSampler, PSIn.tex + movingTex);
@@ -55,7 +55,7 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 		float light = saturate( dot(xSun,normalize(PSIn.nor)) );
 		light=clamp(light,xAmbient,1);
 		baseColor.rgb *= light*xSunColor; 
-		applySpecular(baseColor, xSunColor, PSIn.nor, eyevector, xSun, 1, specular_power, spec.a, 0); 
+		applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.a, 0); 
 		baseColor = pow(baseColor, INV_GAMMA);
 	}
 

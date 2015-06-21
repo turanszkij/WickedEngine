@@ -32,6 +32,8 @@ Set the following dependencies to this library in Visual Studio this way in the 
 3.) Linker -> General -> Additional Library Directories:
 		Directory of your built .lib file (Debug or Release directory in the solution by default)
 		./WickedEngine/mysql
+
+Editor: Use Blender 2.72 as the editor of this engine. Set up your scene and export it with the provided script
 _______________________________________________________________________________________________________________
 
 __________
