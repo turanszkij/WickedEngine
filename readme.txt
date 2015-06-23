@@ -34,6 +34,8 @@ Set the following dependencies to this library in Visual Studio this way in the 
 		./WickedEngine/mysql
 
 Editor: Use Blender 2.72 as the editor of this engine. Set up your scene and export it with the provided script
+
+Windows 7 support: define _WIN32_WINNT=0x0601 preprocessor on the whole project
 _______________________________________________________________________________________________________________
 
 __________
