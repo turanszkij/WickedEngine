@@ -695,9 +695,6 @@
     <ClInclude Include="SPTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TaskThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -721,9 +718,6 @@
     </ClInclude>
     <ClInclude Include="Utility\WicTextureLoader.h">
       <Filter>Utility</Filter>
-    </ClInclude>
-    <ClInclude Include="Resource.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WickedEngine.h">
       <Filter>Header Files</Filter>

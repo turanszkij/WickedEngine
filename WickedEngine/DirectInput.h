@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dinput.h>
+#pragma comment(lib,"dinput8.lib")
 
 #define POV_IDLE 4294967292
 #define POV_UP 1

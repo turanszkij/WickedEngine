@@ -1,10 +1,7 @@
 #ifndef WICKED_ENGINE_VERSION
 #define WICKED_ENGINE_VERSION "1.0"
 
-#define SUPPORT_WINDOWS7
-
-#include "targetver.h"
-#include "resource.h"
+#include <SDKDDKVer.h>
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
@@ -101,7 +98,6 @@ enum POVENUM{ //NUMPAD SORTING
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"dxguid.lib")
-#pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"winmm.lib")
 #pragma comment(lib,"pdh.lib")
 
