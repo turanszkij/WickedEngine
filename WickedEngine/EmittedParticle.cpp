@@ -347,51 +347,83 @@ void EmittedParticle::operator delete(void* p)
 
 void EmittedParticle::LoadShaders()
 {
-    ID3DBlob* pVSBlob = NULL;
-
-	if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load pointspriteVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	
-	
-
-
-    // Define the input layout
-    D3D11_INPUT_ELEMENT_DESC layout[] =
-    {
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		//{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-	UINT numElements = ARRAYSIZE( layout );
-	
-    // Create the input layout
-	Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
-                                          pVSBlob->GetBufferSize(), &vertexLayout );
-
-	if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
-
-    
-
-	ID3DBlob* pPSBlob = NULL;
-
-	if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-
-	if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS_simplest.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
-
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	};
+	UINT numElements = ARRAYSIZE(layout);
+	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/pointspriteVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	if (vsinfo != nullptr){
+		vertexShader = vsinfo->vertexShader;
+		vertexLayout = vsinfo->vertexLayout;
+	}
+	delete vsinfo;
 
 
-	ID3DBlob* pGSBlob = NULL;
+	pixelShader = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/pointspritePS.cso", ResourceManager::PIXELSHADER));
+	simplestPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/pointspritePS_simplest.cso", ResourceManager::PIXELSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load pointspriteGS.cso",0,0);}
-	Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
+	geometryShader = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/pointspriteGS.cso", ResourceManager::GEOMETRYSHADER));
 
-	if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
+
+
+
+
+
+
+
+
+
+
+
+ //   ID3DBlob* pVSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load pointspriteVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
+	//
+	//
+
+
+ //   // Define the input layout
+ //   D3D11_INPUT_ELEMENT_DESC layout[] =
+ //   {
+	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	//{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	{ "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+ //   };
+	//UINT numElements = ARRAYSIZE( layout );
+	//
+ //   // Create the input layout
+	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+ //                                         pVSBlob->GetBufferSize(), &vertexLayout );
+
+	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
+
+ //   
+
+	//ID3DBlob* pPSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS_simplest.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
+
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+
+
+	//ID3DBlob* pGSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load pointspriteGS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
+
+	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 
 
 }

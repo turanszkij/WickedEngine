@@ -75,75 +75,98 @@ void Image::LoadBuffers()
 
 void Image::LoadShaders()
 {
-    ID3DBlob* pVSBlob = NULL;
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/imageVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load imageVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
-
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/screenVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load creenVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &screenVS );
-	if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
 
 
-	ID3DBlob* pPSBlob = NULL;
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/imagePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load imagePS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	vertexShader = static_cast<Renderer::VertexShader>(ResourceManager::add("shaders/imageVS.cso", ResourceManager::VERTEXSHADER));
+	screenVS = static_cast<Renderer::VertexShader>(ResourceManager::add("shaders/screenVS.cso", ResourceManager::VERTEXSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/horizontalBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load horizontalBlurPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blurHPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/verticalBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load verticalBlurPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blurVPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/lightShaftPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load lightShaftPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &shaftPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/outlinePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load outlinePS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &outlinePS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/depthofFieldPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load depthofFieldPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &dofPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/motionBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load motionBlurPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &motionBlurPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/bloomSeparatePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load bloomSeparatePS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &bloomSeparatePS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/fxaa.cso", &pPSBlob))){MessageBox(0,L"Failed To load fxaa.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &fxaaPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/ssao.cso", &pPSBlob))){MessageBox(0,L"Failed To load ssao.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ssaoPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/ssss.cso", &pPSBlob))){MessageBox(0,L"Failed To load ssss.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ssssPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/linDepthPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load linDepthPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &linDepthPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/colorGradePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load colorGradePS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &colorGradePS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/deferredPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load deferredPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &deferredPS );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	pixelShader = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/imagePS.cso", ResourceManager::PIXELSHADER));
+	blurHPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/horizontalBlurPS.cso", ResourceManager::PIXELSHADER));
+	blurVPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/verticalBlurPS.cso", ResourceManager::PIXELSHADER));
+	shaftPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/lightShaftPS.cso", ResourceManager::PIXELSHADER));
+	outlinePS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/outlinePS.cso", ResourceManager::PIXELSHADER));
+	dofPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/depthofFieldPS.cso", ResourceManager::PIXELSHADER));
+	motionBlurPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/motionBlurPS.cso", ResourceManager::PIXELSHADER));
+	bloomSeparatePS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/bloomSeparatePS.cso", ResourceManager::PIXELSHADER));
+	fxaaPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/fxaa.cso", ResourceManager::PIXELSHADER));
+	ssaoPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/ssao.cso", ResourceManager::PIXELSHADER));
+	ssssPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/ssss.cso", ResourceManager::PIXELSHADER));
+	linDepthPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/linDepthPS.cso", ResourceManager::PIXELSHADER));
+	colorGradePS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/colorGradePS.cso", ResourceManager::PIXELSHADER));
+	deferredPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/deferredPS.cso", ResourceManager::PIXELSHADER));
+
+
+
+
+ //   ID3DBlob* pVSBlob = NULL;
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/imageVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load imageVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
+	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
+
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/screenVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load screenVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &screenVS );
+	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
+
+
+	//ID3DBlob* pPSBlob = NULL;
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/imagePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load imagePS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/horizontalBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load horizontalBlurPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blurHPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/verticalBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load verticalBlurPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blurVPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/lightShaftPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load lightShaftPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &shaftPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/outlinePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load outlinePS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &outlinePS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/depthofFieldPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load depthofFieldPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &dofPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/motionBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load motionBlurPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &motionBlurPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/bloomSeparatePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load bloomSeparatePS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &bloomSeparatePS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/fxaa.cso", &pPSBlob))){MessageBox(0,L"Failed To load fxaa.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &fxaaPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/ssao.cso", &pPSBlob))){MessageBox(0,L"Failed To load ssao.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ssaoPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/ssss.cso", &pPSBlob))){MessageBox(0,L"Failed To load ssss.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ssssPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/linDepthPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load linDepthPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &linDepthPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/colorGradePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load colorGradePS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &colorGradePS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/deferredPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load deferredPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &deferredPS );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 }
 void Image::SetUpStates()
 {

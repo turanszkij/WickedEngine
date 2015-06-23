@@ -64,63 +64,102 @@ void HairParticle::CleanUpStatic(){
 }
 void HairParticle::SetUpStatic(){
 	Settings(10,25,120);
-	
-    ID3DBlob* pVSBlob = NULL;
-
-	if(FAILED(D3DReadFileToBlob(L"shaders/grassVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load grassVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vs );
 
 
-    // Define the input layout
-    D3D11_INPUT_ELEMENT_DESC layout[] =
-    {
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-	UINT numElements = ARRAYSIZE( layout );
-	
-    // Create the input layout
-	Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
-                                          pVSBlob->GetBufferSize(), &il );
-
-	if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
-
-    
-
-	ID3DBlob* pPSBlob = NULL;
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/grassPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load grassPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ps );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/qGrassPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load qGrassPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &qps );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	};
+	UINT numElements = ARRAYSIZE(layout);
+	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/grassVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	if (vsinfo != nullptr){
+		vs = vsinfo->vertexShader;
+		il = vsinfo->vertexLayout;
+	}
+	delete vsinfo;
 
 
-	ID3DBlob* pGSBlob = NULL;
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/grassL0GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL0GS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[0] );
-	if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/grassL1GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL1GS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[1] );
-	if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/grassL2GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL2GS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[2] );
-	if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
-	
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/qGrassLCloseGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load qGrassLCloseGS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[0] );
-	if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/qGrassLDistGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load qGrassLDistGS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[1] );
-	if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
+
+	ps = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/grassPS.cso", ResourceManager::PIXELSHADER));
+	qps = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/qGrassPS.cso", ResourceManager::PIXELSHADER));
+
+	gs[0] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/grassL0GS.cso", ResourceManager::GEOMETRYSHADER));
+	gs[1] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/grassL1GS.cso", ResourceManager::GEOMETRYSHADER));
+	gs[2] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/grassL2GS.cso", ResourceManager::GEOMETRYSHADER));
+
+	qgs[0] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/qGrassLCloseGS.cso", ResourceManager::GEOMETRYSHADER));
+	qgs[1] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/qGrassLDistGS.cso", ResourceManager::GEOMETRYSHADER));
+
+
+
+
+
+
+
+
+
+
+
+
+	//
+ //   ID3DBlob* pVSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/grassVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load grassVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vs );
+
+
+ //   // Define the input layout
+ //   D3D11_INPUT_ELEMENT_DESC layout[] =
+ //   {
+	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+ //   };
+	//UINT numElements = ARRAYSIZE( layout );
+	//
+ //   // Create the input layout
+	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+ //                                         pVSBlob->GetBufferSize(), &il );
+
+	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
+
+ //   
+
+	//ID3DBlob* pPSBlob = NULL;
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/grassPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load grassPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ps );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/qGrassPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load qGrassPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &qps );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+
+
+	//ID3DBlob* pGSBlob = NULL;
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/grassL0GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL0GS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[0] );
+	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/grassL1GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL1GS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[1] );
+	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/grassL2GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL2GS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[2] );
+	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
+	//
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/qGrassLCloseGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load qGrassLCloseGS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[0] );
+	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/qGrassLDistGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load qGrassLDistGS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[1] );
+	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 
 
 	

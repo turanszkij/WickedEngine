@@ -130,35 +130,60 @@ void Font::SetUpCB()
 }
 void Font::LoadShaders()
 {
-    ID3DBlob* pVSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/fontVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load fontVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	
-	
-
-
-    // Define the input layout
-    D3D11_INPUT_ELEMENT_DESC layout[] =
-    {
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-	UINT numElements = ARRAYSIZE( layout );
+	};
+	UINT numElements = ARRAYSIZE(layout);
+	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/fontVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	if (vsinfo != nullptr){
+		vertexShader = vsinfo->vertexShader;
+		vertexLayout = vsinfo->vertexLayout;
+	}
+	delete vsinfo;
+
+
+	pixelShader = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/fontPS.cso", ResourceManager::PIXELSHADER));
+
+
+
+
+
+
+
+
+
+ //   ID3DBlob* pVSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/fontVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load fontVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
 	
-    // Create the input layout
-	Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
-                                          pVSBlob->GetBufferSize(), &vertexLayout );
-	pVSBlob->Release();
-
-    
-
 	
-	ID3DBlob* pPSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/fontPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load fontPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	pPSBlob->Release();
+
+ //   // Define the input layout
+ //   D3D11_INPUT_ELEMENT_DESC layout[] =
+ //   {
+	//	{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+ //   };
+	//UINT numElements = ARRAYSIZE( layout );
+	//
+ //   // Create the input layout
+	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+ //                                         pVSBlob->GetBufferSize(), &vertexLayout );
+	//pVSBlob->Release();
+
+ //   
+
+	//
+	//ID3DBlob* pPSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/fontPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load fontPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+	//pPSBlob->Release();
 }
 void Font::SetUpStaticComponents()
 {

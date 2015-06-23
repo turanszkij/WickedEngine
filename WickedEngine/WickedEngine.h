@@ -4,7 +4,6 @@
 #include "targetver.h"
 #include "resource.h"
 #include <d3d11.h>
-#include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
 #include <Xinput.h>
@@ -99,7 +98,6 @@ enum POVENUM{ //NUMPAD SORTING
 #pragma comment(lib,"lib32/libmysql.lib")
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"comctl32.lib")
-#pragma comment(lib,"d3dcompiler.lib")
 #pragma comment(lib,"dxguid.lib")
 #pragma comment(lib,"dinput8.lib")
 #pragma comment(lib,"winmm.lib")

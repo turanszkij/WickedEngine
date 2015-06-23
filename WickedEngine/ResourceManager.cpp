@@ -23,7 +23,8 @@ const ResourceManager::Resource* ResourceManager::get(const string& name)
 	else return nullptr;
 }
 
-void* ResourceManager::add(const string& name, Data_Type newType)
+void* ResourceManager::add(const string& name, Data_Type newType
+	, Renderer::VertexLayoutDesc* vertexLayoutDesc, UINT elementCount, D3D11_SO_DECLARATION_ENTRY* streamOutDecl)
 {
 	const Resource* res = get(name);
 	if(!res){
@@ -46,50 +47,145 @@ void* ResourceManager::add(const string& name, Data_Type newType)
 
 		switch(type){
 		case Data_Type::IMAGE:
+		{
+			Renderer::TextureView image=nullptr;
+			if(
+					!ext.compare("jpg")
+				|| !ext.compare("JPG")
+				|| !ext.compare("png")
+				|| !ext.compare("PNG")
+				)
 			{
-				Renderer::TextureView image=nullptr;
-				if(
-					   !ext.compare("jpg")
-					|| !ext.compare("JPG")
-					|| !ext.compare("png")
-					|| !ext.compare("PNG")
-				  )
-				{
-					Renderer::graphicsMutex.lock();
-					CreateWICTextureFromFile(true,Renderer::graphicsDevice,Renderer::immediateContext,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
-					Renderer::graphicsMutex.unlock();
-				}
-				else if(!ext.compare("dds")){
-					CreateDDSTextureFromFile(Renderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
-				}
-
-				if(image)
-					success=image;
+				Renderer::graphicsMutex.lock();
+				CreateWICTextureFromFile(true,Renderer::graphicsDevice,Renderer::immediateContext,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
+				Renderer::graphicsMutex.unlock();
 			}
-			break;
+			else if(!ext.compare("dds")){
+				CreateDDSTextureFromFile(Renderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
+			}
+
+			if(image)
+				success=image;
+		}
+		break;
 		case Data_Type::IMAGE_STAGING:
-			{
-				Renderer::APIResource image=nullptr;
-				if(!ext.compare("dds")){
-					CreateDDSTextureFromFileEx(Renderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),0
-						,D3D11_USAGE_STAGING,0,D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE,0,false
-						,&image,nullptr);
-				}
+		{
+			Renderer::APIResource image=nullptr;
+			if(!ext.compare("dds")){
+				CreateDDSTextureFromFileEx(Renderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),0
+					,D3D11_USAGE_STAGING,0,D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE,0,false
+					,&image,nullptr);
+			}
 
-				if(image)
-					success=image;
-			}
-			break;
+			if(image)
+				success=image;
+		}
+		break;
 		case Data_Type::SOUND:
-			{
-				success = new SoundEffect(name);
-			}
-			break;
+		{
+			success = new SoundEffect(name);
+		}
+		break;
 		case Data_Type::MUSIC:
-			{
-				success = new Music(name);
+		{
+			success = new Music(name);
+		}
+		break;
+		case Data_Type::VERTEXSHADER:
+		{
+			BYTE* buffer;
+			size_t bufferSize;
+			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
+				Renderer::VertexShader shader = nullptr;
+				Renderer::graphicsDevice->CreateVertexShader(buffer, bufferSize, NULL, &shader);
+				if (vertexLayoutDesc != nullptr && elementCount > 0){
+					Renderer::VertexShaderInfo* vertexShaderInfo = new Renderer::VertexShaderInfo();
+					vertexShaderInfo->vertexShader = shader;
+					Renderer::graphicsDevice->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, &vertexShaderInfo->vertexLayout);
+					if (vertexShaderInfo->vertexShader != nullptr && vertexShaderInfo->vertexLayout != nullptr){
+						success = vertexShaderInfo;
+					}
+				}
+				else{
+					success = shader;
+				}
+				delete[] buffer;
 			}
-			break;
+			else{
+				success = nullptr;
+			}
+		}
+		break;
+		case Data_Type::PIXELSHADER:
+		{
+			BYTE* buffer;
+			size_t bufferSize;
+			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
+				Renderer::PixelShader shader = nullptr;
+				Renderer::graphicsDevice->CreatePixelShader(buffer, bufferSize, nullptr, &shader);
+				delete[] buffer;
+				success = shader;
+			}
+			else{
+				success = nullptr;
+			}
+		}
+		break;
+		case Data_Type::GEOMETRYSHADER:
+		{
+			BYTE* buffer;
+			size_t bufferSize;
+			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
+				Renderer::GeometryShader shader = nullptr;
+				Renderer::graphicsDevice->CreateGeometryShader(buffer, bufferSize, nullptr, &shader);
+				if (streamOutDecl != nullptr && elementCount > 0){
+					Renderer::graphicsDevice->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
+						elementCount, NULL, 0, shader ? 0 : D3D11_SO_NO_RASTERIZED_STREAM, NULL, &shader);
+				}
+				delete[] buffer;
+				success = shader;
+			}
+			else{
+				success = nullptr;
+			}
+		}
+		break;
+		case Data_Type::HULLSHADER:
+		{
+			BYTE* buffer;
+			size_t bufferSize;
+			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
+				Renderer::HullShader shader = nullptr;
+				Renderer::graphicsDevice->CreateHullShader(buffer, bufferSize, nullptr, &shader);
+				delete[] buffer;
+				success = shader;
+			}
+			else{
+				success = nullptr;
+			}
+		}
+		break;
+		case Data_Type::DOMAINSHADER:
+		{
+			BYTE* buffer;
+			size_t bufferSize;
+			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
+				Renderer::DomainShader shader = nullptr;
+				Renderer::graphicsDevice->CreateDomainShader(buffer, bufferSize, nullptr, &shader);
+				delete[] buffer;
+				success = shader;
+			}
+			else{
+				success = nullptr;
+			}
+		}
+		break;
+		case Data_Type::COMPUTESHADER:
+		{
+			//TODO
+			success = nullptr;
+		}
+		break;
 		default:
 			success=nullptr;
 			break;

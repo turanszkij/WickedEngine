@@ -921,272 +921,393 @@ void Renderer::LoadBuffers()
 
 void Renderer::LoadBasicShaders()
 {
-	
-    ID3DBlob* pVSBlob = NULL;
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectVS10.cso", &pVSBlob))){MessageBox(0,L"Failed To load effectVS10.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader10 );
-	
+
+	//ID3DBlob* pVSBlob = NULL;
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectVS10.cso", &pVSBlob))){MessageBox(0,L"Failed To load effectVS10.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader10 );
+
+	//ifstream file("shaders/effectVS10.cso", ios::binary | ios::ate);
+	//if (file.is_open()){
+
+	//	int fileSize = file.tellg();
+	//	file.seekg(0, file.beg);
+	//	char * buffer = new char[fileSize];
+	//	file.read(buffer, fileSize);
+	//	file.close();
+	//	Renderer::graphicsDevice->CreateVertexShader(buffer, fileSize, NULL, &vertexShader10);
+
+
+	//	D3D11_INPUT_ELEMENT_DESC layout[] =
+	//	{
+	//		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+	//		{ "MATI", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+	//		{ "MATI", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+	//		{ "MATI", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+	//	};
+	//	UINT numElements = ARRAYSIZE(layout);
+
+	//	Renderer::graphicsDevice->CreateInputLayout(layout, numElements, buffer, fileSize, &vertexLayout);
+
+	//	delete buffer;
+	//}
+
+	{
 		D3D11_INPUT_ELEMENT_DESC layout[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-//#ifdef USE_GPU_SKINNING
-//			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-//			{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-//#endif
-			
+
 			{ "MATI", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		};
-		UINT numElements = ARRAYSIZE( layout );
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(ResourceManager::add("shaders/effectVS10.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr){
+			vertexShader10 = vsinfo->vertexShader;
+			vertexLayout = vsinfo->vertexLayout;
+		}
+		delete vsinfo;
+	}
 
-		Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
-											  pVSBlob->GetBufferSize(), &vertexLayout );
 
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/sOVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load sOVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &sOVS );
-	D3D11_INPUT_ELEMENT_DESC oslayout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-	numElements = ARRAYSIZE( oslayout );
 
-	Renderer::graphicsDevice->CreateInputLayout( oslayout, numElements, pVSBlob->GetBufferPointer(),
-											pVSBlob->GetBufferSize(), &sOIL );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+		//if (FAILED(D3DReadFileToBlob(L"shaders/sOVS.cso", &pVSBlob))){ MessageBox(0, L"Failed To load sOVS.cso", 0, 0); }
+		//else Renderer::graphicsDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &sOVS);
 
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/sOGS.cso", &pVSBlob))){MessageBox(0,L"Failed To load sOGS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateGeometryShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &sOGS );
-	D3D11_SO_DECLARATION_ENTRY pDecl[] =
+		D3D11_INPUT_ELEMENT_DESC oslayout[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
+		UINT numElements = ARRAYSIZE(oslayout);
+
+		//Renderer::graphicsDevice->CreateInputLayout(oslayout, numElements, pVSBlob->GetBufferPointer(),
+		//	pVSBlob->GetBufferSize(), &sOIL);
+		//if (pVSBlob){ pVSBlob->Release(); pVSBlob = NULL; }
+
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(ResourceManager::add("shaders/sOVS.cso", ResourceManager::VERTEXSHADER, oslayout, numElements));
+		if (vsinfo != nullptr){
+			sOVS = vsinfo->vertexShader;
+			sOIL = vsinfo->vertexLayout;
+		}
+		delete vsinfo;
+	}
+
 	{
-		// semantic name, semantic index, start component, component count, output slot
-		{ 0, "SV_POSITION", 0, 0, 4, 0 },   // output all components of position
-		{ 0, "NORMAL", 0, 0, 3, 0 },     // output the first 3 of the normal
-		{ 0, "TEXCOORD", 0, 0, 4, 0 },     // output the first 2 texture coordinates
-		{ 0, "TEXCOORD", 1, 0, 4, 0 },     // output the first 2 texture coordinates
-	};
-	HRESULT hr = Renderer::graphicsDevice->CreateGeometryShaderWithStreamOutput( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), pDecl, 
-		4, NULL, 0, sOGS?0:D3D11_SO_NO_RASTERIZED_STREAM, NULL, &sOGS );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+		//if (FAILED(D3DReadFileToBlob(L"shaders/sOGS.cso", &pVSBlob))){ MessageBox(0, L"Failed To load sOGS.cso", 0, 0); }
+		//else Renderer::graphicsDevice->CreateGeometryShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &sOGS);
+		D3D11_SO_DECLARATION_ENTRY pDecl[] =
+		{
+			// semantic name, semantic index, start component, component count, output slot
+			{ 0, "SV_POSITION", 0, 0, 4, 0 },   // output all components of position
+			{ 0, "NORMAL", 0, 0, 3, 0 },     // output the first 3 of the normal
+			{ 0, "TEXCOORD", 0, 0, 4, 0 },     // output the first 2 texture coordinates
+			{ 0, "TEXCOORD", 1, 0, 4, 0 },     // output the first 2 texture coordinates
+		};
+		//HRESULT hr = Renderer::graphicsDevice->CreateGeometryShaderWithStreamOutput(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), pDecl,
+		//	4, NULL, 0, sOGS ? 0 : D3D11_SO_NO_RASTERIZED_STREAM, NULL, &sOGS);
+		//if (pVSBlob){ pVSBlob->Release(); pVSBlob = NULL; }
+
+		sOGS = static_cast<GeometryShader>(ResourceManager::add("shaders/sOGS.cso", ResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
+	}
 
 	
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load effectVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load effectVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/dirLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load dirlightVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[0] );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+	//if(FAILED(D3DReadFileToBlob(L"shaders/dirLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load dirlightVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[0] );
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/pointLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load pointlightVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[1] );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+	//if(FAILED(D3DReadFileToBlob(L"shaders/pointLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load pointlightVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[1] );
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/spotLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load spotlightVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[2] );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+	//if(FAILED(D3DReadFileToBlob(L"shaders/spotLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load spotlightVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[2] );
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/vSpotLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load vSpotLightVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vSpotLightVS );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+	//if(FAILED(D3DReadFileToBlob(L"shaders/vSpotLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load vSpotLightVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vSpotLightVS );
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/vPointLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load vPointLightVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vPointLightVS );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+	//if(FAILED(D3DReadFileToBlob(L"shaders/vPointLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load vPointLightVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vPointLightVS );
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/decalVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load decalVS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &decalVS );
-	if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
+	//if(FAILED(D3DReadFileToBlob(L"shaders/decalVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load decalVS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &decalVS );
+	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
 
 	
-	ID3DBlob* pPSBlob = NULL;
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_transparent.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_transparent.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &transparentPS );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_simplest.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
-	if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
+	//ID3DBlob* pPSBlob = NULL;
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_transparent.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_transparent.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &transparentPS );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_simplest.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
+	//if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
 
-	if (FAILED(D3DReadFileToBlob(L"shaders/effectPS_forwardSimple.cso", &pPSBlob))){ MessageBox(0, L"Failed To load effectPS_forwardSimple.cso", 0, 0); }
-	else Renderer::graphicsDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &fowardSimplePS);
-	if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_blackout.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_blackout.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blackoutPS );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_textureonly.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_textureonly.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &textureonlyPS );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/dirLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load dirLightPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[0] );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/pointLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointLightPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[1] );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/spotLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load spotLightPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[2] );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/volumeLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load volumeLightPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &vLightPS );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	
-	if(FAILED(D3DReadFileToBlob(L"shaders/decalPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load decalPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &decalPS );
-	if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//if (FAILED(D3DReadFileToBlob(L"shaders/effectPS_forwardSimple.cso", &pPSBlob))){ MessageBox(0, L"Failed To load effectPS_forwardSimple.cso", 0, 0); }
+	//else Renderer::graphicsDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &fowardSimplePS);
+	//if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_blackout.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_blackout.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blackoutPS );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_textureonly.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_textureonly.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &textureonlyPS );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/dirLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load dirLightPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[0] );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/pointLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointLightPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[1] );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/spotLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load spotLightPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[2] );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/volumeLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load volumeLightPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &vLightPS );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+	//
+	//if(FAILED(D3DReadFileToBlob(L"shaders/decalPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load decalPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &decalPS );
+	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
+
+
+	vertexShader = static_cast<VertexShader>(ResourceManager::add("shaders/effectVS.cso", ResourceManager::VERTEXSHADER));
+	lightVS[0] = static_cast<VertexShader>(ResourceManager::add("shaders/dirLightVS.cso", ResourceManager::VERTEXSHADER));
+	lightVS[1] = static_cast<VertexShader>(ResourceManager::add("shaders/pointLightVS.cso", ResourceManager::VERTEXSHADER));
+	lightVS[2] = static_cast<VertexShader>(ResourceManager::add("shaders/spotLightVS.cso", ResourceManager::VERTEXSHADER));
+	vSpotLightVS = static_cast<VertexShader>(ResourceManager::add("shaders/vSpotLightVS.cso", ResourceManager::VERTEXSHADER));
+	vPointLightVS = static_cast<VertexShader>(ResourceManager::add("shaders/vPointLightVS.cso", ResourceManager::VERTEXSHADER));
+	decalVS = static_cast<VertexShader>(ResourceManager::add("shaders/decalVS.cso", ResourceManager::VERTEXSHADER));
+
+	pixelShader = static_cast<PixelShader>(ResourceManager::add("shaders/effectPS.cso", ResourceManager::PIXELSHADER));
+	transparentPS = static_cast<PixelShader>(ResourceManager::add("shaders/effectPS_transparent.cso", ResourceManager::PIXELSHADER));
+	simplestPS = static_cast<PixelShader>(ResourceManager::add("shaders/effectPS_simplest.cso", ResourceManager::PIXELSHADER));
+	fowardSimplePS = static_cast<PixelShader>(ResourceManager::add("shaders/effectPS_forwardSimple.cso", ResourceManager::PIXELSHADER));
+	blackoutPS = static_cast<PixelShader>(ResourceManager::add("shaders/effectPS_blackout.cso", ResourceManager::PIXELSHADER));
+	textureonlyPS = static_cast<PixelShader>(ResourceManager::add("shaders/effectPS_textureonly.cso", ResourceManager::PIXELSHADER));
+	lightPS[0] = static_cast<PixelShader>(ResourceManager::add("shaders/dirLightPS.cso", ResourceManager::PIXELSHADER));
+	lightPS[1] = static_cast<PixelShader>(ResourceManager::add("shaders/pointLightPS.cso", ResourceManager::PIXELSHADER));
+	lightPS[2] = static_cast<PixelShader>(ResourceManager::add("shaders/spotLightPS.cso", ResourceManager::PIXELSHADER));
+	vLightPS = static_cast<PixelShader>(ResourceManager::add("shaders/volumeLightPS.cso", ResourceManager::PIXELSHADER));
+	decalPS = static_cast<PixelShader>(ResourceManager::add("shaders/decalPS.cso", ResourceManager::PIXELSHADER));
 }
 void Renderer::LoadLineShaders()
 {
-	ID3DBlob* pSVSBlob = NULL;
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+	UINT numElements = ARRAYSIZE(layout);
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/linesVS.cso", &pSVSBlob))){MessageBox(0,L"Failed To load linesVS.cso",0,0);}
-	else {
-		Renderer::graphicsDevice->CreateVertexShader( pSVSBlob->GetBufferPointer(), pSVSBlob->GetBufferSize(), NULL, &lineVS );
-	
-	
-
-
-		D3D11_INPUT_ELEMENT_DESC layout[] =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		};
-		UINT numElements = ARRAYSIZE( layout );
-
-		Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pSVSBlob->GetBufferPointer(),
-											  pSVSBlob->GetBufferSize(), &lineIL );
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(ResourceManager::add("shaders/linesVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	if (vsinfo != nullptr){
+		lineVS = vsinfo->vertexShader;
+		lineIL = vsinfo->vertexLayout;
 	}
+	delete vsinfo;
 
-	if(pSVSBlob){ pSVSBlob->Release(); pSVSBlob=NULL; }
-	
-	ID3DBlob* pSPSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/linesPS.cso", &pSPSBlob))){MessageBox(0,L"Failed To load linesPS.cso",0,0);}
-	else Renderer::graphicsDevice->CreatePixelShader( pSPSBlob->GetBufferPointer(), pSPSBlob->GetBufferSize(), NULL, &linePS );
+	linePS = static_cast<PixelShader>(ResourceManager::add("shaders/linesPS.cso", ResourceManager::PIXELSHADER));
 
-	if(pSPSBlob){ pSPSBlob->Release();pSPSBlob=NULL; }
+
+	//ID3DBlob* pSVSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/linesVS.cso", &pSVSBlob))){MessageBox(0,L"Failed To load linesVS.cso",0,0);}
+	//else {
+	//	Renderer::graphicsDevice->CreateVertexShader( pSVSBlob->GetBufferPointer(), pSVSBlob->GetBufferSize(), NULL, &lineVS );
+	//
+	//
+
+
+	//	D3D11_INPUT_ELEMENT_DESC layout[] =
+	//	{
+	//		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	//	};
+	//	UINT numElements = ARRAYSIZE( layout );
+
+	//	Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pSVSBlob->GetBufferPointer(),
+	//										  pSVSBlob->GetBufferSize(), &lineIL );
+	//}
+
+	//if(pSVSBlob){ pSVSBlob->Release(); pSVSBlob=NULL; }
+	//
+	//ID3DBlob* pSPSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/linesPS.cso", &pSPSBlob))){MessageBox(0,L"Failed To load linesPS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreatePixelShader( pSPSBlob->GetBufferPointer(), pSPSBlob->GetBufferSize(), NULL, &linePS );
+
+	//if(pSPSBlob){ pSPSBlob->Release();pSPSBlob=NULL; }
+
+
 }
 void Renderer::LoadTessShaders()
 {
-	ID3DBlob* pHSBlob = NULL;
+	hullShader = static_cast<HullShader>(ResourceManager::add("shaders/effectHS.cso", ResourceManager::HULLSHADER));
+	domainShader = static_cast<DomainShader>(ResourceManager::add("shaders/effectDS.cso", ResourceManager::DOMAINSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectHS.cso", &pHSBlob))){MessageBox(0,L"Failed To load effectHS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateHullShader( pHSBlob->GetBufferPointer(), pHSBlob->GetBufferSize(), NULL, &hullShader );
-	if(pHSBlob) {pHSBlob->Release();pHSBlob=NULL;}
+	//ID3DBlob* pHSBlob = NULL;
 
-	ID3DBlob* pDSBlob = NULL;
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectHS.cso", &pHSBlob))){MessageBox(0,L"Failed To load effectHS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateHullShader( pHSBlob->GetBufferPointer(), pHSBlob->GetBufferSize(), NULL, &hullShader );
+	//if(pHSBlob) {pHSBlob->Release();pHSBlob=NULL;}
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/effectDS.cso", &pDSBlob))){MessageBox(0,L"Failed To load effectDS.cso",0,0);}
-	else Renderer::graphicsDevice->CreateDomainShader( pDSBlob->GetBufferPointer(), pDSBlob->GetBufferSize(), NULL, &domainShader );
-	if(pDSBlob) {pDSBlob->Release();pDSBlob=NULL;}
+	//ID3DBlob* pDSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/effectDS.cso", &pDSBlob))){MessageBox(0,L"Failed To load effectDS.cso",0,0);}
+	//else Renderer::graphicsDevice->CreateDomainShader( pDSBlob->GetBufferPointer(), pDSBlob->GetBufferSize(), NULL, &domainShader );
+	//if(pDSBlob) {pDSBlob->Release();pDSBlob=NULL;}
 }
 void Renderer::LoadSkyShaders()
 {
-    ID3DBlob* pVSBlob = NULL;
+	skyVS = static_cast<VertexShader>(ResourceManager::add("shaders/skyVS.cso", ResourceManager::VERTEXSHADER));
+	skyPS = static_cast<PixelShader>(ResourceManager::add("shaders/skyPS.cso", ResourceManager::PIXELSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/skyVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load skyVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &skyVS );
+ //   ID3DBlob* pVSBlob = NULL;
 
-	if(pVSBlob){ pVSBlob->Release();
-	pVSBlob=NULL; }
+	//if(FAILED(D3DReadFileToBlob(L"shaders/skyVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load skyVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &skyVS );
+
+	//if(pVSBlob){ pVSBlob->Release();
+	//pVSBlob=NULL; }
 
 
-	ID3DBlob* pPSBlob = NULL;
+	//ID3DBlob* pPSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/skyPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load skyPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &skyPS );
-	
-	if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
+	//if(FAILED(D3DReadFileToBlob(L"shaders/skyPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load skyPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &skyPS );
+	//
+	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 void Renderer::LoadShadowShaders()
 {
-    ID3DBlob* pVSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/shadowVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load shadowVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &shVS );
-	if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
-	
+	shVS = static_cast<VertexShader>(ResourceManager::add("shaders/shadowVS.cso", ResourceManager::VERTEXSHADER));
+	cubeShVS = static_cast<VertexShader>(ResourceManager::add("shaders/cubeShadowVS.cso", ResourceManager::VERTEXSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load cubeShadowVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &cubeShVS );
-	if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
+	shPS = static_cast<PixelShader>(ResourceManager::add("shaders/shadowPS.cso", ResourceManager::PIXELSHADER));
+	cubeShPS = static_cast<PixelShader>(ResourceManager::add("shaders/cubeShadowPS.cso", ResourceManager::PIXELSHADER));
 
-	
-	ID3DBlob* pPSBlob = NULL;
+	cubeShGS = static_cast<GeometryShader>(ResourceManager::add("shaders/cubeShadowGS.cso", ResourceManager::GEOMETRYSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/shadowPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load shadowPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &shPS );
-	if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
+ //   ID3DBlob* pVSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load cubeShadowPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &cubeShPS );
-	if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
+	//if(FAILED(D3DReadFileToBlob(L"shaders/shadowVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load shadowVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &shVS );
+	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
+	//
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load cubeShadowVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &cubeShVS );
+	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
+
+	//
+	//ID3DBlob* pPSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/shadowPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load shadowPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &shPS );
+	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load cubeShadowPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &cubeShPS );
+	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 
 
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowGS.cso", &pPSBlob))){MessageBox(0,L"Failed To load cubeShadowGS.cso",0,0);}
-	Renderer::graphicsDevice->CreateGeometryShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &cubeShGS );
-	if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
+	//if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowGS.cso", &pPSBlob))){MessageBox(0,L"Failed To load cubeShadowGS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateGeometryShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &cubeShGS );
+	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 void Renderer::LoadWaterShaders()
 {
-    ID3DBlob* pVSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/waterVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load waterVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &waterVS );
-	if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
+	waterVS = static_cast<VertexShader>(ResourceManager::add("shaders/waterVS.cso", ResourceManager::VERTEXSHADER));
+	waterPS = static_cast<PixelShader>(ResourceManager::add("shaders/waterPS.cso", ResourceManager::PIXELSHADER));
+
+ //   ID3DBlob* pVSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/waterVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load waterVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &waterVS );
+	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
 
 
-	
-	ID3DBlob* pPSBlob = NULL;
+	//
+	//ID3DBlob* pPSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/waterPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load waterPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &waterPS );
-	if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
+	//if(FAILED(D3DReadFileToBlob(L"shaders/waterPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load waterPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &waterPS );
+	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 void Renderer::LoadTrailShaders(){
-    ID3DBlob* pVSBlob = NULL;
-	if(FAILED(D3DReadFileToBlob(L"shaders/trailVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load trailVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &trailVS );
-	
 	D3D11_INPUT_ELEMENT_DESC layout[] =
-    {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-	UINT numElements = ARRAYSIZE( layout );
-	Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), &trailIL );
-	
-	if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+	UINT numElements = ARRAYSIZE(layout);
+
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(ResourceManager::add("shaders/trailVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	if (vsinfo != nullptr){
+		trailVS = vsinfo->vertexShader;
+		trailIL = vsinfo->vertexLayout;
+	}
+	delete vsinfo;
 
 
-	
-	ID3DBlob* pPSBlob = NULL;
+	trailPS = static_cast<PixelShader>(ResourceManager::add("shaders/trailPS.cso", ResourceManager::PIXELSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/trailPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load trailPS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &trailPS );
+ //   ID3DBlob* pVSBlob = NULL;
+	//if(FAILED(D3DReadFileToBlob(L"shaders/trailVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load trailVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &trailVS );
+	//
+	//D3D11_INPUT_ELEMENT_DESC layout[] =
+ //   {
+ //       { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+ //       { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+ //       { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+ //   };
+	//UINT numElements = ARRAYSIZE( layout );
+	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), &trailIL );
+	//
+	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
 
-	if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
+
+	//
+	//ID3DBlob* pPSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/trailPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load trailPS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &trailPS );
+
+	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 
 

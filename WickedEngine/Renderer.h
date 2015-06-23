@@ -59,6 +59,7 @@ public:
 	typedef ID3D11HullShader*			HullShader;
 	typedef ID3D11DomainShader*			DomainShader;
 	typedef ID3D11InputLayout*			VertexLayout;
+	typedef D3D11_INPUT_ELEMENT_DESC    VertexLayoutDesc;
 	typedef ID3D11BlendState*			BlendState;
 	typedef ID3D11DepthStencilState*	DepthStencilState;
 	typedef ID3D11RasterizerState*		RasterizerState;
@@ -70,6 +71,16 @@ public:
 		POINTLIST,
 		LINELIST,
 		PATCHLIST,
+	};
+
+	struct VertexShaderInfo{
+		VertexShader vertexShader;
+		VertexLayout vertexLayout;
+
+		VertexShaderInfo(){
+			vertexShader = nullptr;
+			vertexLayout = VertexLayout();
+		}
 	};
 
 	static D3D_DRIVER_TYPE				driverType;

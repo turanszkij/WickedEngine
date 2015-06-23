@@ -104,37 +104,59 @@ void LensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* co
 }
 
 void LensFlare::LoadShaders(){
-	ID3DBlob* pVSBlob = NULL;
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load lensFlareVS.cso",0,0);}
-	Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-
-    // Define the input layout
-    D3D11_INPUT_ELEMENT_DESC layout[] =
-    {
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };
-	UINT numElements = ARRAYSIZE( layout );
-	
-    // Create the input layout
-	Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
-		pVSBlob->GetBufferSize(), &inputLayout );
-
-	if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
-    
-
-	ID3DBlob* pPSBlob = NULL;
-
-	if(FAILED(D3DReadFileToBlob(L"shaders/lensFlarePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load lensFlarePS.cso",0,0);}
-	Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+	};
+	UINT numElements = ARRAYSIZE(layout);
+	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/lensFlareVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	if (vsinfo != nullptr){
+		vertexShader = vsinfo->vertexShader;
+		inputLayout = vsinfo->vertexLayout;
+	}
+	delete vsinfo;
 
 
-	ID3DBlob* pGSBlob = NULL;
+	pixelShader = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/lensFlarePS.cso", ResourceManager::PIXELSHADER));
 
-	if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load lensFlareGS.cso",0,0);}
-	Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
-	if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
+	geometryShader = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/lensFlareGS.cso", ResourceManager::GEOMETRYSHADER));
+
+
+
+
+
+	//ID3DBlob* pVSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load lensFlareVS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
+
+ //   // Define the input layout
+ //   D3D11_INPUT_ELEMENT_DESC layout[] =
+ //   {
+	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+ //   };
+	//UINT numElements = ARRAYSIZE( layout );
+	//
+ //   // Create the input layout
+	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+	//	pVSBlob->GetBufferSize(), &inputLayout );
+
+	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
+ //   
+
+	//ID3DBlob* pPSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlarePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load lensFlarePS.cso",0,0);}
+	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
+
+
+	//ID3DBlob* pGSBlob = NULL;
+
+	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load lensFlareGS.cso",0,0);}
+	//Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
+	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 }
 void LensFlare::SetUpCB()
 {
