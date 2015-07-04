@@ -2,6 +2,7 @@
 
 
 void RenderTarget::clear(){
+	textureDesc = { 0 };
 	numViews = 0;
 	viewPort = D3D11_VIEWPORT();
 	depth = NULL;
@@ -12,15 +13,11 @@ RenderTarget::RenderTarget()
 {
 	clear();
 }
-RenderTarget::RenderTarget(int width, int height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ, DXGI_FORMAT format)
+RenderTarget::RenderTarget(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
+	, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
 	clear();
-	Initialize(width, height, numViews, hasDepth, MSAAC, MSAAQ, format);
-}
-RenderTarget::RenderTarget(int width, int height, int numViews, bool hasDepth)
-{
-	clear();
-	Initialize(width, height, numViews, hasDepth);
+	Initialize(width, height, numViews, hasDepth, MSAAC, MSAAQ, format, mipMapLevelCount);
 }
 
 
@@ -38,7 +35,8 @@ RenderTarget::~RenderTarget()
 	if(depth) depth->~DepthTarget(); depth=NULL;
 }
 
-void RenderTarget::Initialize(int width, int height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ, DXGI_FORMAT format)
+void RenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
+	, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
 	this->numViews = numViews;
 	texture2D.resize(numViews);
@@ -46,11 +44,10 @@ void RenderTarget::Initialize(int width, int height, int numViews, bool hasDepth
 	shaderResource.resize(numViews);
 	SAVEDshaderResource.resize(numViews);
 	
-	D3D11_TEXTURE2D_DESC textureDesc;
 	ZeroMemory(&textureDesc, sizeof(textureDesc));
 	textureDesc.Width = width;
 	textureDesc.Height = height;
-	textureDesc.MipLevels = 1;
+	textureDesc.MipLevels = mipMapLevelCount;
 	textureDesc.ArraySize = 1;
 	textureDesc.Format = format;
 	textureDesc.SampleDesc.Count = MSAAC;
@@ -59,7 +56,10 @@ void RenderTarget::Initialize(int width, int height, int numViews, bool hasDepth
 	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	textureDesc.CPUAccessFlags = 0;
 	textureDesc.MiscFlags = 0;
-
+	if (mipMapLevelCount != 1)
+	{
+		textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	}
 	
 	D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
 	renderTargetViewDesc.Format = format;
@@ -70,8 +70,8 @@ void RenderTarget::Initialize(int width, int height, int numViews, bool hasDepth
 	D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
 	shaderResourceViewDesc.Format = format;
 	shaderResourceViewDesc.ViewDimension = (MSAAQ==0 ? D3D11_SRV_DIMENSION_TEXTURE2D : D3D11_SRV_DIMENSION_TEXTURE2DMS);
-	shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-	shaderResourceViewDesc.Texture2D.MipLevels = 1;
+	shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
+	shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 
 	for(int i=0;i<numViews;++i){
 		Renderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
@@ -91,11 +91,7 @@ void RenderTarget::Initialize(int width, int height, int numViews, bool hasDepth
 		depth->Initialize(width,height,MSAAC,MSAAQ);
 	}
 }
-void RenderTarget::Initialize(int width, int height, int numViews, bool hasDepth)
-{
-	Initialize(width,height,numViews,hasDepth,1,0,DXGI_FORMAT_R8G8B8A8_UNORM);
-}
-void RenderTarget::InitializeCube(int size, int numViews, bool hasDepth, DXGI_FORMAT format)
+void RenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format)
 {
 	this->numViews = numViews;
 	texture2D.resize(numViews);
@@ -103,7 +99,6 @@ void RenderTarget::InitializeCube(int size, int numViews, bool hasDepth, DXGI_FO
 	shaderResource.resize(numViews);
 	SAVEDshaderResource.resize(numViews);
 	
-	D3D11_TEXTURE2D_DESC textureDesc;
 	ZeroMemory(&textureDesc, sizeof(textureDesc));
 	textureDesc.Width = size;
 	textureDesc.Height = size;
@@ -150,7 +145,7 @@ void RenderTarget::InitializeCube(int size, int numViews, bool hasDepth, DXGI_FO
 		depth->InitializeCube(size);
 	}
 }
-void RenderTarget::InitializeCube(int size, int numViews, bool hasDepth)
+void RenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth)
 {
 	InitializeCube(size,numViews,hasDepth,DXGI_FORMAT_R8G8B8A8_UNORM);
 }
@@ -217,3 +212,16 @@ void RenderTarget::Restore(){
 	}
 	retargetted=false;
 }
+
+UINT RenderTarget::GetMipCount()
+{
+	if (shaderResource.empty())
+		return 0U;
+
+	if (textureDesc.MipLevels>0)
+		return textureDesc.MipLevels;
+
+	UINT maxDim = max(textureDesc.Width, textureDesc.Height);
+	return static_cast<UINT>( log2(static_cast<double>(maxDim)) );
+}
+

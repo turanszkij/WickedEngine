@@ -1,6 +1,9 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+
+#ifndef WINSTORE_SUPPORT
+
 #include "Network.h"
 #include <ctime>
 #include <map>
@@ -150,5 +153,7 @@ public:
 	
 
 };
+
+#endif //FAMILY
 
 #endif

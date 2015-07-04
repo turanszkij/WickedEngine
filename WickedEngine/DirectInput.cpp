@@ -1,5 +1,6 @@
 #include "DirectInput.h"
 
+#ifndef WINSTORE_SUPPORT
 
 DirectInput::DirectInput(HINSTANCE hinstance, HWND hwnd)
 {
@@ -282,3 +283,5 @@ DWORD DirectInput::getDirections(short pIndex)
 		}
 	return buttons;
 }
+
+#endif

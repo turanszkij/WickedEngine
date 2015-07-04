@@ -1,10 +1,10 @@
 #include "postProcessHF.hlsli"
-static const float strength = 5;
-static const float falloff  = -2;
-static const float rad = 0.3;
-static const float darkness = 2.0;
+static const float strength = 4.f;
+static const float falloff  = -0.8f;
+static const float rad = 0.1f;
+static const float darkness = 1.2f;
 
-#define NUM_SAMPLES	 10
+#define NUM_SAMPLES	 16
 static const float invSamples = 1.0 / (float)NUM_SAMPLES;
 
 // AO sampling directions 
@@ -45,17 +45,19 @@ static const float3 AO_SAMPLES[ NUM_SAMPLES ] =
 
 float4 main( VertextoPixel input ):SV_Target
 {
-	float4 normap = xNormalMap.SampleLevel( Sampler, input.tex, 0 );
+	//float4 normap = xNormalMap.SampleLevel( Sampler, input.tex, 0 );
+	float4 normap = loadNormal(input.tex.xy);
 
 	clip(normap.a?-1:1);
 
 	float3 normal = normap.xyz;
 
-	float3 fres = normalize( xMaskTex.Load(int3((64*input.tex.xy*400)%64,0)).xyz * 2.0 - 1.0 );
+	float3 fres = normalize(xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0);
 
-	float2 depthMapSize;
-	xSceneDepthMap.GetDimensions(depthMapSize.x,depthMapSize.y);
-	float  depth  = ( xSceneDepthMap.Load(int4(depthMapSize*input.tex.xy,0,0)).r );
+	//float2 depthMapSize;
+	//xSceneDepthMap.GetDimensions(depthMapSize.x,depthMapSize.y);
+	//float  depth  = ( xSceneDepthMap.Load(int4(depthMapSize*input.tex.xy,0,0)).r );
+	float depth = loadDepth(input.tex.xy);
 
 	float3 ep = float3( input.tex, depth );
 	float bl = 0.0;
@@ -71,7 +73,8 @@ float4 main( VertextoPixel input ):SV_Target
 		ray = radD * reflect(AO_SAMPLES[i],fres);
 		float2 newTex = ep.xy + ray.xy;
 
-		occFrag = xNormalMap.SampleLevel(Sampler, newTex,0).xyz;
+		//occFrag = xNormalMap.SampleLevel(Sampler, newTex,0).xyz;
+		occFrag = loadNormal(newTex).xyz;
 		if(!occFrag.x && !occFrag.y && !occFrag.z)
 			break;
 

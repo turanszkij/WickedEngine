@@ -1,5 +1,7 @@
 #include "CpuInfo.h"
 
+#ifndef WINSTORE_SUPPORT
+
 bool CpuInfo::m_canReadCpu;
 HQUERY CpuInfo::m_queryHandle;
 HCOUNTER CpuInfo::m_counterHandle;
@@ -90,3 +92,5 @@ int CpuInfo::GetCpuPercentage()
 
 	return usage;
 }
+
+#endif

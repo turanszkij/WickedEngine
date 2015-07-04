@@ -30,8 +30,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 		color=pow(color,INV_GAMMA);
 		color.rgb *= xAOMap.SampleLevel(Sampler,PSIn.tex,0).r;
 
-		float4 pos3D = float4(getPosition(PSIn.tex,depth),1);
-		float fog = getFog((depth),pos3D,xFogSEH);
+		float fog = getFog((depth),xFogSEH);
 		color.rgb = applyFog(color.rgb,xHorizon.rgb,fog);
 	}
 

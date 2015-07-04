@@ -92,7 +92,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 
 		baseColor.rgb=pow(baseColor.rgb,INV_GAMMA)+emit;
 
-		baseColor.rgb = applyFog(baseColor.rgb,xHorizon,getFog(getLinearDepth(depth/PSIn.pos2D.w),PSIn.pos3D,xFogSEH));
+		baseColor.rgb = applyFog(baseColor.rgb,xHorizon,getFog(getLinearDepth(depth/PSIn.pos2D.w),xFogSEH));
 		
 		//Out.col = saturate(baseColor);
 		//Out.nor = float4((normal),1);

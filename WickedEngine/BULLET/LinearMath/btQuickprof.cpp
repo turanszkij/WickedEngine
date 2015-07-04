@@ -13,6 +13,10 @@
 // Credits: The Clock class was inspired by the Timer classes in 
 // Ogre (www.ogre3d.org).
 
+#ifdef WINSTORE_SUPPORT
+long GetTickCount(){ return 0; }
+#endif
+
 #include "btQuickprof.h"
 
 #ifndef BT_NO_PROFILE

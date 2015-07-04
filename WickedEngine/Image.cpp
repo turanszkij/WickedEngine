@@ -9,7 +9,7 @@ ID3D11Buffer*           Image::constantBuffer,*Image::PSCb,*Image::blurCb,*Image
 ID3D11VertexShader*     Image::vertexShader,*Image::screenVS;
 ID3D11PixelShader*      Image::pixelShader,*Image::blurHPS,*Image::blurVPS,*Image::shaftPS,*Image::outlinePS
 	,*Image::dofPS,*Image::motionBlurPS,*Image::bloomSeparatePS,*Image::fxaaPS,*Image::ssaoPS,*Image::deferredPS
-	,*Image::ssssPS,*Image::linDepthPS,*Image::colorGradePS;
+	,*Image::ssssPS,*Image::linDepthPS,*Image::colorGradePS,*Image::ssrPS;
 	
 
 ID3D11RasterizerState*		Image::rasterizerState;
@@ -94,7 +94,8 @@ void Image::LoadShaders()
 	linDepthPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/linDepthPS.cso", ResourceManager::PIXELSHADER));
 	colorGradePS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/colorGradePS.cso", ResourceManager::PIXELSHADER));
 	deferredPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/deferredPS.cso", ResourceManager::PIXELSHADER));
-
+	ssrPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/ssr.cso", ResourceManager::PIXELSHADER));
+	
 
 
 
@@ -326,7 +327,7 @@ void Image::Draw(Renderer::TextureView texture, const ImageEffects& effects,ID3D
 			cb.mOffsetMirFade = XMFLOAT4(effects.offset.x,effects.offset.y,effects.mirror,effects.fade);
 			cb.mDrawRec = effects.drawRec;
 			cb.mBlurOpaPiv = XMFLOAT4(effects.blurDir,effects.blur,effects.opacity,effects.pivotFlag);
-			cb.mTexOffset=XMFLOAT4(effects.texOffset.x,effects.texOffset.y,0,0);
+			cb.mTexOffset = XMFLOAT4(effects.texOffset.x, effects.texOffset.y, effects.mipLevel, 0);
 
 			Renderer::UpdateBuffer(constantBuffer,&cb,context);
 	
@@ -366,16 +367,20 @@ void Image::Draw(Renderer::TextureView texture, const ImageEffects& effects,ID3D
 			}
 			else if(effects.process.linDepth) 
 				//context->PSSetShader(linDepthPS,0,0);
-				Renderer::BindPS(linDepthPS,context);
-			else if(effects.process.colorGrade)
-				Renderer::BindPS(colorGradePS,context);
+				Renderer::BindPS(linDepthPS, context);
+			else if (effects.process.colorGrade)
+				Renderer::BindPS(colorGradePS, context);
+			else if (effects.process.ssr){
+				Renderer::BindConstantBufferPS(deferredCb, 0, context);
+				Renderer::BindPS(ssrPS, context);
+			}
 			else if(effects.process.ssss.x||effects.process.ssss.y) 
 				//context->PSSetShader(ssssPS,0,0);
 				Renderer::BindPS(ssssPS,context);
 			else if(effects.bloom.separate)
 				//context->PSSetShader(bloomSeparatePS,0,0);
 				Renderer::BindPS(bloomSeparatePS,context);
-			else MessageBoxA(0,"Postprocess branch not implemented!","Warning!",0);
+			else WickedHelper::messageBox("Postprocess branch not implemented!");
 			
 			ProcessBuffer prcb;
 			prcb.mPostProcess=XMFLOAT4(effects.process.motionBlur,effects.process.outline,effects.process.dofStrength,effects.process.ssss.x);
@@ -448,11 +453,11 @@ void Image::Draw(Renderer::TextureView texture, const ImageEffects& effects,ID3D
 		BlurBuffer cb;
 		if(effects.blurDir==0){
 			Renderer::BindPS(blurHPS,context);
-			cb.mWeightTexelStren.y=1.0f/RENDERWIDTH;
+			cb.mWeightTexelStrenMip.y = 1.0f / RENDERWIDTH;
 		}
 		else{
 			Renderer::BindPS(blurVPS,context);
-			cb.mWeightTexelStren.y=1.0f/RENDERHEIGHT;
+			cb.mWeightTexelStrenMip.y = 1.0f / RENDERHEIGHT;
 		}
 
 		float weight0 = 1.0f;
@@ -462,8 +467,9 @@ void Image::Draw(Renderer::TextureView texture, const ImageEffects& effects,ID3D
 		float weight4 = 0.1f;
 		float normalization = (weight0 + 2.0f * (weight1 + weight2 + weight3 + weight4));
 		cb.mWeight=XMVectorSet(weight0,weight1,weight2,weight3) / normalization;
-		cb.mWeightTexelStren.x=weight4 / normalization;
-		cb.mWeightTexelStren.z=effects.blur;
+		cb.mWeightTexelStrenMip.x = weight4 / normalization;
+		cb.mWeightTexelStrenMip.z = effects.blur;
+		cb.mWeightTexelStrenMip.w = effects.mipLevel;
 
 		Renderer::UpdateBuffer(blurCb,&cb,context);
 
@@ -826,6 +832,7 @@ void Image::CleanUp()
 	if(fxaaPS) fxaaPS->Release();
 	if(deferredPS) deferredPS->Release();
 	Renderer::SafeRelease(colorGradePS);
+	Renderer::SafeRelease(ssrPS);
 
 	if(constantBuffer) constantBuffer->Release();
 	if(PSCb) PSCb->Release();

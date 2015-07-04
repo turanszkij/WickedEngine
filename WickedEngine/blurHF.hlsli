@@ -2,7 +2,7 @@
 
 cbuffer constants:register(b0){
 	float4 weight;
-	float3 weightTexelStren;
+	float4 weightTexelStrenMip;
 }
 
 struct VertextoPixel

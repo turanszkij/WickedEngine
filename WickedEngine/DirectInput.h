@@ -1,5 +1,7 @@
 #pragma once
 
+
+#ifndef WINSTORE_SUPPORT
 #include <dinput.h>
 #pragma comment(lib,"dinput8.lib")
 
@@ -12,9 +14,13 @@
 #define POV_DOWNLEFT 22501
 #define POV_LEFT 27001
 #define POV_LEFTUP 31501
+#else
+#include <Windows.h>
+#endif
 
 class DirectInput
 {
+#ifndef WINSTORE_SUPPORT
 	friend BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context);
 	friend BOOL CALLBACK enumAxesCallback(const DIDEVICEOBJECTINSTANCE* instance, VOID* context);
 public:
@@ -42,5 +48,17 @@ private:
 	
 	HRESULT poll(IDirectInputDevice8*joy,DIJOYSTATE2 *js);
 	unsigned char m_keyboardState[256];
+
+#else
+public:
+	DirectInput(HINSTANCE hinst, HWND hwnd){}
+	void Shutdown(){}
+	bool Frame(){ return false; }
+	bool IsKeyDown(INT){ return false; }
+	int GetPressedKeys(){ return 0; }
+	bool isButtonDown(short pIndex, unsigned int buttoncode){ return false; }
+	DWORD getDirections(short pIndex){ return 0; }
+	static HRESULT InitJoy(HWND hwnd){ return E_FAIL; }
+#endif
 };
 

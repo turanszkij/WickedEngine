@@ -8,4 +8,7 @@
 bool isUnshaded(float val){return abs(val-RT_UNSHADED)<RT_EPSILON;}
 bool isToon(float val){return abs(val-RT_TOON)<RT_EPSILON;}
 
+
+static const float inf = 100000;
+
 #endif

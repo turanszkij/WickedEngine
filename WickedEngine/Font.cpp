@@ -464,7 +464,9 @@ Font::FontStyle::FontStyle(const string& newName){
 		}
 		file.close();
 	}
-	else {MessageBox(NULL,L"Could not load Font Data!",L"Error!",0); exit(0);}
+	else {
+		WickedHelper::messageBox("Could not load Font Data!"); 
+	}
 }
 void Font::FontStyle::CleanUp(){
 	if(texture) texture->Release(); texture=NULL;

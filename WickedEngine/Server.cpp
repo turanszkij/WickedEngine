@@ -1,5 +1,7 @@
 #include "Server.h"
 
+#ifndef WINSTORE_SUPPORT
+
 using namespace std;
 
 
@@ -136,3 +138,5 @@ bool Server::changeName(const string& newName){
 bool Server::sendMessage(const string& text, const string& clientName, int clientID){
 	return sendText(text, Network::PACKET_TYPE_TEXTMESSAGE, clientName, clientID);
 }
+
+#endif

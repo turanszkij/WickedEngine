@@ -6,6 +6,7 @@
 
 cbuffer viewPropCB:register(b10)
 {
+	float4x4 matView, matProj;
 	float zNearP;
 	float zFarP;
 	float paddingViewProp[2];

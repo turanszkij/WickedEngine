@@ -89,8 +89,11 @@ Renderer::Renderer()
 {
 }
 
-
+#ifndef WINSTORE_SUPPORT
 HRESULT Renderer::InitDevice(HWND window, int screenW, int screenH, bool windowed, short& requestMultiThreading)
+#else
+HRESULT Renderer::InitDevice(Windows::UI::Core::CoreWindow^ window, short& requestMultiThreading)
+#endif
 {
     HRESULT hr = S_OK;
 
@@ -116,7 +119,7 @@ HRESULT Renderer::InitDevice(HWND window, int screenW, int screenH, bool windowe
     };
 	UINT numFeatureLevels = ARRAYSIZE( featureLevels );
 	
-
+#ifndef WINSTORE_SUPPORT
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory( &sd, sizeof( sd ) );
     sd.BufferCount = 2;
@@ -130,25 +133,66 @@ HRESULT Renderer::InitDevice(HWND window, int screenW, int screenH, bool windowe
 	sd.SampleDesc.Count = 1;
 	sd.SampleDesc.Quality = 0;
 	sd.Windowed = windowed;
-	//sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#endif
 	
 	for( UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++ )
     {
         driverType = driverTypes[driverTypeIndex];
+#ifndef WINSTORE_SUPPORT
         hr = D3D11CreateDeviceAndSwapChain( NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
-											D3D11_SDK_VERSION, &sd, &swapChain, &Renderer::graphicsDevice, &featureLevel, &Renderer::immediateContext );
-        if( SUCCEEDED( hr ) )
+											D3D11_SDK_VERSION, &sd, &swapChain, &graphicsDevice, &featureLevel, &immediateContext );
+#else
+		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &graphicsDevice
+			, &featureLevel, &immediateContext);
+#endif
+
+		if( SUCCEEDED( hr ) )
             break;
     }
 	if(FAILED(hr)){
-        MessageBox(window,L"SwapChain Creation Failed!",0,0);
+        WickedHelper::messageBox("SwapChain Creation Failed!","Error!",nullptr);
 #ifdef BACKLOG
 			BackLog::post("SwapChain Creation Failed!");
 #endif
-		exit(0);
+		exit(1);
 	}
 	DX11 = ( ( Renderer::graphicsDevice->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0 ) ? true:false );
 	drawCalls.insert(pair<DeviceContext,long>(immediateContext,0));
+
+
+#ifdef WINSTORE_SUPPORT
+	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
+	sd.Width = SCREENWIDTH = window->Bounds.Width;
+	sd.Height = SCREENHEIGHT = window->Bounds.Height;
+	sd.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // This is the most common swap chain format.
+	sd.Stereo = false;
+	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
+	sd.SampleDesc.Quality = 0;
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.BufferCount = 2; // Use double-buffering to minimize latency.
+	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
+	sd.Flags = 0;
+	sd.Scaling = DXGI_SCALING_NONE;
+	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+
+	IDXGIDevice2 * pDXGIDevice;
+	hr = graphicsDevice->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
+
+	IDXGIAdapter * pDXGIAdapter;
+	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void **)&pDXGIAdapter);
+
+	IDXGIFactory2 * pIDXGIFactory;
+	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&pIDXGIFactory);
+
+
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(graphicsDevice, reinterpret_cast<IUnknown*>(window), &sd
+		, nullptr, &swapChain);
+
+	if (FAILED(hr)){
+		WickedHelper::messageBox("Swap chain creation failed!", "Error!");
+		exit(1);
+	}
+#endif
 
 	if(requestMultiThreading){
 		D3D11_FEATURE_DATA_THREADING threadingFeature;
@@ -179,14 +223,14 @@ HRESULT Renderer::InitDevice(HWND window, int screenW, int screenH, bool windowe
     ID3D11Texture2D* pBackBuffer = NULL;
     hr = swapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D ), ( LPVOID* )&pBackBuffer );
     if( FAILED( hr ) ){
-        MessageBox(window,L"BackBuffer Failed!",0,0);
+		WickedHelper::messageBox("BackBuffer creation Failed!", "Error!", nullptr);
 		exit(0);
 	}
 
     hr = Renderer::graphicsDevice->CreateRenderTargetView( pBackBuffer, NULL, &renderTargetView );
     //pBackBuffer->Release();
     if( FAILED( hr ) ){
-        MessageBox(window,L"Main Rendertarget Failed!",0,0);
+		WickedHelper::messageBox("Main Rendertarget creation Failed!", "Error!", nullptr);
 		exit(0);
 	}
 
@@ -245,6 +289,7 @@ void Renderer::Present(function<void()> drawToScreen1,function<void()> drawToScr
 	FrameRate::Frame();
 
 	swapChain->Present( VSYNC, 0 );
+
 	for(auto& d : drawCalls){
 		d.second=0;
 	}
@@ -3984,11 +4029,15 @@ void Renderer::UpdatePerWorldCB(ID3D11DeviceContext* context){
 	//context->Unmap(pixelCB,0);
 }
 void Renderer::UpdatePerFrameCB(ID3D11DeviceContext* context){
-	ViewPropCB cb;
-	cb.mZFarP=Renderer::cam->zFarP;
-	cb.mZNearP=Renderer::cam->zNearP;
-	UpdateBuffer(viewPropCB,&cb,context);
-	
+	ViewPropCB* cb = (ViewPropCB*)_aligned_malloc(sizeof(ViewPropCB), 16);
+	cb->mZFarP=Renderer::cam->zFarP;
+	cb->mZNearP=Renderer::cam->zNearP;
+	cb->matView = XMMatrixTranspose( cam->View );
+	cb->matProj = XMMatrixTranspose( cam->Projection );
+	UpdateBuffer(viewPropCB,cb,context);
+
+	_aligned_free(cb);
+
 	BindConstantBufferPS(viewPropCB,10,context);
 }
 void Renderer::UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF){

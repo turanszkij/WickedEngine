@@ -12,7 +12,7 @@ XInput::XInput(void)
 
 HRESULT XInput::UpdateControllerState()
 {
-    DWORD dwResult;
+    DWORD dwResult = 0;
     for( DWORD i = 0; i < MAX_CONTROLLERS; i++ )
     {
         // Simply get the state of the controller from XInput.

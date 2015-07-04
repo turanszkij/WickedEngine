@@ -1,6 +1,8 @@
 #include "Network.h"
 
 
+#ifndef WINSTORE_SUPPORT
+
 Network::Network(void)
 {
 	name="UNNAMED_NETWORK";
@@ -53,4 +55,6 @@ bool Network::receiveText(std::string& text, SOCKET socket){
 	BackLog::post("[Error][receiveText] Didn't receive text length!");
 	return false;
 }
+
+#endif
 

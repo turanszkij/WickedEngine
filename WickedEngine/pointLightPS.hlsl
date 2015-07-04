@@ -27,13 +27,14 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 	
 			float3 lightDir;
 			float attenuation;
-			light *= pointLight(pos3D,normal,lightDir,attenuation,toonshaded);
+			float lightInt = pointLight(pos3D, normal, lightDir, attenuation, toonshaded);
+			light *= lightInt;
 
 			//float rimLight = saturate(1.0f-specular) * saturate(pow(saturate(1.0f-dot(normal,eyevector)),3));
 			//light.rgb+=rimLight;
 
 			//SPECULAR
-			applySpecular(light, lightColor, normal, eyevector, lightDir, 1, specular_power, specular, toonshaded);
+			applySpecular(light, lightColor * lightInt, normal, eyevector, lightDir, 1, specular_power, specular, toonshaded);
 			//else 
 			//	light.a=0;
 

@@ -1,4 +1,6 @@
 #include "depthConvertHF.hlsli"
+#include "globalsHF.hlsli"
+
 
 Texture2D xTexture : register(t0);
 Texture2D<float> depthMap:register(t1);
@@ -43,5 +45,5 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 
 	//color.rgb*=PSIn.col.rgb;
 
-	return color;
+	return clamp( color, 0, inf );
 }

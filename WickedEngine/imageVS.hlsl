@@ -14,6 +14,7 @@ struct VertextoPixel
 	float4 pos				: SV_POSITION;
 	float4 tex				: TEXCOORD0; //intex,movingtex
 	float4 dis				: TEXCOORD1; //distortion
+	float mip				: TEXCOORD2;
 };
 
 VertextoPixel main(uint vI : SV_VERTEXID)
@@ -60,6 +61,7 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 	
 	Out.tex.xy=inTex;
 	Out.tex.zw=xTexOffset.xy;
+	Out.mip = xTexOffset.z;
 
 	return Out;
 }

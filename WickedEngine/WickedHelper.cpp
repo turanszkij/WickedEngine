@@ -25,10 +25,14 @@ bool WickedHelper::readByteData(const string& fileName, BYTE** data, size_t& dat
 	}
 	stringstream ss("");
 	ss << "File not found: " << fileName;
-	warningMessage(ss.str());
+	messageBox(ss.str());
 	return false;
 }
 
-void WickedHelper::warningMessage(const string& msg){
-	MessageBoxA(nullptr, msg.c_str(), "Warning!", 0);
+void WickedHelper::messageBox(const string& msg, const string& caption, HWND hWnd){
+#ifndef WINSTORE_SUPPORT
+	MessageBoxA(hWnd, msg.c_str(), caption.c_str(), 0);
+#else
+	//Windows::UI::Popups::MessageDialog("ASD").ShowAsync();
+#endif
 }

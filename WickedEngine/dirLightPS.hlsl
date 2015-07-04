@@ -32,10 +32,10 @@ float4 main( VertexToPixel PSIn ) : SV_TARGET
 			//float rimLight = saturate(1.0f-specular) * saturate(pow(saturate(1.0f-dot(normal,eyevector)),3));
 			//lighting+=rimLight;
 
-			color.rgb *= saturate(lighting);
+			color.rgb *= (lighting);
 
 			//SPECULAR
-			applySpecular(color, lightColor, normal, eyevector, lightDir, 1, specular_power, specular, toonshaded);
+			applySpecular(color, lightColor*lighting, normal, eyevector, lightDir, 1, specular_power, specular, toonshaded);
 			//else 
 			//	color.a=0;
 		}

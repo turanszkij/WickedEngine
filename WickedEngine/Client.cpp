@@ -1,6 +1,8 @@
 #include "Client.h"
 
 
+#ifndef WINSTORE_SUPPORT
+
 Client::Client(const string& newName, const string& ipaddress, int port)
 {
 	if(ConnectToHost(port,ipaddress.length()<=1?"127.0.0.1":ipaddress.c_str())){
@@ -44,4 +46,6 @@ bool Client::sendMessage(const string& text){
 	Network::sendData(Network::PACKET_TYPE_TEXTMESSAGE,s);
 	return Network::sendText(text,s);
 }
+
+#endif
 

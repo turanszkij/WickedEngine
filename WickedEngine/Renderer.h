@@ -42,11 +42,15 @@ class Renderer
 {
 public:
 #define API_CALL_STRICTNESS
+#ifndef WINSTORE_SUPPORT
+	typedef IDXGISwapChain*				SwapChain;
+#else
+	typedef IDXGISwapChain1*				SwapChain; 
+#endif
 	typedef IUnknown*					APIInterface;
 	typedef ID3D11DeviceContext*		DeviceContext;
 	typedef	ID3D11Device*				GraphicsDevice;
 	typedef	D3D11_VIEWPORT				ViewPort;
-	typedef IDXGISwapChain*				SwapChain;
 	typedef ID3D11CommandList*			CommandList;
 	typedef ID3D11RenderTargetView*		RenderTargetView;
 	typedef ID3D11ShaderResourceView*	TextureView;
@@ -95,7 +99,11 @@ public:
 	static DeviceContext deferredContexts[NUM_DCONTEXT];
 	static CommandList commandLists[NUM_DCONTEXT];
 	static mutex graphicsMutex;
+#ifndef WINSTORE_SUPPORT
 	static HRESULT InitDevice(HWND window, int screenW, int screenH, bool windowed, short& requestMultiThreading);
+#else
+	static HRESULT InitDevice(Windows::UI::Core::CoreWindow^ window, short& requestMultiThreading);
+#endif
 	static void DestroyDevice();
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
 	static void Renderer::ReleaseCommandLists();
@@ -232,9 +240,11 @@ protected:
 	};
 	struct ViewPropCB
 	{
+		XMMATRIX matView;
+		XMMATRIX matProj;
 		float mZNearP;
 		float mZFarP;
-		float pad[2];
+		float padding[2];
 	};
 
 

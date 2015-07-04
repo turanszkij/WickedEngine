@@ -8,6 +8,9 @@
 #include <string>
 #include <sstream>
 
+
+#ifndef WINSTORE_SUPPORT
+
 class Network
 {
 protected:
@@ -81,6 +84,8 @@ public:
 		return false;
 	}
 };
+
+#endif //FAMILY
 
 #endif
 

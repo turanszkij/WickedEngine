@@ -24,7 +24,6 @@ Texture2D<float4> materialMap:register(t2);
 SamplerState Sampler:register(s0);
 
 static const float specularMaximumIntensity = 1;
-static const float inf=100000000;
 
 
 

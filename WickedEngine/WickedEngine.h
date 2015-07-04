@@ -2,9 +2,10 @@
 #define WICKED_ENGINE_VERSION "1.0"
 
 #include <SDKDDKVer.h>
-#include <d3d11.h>
+#include <d3d11_2.h>
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
+#include <DXGI1_2.h>
 #include <Xinput.h>
 #include <cstdlib>
 #include <ctime>
@@ -31,10 +32,16 @@
 #include <float.h>
 #include <functional>
 
+#ifdef WINSTORE_SUPPORT
+#include <Windows.UI.Core.h>
+#endif
+
 using namespace DirectX;
 using namespace std;
 
-
+#ifndef WINSTORE_SUPPORT
+#include "mysql/mysql.h"
+#endif
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
@@ -53,7 +60,6 @@ using namespace std;
 #include "DirectInput.h"
 #include "XInput.h"
 #include "TaskThread.h"
-#include "mysql/mysql.h"
 #include "WickedMath.h"
 #include "LensFlare.h"
 #include "Sound.h"
@@ -92,9 +98,12 @@ enum POVENUM{ //NUMPAD SORTING
 
 #define SETTINGSFILE "settings/ProgramSettings.ini"
 
+#ifndef WINSTORE_SUPPORT
+#pragma comment(lib,"lib32/libmysql.lib")
+#endif
 #pragma comment(lib,"WickedEngine.lib")
 #pragma comment(lib,"d3d11.lib")
-#pragma comment(lib,"lib32/libmysql.lib")
+#pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"comctl32.lib")
 #pragma comment(lib,"dxguid.lib")

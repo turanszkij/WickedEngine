@@ -3,6 +3,8 @@
 
 #include "Network.h"
 
+#ifndef WINSTORE_SUPPORT
+
 class Client : public Network
 {
 public:
@@ -139,5 +141,7 @@ public:
 
 
 };
+
+#endif //FAMILY
 
 #endif

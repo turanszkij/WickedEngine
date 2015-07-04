@@ -42,6 +42,7 @@ public:
 	float opacity;
 	float rotation;
 	bool extractNormalMap;
+	float mipLevel;
 		
 	BLENDMODE blendFlag;
 	ImageType typeFlag;
@@ -66,10 +67,11 @@ public:
 		bool fxaa;
 		bool ssao;
 		XMFLOAT2 ssss;
+		bool ssr;
 		bool linDepth;
 		bool colorGrade;
 			
-		void clear(){active=motionBlur=outline=fxaa=ssao=linDepth=colorGrade=false;dofStrength=0;ssss=XMFLOAT2(0,0);}
+		void clear(){active=motionBlur=outline=fxaa=ssao=linDepth=colorGrade=ssr=false;dofStrength=0;ssss=XMFLOAT2(0,0);}
 		void setDOF(float value){dofStrength=value;active=value;}
 		void setMotionBlur(bool value){motionBlur=value;active=value;}
 		void setOutline(bool value){outline=value;active=value;}
@@ -79,6 +81,7 @@ public:
 		void setColorGrade(bool value){colorGrade=value;active=value;}
 		//direction*Properties
 		void setSSSS(const XMFLOAT2& value){ssss=value;active=value.x||value.y;}
+		void setSSR(bool value){ ssr = value; active = value; }
 		Processing(){clear();}
 	};
 	Processing process;
@@ -102,6 +105,7 @@ public:
 		mirror=1.0f;
 		blur=blurDir=fade=opacity=rotation=0.0f;
 		extractNormalMap=false;
+		mipLevel=0.f;
 		blendFlag=BLENDMODE_ALPHA;
 		typeFlag=SCREEN;
 		sampleFlag=SAMPLEMODE_MIRROR;

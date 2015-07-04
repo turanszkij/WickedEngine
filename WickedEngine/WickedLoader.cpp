@@ -5,14 +5,9 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 						, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier){
 	name=newName;
 
-	ifstream file(fname.c_str(),ios::binary|ios::ate);
-	if(file.is_open()){
-
-		int fileSize = file.tellg();
-		file.seekg (0, file.beg);
-		char * buffer = new char [fileSize];
-		file.read (buffer,fileSize);
-		file.close();
+	BYTE* buffer;
+	size_t fileSize;
+	if (WickedHelper::readByteData(fname, &buffer, fileSize)){
 
 		int offset=0;
 

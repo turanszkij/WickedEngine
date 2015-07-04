@@ -44,7 +44,7 @@ protected:
 	struct BlurBuffer
 	{
 		XMVECTOR mWeight;
-		XMFLOAT3 mWeightTexelStren;
+		XMFLOAT4 mWeightTexelStrenMip;
 	};
 	
 	static ID3D11BlendState*		blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg;
@@ -52,7 +52,7 @@ protected:
 
 	static ID3D11VertexShader*     vertexShader,*screenVS;
 	static ID3D11PixelShader*      pixelShader,*blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS
-		,*fxaaPS,*ssaoPS,*ssssPS,*deferredPS,*linDepthPS,*colorGradePS;
+		,*fxaaPS,*ssaoPS,*ssssPS,*deferredPS,*linDepthPS,*colorGradePS,*ssrPS;
 	
 
 	

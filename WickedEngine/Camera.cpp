@@ -1,5 +1,7 @@
 #include "Camera.h"
 
+
+
 Camera::Camera(int width, int height, float newNear, float newFar, const XMVECTOR& newEye)
 {
 	zNearP=newNear;
@@ -8,7 +10,9 @@ Camera::Camera(int width, int height, float newNear, float newFar, const XMVECTO
 	this->width=width;
 	this->height=height;
 
+#ifndef WINSTORE_SUPPORT
 	GetCursorPos(&originalMouse);
+#endif
 
     //Initialize the projection matrix
 	Projection = XMMatrixPerspectiveFovLH( XM_PI / 3.0f, width / (FLOAT)height, zNearP, zFarP );
@@ -30,6 +34,8 @@ Camera::Camera(int width, int height, float newNear, float newFar, const XMVECTO
 
 void Camera::ProcessInput(float t, bool enter)
 {
+
+#ifndef WINSTORE_SUPPORT
 	POINT currentMouse;
 	GetCursorPos(&currentMouse);
 	if(enter)
@@ -45,6 +51,7 @@ void Camera::ProcessInput(float t, bool enter)
 	{
 		GetCursorPos(&originalMouse);
 	}
+#endif
 	
 	
 	XMMATRIX cameraRot = XMMatrixRotationX(updownRot-XM_PI/2.0f)*XMMatrixRotationY(leftrightRot);

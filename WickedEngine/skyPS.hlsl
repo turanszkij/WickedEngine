@@ -1,4 +1,5 @@
 #include "effectHF_PS.hlsli"
+#include "globalsHF.hlsli"
 
 struct VSOut{
 	float4 pos : SV_POSITION;
@@ -12,10 +13,10 @@ float4 main(VSOut PSIn):SV_TARGET
 	float3 col = 0;
 	[branch]if(xFx.x==0){
 		col = lerp(xHorizon.rgb,enviroTex.SampleLevel( texSampler,nor,0 ).rgb,saturate(nor.y/0.3f));
-		sun = saturate(pow(dot(xSun,nor),256)*xSunColor.rgb);
+		sun = clamp(pow(dot(xSun,nor),256)*xSunColor.rgb, 0, inf);
 	}
 	else{
-		sun = saturate(pow(dot(xSun,nor),64)*xSunColor.rgb);
+		sun = clamp(pow(dot(xSun,nor),64)*xSunColor.rgb, 0, inf);
 	}
 	return float4( col+sun ,1);
 }
