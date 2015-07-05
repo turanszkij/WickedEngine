@@ -1,7 +1,7 @@
 #pragma once
 #include "WickedEngine.h"
 
-static class WickedMath
+static class wiMath
 {
 public:
 	static float Distance(const XMFLOAT3& v1,const XMFLOAT3& v2);

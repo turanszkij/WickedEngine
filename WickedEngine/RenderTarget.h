@@ -2,9 +2,9 @@
 #include "WickedEngine.h"
 #include "DepthTarget.h"
 
-class DepthTarget;
+class wiDepthTarget;
 
-class RenderTarget
+class wiRenderTarget
 {
 private:
 	int numViews;
@@ -17,21 +17,21 @@ public:
 	vector<ID3D11Texture2D*>			texture2D;
 	vector<ID3D11RenderTargetView*>		renderTarget;
 	vector<ID3D11ShaderResourceView*>	shaderResource;
-	DepthTarget*						depth;
+	wiDepthTarget*						depth;
 
-	RenderTarget();
-	RenderTarget(UINT width, UINT height, int numViews = 1, bool hasDepth = false, UINT MSAAC = 1, UINT MSAAQ = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1);
-	~RenderTarget();
+	wiRenderTarget();
+	wiRenderTarget(UINT width, UINT height, int numViews = 1, bool hasDepth = false, UINT MSAAC = 1, UINT MSAAQ = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1);
+	~wiRenderTarget();
 
 	void Initialize(UINT width, UINT height, int numViews = 1, bool hasDepth = false, UINT MSAAC = 1, UINT MSAAQ = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1);
 	void InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format);
 	void InitializeCube(UINT size, int numViews, bool hasDepth);
 	void Activate(ID3D11DeviceContext*);
 	void Activate(ID3D11DeviceContext* context, float r, float g, float b, float a);
-	void Activate(ID3D11DeviceContext* context, DepthTarget*, float r, float g, float b, float a);
-	void Activate(ID3D11DeviceContext* context, DepthTarget*);
+	void Activate(ID3D11DeviceContext* context, wiDepthTarget*, float r, float g, float b, float a);
+	void Activate(ID3D11DeviceContext* context, wiDepthTarget*);
 	void Set(ID3D11DeviceContext* context);
-	void Set(ID3D11DeviceContext* context, DepthTarget*);
+	void Set(ID3D11DeviceContext* context, wiDepthTarget*);
 	void Retarget(ID3D11ShaderResourceView* resource);
 	void Restore();
 

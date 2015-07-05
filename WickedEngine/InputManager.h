@@ -4,7 +4,7 @@
 class XInput;
 class DirectInput;
 
-class InputManager
+class wiInputManager
 {
 public:
 	static XInput* xinput;

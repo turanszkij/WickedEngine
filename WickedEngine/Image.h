@@ -1,7 +1,7 @@
 #pragma once
 #include "WickedEngine.h"
 
-class Image
+class wiImage
 {
 private:
 	static mutex MUTEX;
@@ -65,7 +65,7 @@ protected:
 	static int RENDERWIDTH,RENDERHEIGHT;
 
 public:
-	Image();
+	wiImage();
 	
 	static void Draw(ID3D11ShaderResourceView* texture, const ImageEffects& effects);
 	inline static void Draw(ID3D11ShaderResourceView* texture, const ImageEffects& effects,ID3D11DeviceContext* context);
@@ -109,7 +109,7 @@ public:
 		ID3D11ShaderResourceView* texture;
 
 		ImageResource(){name="";texture=NULL;};
-		ImageResource(const string& newDirectory, const string& newName); //in Renderer.cpp
+		ImageResource(const string& newDirectory, const string& newName); //in wiRenderer.cpp
 		void CleanUp(){
 			if(texture) texture->Release(); texture=NULL;
 		}
@@ -120,4 +120,4 @@ public:
 };
 
 
-#include "oImage.h"
+#include "Sprite.h"

@@ -89,7 +89,7 @@ public:
 
 		if ((select( s + 1 , &readfds , NULL , NULL , &time) < 0) && (errno!=EINTR))
 		{
-			BackLog::post("select error");
+			wiBackLog::post("select error");
 		}
 
 		//If something happened on the master socket , then its an incoming connection
@@ -99,7 +99,7 @@ public:
 			bool receiveSuccess = receiveData(command);
 
 			if(!receiveSuccess){
-				BackLog::post("Server no longer available. Please disconnect.");
+				wiBackLog::post("Server no longer available. Please disconnect.");
 				closesocket(s);
 				success=false;
 			}
@@ -111,7 +111,7 @@ public:
 						if(receiveText(text)){
 							stringstream ss("");
 							ss<<"New server name is: "<<text;
-							BackLog::post(ss.str().c_str());
+							wiBackLog::post(ss.str().c_str());
 							serverName=text;
 						}
 						break;
@@ -122,7 +122,7 @@ public:
 						if(receiveText(text)){
 							stringstream ss("");
 							ss<<serverName<<": "<<text;
-							BackLog::post(ss.str().c_str());
+							wiBackLog::post(ss.str().c_str());
 						}
 						break;
 					}

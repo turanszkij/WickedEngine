@@ -2,7 +2,7 @@
 #define LENSFLARE
 #include "WickedEngine.h"
 
-static class LensFlare
+static class wiLensFlare
 {
 private:
 	static ID3D11Buffer* constantBuffer;

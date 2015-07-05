@@ -2,21 +2,21 @@
 
 
 
-ID3D11InputLayout* HairParticle::il;
-ID3D11VertexShader* HairParticle::vs;
-ID3D11PixelShader* HairParticle::ps,*HairParticle::qps;
-ID3D11GeometryShader* HairParticle::gs[],*HairParticle::qgs[];
-ID3D11Buffer* HairParticle::cbgs;
-ID3D11DepthStencilState* HairParticle::dss;
-ID3D11RasterizerState* HairParticle::rs,* HairParticle::ncrs;
-ID3D11SamplerState* HairParticle::ss;
-ID3D11BlendState* HairParticle::bs;
-int HairParticle::LOD[3];
+ID3D11InputLayout* wiHairParticle::il;
+ID3D11VertexShader* wiHairParticle::vs;
+ID3D11PixelShader* wiHairParticle::ps,*wiHairParticle::qps;
+ID3D11GeometryShader* wiHairParticle::gs[],*wiHairParticle::qgs[];
+ID3D11Buffer* wiHairParticle::cbgs;
+ID3D11DepthStencilState* wiHairParticle::dss;
+ID3D11RasterizerState* wiHairParticle::rs,* wiHairParticle::ncrs;
+ID3D11SamplerState* wiHairParticle::ss;
+ID3D11BlendState* wiHairParticle::bs;
+int wiHairParticle::LOD[3];
 
-HairParticle::HairParticle()
+wiHairParticle::wiHairParticle()
 {
 }
-HairParticle::HairParticle(const string& newName, float newLen, int newCount
+wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 						   , const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup)
 {
 	name=newName;
@@ -37,16 +37,16 @@ HairParticle::HairParticle(const string& newName, float newLen, int newCount
 }
 
 
-void HairParticle::CleanUp(){
+void wiHairParticle::CleanUp(){
 	for(int i=0;i<patches.size();++i)
 		patches[i]->CleanUp();
 	patches.clear();
-	Renderer::SafeRelease(vb[0]);
-	Renderer::SafeRelease(vb[1]);
-	Renderer::SafeRelease(vb[2]);
+	wiRenderer::SafeRelease(vb[0]);
+	wiRenderer::SafeRelease(vb[1]);
+	wiRenderer::SafeRelease(vb[2]);
 }
 
-void HairParticle::CleanUpStatic(){
+void wiHairParticle::CleanUpStatic(){
 	if(il) il->Release(); il=NULL;
 	if(vs) vs->Release(); vs=NULL;
 	for(int i=0;i<3;++i){
@@ -62,7 +62,7 @@ void HairParticle::CleanUpStatic(){
 	if(ncrs) ncrs->Release(); ncrs=NULL;
 	
 }
-void HairParticle::SetUpStatic(){
+void wiHairParticle::SetUpStatic(){
 	Settings(10,25,120);
 
 
@@ -73,7 +73,7 @@ void HairParticle::SetUpStatic(){
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/grassVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::add("shaders/grassVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vs = vsinfo->vertexShader;
 		il = vsinfo->vertexLayout;
@@ -82,15 +82,15 @@ void HairParticle::SetUpStatic(){
 
 
 
-	ps = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/grassPS.cso", ResourceManager::PIXELSHADER));
-	qps = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/qGrassPS.cso", ResourceManager::PIXELSHADER));
+	ps = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/grassPS.cso", wiResourceManager::PIXELSHADER));
+	qps = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/qGrassPS.cso", wiResourceManager::PIXELSHADER));
 
-	gs[0] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/grassL0GS.cso", ResourceManager::GEOMETRYSHADER));
-	gs[1] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/grassL1GS.cso", ResourceManager::GEOMETRYSHADER));
-	gs[2] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/grassL2GS.cso", ResourceManager::GEOMETRYSHADER));
+	gs[0] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/grassL0GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[1] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/grassL1GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[2] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/grassL2GS.cso", wiResourceManager::GEOMETRYSHADER));
 
-	qgs[0] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/qGrassLCloseGS.cso", ResourceManager::GEOMETRYSHADER));
-	qgs[1] = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/qGrassLDistGS.cso", ResourceManager::GEOMETRYSHADER));
+	qgs[0] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/qGrassLCloseGS.cso", wiResourceManager::GEOMETRYSHADER));
+	qgs[1] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/qGrassLDistGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 
@@ -107,7 +107,7 @@ void HairParticle::SetUpStatic(){
  //   ID3DBlob* pVSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/grassVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load grassVS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vs );
+	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vs );
 
 
  //   // Define the input layout
@@ -120,7 +120,7 @@ void HairParticle::SetUpStatic(){
 	//UINT numElements = ARRAYSIZE( layout );
 	//
  //   // Create the input layout
-	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
  //                                         pVSBlob->GetBufferSize(), &il );
 
 	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
@@ -130,35 +130,35 @@ void HairParticle::SetUpStatic(){
 	//ID3DBlob* pPSBlob = NULL;
 	//
 	//if(FAILED(D3DReadFileToBlob(L"shaders/grassPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load grassPS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ps );
+	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ps );
 	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 	//
 	//if(FAILED(D3DReadFileToBlob(L"shaders/qGrassPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load qGrassPS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &qps );
+	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &qps );
 	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 
 
 	//ID3DBlob* pGSBlob = NULL;
 	//
 	//if(FAILED(D3DReadFileToBlob(L"shaders/grassL0GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL0GS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[0] );
+	//else wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[0] );
 	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 	//
 	//if(FAILED(D3DReadFileToBlob(L"shaders/grassL1GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL1GS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[1] );
+	//else wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[1] );
 	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 	//
 	//if(FAILED(D3DReadFileToBlob(L"shaders/grassL2GS.cso", &pGSBlob))){MessageBox(0,L"Failed To load grassL2GS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[2] );
+	//else wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &gs[2] );
 	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 	//
 	//
 	//if(FAILED(D3DReadFileToBlob(L"shaders/qGrassLCloseGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load qGrassLCloseGS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[0] );
+	//else wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[0] );
 	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 	//
 	//if(FAILED(D3DReadFileToBlob(L"shaders/qGrassLDistGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load qGrassLDistGS.cso",0,0);}
-	//else Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[1] );
+	//else wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &qgs[1] );
 	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 
 
@@ -169,7 +169,7 @@ void HairParticle::SetUpStatic(){
 	bd.ByteWidth = sizeof(CBGS);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &cbgs );
+    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &cbgs );
 	
 
 	
@@ -186,7 +186,7 @@ void HairParticle::SetUpStatic(){
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	Renderer::graphicsDevice->CreateRasterizerState(&rsd,&rs);
+	wiRenderer::graphicsDevice->CreateRasterizerState(&rsd,&rs);
 	rsd.FillMode=D3D11_FILL_SOLID;
 	rsd.CullMode=D3D11_CULL_NONE;
 	rsd.FrontCounterClockwise=true;
@@ -197,7 +197,7 @@ void HairParticle::SetUpStatic(){
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	Renderer::graphicsDevice->CreateRasterizerState(&rsd,&ncrs);
+	wiRenderer::graphicsDevice->CreateRasterizerState(&rsd,&ncrs);
 
 	
 	D3D11_DEPTH_STENCIL_DESC dsd;
@@ -217,7 +217,7 @@ void HairParticle::SetUpStatic(){
 	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 	// Create the depth stencil state.
-	Renderer::graphicsDevice->CreateDepthStencilState(&dsd, &dss);
+	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &dss);
 
 	D3D11_SAMPLER_DESC samplerDesc;
 	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
@@ -233,7 +233,7 @@ void HairParticle::SetUpStatic(){
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	Renderer::graphicsDevice->CreateSamplerState(&samplerDesc, &ss);
+	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &ss);
 
 	
 	D3D11_BLEND_DESC bld;
@@ -247,9 +247,9 @@ void HairParticle::SetUpStatic(){
 	bld.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	bld.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bld.AlphaToCoverageEnable=false;
-	Renderer::graphicsDevice->CreateBlendState(&bld,&bs);
+	wiRenderer::graphicsDevice->CreateBlendState(&bld,&bs);
 }
-void HairParticle::Settings(int l0,int l1,int l2)
+void wiHairParticle::Settings(int l0,int l1,int l2)
 {
 	LOD[0]=l0;
 	LOD[1]=l1;
@@ -258,12 +258,12 @@ void HairParticle::Settings(int l0,int l1,int l2)
 
 struct PatchHolder:public Cullable
 {
-	HairParticle::Patch* patch;
+	wiHairParticle::Patch* patch;
 	PatchHolder(){}
-	PatchHolder(HairParticle::Patch* p){patch=p;}
+	PatchHolder(wiHairParticle::Patch* p){patch=p;}
 };
 
-void HairParticle::SetUpPatches()
+void wiHairParticle::SetUpPatches()
 {
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
@@ -271,9 +271,9 @@ void HairParticle::SetUpPatches()
 	bd.ByteWidth = sizeof(Point)*MAX_PARTICLES;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[0] );
-    Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[1] );
-    Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[2] );
+    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[0] );
+    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[1] );
+    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[2] );
 
 	const int triangleperpatch = 4;
 	int currentTris=0;
@@ -406,8 +406,8 @@ void HairParticle::SetUpPatches()
 					patches.back()->add(addP);
 				
 					XMFLOAT3 posN = XMFLOAT3(addP.posRand.x,addP.posRand.y,addP.posRand.z);
-					patches.back()->min=WickedMath::Min(patches.back()->min,posN);
-					patches.back()->max=WickedMath::Max(patches.back()->max,posN);
+					patches.back()->min=wiMath::Min(patches.back()->min,posN);
+					patches.back()->max=wiMath::Max(patches.back()->max,posN);
 				}
 				/*patches.back()->max.y+=length;
 				patches.back()->max.x+=length*0.5f;
@@ -428,7 +428,7 @@ void HairParticle::SetUpPatches()
 					//D3D11_SUBRESOURCE_DATA InitData;
 					//ZeroMemory( &InitData, sizeof(InitData) );
 					//InitData.pSysMem = patches.back()->p.data();
-					//Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &patches.back()->vb );
+					//wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &patches.back()->vb );
 
 					patches.push_back(new Patch());
 					pholder.push_back(new PatchHolder(patches.back()));
@@ -440,10 +440,10 @@ void HairParticle::SetUpPatches()
 		}
 	}
 
-	GenerateSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),GENERATE_OCTREE);
+	GeneratewiSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),GENERATE_OCTREE);
 	return;
 }
-void HairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMATRIX& newProj, ID3D11DeviceContext *context)
+void wiHairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMATRIX& newProj, ID3D11DeviceContext *context)
 {
 	
 	Frustum frustum = Frustum();
@@ -455,42 +455,42 @@ void HairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMA
 		
 	CulledList culledPatches;
 	if(spTree)
-		SPTree::getVisible(spTree->root,frustum,culledPatches,SP_TREE_STRICT_CULL);
+		wiSPTree::getVisible(spTree->root,frustum,culledPatches,SP_TREE_STRICT_CULL);
 
 	if(!culledPatches.empty())
 	{
 		ID3D11ShaderResourceView* texture = material->texture;
 
-		Renderer::BindPrimitiveTopology(Renderer::PRIMITIVETOPOLOGY::POINTLIST,context);
-		Renderer::BindVertexLayout(il,context);
-		Renderer::BindPS(texture?qps:ps,context);
-		Renderer::BindVS(vs,context);
+		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::POINTLIST,context);
+		wiRenderer::BindVertexLayout(il,context);
+		wiRenderer::BindPS(texture?qps:ps,context);
+		wiRenderer::BindVS(vs,context);
 
 		if(texture){
-			Renderer::BindTexturePS(texture,0,context);
-			Renderer::BindSamplerPS(ss,0,context);
-			Renderer::BindTextureGS(texture,0,context);
+			wiRenderer::BindTexturePS(texture,0,context);
+			wiRenderer::BindSamplerPS(ss,0,context);
+			wiRenderer::BindTextureGS(texture,0,context);
 
-			Renderer::BindBlendState(bs,context);
+			wiRenderer::BindBlendState(bs,context);
 		}
 		else
-			Renderer::BindRasterizerState(ncrs,context);
+			wiRenderer::BindRasterizerState(ncrs,context);
 
 
 		CBGS gcb;
 		gcb.mView = XMMatrixTranspose(newView);
 		gcb.mProj = XMMatrixTranspose(newProj);
-		gcb.colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,Renderer::wind.time);
+		gcb.colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,wiRenderer::wind.time);
 		gcb.eye=eye;
 		gcb.drawdistance=LOD[2];
-		gcb.wind=Renderer::wind.direction;
-		gcb.windRandomness=Renderer::wind.randomness;
-		gcb.windWaveSize=Renderer::wind.waveSize;
+		gcb.wind=wiRenderer::wind.direction;
+		gcb.windRandomness=wiRenderer::wind.randomness;
+		gcb.windWaveSize=wiRenderer::wind.waveSize;
 		
-		Renderer::UpdateBuffer(cbgs,&gcb,context);
+		wiRenderer::UpdateBuffer(cbgs,&gcb,context);
 
-		Renderer::BindDepthStencilState(dss,STENCILREF_DEFAULT,context);
-		Renderer::BindConstantBufferGS(cbgs,0,context);
+		wiRenderer::BindDepthStencilState(dss,STENCILREF_DEFAULT,context);
+		wiRenderer::BindConstantBufferGS(cbgs,0,context);
 
 
 		for(int i=0;i<3;++i){
@@ -498,17 +498,17 @@ void HairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMA
 			renderPoints.reserve(MAX_PARTICLES);
 
 			if(texture){
-				Renderer::BindGS(i<2?qgs[0]:qgs[1],context);
-				Renderer::BindRasterizerState(i<2?ncrs:rs,context);
+				wiRenderer::BindGS(i<2?qgs[0]:qgs[1],context);
+				wiRenderer::BindRasterizerState(i<2?ncrs:rs,context);
 			}
 			else
-				Renderer::BindGS(gs[i],context);
+				wiRenderer::BindGS(gs[i],context);
 			CulledList::iterator iter = culledPatches.begin();
 			while(iter != culledPatches.end()){
 				Cullable* culled = *iter;
 				Patch* patch = ((PatchHolder*)culled)->patch;
 
-				float dis = WickedMath::Distance(eye,((PatchHolder*)culled)->bounds.getCenter());
+				float dis = wiMath::Distance(eye,((PatchHolder*)culled)->bounds.getCenter());
 
 				if(dis<LOD[i]){
 					culledPatches.erase(iter++);
@@ -519,26 +519,26 @@ void HairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMA
 					++iter;
 			}
 
-			Renderer::UpdateBuffer(vb[i],renderPoints.data(),context,sizeof(Point)*renderPoints.size());
-			Renderer::BindVertexBuffer(vb[i],0,sizeof(Point),context);
-			Renderer::Draw(renderPoints.size(),context);
+			wiRenderer::UpdateBuffer(vb[i],renderPoints.data(),context,sizeof(Point)*renderPoints.size());
+			wiRenderer::BindVertexBuffer(vb[i],0,sizeof(Point),context);
+			wiRenderer::Draw(renderPoints.size(),context);
 		}
 
-		Renderer::BindGS(nullptr,context);
-		Renderer::BindConstantBufferGS(nullptr,0,context);
+		wiRenderer::BindGS(nullptr,context);
+		wiRenderer::BindConstantBufferGS(nullptr,0,context);
 	}
 }
 
-HairParticle::Patch::Patch(){
+wiHairParticle::Patch::Patch(){
 	p.resize(0);
 	min=XMFLOAT3(D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX);
 	max=XMFLOAT3(-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX);
 	//vb=NULL;
 }
-void HairParticle::Patch::add(const Point& pp){
+void wiHairParticle::Patch::add(const Point& pp){
 	p.push_back(pp);
 }
-void HairParticle::Patch::CleanUp(){
+void wiHairParticle::Patch::CleanUp(){
 	p.clear();
 	//if(vb)
 	//	vb->Release();

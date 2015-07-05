@@ -4,7 +4,7 @@
 #include "WickedEngine.h"
 #include <locale>
 
-static class WickedHelper{
+static class wiHelper{
 public:
 	static string toUpper(const string& s);
 

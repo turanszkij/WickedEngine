@@ -11,7 +11,7 @@ Client::Client(const string& newName, const string& ipaddress, int port)
 		if(receiveText(welcomeMsg)){
 			stringstream ss("");
 			ss<<"Client connected to: "<<welcomeMsg<<" ,IP: "<<ipaddress<<" [port: "<<port<<"]";
-			BackLog::post(ss.str().c_str());
+			wiBackLog::post(ss.str().c_str());
 			changeName(newName);
 			serverName=welcomeMsg;
 		}
@@ -20,7 +20,7 @@ Client::Client(const string& newName, const string& ipaddress, int port)
 		success=false;
 		stringstream ss("");
 		ss<<"Connecting to server on address: "<<ipaddress<< " [port "<<port<<"] FAILED with: "<<WSAGetLastError();
-		BackLog::post(ss.str().c_str());
+		wiBackLog::post(ss.str().c_str());
 	}
 }
 

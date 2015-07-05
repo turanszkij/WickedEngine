@@ -11,13 +11,13 @@ Server::Server(const string& newName, int port, const string& ipaddress)
 	if(ListenOnPort(port,ipaddress.length()<=1?"0.0.0.0":ipaddress.c_str())){
 		stringstream ss("");
 		ss<<"Listening as "<<name<<" ,IP: "<<ipaddress<<" [port: "<<port<<"]";
-		BackLog::post(ss.str().c_str());
+		wiBackLog::post(ss.str().c_str());
 		success=true;
 	}
 	else{
 		stringstream ss("");
 		ss<<"Creating server on address: "<<ipaddress<< " [port "<<port<<"] FAILED with: "<<WSAGetLastError();
-		BackLog::post(ss.str().c_str());
+		wiBackLog::post(ss.str().c_str());
 		success=false;
 	}
 }
@@ -126,7 +126,7 @@ bool Server::sendText(const string& text, int packettype, const string& clientNa
 	}
 
 	if(sentTo<=0)
-		BackLog::post("No client was found with the specified parameters");
+		wiBackLog::post("No client was found with the specified parameters");
 
 	return sentTo>0;
 }

@@ -2,33 +2,33 @@
 
 
 
-ID3D11Buffer* LensFlare::constantBuffer;
-ID3D11PixelShader* LensFlare::pixelShader;
-ID3D11GeometryShader* LensFlare::geometryShader;
-ID3D11VertexShader* LensFlare::vertexShader;
-ID3D11InputLayout* LensFlare::inputLayout;
-ID3D11SamplerState* LensFlare::samplerState;
-ID3D11RasterizerState* LensFlare::rasterizerState;
-ID3D11DepthStencilState* LensFlare::depthStencilState;
-ID3D11BlendState* LensFlare::blendState;
-float LensFlare::RENDERWIDTH, LensFlare::RENDERHEIGHT;
+ID3D11Buffer* wiLensFlare::constantBuffer;
+ID3D11PixelShader* wiLensFlare::pixelShader;
+ID3D11GeometryShader* wiLensFlare::geometryShader;
+ID3D11VertexShader* wiLensFlare::vertexShader;
+ID3D11InputLayout* wiLensFlare::inputLayout;
+ID3D11SamplerState* wiLensFlare::samplerState;
+ID3D11RasterizerState* wiLensFlare::rasterizerState;
+ID3D11DepthStencilState* wiLensFlare::depthStencilState;
+ID3D11BlendState* wiLensFlare::blendState;
+float wiLensFlare::RENDERWIDTH, wiLensFlare::RENDERHEIGHT;
 
-void LensFlare::Initialize(float width, float height){
+void wiLensFlare::Initialize(float width, float height){
 	LoadShaders();
 	SetUpCB();
 	SetUpStates();
 	RENDERWIDTH=width;
 	RENDERHEIGHT=height;
 	//
-	//CreateWICTextureFromFile(0,Renderer::graphicsDevice,0,L"images/flare0.jpg",0,&textures[0],0);
-	//CreateWICTextureFromFile(0,Renderer::graphicsDevice,0,L"images/flare1.jpg",0,&textures[1],0);
-	//CreateWICTextureFromFile(0,Renderer::graphicsDevice,0,L"images/flare2.jpg",0,&textures[2],0);
-	//CreateWICTextureFromFile(0,Renderer::graphicsDevice,0,L"images/flare3.jpg",0,&textures[3],0);
-	//CreateWICTextureFromFile(0,Renderer::graphicsDevice,0,L"images/flare4.jpg",0,&textures[4],0);
-	//CreateWICTextureFromFile(0,Renderer::graphicsDevice,0,L"images/flare5.jpg",0,&textures[5],0);
-	//CreateWICTextureFromFile(0,Renderer::graphicsDevice,0,L"images/flare6.jpg",0,&textures[6],0);
+	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare0.jpg",0,&textures[0],0);
+	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare1.jpg",0,&textures[1],0);
+	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare2.jpg",0,&textures[2],0);
+	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare3.jpg",0,&textures[3],0);
+	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare4.jpg",0,&textures[4],0);
+	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare5.jpg",0,&textures[5],0);
+	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare6.jpg",0,&textures[6],0);
 }
-void LensFlare::CleanUp(){
+void wiLensFlare::CleanUp(){
 	if(vertexShader) vertexShader->Release(); vertexShader = NULL;
 	if(pixelShader) pixelShader->Release(); pixelShader = NULL;
 	if(geometryShader) geometryShader->Release(); geometryShader = NULL;
@@ -41,26 +41,26 @@ void LensFlare::CleanUp(){
 	if(blendState) blendState->Release(); blendState = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
 }
-void LensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* context, const XMVECTOR& lightPos
-					 , vector<Renderer::TextureView>& rims){
+void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* context, const XMVECTOR& lightPos
+					 , vector<wiRenderer::TextureView>& rims){
 
 	if(!rims.empty()){
 
 		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_POINTLIST );
-		Renderer::BindPrimitiveTopology(Renderer::POINTLIST,context);
-		Renderer::BindVertexLayout(inputLayout,context);
+		wiRenderer::BindPrimitiveTopology(wiRenderer::POINTLIST,context);
+		wiRenderer::BindVertexLayout(inputLayout,context);
 		//context->IASetInputLayout( inputLayout );
 		//context->VSSetShader( vertexShader, NULL, 0 );
 		//context->GSSetShader( geometryShader, NULL, 0 );
-		Renderer::BindPS(pixelShader,context);
-		Renderer::BindVS(vertexShader,context);
-		Renderer::BindGS(geometryShader,context);
+		wiRenderer::BindPS(pixelShader,context);
+		wiRenderer::BindVS(vertexShader,context);
+		wiRenderer::BindGS(geometryShader,context);
 
 		ConstantBuffer cb;
 		cb.mSunPos = lightPos/XMVectorSet(RENDERWIDTH,RENDERHEIGHT,1,1);
 		cb.mScreen = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,0,0);
 
-		Renderer::UpdateBuffer(constantBuffer,&cb,context);
+		wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
 
 	
 		//context->RSSetState(rasterizerState);
@@ -70,47 +70,47 @@ void LensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* co
 		//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 	
 		//context->GSSetConstantBuffers( 0, 1, &constantBuffer );
-		Renderer::BindRasterizerState(rasterizerState,context);
-		Renderer::BindDepthStencilState(depthStencilState,1,context);
-		Renderer::BindBlendState(blendState,context);
-		Renderer::BindConstantBufferGS(constantBuffer,0,context);
+		wiRenderer::BindRasterizerState(rasterizerState,context);
+		wiRenderer::BindDepthStencilState(depthStencilState,1,context);
+		wiRenderer::BindBlendState(blendState,context);
+		wiRenderer::BindConstantBufferGS(constantBuffer,0,context);
 
 		//context->GSSetShaderResources( 0,1,&depthMap );
-		Renderer::BindTextureGS(depthMap,0,context);
+		wiRenderer::BindTextureGS(depthMap,0,context);
 		//context->GSSetSamplers(0, 1, &samplerState);
 		//context->PSSetSamplers(0, 1, &samplerState);
-		Renderer::BindSamplerPS(Renderer::ssClampLin,0,context);
-		Renderer::BindSamplerGS(samplerState,0,context);
+		wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
+		wiRenderer::BindSamplerGS(samplerState,0,context);
 
 		int i=0;
-		for(Renderer::TextureView x : rims){
+		for(wiRenderer::TextureView x : rims){
 			if(x!=nullptr){
-				Renderer::BindTexturePS(x,i+1,context);
-				Renderer::BindTextureGS(x,i+1,context);
+				wiRenderer::BindTexturePS(x,i+1,context);
+				wiRenderer::BindTextureGS(x,i+1,context);
 				i++;
 			}
 		}
 		//context->Draw(i,0);
-		Renderer::Draw(i,context);
+		wiRenderer::Draw(i,context);
 
 		
 
 
 		//context->GSSetShader(0,0,0);
-		Renderer::BindGS(nullptr,context);
+		wiRenderer::BindGS(nullptr,context);
 		//context->GSSetConstantBuffers(0,0,0);
-		Renderer::BindConstantBufferGS(nullptr,0,context);
+		wiRenderer::BindConstantBufferGS(nullptr,0,context);
 	}
 }
 
-void LensFlare::LoadShaders(){
+void wiLensFlare::LoadShaders(){
 
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/lensFlareVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::add("shaders/lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		inputLayout = vsinfo->vertexLayout;
@@ -118,9 +118,9 @@ void LensFlare::LoadShaders(){
 	delete vsinfo;
 
 
-	pixelShader = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/lensFlarePS.cso", ResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/lensFlareGS.cso", ResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 
@@ -129,7 +129,7 @@ void LensFlare::LoadShaders(){
 	//ID3DBlob* pVSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load lensFlareVS.cso",0,0);}
-	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
+	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
 
  //   // Define the input layout
  //   D3D11_INPUT_ELEMENT_DESC layout[] =
@@ -139,7 +139,7 @@ void LensFlare::LoadShaders(){
 	//UINT numElements = ARRAYSIZE( layout );
 	//
  //   // Create the input layout
-	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
 	//	pVSBlob->GetBufferSize(), &inputLayout );
 
 	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
@@ -148,17 +148,17 @@ void LensFlare::LoadShaders(){
 	//ID3DBlob* pPSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlarePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load lensFlarePS.cso",0,0);}
-	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
 	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 
 
 	//ID3DBlob* pGSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load lensFlareGS.cso",0,0);}
-	//Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
+	//wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
 	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 }
-void LensFlare::SetUpCB()
+void wiLensFlare::SetUpCB()
 {
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
@@ -166,11 +166,11 @@ void LensFlare::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
+    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
 
 	
 }
-void LensFlare::SetUpStates()
+void wiLensFlare::SetUpStates()
 {
 	D3D11_SAMPLER_DESC samplerDesc;
 	ZeroMemory( &samplerDesc, sizeof(D3D11_SAMPLER_DESC) );
@@ -187,7 +187,7 @@ void LensFlare::SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	Renderer::graphicsDevice->CreateSamplerState(&samplerDesc, &samplerState);
+	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &samplerState);
 
 
 
@@ -203,7 +203,7 @@ void LensFlare::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	Renderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
+	wiRenderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
 
 
 
@@ -231,7 +231,7 @@ void LensFlare::SetUpStates()
 	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	Renderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
+	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
@@ -245,5 +245,5 @@ void LensFlare::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	Renderer::graphicsDevice->CreateBlendState(&bd,&blendState);
+	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendState);
 }

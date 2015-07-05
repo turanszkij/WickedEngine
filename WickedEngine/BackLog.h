@@ -2,7 +2,7 @@
 #define BACKLOG
 #include "WickedEngine.h"
 
-static class BackLog
+static class wiBackLog
 {
 private:
 	static deque<string> stream;

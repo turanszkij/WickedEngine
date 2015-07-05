@@ -16,13 +16,13 @@ typedef set<Object*> CulledObjectList;
 typedef unordered_map<Mesh*,CulledObjectList> CulledCollection;
 
 
-class SPTree
+class wiSPTree
 {
 protected:
 	int childCount;
-	SPTree();
+	wiSPTree();
 public:
-	~SPTree();
+	~wiSPTree();
 	void initialize(const vector<Cullable*>& objects);
 	void initialize(const vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax);
 
@@ -65,17 +65,17 @@ public:
 	static void getVisible(Node* node, SPHERE& frustum, CulledList& objects, int type = SP_TREE_STRICT_CULL);
 	static void getVisible(Node* node, RAY& frustum, CulledList& objects, int type = SP_TREE_STRICT_CULL);
 	static void getAll(Node* node, CulledList& objects);
-	SPTree* updateTree(Node* node);
+	wiSPTree* updateTree(Node* node);
 
 	void CleanUp();
 };
 
-class Octree : public SPTree
+class Octree : public wiSPTree
 {
 public:
 	Octree(){childCount=8;}
 };
-class QuadTree : public SPTree
+class QuadTree : public wiSPTree
 {
 public:
 	QuadTree(){childCount=4;}

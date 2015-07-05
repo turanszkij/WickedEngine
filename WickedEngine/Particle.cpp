@@ -2,4 +2,4 @@
 
 
 
-bool Particle::wireRender=false;
+bool wiParticle::wireRender=false;

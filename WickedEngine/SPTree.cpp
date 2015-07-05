@@ -4,36 +4,36 @@
 #define SP_TREE_BOX_CONTAIN
 
 
-SPTree::SPTree()
+wiSPTree::wiSPTree()
 {
 	root=NULL;
 }
 
-SPTree::~SPTree()
+wiSPTree::~wiSPTree()
 {
 	//CleanUp();
 }
 
-void SPTree::initialize(const vector<Cullable*>& objects){
+void wiSPTree::initialize(const vector<Cullable*>& objects){
 	initialize(objects,XMFLOAT3(D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX)
 		,XMFLOAT3(-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX));
 }
-void SPTree::initialize(const vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax){
+void wiSPTree::initialize(const vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax){
 	XMFLOAT3 min = newMin;
 	XMFLOAT3 max = newMax;
 
 	for(Cullable* object : objects){
 		XMFLOAT3 gMin = object->bounds.getMin();
 		XMFLOAT3 gMax = object->bounds.getMax();
-		min=WickedMath::Min(gMin,min);
-		max=WickedMath::Max(gMax,max);
+		min=wiMath::Min(gMin,min);
+		max=wiMath::Max(gMax,max);
 	}
 
-	this->root = new SPTree::Node(NULL,AABB(min,max));
+	this->root = new wiSPTree::Node(NULL,AABB(min,max));
 	AddObjects(this->root,objects);
 }
 
-void SPTree::CleanUp()
+void wiSPTree::CleanUp()
 {
 	if(root) 
 		root->Release();
@@ -43,7 +43,7 @@ void SPTree::CleanUp()
 }
 
 
-void SPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects){
+void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects){
 	for(Cullable* object : newObjects){
 		/*bool default_mesh = false;
 		bool water_mesh = false;
@@ -110,7 +110,7 @@ void SPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects){
 	
 }
 
-void SPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, int type){
 	if(!node) return;
 	int contain_type = frustum.CheckBox(node->box.corners);
 	if(!contain_type) 
@@ -125,7 +125,7 @@ void SPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, int t
 				)
 			)
 			{
-				//object->lastSquaredDistMulThousand=(long)(WickedMath::DistanceEstimated(object->bounds.getCenter(),frustum.getCamPos())*1000);
+				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.getCamPos())*1000);
 				objects.insert(object);
 			}
 		if(node->count){
@@ -134,7 +134,7 @@ void SPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, int t
 		}
 	}
 }
-void SPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, int type){
 	if(!node) return;
 	int contain_type = frustum.intersects(node->box);
 	if(!contain_type) 
@@ -148,7 +148,7 @@ void SPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, int type
 					(contain_type==INTERSECTS && frustum.intersects(object->bounds))
 				)
 			){
-				//object->lastSquaredDistMulThousand=(long)(WickedMath::DistanceEstimated(object->bounds.getCenter(),frustum.getCenter())*1000);
+				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.getCenter())*1000);
 				objects.insert(object);
 			}
 		if(node->count){
@@ -157,14 +157,14 @@ void SPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, int type
 		}
 	}
 }
-void SPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, int type){
 	if(!node) return;
 	int contain_type = frustum.intersects(node->box);
 	if(!contain_type) return;
 	else {
 		for(Cullable* object : node->objects)
 			if(frustum.intersects(object->bounds)){
-				//object->lastSquaredDistMulThousand=(long)(WickedMath::DistanceEstimated(object->bounds.getCenter(),frustum.center)*1000);
+				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.center)*1000);
 				objects.insert(object);
 			}
 		if(node->count){
@@ -173,14 +173,14 @@ void SPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, int ty
 		}
 	}
 }
-void SPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, int type){
 	if(!node) return;
 	int contain_type = frustum.intersects(node->box);
 	if(!contain_type) return;
 	else {
 		for(Cullable* object : node->objects)
 			if(frustum.intersects(object->bounds)){
-				//object->lastSquaredDistMulThousand=(long)(WickedMath::DistanceEstimated(object->bounds.getCenter(),frustum.center)*1000);
+				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.center)*1000);
 				objects.insert(object);
 			}
 		if(node->count){
@@ -189,7 +189,7 @@ void SPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, int type)
 		}
 	}
 }
-void SPTree::getAll(Node* node, CulledList& objects){
+void wiSPTree::getAll(Node* node, CulledList& objects){
 	if(node != nullptr){
 		objects.insert(node->objects.begin(),node->objects.end());
 		if(node->count){
@@ -199,7 +199,7 @@ void SPTree::getAll(Node* node, CulledList& objects){
 	}
 }
 
-SPTree* SPTree::updateTree(Node* node){
+wiSPTree* wiSPTree::updateTree(Node* node){
 	if(this && node)
 	{
 
@@ -229,7 +229,7 @@ SPTree* SPTree::updateTree(Node* node){
 					bad.push_back(item);
 				}
 
-				SPTree* tree;
+				wiSPTree* tree;
 				if(childCount==8) 
 					tree = new Octree();
 				else 

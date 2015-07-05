@@ -324,6 +324,7 @@
     <ClCompile Include="Client.cpp" />
     <ClCompile Include="CpuInfo.cpp" />
     <ClCompile Include="Cube.cpp" />
+    <ClCompile Include="DeferredRenderableComponent.cpp" />
     <ClCompile Include="DepthTarget.cpp" />
     <ClCompile Include="DirectInput.cpp" />
     <ClCompile Include="EmittedParticle.cpp" />
@@ -337,7 +338,8 @@
     <ClCompile Include="LensFlare.cpp" />
     <ClCompile Include="Lines.cpp" />
     <ClCompile Include="Network.cpp" />
-    <ClCompile Include="oImage.cpp" />
+    <ClCompile Include="RenderableComponent.cpp" />
+    <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="Particle.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="RenderTarget.cpp" />
@@ -574,6 +576,8 @@
     <ClInclude Include="BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="DeferredRenderableComponent.h" />
+    <ClInclude Include="RenderableComponent.h" />
     <ClInclude Include="WickedEngine.h" />
     <ClInclude Include="CpuInfo.h" />
     <ClInclude Include="Cube.h" />
@@ -591,7 +595,7 @@
     <ClInclude Include="LensFlare.h" />
     <ClInclude Include="Lines.h" />
     <ClInclude Include="Network.h" />
-    <ClInclude Include="oImage.h" />
+    <ClInclude Include="Sprite.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="PHYSICS.h" />
     <ClInclude Include="Renderer.h" />

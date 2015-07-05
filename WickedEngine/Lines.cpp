@@ -42,7 +42,7 @@ Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4A& c)
 	D3D11_SUBRESOURCE_DATA InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
-	Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
+	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
 
 	if(verts){
 		delete[](verts);
@@ -74,7 +74,7 @@ void Lines::SetUpVertices()
 	D3D11_SUBRESOURCE_DATA InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
-	Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
+	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
 
 	if(verts){
 		delete[](verts);

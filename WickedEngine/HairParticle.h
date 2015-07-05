@@ -1,11 +1,11 @@
 #pragma once
 #include "Particle.h"
 
-class SPTree;
+class wiSPTree;
 struct Material;
 
-class HairParticle :
-	public Particle
+class wiHairParticle :
+	public wiParticle
 {
 public:
 	struct Point
@@ -50,8 +50,8 @@ private:
 	static ID3D11BlendState* bs;
 	static int LOD[3];
 public:
-	HairParticle();
-	HairParticle(const string& newName, float newLen, int newCount
+	wiHairParticle();
+	wiHairParticle(const string& newName, float newLen, int newCount
 		, const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup);
 	void CleanUp();
 
@@ -64,7 +64,7 @@ public:
 
 	Object* object;
 	vector<Patch*> patches;
-	SPTree* spTree;
+	wiSPTree* spTree;
 	ID3D11Buffer *vb[3];
 };
 

@@ -1,25 +1,25 @@
-#include "oImage.h"
+#include "Sprite.h"
 
 
 
 
-oImage::oImage()
+wiSprite::wiSprite()
 {
 	Init();
 }
-oImage::oImage(const string& newTexture, const string& newMask, const string& newNormal){
+wiSprite::wiSprite(const string& newTexture, const string& newMask, const string& newNormal){
 	Init();
 	CreateReference(newTexture,newMask,newNormal);
 }
-oImage::oImage(const string& newTexture, const string& newMask){
+wiSprite::wiSprite(const string& newTexture, const string& newMask){
 	Init();
 	CreateReference(newTexture,newMask,"");
 }
-oImage::oImage(const string& newTexture){
+wiSprite::wiSprite(const string& newTexture){
 	Init();
 	CreateReference(newTexture,"","");
 }
-void oImage::Init(){
+void wiSprite::Init(){
 	texture="";
 	mask="";
 	normal="";
@@ -28,46 +28,46 @@ void oImage::Init(){
 	effects=ImageEffects();
 	anim=Anim();
 }
-void oImage::CreateReference(const string& newTexture, const string& newMask, const string& newNormal){
+void wiSprite::CreateReference(const string& newTexture, const string& newMask, const string& newNormal){
 	if(newTexture.length()) {
 		texture = newTexture;
-		texturePointer = (ID3D11ShaderResourceView*)ResourceManager::add(newTexture);
+		texturePointer = (ID3D11ShaderResourceView*)wiResourceManager::add(newTexture);
 	}
 	if(newMask.length()) {
-		maskPointer=(ID3D11ShaderResourceView*)ResourceManager::add(newMask);
+		maskPointer=(ID3D11ShaderResourceView*)wiResourceManager::add(newMask);
 		effects.setMaskMap( maskPointer );
 		mask = newMask;
 	}
 	if(newNormal.length()) {
-		normalPointer=(ID3D11ShaderResourceView*)ResourceManager::add(newNormal);
+		normalPointer=(ID3D11ShaderResourceView*)wiResourceManager::add(newNormal);
 		//effects.setNormalMap( normalPointer );
 		normal = newNormal;
 	}
 }
-void oImage::CleanUp(){
+void wiSprite::CleanUp(){
 }
 
-void oImage::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* context){
+void wiSprite::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* context){
 	if(effects.opacity<1 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE) ){
 		effects.setRefractionMap(refracRes);
-		Image::Draw(texturePointer,effects,context);
+		wiImage::Draw(texturePointer,effects,context);
 	}
 }
-void oImage::Draw(){
-	oImage::Draw(NULL,Renderer::immediateContext);
+void wiSprite::Draw(){
+	wiSprite::Draw(NULL,wiRenderer::immediateContext);
 }
-void oImage::DrawNormal(ID3D11DeviceContext* context){
+void wiSprite::DrawNormal(ID3D11DeviceContext* context){
 	if(normalPointer && effects.opacity<1 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){
 		//effects.setRefractionMap(refracRes);
 
 		ImageEffects effectsMod(effects);
 		effectsMod.blendFlag=BLENDMODE_ADDITIVE;
 		effectsMod.extractNormalMap=true;
-		Image::Draw(normalPointer,effectsMod,context);
+		wiImage::Draw(normalPointer,effectsMod,context);
 	}
 }
 
-void oImage::Update(float gameSpeed){
+void wiSprite::Update(float gameSpeed){
 	effects.pos.x+=anim.vel.x*gameSpeed;
 	effects.pos.y+=anim.vel.y*gameSpeed;
 	effects.pos.z+=anim.vel.z*gameSpeed;
@@ -114,6 +114,6 @@ void oImage::Update(float gameSpeed){
 	}
 	else anim.drawRecAnim.elapsedFrames+=gameSpeed;
 }
-void oImage::Update(){
+void wiSprite::Update(){
 	Update(1);
 }

@@ -46,7 +46,7 @@ BULLET::BULLET()
 
 
 #ifdef BACKLOG
-	BackLog::post("BULLET physics Initialized");
+	wiBackLog::post("BULLET physics Initialized");
 #endif
 
 	///-----initialization_end-----
@@ -811,7 +811,7 @@ void BULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
             if (pt.getDistance()<0.f)
             {
 				if(pt.getAppliedImpulse()>10.f){
-					//((SoundEffect*)ResourceManager::get("sound/select_character.wav")->data)->Play();
+					//((SoundEffect*)wiResourceManager::get("sound/select_character.wav")->data)->Play();
 				}
                 const btVector3& ptA = pt.getPositionWorldOnA();
                 const btVector3& ptB = pt.getPositionWorldOnB();

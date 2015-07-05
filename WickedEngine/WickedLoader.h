@@ -4,10 +4,10 @@
 #include "skinningDEF.h"
 
 class HitSphere;
-class Particle;
-class EmittedParticle;
-class HairParticle;
-class RenderTarget;
+class wiParticle;
+class wiEmittedParticle;
+class wiHairParticle;
+class wiRenderTarget;
 
 struct Armature;
 struct Bone;
@@ -467,14 +467,14 @@ struct Object : public Streamable, public Transform
 	bool armatureDeform;
 
 	//PARTICLE
-	enum ParticleEmitter{
+	enum wiParticleEmitter{
 		NO_EMITTER,
 		EMITTER_VISIBLE,
 		EMITTER_INVISIBLE,
 	};
-	ParticleEmitter particleEmitter;
-	vector< EmittedParticle* > eParticleSystems;
-	vector< HairParticle* > hParticleSystems;
+	wiParticleEmitter particleEmitter;
+	vector< wiEmittedParticle* > ewiParticleSystems;
+	vector< wiHairParticle* > hwiParticleSystems;
 
 	
 	//PHYSICS
@@ -499,8 +499,8 @@ struct Object : public Streamable, public Transform
 		trail.resize(0);
 		trailBuff=NULL;
 		particleEmitter = NO_EMITTER;
-		eParticleSystems.resize(0);
-		hParticleSystems.resize(0);
+		ewiParticleSystems.resize(0);
+		hwiParticleSystems.resize(0);
 		mesh=nullptr;
 		rigidBody=kinematic=false;
 		collisionShape="";
@@ -717,7 +717,7 @@ struct Light : public Cullable , public Transform
 	vector<ID3D11ShaderResourceView*> lensFlareRimTextures;
 	vector<string> lensFlareNames;
 
-	vector<RenderTarget> shadowMap;
+	vector<wiRenderTarget> shadowMap;
 	vector<SHCAM> shadowCam;
 
 	enum LightType{
@@ -882,7 +882,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 
 
 #include "SPTree.h"
-class SPTree;
+class wiSPTree;
 #define GENERATE_QUADTREE 0
 #define GENERATE_OCTREE 1
-void GenerateSPTree(SPTree*& tree, vector<Cullable*>& objects, int type=GENERATE_QUADTREE);
+void GeneratewiSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type=GENERATE_QUADTREE);

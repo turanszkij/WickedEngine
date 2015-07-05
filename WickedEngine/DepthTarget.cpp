@@ -2,7 +2,7 @@
 
 
 
-DepthTarget::DepthTarget()
+wiDepthTarget::wiDepthTarget()
 {
 	texture2D = NULL;
 	depthTarget = NULL;
@@ -10,14 +10,14 @@ DepthTarget::DepthTarget()
 }
 
 
-DepthTarget::~DepthTarget()
+wiDepthTarget::~wiDepthTarget()
 {
 	if(texture2D) texture2D->Release(); texture2D = NULL;
 	if(depthTarget) depthTarget->Release(); depthTarget = NULL;
 	if(shaderResource) shaderResource->Release(); shaderResource = NULL;
 }
 
-void DepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
+void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 {
 	D3D11_TEXTURE2D_DESC depthBufferDesc;
 	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
@@ -37,7 +37,7 @@ void DepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 
 	HRESULT hr;
 	// Create the texture for the depth buffer using the filled out description.
-	hr=Renderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
+	hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
@@ -47,7 +47,7 @@ void DepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 	depthStencilViewDesc.Flags = 0;
 
 	// Create the depth stencil view.
-	hr=Renderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
+	hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
 
 	//Create Depth ShaderResource
 	D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
@@ -57,9 +57,9 @@ void DepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 	shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
 	shaderResourceViewDesc.Texture2D.MipLevels = 1;
 
-	Renderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
+	wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
 }
-void DepthTarget::InitializeCube(int size)
+void wiDepthTarget::InitializeCube(int size)
 {
 	D3D11_TEXTURE2D_DESC depthBufferDesc;
 	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
@@ -79,7 +79,7 @@ void DepthTarget::InitializeCube(int size)
 
 	HRESULT hr;
 	// Create the texture for the depth buffer using the filled out description.
-	hr=Renderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
+	hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
@@ -91,7 +91,7 @@ void DepthTarget::InitializeCube(int size)
 	depthStencilViewDesc.Flags = 0;
 
 	// Create the depth stencil view.
-	hr=Renderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
+	hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
 
 	//Create Depth ShaderResource
 	D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
@@ -101,19 +101,19 @@ void DepthTarget::InitializeCube(int size)
 	shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
 	shaderResourceViewDesc.Texture2D.MipLevels = 1;
 
-	Renderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
+	wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
 }
 
-void DepthTarget::Clear(ID3D11DeviceContext* context)
+void wiDepthTarget::Clear(ID3D11DeviceContext* context)
 {
 	context->ClearDepthStencilView( depthTarget, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
-void DepthTarget::CopyFrom(const DepthTarget& from,ID3D11DeviceContext* context)
+void wiDepthTarget::CopyFrom(const wiDepthTarget& from, ID3D11DeviceContext* context)
 {
 	if(shaderResource) shaderResource->Release();
 	static D3D11_SHADER_RESOURCE_VIEW_DESC desc;
 	from.shaderResource->GetDesc(&desc);
 	context->CopyResource(texture2D,from.texture2D);
-	HRESULT r = Renderer::graphicsDevice->CreateShaderResourceView(texture2D,&desc,&shaderResource);
+	HRESULT r = wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D,&desc,&shaderResource);
 }
 

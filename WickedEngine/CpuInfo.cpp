@@ -2,22 +2,22 @@
 
 #ifndef WINSTORE_SUPPORT
 
-bool CpuInfo::m_canReadCpu;
-HQUERY CpuInfo::m_queryHandle;
-HCOUNTER CpuInfo::m_counterHandle;
-unsigned long CpuInfo::m_lastSampleTime;
-long CpuInfo::m_cpuUsage;
+bool wiCpuInfo::m_canReadCpu;
+HQUERY wiCpuInfo::m_queryHandle;
+HCOUNTER wiCpuInfo::m_counterHandle;
+unsigned long wiCpuInfo::m_lastSampleTime;
+long wiCpuInfo::m_cpuUsage;
 
-CpuInfo::CpuInfo()
+wiCpuInfo::wiCpuInfo()
 {
 }
 
 
-CpuInfo::~CpuInfo()
+wiCpuInfo::~wiCpuInfo()
 {
 }
 
-void CpuInfo::Initialize()
+void wiCpuInfo::Initialize()
 {
 	PDH_STATUS status;
 
@@ -46,7 +46,7 @@ void CpuInfo::Initialize()
 	return;
 }
 
-void CpuInfo::Shutdown()
+void wiCpuInfo::Shutdown()
 {
 	if(m_canReadCpu)
 	{
@@ -56,7 +56,7 @@ void CpuInfo::Shutdown()
 	return;
 }
 
-void CpuInfo::Frame()
+void wiCpuInfo::Frame()
 {
 	PDH_FMT_COUNTERVALUE value; 
 
@@ -77,7 +77,7 @@ void CpuInfo::Frame()
 	return;
 }
 
-int CpuInfo::GetCpuPercentage()
+int wiCpuInfo::GetCpuPercentage()
 {
 	int usage;
 

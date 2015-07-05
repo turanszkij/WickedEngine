@@ -1,11 +1,11 @@
 #include "ResourceManager.h"
 
 
-ResourceManager::container ResourceManager::resources;
-ResourceManager::filetypes ResourceManager::types;
-mutex ResourceManager::MUTEX;
+wiResourceManager::container wiResourceManager::resources;
+wiResourceManager::filetypes wiResourceManager::types;
+mutex wiResourceManager::MUTEX;
 
-void ResourceManager::SetUp()
+void wiResourceManager::SetUp()
 {
 	types.insert( pair<string,Data_Type>("jpg",IMAGE) );
 	types.insert( pair<string,Data_Type>("JPG",IMAGE) );
@@ -15,7 +15,7 @@ void ResourceManager::SetUp()
 	types.insert( pair<string,Data_Type>("wav",SOUND) );
 }
 
-const ResourceManager::Resource* ResourceManager::get(const string& name)
+const wiResourceManager::Resource* wiResourceManager::get(const string& name)
 {
 	container::iterator it = resources.find(name);
 	if(it!=resources.end())
@@ -23,8 +23,8 @@ const ResourceManager::Resource* ResourceManager::get(const string& name)
 	else return nullptr;
 }
 
-void* ResourceManager::add(const string& name, Data_Type newType
-	, Renderer::VertexLayoutDesc* vertexLayoutDesc, UINT elementCount, D3D11_SO_DECLARATION_ENTRY* streamOutDecl)
+void* wiResourceManager::add(const string& name, Data_Type newType
+	, wiRenderer::VertexLayoutDesc* vertexLayoutDesc, UINT elementCount, D3D11_SO_DECLARATION_ENTRY* streamOutDecl)
 {
 	const Resource* res = get(name);
 	if(!res){
@@ -48,7 +48,7 @@ void* ResourceManager::add(const string& name, Data_Type newType
 		switch(type){
 		case Data_Type::IMAGE:
 		{
-			Renderer::TextureView image=nullptr;
+			wiRenderer::TextureView image=nullptr;
 			if(
 					!ext.compare("jpg")
 				|| !ext.compare("JPG")
@@ -56,12 +56,12 @@ void* ResourceManager::add(const string& name, Data_Type newType
 				|| !ext.compare("PNG")
 				)
 			{
-				Renderer::graphicsMutex.lock();
-				CreateWICTextureFromFile(true,Renderer::graphicsDevice,Renderer::immediateContext,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
-				Renderer::graphicsMutex.unlock();
+				wiRenderer::graphicsMutex.lock();
+				CreateWICTextureFromFile(true,wiRenderer::graphicsDevice,wiRenderer::immediateContext,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
+				wiRenderer::graphicsMutex.unlock();
 			}
 			else if(!ext.compare("dds")){
-				CreateDDSTextureFromFile(Renderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
+				CreateDDSTextureFromFile(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
 			}
 
 			if(image)
@@ -70,9 +70,9 @@ void* ResourceManager::add(const string& name, Data_Type newType
 		break;
 		case Data_Type::IMAGE_STAGING:
 		{
-			Renderer::APIResource image=nullptr;
+			wiRenderer::APIResource image=nullptr;
 			if(!ext.compare("dds")){
-				CreateDDSTextureFromFileEx(Renderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),0
+				CreateDDSTextureFromFileEx(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),0
 					,D3D11_USAGE_STAGING,0,D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE,0,false
 					,&image,nullptr);
 			}
@@ -83,25 +83,25 @@ void* ResourceManager::add(const string& name, Data_Type newType
 		break;
 		case Data_Type::SOUND:
 		{
-			success = new SoundEffect(name);
+			success = new wiSoundEffect(name);
 		}
 		break;
 		case Data_Type::MUSIC:
 		{
-			success = new Music(name);
+			success = new wiMusic(name);
 		}
 		break;
 		case Data_Type::VERTEXSHADER:
 		{
 			BYTE* buffer;
 			size_t bufferSize;
-			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
-				Renderer::VertexShader shader = nullptr;
-				Renderer::graphicsDevice->CreateVertexShader(buffer, bufferSize, NULL, &shader);
+			if (wiHelper::readByteData(name, &buffer, bufferSize)){
+				wiRenderer::VertexShader shader = nullptr;
+				wiRenderer::graphicsDevice->CreateVertexShader(buffer, bufferSize, NULL, &shader);
 				if (vertexLayoutDesc != nullptr && elementCount > 0){
-					Renderer::VertexShaderInfo* vertexShaderInfo = new Renderer::VertexShaderInfo();
+					wiRenderer::VertexShaderInfo* vertexShaderInfo = new wiRenderer::VertexShaderInfo();
 					vertexShaderInfo->vertexShader = shader;
-					Renderer::graphicsDevice->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, &vertexShaderInfo->vertexLayout);
+					wiRenderer::graphicsDevice->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, &vertexShaderInfo->vertexLayout);
 					if (vertexShaderInfo->vertexShader != nullptr && vertexShaderInfo->vertexLayout != nullptr){
 						success = vertexShaderInfo;
 					}
@@ -120,9 +120,9 @@ void* ResourceManager::add(const string& name, Data_Type newType
 		{
 			BYTE* buffer;
 			size_t bufferSize;
-			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
-				Renderer::PixelShader shader = nullptr;
-				Renderer::graphicsDevice->CreatePixelShader(buffer, bufferSize, nullptr, &shader);
+			if (wiHelper::readByteData(name, &buffer, bufferSize)){
+				wiRenderer::PixelShader shader = nullptr;
+				wiRenderer::graphicsDevice->CreatePixelShader(buffer, bufferSize, nullptr, &shader);
 				delete[] buffer;
 				success = shader;
 			}
@@ -135,11 +135,11 @@ void* ResourceManager::add(const string& name, Data_Type newType
 		{
 			BYTE* buffer;
 			size_t bufferSize;
-			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
-				Renderer::GeometryShader shader = nullptr;
-				Renderer::graphicsDevice->CreateGeometryShader(buffer, bufferSize, nullptr, &shader);
+			if (wiHelper::readByteData(name, &buffer, bufferSize)){
+				wiRenderer::GeometryShader shader = nullptr;
+				wiRenderer::graphicsDevice->CreateGeometryShader(buffer, bufferSize, nullptr, &shader);
 				if (streamOutDecl != nullptr && elementCount > 0){
-					Renderer::graphicsDevice->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
+					wiRenderer::graphicsDevice->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
 						elementCount, NULL, 0, shader ? 0 : D3D11_SO_NO_RASTERIZED_STREAM, NULL, &shader);
 				}
 				delete[] buffer;
@@ -154,9 +154,9 @@ void* ResourceManager::add(const string& name, Data_Type newType
 		{
 			BYTE* buffer;
 			size_t bufferSize;
-			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
-				Renderer::HullShader shader = nullptr;
-				Renderer::graphicsDevice->CreateHullShader(buffer, bufferSize, nullptr, &shader);
+			if (wiHelper::readByteData(name, &buffer, bufferSize)){
+				wiRenderer::HullShader shader = nullptr;
+				wiRenderer::graphicsDevice->CreateHullShader(buffer, bufferSize, nullptr, &shader);
 				delete[] buffer;
 				success = shader;
 			}
@@ -169,9 +169,9 @@ void* ResourceManager::add(const string& name, Data_Type newType
 		{
 			BYTE* buffer;
 			size_t bufferSize;
-			if (WickedHelper::readByteData(name, &buffer, bufferSize)){
-				Renderer::DomainShader shader = nullptr;
-				Renderer::graphicsDevice->CreateDomainShader(buffer, bufferSize, nullptr, &shader);
+			if (wiHelper::readByteData(name, &buffer, bufferSize)){
+				wiRenderer::DomainShader shader = nullptr;
+				wiRenderer::graphicsDevice->CreateDomainShader(buffer, bufferSize, nullptr, &shader);
 				delete[] buffer;
 				success = shader;
 			}
@@ -201,7 +201,7 @@ void* ResourceManager::add(const string& name, Data_Type newType
 	return res->data;
 }
 
-bool ResourceManager::del(const string& name)
+bool wiResourceManager::del(const string& name)
 {
 	const Resource* res = get(name);
 
@@ -212,7 +212,7 @@ bool ResourceManager::del(const string& name)
 		if(res->data)
 			switch(res->type){
 			case Data_Type::IMAGE:
-				((Renderer::TextureView)res->data)->Release();
+				((wiRenderer::TextureView)res->data)->Release();
 				break;
 			case Data_Type::SOUND:
 				delete ((SoundResource)res->data);
@@ -231,7 +231,7 @@ bool ResourceManager::del(const string& name)
 	return false;
 }
 
-bool ResourceManager::CleanUp()
+bool wiResourceManager::CleanUp()
 {
 	/*vector<string> names;
 	names.reserve(resources.size());

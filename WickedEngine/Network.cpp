@@ -21,13 +21,13 @@ bool Network::sendText(const std::string& text, SOCKET socket){
 
 		if(sent==SOCKET_ERROR) {
 			//cout << "\n[Error] Sending text '"<<text<<"' failed with error: " << WSAGetLastError();
-			BackLog::post("[Error][sendText] Sending text failed!");
+			wiBackLog::post("[Error][sendText] Sending text failed!");
 			return false;
 		}
 
 		return true;
 	}
-	BackLog::post("[Error][sendText] Sending text length failed!");
+	wiBackLog::post("[Error][sendText] Sending text length failed!");
 	return false;
 }
 
@@ -39,7 +39,7 @@ bool Network::receiveText(std::string& text, SOCKET socket){
 		int received = recv(socket, puffer, textlen, 0);
 		if(received<=0){
 			//cout<< "[Error][receiveText] The recv call failed with error!\n";
-			BackLog::post("[Error][receiveText] The recv call failed with error!");
+			wiBackLog::post("[Error][receiveText] The recv call failed with error!");
 		} 
 		else if (received <= textlen) {
 			puffer[received]='\0';
@@ -48,11 +48,11 @@ bool Network::receiveText(std::string& text, SOCKET socket){
 		}
 		else{
 			//cout<< "[Error][receiveText] Too long request!\n";
-			BackLog::post("[Error][receiveText] Too long request!");
+			wiBackLog::post("[Error][receiveText] Too long request!");
 		}
 		return false;
 	}
-	BackLog::post("[Error][receiveText] Didn't receive text length!");
+	wiBackLog::post("[Error][receiveText] Didn't receive text length!");
 	return false;
 }
 

@@ -7,10 +7,10 @@ struct SkinnedVertex;
 struct Mesh;
 struct Object;
 
-class Particle
+class wiParticle
 {
 protected:
-	Particle(){};
+	wiParticle(){};
 
 public:
 	

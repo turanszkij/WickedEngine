@@ -1,7 +1,7 @@
 #include "RenderTarget.h"
 
 
-void RenderTarget::clear(){
+void wiRenderTarget::clear(){
 	textureDesc = { 0 };
 	numViews = 0;
 	viewPort = D3D11_VIEWPORT();
@@ -9,11 +9,11 @@ void RenderTarget::clear(){
 	retargetted = false;
 }
 
-RenderTarget::RenderTarget()
+wiRenderTarget::wiRenderTarget()
 {
 	clear();
 }
-RenderTarget::RenderTarget(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
+wiRenderTarget::wiRenderTarget(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
 	, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
 	clear();
@@ -21,7 +21,7 @@ RenderTarget::RenderTarget(UINT width, UINT height, int numViews, bool hasDepth,
 }
 
 
-RenderTarget::~RenderTarget()
+wiRenderTarget::~wiRenderTarget()
 {
 	for(int i=0;i<numViews;++i){
 		if(texture2D[i]) texture2D[i]->Release(); texture2D[i] = NULL;
@@ -32,10 +32,10 @@ RenderTarget::~RenderTarget()
 	texture2D.clear();
 	renderTarget.clear();
 	shaderResource.clear();
-	if(depth) depth->~DepthTarget(); depth=NULL;
+	if(depth) depth->~wiDepthTarget(); depth=NULL;
 }
 
-void RenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
+void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
 	, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
 	this->numViews = numViews;
@@ -74,9 +74,9 @@ void RenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDep
 	shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 
 	for(int i=0;i<numViews;++i){
-		Renderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
-		Renderer::graphicsDevice->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
-		Renderer::graphicsDevice->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[i]);
+		wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
+		wiRenderer::graphicsDevice->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
+		wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[i]);
 	}
 	
 	viewPort.Width = (FLOAT)width;
@@ -87,11 +87,11 @@ void RenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDep
     viewPort.TopLeftY = 0;
 
 	if(hasDepth) {
-		depth = new DepthTarget();
+		depth = new wiDepthTarget();
 		depth->Initialize(width,height,MSAAC,MSAAQ);
 	}
 }
-void RenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format)
+void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format)
 {
 	this->numViews = numViews;
 	texture2D.resize(numViews);
@@ -128,9 +128,9 @@ void RenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_F
 	shaderResourceViewDesc.TextureCube.MipLevels = 1;
 
 	for(int i=0;i<numViews;++i){
-		Renderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
-		Renderer::graphicsDevice->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
-		Renderer::graphicsDevice->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[0]);
+		wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
+		wiRenderer::graphicsDevice->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
+		wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[0]);
 	}
 	
 	viewPort.Width = (FLOAT)size;
@@ -141,20 +141,20 @@ void RenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_F
     viewPort.TopLeftY = 0;
 
 	if(hasDepth) {
-		depth = new DepthTarget();
+		depth = new wiDepthTarget();
 		depth->InitializeCube(size);
 	}
 }
-void RenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth)
+void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth)
 {
 	InitializeCube(size,numViews,hasDepth,DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
-void RenderTarget::Activate(ID3D11DeviceContext* context)
+void wiRenderTarget::Activate(ID3D11DeviceContext* context)
 {
 	Activate(context,0,0,0,0);
 }
-void RenderTarget::Activate(ID3D11DeviceContext* context, float r, float g, float b, float a)
+void wiRenderTarget::Activate(ID3D11DeviceContext* context, float r, float g, float b, float a)
 {
 	if(context!=nullptr){
 		Set(context);
@@ -164,7 +164,7 @@ void RenderTarget::Activate(ID3D11DeviceContext* context, float r, float g, floa
 		if(depth) depth->Clear(context);
 	}
 }
-void RenderTarget::Activate(ID3D11DeviceContext* context, DepthTarget* getDepth, float r, float g, float b, float a)
+void wiRenderTarget::Activate(ID3D11DeviceContext* context, wiDepthTarget* getDepth, float r, float g, float b, float a)
 {
 	if(context!=nullptr){
 		Set(context,getDepth);
@@ -173,11 +173,11 @@ void RenderTarget::Activate(ID3D11DeviceContext* context, DepthTarget* getDepth,
 			context->ClearRenderTargetView(renderTarget[i], ClearColor);
 	}
 }
-void RenderTarget::Activate(ID3D11DeviceContext* context, DepthTarget* getDepth)
+void wiRenderTarget::Activate(ID3D11DeviceContext* context, wiDepthTarget* getDepth)
 {
 	Activate(context,getDepth,0,0,0,0);
 }
-void RenderTarget::Set(ID3D11DeviceContext* context)
+void wiRenderTarget::Set(ID3D11DeviceContext* context)
 {
 	//ID3D11ShaderResourceView* t[]={nullptr};
 	//context->PSSetShaderResources(6,1,t);
@@ -186,7 +186,7 @@ void RenderTarget::Set(ID3D11DeviceContext* context)
 		context->OMSetRenderTargets(numViews, renderTarget.data(),(depth?depth->depthTarget:nullptr));
 	}
 }
-void RenderTarget::Set(ID3D11DeviceContext* context, DepthTarget* getDepth)
+void wiRenderTarget::Set(ID3D11DeviceContext* context, wiDepthTarget* getDepth)
 {
 	//ID3D11ShaderResourceView* t[]={nullptr};
 	//context->PSSetShaderResources(6,1,t);
@@ -196,7 +196,7 @@ void RenderTarget::Set(ID3D11DeviceContext* context, DepthTarget* getDepth)
 		context->OMSetRenderTargets(numViews, renderTarget.data(),(depth?depth->depthTarget:nullptr));
 	}
 }
-void RenderTarget::Retarget(ID3D11ShaderResourceView* resource)
+void wiRenderTarget::Retarget(ID3D11ShaderResourceView* resource)
 {
 	retargetted=true;
 	for(int i=0;i<shaderResource.size();++i){
@@ -204,7 +204,7 @@ void RenderTarget::Retarget(ID3D11ShaderResourceView* resource)
 		shaderResource[i]=resource;
 	}
 }
-void RenderTarget::Restore(){
+void wiRenderTarget::Restore(){
 	if(retargetted){
 		for(int i=0;i<shaderResource.size();++i){
 			shaderResource[i]=SAVEDshaderResource[i];
@@ -213,7 +213,7 @@ void RenderTarget::Restore(){
 	retargetted=false;
 }
 
-UINT RenderTarget::GetMipCount()
+UINT wiRenderTarget::GetMipCount()
 {
 	if (shaderResource.empty())
 		return 0U;

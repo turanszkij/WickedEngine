@@ -1,24 +1,24 @@
 #include "BackLog.h"
 //#include "GameComponents.h"
 
-//extern ID3D11Device*			Renderer::graphicsDevice;
+//extern ID3D11Device*			wiRenderer::graphicsDevice;
 
-deque<string> BackLog::stream;
-deque<string> BackLog::history;
-mutex BackLog::logMutex;
-BackLog::State BackLog::state;
-const float BackLog::speed=50.0f;
-unsigned int BackLog::deletefromline = 100;
-float BackLog::pos;
-int BackLog::scroll;
-int BackLog::RENDERWIDTH,BackLog::RENDERHEIGHT;
-stringstream BackLog::inputArea;
-int BackLog::historyPos=0;
+deque<string> wiBackLog::stream;
+deque<string> wiBackLog::history;
+mutex wiBackLog::logMutex;
+wiBackLog::State wiBackLog::state;
+const float wiBackLog::speed=50.0f;
+unsigned int wiBackLog::deletefromline = 100;
+float wiBackLog::pos;
+int wiBackLog::scroll;
+int wiBackLog::RENDERWIDTH,wiBackLog::RENDERHEIGHT;
+stringstream wiBackLog::inputArea;
+int wiBackLog::historyPos=0;
 
 
-void BackLog::Initialize(int width, int height){
+void wiBackLog::Initialize(int width, int height){
 	//stream.resize(0);
-	ResourceManager::add("images/logBG.png");
+	wiResourceManager::add("images/logBG.png");
 	RENDERWIDTH=width;
 	RENDERHEIGHT=height;
 	pos=RENDERHEIGHT;
@@ -26,12 +26,12 @@ void BackLog::Initialize(int width, int height){
 	state=DISABLED;
 	deletefromline=100;
 	inputArea=stringstream("");
-	//post("BackLog Created");
+	//post("wiBackLog Created");
 }
-void BackLog::CleanUp(){
+void wiBackLog::CleanUp(){
 	stream.clear();
 }
-void BackLog::Toggle(){
+void wiBackLog::Toggle(){
 	switch(state){
 	case IDLE:
 		state=DEACTIVATING;
@@ -42,29 +42,29 @@ void BackLog::Toggle(){
 	default:break;
 	};
 }
-void BackLog::Scroll(int dir){
+void wiBackLog::Scroll(int dir){
 	scroll+=dir;
 }
-void BackLog::Update(){
+void wiBackLog::Update(){
 	if(state==DEACTIVATING) pos+=speed;
 	else if(state==ACTIVATING) pos-=speed;
 	if(pos>=RENDERHEIGHT) {state=DISABLED; pos=RENDERHEIGHT;}
 	else if(pos<=0) {state=IDLE; pos=0;}
 }
-void BackLog::Draw(){
+void wiBackLog::Draw(){
 	if(state!=DISABLED){
-		Image::BatchBegin();
+		wiImage::BatchBegin();
 		ImageEffects fx = ImageEffects(RENDERWIDTH,RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
-		fx.opacity=WickedMath::Lerp(0,1,pos/RENDERHEIGHT);
-		Image::Draw((Renderer::TextureView)(ResourceManager::get("images/logBG.png")->data),fx);
-		Font::Draw(BackLog::getText(),"01",XMFLOAT4(5,pos-RENDERHEIGHT+75+scroll,0,-8),"left","bottom");
-		Font::Draw(inputArea.str().c_str(),"01",XMFLOAT4(5,-RENDERHEIGHT+10,0,-8),"left","bottom");
+		fx.opacity=wiMath::Lerp(0,1,pos/RENDERHEIGHT);
+		wiImage::Draw((wiRenderer::TextureView)(wiResourceManager::get("images/logBG.png")->data),fx);
+		wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
+		wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}
 }
 
 
-string BackLog::getText(){
+string wiBackLog::getText(){
 	logMutex.lock();
 	stringstream ss("");
 	for(unsigned int i=0;i<stream.size();++i)
@@ -72,12 +72,12 @@ string BackLog::getText(){
 	logMutex.unlock();
 	return ss.str();
 }
-void BackLog::clear(){
+void wiBackLog::clear(){
 	logMutex.lock();
 	stream.clear();
 	logMutex.unlock();
 }
-void BackLog::post(const char* input){
+void wiBackLog::post(const char* input){
 	logMutex.lock();
 	stringstream ss("");
 	ss<<input<<endl;
@@ -87,10 +87,10 @@ void BackLog::post(const char* input){
 	}
 	logMutex.unlock();
 }
-void BackLog::input(const char& input){
+void wiBackLog::input(const char& input){
 	inputArea<<input;
 }
-void BackLog::acceptInput(){
+void wiBackLog::acceptInput(){
 	historyPos=0;
 	stringstream commandStream("");
 	commandStream<<inputArea.str();
@@ -114,18 +114,18 @@ void BackLog::acceptInput(){
 	GameComponents::wakeConsoleCommand=true;
 #endif
 }
-void BackLog::deletefromInput(){
+void wiBackLog::deletefromInput(){
 	stringstream ss(inputArea.str().substr(0,inputArea.str().length()-1));
 	inputArea.str("");
 	inputArea<<ss.str();
 }
-void BackLog::save(ofstream& file){
+void wiBackLog::save(ofstream& file){
 	for(deque<string>::iterator iter=stream.begin(); iter!=stream.end(); ++iter)
 		file<<iter->c_str();
 	file.close();
 }
 
-void BackLog::historyPrev(){
+void wiBackLog::historyPrev(){
 	if(!history.empty()){
 		inputArea.str("");
 		inputArea<<history[history.size()-1-historyPos];
@@ -133,7 +133,7 @@ void BackLog::historyPrev(){
 			historyPos++;
 	}
 }
-void BackLog::historyNext(){
+void wiBackLog::historyNext(){
 	if(!history.empty()){
 		if(historyPos>0)
 			historyPos--;

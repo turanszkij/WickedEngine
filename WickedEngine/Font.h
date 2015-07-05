@@ -2,9 +2,9 @@
 #include "WickedEngine.h"
 #define MAX_TEXT 20000
 
-class Renderer;
+class wiRenderer;
 
-static class Font
+static class wiFont
 {
 private:
 	static mutex MUTEX;
@@ -58,7 +58,7 @@ protected:
 	static DWORD counter;
 
 
-	struct FontStyle{
+	struct wiFontStyle{
 		string name;
 		ID3D11ShaderResourceView *texture;
 		
@@ -69,11 +69,11 @@ protected:
 		LookUp lookup[127];
 		int texWidth,texHeight,charSize,recSize;
 
-		FontStyle(){}
-		FontStyle(const string& newName);
+		wiFontStyle(){}
+		wiFontStyle(const string& newName);
 		void CleanUp();
 	};
-	static vector<FontStyle> fontStyles;
+	static vector<wiFontStyle> fontStyles;
 
 
 	static void ModifyGeo(const wchar_t* text,XMFLOAT2 sizSpacing,const int& style, ID3D11DeviceContext* context = nullptr);
@@ -98,8 +98,8 @@ public:
 	static int textWidth(const wchar_t*,FLOAT siz,const int& style);
 	static int textHeight(const wchar_t*,FLOAT siz,const int& style);
 
-	static void addFontStyle( string toAdd);
-	static int getFontStyleByName( string get);
+	static void addFontStyle( const string& toAdd );
+	static int getFontStyleByName( const string& get );
 
 	void CleanUp();
 };

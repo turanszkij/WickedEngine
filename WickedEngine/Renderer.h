@@ -25,11 +25,11 @@ struct RAY;
 
 class  Lines;
 class  Cube;
-class  Particle;
-class  EmittedParticle;
-class  HairParticle;
-class  oImage;
-class  SPTree;
+class  wiParticle;
+class  wiEmittedParticle;
+class  wiHairParticle;
+class  wiSprite;
+class  wiSPTree;
 class  TaskThread;
 struct Cullable;
 class  PHYSICS;
@@ -38,7 +38,7 @@ class  Camera;
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string,Material*> MaterialCollection;
 
-class Renderer
+class wiRenderer
 {
 public:
 #define API_CALL_STRICTNESS
@@ -106,8 +106,8 @@ public:
 #endif
 	static void DestroyDevice();
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
-	static void Renderer::ReleaseCommandLists();
-	static void Renderer::ExecuteDeferredContexts();
+	static void wiRenderer::ReleaseCommandLists();
+	static void wiRenderer::ExecuteDeferredContexts();
 	static void FinishCommandList(int THREAD);
 
 	static map<DeviceContext,long> drawCalls;
@@ -311,7 +311,7 @@ protected:
 	static float GameSpeed,overrideGameSpeed;
 
 public:
-	Renderer();
+	wiRenderer();
 	void CleanUp();
 	static void SetUpStaticComponents();
 	static void CleanUpStatic();
@@ -321,7 +321,7 @@ public:
 	static void UpdateObjects();
 	static void UpdateSoftBodyPinning();
 	static void UpdateSkinnedVB();
-	static void UpdateSPTree(SPTree*& tree);
+	static void UpdatewiSPTree(wiSPTree*& tree);
 	static void UpdateImages();
 	static void ManageImages();
 	static void PutWaterRipple(const string& image, const XMFLOAT3& pos, const XMFLOAT4& plane);
@@ -726,19 +726,19 @@ public:
 			D3D11_PRIMITIVE_TOPOLOGY topo = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 			switch (type)
 			{
-			case Renderer::TRIANGLELIST:
+			case wiRenderer::TRIANGLELIST:
 				topo=D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 				break;
-			case Renderer::TRIANGLESTRIP:
+			case wiRenderer::TRIANGLESTRIP:
 				topo=D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 				break;
-			case Renderer::POINTLIST:
+			case wiRenderer::POINTLIST:
 				topo=D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
 				break;
-			case Renderer::LINELIST:
+			case wiRenderer::LINELIST:
 				topo=D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 				break;
-			case Renderer::PATCHLIST:
+			case wiRenderer::PATCHLIST:
 				topo=D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
 				break;
 			default:
@@ -997,10 +997,10 @@ public:
 	static void setRenderResolution(int w, int h){RENDERWIDTH=w;RENDERHEIGHT=h;};
 
 	static void FinishLoading();
-	static SPTree* spTree;
-	static SPTree* spTree_trans;
-	static SPTree* spTree_water;
-	static SPTree* spTree_lights;
+	static wiSPTree* spTree;
+	static wiSPTree* spTree_trans;
+	static wiSPTree* spTree_water;
+	static wiSPTree* spTree_lights;
 	
 	static vector<Object*> everyObject;
 	static vector<Object*> objects;
@@ -1012,21 +1012,21 @@ public:
 	static vector<Lines> boneLines;
 	static vector<Cube> cubes;
 	static vector<Light*> lights;
-	static map<string,vector<EmittedParticle*>> emitterSystems;
+	static map<string,vector<wiEmittedParticle*>> emitterSystems;
 	vector<ActionCamera> cameras;
 	vector<HitSphere*> spheres;
 	static map<string,Transform*> transforms;
 	static list<Decal*> decals;
 	
-	static deque<oImage*> images;
-	static deque<oImage*> waterRipples;
+	static deque<wiSprite*> images;
+	static deque<wiSprite*> waterRipples;
 	static void CleanUpStaticTemp();
 	
 	static void SetUpLights();
 	static void UpdateLights();
 
 
-	static RenderTarget normalMapRT,imagesRT,imagesRTAdd;
+	static wiRenderTarget normalMapRT, imagesRT, imagesRTAdd;
 	
 	static Camera* cam;
 

@@ -1,19 +1,19 @@
 #include "EmittedParticle.h"
 
 
-//ID3D11Buffer		*EmittedParticle::vertexBuffer;
-ID3D11InputLayout   *EmittedParticle::vertexLayout;
-ID3D11VertexShader  *EmittedParticle::vertexShader;
-ID3D11PixelShader   *EmittedParticle::pixelShader,*EmittedParticle::simplestPS;
-ID3D11GeometryShader*EmittedParticle::geometryShader;
-ID3D11Buffer*           EmittedParticle::constantBuffer;
-ID3D11BlendState*		EmittedParticle::blendStateAlpha,*EmittedParticle::blendStateAdd;
-ID3D11SamplerState*			EmittedParticle::sampleState;
-ID3D11RasterizerState*		EmittedParticle::rasterizerState,*EmittedParticle::wireFrameRS;
-ID3D11DepthStencilState*	EmittedParticle::depthStencilState;
-set<EmittedParticle*> EmittedParticle::systems;
+//ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
+ID3D11InputLayout   *wiEmittedParticle::vertexLayout;
+ID3D11VertexShader  *wiEmittedParticle::vertexShader;
+ID3D11PixelShader   *wiEmittedParticle::pixelShader,*wiEmittedParticle::simplestPS;
+ID3D11GeometryShader*wiEmittedParticle::geometryShader;
+ID3D11Buffer*           wiEmittedParticle::constantBuffer;
+ID3D11BlendState*		wiEmittedParticle::blendStateAlpha,*wiEmittedParticle::blendStateAdd;
+ID3D11SamplerState*			wiEmittedParticle::sampleState;
+ID3D11RasterizerState*		wiEmittedParticle::rasterizerState,*wiEmittedParticle::wireFrameRS;
+ID3D11DepthStencilState*	wiEmittedParticle::depthStencilState;
+set<wiEmittedParticle*> wiEmittedParticle::systems;
 
-EmittedParticle::EmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
+wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot){
 	name=newName;
 	object=newObject;
@@ -48,7 +48,7 @@ EmittedParticle::EmittedParticle(std::string newName, std::string newMat, Object
 		light->type=Light::POINT;
 		light->name="particleSystemLight";
 		//light->shadowMap.resize(1);
-		//light->shadowMap[0].InitializeCube(Renderer::POINTLIGHTSHADOWRES,0,true);
+		//light->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
 	}
 
 	LoadVertexBuffer();
@@ -62,13 +62,13 @@ EmittedParticle::EmittedParticle(std::string newName, std::string newMat, Object
 		);
 
 }
-long EmittedParticle::getCount(){return points.size();}
+long wiEmittedParticle::getCount(){return points.size();}
 
 
-int EmittedParticle::getRandomPointOnEmitter(){ return rand()%(object->mesh->indices.size()); }
+int wiEmittedParticle::getRandomPointOnEmitter(){ return rand()%(object->mesh->indices.size()); }
 
 
-void EmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
+void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 {
 	vector<SkinnedVertex>& emitterVertexList = object->mesh->vertices;
 	int gen[3];
@@ -132,7 +132,7 @@ void EmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 	points.push_back( Point( pos, XMFLOAT4(size,1,rand()%2,rand()%2), vel/*, XMFLOAT3(1,1,1)*/, getNewLifeSpan()
 		,rotation*getNewRotationModifier(),scaleX,scaleY ) );
 }
-void EmittedParticle::Update(float gamespeed)
+void wiEmittedParticle::Update(float gamespeed)
 {
 	systems.insert(this);
 
@@ -157,15 +157,15 @@ void EmittedParticle::Update(float gamespeed)
 		if(point.sizOpaMir.y>=1) point.sizOpaMir.y=1;*/
 
 		point.life-=/*1.0f/60.0f**/gamespeed;
-		point.life=WickedMath::Clamp(point.life,0,point.maxLife);
+		point.life=wiMath::Clamp(point.life,0,point.maxLife);
 
 		float lifeLerp = point.life/point.maxLife;
-		point.sizOpaMir.x=WickedMath::Lerp(point.sizBeginEnd[1],point.sizBeginEnd[0],lifeLerp);
-		point.sizOpaMir.y=WickedMath::Lerp(1,0,lifeLerp);
+		point.sizOpaMir.x=wiMath::Lerp(point.sizBeginEnd[1],point.sizBeginEnd[0],lifeLerp);
+		point.sizOpaMir.y=wiMath::Lerp(1,0,lifeLerp);
 
 		
-		minP=WickedMath::Min(XMFLOAT3(point.pos.x-point.sizOpaMir.x,point.pos.y-point.sizOpaMir.x,point.pos.z-point.sizOpaMir.x),minP);
-		maxP=WickedMath::Max(XMFLOAT3(point.pos.x+point.sizOpaMir.x,point.pos.y+point.sizOpaMir.x,point.pos.z+point.sizOpaMir.x),maxP);
+		minP=wiMath::Min(XMFLOAT3(point.pos.x-point.sizOpaMir.x,point.pos.y-point.sizOpaMir.x,point.pos.z-point.sizOpaMir.x),minP);
+		maxP=wiMath::Max(XMFLOAT3(point.pos.x+point.sizOpaMir.x,point.pos.y+point.sizOpaMir.x,point.pos.z+point.sizOpaMir.x),maxP);
 	}
 	bounding_box->create(minP,maxP);
 
@@ -205,12 +205,12 @@ void EmittedParticle::Update(float gamespeed)
 	
 	//D3D11_MAPPED_SUBRESOURCE mappedResource;
 	//Point* vertexPtr;
-	//Renderer::immediateContext->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+	//wiRenderer::immediateContext->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 	//vertexPtr = (Point*)mappedResource.pData;
 	//memcpy(vertexPtr,renderPoints.data(),sizeof(Point)* renderPoints.size());
-	//Renderer::immediateContext->Unmap(vertexBuffer,0);
+	//wiRenderer::immediateContext->Unmap(vertexBuffer,0);
 }
-void EmittedParticle::Burst(float num)
+void wiEmittedParticle::Burst(float num)
 {
 	XMMATRIX t4=XMLoadFloat4x4(&transform4), t3=XMLoadFloat3x3(&transform3);
 
@@ -222,20 +222,20 @@ void EmittedParticle::Burst(float num)
 }
 
 
-void EmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG)
+void wiEmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG)
 {
 	if(!points.empty()){
 		
 		Frustum frustum = Frustum();
 		XMFLOAT4X4 proj,view;
-		XMStoreFloat4x4( &proj,Renderer::cam->Projection );
+		XMStoreFloat4x4( &proj,wiRenderer::cam->Projection );
 		XMStoreFloat4x4( &view,newView );
-		frustum.ConstructFrustum(Renderer::cam->zFarP,proj,view);
+		frustum.ConstructFrustum(wiRenderer::cam->zFarP,proj,view);
 
 		if(frustum.CheckBox(bounding_box->corners)){
 			
 			vector<Point> renderPoints=vector<Point>(points.begin(),points.end());
-			Renderer::UpdateBuffer(vertexBuffer,renderPoints.data(),context,sizeof(Point)* renderPoints.size());
+			wiRenderer::UpdateBuffer(vertexBuffer,renderPoints.data(),context,sizeof(Point)* renderPoints.size());
 
 			bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
@@ -244,17 +244,17 @@ void EmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11De
 			//context->VSSetShader( vertexShader, NULL, 0 );
 			//context->GSSetShader( geometryShader, NULL, 0 );
 			//context->PSSetShader( wireRender?simplestPS:pixelShader, NULL, 0 );
-			Renderer::BindPrimitiveTopology(Renderer::PRIMITIVETOPOLOGY::POINTLIST,context);
-			Renderer::BindVertexLayout(vertexLayout,context);
-			Renderer::BindPS(wireRender?simplestPS:pixelShader,context);
-			Renderer::BindVS(vertexShader,context);
-			Renderer::BindGS(geometryShader,context);
+			wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::POINTLIST,context);
+			wiRenderer::BindVertexLayout(vertexLayout,context);
+			wiRenderer::BindPS(wireRender?simplestPS:pixelShader,context);
+			wiRenderer::BindVS(vertexShader,context);
+			wiRenderer::BindGS(geometryShader,context);
 		
-			Renderer::BindTexturePS(depth,1,context);
+			wiRenderer::BindTexturePS(depth,1,context);
 
 			ConstantBuffer cb;
 			cb.mView = XMMatrixTranspose(newView);
-			cb.mProjection = XMMatrixTranspose( Renderer::cam->Projection );
+			cb.mProjection = XMMatrixTranspose( wiRenderer::cam->Projection );
 			cb.mCamPos = eye;
 			cb.mAdd.x = additive;
 			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
@@ -262,7 +262,7 @@ void EmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11De
 		
 			//context->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
 
-			Renderer::UpdateBuffer(constantBuffer,&cb,context);
+			wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			//ConstantBuffer* dataPtr;
 			//context->Map(constantBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
@@ -272,18 +272,18 @@ void EmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11De
 	
 			//context->RSSetState(wireRender?wireFrameRS:rasterizerState);
 			//context->OMSetDepthStencilState(depthStencilState, 1);
-			Renderer::BindRasterizerState(wireRender?wireFrameRS:rasterizerState,context);
-			Renderer::BindDepthStencilState(depthStencilState,1,context);
+			wiRenderer::BindRasterizerState(wireRender?wireFrameRS:rasterizerState,context);
+			wiRenderer::BindDepthStencilState(depthStencilState,1,context);
 	
 			//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 			//UINT sampleMask   = 0xffffffff;
 			//context->OMSetBlendState((additive?blendStateAdd:blendStateAlpha), blendFactor, sampleMask);
-			Renderer::BindBlendState((additive?blendStateAdd:blendStateAlpha),context);
+			wiRenderer::BindBlendState((additive?blendStateAdd:blendStateAlpha),context);
 
 			//context->GSSetConstantBuffers( 0, 1, &constantBuffer );
 			//context->PSSetSamplers(0, 1, &sampleState);
-			Renderer::BindConstantBufferGS(constantBuffer,0,context);
-			Renderer::BindSamplerPS(sampleState,0,context);
+			wiRenderer::BindConstantBufferGS(constantBuffer,0,context);
+			wiRenderer::BindSamplerPS(sampleState,0,context);
 
 		
 			//context->UpdateSubresource( vertexBuffer, 0, 0, points.data(), 0, 0 );
@@ -292,31 +292,31 @@ void EmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11De
 			//UINT stride = sizeof( Point );
 			//UINT offset = 0;
 			//context->IASetVertexBuffers( 0, 1, &vertexBuffer, &stride, &offset );
-			Renderer::BindVertexBuffer(vertexBuffer,0,sizeof(Point),context);
+			wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Point),context);
 
-			if(!wireRender && material->texture) Renderer::BindTexturePS(material->texture,0,context);
+			if(!wireRender && material->texture) wiRenderer::BindTexturePS(material->texture,0,context);
 			//context->Draw( renderPoints.size(),0);
-			Renderer::Draw(renderPoints.size(),context);
+			wiRenderer::Draw(renderPoints.size(),context);
 
 
 			//context->GSSetShader(0,0,0);
-			Renderer::BindGS(nullptr,context);
+			wiRenderer::BindGS(nullptr,context);
 			//context->GSSetConstantBuffers(0,0,0);
-			Renderer::BindConstantBufferGS(nullptr,0,context);
+			wiRenderer::BindConstantBufferGS(nullptr,0,context);
 		}
 	}
 }
-void EmittedParticle::DrawPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
+void wiEmittedParticle::DrawPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
 	if(material->premultipliedTexture)
 		Draw(eye,view,context,depth,FLAG);
 }
-void EmittedParticle::DrawNonPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
+void wiEmittedParticle::DrawNonPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
 	if(!material->premultipliedTexture)
 		Draw(eye,view,context,depth,FLAG);
 }
 
 
-void EmittedParticle::CleanUp()
+void wiEmittedParticle::CleanUp()
 {
 
 	points.clear();
@@ -331,12 +331,12 @@ void EmittedParticle::CleanUp()
 	//delete(this);
 }
 
-void* EmittedParticle::operator new(size_t size)
+void* wiEmittedParticle::operator new(size_t size)
 {
 	void* result = _aligned_malloc(size,16);
 	return result;
 }
-void EmittedParticle::operator delete(void* p)
+void wiEmittedParticle::operator delete(void* p)
 {
 	if(p) _aligned_free(p);
 }
@@ -345,7 +345,7 @@ void EmittedParticle::operator delete(void* p)
 
 
 
-void EmittedParticle::LoadShaders()
+void wiEmittedParticle::LoadShaders()
 {
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
@@ -355,7 +355,7 @@ void EmittedParticle::LoadShaders()
 		{ "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/pointspriteVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::add("shaders/pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
@@ -363,10 +363,10 @@ void EmittedParticle::LoadShaders()
 	delete vsinfo;
 
 
-	pixelShader = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/pointspritePS.cso", ResourceManager::PIXELSHADER));
-	simplestPS = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/pointspritePS_simplest.cso", ResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/pointspritePS.cso", wiResourceManager::PIXELSHADER));
+	simplestPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<Renderer::GeometryShader>(ResourceManager::add("shaders/pointspriteGS.cso", ResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 
@@ -382,7 +382,7 @@ void EmittedParticle::LoadShaders()
  //   ID3DBlob* pVSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load pointspriteVS.cso",0,0);}
-	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
+	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
 	//
 	//
 
@@ -398,7 +398,7 @@ void EmittedParticle::LoadShaders()
 	//UINT numElements = ARRAYSIZE( layout );
 	//
  //   // Create the input layout
-	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
  //                                         pVSBlob->GetBufferSize(), &vertexLayout );
 
 	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
@@ -408,12 +408,12 @@ void EmittedParticle::LoadShaders()
 	//ID3DBlob* pPSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS.cso",0,0);}
-	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
 
 	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS_simplest.cso",0,0);}
-	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
+	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
 
 	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 
@@ -421,13 +421,13 @@ void EmittedParticle::LoadShaders()
 	//ID3DBlob* pGSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load pointspriteGS.cso",0,0);}
-	//Renderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
+	//wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
 
 	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 
 
 }
-void EmittedParticle::SetUpCB()
+void wiEmittedParticle::SetUpCB()
 {
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
@@ -435,9 +435,9 @@ void EmittedParticle::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
+    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
 }
-void EmittedParticle::SetUpStates()
+void wiEmittedParticle::SetUpStates()
 {
 	D3D11_SAMPLER_DESC samplerDesc;
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -453,7 +453,7 @@ void EmittedParticle::SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	Renderer::graphicsDevice->CreateSamplerState(&samplerDesc, &sampleState);
+	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &sampleState);
 
 
 
@@ -469,7 +469,7 @@ void EmittedParticle::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	Renderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
+	wiRenderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
 
 	
 	rs.FillMode=D3D11_FILL_WIREFRAME;
@@ -482,7 +482,7 @@ void EmittedParticle::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	Renderer::graphicsDevice->CreateRasterizerState(&rs,&wireFrameRS);
+	wiRenderer::graphicsDevice->CreateRasterizerState(&rs,&wireFrameRS);
 
 
 
@@ -510,7 +510,7 @@ void EmittedParticle::SetUpStates()
 	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	Renderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
+	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
@@ -525,7 +525,7 @@ void EmittedParticle::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=true;
-	Renderer::graphicsDevice->CreateBlendState(&bd,&blendStateAlpha);
+	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateAlpha);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
@@ -537,9 +537,9 @@ void EmittedParticle::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=true;
-	Renderer::graphicsDevice->CreateBlendState(&bd,&blendStateAdd);
+	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateAdd);
 }
-void EmittedParticle::LoadVertexBuffer()
+void wiEmittedParticle::LoadVertexBuffer()
 {
 	vertexBuffer=NULL;
 
@@ -549,9 +549,9 @@ void EmittedParticle::LoadVertexBuffer()
 	bd.ByteWidth = sizeof( Point ) * MAX_PARTICLES;
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &vertexBuffer );
+    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vertexBuffer );
 }
-void EmittedParticle::SetUpStatic()
+void wiEmittedParticle::SetUpStatic()
 {
 	vertexShader = NULL;
 	pixelShader = NULL;
@@ -570,7 +570,7 @@ void EmittedParticle::SetUpStatic()
 
 	systems.clear();
 }
-void EmittedParticle::CleanUpStatic()
+void wiEmittedParticle::CleanUpStatic()
 {
 	//if(vertexBuffer) vertexBuffer->Release(); vertexBuffer=NULL;
 	if(vertexShader) vertexShader->Release(); vertexShader = NULL;
@@ -588,10 +588,10 @@ void EmittedParticle::CleanUpStatic()
 	if(blendStateAlpha) blendStateAlpha->Release(); blendStateAlpha = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
 }
-long EmittedParticle::getNumParticles()
+long wiEmittedParticle::getNumwiParticles()
 {
 	long retval=0;
-	for(EmittedParticle* e:systems)
+	for(wiEmittedParticle* e:systems)
 		if(e)
 			retval+=e->getCount();
 	return retval;

@@ -19,7 +19,7 @@ void Timer::Start()
 {
     LARGE_INTEGER li;
     if(!QueryPerformanceFrequency(&li))
-		WickedHelper::messageBox("QueryPerformanceFrequency failed!\n");
+		wiHelper::messageBox("QueryPerformanceFrequency failed!\n");
 
     PCFreq = double(li.QuadPart)/1000.0;
 

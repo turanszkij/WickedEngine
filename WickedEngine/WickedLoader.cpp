@@ -7,7 +7,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 
 	BYTE* buffer;
 	size_t fileSize;
-	if (WickedHelper::readByteData(fname, &buffer, fileSize)){
+	if (wiHelper::readByteData(fname, &buffer, fileSize)){
 
 		int offset=0;
 
@@ -311,7 +311,7 @@ void Mesh::CreateBuffers(){
 		bd.ByteWidth = sizeof( Instance )*usedBy.size();
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		Renderer::graphicsDevice->CreateBuffer( &bd, 0, &meshInstanceBuffer );
+		wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &meshInstanceBuffer );
 
 		//bool armatureDeformedMesh=false;
 		//for(int u : usedBy){
@@ -354,7 +354,7 @@ void Mesh::CreateBuffers(){
 				InitData.pSysMem = vertices.data();
 			else
 				InitData.pSysMem = skinnedVertices.data();
-			Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &meshVertBuff );
+			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &meshVertBuff );
 		
 			
 			ZeroMemory( &bd, sizeof(bd) );
@@ -364,7 +364,7 @@ void Mesh::CreateBuffers(){
 			bd.CPUAccessFlags = 0;
 			ZeroMemory( &InitData, sizeof(InitData) );
 			InitData.pSysMem = indices.data();
-			Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &meshIndexBuff );
+			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &meshIndexBuff );
 			
 		if(renderable)
 		{
@@ -374,7 +374,7 @@ void Mesh::CreateBuffers(){
 			bd.ByteWidth = sizeof(BoneShaderBuffer);
 			bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &boneBuffer );
+			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &boneBuffer );
 
 			if(hasArmature() && !softBody){
 				ZeroMemory( &bd, sizeof(bd) );
@@ -383,7 +383,7 @@ void Mesh::CreateBuffers(){
 				bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride=0;
-				Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &sOutBuffer );
+				wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &sOutBuffer );
 			}
 
 			//PHYSICALMAPPING
@@ -412,7 +412,7 @@ void Mesh::AddInstance(int count){
 		instances[i].clear();
 		instances[i].resize(usedBy.size());
 	}
-	Renderer::ResizeBuffer<Instance>(meshInstanceBuffer,usedBy.size()*2);
+	wiRenderer::ResizeBuffer<Instance>(meshInstanceBuffer,usedBy.size()*2);
 }
 
 void LoadWiArmatures(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures
@@ -608,7 +608,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->refMapName=ss.str();
-						currentMat->refMap=(ID3D11ShaderResourceView*)ResourceManager::add(ss.str());
+						currentMat->refMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
 					}
 					if(currentMat->refMap!=0)
 						currentMat->hasRefMap = true;
@@ -620,7 +620,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->normalMapName=ss.str();
-						currentMat->normalMap=(ID3D11ShaderResourceView*)ResourceManager::add(ss.str());
+						currentMat->normalMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
 					}
 					if(currentMat->normalMap!=0)
 						currentMat->hasNormalMap = true;
@@ -632,7 +632,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->textureName=ss.str();
-						currentMat->texture=(ID3D11ShaderResourceView*)ResourceManager::add(ss.str());
+						currentMat->texture=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
 					}
 					if(currentMat->texture!=0)
 						currentMat->hasTexture=true;
@@ -645,7 +645,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->displacementMapName=ss.str();
-						currentMat->displacementMap=(ID3D11ShaderResourceView*)ResourceManager::add(ss.str());
+						currentMat->displacementMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
 					}
 					if(currentMat->displacementMap!=0)
 						currentMat->hasDisplacementMap=true;
@@ -657,7 +657,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->specularMapName=ss.str();
-						currentMat->specularMap=(ID3D11ShaderResourceView*)ResourceManager::add(ss.str());
+						currentMat->specularMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
 					}
 					if(currentMat->specularMap!=0)
 						currentMat->hasSpecularMap=true;
@@ -852,14 +852,14 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 						if(visibleEmitter) objects.back()->particleEmitter=Object::EMITTER_VISIBLE;
 						else if(objects.back()->particleEmitter==Object::NO_EMITTER) objects.back()->particleEmitter=Object::EMITTER_INVISIBLE;
 
-						if(Renderer::EMITTERSENABLED){
+						if(wiRenderer::EMITTERSENABLED){
 							stringstream identified_materialName("");
 							identified_materialName<<materialName<<identifier;
 							stringstream identified_systemName("");
 							identified_systemName<<systemName<<identifier;
 							if(objects.back()->mesh){
-								objects.back()->eParticleSystems.push_back( 
-									new EmittedParticle(identified_systemName.str(),identified_materialName.str(),objects.back(),size,randfac,norfac,count,life,randlife,scaleX,scaleY,rot) 
+								objects.back()->ewiParticleSystems.push_back( 
+									new wiEmittedParticle(identified_systemName.str(),identified_materialName.str(),objects.back(),size,randfac,norfac,count,life,randlife,scaleX,scaleY,rot) 
 									);
 							}
 						}
@@ -872,10 +872,10 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 						int count;
 						file>>name>>mat>>len>>count>>densityG>>lenG;
 						
-						if(Renderer::HAIRPARTICLEENABLED){
+						if(wiRenderer::HAIRPARTICLEENABLED){
 							stringstream identified_materialName("");
 							identified_materialName<<mat<<identifier;
-							objects.back()->hParticleSystems.push_back(new HairParticle(name,len,count,identified_materialName.str(),objects.back(),densityG,lenG) );
+							objects.back()->hwiParticleSystems.push_back(new wiHairParticle(name,len,count,identified_materialName.str(),objects.back(),densityG,lenG) );
 						}
 					}
 					break;
@@ -902,7 +902,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 					bd.ByteWidth = sizeof( RibbonVertex ) * MAX_RIBBONTRAILS;
 					bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 					bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-					Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
+					wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
 			}
 		
 			/*string parent = objects[i]->parent;
@@ -962,7 +962,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 		bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		Renderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
+		wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
 
 		bool armatureDeformedMesh=false;
 		for(int u : iMesh->usedBy){
@@ -1005,7 +1005,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 				InitData.pSysMem = iMesh->vertices.data();
 			else
 				InitData.pSysMem = iMesh->skinnedVertices.data();
-			Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshVertBuff );
+			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshVertBuff );
 		
 			
 			ZeroMemory( &bd, sizeof(bd) );
@@ -1015,7 +1015,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 			bd.CPUAccessFlags = 0;
 			ZeroMemory( &InitData, sizeof(InitData) );
 			InitData.pSysMem = iMesh->indices.data();
-			Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshIndexBuff );
+			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshIndexBuff );
 			
 		if(iMesh->renderable)
 		{
@@ -1025,7 +1025,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 			bd.ByteWidth = sizeof(BoneShaderBuffer);
 			bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->boneBuffer );
+			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->boneBuffer );
 
 			if(iMesh->hasArmature() && !iMesh->softBody){
 				ZeroMemory( &bd, sizeof(bd) );
@@ -1034,7 +1034,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 				bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride=0;
-				Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->sOutBuffer );
+				wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->sOutBuffer );
 			}
 
 			//PHYSICALMAPPING
@@ -1374,9 +1374,9 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					lights.back()->name=identified_name.str();
 					if(shadow){
 						lights.back()->shadowMap.resize(1);
-						lights.back()->shadowMap[0].InitializeCube(Renderer::POINTLIGHTSHADOWRES,0,true);
+						lights.back()->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
 					}
-					//lights.back()->mesh=lightGRenderer[Light::getTypeStr(Light::POINT)];
+					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::POINT)];
 					
 					transforms.insert(pair<string,Transform*>(lights.back()->name,lights.back()));
 				}
@@ -1389,11 +1389,11 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					lights.back()->shadowMap.resize(3);
 					for(int i=0;i<3;++i)
 						lights.back()->shadowMap[i].Initialize(
-							Renderer::SHADOWMAPRES,Renderer::SHADOWMAPRES
+							wiRenderer::SHADOWMAPRES,wiRenderer::SHADOWMAPRES
 							,0,true
 							);
-					//lightGRenderer[Light::getTypeStr(Light::DIRECTIONAL)]->usedBy.push_back(lights.size()-1);
-					//lights.back()->mesh=lightGRenderer[Light::getTypeStr(Light::DIRECTIONAL)];
+					//lightGwiRenderer[Light::getTypeStr(Light::DIRECTIONAL)]->usedBy.push_back(lights.size()-1);
+					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::DIRECTIONAL)];
 				}
 				break;
 			case 'S':
@@ -1406,12 +1406,12 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					if(shadow){
 						lights.back()->shadowMap.resize(1);
 						lights.back()->shadowMap[0].Initialize(
-							Renderer::SHADOWMAPRES,Renderer::SHADOWMAPRES
+							wiRenderer::SHADOWMAPRES,wiRenderer::SHADOWMAPRES
 							,0,true
 							);
 					}
-					//lightGRenderer[Light::getTypeStr(Light::SPOT)]->usedBy.push_back(lights.size()-1);
-					//lights.back()->mesh=lightGRenderer[Light::getTypeStr(Light::SPOT)];
+					//lightGwiRenderer[Light::getTypeStr(Light::SPOT)]->usedBy.push_back(lights.size()-1);
+					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::SPOT)];
 				}
 				break;
 			case 'p':
@@ -1493,8 +1493,8 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					file>>t;
 					stringstream rim("");
 					rim<<directory<<"rims/"<<t;
-					Renderer::TextureView tex=nullptr;
-					if((tex = (Renderer::TextureView)ResourceManager::add(rim.str()))!=nullptr){
+					wiRenderer::TextureView tex=nullptr;
+					if((tex = (wiRenderer::TextureView)wiResourceManager::add(rim.str()))!=nullptr){
 						lights.back()->lensFlareRimTextures.push_back(tex);
 						lights.back()->lensFlareNames.push_back(rim.str());
 					}
@@ -1504,7 +1504,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 			}
 		}
 
-		//for(MeshCollection::iterator iter=lightGRenderer.begin(); iter!=lightGRenderer.end(); ++iter){
+		//for(MeshCollection::iterator iter=lightGwiRenderer.begin(); iter!=lightGwiRenderer.end(); ++iter){
 		//	Mesh* iMesh = iter->second;
 		//	D3D11_BUFFER_DESC bd;
 		//	ZeroMemory( &bd, sizeof(bd) );
@@ -1512,7 +1512,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 		//	bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
 		//	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		//	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		//	Renderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
+		//	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
 		//}
 	}
 	file.close();
@@ -1825,7 +1825,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 	LoadWiWorldInfo(directory.str(), worldInfoFilePath.str(),l_worldInfo,l_wind);
 	LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", l_decals);
 
-	Renderer::graphicsMutex.lock();
+	wiRenderer::graphicsMutex.lock();
 	{
 		armatures.insert(armatures.end(),l_armatures.begin(),l_armatures.end());
 		objects_norm.insert(objects_norm.end(),l_objects_norm.begin(),l_objects_norm.end());
@@ -1849,7 +1849,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 
 		decals.insert(decals.end(),l_decals.begin(),l_decals.end());
 	}
-	Renderer::graphicsMutex.unlock();
+	wiRenderer::graphicsMutex.unlock();
 }
 
 void Material::CleanUp(){
@@ -1858,11 +1858,11 @@ void Material::CleanUp(){
 	if(normalMap) normalMap->Release();
 	if(displacementMap) displacementMap->Release();
 	if(specularMap) specularMap->Release();*/
-	ResourceManager::del(refMapName);
-	ResourceManager::del(textureName);
-	ResourceManager::del(normalMapName);
-	ResourceManager::del(displacementMapName);
-	ResourceManager::del(specularMapName);
+	wiResourceManager::del(refMapName);
+	wiResourceManager::del(textureName);
+	wiResourceManager::del(normalMapName);
+	wiResourceManager::del(displacementMapName);
+	wiResourceManager::del(specularMapName);
 	refMap=nullptr;
 	texture=nullptr;
 	normalMap=nullptr;
@@ -1874,11 +1874,11 @@ void Light::CleanUp(){
 	shadowMap.clear();
 	lensFlareRimTextures.clear();
 	for(string x:lensFlareNames)
-		ResourceManager::del(x);
+		wiResourceManager::del(x);
 	lensFlareNames.clear();
 }
 
-void GenerateSPTree(SPTree*& tree, vector<Cullable*>& objects, int type){
+void GeneratewiSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
 	if(type==GENERATE_QUADTREE)
 		tree = new QuadTree();
 	else if(type==GENERATE_OCTREE)
@@ -2034,12 +2034,12 @@ AABB AABB::operator* (float a)
 bool SPHERE::intersects(const AABB& b){
 	XMFLOAT3 min = b.getMin();
 	XMFLOAT3 max = b.getMax();
-	XMFLOAT3 closestPointInAabb = WickedMath::Min(WickedMath::Max(center, min), max);
-	double distanceSquared = WickedMath::Distance(closestPointInAabb,center);
+	XMFLOAT3 closestPointInAabb = wiMath::Min(wiMath::Max(center, min), max);
+	double distanceSquared = wiMath::Distance(closestPointInAabb,center);
 	return distanceSquared < radius;
 }
 bool SPHERE::intersects(const SPHERE& b){
-	return WickedMath::Distance(center,b.center)<=radius+b.radius;
+	return wiMath::Distance(center,b.center)<=radius+b.radius;
 }
 
 bool RAY::intersects(const AABB& box) const{
@@ -2067,7 +2067,7 @@ void HitSphere::SetUpStatic()
 	D3D11_SUBRESOURCE_DATA InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts.data();
-	Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
+	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
 }
 void HitSphere::CleanUpStatic()
 {
@@ -2271,17 +2271,17 @@ void Decal::Update(){
 void Decal::addTexture(const string& tex){
 	texName=tex;
 	if(!tex.empty()){
-		texture=(ID3D11ShaderResourceView*)ResourceManager::add(tex);
+		texture=(ID3D11ShaderResourceView*)wiResourceManager::add(tex);
 	}
 }
 void Decal::addNormal(const string& nor){
 	norName=nor;
 	if(!nor.empty()){
-		normal=(ID3D11ShaderResourceView*)ResourceManager::add(nor);
+		normal=(ID3D11ShaderResourceView*)wiResourceManager::add(nor);
 	}
 }
 void Decal::CleanUp(){
-	ResourceManager::del(texName);
-	ResourceManager::del(norName);
+	wiResourceManager::del(texName);
+	wiResourceManager::del(norName);
 }
 #pragma endregion

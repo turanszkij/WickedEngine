@@ -1,7 +1,7 @@
 #include "WickedMath.h"
 
 
-float WickedMath::Distance(const XMFLOAT3& v1,const XMFLOAT3& v2)
+float wiMath::Distance(const XMFLOAT3& v1,const XMFLOAT3& v2)
 {
     XMVECTOR vector1 = XMLoadFloat3(&v1);
     XMVECTOR vector2 = XMLoadFloat3(&v2);
@@ -12,7 +12,7 @@ float WickedMath::Distance(const XMFLOAT3& v1,const XMFLOAT3& v2)
     XMStoreFloat(&Distance,length);
     return Distance;
 }
-float WickedMath::DistanceSqaured(const XMFLOAT3& v1,const XMFLOAT3& v2)
+float wiMath::DistanceSqaured(const XMFLOAT3& v1,const XMFLOAT3& v2)
 {
     XMVECTOR vector1 = XMLoadFloat3(&v1);
     XMVECTOR vector2 = XMLoadFloat3(&v2);
@@ -23,7 +23,7 @@ float WickedMath::DistanceSqaured(const XMFLOAT3& v1,const XMFLOAT3& v2)
     XMStoreFloat(&Distance,length);
     return Distance;
 }
-float WickedMath::DistanceEstimated(const XMFLOAT3& v1,const XMFLOAT3& v2)
+float wiMath::DistanceEstimated(const XMFLOAT3& v1,const XMFLOAT3& v2)
 {
     XMVECTOR vector1 = XMLoadFloat3(&v1);
     XMVECTOR vector2 = XMLoadFloat3(&v2);
@@ -34,12 +34,12 @@ float WickedMath::DistanceEstimated(const XMFLOAT3& v1,const XMFLOAT3& v2)
     XMStoreFloat(&Distance,length);
     return Distance;
 }
-XMFLOAT3 WickedMath::getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b)
+XMFLOAT3 wiMath::getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b)
 {
 	return XMFLOAT3( (a.x+b.x)*0.5f,(a.y+b.y)*0.5f,(a.z+b.z)*0.5f );
 }
 
-bool WickedMath::Collision(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
+bool wiMath::Collision(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
 {
 	if( hitBox1Pos.x+hitBox1Siz.x<hitBox2Pos.x )
 		return false;
@@ -55,36 +55,36 @@ bool WickedMath::Collision(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Si
 
 
 
-float WickedMath::Lerp(const float& value1,const float& value2,const float& amount)
+float wiMath::Lerp(const float& value1,const float& value2,const float& amount)
 {
 	return value1 + (value2 - value1) * amount;
 }
-XMFLOAT2 WickedMath::Lerp(const XMFLOAT2& a,const XMFLOAT2& b,const float& i)
+XMFLOAT2 wiMath::Lerp(const XMFLOAT2& a,const XMFLOAT2& b,const float& i)
 {
 	return XMFLOAT2(Lerp(a.x,b.x,i),Lerp(a.y,b.y,i));
 }
-XMFLOAT3 WickedMath::Lerp(const XMFLOAT3& a,const XMFLOAT3& b,const float& i)
+XMFLOAT3 wiMath::Lerp(const XMFLOAT3& a,const XMFLOAT3& b,const float& i)
 {
 	return XMFLOAT3(Lerp(a.x,b.x,i),Lerp(a.y,b.y,i),Lerp(a.z,b.z,i));
 }
-XMFLOAT4 WickedMath::Lerp(const XMFLOAT4& a,const XMFLOAT4& b,const float& i)
+XMFLOAT4 wiMath::Lerp(const XMFLOAT4& a,const XMFLOAT4& b,const float& i)
 {
 	return XMFLOAT4(Lerp(a.x,b.x,i),Lerp(a.y,b.y,i),Lerp(a.z,b.z,i),Lerp(a.w,b.w,i));
 }
-XMFLOAT3 WickedMath::Max(const XMFLOAT3& a, const XMFLOAT3& b){
+XMFLOAT3 wiMath::Max(const XMFLOAT3& a, const XMFLOAT3& b){
 	return XMFLOAT3(max(a.x,b.x),max(a.y,b.y),max(a.z,b.z));
 }
-XMFLOAT3 WickedMath::Min(const XMFLOAT3& a, const XMFLOAT3& b){
+XMFLOAT3 wiMath::Min(const XMFLOAT3& a, const XMFLOAT3& b){
 	return XMFLOAT3(min(a.x,b.x),min(a.y,b.y),min(a.z,b.z));
 }
-float WickedMath::Clamp(float val, float min, float max)
+float wiMath::Clamp(float val, float min, float max)
 {
 	if(val<min) return min;
 	else if(val>max) return max;
 	return val;
 }
 
-XMFLOAT3 WickedMath::getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XMFLOAT3& endPos
+XMFLOAT3 wiMath::getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XMFLOAT3& endPos
 									, const XMFLOAT3& startTangent, const XMFLOAT3& endTangent
 									, const float& atInterval){
 	float x,y,z,t; float r1=1.0f,r4=1.0f;
@@ -94,7 +94,7 @@ XMFLOAT3 WickedMath::getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XM
 	z=(2*t*t*t-3*t*t+1)*startPos.z+(-2*t*t*t+3*t*t)*endPos.z+(t*t*t-2*t*t+1)*startTangent.z+(t*t*t-t*t)*endTangent.z; 
 	return XMFLOAT3(x,y,z);
 }
-XMFLOAT3 WickedMath::getQuadraticBezierPos(const XMFLOAT3& a,const XMFLOAT3&b, const XMFLOAT3& c, const float& t){
+XMFLOAT3 wiMath::getQuadraticBezierPos(const XMFLOAT3& a,const XMFLOAT3&b, const XMFLOAT3& c, const float& t){
 	float param0,param1,param2;
 	param0=pow(1-t,2);
 	param1=2*(1-t)*t;
@@ -104,6 +104,6 @@ XMFLOAT3 WickedMath::getQuadraticBezierPos(const XMFLOAT3& a,const XMFLOAT3&b, c
 	float z = param0*a.z+param1*b.z+param2*c.z;
 	return XMFLOAT3(x,y,z);
 }
-XMFLOAT3 WickedMath::getQuadraticBezierPos(const XMFLOAT4& a,const XMFLOAT4&b, const XMFLOAT4& c, const float& t){
+XMFLOAT3 wiMath::getQuadraticBezierPos(const XMFLOAT4& a,const XMFLOAT4&b, const XMFLOAT4& c, const float& t){
 	return getQuadraticBezierPos(XMFLOAT3(a.x,a.y,a.z),XMFLOAT3(b.x,b.y,b.z),XMFLOAT3(c.x,c.y,c.z),t);
 }

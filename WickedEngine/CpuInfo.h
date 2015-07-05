@@ -5,7 +5,7 @@
 #include <Pdh.h>
 #endif
 
-static class CpuInfo
+static class wiCpuInfo
 {
 #ifndef WINSTORE_SUPPORT
 
@@ -16,8 +16,8 @@ private:
 	static unsigned long m_lastSampleTime;
 	static long m_cpuUsage;
 public:
-	CpuInfo();
-	~CpuInfo();
+	wiCpuInfo();
+	~wiCpuInfo();
 
 	static void Initialize();
 	static void Shutdown();
@@ -26,8 +26,8 @@ public:
 
 #else
 public:
-	CpuInfo(){}
-	~CpuInfo(){}
+	wiCpuInfo(){}
+	~wiCpuInfo(){}
 
 	static void Initialize(){}
 	static void Shutdown(){}

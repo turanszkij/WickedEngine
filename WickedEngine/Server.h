@@ -69,7 +69,7 @@ public:
 
 		if ((select( max_sd + 1 , &readfds , NULL , NULL , &time) < 0) && (errno!=EINTR))
 		{
-			BackLog::post("select error");
+			wiBackLog::post("select error");
 		}
 
 		//If something happened on the master socket , then its an incoming connection
@@ -81,7 +81,7 @@ public:
 				if(Network::sendText(name,new_socket)){
 					stringstream ss("");
 					ss<<"Name sent, client ["<<new_socket<<"] connected";
-					BackLog::post(ss.str().c_str());
+					wiBackLog::post(ss.str().c_str());
 
 					ss.str("");
 					ss<<"Unnamed_client_"<<new_socket;
@@ -89,7 +89,7 @@ public:
 
 				}
 				else
-					BackLog::post("Welcome message could NOT be sent, client ignored");
+					wiBackLog::post("Welcome message could NOT be sent, client ignored");
 
 			}
 		}
@@ -103,7 +103,7 @@ public:
 				bool receiveSuccess = Network::receiveData(command,it->first);
 
 				if(!receiveSuccess){
-					BackLog::post("Client disconnected.");
+					wiBackLog::post("Client disconnected.");
 					closesocket(it->first);
 					clients.erase(it++);
 					continue;
@@ -117,7 +117,7 @@ public:
 							if(receiveText(text,it->first)){
 								stringstream ss("");
 								ss<<"Client "<<it->second<<" now registered as "<<text;
-								BackLog::post(ss.str().c_str());
+								wiBackLog::post(ss.str().c_str());
 								it->second=text;
 							}
 							break;
@@ -128,7 +128,7 @@ public:
 							if(receiveText(text,it->first)){
 								stringstream ss("");
 								ss<<it->second<<": "<<text;
-								BackLog::post(ss.str().c_str());
+								wiBackLog::post(ss.str().c_str());
 							}
 							break;
 						}

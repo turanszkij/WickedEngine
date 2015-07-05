@@ -1,19 +1,19 @@
 #include "FrameRate.h"
 
-Timer FrameRate::timer;
-double FrameRate::dt=0.0;
+Timer wiFrameRate::timer;
+double wiFrameRate::dt=0.0;
 
-void FrameRate::Initialize()
+void wiFrameRate::Initialize()
 {
 	timer = Timer();
 }
 
-void FrameRate::Frame(){
+void wiFrameRate::Frame(){
 	dt=timer.elapsed();
 	timer.record();
 }
 
-double FrameRate::FPS() {
+double wiFrameRate::FPS() {
 	static const int NUM_FPS_SAMPLES = 60;
 	static double fpsSamples[NUM_FPS_SAMPLES];
 	static int currentSample = 0;

@@ -1,10 +1,10 @@
 #pragma once
 #include "WickedEngine.h"
 
-class ResourceManager
+class wiResourceManager
 {
 public:
-	typedef Sound* SoundResource;
+	typedef wiSound* SoundResource;
 	enum Data_Type{
 		DYNAMIC,
 		IMAGE,IMAGE_STAGING,

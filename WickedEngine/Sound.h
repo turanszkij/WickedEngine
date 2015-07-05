@@ -36,7 +36,7 @@
 #define fourccDPDS 'sdpd'
 #endif
 
-class Sound
+class wiSound
 {
 protected:
 	WAVEFORMATEX wfx;
@@ -56,10 +56,10 @@ public:
 	void Stop();
 
 private:
-	static void DelayHelper(Sound* sound, DWORD delay);
+	static void DelayHelper(wiSound* sound, DWORD delay);
 };
 
-class SoundEffect : public Sound
+class wiSoundEffect : public wiSound
 {
 private:
 	static IXAudio2MasteringVoice* pMasterVoice;
@@ -69,10 +69,10 @@ private:
 	void StopSoundEffect();
 
 public:
-	SoundEffect();
-	SoundEffect(std::wstring);
-	SoundEffect(std::string);
-	~SoundEffect();
+	wiSoundEffect();
+	wiSoundEffect(std::wstring);
+	wiSoundEffect(std::string);
+	~wiSoundEffect();
 
 	static HRESULT Initialize();
 	static void CleanUp();
@@ -81,7 +81,7 @@ public:
 	static float GetVolume();
 };
 
-class Music : public Sound
+class wiMusic : public wiSound
 {
 private:
 	static IXAudio2MasteringVoice* pMasterVoice;
@@ -91,10 +91,10 @@ private:
 	void StopSoundEffect();
 
 public:
-	Music();
-	Music(std::wstring);
-	Music(std::string);
-	~Music();
+	wiMusic();
+	wiMusic(std::wstring);
+	wiMusic(std::string);
+	~wiMusic();
 	
 	static HRESULT Initialize();
 	static void CleanUp();

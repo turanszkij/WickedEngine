@@ -48,7 +48,7 @@ public:
 		WSACleanup();
 
 
-		//BackLog::post("\n\nClosed Connection");
+		//wiBackLog::post("\n\nClosed Connection");
 	}
 
 	static bool sendText(const std::string& text, SOCKET socket);
@@ -59,7 +59,7 @@ public:
 		if(sent==SOCKET_ERROR) {
 			//stringstream ss("");
 			//ss << "\n[Error] Sending data failed with error: " << WSAGetLastError();
-			//BackLog::post(ss.str().c_str());
+			//wiBackLog::post(ss.str().c_str());
 			return false;
 		}
 

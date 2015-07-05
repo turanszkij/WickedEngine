@@ -1,16 +1,16 @@
 #pragma once
 #include "Image.h"
 
-class oImage : public Image
+class wiSprite : public wiImage
 {
 private:
 	string texture, mask, normal;
 	ID3D11ShaderResourceView* texturePointer,*normalPointer,*maskPointer;
 public:
-	oImage();
-	oImage(const string& newTexture, const string& newMask, const string& newNormal);
-	oImage(const string& newTexture, const string& newMask);
-	oImage(const string& newTexture);
+	wiSprite();
+	wiSprite(const string& newTexture, const string& newMask, const string& newNormal);
+	wiSprite(const string& newTexture, const string& newMask);
+	wiSprite(const string& newTexture);
 	void Init();
 	void CreateReference(const string& newTexture, const string& newMask, const string& newNormal);
 	void CleanUp();

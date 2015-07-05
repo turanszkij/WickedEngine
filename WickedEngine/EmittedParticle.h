@@ -5,8 +5,8 @@ struct Material;
 struct AABB;
 struct Light;
 
-class EmittedParticle :
-	public Particle
+class wiEmittedParticle :
+	public wiParticle
 {
 private:
 	struct Point
@@ -60,7 +60,7 @@ private:
 	static void SetUpStates();
 	void LoadVertexBuffer();
 
-	static set<EmittedParticle*> systems;
+	static set<wiEmittedParticle*> systems;
 	
 
 	//std::vector<SkinnedVertex> emitterVertexList;
@@ -79,8 +79,8 @@ private:
 	float emit;
 
 public:
-	EmittedParticle(){};
-	EmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
+	wiEmittedParticle(){};
+	wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot);
 	void* operator new(size_t);
 	void operator delete(void*);
@@ -88,7 +88,7 @@ public:
 	static void CleanUpStatic();
 
 	long getCount();
-	static long getNumParticles();
+	static long getNumwiParticles();
 
 	void Update(float gamespeed);
 	void Burst(float num);

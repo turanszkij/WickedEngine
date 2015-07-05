@@ -48,6 +48,9 @@
     <Filter Include="shaders\shadow">
       <UniqueIdentifier>{55c88699-1823-47ee-af0c-a3ebcfc16e38}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ComponentTemplates">
+      <UniqueIdentifier>{73c2fdb6-071b-400b-912f-37847dacd33c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BackLog.cpp">
@@ -120,9 +123,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Network.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="oImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Particle.cpp">
@@ -581,6 +581,15 @@
     <ClCompile Include="BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp">
       <Filter>BULLET\BulletDynamics</Filter>
     </ClCompile>
+    <ClCompile Include="Sprite.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DeferredRenderableComponent.cpp">
+      <Filter>ComponentTemplates</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderableComponent.cpp">
+      <Filter>ComponentTemplates</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BackLog.h">
@@ -590,9 +599,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="VariableManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WickedHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WickedLoader.h">
@@ -659,9 +665,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Network.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="oImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Particle.h">
@@ -1356,6 +1359,18 @@
     </ClInclude>
     <ClInclude Include="BULLET\Bullet-C-Api.h">
       <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="WickedHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sprite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderableComponent.h">
+      <Filter>ComponentTemplates</Filter>
+    </ClInclude>
+    <ClInclude Include="DeferredRenderableComponent.h">
+      <Filter>ComponentTemplates</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

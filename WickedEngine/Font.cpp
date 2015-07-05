@@ -2,25 +2,25 @@
 
 
 
-ID3D11Buffer		*Font::vertexBuffer,*Font::indexBuffer;
-ID3D11InputLayout   *Font::vertexLayout;
-ID3D11VertexShader  *Font::vertexShader;
-ID3D11PixelShader   *Font::pixelShader;
-ID3D11BlendState*		Font::blendState;
-ID3D11Buffer*           Font::constantBuffer;
-ID3D11SamplerState*			Font::sampleState;
-ID3D11RasterizerState*		Font::rasterizerState;
-ID3D11DepthStencilState*	Font::depthStencilState;
-int Font::RENDERWIDTH,Font::RENDERHEIGHT;
-mutex Font::MUTEX;
-UINT Font::textlen;
-SHORT Font::line,Font::pos;
-BOOL Font::toDraw;
-DWORD Font::counter;
-vector<Font::Vertex> Font::vertexList;
-vector<Font::FontStyle> Font::fontStyles;
+ID3D11Buffer		*wiFont::vertexBuffer,*wiFont::indexBuffer;
+ID3D11InputLayout   *wiFont::vertexLayout;
+ID3D11VertexShader  *wiFont::vertexShader;
+ID3D11PixelShader   *wiFont::pixelShader;
+ID3D11BlendState*		wiFont::blendState;
+ID3D11Buffer*           wiFont::constantBuffer;
+ID3D11SamplerState*			wiFont::sampleState;
+ID3D11RasterizerState*		wiFont::rasterizerState;
+ID3D11DepthStencilState*	wiFont::depthStencilState;
+int wiFont::RENDERWIDTH,wiFont::RENDERHEIGHT;
+mutex wiFont::MUTEX;
+UINT wiFont::textlen;
+SHORT wiFont::line,wiFont::pos;
+BOOL wiFont::toDraw;
+DWORD wiFont::counter;
+vector<wiFont::Vertex> wiFont::vertexList;
+vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
-void Font::Initialize()
+void wiFont::Initialize()
 {
 	line=pos=counter=0;
 	toDraw=TRUE;
@@ -42,7 +42,7 @@ void Font::Initialize()
 	depthStencilState=NULL;
 }
 
-void Font::SetUpStates()
+void wiFont::SetUpStates()
 {
 	D3D11_SAMPLER_DESC samplerDesc;
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -58,7 +58,7 @@ void Font::SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	Renderer::graphicsDevice->CreateSamplerState(&samplerDesc, &sampleState);
+	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &sampleState);
 
 
 
@@ -74,7 +74,7 @@ void Font::SetUpStates()
 	rs.ScissorEnable=FALSE;
 	rs.MultisampleEnable=FALSE;
 	rs.AntialiasedLineEnable=FALSE;
-	Renderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
+	wiRenderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
 
 
 
@@ -102,7 +102,7 @@ void Font::SetUpStates()
 	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	Renderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
+	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
@@ -116,9 +116,9 @@ void Font::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	Renderer::graphicsDevice->CreateBlendState(&bd,&blendState);
+	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendState);
 }
-void Font::SetUpCB()
+void wiFont::SetUpCB()
 {
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
@@ -126,9 +126,9 @@ void Font::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
+	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
 }
-void Font::LoadShaders()
+void wiFont::LoadShaders()
 {
 
 	D3D11_INPUT_ELEMENT_DESC layout[] =
@@ -137,7 +137,7 @@ void Font::LoadShaders()
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	Renderer::VertexShaderInfo* vsinfo = static_cast<Renderer::VertexShaderInfo*>(ResourceManager::add("shaders/fontVS.cso", ResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::add("shaders/fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
@@ -145,7 +145,7 @@ void Font::LoadShaders()
 	delete vsinfo;
 
 
-	pixelShader = static_cast<Renderer::PixelShader>(ResourceManager::add("shaders/fontPS.cso", ResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/fontPS.cso", wiResourceManager::PIXELSHADER));
 
 
 
@@ -158,7 +158,7 @@ void Font::LoadShaders()
  //   ID3DBlob* pVSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/fontVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load fontVS.cso",0,0);}
-	//Renderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
+	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
 	
 	
 
@@ -172,7 +172,7 @@ void Font::LoadShaders()
 	//UINT numElements = ARRAYSIZE( layout );
 	//
  //   // Create the input layout
-	//Renderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
+	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
  //                                         pVSBlob->GetBufferSize(), &vertexLayout );
 	//pVSBlob->Release();
 
@@ -182,10 +182,10 @@ void Font::LoadShaders()
 	//ID3DBlob* pPSBlob = NULL;
 
 	//if(FAILED(D3DReadFileToBlob(L"shaders/fontPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load fontPS.cso",0,0);}
-	//Renderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
+	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
 	//pPSBlob->Release();
 }
-void Font::SetUpStaticComponents()
+void wiFont::SetUpStaticComponents()
 {
 	SetUpStates();
 	SetUpCB();
@@ -193,7 +193,7 @@ void Font::SetUpStaticComponents()
 	LoadVertexBuffer();
 	LoadIndices();
 }
-void Font::CleanUpStatic()
+void wiFont::CleanUpStatic()
 {
 	for(int i=0;i<fontStyles.size();++i) fontStyles[i].CleanUp();
 	fontStyles.clear();
@@ -212,7 +212,7 @@ void Font::CleanUpStatic()
 }
 
 
-void Font::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID3D11DeviceContext* context)
+void wiFont::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID3D11DeviceContext* context)
 {
 	textlen=wcslen(text);
 	line=0; pos=0;
@@ -256,18 +256,18 @@ void Font::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID3D
 			pos+=fontStyles[style].recSize+sizSpa.x+sizSpa.y;
 		}
 	}
-	//Renderer::immediateContext->UpdateSubresource( vertexBuffer, 0, NULL, vertexList.data(), 0, 0 );
+	//wiRenderer::immediateContext->UpdateSubresource( vertexBuffer, 0, NULL, vertexList.data(), 0, 0 );
 
-	Renderer::UpdateBuffer(vertexBuffer,vertexList.data(),context==nullptr?Renderer::immediateContext:context,sizeof(Vertex) * textlen * 4);
+	wiRenderer::UpdateBuffer(vertexBuffer,vertexList.data(),context==nullptr?wiRenderer::immediateContext:context,sizeof(Vertex) * textlen * 4);
 	//D3D11_MAPPED_SUBRESOURCE mappedResource;
 	//Vertex* dataPtr;
-	//Renderer::immediateContext->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+	//wiRenderer::immediateContext->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 	//dataPtr = (Vertex*)mappedResource.pData;
 	//memcpy(dataPtr,vertexList.data(),sizeof(Vertex) * textlen * 4);
-	//Renderer::immediateContext->Unmap(vertexBuffer,0);
+	//wiRenderer::immediateContext->Unmap(vertexBuffer,0);
 }
 
-void Font::LoadVertexBuffer()
+void wiFont::LoadVertexBuffer()
 {
 		D3D11_BUFFER_DESC bd;
 		ZeroMemory( &bd, sizeof(bd) );
@@ -275,9 +275,9 @@ void Font::LoadVertexBuffer()
 		bd.ByteWidth = sizeof( Vertex ) * MAX_TEXT * 4;
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		Renderer::graphicsDevice->CreateBuffer( &bd, NULL, &vertexBuffer );
+		wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vertexBuffer );
 }
-void Font::LoadIndices()
+void wiFont::LoadIndices()
 {
 	std::vector<unsigned long>indices;
 	indices.resize(MAX_TEXT*6);
@@ -299,50 +299,50 @@ void Font::LoadIndices()
 	D3D11_SUBRESOURCE_DATA InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = indices.data();
-	Renderer::graphicsDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
+	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
 }
 
 
-void Font::DrawBlink(wchar_t* text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context)
+void wiFont::DrawBlink(wchar_t* text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
 {
 	if(toDraw){
 		Draw(text,newPosSizSpa,Halign,Valign,context);
 	}
 }
-void Font::DrawBlink(const std::string& text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context)
+void wiFont::DrawBlink(const std::string& text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
 {
 	if(toDraw){
 		Draw(text,newPosSizSpa,Halign,Valign,context);
 	}
 }
-void Font::Draw(const std::string& text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context)
+void wiFont::Draw(const std::string& text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
 {
 	std::wstring ws(text.begin(), text.end());
 
 	Draw(ws.c_str(),newPosSizSpa,Halign,Valign,context);
 }
-void Font::Draw(const wchar_t* text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context)
+void wiFont::Draw(const wchar_t* text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
 {
 	Draw(text,"",newPosSizSpa,Halign,Valign,context);
 }
 
-void Font::DrawBlink(const string& text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context){
+void wiFont::DrawBlink(const string& text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
 	if(toDraw){
 		Draw(text,fontStyle,newPosSizSpa,Halign,Valign,context);
 	}
 }
-void Font::DrawBlink(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context){
+void wiFont::DrawBlink(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
 	if(toDraw){
 		Draw(text,fontStyle,newPosSizSpa,Halign,Valign,context);
 	}
 }
-void Font::Draw(const string& text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context){
+void wiFont::Draw(const string& text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
 	wstring ws(text.begin(),text.end());
 	Draw(ws.c_str(),fontStyle,newPosSizSpa,Halign,Valign,context);
 }
 
 
-void Font::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, Renderer::DeviceContext context){
+void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
 	int fontStyleI = getFontStyleByName(fontStyle);
 
 
@@ -361,38 +361,38 @@ void Font::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa,
 	if(textlen){
 
 		if(context==nullptr)
-			context=Renderer::immediateContext;
+			context=wiRenderer::immediateContext;
 	
-		Renderer::BindPrimitiveTopology(Renderer::PRIMITIVETOPOLOGY::TRIANGLELIST,context);
-		Renderer::BindVertexLayout(vertexLayout,context);
-		Renderer::BindVS(vertexShader,context);
-		Renderer::BindPS(pixelShader,context);
+		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLELIST,context);
+		wiRenderer::BindVertexLayout(vertexLayout,context);
+		wiRenderer::BindVS(vertexShader,context);
+		wiRenderer::BindPS(pixelShader,context);
 
 
 		ConstantBuffer* cb = new ConstantBuffer();
-		cb->mProjection = XMMatrixTranspose( Renderer::cam->Oprojection );
+		cb->mProjection = XMMatrixTranspose( wiRenderer::cam->Oprojection );
 		cb->mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSizSpa.x,newPosSizSpa.y,0) );
 		cb->mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,0,0);
 		
-		Renderer::UpdateBuffer(constantBuffer,cb,context);
+		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 		delete cb;
 
-		Renderer::BindConstantBufferVS(constantBuffer,0,context);
+		wiRenderer::BindConstantBufferVS(constantBuffer,0,context);
 
-		Renderer::BindRasterizerState(rasterizerState,context);
-		Renderer::BindDepthStencilState(depthStencilState,1,context);
+		wiRenderer::BindRasterizerState(rasterizerState,context);
+		wiRenderer::BindDepthStencilState(depthStencilState,1,context);
 
-		Renderer::BindBlendState(blendState,context);
-		Renderer::BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),context);
-		Renderer::BindIndexBuffer(indexBuffer,context);
+		wiRenderer::BindBlendState(blendState,context);
+		wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),context);
+		wiRenderer::BindIndexBuffer(indexBuffer,context);
 
-		Renderer::BindTexturePS(fontStyles[fontStyleI].texture,0,context);
-		Renderer::BindSamplerPS(sampleState,0,context);
-		Renderer::DrawIndexed(textlen*6,context);
+		wiRenderer::BindTexturePS(fontStyles[fontStyleI].texture,0,context);
+		wiRenderer::BindSamplerPS(sampleState,0,context);
+		wiRenderer::DrawIndexed(textlen*6,context);
 	}
 }
 
-void Font::Blink(DWORD perframe,DWORD invisibleTime)
+void wiFont::Blink(DWORD perframe,DWORD invisibleTime)
 {
 	counter++;
 	if(toDraw && counter>perframe){
@@ -406,7 +406,7 @@ void Font::Blink(DWORD perframe,DWORD invisibleTime)
 }
 
 
-int Font::textWidth(const wchar_t* text,FLOAT spacing,const int& style)
+int wiFont::textWidth(const wchar_t* text,FLOAT spacing,const int& style)
 {
 	int i=0;
 	int max=0,lineW=0;
@@ -423,7 +423,7 @@ int Font::textWidth(const wchar_t* text,FLOAT spacing,const int& style)
 
 	return max*(fontStyles[style].recSize+spacing);
 }
-int Font::textHeight(const wchar_t* text,FLOAT siz,const int& style)
+int wiFont::textHeight(const wchar_t* text,FLOAT siz,const int& style)
 {
 	int i=0;
 	int lines=1;
@@ -441,7 +441,7 @@ int Font::textHeight(const wchar_t* text,FLOAT siz,const int& style)
 
 
 
-Font::FontStyle::FontStyle(const string& newName){
+wiFont::wiFontStyle::wiFontStyle(const string& newName){
 	name=newName;
 
 	for(short i=0;i<127;i++) lookup[i].code=lookup[i].offX=lookup[i].offY=0;
@@ -451,8 +451,8 @@ Font::FontStyle::FontStyle(const string& newName){
 	ss1<<"fonts/"<<name<<".dds";
 	std::ifstream file(ss.str());
 	if(file.is_open()){
-		//CreateWICTextureFromFile(FALSE,Renderer::graphicsDevice,0,wss1.str().c_str(),0,&texture,0);
-		texture = (Renderer::TextureView)ResourceManager::add(ss1.str());
+		//CreateWICTextureFromFile(FALSE,wiRenderer::graphicsDevice,0,wss1.str().c_str(),0,&texture,0);
+		texture = (wiRenderer::TextureView)wiResourceManager::add(ss1.str());
 		file>>texWidth>>texHeight>>recSize>>charSize;
 		int i=0;
 		while(!file.eof()){
@@ -465,18 +465,18 @@ Font::FontStyle::FontStyle(const string& newName){
 		file.close();
 	}
 	else {
-		WickedHelper::messageBox("Could not load Font Data!"); 
+		wiHelper::messageBox("Could not load Font Data!"); 
 	}
 }
-void Font::FontStyle::CleanUp(){
+void wiFont::wiFontStyle::CleanUp(){
 	if(texture) texture->Release(); texture=NULL;
 }
-void Font::addFontStyle( string toAdd){
+void wiFont::addFontStyle( const string& toAdd ){
 	MUTEX.lock();
-	fontStyles.push_back(FontStyle(toAdd));
+	fontStyles.push_back(wiFontStyle(toAdd));
 	MUTEX.unlock();
 }
-int Font::getFontStyleByName( string get){
+int wiFont::getFontStyleByName( const string& get ){
 	for(int i=0;i<fontStyles.size();i++)
 	if(!strcmp(fontStyles[i].name.c_str(),get.c_str()))
 		return i;

@@ -1,19 +1,19 @@
 #include "Sound.h"
 
-IXAudio2* SoundEffect::pXAudio2;
-IXAudio2MasteringVoice* SoundEffect::pMasterVoice;
-bool SoundEffect::INITIALIZED=false;
+IXAudio2* wiSoundEffect::pXAudio2;
+IXAudio2MasteringVoice* wiSoundEffect::pMasterVoice;
+bool wiSoundEffect::INITIALIZED = false;
 
-IXAudio2* Music::pXAudio2;
-IXAudio2MasteringVoice* Music::pMasterVoice;
-bool Music::INITIALIZED=false;
+IXAudio2* wiMusic::pXAudio2;
+IXAudio2MasteringVoice* wiMusic::pMasterVoice;
+bool wiMusic::INITIALIZED = false;
 
 using namespace std;
 
 
 
 
-HRESULT Sound::FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWORD & dwChunkDataPosition)
+HRESULT wiSound::FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWORD & dwChunkDataPosition)
 {
 	HRESULT hr = S_OK;
 #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
@@ -79,7 +79,7 @@ HRESULT Sound::FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWORD 
     return S_OK;
     
 }
-HRESULT Sound::ReadChunkData(HANDLE hFile, void * buffer, DWORD buffersize, DWORD bufferoffset)
+HRESULT wiSound::ReadChunkData(HANDLE hFile, void * buffer, DWORD buffersize, DWORD bufferoffset)
 {
     HRESULT hr = S_OK;
 
@@ -97,7 +97,7 @@ HRESULT Sound::ReadChunkData(HANDLE hFile, void * buffer, DWORD buffersize, DWOR
         hr = HRESULT_FROM_WIN32( GetLastError() );
     return hr;
 }
-HRESULT Sound::OpenFile(TCHAR* strFileName)
+HRESULT wiSound::OpenFile(TCHAR* strFileName)
 {
 	HRESULT hr;
 
@@ -175,19 +175,19 @@ HRESULT Sound::OpenFile(TCHAR* strFileName)
 
 
 
-HRESULT Sound::Load(wstring filename)
+HRESULT wiSound::Load(wstring filename)
 {
 	return OpenFile(filename._Myptr());
 }
-HRESULT Sound::Load(string filename)
+HRESULT wiSound::Load(string filename)
 {
 	return OpenFile(wstring(filename.begin(),filename.end())._Myptr());
 }
-void Sound::DelayHelper(Sound* sound, DWORD delay){
+void wiSound::DelayHelper(wiSound* sound, DWORD delay){
 	Sleep(delay);
 	sound->Play();
 }
-HRESULT Sound::Play(DWORD delay)
+HRESULT wiSound::Play(DWORD delay)
 {
 	if(delay>0){
 		thread(DelayHelper,this,delay).detach();
@@ -195,23 +195,23 @@ HRESULT Sound::Play(DWORD delay)
 	}
 	return PlaySoundEffect();
 }
-void Sound::Stop(){
+void wiSound::Stop(){
 	StopSoundEffect();
 }
 
 
 
-void SoundEffect::SetVolume(float vol){
+void wiSoundEffect::SetVolume(float vol){
 	if(INITIALIZED && pMasterVoice != nullptr)
 		pMasterVoice->SetVolume(vol);
 }
-float SoundEffect::GetVolume(){
+float wiSoundEffect::GetVolume(){
 	float vol;
 	if(pMasterVoice != nullptr)
 		pMasterVoice->GetVolume(&vol);
 	return vol;
 }
-HRESULT SoundEffect::Initialize()
+HRESULT wiSoundEffect::Initialize()
 {
 	HRESULT hr;
 	pXAudio2 = nullptr;
@@ -224,7 +224,7 @@ HRESULT SoundEffect::Initialize()
 	INITIALIZED=true;
 	return EXIT_SUCCESS;
 }
-void SoundEffect::CleanUp()
+void wiSoundEffect::CleanUp()
 {
 	if(pMasterVoice!=nullptr) pMasterVoice->DestroyVoice();
 	if(pXAudio2!=nullptr) pXAudio2->Release();
@@ -232,25 +232,25 @@ void SoundEffect::CleanUp()
 	pXAudio2=nullptr;
 	INITIALIZED=false;
 }
-SoundEffect::SoundEffect()
+wiSoundEffect::wiSoundEffect()
 {
 	pSourceVoice=nullptr;
 	if(!INITIALIZED) Initialize();
 }
-SoundEffect::SoundEffect(wstring filename)
+wiSoundEffect::wiSoundEffect(wstring filename)
 {
 	if(!INITIALIZED) Initialize();
 	Load(filename);
 }
-SoundEffect::SoundEffect(string filename)
+wiSoundEffect::wiSoundEffect(string filename)
 {
 	if(!INITIALIZED) Initialize();
 	Load(filename);
 }
-SoundEffect::~SoundEffect()
+wiSoundEffect::~wiSoundEffect()
 {
 }
-HRESULT SoundEffect::PlaySoundEffect()
+HRESULT wiSoundEffect::PlaySoundEffect()
 {
 
 	HRESULT hr;
@@ -267,7 +267,7 @@ HRESULT SoundEffect::PlaySoundEffect()
 
 	return EXIT_SUCCESS;
 }
-void SoundEffect::StopSoundEffect()
+void wiSoundEffect::StopSoundEffect()
 {
 	if(pSourceVoice!=nullptr){
 		pSourceVoice->Stop();
@@ -275,17 +275,17 @@ void SoundEffect::StopSoundEffect()
 }
 
 
-void Music::SetVolume(float vol){
+void wiMusic::SetVolume(float vol){
 	if(INITIALIZED && pMasterVoice != nullptr)
 		pMasterVoice->SetVolume(vol);
 }
-float Music::GetVolume(){
+float wiMusic::GetVolume(){
 	float vol;
 	if(pMasterVoice != nullptr)
 		pMasterVoice->GetVolume(&vol);
 	return vol;
 }
-HRESULT Music::Initialize()
+HRESULT wiMusic::Initialize()
 {
 	HRESULT hr;
 	pXAudio2 = nullptr;
@@ -298,7 +298,7 @@ HRESULT Music::Initialize()
 	INITIALIZED=true;
 	return EXIT_SUCCESS;
 }
-void Music::CleanUp()
+void wiMusic::CleanUp()
 {
 	if(pMasterVoice!=nullptr) pMasterVoice->DestroyVoice();
 	if(pXAudio2!=nullptr) pXAudio2->Release();
@@ -306,25 +306,25 @@ void Music::CleanUp()
 	pXAudio2=nullptr;
 	INITIALIZED=false;
 }
-Music::Music()
+wiMusic::wiMusic()
 {
 	pSourceVoice=nullptr;
 	if(!INITIALIZED) Initialize();
 }
-Music::Music(wstring filename)
+wiMusic::wiMusic(wstring filename)
 {
 	if(!INITIALIZED) Initialize();
 	Load(filename);
 }
-Music::Music(string filename)
+wiMusic::wiMusic(string filename)
 {
 	if(!INITIALIZED) Initialize();
 	Load(filename);
 }
-Music::~Music()
+wiMusic::~wiMusic()
 {
 }
-HRESULT Music::PlaySoundEffect()
+HRESULT wiMusic::PlaySoundEffect()
 {
 
 	HRESULT hr;
@@ -341,7 +341,7 @@ HRESULT Music::PlaySoundEffect()
 
 	return EXIT_SUCCESS;
 }
-void Music::StopSoundEffect()
+void wiMusic::StopSoundEffect()
 {
 	if(pSourceVoice!=nullptr){
 		pSourceVoice->Stop();

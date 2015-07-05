@@ -1,6 +1,6 @@
 #include "WickedHelper.h"
 
-std::string WickedHelper::toUpper(const std::string& s)
+std::string wiHelper::toUpper(const std::string& s)
 {
 	std::string result;
 		std::locale loc;
@@ -11,7 +11,7 @@ std::string WickedHelper::toUpper(const std::string& s)
 		return result;
 }
 
-bool WickedHelper::readByteData(const string& fileName, BYTE** data, size_t& dataSize){
+bool wiHelper::readByteData(const string& fileName, BYTE** data, size_t& dataSize){
 	ifstream file(fileName, ios::binary | ios::ate);
 	if (file.is_open()){
 
@@ -29,7 +29,7 @@ bool WickedHelper::readByteData(const string& fileName, BYTE** data, size_t& dat
 	return false;
 }
 
-void WickedHelper::messageBox(const string& msg, const string& caption, HWND hWnd){
+void wiHelper::messageBox(const string& msg, const string& caption, HWND hWnd){
 #ifndef WINSTORE_SUPPORT
 	MessageBoxA(hWnd, msg.c_str(), caption.c_str(), 0);
 #else
