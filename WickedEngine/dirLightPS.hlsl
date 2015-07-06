@@ -20,7 +20,7 @@ float4 main( VertexToPixel PSIn ) : SV_TARGET
 		[branch]if(!unshaded){
 			float4 material = materialMap.SampleLevel(Sampler,screenPos,0);
 			float specular = material.w*specularMaximumIntensity;
-			uint specular_power = material.z*1000;
+			uint specular_power = material.z;
 			float3 normal = norU.xyz;
 			bool toonshaded = isToon(norU.w);
 

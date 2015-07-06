@@ -590,6 +590,9 @@
     <ClCompile Include="RenderableComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
+    <ClCompile Include="ForwardRenderableComponent.cpp">
+      <Filter>ComponentTemplates</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BackLog.h">
@@ -1374,6 +1377,9 @@
     </ClInclude>
     <ClInclude Include="CommonInclude.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ForwardRenderableComponent.h">
+      <Filter>ComponentTemplates</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,7 +1,5 @@
 #pragma once
 #include "RenderableComponent.h"
-#include "RenderTarget.h"
-#include "DepthTarget.h"
 
 
 class DeferredRenderableComponent :
@@ -36,13 +34,12 @@ private:
 	void RenderComposition2();
 	void RenderColorGradedComposition();
 
+protected:
 	bool ssr, ssao;
 public:
-	DeferredRenderableComponent(bool ssao, bool ssr);
-	~DeferredRenderableComponent(); 
-	
-	virtual void Load() = 0;
-	virtual void Start() = 0;
+	DeferredRenderableComponent();
+	~DeferredRenderableComponent();
+
 	void Update();
 	void Render();
 	void Compose();

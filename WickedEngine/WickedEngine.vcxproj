@@ -329,6 +329,7 @@
     <ClCompile Include="DirectInput.cpp" />
     <ClCompile Include="EmittedParticle.cpp" />
     <ClCompile Include="Font.cpp" />
+    <ClCompile Include="ForwardRenderableComponent.cpp" />
     <ClCompile Include="FrameRate.cpp" />
     <ClCompile Include="Frustum.cpp" />
     <ClCompile Include="HairParticle.cpp" />
@@ -578,6 +579,7 @@
     <ClInclude Include="Client.h" />
     <ClInclude Include="CommonInclude.h" />
     <ClInclude Include="DeferredRenderableComponent.h" />
+    <ClInclude Include="ForwardRenderableComponent.h" />
     <ClInclude Include="RenderableComponent.h" />
     <ClInclude Include="WickedEngine.h" />
     <ClInclude Include="CpuInfo.h" />

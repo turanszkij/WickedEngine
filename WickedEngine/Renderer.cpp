@@ -3920,6 +3920,9 @@ void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResou
 
 void wiRenderer::DrawSky(const XMVECTOR& newCenter, ID3D11DeviceContext* context)
 {
+	if (enviroMap == nullptr)
+		return;
+
 	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	BindPrimitiveTopology(TRIANGLELIST,context);
 	//context->RSSetState(backFaceRS);

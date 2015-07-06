@@ -1,12 +1,15 @@
 #include "DeferredRenderableComponent.h"
 #include "WickedEngine.h"
 
-DeferredRenderableComponent::DeferredRenderableComponent(bool ssao, bool ssr) :ssao(ssao), ssr(ssr){
+DeferredRenderableComponent::DeferredRenderableComponent() :ssao(false), ssr(false){
 	static const float lightShaftQuality = .4f;
 	static const float bloomDownSample = 4.f;
 	static const float particleDownSample = 1.0f;
 	static const float reflectionDownSample = 0.5f;
 	static const float ssaoQuality = 0.3f;
+
+	wiRenderer::SetEnviromentMap(nullptr);
+	wiRenderer::SetColorGrading(nullptr);
 
 	rtSun.resize(2);
 	rtSun[0].Initialize(
@@ -126,11 +129,6 @@ void DeferredRenderableComponent::Compose(){
 
 	RenderColorGradedComposition();
 
-	wiImage::BatchBegin();
-	ImageEffects fx = ImageEffects(0, 0, 200, 200);
-	fx.blendFlag = BLENDMODE_OPAQUE;
-	fx.mipLevel = 4.5f;
-	wiImage::Draw(rtBloom.back().shaderResource[0], fx);
 }
 
 void DeferredRenderableComponent::RenderReflections(){

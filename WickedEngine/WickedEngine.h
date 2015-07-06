@@ -31,7 +31,9 @@
 #include "WickedHelper.h"
 #include "InputManager.h"
 
-
+#include "RenderableComponent.h"
+#include "ForwardRenderableComponent.h"
+#include "DeferredRenderableComponent.h"
 
 
 

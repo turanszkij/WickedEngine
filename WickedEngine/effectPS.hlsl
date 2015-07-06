@@ -95,7 +95,7 @@ PixelOutputType main(PixelInputType PSIn)
 			
 	Out.col = float4((baseColor.rgb+colorMask.rgb)*(1+emit),1);
 	Out.nor = float4((normal.xyz),properties);
-	Out.vel = float4(PSIn.vel.xy*float2(-1,1),specular_power*0.001,spec.a);
+	Out.vel = float4(PSIn.vel.xy*float2(-1,1),specular_power,spec.a);
 
 	
 	return Out;
