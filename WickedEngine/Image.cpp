@@ -1,5 +1,10 @@
 #include "Image.h"
-
+#include "ResourceManager.h"
+#include "Renderer.h"
+#include "ImageEffects.h"
+#include "WickedLoader.h"
+#include "Camera.h"
+#include "WickedHelper.h"
 
 #pragma region STATICS
 mutex wiImage::MUTEX;
@@ -15,7 +20,6 @@ ID3D11PixelShader*      wiImage::pixelShader,*wiImage::blurHPS,*wiImage::blurVPS
 ID3D11RasterizerState*		wiImage::rasterizerState;
 ID3D11DepthStencilState*	wiImage::depthStencilStateGreater,*wiImage::depthStencilStateLess,*wiImage::depthNoStencilState;
 
-int wiImage::RENDERWIDTH,wiImage::RENDERHEIGHT;
 
 //map<string,wiImage::ImageResource> wiImage::images;
 #pragma endregion
@@ -293,13 +297,13 @@ void wiImage::Draw(wiRenderer::TextureView texture, const ImageEffects& effects,
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			ConstantBuffer cb;
 			if(effects.typeFlag==SCREEN){
-				cb.mViewProjection = XMMatrixTranspose( wiRenderer::cam->Oprojection );
-				cb.mTrans = XMMatrixTranspose( XMMatrixTranslation(RENDERWIDTH/2-effects.siz.x/2,-RENDERHEIGHT/2+effects.siz.y/2,0) * XMMatrixRotationZ(effects.rotation)
-					* XMMatrixTranslation(-RENDERWIDTH/2+effects.pos.x+effects.siz.x*0.5f,RENDERHEIGHT/2 + effects.pos.y-effects.siz.y*0.5f,0) ); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
-				cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,effects.siz.x,effects.siz.y);
+				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
+				cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::RENDERWIDTH / 2 - effects.siz.x / 2, -wiRenderer::RENDERHEIGHT / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
+					* XMMatrixTranslation(-wiRenderer::RENDERWIDTH / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::RENDERHEIGHT / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
+				cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
-				cb.mViewProjection = XMMatrixTranspose( wiRenderer::cam->View * wiRenderer::cam->Projection );
+				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->View * wiRenderer::getCamera()->Projection );
 				XMMATRIX faceRot = XMMatrixIdentity();
 				if(effects.lookAt.w){
 					XMVECTOR vvv = (effects.lookAt.x==1 && !effects.lookAt.y && !effects.lookAt.z)?XMVectorSet(0,1,0,0):XMVectorSet(1,0,0,0);
@@ -313,12 +317,12 @@ void wiImage::Draw(wiRenderer::TextureView texture, const ImageEffects& effects,
 					;
 				}
 				else
-					faceRot=XMMatrixRotationX(wiRenderer::cam->updownRot)*XMMatrixRotationY(wiRenderer::cam->leftrightRot);
+					faceRot=XMMatrixRotationX(wiRenderer::getCamera()->updownRot)*XMMatrixRotationY(wiRenderer::getCamera()->leftrightRot);
 				cb.mTrans = XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x,effects.scale.y,1)
 					*XMMatrixRotationZ(effects.rotation)
 					*faceRot
-					//*XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&effects.pos)-wiRenderer::cam->Eye,XMVectorSet(0,1,0,0)))
+					//*XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&effects.pos)-wiRenderer::getCamera()->Eye,XMVectorSet(0,1,0,0)))
 					*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
 					);
 				cb.mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
@@ -429,7 +433,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, const ImageEffects& effects,
 		if(effects.extractNormalMap==true)
 			normalmapmode=2;
 		pscb.mMaskFadOpaDis=XMFLOAT4(effects.maskMap?1:0,effects.fade,effects.opacity,normalmapmode);
-		pscb.mDimension=XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,effects.siz.x,effects.siz.y);
+		pscb.mDimension = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
 
 		wiRenderer::UpdateBuffer(PSCb,&pscb,context);
 		//PSConstantBuffer* dataPtr2;
@@ -453,11 +457,11 @@ void wiImage::Draw(wiRenderer::TextureView texture, const ImageEffects& effects,
 		BlurBuffer cb;
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
-			cb.mWeightTexelStrenMip.y = 1.0f / RENDERWIDTH;
+			cb.mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERWIDTH;
 		}
 		else{
 			wiRenderer::BindPS(blurVPS,context);
-			cb.mWeightTexelStrenMip.y = 1.0f / RENDERHEIGHT;
+			cb.mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERHEIGHT;
 		}
 
 		float weight0 = 1.0f;
@@ -574,11 +578,11 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 
 	DeferredBuffer cb;
 	//cb.mSun=XMVector3Normalize(wiRenderer::GetSunPosition());
-	//cb.mEye=wiRenderer::cam->Eye;
+	//cb.mEye=wiRenderer::getCamera()->Eye;
 	cb.mAmbient=wiRenderer::worldInfo.ambient;
 	//cb.mBiasResSoftshadow=shadowProps;
 	cb.mHorizon=wiRenderer::worldInfo.horizon;
-	cb.mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::cam->View*wiRenderer::cam->Projection) );
+	cb.mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::getCamera()->View*wiRenderer::getCamera()->Projection) );
 	cb.mFogSEH=wiRenderer::worldInfo.fogSEH;
 
 	wiRenderer::UpdateBuffer(deferredCb,&cb,context);
@@ -669,9 +673,9 @@ void wiImage::DrawModifiedTexCoords(wiRenderer::TextureView texture, wiRenderer:
 void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, XMFLOAT2 newOffset)
 {
 	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( wiRenderer::cam->Oprojection );
+	cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
 	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
-	cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,newPosSiz.z,newPosSiz.w);
+	cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, newPosSiz.z, newPosSiz.w);
 	cb.mOffsetMirFade = XMFLOAT4(newOffset.x,newOffset.y,1,0);
 	cb.mDrawRec = XMFLOAT4(0,0,0,0);
 	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
@@ -710,9 +714,9 @@ void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPos
 void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, XMFLOAT2 newOffset)
 {
 	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( wiRenderer::cam->Oprojection );
+	cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
 	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
-	cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,newPosSiz.z,newPosSiz.w);
+	cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, newPosSiz.z, newPosSiz.w);
 	cb.mOffsetMirFade = XMFLOAT4(newOffset.x,newOffset.y,1,0);
 	cb.mDrawRec = newDrawRec;
 	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
@@ -727,9 +731,9 @@ void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPos
 void wiImage::DrawAdditive(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec)
 {
 	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( wiRenderer::cam->Oprojection );
+	cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
 	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
-	cb.mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,newPosSiz.z,newPosSiz.w);
+	cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, newPosSiz.z, newPosSiz.w);
 	cb.mOffsetMirFade = XMFLOAT4(0,0,1,0);
 	cb.mDrawRec = newDrawRec;
 	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);

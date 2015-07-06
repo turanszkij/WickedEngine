@@ -1,4 +1,12 @@
 #include "WickedLoader.h"
+#include "ResourceManager.h"
+#include "WickedHelper.h"
+#include "WickedMath.h"
+#include "Renderer.h"
+#include "EmittedParticle.h"
+#include "HairParticle.h"
+#include "RenderTarget.h"
+#include "DepthTarget.h"
 
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
@@ -858,7 +866,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 							stringstream identified_systemName("");
 							identified_systemName<<systemName<<identifier;
 							if(objects.back()->mesh){
-								objects.back()->ewiParticleSystems.push_back( 
+								objects.back()->eParticleSystems.push_back( 
 									new wiEmittedParticle(identified_systemName.str(),identified_materialName.str(),objects.back(),size,randfac,norfac,count,life,randlife,scaleX,scaleY,rot) 
 									);
 							}

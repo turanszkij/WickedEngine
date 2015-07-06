@@ -1,5 +1,5 @@
 #include "Cube.h"
-
+#include "Renderer.h"
 
 ID3D11Buffer* Cube::vertexBuffer;
 ID3D11Buffer* Cube::indexBuffer;

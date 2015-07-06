@@ -1,5 +1,7 @@
 #pragma once
-#include "WickedEngine.h"
+#include "CommonInclude.h"
+
+class wiSound;
 
 class wiResourceManager
 {

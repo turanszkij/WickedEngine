@@ -1,6 +1,8 @@
 #include "Sprite.h"
-
-
+#include "ResourceManager.h"
+#include "ImageEffects.h"
+#include "Image.h"
+#include "Renderer.h"
 
 
 wiSprite::wiSprite()

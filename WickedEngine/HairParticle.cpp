@@ -1,6 +1,9 @@
 #include "HairParticle.h"
-
-
+#include "Renderer.h"
+#include "ResourceManager.h"
+#include "WickedLoader.h"
+#include "WickedMath.h"
+#include "Frustum.h"
 
 ID3D11InputLayout* wiHairParticle::il;
 ID3D11VertexShader* wiHairParticle::vs;

@@ -1,4 +1,5 @@
 #include "BULLET.h"
+#include "WickedLoader.h"
 
 int PHYSICS::softBodyInterationCount=5;
 bool BULLET::grab=false;

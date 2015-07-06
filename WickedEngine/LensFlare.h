@@ -1,6 +1,6 @@
 #ifndef LENSFLARE
 #define LENSFLARE
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 
 static class wiLensFlare
 {
@@ -14,7 +14,6 @@ private:
 	static ID3D11RasterizerState* rasterizerState;
 	static ID3D11DepthStencilState* depthStencilState;
 	static ID3D11BlendState* blendState;
-	static float RENDERWIDTH, RENDERHEIGHT;
 
 	struct ConstantBuffer
 	{
@@ -26,7 +25,7 @@ private:
 	static void SetUpStates();
 	static void SetUpCB();
 public:
-	static void Initialize(float width, float height);
+	static void Initialize();
 	static void CleanUp();
 	static void Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* context, const XMVECTOR& lightPos
 		, vector<ID3D11ShaderResourceView*>& rims);

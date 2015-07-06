@@ -1,5 +1,10 @@
 #include "EmittedParticle.h"
-
+#include "WickedMath.h"
+#include "WickedLoader.h"
+#include "Renderer.h"
+#include "ResourceManager.h"
+#include "Frustum.h"
+#include "Camera.h"
 
 //ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
 ID3D11InputLayout   *wiEmittedParticle::vertexLayout;
@@ -228,9 +233,9 @@ void wiEmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11
 		
 		Frustum frustum = Frustum();
 		XMFLOAT4X4 proj,view;
-		XMStoreFloat4x4( &proj,wiRenderer::cam->Projection );
+		XMStoreFloat4x4( &proj,wiRenderer::getCamera()->Projection );
 		XMStoreFloat4x4( &view,newView );
-		frustum.ConstructFrustum(wiRenderer::cam->zFarP,proj,view);
+		frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP,proj,view);
 
 		if(frustum.CheckBox(bounding_box->corners)){
 			
@@ -254,7 +259,7 @@ void wiEmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11
 
 			ConstantBuffer cb;
 			cb.mView = XMMatrixTranspose(newView);
-			cb.mProjection = XMMatrixTranspose( wiRenderer::cam->Projection );
+			cb.mProjection = XMMatrixTranspose( wiRenderer::getCamera()->Projection );
 			cb.mCamPos = eye;
 			cb.mAdd.x = additive;
 			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);

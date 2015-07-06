@@ -1,5 +1,9 @@
 #pragma once
-#include "WickedEngine.h"
+#include "CommonInclude.h"
+
+struct SkinnedVertex;
+struct Mesh;
+struct Object;
 
 class PHYSICS
 {

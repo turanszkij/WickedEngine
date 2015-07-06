@@ -1,7 +1,7 @@
 #ifndef MAIN_CAMERA_H
 #define MAIN_CAMERA_H
 
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 
 class Camera
 {

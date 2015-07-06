@@ -1,5 +1,6 @@
 #pragma once
 #include "Image.h"
+#include "ImageEffects.h"
 
 class wiSprite : public wiImage
 {

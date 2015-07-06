@@ -1,4 +1,6 @@
 #include "InputManager.h"
+#include "XInput.h"
+#include "DirectInput.h"
 
 XInput* wiInputManager::xinput=nullptr;
 DirectInput* wiInputManager::dinput=nullptr;

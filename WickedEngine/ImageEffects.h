@@ -1,5 +1,5 @@
 #pragma once
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 
 enum BLENDMODE{
 	BLENDMODE_OPAQUE,

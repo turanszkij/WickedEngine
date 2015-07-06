@@ -1,5 +1,5 @@
 #pragma once 
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 #define MAX_TEXT 20000
 
 class wiRenderer;
@@ -42,7 +42,6 @@ protected:
 	static ID3D11SamplerState*			sampleState;
 	static ID3D11RasterizerState*		rasterizerState;
 	static ID3D11DepthStencilState*	depthStencilState;
-	static int RENDERWIDTH,RENDERHEIGHT;
 	
 	static void SetUpStates();
 	static void SetUpCB();
@@ -81,7 +80,6 @@ public:
 	static void Initialize();
 	static void SetUpStaticComponents();
 	static void CleanUpStatic();
-	static void SetScreenResolution(int width, int height){RENDERHEIGHT=height;RENDERWIDTH=width;};
 	
 	static void DrawBlink(wchar_t* text,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
 	static void Draw(const wchar_t* text,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);

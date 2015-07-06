@@ -1,7 +1,9 @@
 #pragma once
-#include "WickedEngine.h"
-//#include "ViewProp.h"
+#include "CommonInclude.h"
 #include "skinningDEF.h"
+#include "ImageEffects.h"
+#include "RenderTarget.h"
+#include "DepthTarget.h"
 
 class HitSphere;
 class wiParticle;
@@ -473,7 +475,7 @@ struct Object : public Streamable, public Transform
 		EMITTER_INVISIBLE,
 	};
 	wiParticleEmitter particleEmitter;
-	vector< wiEmittedParticle* > ewiParticleSystems;
+	vector< wiEmittedParticle* > eParticleSystems;
 	vector< wiHairParticle* > hwiParticleSystems;
 
 	
@@ -499,7 +501,7 @@ struct Object : public Streamable, public Transform
 		trail.resize(0);
 		trailBuff=NULL;
 		particleEmitter = NO_EMITTER;
-		ewiParticleSystems.resize(0);
+		eParticleSystems.resize(0);
 		hwiParticleSystems.resize(0);
 		mesh=nullptr;
 		rigidBody=kinematic=false;

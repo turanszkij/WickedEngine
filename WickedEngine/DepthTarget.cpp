@@ -1,5 +1,5 @@
 #include "DepthTarget.h"
-
+#include "Renderer.h"
 
 
 wiDepthTarget::wiDepthTarget()

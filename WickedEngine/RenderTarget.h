@@ -1,6 +1,5 @@
 #pragma once
-#include "WickedEngine.h"
-#include "DepthTarget.h"
+#include "CommonInclude.h"
 
 class wiDepthTarget;
 

@@ -1,4 +1,5 @@
 #include "Timer.h"
+#include "WickedHelper.h"
 
 double Timer::PCFreq=0;
 __int64 Timer::CounterStart=0;

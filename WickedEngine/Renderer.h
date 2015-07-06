@@ -1,5 +1,5 @@
 #pragma once
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 #include "PHYSICS.h"
 #include "Lines.h"
 #include "Cube.h"
@@ -34,6 +34,7 @@ class  TaskThread;
 struct Cullable;
 class  PHYSICS;
 class  Camera;
+class  wiRenderTarget;
 
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string,Material*> MaterialCollection;
@@ -1029,7 +1030,7 @@ public:
 	static wiRenderTarget normalMapRT, imagesRT, imagesRTAdd;
 	
 	static Camera* cam;
-
+	static Camera* getCamera(){ return cam; }
 
 	float getSphereRadius(const int& index);
 

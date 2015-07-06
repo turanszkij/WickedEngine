@@ -1,4 +1,4 @@
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 
 class TaskThread {
 public:

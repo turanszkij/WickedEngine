@@ -1,7 +1,8 @@
 #include "BackLog.h"
-//#include "GameComponents.h"
-
-//extern ID3D11Device*			wiRenderer::graphicsDevice;
+#include "WickedMath.h"
+#include "ResourceManager.h"
+#include "ImageEffects.h"
+#include "Renderer.h"
 
 deque<string> wiBackLog::stream;
 deque<string> wiBackLog::history;
@@ -11,17 +12,14 @@ const float wiBackLog::speed=50.0f;
 unsigned int wiBackLog::deletefromline = 100;
 float wiBackLog::pos;
 int wiBackLog::scroll;
-int wiBackLog::RENDERWIDTH,wiBackLog::RENDERHEIGHT;
 stringstream wiBackLog::inputArea;
 int wiBackLog::historyPos=0;
 
 
-void wiBackLog::Initialize(int width, int height){
+void wiBackLog::Initialize(){
 	//stream.resize(0);
 	wiResourceManager::add("images/logBG.png");
-	RENDERWIDTH=width;
-	RENDERHEIGHT=height;
-	pos=RENDERHEIGHT;
+	pos = wiRenderer::RENDERHEIGHT;
 	scroll=0;
 	state=DISABLED;
 	deletefromline=100;
@@ -48,18 +46,18 @@ void wiBackLog::Scroll(int dir){
 void wiBackLog::Update(){
 	if(state==DEACTIVATING) pos+=speed;
 	else if(state==ACTIVATING) pos-=speed;
-	if(pos>=RENDERHEIGHT) {state=DISABLED; pos=RENDERHEIGHT;}
+	if (pos >= wiRenderer::RENDERHEIGHT) { state = DISABLED; pos = wiRenderer::RENDERHEIGHT; }
 	else if(pos<=0) {state=IDLE; pos=0;}
 }
 void wiBackLog::Draw(){
 	if(state!=DISABLED){
 		wiImage::BatchBegin();
-		ImageEffects fx = ImageEffects(RENDERWIDTH,RENDERHEIGHT);
+		ImageEffects fx = ImageEffects(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
-		fx.opacity=wiMath::Lerp(0,1,pos/RENDERHEIGHT);
+		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);
 		wiImage::Draw((wiRenderer::TextureView)(wiResourceManager::get("images/logBG.png")->data),fx);
-		wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
-		wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -RENDERHEIGHT + 10, 0, -8), "left", "bottom");
+		wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
+		wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}
 }
 

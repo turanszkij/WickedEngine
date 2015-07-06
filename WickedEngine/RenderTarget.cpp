@@ -1,4 +1,6 @@
 #include "RenderTarget.h"
+#include "Renderer.h"
+#include "DepthTarget.h"
 
 
 void wiRenderTarget::clear(){

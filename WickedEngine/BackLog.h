@@ -1,6 +1,8 @@
 #ifndef BACKLOG
 #define BACKLOG
-#include "WickedEngine.h"
+#include "CommonInclude.h"
+#include "Font.h"
+#include "Image.h"
 
 static class wiBackLog
 {
@@ -19,9 +21,8 @@ private:
 		DEACTIVATING,
 	};
 	static State state;
-	static int RENDERWIDTH, RENDERHEIGHT;
 public:
-	static void Initialize(int width, int height);
+	static void Initialize();
 	static void CleanUp();
 	static void Toggle();
 	static void Scroll(int direction);

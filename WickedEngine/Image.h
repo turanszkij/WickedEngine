@@ -1,5 +1,8 @@
 #pragma once
-#include "WickedEngine.h"
+#include "CommonInclude.h"
+
+class ImageEffects;
+enum BLENDMODE;
 
 class wiImage
 {
@@ -62,7 +65,6 @@ protected:
 	static void LoadShaders();
 	static void LoadBuffers();
 	static void SetUpStates();
-	static int RENDERWIDTH,RENDERHEIGHT;
 
 public:
 	wiImage();
@@ -88,10 +90,15 @@ public:
 	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, const float&blur, const float&blurStrength, const float&fade, const float&opacity, const float&rotation, ID3D11DeviceContext* context);
 	static void Draw(ID3D11ShaderResourceView* resourceView, ID3D11ShaderResourceView* mask, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, const float&blur, const float&blurStrength, const float&fade, const float&opacity, const float&rotation, XMFLOAT2 texOffset, BLENDMODE blendFlag, ID3D11DeviceContext* context);
 	
-	static void DrawModifiedTexCoords(ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, XMFLOAT2 texOffset, const float&opacity, BLENDMODE blendFlag);
+	//deprecated
+	static void DrawModifiedTexCoords(ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, XMFLOAT2 texOffset, const float&opacity, BLENDMODE blendFlag);
+	//deprecated
 	static void DrawModifiedTexCoords(ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, XMFLOAT2 texOffset, const float&opacity, BLENDMODE blendFlag, ID3D11DeviceContext* context);
-	static void DrawOffset(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz,XMFLOAT2 offset);
-	static void DrawOffset(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, XMFLOAT2 offset);
+	//deprecated
+	static void DrawOffset(ID3D11ShaderResourceView* resourceView, const XMFLOAT4& posSiz, XMFLOAT2 offset);
+	//deprecated
+	static void DrawOffset(ID3D11ShaderResourceView* resourceView, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, XMFLOAT2 offset);
+	//deprecated
 	static void DrawAdditive(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz,const XMFLOAT4& drawRec=XMFLOAT4(0,0,0,0));
 
 	static void BatchBegin();
@@ -100,24 +107,5 @@ public:
 
 	static void Load();
 	static void CleanUp();
-
-	static void SetScreenResolution(int width, int height){RENDERHEIGHT=height;RENDERWIDTH=width;};
-
-	/*
-	struct ImageResource{
-		string name;
-		ID3D11ShaderResourceView* texture;
-
-		ImageResource(){name="";texture=NULL;};
-		ImageResource(const string& newDirectory, const string& newName); //in wiRenderer.cpp
-		void CleanUp(){
-			if(texture) texture->Release(); texture=NULL;
-		}
-	};
-	static map<string,ImageResource> images;
-	static ID3D11ShaderResourceView* getImageByName(const string& get);
-	static void addImageResource(const string& dir, const string& name);*/
 };
 
-
-#include "Sprite.h"

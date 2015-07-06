@@ -576,6 +576,7 @@
     <ClInclude Include="BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Client.h" />
+    <ClInclude Include="CommonInclude.h" />
     <ClInclude Include="DeferredRenderableComponent.h" />
     <ClInclude Include="RenderableComponent.h" />
     <ClInclude Include="WickedEngine.h" />

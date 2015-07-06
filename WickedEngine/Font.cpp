@@ -1,5 +1,8 @@
 #include "Font.h"
-
+#include "Renderer.h"
+#include "ResourceManager.h"
+#include "WickedHelper.h"
+#include "Camera.h"
 
 
 ID3D11Buffer		*wiFont::vertexBuffer,*wiFont::indexBuffer;
@@ -11,7 +14,6 @@ ID3D11Buffer*           wiFont::constantBuffer;
 ID3D11SamplerState*			wiFont::sampleState;
 ID3D11RasterizerState*		wiFont::rasterizerState;
 ID3D11DepthStencilState*	wiFont::depthStencilState;
-int wiFont::RENDERWIDTH,wiFont::RENDERHEIGHT;
 mutex wiFont::MUTEX;
 UINT wiFont::textlen;
 SHORT wiFont::line,wiFont::pos;
@@ -26,8 +28,6 @@ void wiFont::Initialize()
 	toDraw=TRUE;
 	textlen=0;
 	line=pos=0;
-	RENDERWIDTH=1280;
-	RENDERHEIGHT=720;
 
 	
 	indexBuffer=NULL;
@@ -370,9 +370,9 @@ void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSp
 
 
 		ConstantBuffer* cb = new ConstantBuffer();
-		cb->mProjection = XMMatrixTranspose( wiRenderer::cam->Oprojection );
+		cb->mProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
 		cb->mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSizSpa.x,newPosSizSpa.y,0) );
-		cb->mDimensions = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,0,0);
+		cb->mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, 0, 0);
 		
 		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 		delete cb;

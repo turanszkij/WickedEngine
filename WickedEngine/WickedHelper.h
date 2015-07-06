@@ -1,7 +1,7 @@
 #ifndef WHELPER
 #define WHELPER
 
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 #include <locale>
 
 static class wiHelper{

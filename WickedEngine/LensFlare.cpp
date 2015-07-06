@@ -1,5 +1,6 @@
 #include "LensFlare.h"
-
+#include "Renderer.h"
+#include "ResourceManager.h"
 
 
 ID3D11Buffer* wiLensFlare::constantBuffer;
@@ -11,22 +12,11 @@ ID3D11SamplerState* wiLensFlare::samplerState;
 ID3D11RasterizerState* wiLensFlare::rasterizerState;
 ID3D11DepthStencilState* wiLensFlare::depthStencilState;
 ID3D11BlendState* wiLensFlare::blendState;
-float wiLensFlare::RENDERWIDTH, wiLensFlare::RENDERHEIGHT;
 
-void wiLensFlare::Initialize(float width, float height){
+void wiLensFlare::Initialize(){
 	LoadShaders();
 	SetUpCB();
 	SetUpStates();
-	RENDERWIDTH=width;
-	RENDERHEIGHT=height;
-	//
-	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare0.jpg",0,&textures[0],0);
-	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare1.jpg",0,&textures[1],0);
-	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare2.jpg",0,&textures[2],0);
-	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare3.jpg",0,&textures[3],0);
-	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare4.jpg",0,&textures[4],0);
-	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare5.jpg",0,&textures[5],0);
-	//CreateWICTextureFromFile(0,wiRenderer::graphicsDevice,0,L"images/flare6.jpg",0,&textures[6],0);
 }
 void wiLensFlare::CleanUp(){
 	if(vertexShader) vertexShader->Release(); vertexShader = NULL;
@@ -57,8 +47,8 @@ void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* 
 		wiRenderer::BindGS(geometryShader,context);
 
 		ConstantBuffer cb;
-		cb.mSunPos = lightPos/XMVectorSet(RENDERWIDTH,RENDERHEIGHT,1,1);
-		cb.mScreen = XMFLOAT4(RENDERWIDTH,RENDERHEIGHT,0,0);
+		cb.mSunPos = lightPos / XMVectorSet(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, 1, 1);
+		cb.mScreen = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, 0, 0);
 
 		wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
 

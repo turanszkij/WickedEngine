@@ -1,4 +1,7 @@
 #include "ResourceManager.h"
+#include "Renderer.h"
+#include "Sound.h"
+#include "WickedHelper.h"
 
 
 wiResourceManager::container wiResourceManager::resources;

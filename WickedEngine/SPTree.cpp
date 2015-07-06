@@ -1,4 +1,8 @@
 #include "SPTree.h"
+#include "WickedMath.h"
+#include "WickedLoader.h"
+#include "Frustum.h"
+
 #define SP_TREE_MAX_DEPTH 100
 #define SP_TREE_OBJECT_PER_NODE 6
 #define SP_TREE_BOX_CONTAIN

@@ -1,5 +1,7 @@
 #pragma once
 #include "RenderableComponent.h"
+#include "RenderTarget.h"
+#include "DepthTarget.h"
 
 
 class DeferredRenderableComponent :

@@ -1,5 +1,5 @@
 #pragma once
-#include "WickedEngine.h"
+#include "CommonInclude.h"
 #define MAX_PARTICLES 10000
 
 
