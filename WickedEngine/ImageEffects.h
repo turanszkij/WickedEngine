@@ -26,7 +26,7 @@ enum Pivot{
 	CENTER,
 };
 
-class ImageEffects{
+class wiImageEffects{
 public:
 	XMFLOAT3 pos;
 	XMFLOAT2 siz;
@@ -122,14 +122,14 @@ public:
 	}
 
 
-	ImageEffects(){
+	wiImageEffects(){
 		init();
 	}
-	ImageEffects(float width, float height){
+	wiImageEffects(float width, float height){
 		init();
 		siz=XMFLOAT2(width,height);
 	}
-	ImageEffects(float posX, float posY, float width, float height){
+	wiImageEffects(float posX, float posY, float width, float height){
 		init();
 		pos.x=posX;
 		pos.y=posY;

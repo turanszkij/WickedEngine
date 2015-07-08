@@ -52,7 +52,7 @@ void wiBackLog::Update(){
 void wiBackLog::Draw(){
 	if(state!=DISABLED){
 		wiImage::BatchBegin();
-		ImageEffects fx = ImageEffects(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT);
+		wiImageEffects fx = wiImageEffects(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
 		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);
 		wiImage::Draw((wiRenderer::TextureView)(wiResourceManager::get("images/logBG.png")->data),fx);

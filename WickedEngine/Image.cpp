@@ -287,10 +287,10 @@ void wiImage::SetUpStates()
 }
 
 
-void wiImage::Draw(wiRenderer::TextureView texture, const ImageEffects& effects){
+void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effects){
 	Draw(texture,effects,wiRenderer::immediateContext);
 }
-void wiImage::Draw(wiRenderer::TextureView texture, const ImageEffects& effects,ID3D11DeviceContext* context){
+void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effects,ID3D11DeviceContext* context){
 	if(!context)
 		return;
 	if(!effects.blur){
@@ -647,7 +647,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, wiRenderer::TextureView mask
 						, const float&newFade, const float&newOpacity, const float&newRot, XMFLOAT2 texOffset
 						, BLENDMODE blendMode, ID3D11DeviceContext* context)
 {
-	ImageEffects fx = ImageEffects();
+	wiImageEffects fx = wiImageEffects();
 	fx.pos=XMFLOAT3(newPosSiz.x,newPosSiz.y,0);
 	fx.siz=XMFLOAT2(newPosSiz.z,newPosSiz.w);
 	fx.drawRec=newDrawRec;

@@ -58,7 +58,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 	
 		//REFRACTION 
 		float2 perturbatedRefrTexCoords = screenPos + bumpColor * refractionIndex;   
-		float4 refractiveColor = xTextureRefrac.Sample(mapSampler, perturbatedRefrTexCoords);
+		float4 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0));
 		baseColor.rgb=lerp(refractiveColor.rgb,baseColor.rgb,baseColor.a);
 		
 		baseColor.rgb=pow(baseColor.rgb,GAMMA);
@@ -80,7 +80,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 			applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.w, toonshaded);
 		}
 		
-		baseColor.rgb=pow(baseColor.rgb,INV_GAMMA)+emit;
+		baseColor.rgb = pow(baseColor.rgb*(1 + emit), INV_GAMMA);
 
 		baseColor.rgb = applyFog(baseColor.rgb,xHorizon,getFog(getLinearDepth(depth/PSIn.pos2D.w),xFogSEH));
 		

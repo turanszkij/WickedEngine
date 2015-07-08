@@ -24,7 +24,7 @@ public:
 
 	string name;
 
-	ImageEffects effects;
+	wiImageEffects effects;
 
 	struct Anim{
 		struct MovingTexData{

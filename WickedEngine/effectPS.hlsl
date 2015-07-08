@@ -19,7 +19,7 @@ PixelOutputType main(PixelInputType PSIn)
 		baseColor = xTextureTex.Sample(texSampler,PSIn.tex);
 	}
 	
-	clip( baseColor.a < 0.1f ? -1:1 );
+	clip( baseColor.a - 0.1f );
 
 		
 	if(depth){

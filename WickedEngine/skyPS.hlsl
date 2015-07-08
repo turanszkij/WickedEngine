@@ -8,7 +8,8 @@ struct VSOut{
 
 float4 main(VSOut PSIn):SV_TARGET
 {
-	float3 nor = normalize(PSIn.nor);
+	static const float overBright = 1.005f;
+	float3 nor = normalize(PSIn.nor)*overBright;
 	float3 sun = 0;
 	float3 col = 0;
 	[branch]if(xFx.x==0){

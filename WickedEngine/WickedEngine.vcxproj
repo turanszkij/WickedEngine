@@ -339,6 +339,7 @@
     <ClCompile Include="LensFlare.cpp" />
     <ClCompile Include="Lines.cpp" />
     <ClCompile Include="Network.cpp" />
+    <ClCompile Include="Renderable3DSceneComponent.cpp" />
     <ClCompile Include="RenderableComponent.cpp" />
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="Particle.cpp" />
@@ -581,6 +582,7 @@
     <ClInclude Include="DeferredRenderableComponent.h" />
     <ClInclude Include="ForwardRenderableComponent.h" />
     <ClInclude Include="RenderableComponent.h" />
+    <ClInclude Include="Renderable3DSceneComponent.h" />
     <ClInclude Include="WickedEngine.h" />
     <ClInclude Include="CpuInfo.h" />
     <ClInclude Include="Cube.h" />

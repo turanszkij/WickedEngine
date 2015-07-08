@@ -32,6 +32,7 @@
 #include "InputManager.h"
 
 #include "RenderableComponent.h"
+#include "Renderable3DSceneComponent.h"
 #include "ForwardRenderableComponent.h"
 #include "DeferredRenderableComponent.h"
 

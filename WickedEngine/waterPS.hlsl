@@ -50,12 +50,12 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		float2 RefTex;
 			RefTex.x = PSIn.ReflectionMapSamplingPos.x/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 			RefTex.y = -PSIn.ReflectionMapSamplingPos.y/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
-		float3 reflectiveColor = xTextureRef.Sample(mapSampler,RefTex+bumpColor).rgb;
+		float3 reflectiveColor = xTextureRef.SampleLevel(mapSampler,RefTex+bumpColor,0).rgb;
 		
 	
 		//REFRACTION 
 		float2 perturbatedRefrTexCoords = screenPos + bumpColor;   
-		float3 refractiveColor = xTextureRefrac.Sample(mapSampler, perturbatedRefrTexCoords);
+		float3 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords,0));
 		float mod = saturate(0.05*(refDepth-depth));
 		refractiveColor = lerp(refractiveColor,float4(0,0,0.23,1),mod).rgb;
 		//baseColor.rgb=lerp(baseColor,refractiveColor,diffuseColor.a);
@@ -90,7 +90,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.w, toonshaded);
 		
 
-		baseColor.rgb=pow(baseColor.rgb,INV_GAMMA)+emit;
+		baseColor.rgb = pow(baseColor.rgb*(1 + emit), INV_GAMMA) + emit;
 
 		baseColor.rgb = applyFog(baseColor.rgb,xHorizon,getFog(getLinearDepth(depth/PSIn.pos2D.w),xFogSEH));
 		

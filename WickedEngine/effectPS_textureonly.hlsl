@@ -27,6 +27,6 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 	//}
 	//else discard;
 	
-	return baseColor;
+	return baseColor*(1 + emit);
 }
 

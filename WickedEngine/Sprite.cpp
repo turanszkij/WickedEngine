@@ -27,7 +27,7 @@ void wiSprite::Init(){
 	normal="";
 	name="";
 	texturePointer=maskPointer=normalPointer=nullptr;
-	effects=ImageEffects();
+	effects=wiImageEffects();
 	anim=Anim();
 }
 void wiSprite::CreateReference(const string& newTexture, const string& newMask, const string& newNormal){
@@ -62,7 +62,7 @@ void wiSprite::DrawNormal(ID3D11DeviceContext* context){
 	if(normalPointer && effects.opacity<1 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){
 		//effects.setRefractionMap(refracRes);
 
-		ImageEffects effectsMod(effects);
+		wiImageEffects effectsMod(effects);
 		effectsMod.blendFlag=BLENDMODE_ADDITIVE;
 		effectsMod.extractNormalMap=true;
 		wiImage::Draw(normalPointer,effectsMod,context);

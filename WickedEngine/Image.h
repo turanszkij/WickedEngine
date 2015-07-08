@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 
-class ImageEffects;
+class wiImageEffects;
 enum BLENDMODE;
 
 class wiImage
@@ -69,8 +69,8 @@ protected:
 public:
 	wiImage();
 	
-	static void Draw(ID3D11ShaderResourceView* texture, const ImageEffects& effects);
-	inline static void Draw(ID3D11ShaderResourceView* texture, const ImageEffects& effects,ID3D11DeviceContext* context);
+	static void Draw(ID3D11ShaderResourceView* texture, const wiImageEffects& effects);
+	inline static void Draw(ID3D11ShaderResourceView* texture, const wiImageEffects& effects,ID3D11DeviceContext* context);
 
 	static void DrawDeferred(ID3D11ShaderResourceView* texture
 		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* lightmap, ID3D11ShaderResourceView* normal

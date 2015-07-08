@@ -3,12 +3,15 @@
 #include "gammaHF.hlsli"
 #include "toonHF.hlsli"
 #include "specularHF.hlsli"
+#include "depthConvertHF.hlsli"
+#include "fogHF.hlsli"
 
 
 
 float4 main(PixelInputType PSIn) : SV_TARGET
 {
 	float4 baseColor = float4(0, 0, 0, 1);
+	float depth = PSIn.pos2D.z;
 
 	baseColor = diffuseColor*(1 - xFx.x);
 
@@ -54,9 +57,13 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 
 		float light = saturate( dot(xSun,normalize(PSIn.nor)) );
 		light=clamp(light,xAmbient,1);
-		baseColor.rgb *= light*xSunColor; 
-		applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.a, 0); 
-		baseColor = pow(baseColor, INV_GAMMA);
+		baseColor.rgb *= light*xSunColor;
+
+		applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.a, 0);
+
+		baseColor = pow(baseColor*(1 + emit), INV_GAMMA);
+
+		baseColor.rgb = applyFog(baseColor.rgb, xHorizon, getFog(getLinearDepth(depth / PSIn.pos2D.w), xFogSEH));
 	}
 
 	return baseColor;
