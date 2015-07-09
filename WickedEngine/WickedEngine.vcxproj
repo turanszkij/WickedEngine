@@ -349,6 +349,7 @@
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="SPTree.cpp" />
+    <ClCompile Include="TextureHelper.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="Utility\DDSTextureLoader.cpp" />
     <ClCompile Include="Utility\pch.cpp" />
@@ -358,6 +359,8 @@
     <ClCompile Include="WickedHelper.cpp" />
     <ClCompile Include="WickedLoader.cpp" />
     <ClCompile Include="WickedMath.cpp" />
+    <ClCompile Include="wiColor.cpp" />
+    <ClCompile Include="wiRandom.cpp" />
     <ClCompile Include="XInput.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -583,6 +586,7 @@
     <ClInclude Include="ForwardRenderableComponent.h" />
     <ClInclude Include="RenderableComponent.h" />
     <ClInclude Include="Renderable3DSceneComponent.h" />
+    <ClInclude Include="TextureHelper.h" />
     <ClInclude Include="WickedEngine.h" />
     <ClInclude Include="CpuInfo.h" />
     <ClInclude Include="Cube.h" />
@@ -623,6 +627,8 @@
     <ClInclude Include="WickedHelper.h" />
     <ClInclude Include="WickedLoader.h" />
     <ClInclude Include="WickedMath.h" />
+    <ClInclude Include="wiColor.h" />
+    <ClInclude Include="wiRandom.h" />
     <ClInclude Include="XInput.h" />
   </ItemGroup>
   <ItemGroup>

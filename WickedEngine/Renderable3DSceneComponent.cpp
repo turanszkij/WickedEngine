@@ -29,8 +29,11 @@ void Renderable3DSceneComponent::Initialize()
 
 	setSSAOEnabled(true);
 	setSSREnabled(true);
+	setReflectionsEnabled(false);
+	setShadowsEnabled(true);
+	setFXAAEnabled(true);
 
-	RenderableComponent::Initialize();
+	setPreferredThreadingCount(0);
 }
 
 void Renderable3DSceneComponent::Load()
@@ -61,7 +64,6 @@ void Renderable3DSceneComponent::Load()
 		, screenH
 		, 1, false, 1, 0, DXGI_FORMAT_R8G8B8A8_SNORM
 		);
-	rtWaterRipple.Activate(wiRenderer::immediateContext, 0, 0, 0, 0);
 	rtTransparent.Initialize(
 		screenW, screenH
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
@@ -97,7 +99,6 @@ void Renderable3DSceneComponent::Load()
 		screenW*getSSAOQuality(), screenH*getSSAOQuality()
 		, 1, false, 1, 0, DXGI_FORMAT_R8_UNORM
 		);
-	rtSSAO.back().Activate(wiRenderer::immediateContext, 1, 1, 1, 1);
 
 
 	rtSun.resize(2);
@@ -129,6 +130,14 @@ void Renderable3DSceneComponent::Load()
 	RenderableComponent::Load();
 }
 
+void Renderable3DSceneComponent::Start()
+{
+	wiRenderer::SetEnviromentMap(nullptr);
+	wiRenderer::SetColorGrading(nullptr);
+	wiRenderer::SetToDrawDebugBoxes(false);
+	wiRenderer::SetToDrawDebugLines(false);
+}
+
 void Renderable3DSceneComponent::Update(){
 	RenderableComponent::Update();
 
@@ -146,170 +155,152 @@ void Renderable3DSceneComponent::Compose(){
 
 }
 
-void Renderable3DSceneComponent::RenderReflections(){
+void Renderable3DSceneComponent::RenderReflections(wiRenderer::DeviceContext context){
+	if (!getReflectionsEnabled() || getReflectionQuality() < 0.01f)
+	{
+		return;
+	}
 
-	rtReflection.Activate(wiRenderer::immediateContext); {
-		wiRenderer::UpdatePerRenderCB(wiRenderer::immediateContext, 0);
-		wiRenderer::UpdatePerEffectCB(wiRenderer::immediateContext, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::UpdatePerViewCB(wiRenderer::immediateContext, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->View, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->refEye, getWaterPlane());
-		wiRenderer::DrawWorld(wiRenderer::getCamera()->refView, false, 0, wiRenderer::immediateContext
+	rtReflection.Activate(context); {
+		wiRenderer::UpdatePerRenderCB(context, 0);
+		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
+		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->View, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->refEye, getWaterPlane());
+		wiRenderer::DrawWorld(wiRenderer::getCamera()->refView, false, 0, context
 			, false, wiRenderer::SHADED_NONE
 			, nullptr, false, 1);
-		wiRenderer::DrawSky(wiRenderer::getCamera()->refEye, wiRenderer::immediateContext);
+		wiRenderer::DrawSky(wiRenderer::getCamera()->refEye, context);
 	}
 }
-void Renderable3DSceneComponent::RenderShadows(){
-	wiRenderer::ClearShadowMaps(wiRenderer::immediateContext);
-	wiRenderer::DrawForShadowMap(wiRenderer::immediateContext);
+void Renderable3DSceneComponent::RenderShadows(wiRenderer::DeviceContext context){
+	if (!getShadowsEnabled())
+	{
+		return;
+	}
+
+	wiRenderer::ClearShadowMaps(context);
+	wiRenderer::DrawForShadowMap(context);
 }
-void Renderable3DSceneComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT)
+void Renderable3DSceneComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context)
 {
-	rtLensFlare.Activate(wiRenderer::immediateContext);
+	rtLensFlare.Activate(context);
 	if (!wiRenderer::GetRasterizer())
-		wiRenderer::DrawLensFlares(wiRenderer::immediateContext, mainRT.depth->shaderResource, screenW, screenH);
+		wiRenderer::DrawLensFlares(context, mainRT.depth->shaderResource, screenW, screenH);
 
-	rtVolumeLight.Activate(wiRenderer::immediateContext, mainRT.depth);
-		wiRenderer::DrawVolumeLights(wiRenderer::getCamera()->View, wiRenderer::immediateContext);
+	rtVolumeLight.Activate(context, mainRT.depth);
+		wiRenderer::DrawVolumeLights(wiRenderer::getCamera()->View, context);
 
-	rtParticle.Activate(wiRenderer::immediateContext, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
-		wiRenderer::DrawSoftParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, wiRenderer::immediateContext, rtLinearDepth.shaderResource.back());
-	rtParticleAdditive.Activate(wiRenderer::immediateContext, 0, 0, 0, 1);  //OFFSCREEN RENDER ADDITIVEPARTICLES
-		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, wiRenderer::immediateContext, rtLinearDepth.shaderResource.back());
-		rtWater.Activate(wiRenderer::immediateContext, mainRT.depth); {
-		wiRenderer::DrawWorldWater(wiRenderer::getCamera()->View, shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
-			, rtWaterRipple.shaderResource.back(), wiRenderer::immediateContext, 2);
+	rtParticle.Activate(context, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
+		wiRenderer::DrawSoftParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, context, rtLinearDepth.shaderResource.back());
+	rtParticleAdditive.Activate(context, 0, 0, 0, 1);  //OFFSCREEN RENDER ADDITIVEPARTICLES
+		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, context, rtLinearDepth.shaderResource.back());
+
+	rtWaterRipple.Activate(context, 0, 0, 0, 0); {
+		wiRenderer::DrawWaterRipples(context);
+		wiRenderer::ManageWaterRipples();
 	}
-	rtTransparent.Activate(wiRenderer::immediateContext, mainRT.depth); {
+	rtWater.Activate(context, mainRT.depth); {
+		wiRenderer::DrawWorldWater(wiRenderer::getCamera()->View, shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
+			, rtWaterRipple.shaderResource.back(), context, 2);
+	}
+
+	rtTransparent.Activate(context, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera()->View, shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
-			, wiRenderer::immediateContext, 2);
+			, context, 2);
 	}
 
 }
-void Renderable3DSceneComponent::RenderBloom(){
+void Renderable3DSceneComponent::RenderBloom(wiRenderer::DeviceContext context){
 
 	wiImageEffects fx(screenW, screenH);
 
-	wiImage::BatchBegin();
+	wiImage::BatchBegin(context);
 
-	rtBloom[0].Activate(wiRenderer::immediateContext);
+	rtBloom[0].Activate(context);
 	{
 		fx.bloom.separate = true;
 		fx.bloom.saturation = getBloomSaturation();
 		fx.bloom.threshold = getBloomThreshold();
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		wiImage::Draw(rtFinal[0].shaderResource.front(), fx);
+		wiImage::Draw(rtFinal[0].shaderResource.front(), fx, context);
 	}
 
 
-	rtBloom[1].Activate(wiRenderer::immediateContext); //horizontal
+	rtBloom[1].Activate(context); //horizontal
 	{
-		wiRenderer::immediateContext->GenerateMips(rtBloom[0].shaderResource[0]);
+		context->GenerateMips(rtBloom[0].shaderResource[0]);
 		fx.mipLevel = 5.32f;
 		fx.blur = getBloomStrength();
 		fx.blurDir = 0;
 		fx.blendFlag = BLENDMODE_OPAQUE;
-		wiImage::Draw(rtBloom[0].shaderResource.back(), fx);
+		wiImage::Draw(rtBloom[0].shaderResource.back(), fx, context);
 	}
-	rtBloom[2].Activate(wiRenderer::immediateContext); //vertical
+	rtBloom[2].Activate(context); //vertical
 	{
-		wiRenderer::immediateContext->GenerateMips(rtBloom[0].shaderResource[0]);
+		context->GenerateMips(rtBloom[0].shaderResource[0]);
 		fx.blur = getBloomStrength();
 		fx.blurDir = 1;
 		fx.blendFlag = BLENDMODE_OPAQUE;
-		wiImage::Draw(rtBloom[1].shaderResource.back(), fx);
+		wiImage::Draw(rtBloom[1].shaderResource.back(), fx, context);
 	}
-
-
-	//if (rtBloom.size()>2){
-	//	for (int i = 0; i<rtBloom.size() - 1; ++i){
-	//		rtBloom[i].Activate(wiRenderer::immediateContext);
-	//		if (i == 0){
-	//			fx.bloom.separate = true;
-	//			fx.bloom.threshold = bloomThreshold;
-	//			fx.bloom.saturation = bloomSaturation;
-	//			fx.blendFlag = BLENDMODE_OPAQUE;
-	//			fx.sampleFlag = SAMPLEMODE_CLAMP;
-	//			wiImage::Draw(rtFinal[0].shaderResource.front(), fx);
-	//		}
-	//		else { //horizontal blurs
-	//			if (i == 1)
-	//			{
-	//				wiRenderer::immediateContext->GenerateMips(rtBloom[0].shaderResource[0]);
-	//			}
-	//			fx.mipLevel = 4;
-	//			fx.blur = bloomStren;
-	//			fx.blurDir = 0;
-	//			fx.blendFlag = BLENDMODE_OPAQUE;
-	//			wiImage::Draw(rtBloom[i - 1].shaderResource.back(), fx);
-	//		}
-	//	}
-
-	//	rtBloom.back().Activate(wiRenderer::immediateContext);
-	//	//vertical blur
-	//	fx.blur = bloomStren;
-	//	fx.blurDir = 1;
-	//	fx.blendFlag = BLENDMODE_OPAQUE;
-	//	wiImage::Draw(rtBloom[rtBloom.size() - 2].shaderResource.back(), fx);
-	//}
 }
-void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT){
+void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer::DeviceContext context){
 	wiImageEffects fx(screenW, screenH);
 
 
-	rtSun[0].Activate(wiRenderer::immediateContext, mainRT.depth); {
-		wiRenderer::UpdatePerRenderCB(wiRenderer::immediateContext, 0);
-		wiRenderer::UpdatePerEffectCB(wiRenderer::immediateContext, XMFLOAT4(1, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::DrawSky(wiRenderer::getCamera()->Eye, wiRenderer::immediateContext);
+	rtSun[0].Activate(context, mainRT.depth); {
+		wiRenderer::UpdatePerRenderCB(context, 0);
+		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(1, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
+		wiRenderer::DrawSky(wiRenderer::getCamera()->Eye, context);
 	}
 
-	wiImage::BatchBegin();
-	rtSun[1].Activate(wiRenderer::immediateContext); {
+	wiImage::BatchBegin(context);
+	rtSun[1].Activate(context); {
 		wiImageEffects fxs = fx;
 		fxs.blendFlag = BLENDMODE_ADDITIVE;
 		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, screenW, screenH, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
 		{
 			XMStoreFloat2(&fxs.sunPos, sunPos);
-			wiImage::Draw(rtSun[0].shaderResource.back(), fxs, wiRenderer::immediateContext);
+			wiImage::Draw(rtSun[0].shaderResource.back(), fxs, context);
 		}
 	}
 }
-void Renderable3DSceneComponent::RenderComposition1(wiRenderTarget& shadedSceneRT){
+void Renderable3DSceneComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context){
 	wiImageEffects fx(screenW, screenH);
-	wiImage::BatchBegin();
+	wiImage::BatchBegin(context);
 
-	rtFinal[0].Activate(wiRenderer::immediateContext);
+	rtFinal[0].Activate(context);
 
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	wiImage::Draw(shadedSceneRT.shaderResource.front(), fx);
+	wiImage::Draw(shadedSceneRT.shaderResource.front(), fx, context);
 
 	fx.blendFlag = BLENDMODE_ALPHA;
 	if (getSSREnabled()){
-		wiImage::Draw(rtSSR.shaderResource.back(), fx);
+		wiImage::Draw(rtSSR.shaderResource.back(), fx, context);
 	}
-	wiImage::Draw(rtWater.shaderResource.back(), fx);
-	wiImage::Draw(rtTransparent.shaderResource.back(), fx);
-	wiImage::Draw(rtParticle.shaderResource.back(), fx);
+	wiImage::Draw(rtWater.shaderResource.back(), fx, context);
+	wiImage::Draw(rtTransparent.shaderResource.back(), fx, context);
+	wiImage::Draw(rtParticle.shaderResource.back(), fx, context);
 
 	fx.blendFlag = BLENDMODE_ADDITIVE;
-	wiImage::Draw(rtVolumeLight.shaderResource.back(), fx);
-	wiImage::Draw(rtParticleAdditive.shaderResource.back(), fx);
-	wiImage::Draw(rtSun.back().shaderResource.back(), fx);
-	wiImage::Draw(rtLensFlare.shaderResource.back(), fx);
+	wiImage::Draw(rtVolumeLight.shaderResource.back(), fx, context);
+	wiImage::Draw(rtParticleAdditive.shaderResource.back(), fx, context);
+	wiImage::Draw(rtSun.back().shaderResource.back(), fx, context);
+	wiImage::Draw(rtLensFlare.shaderResource.back(), fx, context);
 }
-void Renderable3DSceneComponent::RenderComposition2(){
+void Renderable3DSceneComponent::RenderComposition2(wiRenderer::DeviceContext context){
 	wiImageEffects fx(screenW, screenH);
-	wiImage::BatchBegin();
+	wiImage::BatchBegin(context);
 
-	rtFinal[1].Activate(wiRenderer::immediateContext);
+	rtFinal[1].Activate(context);
 
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	fx.process.setFXAA(true);
-	wiImage::Draw(rtFinal[0].shaderResource.back(), fx);
+	fx.process.setFXAA(getFXAAEnabled());
+	wiImage::Draw(rtFinal[0].shaderResource.back(), fx, context);
 	fx.process.clear();
 
 	fx.blendFlag = BLENDMODE_ADDITIVE;
-	wiImage::Draw(rtBloom.back().shaderResource.back(), fx);
+	wiImage::Draw(rtBloom.back().shaderResource.back(), fx, context);
 }
 void Renderable3DSceneComponent::RenderColorGradedComposition(){
 
@@ -320,5 +311,39 @@ void Renderable3DSceneComponent::RenderColorGradedComposition(){
 		fx.process.setColorGrade(true);
 		fx.setMaskMap(wiRenderer::GetColorGrading());
 	}
+	else
+	{
+		fx.process.setColorGrade(true);
+		fx.setMaskMap(wiTextureHelper::getInstance()->getColorGradeDefaultTex());
+	}
 	wiImage::Draw(rtFinal[1].shaderResource.back(), fx);
+}
+
+
+void Renderable3DSceneComponent::setPreferredThreadingCount(unsigned short value)
+{
+	//TODO
+	workerThreads.clear();
+
+	switch (value){
+	case 0: break;
+	case 2:
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(0); }));
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(1); }));
+		break;
+	case 3:
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(0); }));
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(1); }));
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(2); }));
+		break;
+	case 4:
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(0); }));
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(1); }));
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(2); }));
+		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(3); }));
+		break;
+	default:
+		wiHelper::messageBox("You can assign a maximum of 4 rendering threads for graphics!\nFalling back to single threading!", "Caution");
+		break;
+	};
 }

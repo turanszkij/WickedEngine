@@ -67,7 +67,7 @@ float4 main( VertextoPixel input ):SV_Target
 	float3 occFrag;
 	float  depthDiff;
 
-	[unroll]
+	
 	for( int i = 0; i < NUM_SAMPLES; ++i )
 	{
 		ray = radD * reflect(AO_SAMPLES[i],fres);

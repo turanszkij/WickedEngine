@@ -8,7 +8,7 @@ class DeferredRenderableComponent :
 protected:
 	wiRenderTarget rtGBuffer, rtDeferred;
 
-	virtual void RenderScene();
+	virtual void RenderScene(wiRenderer::DeviceContext context = wiRenderer::immediateContext);
 
 public:
 	DeferredRenderableComponent();

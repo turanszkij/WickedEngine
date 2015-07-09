@@ -37,7 +37,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 
 	HRESULT hr;
 	// Create the texture for the depth buffer using the filled out description.
-	hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
+	hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, nullptr, &texture2D);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));

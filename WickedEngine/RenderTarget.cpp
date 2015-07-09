@@ -76,7 +76,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasD
 	shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 
 	for(int i=0;i<numViews;++i){
-		wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
+		wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, nullptr, &texture2D[i]);
 		wiRenderer::graphicsDevice->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
 		wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[i]);
 	}

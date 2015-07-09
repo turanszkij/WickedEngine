@@ -30,6 +30,10 @@
 #include "Timer.h"
 #include "WickedHelper.h"
 #include "InputManager.h"
+#include "VariableManager.h"
+#include "TextureHelper.h"
+#include "wiRandom.h"
+#include "wiColor.h"
 
 #include "RenderableComponent.h"
 #include "Renderable3DSceneComponent.h"

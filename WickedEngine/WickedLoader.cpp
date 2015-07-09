@@ -1626,7 +1626,6 @@ void LoadWiHitSpheres(const string& directory, const string& name, const string&
 	//}
 }
 void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worldInfo, Wind& wind){
-	worldInfo=WorldInfo();
 	stringstream filename("");
 	filename<<directory<<name;
 
@@ -1800,8 +1799,8 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 	MeshCollection			l_meshes;
 	vector<Light*>			l_lights;
 	vector<HitSphere*>		l_spheres;
-	WorldInfo				l_worldInfo;
-	Wind					l_wind;
+	WorldInfo				l_worldInfo = worldInfo;
+	Wind					l_wind = wind;
 	vector<ActionCamera>	l_cameras;
 	map<string,Transform*>  l_transforms;
 	list<Decal*>			l_decals;

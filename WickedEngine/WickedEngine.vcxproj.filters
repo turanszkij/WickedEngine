@@ -596,6 +596,15 @@
     <ClCompile Include="Renderable3DSceneComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
+    <ClCompile Include="TextureHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="wiRandom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="wiColor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BackLog.h">
@@ -1386,6 +1395,15 @@
     </ClInclude>
     <ClInclude Include="Renderable3DSceneComponent.h">
       <Filter>ComponentTemplates</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiRandom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiColor.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

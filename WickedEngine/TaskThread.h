@@ -1,14 +1,16 @@
+#pragma once
+
 #include "CommonInclude.h"
 
-class TaskThread {
+class wiTaskThread {
 public:
-    TaskThread(std::function<void ()> task)
+	wiTaskThread(std::function<void()> task)
       : m_task(std::move(task)),
         m_wakeup(false),
         m_stop(false),
-        m_thread(&TaskThread::taskFunc, this)
+		m_thread(&wiTaskThread::taskFunc, this)
     {}
-    ~TaskThread() { stop(); join(); }
+	~wiTaskThread() { stop(); join(); }
 
     // wake up the thread and execute the task
     void wakeup() {

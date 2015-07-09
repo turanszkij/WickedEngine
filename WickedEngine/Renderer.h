@@ -95,15 +95,15 @@ public:
 	static ViewPort						viewPort;
 	static GraphicsDevice				graphicsDevice;
 	static DeviceContext				immediateContext;
-	static bool DX11,VSYNC;
+	static bool DX11,VSYNC,DEFERREDCONTEXT_SUPPORT;
 	static const int NUM_DCONTEXT = 5;
 	static DeviceContext deferredContexts[NUM_DCONTEXT];
 	static CommandList commandLists[NUM_DCONTEXT];
 	static mutex graphicsMutex;
 #ifndef WINSTORE_SUPPORT
-	static HRESULT InitDevice(HWND window, int screenW, int screenH, bool windowed, short& requestMultiThreading);
+	static HRESULT InitDevice(HWND window, int screenW, int screenH, bool windowed);
 #else
-	static HRESULT InitDevice(Windows::UI::Core::CoreWindow^ window, short& requestMultiThreading);
+	static HRESULT InitDevice(Windows::UI::Core::CoreWindow^ window, bool requestMultiThreading);
 #endif
 	static void DestroyDevice();
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
@@ -113,6 +113,7 @@ public:
 
 	static map<DeviceContext,long> drawCalls;
 	static long getDrawCallCount();
+	static bool getMultithreadingSupport(){ return DEFERREDCONTEXT_SUPPORT; }
 
 	
 	static Sampler ssClampLin,ssClampPoi,ssMirrorLin,ssMirrorPoi,ssWrapLin,ssWrapPoi
@@ -341,7 +342,7 @@ public:
 	static bool GetToDrawDebugSpheres(){return debugSpheres;};
 	static bool GetToDrawDebugBoxes(){return debugBoxes;};
 	static TextureView GetColorGrading(){return colorGrading;};
-	static void SetColorGrading(TextureView tex){colorGrading=tex?tex:colorGrading;};
+	static void SetColorGrading(TextureView tex){colorGrading=tex;};
 	static void SetEnviromentMap(TextureView tex){ enviroMap = tex; }
 	static TextureView GetEnviromentMap(){ return enviroMap; }
 	static void SetNoiseTexture(TextureView tex){ noiseTex = tex; }

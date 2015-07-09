@@ -13,6 +13,7 @@
 #include "WickedHelper.h"
 #include "WickedMath.h"
 #include "LensFlare.h"
+#include "TextureHelper.h"
 
 #pragma region STATICS
 D3D_DRIVER_TYPE						wiRenderer::driverType;
@@ -22,7 +23,7 @@ wiRenderer::RenderTargetView			wiRenderer::renderTargetView;
 wiRenderer::ViewPort					wiRenderer::viewPort;
 wiRenderer::GraphicsDevice			wiRenderer::graphicsDevice;
 wiRenderer::DeviceContext				wiRenderer::immediateContext;
-bool wiRenderer::DX11 = false,wiRenderer::VSYNC=true;
+bool wiRenderer::DX11 = false,wiRenderer::VSYNC=true,wiRenderer::DEFERREDCONTEXT_SUPPORT=false;
 wiRenderer::DeviceContext				wiRenderer::deferredContexts[];
 wiRenderer::CommandList				wiRenderer::commandLists[];
 mutex								wiRenderer::graphicsMutex;
@@ -103,9 +104,9 @@ wiRenderer::wiRenderer()
 }
 
 #ifndef WINSTORE_SUPPORT
-HRESULT wiRenderer::InitDevice(HWND window, int screenW, int screenH, bool windowed, short& requestMultiThreading)
+HRESULT wiRenderer::InitDevice(HWND window, int screenW, int screenH, bool windowed)
 #else
-HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window, short& requestMultiThreading)
+HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window)
 #endif
 {
     HRESULT hr = S_OK;
@@ -207,28 +208,28 @@ HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window, short& req
 	}
 #endif
 
-	if(requestMultiThreading){
-		D3D11_FEATURE_DATA_THREADING threadingFeature;
-		wiRenderer::graphicsDevice->CheckFeatureSupport( D3D11_FEATURE_THREADING,&threadingFeature,sizeof(threadingFeature) );
-		if(threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists){
-			for(int i=0;i<NUM_DCONTEXT;i++){
-				wiRenderer::graphicsDevice->CreateDeferredContext( 0,&deferredContexts[i] );
-				drawCalls.insert(pair<DeviceContext,long>(deferredContexts[i],0));
-			}
-#ifdef BACKLOG
-			stringstream ss("");
-			ss<<NUM_DCONTEXT<<" defferred contexts created!";
-			wiBackLog::post(ss.str().c_str());
-#endif
+	DEFERREDCONTEXT_SUPPORT = false;
+	D3D11_FEATURE_DATA_THREADING threadingFeature;
+	wiRenderer::graphicsDevice->CheckFeatureSupport( D3D11_FEATURE_THREADING,&threadingFeature,sizeof(threadingFeature) );
+	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists){
+		DEFERREDCONTEXT_SUPPORT = true;
+		for(int i=0;i<NUM_DCONTEXT;i++){
+			wiRenderer::graphicsDevice->CreateDeferredContext( 0,&deferredContexts[i] );
+			drawCalls.insert(pair<DeviceContext,long>(deferredContexts[i],0));
 		}
-		else {
-			//MessageBox(window,L"Deferred Context not supported!",L"Error!",0);
 #ifdef BACKLOG
-			wiBackLog::post("Deferred context not supported!");
+		stringstream ss("");
+		ss<<NUM_DCONTEXT<<" defferred contexts created!";
+		wiBackLog::post(ss.str().c_str());
 #endif
-			requestMultiThreading=0;
-			//exit(0);
-		}
+	}
+	else {
+		//MessageBox(window,L"Deferred Context not supported!",L"Error!",0);
+#ifdef BACKLOG
+		wiBackLog::post("Deferred context not supported!");
+#endif
+		DEFERREDCONTEXT_SUPPORT=false;
+		//exit(0);
 	}
 	
 
@@ -390,8 +391,9 @@ void wiRenderer::SetUpStaticComponents()
 
 	cam = new Camera(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800, XMVectorSet(0, 4, -4, 1));
 	
-	noiseTex = (ID3D11ShaderResourceView*)wiResourceManager::add("images/noise.png");
-	trailDistortTex = (ID3D11ShaderResourceView*)wiResourceManager::add("images/normalmap1.jpg");
+	noiseTex = wiTextureHelper::getInstance()->getRandom64x64();
+	//trailDistortTex = (ID3D11ShaderResourceView*)wiResourceManager::add("images/normalmap1.jpg");
+	trailDistortTex = wiTextureHelper::getInstance()->getColor(wiColor(127, 127, 127, 255));
 
 	wireRender=false;
 	debugSpheres=false;
@@ -586,9 +588,6 @@ void wiRenderer::CleanUpStatic()
 	HitSphere::CleanUpStatic();
 
 
-	//wiResourceManager::del("images/noise.png");
-	//wiResourceManager::del("images/normalmap1.jpg");
-	wiResourceManager::del("images/clipbox.png");
 
 	if (physicsEngine) physicsEngine->CleanUp();
 }
