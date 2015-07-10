@@ -14,6 +14,8 @@ public:
 	DeferredRenderableComponent();
 	~DeferredRenderableComponent();
 
+	virtual void setPreferredThreadingCount(unsigned short value);
+
 	virtual void Initialize();
 	virtual void Load();
 	virtual void Start();

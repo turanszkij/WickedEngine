@@ -96,7 +96,7 @@ public:
 	void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
 	void setFXAAEnabled(bool value){ fxaaEnabled = value; }
 
-	void setPreferredThreadingCount(unsigned short value);
+	virtual void setPreferredThreadingCount(unsigned short value);
 
 	Renderable3DSceneComponent();
 	~Renderable3DSceneComponent();

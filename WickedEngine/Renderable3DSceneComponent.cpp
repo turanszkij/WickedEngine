@@ -7,7 +7,10 @@ Renderable3DSceneComponent::Renderable3DSceneComponent()
 }
 Renderable3DSceneComponent::~Renderable3DSceneComponent()
 {
-
+	for (auto& wt : workerThreads)
+	{
+		delete wt;
+	}
 }
 
 void Renderable3DSceneComponent::Initialize()
@@ -322,28 +325,10 @@ void Renderable3DSceneComponent::RenderColorGradedComposition(){
 
 void Renderable3DSceneComponent::setPreferredThreadingCount(unsigned short value)
 {
-	//TODO
-	workerThreads.clear();
+	for (auto& wt : workerThreads)
+	{
+		delete wt;
+	}
 
-	switch (value){
-	case 0: break;
-	case 2:
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(0); }));
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(1); }));
-		break;
-	case 3:
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(0); }));
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(1); }));
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(2); }));
-		break;
-	case 4:
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(0); }));
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(1); }));
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(2); }));
-		workerThreads.push_back(new wiTaskThread([]{ wiRenderer::FinishCommandList(3); }));
-		break;
-	default:
-		wiHelper::messageBox("You can assign a maximum of 4 rendering threads for graphics!\nFalling back to single threading!", "Caution");
-		break;
-	};
+	workerThreads.clear();
 }
