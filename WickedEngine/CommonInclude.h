@@ -6,7 +6,6 @@
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
 #include <DXGI1_2.h>
-#include <Xinput.h>
 #include <cstdlib>
 #include <ctime>
 #include <math.h>
@@ -38,11 +37,6 @@
 
 using namespace DirectX;
 using namespace std;
-
-
-#include "Utility/WicTextureLoader.h"
-#include "Utility/DDSTextureLoader.h"
-#include "Utility/ScreenGrab.h"
 
 
 //TODO: REMOVE!!!

@@ -1,0 +1,67 @@
+#pragma once
+#include "CommonInclude.h"
+
+struct SkinnedVertex;
+struct Mesh;
+struct Object;
+
+class PHYSICS
+{
+public:
+	struct Transform{
+		XMFLOAT4 rotation;
+		XMFLOAT3 position;
+		Transform(){
+			rotation=XMFLOAT4(0,0,0,1);
+			position=XMFLOAT3(0,0,0);
+		}
+		Transform(const XMFLOAT4& newRot, const XMFLOAT3& newPos){
+			rotation=newRot;
+			position=newPos;
+		}
+	};
+	static int softBodyInterationCount;
+protected:
+	vector<Transform*> transforms;
+	bool firstRunWorld;
+	int registeredObjects;
+public:
+	void FirstRunWorld(){firstRunWorld=true;}
+	void NextRunWorld(){firstRunWorld=false;}
+	int getObjectCount(){return registeredObjects+1;}
+
+	virtual void Update()=0;
+	virtual void MarkForRead()=0;
+	virtual void UnMarkForRead()=0;
+	virtual void MarkForWrite()=0;
+	virtual void UnMarkForWrite()=0;
+	virtual void ClearWorld()=0;
+	virtual void CleanUp()=0;
+
+	virtual void addWind(const XMFLOAT3& wind)=0;
+	
+	virtual void addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+	virtual void addSphere(const float& rad, const XMFLOAT3& pos
+		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+	virtual void addCapsule(const float& rad, const float& hei, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+	virtual void addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+	virtual void addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+
+	
+	virtual void addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1)=0;
+	
+	virtual void connectVerticesToSoftBody(Mesh* const mesh, int objectI)=0;
+	virtual void connectSoftBodyToVertices(const Mesh* const mesh, int objectI)=0;
+	virtual void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI)=0;
+
+	virtual Transform* getObject(int index)=0;
+
+	virtual void registerObject(Object* object)=0;
+};
+//#include "HAVOK.h"
+#include "wiBULLET.h"

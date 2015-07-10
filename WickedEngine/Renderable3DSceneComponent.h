@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderableComponent.h"
-#include "TaskThread.h"
-#include "Renderer.h"
+#include "wiTaskThread.h"
+#include "wiRenderer.h"
 
 class Renderable3DSceneComponent :
 	public RenderableComponent

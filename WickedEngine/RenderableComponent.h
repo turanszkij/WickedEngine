@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
-#include "RenderTarget.h"
-#include "DepthTarget.h"
+#include "wiRenderTarget.h"
+#include "wiDepthTarget.h"
 
 class RenderableComponent
 {
