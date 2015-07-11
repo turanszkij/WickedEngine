@@ -2,6 +2,7 @@
 #include "RenderableComponent.h"
 #include "wiTaskThread.h"
 #include "wiRenderer.h"
+#include "wiWaterPlane.h"
 
 class Renderable3DSceneComponent :
 	public RenderableComponent
@@ -9,22 +10,25 @@ class Renderable3DSceneComponent :
 private:
 	float lightShaftQuality;
 	float bloomDownSample;
+	float bloomStren;
+	float bloomThreshold;
+	float bloomSaturation;
 	float particleAlphaDownSample;
 	float particleAdditiveDownSample;
 	float reflectionQuality;
-	bool ssaoEnabled;
 	float ssaoQuality;
 	float ssaoBlur;
-	bool ssrEnabled;
-	float ssrQuality;
-	float bloomStren;
-	float bloomThreshold;
-	float bloomSaturation; 
-	bool fxaaEnabled;
-	XMFLOAT4 waterPlane;
+	float ssrQuality; 
 
+	wiWaterPlane waterPlane;
+
+	bool fxaaEnabled;
+	bool ssaoEnabled;
+	bool ssrEnabled;
 	bool reflectionsEnabled;
 	bool shadowsEnabled;
+	bool bloomEnabled;
+	bool colorGradingEnabled;
 
 protected:
 	wiRenderTarget
@@ -58,43 +62,49 @@ protected:
 public:
 	float getLightShaftQuality(){ return lightShaftQuality; }
 	float getBloomDownSample(){ return bloomDownSample; }
+	float getBloomStrength(){ return bloomStren; }
+	float getBloomThreshold(){ return bloomThreshold; }
+	float getBloomSaturation(){ return bloomSaturation; }
 	float getAlphaParticleDownSample(){ return particleAlphaDownSample; }
 	float getAdditiveParticleDownSample(){ return particleAdditiveDownSample; }
 	float getReflectionQuality(){ return reflectionQuality; }
 	float getSSAOQuality(){ return ssaoQuality; }
 	float getSSAOBlur(){ return ssaoBlur; }
 	float getSSRQuality(){ return ssrQuality; }
-	float getBloomStrength(){ return bloomStren; }
-	float getBloomThreshold(){ return bloomThreshold; }
-	float getBloomSaturation(){ return bloomSaturation; }
-	XMFLOAT4 getWaterPlane(){ return waterPlane; }
+
+	wiWaterPlane getWaterPlane(){ return waterPlane; }
 
 	bool getSSAOEnabled(){ return ssaoEnabled; }
 	bool getSSREnabled(){ return ssrEnabled; }
 	bool getShadowsEnabled(){ return shadowsEnabled; }
 	bool getReflectionsEnabled(){ return reflectionsEnabled; }
 	bool getFXAAEnabled(){ return fxaaEnabled; }
+	bool getBloomEnabled(){ return bloomEnabled; }
+	bool getColorGradingEnabled(){ return colorGradingEnabled; }
 
 	unsigned short getThreadingCount(){ return workerThreads.size(); }
 
 	void setLightShaftQuality(float value){ lightShaftQuality = value; }
 	void setBloomDownSample(float value){ bloomDownSample = value; }
+	void setBloomStrength(float value){ bloomStren = value; }
+	void setBloomThreshold(float value){ bloomThreshold = value; }
+	void setBloomSaturation(float value){ bloomSaturation = value; }
 	void setAlphaParticleDownSample(float value){ particleAlphaDownSample = value; }
 	void setAdditiveParticleDownSample(float value){ particleAdditiveDownSample = value; }
 	void setReflectionQuality(float value){ reflectionQuality = value; }
 	void setSSAOQuality(float value){ ssaoQuality = value; }
 	void setSSAOBlur(float value){ ssaoBlur = value; }
 	void setSSRQuality(float value){ ssrQuality = value; }
-	void setBloomStrength(float value){ bloomStren = value; }
-	void setBloomThreshold(float value){ bloomThreshold = value; }
-	void setBloomSaturation(float value){ bloomSaturation = value; }
-	void setWaterPlane(const XMFLOAT4& value){ waterPlane = value; }
+
+	void setWaterPlane(const wiWaterPlane& value){ waterPlane = value; }
 
 	void setSSAOEnabled(bool value){ ssaoEnabled = value; }
 	void setSSREnabled(bool value){ ssrEnabled = value; }
 	void setShadowsEnabled(bool value){ shadowsEnabled = value; }
 	void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
 	void setFXAAEnabled(bool value){ fxaaEnabled = value; }
+	void setBloomEnabled(bool value){ bloomEnabled = value; }
+	void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

@@ -19,7 +19,7 @@ int wiBackLog::historyPos=0;
 void wiBackLog::Initialize(){
 	//stream.resize(0);
 	wiResourceManager::add("images/logBG.png");
-	pos = wiRenderer::RENDERHEIGHT;
+	pos = (float)wiRenderer::RENDERHEIGHT;
 	scroll=0;
 	state=DISABLED;
 	deletefromline=100;
@@ -46,18 +46,18 @@ void wiBackLog::Scroll(int dir){
 void wiBackLog::Update(){
 	if(state==DEACTIVATING) pos+=speed;
 	else if(state==ACTIVATING) pos-=speed;
-	if (pos >= wiRenderer::RENDERHEIGHT) { state = DISABLED; pos = wiRenderer::RENDERHEIGHT; }
+	if (pos >= wiRenderer::RENDERHEIGHT) { state = DISABLED; pos = (float)wiRenderer::RENDERHEIGHT; }
 	else if(pos<=0) {state=IDLE; pos=0;}
 }
 void wiBackLog::Draw(){
 	if(state!=DISABLED){
 		wiImage::BatchBegin();
-		wiImageEffects fx = wiImageEffects(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT);
+		wiImageEffects fx = wiImageEffects((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
 		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);
 		wiImage::Draw((wiRenderer::TextureView)(wiResourceManager::get("images/logBG.png")->data),fx);
 		wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
-		wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
+		wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}
 }
 
@@ -127,7 +127,7 @@ void wiBackLog::historyPrev(){
 	if(!history.empty()){
 		inputArea.str("");
 		inputArea<<history[history.size()-1-historyPos];
-		if(historyPos<history.size()-1)
+		if((size_t)historyPos<history.size()-1)
 			historyPos++;
 	}
 }

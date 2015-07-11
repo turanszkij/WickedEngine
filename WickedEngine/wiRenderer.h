@@ -1,8 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiPHYSICS.h"
-#include "wiLines.h"
-#include "wiCube.h"
 
 struct Transform;
 struct Vertex;
@@ -35,6 +32,7 @@ struct Cullable;
 class  PHYSICS;
 class  Camera;
 class  wiRenderTarget;
+class  wiWaterPlane;
 
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string,Material*> MaterialCollection;
@@ -326,7 +324,7 @@ public:
 	static void UpdatewiSPTree(wiSPTree*& tree);
 	static void UpdateImages();
 	static void ManageImages();
-	static void PutWaterRipple(const string& image, const XMFLOAT3& pos, const XMFLOAT4& plane);
+	static void PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane);
 	static void ManageWaterRipples();
 	static void DrawWaterRipples(ID3D11DeviceContext* context);
 	static void SetGameSpeed(float value){GameSpeed=value; if(GameSpeed<0) GameSpeed=0;};

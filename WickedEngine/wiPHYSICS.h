@@ -63,5 +63,4 @@ public:
 
 	virtual void registerObject(Object* object)=0;
 };
-//#include "HAVOK.h"
 #include "wiBULLET.h"

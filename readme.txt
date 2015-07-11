@@ -69,9 +69,15 @@ _________________________________________________________
 
 	Priority:
 		- FIX XINPUT
+		- Optimize image rendering
+		- Rewrite camera class
+		- Decouple API from wiRenderer
 	Other:
 		- Cleanup
 		- Documentation
 		- HDR pipeline
 		- Forward rendering pipeline
+		- Precalculated Ambient Occlusion
+		- Windows RT controls helper
+		- Texture helper various texture generators (fractal, perlin, etc.) (low priority)
 __________________________________________________________

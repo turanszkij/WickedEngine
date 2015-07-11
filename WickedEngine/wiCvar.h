@@ -1,12 +1,15 @@
 #pragma once
 #include "CommonInclude.h"
 
-class VariableManager
+class wiCvar
 {
 public:
 	enum Data_Type{
 		TEXT,
-		NUMBER,
+		INTEGER,
+		FLOAT,
+		BOOLEAN,
+		CVAR_DATATYPE_COUNT
 	};
 private:
 	struct Variable{
@@ -14,7 +17,7 @@ private:
 		Data_Type type;
 		Variable(const string d, Data_Type t):data(d),type(t){}
 	};
-	typedef unordered_map<string,Variable*> container;
+	typedef map<string,Variable*> container;
 	static container variables;
 public:
 	static void SetUp();

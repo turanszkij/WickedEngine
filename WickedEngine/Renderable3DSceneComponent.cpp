@@ -28,13 +28,15 @@ void Renderable3DSceneComponent::Initialize()
 	setBloomStrength(19.3f);
 	setBloomThreshold(0.99f);
 	setBloomSaturation(-3.86f);
-	setWaterPlane(XMFLOAT4(0, 1, 0, 0));
+	setWaterPlane(wiWaterPlane());
 
 	setSSAOEnabled(true);
 	setSSREnabled(true);
 	setReflectionsEnabled(false);
 	setShadowsEnabled(true);
 	setFXAAEnabled(true);
+	setBloomEnabled(true);
+	setColorGradingEnabled(true);
 
 	setPreferredThreadingCount(0);
 }
@@ -167,7 +169,7 @@ void Renderable3DSceneComponent::RenderReflections(wiRenderer::DeviceContext con
 	rtReflection.Activate(context); {
 		wiRenderer::UpdatePerRenderCB(context, 0);
 		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->View, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->refEye, getWaterPlane());
+		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->View, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->refEye, getWaterPlane().getXMFLOAT4());
 		wiRenderer::DrawWorld(wiRenderer::getCamera()->refView, false, 0, context
 			, false, wiRenderer::SHADED_NONE
 			, nullptr, false, 1);
@@ -302,22 +304,31 @@ void Renderable3DSceneComponent::RenderComposition2(wiRenderer::DeviceContext co
 	wiImage::Draw(rtFinal[0].shaderResource.back(), fx, context);
 	fx.process.clear();
 
-	fx.blendFlag = BLENDMODE_ADDITIVE;
-	wiImage::Draw(rtBloom.back().shaderResource.back(), fx, context);
+	if (getBloomEnabled())
+	{
+		fx.blendFlag = BLENDMODE_ADDITIVE;
+		wiImage::Draw(rtBloom.back().shaderResource.back(), fx, context);
+	}
 }
 void Renderable3DSceneComponent::RenderColorGradedComposition(){
 
 	wiImageEffects fx(screenW, screenH);
 	wiImage::BatchBegin();
+	fx.blendFlag = BLENDMODE_OPAQUE;
+	fx.quality = QUALITY_NEAREST;
 
-	if (wiRenderer::GetColorGrading() != nullptr){
-		fx.process.setColorGrade(true);
-		fx.setMaskMap(wiRenderer::GetColorGrading());
-	}
-	else
+	if (getColorGradingEnabled())
 	{
-		fx.process.setColorGrade(true);
-		fx.setMaskMap(wiTextureHelper::getInstance()->getColorGradeDefaultTex());
+		fx.quality = QUALITY_BILINEAR;
+		if (wiRenderer::GetColorGrading() != nullptr){
+			fx.process.setColorGrade(true);
+			fx.setMaskMap(wiRenderer::GetColorGrading());
+		}
+		else
+		{
+			fx.process.setColorGrade(true);
+			fx.setMaskMap(wiTextureHelper::getInstance()->getColorGradeDefaultTex());
+		}
 	}
 	wiImage::Draw(rtFinal[1].shaderResource.back(), fx);
 }

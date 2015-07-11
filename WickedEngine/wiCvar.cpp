@@ -1,25 +1,25 @@
 #include "wiCvar.h"
 
-VariableManager::container VariableManager::variables;
+wiCvar::container wiCvar::variables;
 
-void VariableManager::SetUp()
+void wiCvar::SetUp()
 {
 }
 
-const VariableManager::Variable* VariableManager::get(const string& name)
+const wiCvar::Variable* wiCvar::get(const string& name)
 {
 	container::iterator it = variables.find(name);
 	if(it!=variables.end())
 		return it->second;
 	else return nullptr;
 }
-bool VariableManager::add(const string& name, const string& value, Data_Type newType)
+bool wiCvar::add(const string& name, const string& value, Data_Type newType)
 {
 	if(get(name))
 		return false;
 	variables.insert< pair<string,Variable*> >( pair<string,Variable*>(name,new Variable(value,newType)) );
 } 
-bool VariableManager::del(const string& name)
+bool wiCvar::del(const string& name)
 {
 	Variable* var=nullptr;
 	if(!var)
@@ -28,7 +28,7 @@ bool VariableManager::del(const string& name)
 	variables.erase(name);
 	return true;
 }
-bool VariableManager::CleanUp()
+bool wiCvar::CleanUp()
 {
 	return true;
 }

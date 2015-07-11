@@ -605,6 +605,9 @@
     <ClCompile Include="wiDirectInput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wiWaterPlane.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1403,6 +1406,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wiCvar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiWaterPlane.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

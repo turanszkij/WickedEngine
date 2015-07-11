@@ -361,6 +361,7 @@
     <ClCompile Include="wiMath.cpp" />
     <ClCompile Include="wiColor.cpp" />
     <ClCompile Include="wiRandom.cpp" />
+    <ClCompile Include="wiWaterPlane.cpp" />
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -629,6 +630,7 @@
     <ClInclude Include="wiMath.h" />
     <ClInclude Include="wiColor.h" />
     <ClInclude Include="wiRandom.h" />
+    <ClInclude Include="wiWaterPlane.h" />
     <ClInclude Include="wiXInput.h" />
   </ItemGroup>
   <ItemGroup>

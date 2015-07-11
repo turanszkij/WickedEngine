@@ -44,7 +44,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
     float2 finalStep = colorM.a * step / depthM;
 
     // Accumulate the other samples:
-    [unroll]
+    //[unroll]
     for (int i = 1; i < SSSS_N_SAMPLES; i++) {
         // Fetch color and depth for current sample:
         float2 offset = PSIn.tex + kernel[i].a * finalStep;

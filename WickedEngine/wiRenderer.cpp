@@ -14,6 +14,10 @@
 #include "wiMath.h"
 #include "wiLensFlare.h"
 #include "wiTextureHelper.h"
+#include "wiPHYSICS.h"
+#include "wiLines.h"
+#include "wiCube.h"
+#include "wiWaterPlane.h"
 
 #pragma region STATICS
 D3D_DRIVER_TYPE						wiRenderer::driverType;
@@ -2281,7 +2285,7 @@ void wiRenderer::ManageImages(){
 			)
 			images.pop_front();
 }
-void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const XMFLOAT4& plane){
+void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane){
 	wiSprite* img=new wiSprite("","",image);
 	img->anim.fad=0.01f;
 	img->anim.scaleX=0.2f;
@@ -2292,7 +2296,7 @@ void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const 
 	img->effects.typeFlag=WORLD;
 	img->effects.quality=QUALITY_ANISOTROPIC;
 	img->effects.pivotFlag=Pivot::CENTER;
-	img->effects.lookAt=plane;
+	img->effects.lookAt=waterPlane.getXMFLOAT4();
 	img->effects.lookAt.w=1;
 	waterRipples.push_back(img);
 }
@@ -4332,12 +4336,9 @@ void wiRenderer::UpdateLights()
 
 wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickType)
 {
-	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet(cursorX,cursorY,0,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet(cursorX,cursorY,1,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-	XMVECTOR& rayOrigin = lineStart, rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
-	RAY ray = RAY(lineStart,rayDirection);
+	RAY ray = getPickRay(cursorX, cursorY);
+	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
+	XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
 
 	CulledCollection culledwiRenderer;
 	CulledList culledObjects;
@@ -4415,7 +4416,7 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
 	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet(cursorX,cursorY,1,1),0,0
 		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-	XMVECTOR& rayOrigin = lineStart, rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
+	XMVECTOR& rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
 	return RAY(lineStart,rayDirection);
 }
 

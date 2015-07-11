@@ -34,6 +34,8 @@
 #include "wiTextureHelper.h"
 #include "wiRandom.h"
 #include "wiColor.h"
+#include "wiWaterPlane.h"
+#include "wiPHYSICS.h"
 
 #include "RenderableComponent.h"
 #include "Renderable3DSceneComponent.h"

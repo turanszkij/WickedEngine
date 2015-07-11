@@ -4,7 +4,7 @@
 
 class wiRenderer;
 
-static class wiFont
+class wiFont
 {
 private:
 	static mutex MUTEX;

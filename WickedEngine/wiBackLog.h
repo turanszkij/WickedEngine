@@ -4,7 +4,7 @@
 #include "wiFont.h"
 #include "wiImage.h"
 
-static class wiBackLog
+class wiBackLog
 {
 private:
 	static deque<string> stream;
