@@ -6,7 +6,7 @@ class DeferredRenderableComponent :
 	public Renderable3DSceneComponent
 {
 protected:
-	wiRenderTarget rtGBuffer, rtDeferred;
+	wiRenderTarget rtGBuffer, rtDeferred, rtLight;
 
 	virtual void RenderScene(wiRenderer::DeviceContext context = wiRenderer::immediateContext);
 

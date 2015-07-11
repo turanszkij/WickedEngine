@@ -26,6 +26,11 @@ void DeferredRenderableComponent::Load()
 	rtDeferred.Initialize(
 		screenW, screenH
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0);
+	rtLight.Initialize(
+		screenW, screenH
+		, 1, false, 1, 0
+		, DXGI_FORMAT_R11G11B10_FLOAT
+		);
 }
 void DeferredRenderableComponent::Start()
 {

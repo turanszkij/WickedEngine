@@ -37,6 +37,11 @@ void Renderable3DSceneComponent::Initialize()
 	setFXAAEnabled(true);
 	setBloomEnabled(true);
 	setColorGradingEnabled(true);
+	setEmitterParticlesEnabled(true);
+	setHairParticlesEnabled(true);
+	setVolumeLightsEnabled(true);
+	setLightShaftsEnabled(true);
+	setLensFlareEnabled(true);
 
 	setPreferredThreadingCount(0);
 }
@@ -72,11 +77,6 @@ void Renderable3DSceneComponent::Load()
 	rtTransparent.Initialize(
 		screenW, screenH
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
-		);
-	rtLight.Initialize(
-		screenW, screenH
-		, 1, false, 1, 0
-		, DXGI_FORMAT_R11G11B10_FLOAT
 		);
 	rtVolumeLight.Initialize(
 		screenW, screenH
@@ -141,6 +141,8 @@ void Renderable3DSceneComponent::Start()
 	wiRenderer::SetColorGrading(nullptr);
 	wiRenderer::SetToDrawDebugBoxes(false);
 	wiRenderer::SetToDrawDebugLines(false);
+	wiRenderer::HAIRPARTICLEENABLED = getHairParticlesEnabled();
+	wiRenderer::EMITTERSENABLED = getEmittedParticlesEnabled();
 }
 
 void Renderable3DSceneComponent::Update(){
@@ -187,17 +189,27 @@ void Renderable3DSceneComponent::RenderShadows(wiRenderer::DeviceContext context
 }
 void Renderable3DSceneComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context)
 {
-	rtLensFlare.Activate(context);
-	if (!wiRenderer::GetRasterizer())
-		wiRenderer::DrawLensFlares(context, mainRT.depth->shaderResource, screenW, screenH);
+	if (getLensFlareEnabled())
+	{
+		rtLensFlare.Activate(context);
+		if (!wiRenderer::GetRasterizer())
+			wiRenderer::DrawLensFlares(context, mainRT.depth->shaderResource, screenW, screenH);
+	}
 
-	rtVolumeLight.Activate(context, mainRT.depth);
+	if (getVolumeLightsEnabled())
+	{
+		rtVolumeLight.Activate(context, mainRT.depth);
 		wiRenderer::DrawVolumeLights(wiRenderer::getCamera()->View, context);
+	}
 
-	rtParticle.Activate(context, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
+	if (getEmittedParticlesEnabled())
+	{
+		rtParticle.Activate(context, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
 		wiRenderer::DrawSoftParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, context, rtLinearDepth.shaderResource.back());
-	rtParticleAdditive.Activate(context, 0, 0, 0, 1);  //OFFSCREEN RENDER ADDITIVEPARTICLES
+		
+		rtParticleAdditive.Activate(context, 0, 0, 0, 1);  //OFFSCREEN RENDER ADDITIVEPARTICLES
 		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, context, rtLinearDepth.shaderResource.back());
+	}
 
 	rtWaterRipple.Activate(context, 0, 0, 0, 0); {
 		wiRenderer::DrawWaterRipples(context);
@@ -250,8 +262,12 @@ void Renderable3DSceneComponent::RenderBloom(wiRenderer::DeviceContext context){
 	}
 }
 void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer::DeviceContext context){
-	wiImageEffects fx(screenW, screenH);
+	if (!getLightShaftsEnabled())
+	{
+		return;
+	}
 
+	wiImageEffects fx(screenW, screenH);
 
 	rtSun[0].Activate(context, mainRT.depth); {
 		wiRenderer::UpdatePerRenderCB(context, 0);
@@ -285,13 +301,23 @@ void Renderable3DSceneComponent::RenderComposition1(wiRenderTarget& shadedSceneR
 	}
 	wiImage::Draw(rtWater.shaderResource.back(), fx, context);
 	wiImage::Draw(rtTransparent.shaderResource.back(), fx, context);
-	wiImage::Draw(rtParticle.shaderResource.back(), fx, context);
+	if (getEmittedParticlesEnabled()){
+		wiImage::Draw(rtParticle.shaderResource.back(), fx, context);
+	}
 
 	fx.blendFlag = BLENDMODE_ADDITIVE;
-	wiImage::Draw(rtVolumeLight.shaderResource.back(), fx, context);
-	wiImage::Draw(rtParticleAdditive.shaderResource.back(), fx, context);
-	wiImage::Draw(rtSun.back().shaderResource.back(), fx, context);
-	wiImage::Draw(rtLensFlare.shaderResource.back(), fx, context);
+	if (getVolumeLightsEnabled()){
+		wiImage::Draw(rtVolumeLight.shaderResource.back(), fx, context);
+	}
+	if (getEmittedParticlesEnabled()){
+		wiImage::Draw(rtParticleAdditive.shaderResource.back(), fx, context);
+	}
+	if (getLightShaftsEnabled()){
+		wiImage::Draw(rtSun.back().shaderResource.back(), fx, context);
+	}
+	if (getLensFlareEnabled()){
+		wiImage::Draw(rtLensFlare.shaderResource.back(), fx, context);
+	}
 }
 void Renderable3DSceneComponent::RenderComposition2(wiRenderer::DeviceContext context){
 	wiImageEffects fx(screenW, screenH);

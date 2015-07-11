@@ -29,12 +29,16 @@ private:
 	bool shadowsEnabled;
 	bool bloomEnabled;
 	bool colorGradingEnabled;
+	bool emittedParticlesEnabled;
+	bool hairParticlesEnabled;
+	bool volumeLightsEnabled;
+	bool lightShaftsEnabled;
+	bool lensFlareEnabled;
 
 protected:
 	wiRenderTarget
 		rtReflection
 		, rtSSR
-		, rtLight
 		, rtVolumeLight
 		, rtTransparent
 		, rtWater
@@ -81,6 +85,11 @@ public:
 	bool getFXAAEnabled(){ return fxaaEnabled; }
 	bool getBloomEnabled(){ return bloomEnabled; }
 	bool getColorGradingEnabled(){ return colorGradingEnabled; }
+	bool getEmittedParticlesEnabled(){ return emittedParticlesEnabled; }
+	bool getHairParticlesEnabled(){ return hairParticlesEnabled; }
+	bool getVolumeLightsEnabled(){ return volumeLightsEnabled; }
+	bool getLightShaftsEnabled(){ return lightShaftsEnabled; }
+	bool getLensFlareEnabled(){ return lensFlareEnabled; }
 
 	unsigned short getThreadingCount(){ return workerThreads.size(); }
 
@@ -105,6 +114,11 @@ public:
 	void setFXAAEnabled(bool value){ fxaaEnabled = value; }
 	void setBloomEnabled(bool value){ bloomEnabled = value; }
 	void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
+	void setEmitterParticlesEnabled(bool value){ emittedParticlesEnabled = value; }
+	void setHairParticlesEnabled(bool value){ hairParticlesEnabled = value; }
+	void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
+	void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
+	void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 
