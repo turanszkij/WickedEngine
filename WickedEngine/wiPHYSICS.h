@@ -63,4 +63,3 @@ public:
 
 	virtual void registerObject(Object* object)=0;
 };
-#include "wiBULLET.h"

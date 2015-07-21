@@ -36,6 +36,7 @@
 #include "wiColor.h"
 #include "wiWaterPlane.h"
 #include "wiPHYSICS.h"
+#include "wiBULLET.h"
 #include "wiGraphicsThreads.h"
 
 #include "RenderableComponent.h"
