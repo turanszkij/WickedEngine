@@ -47,8 +47,8 @@ void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* 
 		wiRenderer::BindGS(geometryShader,context);
 
 		ConstantBuffer cb;
-		cb.mSunPos = lightPos / XMVectorSet(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, 1, 1);
-		cb.mScreen = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, 0, 0);
+		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 1, 1);
+		cb.mScreen = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
 
 		wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
 

@@ -36,20 +36,20 @@ public:
 	void addWind(const XMFLOAT3& wind);
 
 	void addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic);
-	void addSphere(const float& rad, const XMFLOAT3& pos
-		, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic);
-	void addCapsule(const float& rad, const float& hei, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic);
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
+	void addSphere(float rad, const XMFLOAT3& pos
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
+	void addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
 	void addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic);
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
 	void addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic);
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
 	
 	void addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping);
+		, float newMass, float newFriction, float newRestitution, float newDamping);
 
-	void addBone(const float& rad, const float& hei);
+	void addBone(float rad, float hei);
 	
 	void connectVerticesToSoftBody(Mesh* const mesh, int objectI);
 	void connectSoftBodyToVertices(const Mesh*  const mesh, int objectI);

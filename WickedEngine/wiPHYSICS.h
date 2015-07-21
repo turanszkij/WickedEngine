@@ -41,19 +41,19 @@ public:
 	virtual void addWind(const XMFLOAT3& wind)=0;
 	
 	virtual void addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
-	virtual void addSphere(const float& rad, const XMFLOAT3& pos
-		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
-	virtual void addCapsule(const float& rad, const float& hei, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
+	virtual void addSphere(float rad, const XMFLOAT3& pos
+		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
+	virtual void addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
 	virtual void addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
 	virtual void addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1, bool kinematic=false)=0;
+		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
 
 	
 	virtual void addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, const float& newMass=1, const float& newFriction=1, const float& newRestitution=1, const float& newDamping=1)=0;
+		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1)=0;
 	
 	virtual void connectVerticesToSoftBody(Mesh* const mesh, int objectI)=0;
 	virtual void connectSoftBodyToVertices(const Mesh* const mesh, int objectI)=0;

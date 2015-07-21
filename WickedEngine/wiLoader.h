@@ -6,7 +6,7 @@
 #include "wiDepthTarget.h"
 #include "wiGraphicsThreads.h"
 
-class HitSphere;
+struct HitSphere;
 class wiParticle;
 class wiEmittedParticle;
 class wiHairParticle;
@@ -669,18 +669,18 @@ struct SHCAM{
 
 	SHCAM(){
 		Init(XMQuaternionIdentity());
-		Create_Perspective(XM_PI/2.0);
-		nearplane=0.1;farplane=200,size=0;
+		Create_Perspective(XM_PI/2.0f);
+		nearplane=0.1f;farplane=200,size=0;
 	}
 	//orthographic
-	SHCAM(const float& size, const XMVECTOR& dir, const float& newNear, const float& newFar){
+	SHCAM(float size, const XMVECTOR& dir, float newNear, float newFar){
 		nearplane=newNear;
 		farplane=newFar;
 		Init(dir);
 		Create_Ortho(size);
 	};
 	//perspective
-	SHCAM(const XMFLOAT4& dir, const float& newNear, const float& newFar, const float& newFov){
+	SHCAM(const XMFLOAT4& dir, float newNear, float newFar, float newFov){
 		nearplane=newNear;
 		farplane=newFar;
 		Init(XMLoadFloat4(&dir));
@@ -699,12 +699,12 @@ struct SHCAM{
 		XMStoreFloat3( &Up, rUp );
 		XMStoreFloat4x4( &View, rView);
 	}
-	void Create_Ortho(const float& size){
+	void Create_Ortho(float size){
 		XMMATRIX rProjection = XMMatrixOrthographicLH(size,size,-farplane,farplane);
 		XMStoreFloat4x4( &Projection, rProjection);
 		this->size=size;
 	}
-	void Create_Perspective(const float& fov){
+	void Create_Perspective(float fov){
 		XMMATRIX rProjection = XMMatrixPerspectiveFovLH(fov,1,nearplane,farplane);
 		XMStoreFloat4x4( &Projection, rProjection);
 	}

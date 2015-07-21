@@ -135,7 +135,7 @@ void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 		//pos.z+=getNewPositionModifier();
 
 
-	points.push_back(Point(pos, XMFLOAT4(size, 1, wiRandom::getRandom(0, 1), wiRandom::getRandom(0, 1)), vel/*, XMFLOAT3(1,1,1)*/, getNewLifeSpan()
+	points.push_back(Point(pos, XMFLOAT4(size, 1, (float)wiRandom::getRandom(0, 1), (float)wiRandom::getRandom(0, 1)), vel/*, XMFLOAT3(1,1,1)*/, getNewLifeSpan()
 		,rotation*getNewRotationModifier(),scaleX,scaleY ) );
 }
 void wiEmittedParticle::Update(float gamespeed)
@@ -146,7 +146,7 @@ void wiEmittedParticle::Update(float gamespeed)
 	XMFLOAT3 minP=XMFLOAT3(D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX)
 		,maxP=XMFLOAT3(-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX);
 
-	for(int i=0;i<points.size();++i){
+	for (unsigned int i = 0; i<points.size(); ++i){
 		Point &point = points[i];
 
 		point.pos.x += point.vel.x*gamespeed;

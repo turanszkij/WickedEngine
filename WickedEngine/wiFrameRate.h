@@ -4,7 +4,7 @@
 
 class Timer;
 
-static class wiFrameRate
+class wiFrameRate
 {
 protected:
 	static Timer timer;

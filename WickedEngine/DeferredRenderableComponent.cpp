@@ -71,7 +71,7 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 	static const int tessellationQuality = 0;
 
 	wiRenderer::UpdatePerFrameCB(context);
-	wiImageEffects fx(screenW, screenH);
+	wiImageEffects fx((float)screenW, (float)screenH);
 
 	rtGBuffer.Activate(context); {
 		wiRenderer::UpdatePerRenderCB(context, tessellationQuality);

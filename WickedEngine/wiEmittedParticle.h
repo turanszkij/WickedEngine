@@ -66,7 +66,7 @@ private:
 	//std::vector<SkinnedVertex> emitterVertexList;
 	Object* object;
 	
-	float getNewVelocityModifier(){ return 1+((rand()%10001+1)*0.0001)*random_factor;}
+	float getNewVelocityModifier(){ return 1+((rand()%10001+1)*0.0001f)*random_factor;}
 	float getNewPositionModifier(){ return (rand()%((int)(random_factor*1000)+1))*0.001f - random_factor*0.5f; }
 	float getNewRotationModifier(){ return (rand()%((int)(random_factor*1000)+1))*0.001f - random_factor*0.5f; }
 	float getNewLifeSpan(){ return life + (rand()%((int)(random_life*1000)+1))*0.001f - random_life*0.5f; }

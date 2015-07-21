@@ -303,7 +303,7 @@ protected:
 
 
 	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
-	static XMVECTOR InterPolateKeyFrames(const float& currentFrame, const int& frameCount,const std::vector<KeyFrame>& keyframes, KeyFrameType type);
+	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int& frameCount,const std::vector<KeyFrame>& keyframes, KeyFrameType type);
 	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat=XMMatrixIdentity());
 	static Vertex TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat = XMMatrixIdentity());
 	static XMFLOAT3 VertexVelocity(const Mesh* mesh, const int& vertexI);

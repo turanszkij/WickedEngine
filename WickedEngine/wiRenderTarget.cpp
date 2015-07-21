@@ -201,14 +201,14 @@ void wiRenderTarget::Set(ID3D11DeviceContext* context, wiDepthTarget* getDepth)
 void wiRenderTarget::Retarget(ID3D11ShaderResourceView* resource)
 {
 	retargetted=true;
-	for(int i=0;i<shaderResource.size();++i){
+	for(unsigned int i=0;i<shaderResource.size();++i){
 		SAVEDshaderResource[i]=shaderResource[i];
 		shaderResource[i]=resource;
 	}
 }
 void wiRenderTarget::Restore(){
 	if(retargetted){
-		for(int i=0;i<shaderResource.size();++i){
+		for(unsigned int i=0;i<shaderResource.size();++i){
 			shaderResource[i]=SAVEDshaderResource[i];
 		}
 	}

@@ -76,31 +76,6 @@ public:
 		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* lightmap, ID3D11ShaderResourceView* normal
 		, ID3D11ShaderResourceView* ao, ID3D11DeviceContext* context, int stencilref = 0);
 
-
-
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT3& pos, const XMFLOAT2& siz, ID3D11DeviceContext* context);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz,const float&rotation);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz,const float&rotation, const float&opacity, ID3D11DeviceContext* context);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, const float&blur, const float&blurStrength, const float&fade, const float&opacity);
-	static void Draw(ID3D11ShaderResourceView *texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity, ID3D11DeviceContext* context);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, const float&blur, const float&blurStrength, const float&fade, const float&opacity, const float&rotation);
-	static void Draw(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, const float&blur, const float&blurStrength, const float&fade, const float&opacity, const float&rotation, ID3D11DeviceContext* context);
-	static void Draw(ID3D11ShaderResourceView* resourceView, ID3D11ShaderResourceView* mask, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, const float&blur, const float&blurStrength, const float&fade, const float&opacity, const float&rotation, XMFLOAT2 texOffset, BLENDMODE blendFlag, ID3D11DeviceContext* context);
-	
-	//deprecated
-	static void DrawModifiedTexCoords(ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, XMFLOAT2 texOffset, const float&opacity, BLENDMODE blendFlag);
-	//deprecated
-	static void DrawModifiedTexCoords(ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, const float&mirror, XMFLOAT2 texOffset, const float&opacity, BLENDMODE blendFlag, ID3D11DeviceContext* context);
-	//deprecated
-	static void DrawOffset(ID3D11ShaderResourceView* resourceView, const XMFLOAT4& posSiz, XMFLOAT2 offset);
-	//deprecated
-	static void DrawOffset(ID3D11ShaderResourceView* resourceView, const XMFLOAT4& posSiz, const XMFLOAT4& drawRec, XMFLOAT2 offset);
-	//deprecated
-	static void DrawAdditive(ID3D11ShaderResourceView* resourceView,const XMFLOAT4& posSiz,const XMFLOAT4& drawRec=XMFLOAT4(0,0,0,0));
-
 	static void BatchBegin();
 	static void BatchBegin(ID3D11DeviceContext* context);
 	static void BatchBegin(ID3D11DeviceContext* context, unsigned int stencilref, bool stencilOpLess=true);

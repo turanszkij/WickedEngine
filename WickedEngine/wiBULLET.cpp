@@ -90,7 +90,7 @@ void BULLET::addWind(const XMFLOAT3& wind){
 
 
 void BULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic){
+					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 
 	btCollisionShape* shape = new btBoxShape(btVector3(sca.x,sca.y,sca.z));
 	shape->setMargin(0.05);
@@ -141,8 +141,8 @@ void BULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& po
 	
 }
 
-void BULLET::addSphere(const float& rad, const XMFLOAT3& pos
-					, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic){
+void BULLET::addSphere(float rad, const XMFLOAT3& pos
+					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	///create a few basic rigid bodies
 	/*btCollisionShape* groundShape = new btshape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
 
@@ -250,8 +250,8 @@ void BULLET::addSphere(const float& rad, const XMFLOAT3& pos
 	
 }
 
-void BULLET::addCapsule(const float& rad, const float& hei, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic){
+void BULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
+					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 
 	btCollisionShape* shape = new btCapsuleShape(btScalar(rad),btScalar(hei));
 	shape->setMargin(0.05);
@@ -303,9 +303,9 @@ void BULLET::addCapsule(const float& rad, const float& hei, const XMFLOAT4& rot,
 }
 
 void BULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic){
+					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	btCollisionShape* shape = new btConvexHullShape();
-	for(int i=0;i<vertices.size();++i)
+	for (unsigned int i = 0; i<vertices.size(); ++i)
 		((btConvexHullShape*)shape)->addPoint(btVector3(vertices[i].pos.x,vertices[i].pos.y,vertices[i].pos.z));
 	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
 	shape->setMargin(0.05);
@@ -360,17 +360,17 @@ void BULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3
 }
 
 void BULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping, bool kinematic){
+					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	
 	int totalVerts = vertices.size();
 	int totalTriangles = indices.size() / 3;
 
 	btVector3* btVerts = new btVector3[totalVerts];
-	for(int i=0;i<vertices.size();++i)
+	for (unsigned int i = 0; i<vertices.size(); ++i)
 		btVerts[i] = (btVector3(vertices[i].pos.x,vertices[i].pos.y,vertices[i].pos.z));
 
 	int* btInd = new int[indices.size()];
-	for(int i=0;i<indices.size();++i)
+	for (unsigned int i = 0; i<indices.size(); ++i)
 		btInd[i] = indices[i];
 	
 	int vertStride = sizeof(btVector3);
@@ -440,7 +440,7 @@ void BULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector
 
 
 void BULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-	, const float& newMass, const float& newFriction, const float& newRestitution, const float& newDamping){
+	, float newMass, float newFriction, float newRestitution, float newDamping){
 		
 
 	const int vCount = mesh->physicsverts.size();
@@ -575,7 +575,7 @@ void BULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
 		int gvg = mesh->goalVG;
-		for(int i=0;i<mesh->skinnedVertices.size();++i)
+		for (unsigned int i = 0; i<mesh->skinnedVertices.size(); ++i)
 		{
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
@@ -776,13 +776,13 @@ void BULLET::ClearWorld(){
 	}
 
 	//delete transfom interface
-	for(int i=0;i<transforms.size();++i)
+	for (unsigned int i = 0; i<transforms.size(); ++i)
 		delete transforms[i];
 	transforms.clear();
 	registeredObjects=-1;
 }
 void BULLET::CleanUp(){
-	for(int i=0;i<transforms.size();++i)
+	for (unsigned int i = 0; i<transforms.size(); ++i)
 		delete transforms[i];
 	transforms.clear();
 }

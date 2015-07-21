@@ -144,7 +144,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 					bool gotBone=false;
 					int BONEINDEX=0;
 					int b=0;
-					while(!gotBone && b<armature->boneCollection.size()){
+					while(!gotBone && b<(int)armature->boneCollection.size()){
 						if(!armature->boneCollection[b]->name.compare(nameB)){
 							gotBone=true;
 							BONEINDEX=b; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
@@ -182,7 +182,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				if(nameB.find("wind")!=string::npos)
 					windAffection=true;
 				bool gotvg=false;
-				for(int v=0;v<vertexGroups.size();++v)
+				for (unsigned int v = 0; v<vertexGroups.size(); ++v)
 					if(!nameB.compare(vertexGroups[v].name)){
 						gotvg=true;
 						vertexGroups[v].addVertex( VertexRef(vertices.size(),weightValue) );
@@ -281,7 +281,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 			memcpy(vgs,buffer+offset,vglenghts[2]);
 			offset+=vglenghts[2];
 
-			for(int v=0;v<vertexGroups.size();++v){
+			for (unsigned int v = 0; v<vertexGroups.size(); ++v){
 				if(!strcmp(vgm,vertexGroups[v].name.c_str()))
 					massVG=v;
 				if(!strcmp(vgg,vertexGroups[v].name.c_str()))
@@ -297,7 +297,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 
 		delete[] buffer;
 
-		renderable=(bool)rendermesh;
+		renderable=rendermesh==0?false:true;
 
 		CreateVertexArrays();
 
@@ -401,8 +401,8 @@ void Mesh::CreateBuffers(){
 			}
 
 			//PHYSICALMAPPING
-			for(int i=0;i<vertices.size();++i){
-				for(int j=0;j<physicsverts.size();++j){
+			for (unsigned int i = 0; i<vertices.size(); ++i){
+				for (unsigned int j = 0; j<physicsverts.size(); ++j){
 					if(		fabs( vertices[i].pos.x-physicsverts[j].x ) < DBL_EPSILON
 						&&	fabs( vertices[i].pos.y-physicsverts[j].y ) < DBL_EPSILON
 						&&	fabs( vertices[i].pos.z-physicsverts[j].z ) < DBL_EPSILON
@@ -425,7 +425,7 @@ void Mesh::CreateVertexArrays()
 	if (skinnedVertices.empty())
 	{
 		skinnedVertices.resize(vertices.size());
-		for (int i = 0; i<vertices.size(); ++i){
+		for (unsigned int i = 0; i<vertices.size(); ++i){
 			skinnedVertices[i].pos = vertices[i].pos;
 			skinnedVertices[i].nor = vertices[i].nor;
 			skinnedVertices[i].tex = vertices[i].tex;
@@ -442,7 +442,7 @@ void Mesh::AddInstance(int count){
 }
 void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD thread)
 {
-	if (numerator >= instances[thread].size())
+	if (numerator >= (int)instances[thread].size())
 	{
 		instances[thread].resize(instances[thread].size() * 2);
 	}
@@ -575,7 +575,7 @@ void LoadWiArmatures(const string& directory, const string& name, const string& 
 			}
 		}
 
-		for(int i=0;i<armature->rootbones.size();++i){
+		for (unsigned int i = 0; i<armature->rootbones.size(); ++i){
 			RecursiveRest(armature,armature->rootbones[i]);
 		}
 
@@ -602,7 +602,7 @@ void RecursiveRest(Armature* armature, Bone* bone){
 		XMStoreFloat4x4( &bone->recursiveRestInv, XMMatrixInverse(0,XMLoadFloat4x4(&bone->recursiveRest)) );
 	}
 
-	for(int i=0;i<bone->childrenI.size();++i){
+	for (unsigned int i = 0; i<bone->childrenI.size(); ++i){
 		RecursiveRest(armature,bone->childrenI[i]);
 	}
 }
@@ -930,7 +930,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 	}
 	file.close();
 
-	for(int i=0;i<objects.size();i++){
+	for (unsigned int i = 0; i<objects.size(); i++){
 		if(objects[i]->mesh){
 			if(objects[i]->mesh->trailInfo.base>=0 && objects[i]->mesh->trailInfo.tip>=0){
 					//objects[i]->trail.resize(MAX_RIBBONTRAILS);
@@ -1131,7 +1131,7 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						stringstream identified_parentArmature("");
 						identified_parentArmature<<parentArmature<<identifier;
 						currentMesh->parent=identified_parentArmature.str();
-						for(int i=0;i<armatures.size();++i)
+						for (unsigned int i = 0; i<armatures.size(); ++i)
 							if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str())){
 								currentMesh->armatureIndex=i;
 								currentMesh->armature=armatures[i];
@@ -1170,14 +1170,14 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						bool gotArmature=false;
 						bool gotBone=false;
 						int i=0;
-						while(!gotArmature && i<armatures.size()){  //SEARCH FOR PARENT ARMATURE
+						while(!gotArmature && i<(int)armatures.size()){  //SEARCH FOR PARENT ARMATURE
 							if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str()))
 								gotArmature=true;
 							else i++;
 						}
 						if(gotArmature){
 							int j=0;
-							while(!gotBone && j<armatures[i]->boneCollection.size()){
+							while(!gotBone && j<(int)armatures[i]->boneCollection.size()){
 								if(!armatures[i]->boneCollection[j]->name.compare(nameB)){
 									gotBone=true;
 									BONEINDEX=j; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
@@ -1188,19 +1188,19 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						if(gotBone){ //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
 							if(!currentMesh->vertices.back().wei.x) {
 								currentMesh->vertices.back().wei.x=weight;
-								currentMesh->vertices.back().bon.x=BONEINDEX;
+								currentMesh->vertices.back().bon.x=(float)BONEINDEX;
 							}
 							else if(!currentMesh->vertices.back().wei.y) {
 								currentMesh->vertices.back().wei.y=weight;
-								currentMesh->vertices.back().bon.y=BONEINDEX;
+								currentMesh->vertices.back().bon.y=(float)BONEINDEX;
 							}
 							else if(!currentMesh->vertices.back().wei.z) {
 								currentMesh->vertices.back().wei.z=weight;
-								currentMesh->vertices.back().bon.z=BONEINDEX;
+								currentMesh->vertices.back().bon.z=(float)BONEINDEX;
 							}
 							else if(!currentMesh->vertices.back().wei.w) {
 								currentMesh->vertices.back().wei.w=weight;
-								currentMesh->vertices.back().bon.w=BONEINDEX;
+								currentMesh->vertices.back().bon.w=(float)BONEINDEX;
 							}
 						}
 
@@ -1215,7 +1215,7 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						if(nameB.find("wind")!=string::npos)
 							windAffection=true;
 						bool gotvg=false;
-						for(int v=0;v<currentMesh->vertexGroups.size();++v)
+						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v)
 							if(!nameB.compare(currentMesh->vertexGroups[v].name)){
 								gotvg=true;
 								currentMesh->vertexGroups[v].addVertex( VertexRef(currentMesh->vertices.size()-1,weight) );
@@ -1301,7 +1301,7 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						currentMesh->softBody=true;
 						string mvgi="",gvgi="",svgi="";
 						file>>currentMesh->mass>>currentMesh->friction>>gvgi>>mvgi>>svgi;
-						for(int v=0;v<currentMesh->vertexGroups.size();++v){
+						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v){
 							if(!strcmp(mvgi.c_str(),currentMesh->vertexGroups[v].name.c_str()))
 								currentMesh->massVG=v;
 							if(!strcmp(gvgi.c_str(),currentMesh->vertexGroups[v].name.c_str()))
@@ -1340,7 +1340,7 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 				stringstream identified_name("");
 				identified_name<<line.substr(11,strlen(line.c_str())-11)<<identifier;
 				string armaturename = identified_name.str() ;
-				for(int i=0;i<armatures.size();i++)
+				for (unsigned int i = 0; i<armatures.size(); i++)
 					if(!armatures[i]->name.compare(armaturename)){
 						armatureI=i;
 						break;
@@ -1359,7 +1359,7 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 					{
 						string boneName;
 						file>>boneName;
-						for(int i=0;i<armatures[armatureI]->boneCollection.size();i++)
+						for (unsigned int i = 0; i<armatures[armatureI]->boneCollection.size(); i++)
 							if(!armatures[armatureI]->boneCollection[i]->name.compare(boneName)){
 								boneI=i;
 								break;
@@ -1369,21 +1369,24 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 					break;
 				case 'r':
 					{
-						float f=0,x=0,y=0,z=0,w=0;
+						int f = 0;
+						float x=0,y=0,z=0,w=0;
 						file>>f>>x>>y>>z>>w;
 						armatures[armatureI]->boneCollection[boneI]->actionFrames.back().keyframesRot.push_back(KeyFrame(f,x,y,z,w));
 					}
 					break;
 				case 't':
 					{
-						float f=0,x=0,y=0,z=0;
+						int f = 0;
+						float x=0,y=0,z=0;
 						file>>f>>x>>y>>z;
 						armatures[armatureI]->boneCollection[boneI]->actionFrames.back().keyframesPos.push_back(KeyFrame(f,x,y,z,0));
 					}
 					break;
 				case 's':
 					{
-						float f=0,x=0,y=0,z=0;
+						int f = 0;
+						float x=0,y=0,z=0;
 						file>>f>>x>>y>>z;
 						armatures[armatureI]->boneCollection[boneI]->actionFrames.back().keyframesSca.push_back(KeyFrame(f,x,y,z,0));
 					}
@@ -1735,9 +1738,9 @@ void LoadWiCameras(const string&directory, const string& name, const string& ide
 						,name)
 						);
 
-					for(int i=0;i<armatures.size();++i){
+					for (unsigned int i = 0; i<armatures.size(); ++i){
 						if(!armatures[i]->name.compare(identified_parentArmature.str())){
-							for(int j=0;j<armatures[i]->boneCollection.size();++j){
+							for (unsigned int j = 0; j<armatures[i]->boneCollection.size(); ++j){
 								if(!armatures[i]->boneCollection[j]->name.compare(parentB.c_str()))
 									cameras.back().attachTo(armatures[i]->boneCollection[j]);
 							}

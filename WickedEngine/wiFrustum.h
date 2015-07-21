@@ -14,7 +14,7 @@ public:
 	void ConstructFrustum(float screenDepth, XMFLOAT4X4 projectionMatrix, XMFLOAT4X4 viewMatrix);
 
 	bool CheckPoint(const XMFLOAT3&);
-	bool CheckSphere(const XMFLOAT3&, const float&);
+	bool CheckSphere(const XMFLOAT3&, float);
 
 #define BOX_FRUSTUM_INTERSECTS 1
 #define BOX_FRUSTUM_INSIDE 2

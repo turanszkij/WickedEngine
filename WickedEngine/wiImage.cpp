@@ -300,7 +300,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
 				cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::RENDERWIDTH / 2 - effects.siz.x / 2, -wiRenderer::RENDERHEIGHT / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(-wiRenderer::RENDERWIDTH / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::RENDERHEIGHT / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
-				cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
+				cb.mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
 				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->View * wiRenderer::getCamera()->Projection );
@@ -330,7 +330,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 	
 			cb.mOffsetMirFade = XMFLOAT4(effects.offset.x,effects.offset.y,effects.mirror,effects.fade);
 			cb.mDrawRec = effects.drawRec;
-			cb.mBlurOpaPiv = XMFLOAT4(effects.blurDir,effects.blur,effects.opacity,effects.pivotFlag);
+			cb.mBlurOpaPiv = XMFLOAT4(effects.blurDir, effects.blur, effects.opacity, (float)effects.pivotFlag);
 			cb.mTexOffset = XMFLOAT4(effects.texOffset.x, effects.texOffset.y, effects.mipLevel, 0);
 
 			wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
@@ -432,8 +432,8 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 			normalmapmode=1;
 		if(effects.extractNormalMap==true)
 			normalmapmode=2;
-		pscb.mMaskFadOpaDis=XMFLOAT4(effects.maskMap?1:0,effects.fade,effects.opacity,normalmapmode);
-		pscb.mDimension = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
+		pscb.mMaskFadOpaDis = XMFLOAT4((effects.maskMap ? 1.f : 0.f), effects.fade, effects.opacity, (float)normalmapmode);
+		pscb.mDimension = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
 
 		wiRenderer::UpdateBuffer(PSCb,&pscb,context);
 		//PSConstantBuffer* dataPtr2;
@@ -603,161 +603,6 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 
 	wiRenderer::BindConstantBufferPS(deferredCb,0,context);
 	wiRenderer::Draw(4,context);
-}
-
-
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz)
-{
-	Draw(texture,newPosSiz,XMFLOAT4(0,0,0,0),1,0,0,0,0,0,wiRenderer::getImmediateContext());
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const float&newRot)
-{
-	Draw(texture,newPosSiz,XMFLOAT4(0,0,0,0),1,0,0,0,0,newRot,wiRenderer::getImmediateContext());
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const float&newRot, const float&opacity, ID3D11DeviceContext* context)
-{
-	Draw(texture,newPosSiz,XMFLOAT4(0,0,0,0),1,0,0,0,opacity,newRot,context);
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec)
-{
-	Draw(texture,newPosSiz,newDrawRec,1,0,0,0,0,0,wiRenderer::getImmediateContext());
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror)
-{
-	Draw(texture,newPosSiz,newDrawRec,newMirror,0,0,0,0,0,wiRenderer::getImmediateContext());
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity)
-{
-	Draw(texture,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,0,wiRenderer::getImmediateContext());
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity, ID3D11DeviceContext* context)
-{
-	Draw(texture,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,0,context);
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity, const float&newRot)
-{
-	Draw(texture,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,newRot,wiRenderer::getImmediateContext());
-}
-void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity, const float&newRot, ID3D11DeviceContext* context)
-{
-	Draw(texture,0,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,newRot,XMFLOAT2(0,0),BLENDMODE_ALPHA,context);
-}
-void wiImage::Draw(wiRenderer::TextureView texture, wiRenderer::TextureView mask, const XMFLOAT4& newPosSiz
-						, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength
-						, const float&newFade, const float&newOpacity, const float&newRot, XMFLOAT2 texOffset
-						, BLENDMODE blendMode, ID3D11DeviceContext* context)
-{
-	wiImageEffects fx = wiImageEffects();
-	fx.pos=XMFLOAT3(newPosSiz.x,newPosSiz.y,0);
-	fx.siz=XMFLOAT2(newPosSiz.z,newPosSiz.w);
-	fx.drawRec=newDrawRec;
-	fx.mirror=newMirror;
-	fx.blur=newBlurStrength;
-	fx.fade=newFade;
-	fx.opacity=newOpacity;
-	fx.rotation=newRot;
-	fx.texOffset=texOffset;
-	fx.blendFlag=blendMode;
-	fx.setMaskMap(mask);
-
-	Draw(texture,fx,context);
-}
-void wiImage::DrawModifiedTexCoords(wiRenderer::TextureView texture, wiRenderer::TextureView mask, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, XMFLOAT2 texOffset, const float&newOpacity, BLENDMODE blendMode)
-{
-	Draw(texture,mask,newPosSiz,newDrawRec,newMirror,0,0,0,newOpacity,0,texOffset,blendMode,wiRenderer::getImmediateContext());
-}
-void wiImage::DrawModifiedTexCoords(wiRenderer::TextureView texture, wiRenderer::TextureView mask, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, XMFLOAT2 texOffset, const float&newOpacity, BLENDMODE blendMode, ID3D11DeviceContext* context)
-{
-	Draw(texture,mask,newPosSiz,newDrawRec,newMirror,0,0,0,newOpacity,0,texOffset,blendMode,context);
-}
-void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, XMFLOAT2 newOffset)
-{
-	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
-	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
-	cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, newPosSiz.z, newPosSiz.w);
-	cb.mOffsetMirFade = XMFLOAT4(newOffset.x,newOffset.y,1,0);
-	cb.mDrawRec = XMFLOAT4(0,0,0,0);
-	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
-	cb.mTexOffset=XMFLOAT4(0,0,0,0);
-
-	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::getImmediateContext());
-	
-	//wiRenderer::getImmediateContext()->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
-
-	//D3D11_MAPPED_SUBRESOURCE mappedResource;
-	//ConstantBuffer* dataPtr;
-	//wiRenderer::getImmediateContext()->Map(constantBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-	//dataPtr = (ConstantBuffer*)mappedResource.pData;
-	//memcpy(dataPtr,&cb,sizeof(ConstantBuffer));
-	//wiRenderer::getImmediateContext()->Unmap(constantBuffer,0);
-
-	wiRenderer::getImmediateContext()->VSSetConstantBuffers( 0, 1, &constantBuffer );
-
-
-	//PSConstantBuffer pscb;
-	////pscb.mMaskFxBlSa=XMFLOAT4(0,0,0,0);
-	////wiRenderer::getImmediateContext()->UpdateSubresource( PSCb, 0, NULL, &pscb, 0, 0 );
-	//PSConstantBuffer* dataPtr2;
-	//wiRenderer::getImmediateContext()->Map(PSCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-	//dataPtr2 = (PSConstantBuffer*)mappedResource.pData;
-	//memcpy(dataPtr2,&pscb,sizeof(PSConstantBuffer));
-	//wiRenderer::getImmediateContext()->Unmap(PSCb,0);
-
-	//wiRenderer::getImmediateContext()->PSSetConstantBuffers( 0, 1, &PSCb );
-
-
-	wiRenderer::BindTexturePS(texture,5,wiRenderer::getImmediateContext());
-	wiRenderer::getImmediateContext()->Draw(4,0);
-
-}
-void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, XMFLOAT2 newOffset)
-{
-	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
-	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
-	cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, newPosSiz.z, newPosSiz.w);
-	cb.mOffsetMirFade = XMFLOAT4(newOffset.x,newOffset.y,1,0);
-	cb.mDrawRec = newDrawRec;
-	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
-	cb.mTexOffset=XMFLOAT4(0,0,0,0);
-
-	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::getImmediateContext());
-	
-	wiRenderer::BindTexturePS(texture,5,wiRenderer::getImmediateContext());
-	wiRenderer::getImmediateContext()->Draw(4,0);
-
-}
-void wiImage::DrawAdditive(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec)
-{
-	ConstantBuffer cb;
-	cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
-	cb.mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSiz.x,newPosSiz.y,0) );
-	cb.mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, newPosSiz.z, newPosSiz.w);
-	cb.mOffsetMirFade = XMFLOAT4(0,0,1,0);
-	cb.mDrawRec = newDrawRec;
-	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
-	cb.mTexOffset=XMFLOAT4(0,0,0,0);
-
-	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::getImmediateContext());
-	//
-
-	//wiRenderer::getImmediateContext()->VSSetConstantBuffers( 0, 1, &constantBuffer );
-
-	//wiRenderer::BindTexturePS(texture,5,wiRenderer::getImmediateContext());
-
-	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//UINT sampleMask   = 0xffffffff;
-	//wiRenderer::getImmediateContext()->OMSetBlendState(blendStateAdd, blendFactor, sampleMask);
-	//	wiRenderer::getImmediateContext()->Draw(4,0);
-	//wiRenderer::getImmediateContext()->OMSetBlendState(blendState, blendFactor, sampleMask);
-
-	wiRenderer::BindConstantBufferVS(constantBuffer,0);
-	wiRenderer::BindTexturePS(texture,5);
-	wiRenderer::BindBlendState(blendStateAdd);
-	wiRenderer::Draw(4);
-	wiRenderer::BindBlendState(blendState);
-
 }
 
 

@@ -2,7 +2,7 @@
 #define LENSFLARE
 #include "CommonInclude.h"
 
-static class wiLensFlare
+class wiLensFlare
 {
 private:
 	static ID3D11Buffer* constantBuffer;

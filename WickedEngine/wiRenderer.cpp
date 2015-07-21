@@ -347,8 +347,8 @@ long wiRenderer::getDrawCallCount(){
 
 void wiRenderer::CleanUp()
 {
-	for(int i=0;i<spheres.size();i++)
-		delete spheres[i];
+	for (HitSphere* x : spheres)
+		delete x;
 	spheres.clear();
 }
 
@@ -601,11 +601,11 @@ void wiRenderer::CleanUpStaticTemp(){
 
 	wiRenderer::resetVertexCount();
 	
-	for(int i=0;i<images.size();i++)
-		images[i]->CleanUp();
+	for (wiSprite* x : images)
+		x->CleanUp();
 	images.clear();
-	for(int i=0;i<waterRipples.size();i++)
-		waterRipples[i]->CleanUp();
+	for (wiSprite* x : waterRipples)
+		x->CleanUp();
 	waterRipples.clear();
 
 	
@@ -622,37 +622,37 @@ void wiRenderer::CleanUpStaticTemp(){
 	}
 	meshes.clear();
 	
-	for(int i=0;i<objects.size();i++){
+	for(unsigned int i=0;i<objects.size();i++){
 		objects[i]->CleanUp();
-		for(int j=0;j<objects[i]->eParticleSystems.size();++j)
+		for(unsigned int j=0;j<objects[i]->eParticleSystems.size();++j)
 			objects[i]->eParticleSystems[j]->CleanUp();
 		objects[i]->eParticleSystems.clear();
 
-		for(int j=0;j<objects[i]->hwiParticleSystems.size();++j)
+		for(unsigned int j=0;j<objects[i]->hwiParticleSystems.size();++j)
 			objects[i]->hwiParticleSystems[j]->CleanUp();
 		objects[i]->hwiParticleSystems.clear();
 	}
 	objects.clear();
 	
-	for(int i=0;i<objects_trans.size();i++){
+	for(unsigned int i=0;i<objects_trans.size();i++){
 		objects_trans[i]->CleanUp();
-		for(int j=0;j<objects_trans[i]->eParticleSystems.size();++j)
+		for (unsigned int j = 0; j<objects_trans[i]->eParticleSystems.size(); ++j)
 			objects_trans[i]->eParticleSystems[j]->CleanUp();
 		objects_trans[i]->eParticleSystems.clear();
 
-		for(int j=0;j<objects_trans[i]->hwiParticleSystems.size();++j)
+		for (unsigned int j = 0; j<objects_trans[i]->hwiParticleSystems.size(); ++j)
 			objects_trans[i]->hwiParticleSystems[j]->CleanUp();
 		objects_trans[i]->hwiParticleSystems.clear();
 	}
 	objects_trans.clear();
 	
-	for(int i=0;i<objects_water.size();i++){
+	for (unsigned int i = 0; i<objects_water.size(); i++){
 		objects_water[i]->CleanUp();
-		for(int j=0;j<objects_water[i]->eParticleSystems.size();++j)
+		for (unsigned int j = 0; j<objects_water[i]->eParticleSystems.size(); ++j)
 			objects_water[i]->eParticleSystems[j]->CleanUp();
 		objects_water[i]->eParticleSystems.clear();
 
-		for(int j=0;j<objects_water[i]->hwiParticleSystems.size();++j)
+		for (unsigned int j = 0; j<objects_water[i]->hwiParticleSystems.size(); ++j)
 			objects_water[i]->hwiParticleSystems[j]->CleanUp();
 		objects_water[i]->hwiParticleSystems.clear();
 	}
@@ -664,7 +664,7 @@ void wiRenderer::CleanUpStaticTemp(){
 	materials.clear();
 
 
-	for(int i=0;i<boneLines.size();i++)
+	for (unsigned int i = 0; i<boneLines.size(); i++)
 		boneLines[i].CleanUp();
 	boneLines.clear();
 
@@ -738,8 +738,8 @@ float wiRenderer::getSphereRadius(const int& index){
 void wiRenderer::SetUpBoneLines()
 {
 	boneLines.resize(0);
-	for(int i=0;i<armatures.size();i++){
-		for(int j=0;j<armatures[i]->boneCollection.size();j++){
+	for (unsigned int i = 0; i<armatures.size(); i++){
+		for (unsigned int j = 0; j<armatures[i]->boneCollection.size(); j++){
 			boneLines.push_back( Lines(armatures[i]->boneCollection[j]->length,XMFLOAT4A(1,1,1,1),i,j) );
 		}
 	}
@@ -747,7 +747,7 @@ void wiRenderer::SetUpBoneLines()
 void wiRenderer::UpdateBoneLines()
 {
 	if(debugLines)
-		for(int i=0;i<boneLines.size();i++){
+		for (unsigned int i = 0; i<boneLines.size(); i++){
 			int armatureI=boneLines[i].parentArmature;
 			int boneI=boneLines[i].parentBone;
 
@@ -759,12 +759,12 @@ void wiRenderer::UpdateBoneLines()
 			boneLines[i].Transform(armatures[armatureI]->boneCollection[boneI]->world);
 		}
 }
-void iteratewiSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col);
-void iteratewiSPTree(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col){
+void iterateSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col);
+void iterateSPTree(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col){
 	if(!n) return;
 	if(n->count){
-		for(int i=0;i<n->children.size();++i)
-			iteratewiSPTree(n->children[i],cubes,col);
+		for (unsigned int i = 0; i<n->children.size(); ++i)
+			iterateSPTree(n->children[i],cubes,col);
 	}
 	if(!n->objects.empty()){
 		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
@@ -772,15 +772,15 @@ void iteratewiSPTree(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& co
 			cubes.push_back(Cube(object->bounds.getCenter(),object->bounds.getHalfWidth(),XMFLOAT4A(1,0,0,1)));
 			//Object* o = (Object*)object;
 			//for(wiHairParticle& hps : o->hwiParticleSystems)
-			//	iteratewiSPTree2(hps.spTree->root,cubes,XMFLOAT4A(0,1,0,1));
+			//	iterateSPTree2(hps.spTree->root,cubes,XMFLOAT4A(0,1,0,1));
 		}
 	}
 }
-void iteratewiSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col){
+void iterateSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col){
 	if(!n) return;
 	if(n->count){
-		for(int i=0;i<n->children.size();++i)
-			iteratewiSPTree2(n->children[i],cubes,col);
+		for (unsigned int i = 0; i<n->children.size(); ++i)
+			iterateSPTree2(n->children[i],cubes,col);
 	}
 	if(!n->objects.empty()){
 		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
@@ -789,7 +789,7 @@ void iteratewiSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& c
 void wiRenderer::SetUpCubes(){
 	/*if(debugBoxes){
 		cubes.resize(0);
-		iteratewiSPTree(spTree->root,cubes);
+		iterateSPTree(spTree->root,cubes);
 		for(Object* object:objects)
 			cubes.push_back(Cube(XMFLOAT3(0,0,0),XMFLOAT3(1,1,1),XMFLOAT4A(1,0,0,1)));
 	}*/
@@ -798,7 +798,7 @@ void wiRenderer::SetUpCubes(){
 void wiRenderer::UpdateCubes(){
 	if(debugBoxes && spTree && spTree->root){
 		/*int num=0;
-		iteratewiSPTreeUpdate(spTree->root,cubes,num);
+		iterateSPTreeUpdate(spTree->root,cubes,num);
 		for(Object* object:objects){
 			AABB b=object->frameBB;
 			XMFLOAT3 c = b.getCenter();
@@ -807,10 +807,10 @@ void wiRenderer::UpdateCubes(){
 			num+=1;
 		}*/
 		cubes.clear();
-		if(spTree) iteratewiSPTree(spTree->root,cubes,XMFLOAT4A(1,1,0,1));
-		if(spTree_trans) iteratewiSPTree(spTree_trans->root,cubes,XMFLOAT4A(0,1,1,1));
-		if(spTree_water) iteratewiSPTree(spTree_water->root,cubes,XMFLOAT4A(0,0,1,1));
-		if(spTree_lights) iteratewiSPTree(spTree_lights->root,cubes,XMFLOAT4A(1,1,1,1));
+		if(spTree) iterateSPTree(spTree->root,cubes,XMFLOAT4A(1,1,0,1));
+		if(spTree_trans) iterateSPTree(spTree_trans->root,cubes,XMFLOAT4A(0,1,1,1));
+		if(spTree_water) iterateSPTree(spTree_water->root,cubes,XMFLOAT4A(0,0,1,1));
+		if(spTree_lights) iterateSPTree(spTree_lights->root,cubes,XMFLOAT4A(1,1,1,1));
 	}
 	if(debugBoxes){
 		for(Decal* decal : decals){
@@ -1578,14 +1578,14 @@ int wiRenderer::getActionByName(Armature* armature, const string& get)
 
 	stringstream ss("");
 	ss<<armature->unidentified_name<<get;
-	for(int j=0;j<armature->actions.size();j++)
+	for (unsigned int j = 0; j<armature->actions.size(); j++)
 		if(!armature->actions[j].name.compare(ss.str()))
 			return j;
 	return (-1);
 }
 int wiRenderer::getBoneByName(Armature* armature, const string& get)
 {
-	for(int j=0;j<armature->boneCollection.size();j++)
+	for (unsigned int j = 0; j<armature->boneCollection.size(); j++)
 		if(!armature->boneCollection[j]->name.compare(get))
 			return j;
 	return (-1);
@@ -1646,12 +1646,12 @@ void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XM
 	*bone->boneRelativityPrev=*bone->boneRelativity;
 	XMStoreFloat4x4( bone->boneRelativity,finalMat );
 
-	for(int i=0;i<bone->childrenI.size();++i){
+	for (unsigned int i = 0; i<bone->childrenI.size(); ++i){
 		RecursiveBoneTransform(armature,bone->childrenI[i],boneMat);
 	}
 
 }
-XMVECTOR wiRenderer::InterPolateKeyFrames(const float& cf, const int& maxCf, const vector<KeyFrame>& keyframeList, KeyFrameType type)
+XMVECTOR wiRenderer::InterPolateKeyFrames(float cf, const int& maxCf, const vector<KeyFrame>& keyframeList, KeyFrameType type)
 {
 	XMVECTOR result = XMVectorSet(0,0,0,0);
 	
@@ -1680,7 +1680,7 @@ XMVECTOR wiRenderer::InterPolateKeyFrames(const float& cf, const int& maxCf, con
 					nearest[0] = k;
 					break;
 				}
-			for(int k=0;k<keyframeList.size();k++)
+			for (unsigned int k = 0; k<keyframeList.size(); k++)
 				if(keyframeList[k].frameI>=cf){
 					nearest[1] = k;
 					break;
@@ -1694,15 +1694,15 @@ XMVECTOR wiRenderer::InterPolateKeyFrames(const float& cf, const int& maxCf, con
 		};
 		float interframe=0;
 		if(cf<=first || cf>=last){ //BROKEN INTERVAL
-			float intervalBegin = maxCf - keyframes[0];
+			float intervalBegin = (float)(maxCf - keyframes[0]);
 			float intervalEnd = keyframes[1] + intervalBegin;
 			float intervalLen = abs(intervalEnd - intervalBegin);
 			float offsetCf = cf + intervalBegin;
 			if(intervalLen) interframe = offsetCf / intervalLen;
 		}
 		else{
-			float intervalBegin = keyframes[0];
-			float intervalEnd = keyframes[1];
+			float intervalBegin = (float)keyframes[0];
+			float intervalEnd = (float)keyframes[1];
 			float intervalLen = abs(intervalEnd - intervalBegin);
 			float offsetCf = cf - intervalBegin;
 			if(intervalLen) interframe = offsetCf / intervalLen;
@@ -1834,7 +1834,7 @@ void wiRenderer::Update(float amount)
 					cf = armature->currentFrame = 1;
 
 				{
-					for(int j=0;j<armature->rootbones.size();++j){
+					for (unsigned int j = 0; j<armature->rootbones.size(); ++j){
 						RecursiveBoneTransform(armature,armature->rootbones[j],world);
 					}
 				}
@@ -1897,7 +1897,7 @@ void wiRenderer::UpdateRenderInfo(ID3D11DeviceContext* context)
 			if(mesh->hasArmature() && !mesh->softBody && mesh->renderable){
 #ifdef USE_GPU_SKINNING
 				BoneShaderBuffer bonebuf = BoneShaderBuffer();
-				for(int k=0;k<mesh->armature->boneCollection.size();k++){
+				for (unsigned int k = 0; k<mesh->armature->boneCollection.size(); k++){
 					bonebuf.pose[k]=XMMatrixTranspose(XMLoadFloat4x4(mesh->armature->boneCollection[k]->boneRelativity));
 					bonebuf.prev[k]=XMMatrixTranspose(XMLoadFloat4x4(mesh->armature->boneCollection[k]->boneRelativityPrev));
 				}
@@ -1928,41 +1928,7 @@ void wiRenderer::UpdateRenderInfo(ID3D11DeviceContext* context)
 	wind.time=(float)((Timer::TotalTime())/1000.0*GameSpeed/2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
 }
 void wiRenderer::UpdateObjects(){
-	for(int i=0;i<everyObject.size();i++){
-		//XMMATRIX world;
-
-		////if(!everyObject[i]->armatureTransform()){
-		//	world = XMMatrixScalingFromVector(XMLoadFloat3(&everyObject[i]->scale));
-
-		//	if(everyObject[i]->mesh->isBillboarded){
-		//		XMMATRIX bbMat = XMMatrixIdentity();
-		//		if(everyObject[i]->mesh->billboardAxis.x || everyObject[i]->mesh->billboardAxis.y || everyObject[i]->mesh->billboardAxis.z){
-		//			float angle = 0;
-		//			angle = atan2(everyObject[i]->translation.x - XMVectorGetX(wiRenderer::getCamera()->Eye), everyObject[i]->translation.z - XMVectorGetZ(wiRenderer::getCamera()->Eye)) * (180.0 / XM_PI);
-		//			bbMat = XMMatrixRotationAxis(XMLoadFloat3(&everyObject[i]->mesh->billboardAxis), angle * 0.0174532925f );
-		//		}
-		//		else
-		//			bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&everyObject[i]->translation)-wiRenderer::getCamera()->Eye,XMVectorSet(0,1,0,0)));
-		//			
-		//		world *= bbMat * XMMatrixRotationQuaternion(XMLoadFloat4(&everyObject[i]->rotation));
-		//	}
-		//	else
-		//		world *= XMMatrixRotationQuaternion(XMLoadFloat4(&everyObject[i]->rotation));
-
-		//	world *= XMMatrixTranslationFromVector(XMLoadFloat3(&everyObject[i]->translation));
-		////}
-		//	if(everyObject[i]->parentbone()){
-		//		int bi=everyObject[i]->boneIndex;
-		//		world = 
-		//			world*
-		//			XMLoadFloat4x4(&everyObject[i]->mesh->armature->boneCollection[bi].poseFrame)
-		//			;
-		//	}
-		////}
-		////else world = XMMatrixIdentity();
-
-		//everyObject[i]->worldPrev=everyObject[i]->world;
-		//XMStoreFloat4x4(&everyObject[i]->world,world);
+	for (unsigned int i = 0; i<everyObject.size(); i++){
 
 		XMMATRIX world = everyObject[i]->getTransform();
 		
@@ -1970,7 +1936,7 @@ void wiRenderer::UpdateObjects(){
 			XMMATRIX bbMat = XMMatrixIdentity();
 			if(everyObject[i]->mesh->billboardAxis.x || everyObject[i]->mesh->billboardAxis.y || everyObject[i]->mesh->billboardAxis.z){
 				float angle = 0;
-				angle = atan2(everyObject[i]->translation.x - XMVectorGetX(wiRenderer::getCamera()->Eye), everyObject[i]->translation.z - XMVectorGetZ(wiRenderer::getCamera()->Eye)) * (180.0 / XM_PI);
+				angle = (float)atan2(everyObject[i]->translation.x - XMVectorGetX(wiRenderer::getCamera()->Eye), everyObject[i]->translation.z - XMVectorGetZ(wiRenderer::getCamera()->Eye)) * (180.0f / XM_PI);
 				bbMat = XMMatrixRotationAxis(XMLoadFloat3(&everyObject[i]->mesh->billboardAxis), angle * 0.0174532925f );
 			}
 			else
@@ -1987,9 +1953,6 @@ void wiRenderer::UpdateObjects(){
 		if(everyObject[i]->mesh->softBody)
 			everyObject[i]->bounds=everyObject[i]->mesh->aabb;
 		else if(!everyObject[i]->mesh->isBillboarded && everyObject[i]->mesh->renderable){
-			//XMMATRIX mw = XMLoadFloat4x4(&everyObject[i]->world);
-			//if(everyObject[i]->armatureTransform())
-			//	mw = mw * XMLoadFloat4x4(&everyObject[i]->mesh->armature->world);
 			everyObject[i]->bounds=everyObject[i]->mesh->aabb.get(world);
 		}
 		else if(everyObject[i]->mesh->renderable)
@@ -2038,10 +2001,10 @@ void wiRenderer::UpdateSkinnedVB(){
 	wiRenderer::graphicsMutex.unlock();
 }
 void wiRenderer::UpdateImages(){
-	for(int i=0;i<images.size();++i)
-		images[i]->Update(GameSpeed);
-	for (wiSprite* i : waterRipples)
-		i->Update(GameSpeed);
+	for (wiSprite* x : images)
+		x->Update(GameSpeed);
+	for (wiSprite* x : waterRipples)
+		x->Update(GameSpeed);
 
 	ManageImages();
 	ManageWaterRipples();
@@ -2116,7 +2079,7 @@ void wiRenderer::DrawDebugSpheres(const XMMATRIX& newView, ID3D11DeviceContext* 
 		BindConstantBufferVS(lineBuffer,0,context);
 		BindVertexBuffer(HitSphere::vertexBuffer,0,sizeof(XMFLOAT3A),context);
 
-		for(int i=0;i<spheres.size();i++){
+		for (unsigned int i = 0; i<spheres.size(); i++){
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			LineBuffer sb;
 			sb.mWorldViewProjection=XMMatrixTranspose(
@@ -2166,7 +2129,7 @@ void wiRenderer::DrawDebugLines(const XMMATRIX& newView, ID3D11DeviceContext* co
 
 		BindConstantBufferVS(lineBuffer,0,context);
 
-		for(int i=0;i<boneLines.size();i++){
+		for (unsigned int i = 0; i<boneLines.size(); i++){
 			LineBuffer sb;
 			sb.mWorldViewProjection=XMMatrixTranspose(
 				XMLoadFloat4x4(&boneLines[i].desc.transform)
@@ -2223,7 +2186,7 @@ void wiRenderer::DrawDebugBoxes(const XMMATRIX& newView, ID3D11DeviceContext* co
 			edges.push_back(Lines(object->frameBB.corners[6],object->frameBB.corners[7],XMFLOAT4A(1,0,0,1)));
 		}*/
 
-		//iteratewiSPTree(spTree->root,edges);
+		//iterateSPTree(spTree->root,edges);
 
 		//UINT stride = sizeof( XMFLOAT3A );
 		//UINT offset = 0;
@@ -2234,7 +2197,7 @@ void wiRenderer::DrawDebugBoxes(const XMMATRIX& newView, ID3D11DeviceContext* co
 		BindIndexBuffer(Cube::indexBuffer,context);
 		BindConstantBufferVS(lineBuffer,0,context);
 
-		for(int i=0;i<cubes.size();i++){
+		for (unsigned int i = 0; i<cubes.size(); i++){
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			LineBuffer sb;
 			sb.mWorldViewProjection=XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*newView*wiRenderer::getCamera()->Projection);
@@ -2259,7 +2222,7 @@ void wiRenderer::DrawDebugBoxes(const XMMATRIX& newView, ID3D11DeviceContext* co
 
 void wiRenderer::DrawSoftParticles(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark)
 {
-	static struct particlesystem_comparator {
+	struct particlesystem_comparator {
 		bool operator() (const wiEmittedParticle* a, const wiEmittedParticle* b) const{
 			return a->lastSquaredDistMulThousand>b->lastSquaredDistMulThousand;
 		}
@@ -2330,7 +2293,7 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 	//context->PSSetSamplers( 0,1,&mirSampler );
 	BindSamplerPS(mirSampler,0,context);
 
-	for(int i=0;i<everyObject.size();i++){
+	for (unsigned int i = 0; i<everyObject.size(); i++){
 		if(everyObject[i]->trailBuff && everyObject[i]->trail.size()>=4){
 			
 			
@@ -2498,8 +2461,8 @@ void wiRenderer::DrawLights(const XMMATRIX& newView, ID3D11DeviceContext* contex
 						-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
 						);
 					lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-					lcb.mBiasResSoftshadow=XMFLOAT4(shBias,SHADOWMAPRES,SOFTSHADOW,0);
-					for(int shmap=0;shmap<l->shadowMap.size();++shmap){
+					lcb.mBiasResSoftshadow=XMFLOAT4(shBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
+					for (unsigned int shmap = 0; shmap<l->shadowMap.size(); ++shmap){
 						lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
 						BindTexturePS(l->shadowMap[shmap].depth->shaderResource,4+shmap,context);
 					}
@@ -2512,7 +2475,7 @@ void wiRenderer::DrawLights(const XMMATRIX& newView, ID3D11DeviceContext* contex
 					lcb.pos=l->translation;
 					lcb.col=l->color;
 					lcb.enerdis=l->enerDis;
-					lcb.enerdis.w=l->shadowMap.size();
+					lcb.enerdis.w=(float)l->shadowMap.size();
 					UpdateBuffer(lightCb[type],&lcb,context);
 
 					if(!l->shadowMap.empty()) 
@@ -2521,7 +2484,7 @@ void wiRenderer::DrawLights(const XMMATRIX& newView, ID3D11DeviceContext* contex
 					break;
 			case 2:{ //spot
 					sLightBuffer lcb;
-					const float coneS=l->enerDis.z/0.7853981852531433;
+					const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
 					XMMATRIX world,rot;
 					world = XMMatrixTranspose(
 							XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
@@ -2533,14 +2496,14 @@ void wiRenderer::DrawLights(const XMMATRIX& newView, ID3D11DeviceContext* contex
 						-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
 						);
 					lcb.world=world;
-					lcb.mBiasResSoftshadow=XMFLOAT4(shBias,SHADOWMAPRES,SOFTSHADOW,0);
+					lcb.mBiasResSoftshadow=XMFLOAT4(shBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
 					lcb.mShM=l->shadowCam.size()?l->shadowCam[0].getVP():XMMatrixIdentity();
 					lcb.col=l->color;
 					lcb.enerdis=l->enerDis;
-					lcb.enerdis.z=cos(l->enerDis.z/2.0);
+					lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
 					UpdateBuffer(lightCb[type],&lcb,context);
 
-					for(int shmap=0;shmap<l->shadowMap.size();++shmap)
+					for (unsigned int shmap = 0; shmap<l->shadowMap.size(); ++shmap)
 						BindTexturePS(l->shadowMap[shmap].depth->shaderResource,4+shmap,context);
 					}
 					break;
@@ -2631,7 +2594,7 @@ void wiRenderer::DrawVolumeLights(const XMMATRIX& newView, ID3D11DeviceContext* 
 					//		);
 					//}
 					if(type==1){ //point
-						sca = l->enerDis.y*l->enerDis.x*0.01;
+						sca = l->enerDis.y*l->enerDis.x*0.01f;
 						world = XMMatrixTranspose(
 							XMMatrixScaling(sca,sca,sca)*
 							XMMatrixRotationX(wiRenderer::getCamera()->updownRot)*XMMatrixRotationY(wiRenderer::getCamera()->leftrightRot)*
@@ -2639,8 +2602,8 @@ void wiRenderer::DrawVolumeLights(const XMMATRIX& newView, ID3D11DeviceContext* 
 							);
 					}
 					else{ //spot
-						float coneS=l->enerDis.z/0.7853981852531433;
-						sca = l->enerDis.y*l->enerDis.x*0.03;
+						float coneS=(float)(l->enerDis.z/0.7853981852531433);
+						sca = l->enerDis.y*l->enerDis.x*0.03f;
 						world = XMMatrixTranspose(
 							XMMatrixScaling(coneS*sca,sca,coneS*sca)*
 							XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
@@ -2699,7 +2662,7 @@ void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResour
 							)*100000;
 			}
 			
-			XMVECTOR flarePos = XMVector3Project(POS,0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
+			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)RENDERWIDTH,(float)RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
 
 			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,wiRenderer::getCamera()->Eye),wiRenderer::getCamera()->At ))>0 )
 				wiLensFlare::Draw(depth,context,flarePos,l->lensFlareRimTextures);
@@ -2711,7 +2674,7 @@ void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResour
 void wiRenderer::ClearShadowMaps(ID3D11DeviceContext* context){
 	if(GetGameSpeed())
 	for(Light* l : lights){
-		for(int index=0;index<l->shadowMap.size();++index){
+		for (unsigned int index = 0; index<l->shadowMap.size(); ++index){
 			l->shadowMap[index].Activate(context);
 		}
 	}
@@ -2757,7 +2720,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 	Light* l=(Light*)c;
 	if(l->type!=Light::POINT){
 
-		for(int index=0;index<l->shadowMap.size();++index){
+		for (unsigned int index = 0; index<l->shadowMap.size(); ++index){
 			l->shadowMap[index].Set(context);
 			
 			CulledCollection culledwiRenderer;
@@ -2880,7 +2843,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 			BindConstantBufferPS(lightCb[1],2,context);
 			for(Light* l : orderedLights){
 
-				for(int index=0;index<l->shadowMap.size();++index){
+				for (unsigned int index = 0; index<l->shadowMap.size(); ++index){
 				if(cube_shadowrenders_remain<=0)
 					break;
 				cube_shadowrenders_remain-=1;
@@ -2899,7 +2862,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 				UpdateBuffer(lightCb[1],&lcb,context);
 				
 				CubeShadowCb cb;
-				for(int shcam=0;shcam<l->shadowCam.size();++shcam)
+				for (unsigned int shcam = 0; shcam<l->shadowCam.size(); ++shcam)
 					cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
 
 				UpdateBuffer(cubeShCb,&cb,context);
@@ -3533,7 +3496,7 @@ void wiRenderer::UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF){
 	if(tessF){
 		TessBuffer tb;
 		tb.g_f4Eye = wiRenderer::getCamera()->Eye;
-		tb.g_f4TessFactors = XMFLOAT4A( tessF,2,4,6 );
+		tb.g_f4TessFactors = XMFLOAT4A( (float)tessF,2.f,4.f,6.f );
 		UpdateBuffer(tessBuf,&tb,context);
 	}
 
@@ -3707,10 +3670,10 @@ void wiRenderer::SetUpLights()
 			float lerp1 = 0.12f;
 			float lerp2 = 0.016f;
 			XMVECTOR a0,a,b0,b;
-			a0=XMVector3Unproject(XMVectorSet(0,RENDERHEIGHT,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-			a=XMVector3Unproject(XMVectorSet(0,RENDERHEIGHT,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-			b0=XMVector3Unproject(XMVectorSet(RENDERWIDTH,RENDERHEIGHT,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-			b=XMVector3Unproject(XMVectorSet(RENDERWIDTH,RENDERHEIGHT,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
+			a0 = XMVector3Unproject(XMVectorSet(0, (float)RENDERHEIGHT, 0, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
+			a = XMVector3Unproject(XMVectorSet(0, (float)RENDERHEIGHT, 1, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
+			b0 = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH, (float)RENDERHEIGHT, 0, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
+			b = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH, (float)RENDERHEIGHT, 1, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
 			float size=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp),XMVectorLerp(a0,a,lerp))));
 			float size1=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp1),XMVectorLerp(a0,a,lerp1))));
 			float size2=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp2),XMVectorLerp(a0,a,lerp2))));
@@ -3725,14 +3688,14 @@ void wiRenderer::SetUpLights()
 			l->shadowCam.push_back( SHCAM(l->rotation,wiRenderer::getCamera()->zNearP,l->enerDis.y,l->enerDis.z) );
 		}
 		else if(l->type==Light::POINT && l->shadowMap.size()){
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5,-0.5,-0.5,-0.5),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0) ); //+x
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5,0.5,0.5,-0.5),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0) ); //-x
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5f,-0.5f,-0.5f,-0.5f),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //+x
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5f,0.5f,0.5f,-0.5f),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //-x
 
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(1,0,0,-0),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0) ); //+y
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0,0,-1),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0) ); //-y
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(1,0,0,-0),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //+y
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0,0,-1),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //-y
 
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.707,0,0,-0.707),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0) ); //+z
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0.707,0.707,0),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0) ); //-z
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.707f,0,0,-0.707f),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //+z
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0.707f,0.707f,0),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //-z
 		}
 	}
 
@@ -3762,8 +3725,8 @@ void wiRenderer::UpdateLights()
 			float lerp1 = 0.12f;//second slice distance from cam (percentage)
 			float lerp2 = 0.016f;//first slice distance from cam (percentage)
 			XMVECTOR c,d,e,e1,e2;
-			c=XMVector3Unproject(XMVectorSet(RENDERWIDTH/2,RENDERHEIGHT/2,1,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-			d=XMVector3Unproject(XMVectorSet(RENDERWIDTH/2,RENDERHEIGHT/2,0,1),0,0,RENDERWIDTH,RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
+			c = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH / 2, (float)RENDERHEIGHT / 2, 1, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
+			d = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH / 2, (float)RENDERHEIGHT / 2, 0, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
 			
 			float f = l->shadowCam[0].size/(float)SHADOWMAPRES;
 			e=	XMVectorFloor( XMVectorLerp(d,c,lerp)/f	)*f;
@@ -3803,7 +3766,7 @@ void wiRenderer::UpdateLights()
 			l->bounds.createFromHalfWidth(l->translation,XMFLOAT3(l->enerDis.y,l->enerDis.y,l->enerDis.y));
 		}
 		else if(l->type==Light::POINT){
-			for(int i=0;i<l->shadowCam.size();++i){
+			for(unsigned int i=0;i<l->shadowCam.size();++i){
 				l->shadowCam[i].Update(XMLoadFloat3(&l->translation));
 			}
 			//l->bounds=l->mesh->aabb.get( 
@@ -3855,7 +3818,7 @@ wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickTyp
 		if(!pickPoints.empty()){
 			Picked min = pickPoints.front();
 			float mini = wiMath::DistanceSquared(min.position,ray.origin);
-			for(int i=1;i<pickPoints.size();++i){
+			for(unsigned int i=1;i<pickPoints.size();++i){
 				if(float nm = wiMath::DistanceSquared(pickPoints[i].position,ray.origin)<mini){
 					min=pickPoints[i];
 					mini=nm;
@@ -3870,10 +3833,10 @@ wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickTyp
 }
 
 RAY wiRenderer::getPickRay(long cursorX, long cursorY){
-	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet(cursorX,cursorY,0,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
-	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet(cursorX,cursorY,1,1),0,0
-		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
+	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet((float)cursorX,(float)cursorY,0,1),0,0
+		, (float)SCREENWIDTH, (float)SCREENHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
+	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0
+		, (float)SCREENWIDTH, (float)SCREENHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
 	XMVECTOR& rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
 	return RAY(lineStart,rayDirection);
 }
@@ -3895,7 +3858,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			Mesh* mesh = object->mesh;
 			XMMATRIX& objectMat = XMLoadFloat4x4(&object->world);
 
-			for (int i = 0; i<mesh->indices.size(); i += 3){
+			for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
 				int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
 				Vertex& v0 = mesh->skinnedVertices[i0], v1 = mesh->skinnedVertices[i1], v2 = mesh->skinnedVertices[i2];
 				XMVECTOR& V0 =
@@ -3968,7 +3931,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 			if (!points.empty()){
 				Picked min = points.front();
 				float mini = wiMath::DistanceSquared(min.position, ray.origin);
-				for (int i = 1; i<points.size(); ++i){
+				for (unsigned int i = 1; i<points.size(); ++i){
 					if (float nm = wiMath::DistanceSquared(points[i].position, ray.origin)<mini){
 						min = points[i];
 						mini = nm;

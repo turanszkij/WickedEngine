@@ -133,7 +133,7 @@ void wiSPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, int
 				objects.insert(object);
 			}
 		if(node->count){
-			for(int i=0;i<node->children.size();++i)
+			for (unsigned int i = 0; i<node->children.size(); ++i)
 				getVisible(node->children[i],frustum,objects,type);
 		}
 	}
@@ -156,7 +156,7 @@ void wiSPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, int ty
 				objects.insert(object);
 			}
 		if(node->count){
-			for(int i=0;i<node->children.size();++i)
+			for (unsigned int i = 0; i<node->children.size(); ++i)
 				getVisible(node->children[i],frustum,objects,type);
 		}
 	}
@@ -172,7 +172,7 @@ void wiSPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, int 
 				objects.insert(object);
 			}
 		if(node->count){
-			for(int i=0;i<node->children.size();++i)
+			for (unsigned int i = 0; i<node->children.size(); ++i)
 				getVisible(node->children[i],frustum,objects,type);
 		}
 	}
@@ -188,7 +188,7 @@ void wiSPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, int typ
 				objects.insert(object);
 			}
 		if(node->count){
-			for(int i=0;i<node->children.size();++i)
+			for (unsigned int i = 0; i<node->children.size(); ++i)
 				getVisible(node->children[i],frustum,objects,type);
 		}
 	}
@@ -197,7 +197,7 @@ void wiSPTree::getAll(Node* node, CulledList& objects){
 	if(node != nullptr){
 		objects.insert(node->objects.begin(),node->objects.end());
 		if(node->count){
-			for(int i=0;i<node->children.size();++i)
+			for (unsigned int i = 0; i<node->children.size(); ++i)
 				getAll(node->children[i],objects);
 		}
 	}
@@ -244,7 +244,7 @@ wiSPTree* wiSPTree::updateTree(Node* node){
 			}
 		}
 		if(!node->children.empty()){
-			for(int i=0;i<node->children.size();++i)
+			for (unsigned int i = 0; i<node->children.size(); ++i)
 				updateTree(node->children[i]);
 		}
 

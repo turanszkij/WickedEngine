@@ -4,7 +4,7 @@
 #include "CommonInclude.h"
 
 
-static class wiTextureHelper
+class wiTextureHelper
 {
 private:
 	class wiTextureHelperInstance

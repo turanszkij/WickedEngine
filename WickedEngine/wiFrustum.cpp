@@ -82,7 +82,7 @@ bool Frustum::CheckPoint(const XMFLOAT3& point)
 
 	return true;
 }
-bool Frustum::CheckSphere(const XMFLOAT3& center, const float& radius)
+bool Frustum::CheckSphere(const XMFLOAT3& center, float radius)
 {
 	int i;
 	XMVECTOR c = XMLoadFloat3(&center);

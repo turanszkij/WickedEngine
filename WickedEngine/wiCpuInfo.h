@@ -5,7 +5,7 @@
 #include <Pdh.h>
 #endif
 
-static class wiCpuInfo
+class wiCpuInfo
 {
 #ifndef WINSTORE_SUPPORT
 

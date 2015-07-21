@@ -51,18 +51,18 @@ void Renderable3DSceneComponent::Load()
 	RenderableComponent::Load();
 
 	rtSSR.Initialize(
-		screenW * getSSRQuality(), screenH * getSSRQuality()
+		(UINT)(screenW * getSSRQuality()), (UINT)(screenH * getSSRQuality())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	rtLinearDepth.Initialize(
 		screenW, screenH
 		, 1, false, 1, 0, DXGI_FORMAT_R32_FLOAT
 		);
 	rtParticle.Initialize(
-		screenW*getAlphaParticleDownSample(), screenH*getAlphaParticleDownSample()
+		(UINT)(screenW*getAlphaParticleDownSample()), (UINT)(screenH*getAlphaParticleDownSample())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtParticleAdditive.Initialize(
-		screenW*getAdditiveParticleDownSample(), screenH*getAdditiveParticleDownSample()
+		(UINT)(screenW*getAdditiveParticleDownSample()), (UINT)(screenH*getAdditiveParticleDownSample())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtWater.Initialize(
@@ -83,8 +83,8 @@ void Renderable3DSceneComponent::Load()
 		, 1, false
 		);
 	rtReflection.Initialize(
-		screenW * getReflectionQuality()
-		, screenH * getReflectionQuality()
+		(UINT)(screenW * getReflectionQuality())
+		, (UINT)(screenH * getReflectionQuality())
 		, 1, true, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtFinal[0].Initialize(
@@ -99,9 +99,9 @@ void Renderable3DSceneComponent::Load()
 		);
 
 	rtSSAO.resize(3);
-	for (int i = 0; i<rtSSAO.size(); i++)
+	for (unsigned int i = 0; i<rtSSAO.size(); i++)
 		rtSSAO[i].Initialize(
-		screenW*getSSAOQuality(), screenH*getSSAOQuality()
+		(UINT)(screenW*getSSAOQuality()), (UINT)(screenH*getSSAOQuality())
 		, 1, false, 1, 0, DXGI_FORMAT_R8_UNORM
 		);
 
@@ -113,8 +113,8 @@ void Renderable3DSceneComponent::Load()
 		, 1, true
 		);
 	rtSun[1].Initialize(
-		screenW*getLightShaftQuality()
-		, screenH*getLightShaftQuality()
+		(UINT)(screenW*getLightShaftQuality())
+		, (UINT)(screenH*getLightShaftQuality())
 		, 1, false
 		);
 	rtLensFlare.Initialize(screenW, screenH, 1, false);
@@ -125,10 +125,10 @@ void Renderable3DSceneComponent::Load()
 		, screenH
 		, 1, false, 1, 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0
 		);
-	for (int i = 1; i<rtBloom.size(); ++i)
+	for (unsigned int i = 1; i<rtBloom.size(); ++i)
 		rtBloom[i].Initialize(
-		screenW / getBloomDownSample()
-		, screenH / getBloomDownSample()
+		(UINT)(screenW / getBloomDownSample())
+		,(UINT)( screenH / getBloomDownSample())
 		, 1, false
 		);
 
@@ -228,7 +228,7 @@ void Renderable3DSceneComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wi
 }
 void Renderable3DSceneComponent::RenderBloom(wiRenderer::DeviceContext context){
 
-	wiImageEffects fx(screenW, screenH);
+	wiImageEffects fx((float)screenW, (float)screenH);
 
 	wiImage::BatchBegin(context);
 
@@ -267,7 +267,7 @@ void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRen
 		return;
 	}
 
-	wiImageEffects fx(screenW, screenH);
+	wiImageEffects fx((float)screenW, (float)screenH);
 
 	rtSun[0].Activate(context, mainRT.depth); {
 		wiRenderer::UpdatePerRenderCB(context, 0);
@@ -279,7 +279,7 @@ void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRen
 	rtSun[1].Activate(context); {
 		wiImageEffects fxs = fx;
 		fxs.blendFlag = BLENDMODE_ADDITIVE;
-		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, screenW, screenH, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
+		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)screenW, (float)screenH, 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
 		{
 			XMStoreFloat2(&fxs.sunPos, sunPos);
 			wiImage::Draw(rtSun[0].shaderResource.back(), fxs, context);
@@ -287,7 +287,7 @@ void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRen
 	}
 }
 void Renderable3DSceneComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context){
-	wiImageEffects fx(screenW, screenH);
+	wiImageEffects fx((float)screenW, (float)screenH);
 	wiImage::BatchBegin(context);
 
 	rtFinal[0].Activate(context);
@@ -320,7 +320,7 @@ void Renderable3DSceneComponent::RenderComposition1(wiRenderTarget& shadedSceneR
 	}
 }
 void Renderable3DSceneComponent::RenderComposition2(wiRenderer::DeviceContext context){
-	wiImageEffects fx(screenW, screenH);
+	wiImageEffects fx((float)screenW, (float)screenH);
 	wiImage::BatchBegin(context);
 
 	rtFinal[1].Activate(context);
@@ -338,7 +338,7 @@ void Renderable3DSceneComponent::RenderComposition2(wiRenderer::DeviceContext co
 }
 void Renderable3DSceneComponent::RenderColorGradedComposition(){
 
-	wiImageEffects fx(screenW, screenH);
+	wiImageEffects fx((float)screenW, (float)screenH);
 	wiImage::BatchBegin();
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_NEAREST;
