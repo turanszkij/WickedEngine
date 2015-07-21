@@ -78,6 +78,7 @@ _________________________________________________________
 		- HDR pipeline
 		- Forward rendering pipeline
 		- Precalculated Ambient Occlusion
+		- Optimize Meshes
 		- Windows RT controls helper
 		- Texture helper various texture generators (fractal, perlin, etc.) (low priority)
 __________________________________________________________

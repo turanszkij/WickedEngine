@@ -2,11 +2,12 @@
 #include <cstdlib>
 #include <ctime>
 
-static class wiRandom
+class wiRandom
 {
 private:
 	static bool initialized;
 public:
 	static int getRandom(int minValue, int maxValue);
+	static int getRandom(int maxValue);
 };
 

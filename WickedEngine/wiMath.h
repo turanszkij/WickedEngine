@@ -4,8 +4,11 @@
 namespace wiMath
 {
 	float Distance(const XMFLOAT3& v1,const XMFLOAT3& v2);
-	float DistanceSqaured(const XMFLOAT3& v1,const XMFLOAT3& v2);
-	float DistanceEstimated(const XMFLOAT3& v1,const XMFLOAT3& v2);
+	float DistanceSquared(const XMFLOAT3& v1,const XMFLOAT3& v2);
+	float DistanceEstimated(const XMFLOAT3& v1, const XMFLOAT3& v2);
+	float Distance(const XMVECTOR& v1, const XMVECTOR& v2);
+	float DistanceSquared(const XMVECTOR& v1, const XMVECTOR& v2);
+	float DistanceEstimated(const XMVECTOR& v1, const XMVECTOR& v2);
 	XMFLOAT3 getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b);
 	bool Collision(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz);
 	float Lerp(float value1, float value2, float amount);

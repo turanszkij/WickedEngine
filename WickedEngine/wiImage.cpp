@@ -288,7 +288,7 @@ void wiImage::SetUpStates()
 
 
 void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effects){
-	Draw(texture,effects,wiRenderer::immediateContext);
+	Draw(texture,effects,wiRenderer::getImmediateContext());
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effects,ID3D11DeviceContext* context){
 	if(!context)
@@ -608,11 +608,11 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz)
 {
-	Draw(texture,newPosSiz,XMFLOAT4(0,0,0,0),1,0,0,0,0,0,wiRenderer::immediateContext);
+	Draw(texture,newPosSiz,XMFLOAT4(0,0,0,0),1,0,0,0,0,0,wiRenderer::getImmediateContext());
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const float&newRot)
 {
-	Draw(texture,newPosSiz,XMFLOAT4(0,0,0,0),1,0,0,0,0,newRot,wiRenderer::immediateContext);
+	Draw(texture,newPosSiz,XMFLOAT4(0,0,0,0),1,0,0,0,0,newRot,wiRenderer::getImmediateContext());
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const float&newRot, const float&opacity, ID3D11DeviceContext* context)
 {
@@ -620,15 +620,15 @@ void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, c
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec)
 {
-	Draw(texture,newPosSiz,newDrawRec,1,0,0,0,0,0,wiRenderer::immediateContext);
+	Draw(texture,newPosSiz,newDrawRec,1,0,0,0,0,0,wiRenderer::getImmediateContext());
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror)
 {
-	Draw(texture,newPosSiz,newDrawRec,newMirror,0,0,0,0,0,wiRenderer::immediateContext);
+	Draw(texture,newPosSiz,newDrawRec,newMirror,0,0,0,0,0,wiRenderer::getImmediateContext());
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity)
 {
-	Draw(texture,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,0,wiRenderer::immediateContext);
+	Draw(texture,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,0,wiRenderer::getImmediateContext());
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity, ID3D11DeviceContext* context)
 {
@@ -636,7 +636,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, c
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity, const float&newRot)
 {
-	Draw(texture,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,newRot,wiRenderer::immediateContext);
+	Draw(texture,newPosSiz,newDrawRec,newMirror,newBlur,newBlurStrength,newFade,newOpacity,newRot,wiRenderer::getImmediateContext());
 }
 void wiImage::Draw(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, const float&newBlur, const float&newBlurStrength, const float&newFade, const float&newOpacity, const float&newRot, ID3D11DeviceContext* context)
 {
@@ -664,7 +664,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, wiRenderer::TextureView mask
 }
 void wiImage::DrawModifiedTexCoords(wiRenderer::TextureView texture, wiRenderer::TextureView mask, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, XMFLOAT2 texOffset, const float&newOpacity, BLENDMODE blendMode)
 {
-	Draw(texture,mask,newPosSiz,newDrawRec,newMirror,0,0,0,newOpacity,0,texOffset,blendMode,wiRenderer::immediateContext);
+	Draw(texture,mask,newPosSiz,newDrawRec,newMirror,0,0,0,newOpacity,0,texOffset,blendMode,wiRenderer::getImmediateContext());
 }
 void wiImage::DrawModifiedTexCoords(wiRenderer::TextureView texture, wiRenderer::TextureView mask, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, const float&newMirror, XMFLOAT2 texOffset, const float&newOpacity, BLENDMODE blendMode, ID3D11DeviceContext* context)
 {
@@ -681,34 +681,34 @@ void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPos
 	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
 	cb.mTexOffset=XMFLOAT4(0,0,0,0);
 
-	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::immediateContext);
+	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::getImmediateContext());
 	
-	//wiRenderer::immediateContext->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
+	//wiRenderer::getImmediateContext()->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
 
 	//D3D11_MAPPED_SUBRESOURCE mappedResource;
 	//ConstantBuffer* dataPtr;
-	//wiRenderer::immediateContext->Map(constantBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+	//wiRenderer::getImmediateContext()->Map(constantBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 	//dataPtr = (ConstantBuffer*)mappedResource.pData;
 	//memcpy(dataPtr,&cb,sizeof(ConstantBuffer));
-	//wiRenderer::immediateContext->Unmap(constantBuffer,0);
+	//wiRenderer::getImmediateContext()->Unmap(constantBuffer,0);
 
-	wiRenderer::immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
+	wiRenderer::getImmediateContext()->VSSetConstantBuffers( 0, 1, &constantBuffer );
 
 
 	//PSConstantBuffer pscb;
 	////pscb.mMaskFxBlSa=XMFLOAT4(0,0,0,0);
-	////wiRenderer::immediateContext->UpdateSubresource( PSCb, 0, NULL, &pscb, 0, 0 );
+	////wiRenderer::getImmediateContext()->UpdateSubresource( PSCb, 0, NULL, &pscb, 0, 0 );
 	//PSConstantBuffer* dataPtr2;
-	//wiRenderer::immediateContext->Map(PSCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+	//wiRenderer::getImmediateContext()->Map(PSCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 	//dataPtr2 = (PSConstantBuffer*)mappedResource.pData;
 	//memcpy(dataPtr2,&pscb,sizeof(PSConstantBuffer));
-	//wiRenderer::immediateContext->Unmap(PSCb,0);
+	//wiRenderer::getImmediateContext()->Unmap(PSCb,0);
 
-	//wiRenderer::immediateContext->PSSetConstantBuffers( 0, 1, &PSCb );
+	//wiRenderer::getImmediateContext()->PSSetConstantBuffers( 0, 1, &PSCb );
 
 
-	wiRenderer::BindTexturePS(texture,5,wiRenderer::immediateContext);
-	wiRenderer::immediateContext->Draw(4,0);
+	wiRenderer::BindTexturePS(texture,5,wiRenderer::getImmediateContext());
+	wiRenderer::getImmediateContext()->Draw(4,0);
 
 }
 void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec, XMFLOAT2 newOffset)
@@ -722,10 +722,10 @@ void wiImage::DrawOffset(wiRenderer::TextureView texture, const XMFLOAT4& newPos
 	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
 	cb.mTexOffset=XMFLOAT4(0,0,0,0);
 
-	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::immediateContext);
+	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::getImmediateContext());
 	
-	wiRenderer::BindTexturePS(texture,5,wiRenderer::immediateContext);
-	wiRenderer::immediateContext->Draw(4,0);
+	wiRenderer::BindTexturePS(texture,5,wiRenderer::getImmediateContext());
+	wiRenderer::getImmediateContext()->Draw(4,0);
 
 }
 void wiImage::DrawAdditive(wiRenderer::TextureView texture, const XMFLOAT4& newPosSiz, const XMFLOAT4& newDrawRec)
@@ -739,18 +739,18 @@ void wiImage::DrawAdditive(wiRenderer::TextureView texture, const XMFLOAT4& newP
 	cb.mBlurOpaPiv = XMFLOAT4(0,0,0,0);
 	cb.mTexOffset=XMFLOAT4(0,0,0,0);
 
-	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::immediateContext);
+	wiRenderer::UpdateBuffer(constantBuffer,&cb,wiRenderer::getImmediateContext());
 	//
 
-	//wiRenderer::immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
+	//wiRenderer::getImmediateContext()->VSSetConstantBuffers( 0, 1, &constantBuffer );
 
-	//wiRenderer::BindTexturePS(texture,5,wiRenderer::immediateContext);
+	//wiRenderer::BindTexturePS(texture,5,wiRenderer::getImmediateContext());
 
 	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	//UINT sampleMask   = 0xffffffff;
-	//wiRenderer::immediateContext->OMSetBlendState(blendStateAdd, blendFactor, sampleMask);
-	//	wiRenderer::immediateContext->Draw(4,0);
-	//wiRenderer::immediateContext->OMSetBlendState(blendState, blendFactor, sampleMask);
+	//wiRenderer::getImmediateContext()->OMSetBlendState(blendStateAdd, blendFactor, sampleMask);
+	//	wiRenderer::getImmediateContext()->Draw(4,0);
+	//wiRenderer::getImmediateContext()->OMSetBlendState(blendState, blendFactor, sampleMask);
 
 	wiRenderer::BindConstantBufferVS(constantBuffer,0);
 	wiRenderer::BindTexturePS(texture,5);
@@ -763,7 +763,7 @@ void wiImage::DrawAdditive(wiRenderer::TextureView texture, const XMFLOAT4& newP
 
 void wiImage::BatchBegin()
 {
-	BatchBegin(wiRenderer::immediateContext);
+	BatchBegin(wiRenderer::getImmediateContext());
 }
 void wiImage::BatchBegin(ID3D11DeviceContext* context)
 {

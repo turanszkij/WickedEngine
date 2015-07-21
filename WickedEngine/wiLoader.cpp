@@ -11,7 +11,7 @@
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
 						, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier){
-	name=newName;
+	name = newName;
 
 	BYTE* buffer;
 	size_t fileSize;
@@ -112,7 +112,9 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				vert.nor.z=v[5];
 			}
 			else{
-				vert.nor=billboardAxis;
+				vert.nor.x = billboardAxis.x;
+				vert.nor.y = billboardAxis.y;
+				vert.nor.z = billboardAxis.z;
 			}
 			vert.tex.x=v[6];
 			vert.tex.y=v[7];
@@ -297,15 +299,24 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 
 		renderable=(bool)rendermesh;
 
+		CreateVertexArrays();
+
+		Optimize();
+
+		usedBy.resize(1);
 		CreateBuffers();
 	}
+}
+void Mesh::Optimize()
+{
+	//TODO
 }
 void Mesh::CreateBuffers(){
 	if(!buffersComplete){
 
 		usedBy.resize(1);
 
-		for(int i=0;i<5;++i){
+		for(int i=0;i<GRAPHICSTHREAD_COUNT;++i){
 			instances[i].clear();
 			instances[i].resize(usedBy.size());
 		}
@@ -334,12 +345,7 @@ void Mesh::CreateBuffers(){
 			goalPositions.resize(vertexGroups[goalVG].vertices.size());
 			goalNormals.resize(vertexGroups[goalVG].vertices.size());
 		}
-		skinnedVertices.resize(vertices.size());
-		for(int i=0;i<vertices.size();++i){
-			skinnedVertices[i].pos=vertices[i].pos;
-			skinnedVertices[i].nor=vertices[i].nor;
-			skinnedVertices[i].tex=vertices[i].tex;
-		}
+
 
 
 			ZeroMemory( &bd, sizeof(bd) );
@@ -414,13 +420,37 @@ void Mesh::CreateBuffers(){
 	}
 
 }
+void Mesh::CreateVertexArrays()
+{
+	if (skinnedVertices.empty())
+	{
+		skinnedVertices.resize(vertices.size());
+		for (int i = 0; i<vertices.size(); ++i){
+			skinnedVertices[i].pos = vertices[i].pos;
+			skinnedVertices[i].nor = vertices[i].nor;
+			skinnedVertices[i].tex = vertices[i].tex;
+		}
+	}
+}
 void Mesh::AddInstance(int count){
 	usedBy.resize(usedBy.size()+count);
-	for(int i=0;i<5;++i){
+	for(int i=0;i<GRAPHICSTHREAD_COUNT;++i){
 		instances[i].clear();
 		instances[i].resize(usedBy.size());
 	}
 	wiRenderer::ResizeBuffer<Instance>(meshInstanceBuffer,usedBy.size()*2);
+}
+void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD thread)
+{
+	if (numerator >= instances[thread].size())
+	{
+		instances[thread].resize(instances[thread].size() * 2);
+	}
+	instances[thread][numerator] = instance;
+}
+void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD thread, wiRenderer::DeviceContext context)
+{
+	wiRenderer::UpdateBuffer(meshInstanceBuffer, instances[thread].data(), context, sizeof(Instance)*count);
 }
 
 void LoadWiArmatures(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures
@@ -950,117 +980,124 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 		}
 	}
 
-	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
+	for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter){
 		Mesh* iMesh = iter->second;
 
-		if(iMesh->buffersComplete)
-			continue;
-		
-		for(int i=0;i<5;++i){
-			iMesh->instances[i].clear();
-			iMesh->instances[i].resize(iMesh->usedBy.size());
-		}
-
-		if(iMesh->meshInstanceBuffer!=nullptr)
-			continue;
-
-		D3D11_BUFFER_DESC bd;
-		ZeroMemory( &bd, sizeof(bd) );
-		bd.Usage = D3D11_USAGE_DYNAMIC;
-		bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
-
-		bool armatureDeformedMesh=false;
-		for(int u : iMesh->usedBy){
-			if(objects[u]->armatureDeform)
-				armatureDeformedMesh=true;
-		}
-		if(!armatureDeformedMesh)
-			iMesh->armature=nullptr;
-
-
-		if(iMesh->goalVG>=0){
-			iMesh->goalPositions.resize(iMesh->vertexGroups[iMesh->goalVG].vertices.size());
-			iMesh->goalNormals.resize(iMesh->vertexGroups[iMesh->goalVG].vertices.size());
-		}
-		iMesh->skinnedVertices.resize(iMesh->vertices.size());
-		for(int i=0;i<iMesh->vertices.size();++i){
-			iMesh->skinnedVertices[i].pos=iMesh->vertices[i].pos;
-			iMesh->skinnedVertices[i].nor=iMesh->vertices[i].nor;
-			iMesh->skinnedVertices[i].tex=iMesh->vertices[i].tex;
-		}
-
-
-			ZeroMemory( &bd, sizeof(bd) );
-	#ifdef USE_GPU_SKINNING
-			bd.Usage = (iMesh->softBody?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
-			bd.CPUAccessFlags = (iMesh->softBody?D3D11_CPU_ACCESS_WRITE:0);
-			if(iMesh->hasArmature() && !iMesh->softBody)
-				bd.ByteWidth = sizeof( SkinnedVertex ) * iMesh->vertices.size();
-			else
-				bd.ByteWidth = sizeof( Vertex ) * iMesh->vertices.size();
-	#else
-			bd.Usage = ((iMesh->softBody || iMesh->hasArmature())?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
-			bd.CPUAccessFlags = ((iMesh->softBody || iMesh->hasArmature())?D3D11_CPU_ACCESS_WRITE:0);
-			bd.ByteWidth = sizeof( Vertex ) * iMesh->vertices.size();
-	#endif
-			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			D3D11_SUBRESOURCE_DATA InitData;
-			ZeroMemory( &InitData, sizeof(InitData) );
-			if(iMesh->hasArmature() && !iMesh->softBody)
-				InitData.pSysMem = iMesh->vertices.data();
-			else
-				InitData.pSysMem = iMesh->skinnedVertices.data();
-			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshVertBuff );
-		
-			
-			ZeroMemory( &bd, sizeof(bd) );
-			bd.Usage = D3D11_USAGE_IMMUTABLE;
-			bd.ByteWidth = sizeof( unsigned int ) * iMesh->indices.size();
-			bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			ZeroMemory( &InitData, sizeof(InitData) );
-			InitData.pSysMem = iMesh->indices.data();
-			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshIndexBuff );
-			
-		if(iMesh->renderable)
-		{
-		
-			ZeroMemory( &bd, sizeof(bd) );
-			bd.Usage = D3D11_USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(BoneShaderBuffer);
-			bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->boneBuffer );
-
-			if(iMesh->hasArmature() && !iMesh->softBody){
-				ZeroMemory( &bd, sizeof(bd) );
-				bd.Usage = D3D11_USAGE_DEFAULT;
-				bd.ByteWidth = sizeof(Vertex) * iMesh->vertices.size();
-				bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
-				bd.CPUAccessFlags = 0;
-				bd.StructureByteStride=0;
-				wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->sOutBuffer );
-			}
-
-			//PHYSICALMAPPING
-			for(int i=0;i<iMesh->vertices.size();++i){
-				for(int j=0;j<iMesh->physicsverts.size();++j){
-					if(		fabs( iMesh->vertices[i].pos.x-iMesh->physicsverts[j].x ) < DBL_EPSILON
-						&&	fabs( iMesh->vertices[i].pos.y-iMesh->physicsverts[j].y ) < DBL_EPSILON
-						&&	fabs( iMesh->vertices[i].pos.z-iMesh->physicsverts[j].z ) < DBL_EPSILON
-						)
-					{
-						iMesh->physicalmapGP.push_back(j);
-						break;
-					}
-				}
-			}
-
-		}
+		iMesh->CreateVertexArrays();
+		iMesh->CreateBuffers();
 	}
+
+	//for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
+	//	Mesh* iMesh = iter->second;
+
+	//	if(iMesh->buffersComplete)
+	//		continue;
+	//	
+	//	for(int i=0;i<5;++i){
+	//		iMesh->instances[i].clear();
+	//		iMesh->instances[i].resize(iMesh->usedBy.size());
+	//	}
+
+	//	if(iMesh->meshInstanceBuffer!=nullptr)
+	//		continue;
+
+	//	D3D11_BUFFER_DESC bd;
+	//	ZeroMemory( &bd, sizeof(bd) );
+	//	bd.Usage = D3D11_USAGE_DYNAMIC;
+	//	bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
+	//	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	//	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	//	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
+
+	//	bool armatureDeformedMesh=false;
+	//	for(int u : iMesh->usedBy){
+	//		if(objects[u]->armatureDeform)
+	//			armatureDeformedMesh=true;
+	//	}
+	//	if(!armatureDeformedMesh)
+	//		iMesh->armature=nullptr;
+
+
+	//	if(iMesh->goalVG>=0){
+	//		iMesh->goalPositions.resize(iMesh->vertexGroups[iMesh->goalVG].vertices.size());
+	//		iMesh->goalNormals.resize(iMesh->vertexGroups[iMesh->goalVG].vertices.size());
+	//	}
+	//	iMesh->skinnedVertices.resize(iMesh->vertices.size());
+	//	for(int i=0;i<iMesh->vertices.size();++i){
+	//		iMesh->skinnedVertices[i].pos=iMesh->vertices[i].pos;
+	//		iMesh->skinnedVertices[i].nor=iMesh->vertices[i].nor;
+	//		iMesh->skinnedVertices[i].tex=iMesh->vertices[i].tex;
+	//	}
+
+
+	//		ZeroMemory( &bd, sizeof(bd) );
+	//#ifdef USE_GPU_SKINNING
+	//		bd.Usage = (iMesh->softBody?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
+	//		bd.CPUAccessFlags = (iMesh->softBody?D3D11_CPU_ACCESS_WRITE:0);
+	//		if(iMesh->hasArmature() && !iMesh->softBody)
+	//			bd.ByteWidth = sizeof( SkinnedVertex ) * iMesh->vertices.size();
+	//		else
+	//			bd.ByteWidth = sizeof( Vertex ) * iMesh->vertices.size();
+	//#else
+	//		bd.Usage = ((iMesh->softBody || iMesh->hasArmature())?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
+	//		bd.CPUAccessFlags = ((iMesh->softBody || iMesh->hasArmature())?D3D11_CPU_ACCESS_WRITE:0);
+	//		bd.ByteWidth = sizeof( Vertex ) * iMesh->vertices.size();
+	//#endif
+	//		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	//		D3D11_SUBRESOURCE_DATA InitData;
+	//		ZeroMemory( &InitData, sizeof(InitData) );
+	//		if(iMesh->hasArmature() && !iMesh->softBody)
+	//			InitData.pSysMem = iMesh->vertices.data();
+	//		else
+	//			InitData.pSysMem = iMesh->skinnedVertices.data();
+	//		wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshVertBuff );
+	//	
+	//		
+	//		ZeroMemory( &bd, sizeof(bd) );
+	//		bd.Usage = D3D11_USAGE_IMMUTABLE;
+	//		bd.ByteWidth = sizeof( unsigned int ) * iMesh->indices.size();
+	//		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	//		bd.CPUAccessFlags = 0;
+	//		ZeroMemory( &InitData, sizeof(InitData) );
+	//		InitData.pSysMem = iMesh->indices.data();
+	//		wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshIndexBuff );
+	//		
+	//	if(iMesh->renderable)
+	//	{
+	//	
+	//		ZeroMemory( &bd, sizeof(bd) );
+	//		bd.Usage = D3D11_USAGE_DYNAMIC;
+	//		bd.ByteWidth = sizeof(BoneShaderBuffer);
+	//		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	//		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	//		wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->boneBuffer );
+
+	//		if(iMesh->hasArmature() && !iMesh->softBody){
+	//			ZeroMemory( &bd, sizeof(bd) );
+	//			bd.Usage = D3D11_USAGE_DEFAULT;
+	//			bd.ByteWidth = sizeof(Vertex) * iMesh->vertices.size();
+	//			bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
+	//			bd.CPUAccessFlags = 0;
+	//			bd.StructureByteStride=0;
+	//			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->sOutBuffer );
+	//		}
+
+	//		//PHYSICALMAPPING
+	//		for(int i=0;i<iMesh->vertices.size();++i){
+	//			for(int j=0;j<iMesh->physicsverts.size();++j){
+	//				if(		fabs( iMesh->vertices[i].pos.x-iMesh->physicsverts[j].x ) < DBL_EPSILON
+	//					&&	fabs( iMesh->vertices[i].pos.y-iMesh->physicsverts[j].y ) < DBL_EPSILON
+	//					&&	fabs( iMesh->vertices[i].pos.z-iMesh->physicsverts[j].z ) < DBL_EPSILON
+	//					)
+	//				{
+	//					iMesh->physicalmapGP.push_back(j);
+	//					break;
+	//				}
+	//			}
+	//		}
+
+	//	}
+	//}
 	objects.clear();
 }
 void LoadWiMeshes(const string& directory, const string& name, const string& identifier, MeshCollection& meshes, const vector<Armature*>& armatures, const MaterialCollection& materials)
@@ -1108,8 +1145,10 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 					file >> currentMesh->vertices.back().pos.z;
 					break;
 				case 'n':
-					if(currentMesh->isBillboarded){
-						currentMesh->vertices.back().nor=currentMesh->billboardAxis;
+					if (currentMesh->isBillboarded){
+						currentMesh->vertices.back().nor.x = currentMesh->billboardAxis.x;
+						currentMesh->vertices.back().nor.y = currentMesh->billboardAxis.y;
+						currentMesh->vertices.back().nor.z = currentMesh->billboardAxis.z;
 					}
 					else{
 						file >> currentMesh->vertices.back().nor.x;
@@ -1885,10 +1924,10 @@ void Light::CleanUp(){
 	lensFlareNames.clear();
 }
 
-void GeneratewiSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
-	if(type==GENERATE_QUADTREE)
+void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
+	if(type==SPTREE_GENERATE_QUADTREE)
 		tree = new QuadTree();
-	else if(type==GENERATE_OCTREE)
+	else if(type==SPTREE_GENERATE_OCTREE)
 		tree = new Octree();
 	tree->initialize(objects);
 }

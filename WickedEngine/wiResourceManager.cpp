@@ -62,7 +62,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 				)
 			{
 				wiRenderer::graphicsMutex.lock();
-				CreateWICTextureFromFile(true,wiRenderer::graphicsDevice,wiRenderer::immediateContext,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
+				CreateWICTextureFromFile(true,wiRenderer::graphicsDevice,wiRenderer::getImmediateContext(),(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
 				wiRenderer::graphicsMutex.unlock();
 			}
 			else if(!ext.compare("dds")){

@@ -54,14 +54,14 @@ protected:
 
 	vector<wiTaskThread*> workerThreads;
 
-	virtual void RenderReflections(wiRenderer::DeviceContext context = wiRenderer::immediateContext);
-	virtual void RenderShadows(wiRenderer::DeviceContext context = wiRenderer::immediateContext);
-	virtual void RenderScene(wiRenderer::DeviceContext context = wiRenderer::immediateContext) = 0;
-	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context = wiRenderer::immediateContext);
-	virtual void RenderBloom(wiRenderer::DeviceContext context = wiRenderer::immediateContext);
-	virtual void RenderLightShafts(wiRenderTarget& mainRT, wiRenderer::DeviceContext context = wiRenderer::immediateContext);
-	virtual void RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context = wiRenderer::immediateContext);
-	virtual void RenderComposition2(wiRenderer::DeviceContext context = wiRenderer::immediateContext);
+	virtual void RenderReflections(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderShadows(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderScene(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext()) = 0;
+	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderBloom(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderLightShafts(wiRenderTarget& mainRT, wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderComposition2(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
 	virtual void RenderColorGradedComposition();
 public:
 	float getLightShaftQuality(){ return lightShaftQuality; }

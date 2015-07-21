@@ -18,6 +18,8 @@
 #include "wiLines.h"
 #include "wiCube.h"
 #include "wiWaterPlane.h"
+#include "wiGraphicsThreads.h"
+#include "wiRandom.h"
 
 #pragma region STATICS
 D3D_DRIVER_TYPE						wiRenderer::driverType;
@@ -217,7 +219,7 @@ HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window)
 	wiRenderer::graphicsDevice->CheckFeatureSupport( D3D11_FEATURE_THREADING,&threadingFeature,sizeof(threadingFeature) );
 	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists){
 		DEFERREDCONTEXT_SUPPORT = true;
-		for(int i=0;i<NUM_DCONTEXT;i++){
+		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++){
 			wiRenderer::graphicsDevice->CreateDeferredContext( 0,&deferredContexts[i] );
 			drawCalls.insert(pair<DeviceContext,long>(deferredContexts[i],0));
 		}
@@ -271,14 +273,14 @@ void wiRenderer::DestroyDevice()
 		renderTargetView->Release();
     if( swapChain ) 
 		swapChain->Release();
-	if( wiRenderer::immediateContext ) 
-		wiRenderer::immediateContext->ClearState();
-    if( wiRenderer::immediateContext ) 
-		wiRenderer::immediateContext->Release();
+	if( wiRenderer::getImmediateContext() ) 
+		wiRenderer::getImmediateContext()->ClearState();
+    if( wiRenderer::getImmediateContext() ) 
+		wiRenderer::getImmediateContext()->Release();
     if( graphicsDevice ) 
 		graphicsDevice->Release();
 
-	for(int i=0;i<NUM_DCONTEXT;i++){
+	for(int i=0;i<GRAPHICSTHREAD_COUNT;i++){
 		if(commandLists[i]) {commandLists[i]->Release(); commandLists[i]=0;}
 		if(deferredContexts[i]) {deferredContexts[i]->Release(); deferredContexts[i]=0;}
 	}
@@ -287,11 +289,11 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 {
 	wiRenderer::graphicsMutex.lock();
 
-	wiRenderer::immediateContext->RSSetViewports( 1, &viewPort );
-	wiRenderer::immediateContext->OMSetRenderTargets( 1, &renderTargetView, 0 );
+	wiRenderer::getImmediateContext()->RSSetViewports( 1, &viewPort );
+	wiRenderer::getImmediateContext()->OMSetRenderTargets( 1, &renderTargetView, 0 );
 	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-    wiRenderer::immediateContext->ClearRenderTargetView( renderTargetView, ClearColor );
-	//wiRenderer::immediateContext->ClearDepthStencilView( g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    wiRenderer::getImmediateContext()->ClearRenderTargetView( renderTargetView, ClearColor );
+	//wiRenderer::getImmediateContext()->ClearDepthStencilView( g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	
 	if(drawToScreen1!=nullptr)
@@ -313,29 +315,26 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 	}
 
 
-	wiRenderer::immediateContext->OMSetRenderTargets(NULL, NULL,NULL);
+	wiRenderer::getImmediateContext()->OMSetRenderTargets(NULL, NULL,NULL);
 
 	wiRenderer::graphicsMutex.unlock();
 }
 void wiRenderer::ReleaseCommandLists()
 {
-	for(int i=0;i<NUM_DCONTEXT;i++)
+	for(int i=0;i<GRAPHICSTHREAD_COUNT;i++)
 		if(commandLists[i]){ commandLists[i]->Release(); commandLists[i]=NULL; }
 }
 void wiRenderer::ExecuteDeferredContexts()
 {
-	for(int i=0;i<NUM_DCONTEXT;i++)
-		if(commandLists[i]) wiRenderer::immediateContext->ExecuteCommandList( commandLists[i], false );
+	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++)
+		if(commandLists[i]) wiRenderer::getImmediateContext()->ExecuteCommandList( commandLists[i], false );
 
 	ReleaseCommandLists();
 }
-void wiRenderer::FinishCommandList(int THREAD)
+void wiRenderer::FinishCommandList(GRAPHICSTHREAD thread)
 {
-	if(commandLists[THREAD]) {
-		commandLists[THREAD]->Release();
-		commandLists[THREAD]=0;
-	}
-	deferredContexts[THREAD]->FinishCommandList( false,&commandLists[THREAD] );
+	SafeRelease(commandLists[thread]);
+	deferredContexts[thread]->FinishCommandList( false,&commandLists[thread] );
 }
 
 long wiRenderer::getDrawCallCount(){
@@ -982,45 +981,11 @@ void wiRenderer::LoadBuffers()
 
 void wiRenderer::LoadBasicShaders()
 {
-
-	//ID3DBlob* pVSBlob = NULL;
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectVS10.cso", &pVSBlob))){MessageBox(0,L"Failed To load effectVS10.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader10 );
-
-	//ifstream file("shaders/effectVS10.cso", ios::binary | ios::ate);
-	//if (file.is_open()){
-
-	//	int fileSize = file.tellg();
-	//	file.seekg(0, file.beg);
-	//	char * buffer = new char[fileSize];
-	//	file.read(buffer, fileSize);
-	//	file.close();
-	//	wiRenderer::graphicsDevice->CreateVertexShader(buffer, fileSize, NULL, &vertexShader10);
-
-
-	//	D3D11_INPUT_ELEMENT_DESC layout[] =
-	//	{
-	//		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-
-	//		{ "MATI", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-	//		{ "MATI", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-	//		{ "MATI", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-	//	};
-	//	UINT numElements = ARRAYSIZE(layout);
-
-	//	wiRenderer::graphicsDevice->CreateInputLayout(layout, numElements, buffer, fileSize, &vertexLayout);
-
-	//	delete buffer;
-	//}
-
 	{
 		D3D11_INPUT_ELEMENT_DESC layout[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 
@@ -1037,27 +1002,18 @@ void wiRenderer::LoadBasicShaders()
 		delete vsinfo;
 	}
 
-
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
 	{
-
-		//if (FAILED(D3DReadFileToBlob(L"shaders/sOVS.cso", &pVSBlob))){ MessageBox(0, L"Failed To load sOVS.cso", 0, 0); }
-		//else wiRenderer::graphicsDevice->CreateVertexShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &sOVS);
 
 		D3D11_INPUT_ELEMENT_DESC oslayout[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 		UINT numElements = ARRAYSIZE(oslayout);
 
-		//wiRenderer::graphicsDevice->CreateInputLayout(oslayout, numElements, pVSBlob->GetBufferPointer(),
-		//	pVSBlob->GetBufferSize(), &sOIL);
-		//if (pVSBlob){ pVSBlob->Release(); pVSBlob = NULL; }
 
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::add("shaders/sOVS.cso", wiResourceManager::VERTEXSHADER, oslayout, numElements));
 		if (vsinfo != nullptr){
@@ -1068,97 +1024,17 @@ void wiRenderer::LoadBasicShaders()
 	}
 
 	{
-		//if (FAILED(D3DReadFileToBlob(L"shaders/sOGS.cso", &pVSBlob))){ MessageBox(0, L"Failed To load sOGS.cso", 0, 0); }
-		//else wiRenderer::graphicsDevice->CreateGeometryShader(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &sOGS);
 		D3D11_SO_DECLARATION_ENTRY pDecl[] =
 		{
 			// semantic name, semantic index, start component, component count, output slot
 			{ 0, "SV_POSITION", 0, 0, 4, 0 },   // output all components of position
-			{ 0, "NORMAL", 0, 0, 3, 0 },     // output the first 3 of the normal
+			{ 0, "NORMAL", 0, 0, 4, 0 },     // output the first 3 of the normal
 			{ 0, "TEXCOORD", 0, 0, 4, 0 },     // output the first 2 texture coordinates
 			{ 0, "TEXCOORD", 1, 0, 4, 0 },     // output the first 2 texture coordinates
 		};
-		//HRESULT hr = wiRenderer::graphicsDevice->CreateGeometryShaderWithStreamOutput(pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), pDecl,
-		//	4, NULL, 0, sOGS ? 0 : D3D11_SO_NO_RASTERIZED_STREAM, NULL, &sOGS);
-		//if (pVSBlob){ pVSBlob->Release(); pVSBlob = NULL; }
 
 		sOGS = static_cast<GeometryShader>(wiResourceManager::add("shaders/sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
 	}
-
-	
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load effectVS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/dirLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load dirlightVS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[0] );
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/pointLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load pointlightVS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[1] );
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/spotLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load spotlightVS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &lightVS[2] );
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/vSpotLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load vSpotLightVS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vSpotLightVS );
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/vPointLightVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load vPointLightVS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vPointLightVS );
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/decalVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load decalVS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &decalVS );
-	//if(pVSBlob){ pVSBlob->Release(); pVSBlob=NULL;}
-
-	
-	//ID3DBlob* pPSBlob = NULL;
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_transparent.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_transparent.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &transparentPS );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_simplest.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
-	//if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
-
-	//if (FAILED(D3DReadFileToBlob(L"shaders/effectPS_forwardSimple.cso", &pPSBlob))){ MessageBox(0, L"Failed To load effectPS_forwardSimple.cso", 0, 0); }
-	//else wiRenderer::graphicsDevice->CreatePixelShader(pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &fowardSimplePS);
-	//if (pPSBlob) { pPSBlob->Release(); pPSBlob = NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_blackout.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_blackout.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blackoutPS );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectPS_textureonly.cso", &pPSBlob))){MessageBox(0,L"Failed To load effectPS_textureonly.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &textureonlyPS );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/dirLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load dirLightPS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[0] );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/pointLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointLightPS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[1] );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/spotLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load spotLightPS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &lightPS[2] );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/volumeLightPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load volumeLightPS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &vLightPS );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/decalPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load decalPS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &decalPS );
-	//if(pPSBlob) { pPSBlob->Release(); pPSBlob=NULL;}
 
 
 	vertexShader = static_cast<VertexShader>(wiResourceManager::add("shaders/effectVS.cso", wiResourceManager::VERTEXSHADER));
@@ -1199,74 +1075,18 @@ void wiRenderer::LoadLineShaders()
 
 	linePS = static_cast<PixelShader>(wiResourceManager::add("shaders/linesPS.cso", wiResourceManager::PIXELSHADER));
 
-
-	//ID3DBlob* pSVSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/linesVS.cso", &pSVSBlob))){MessageBox(0,L"Failed To load linesVS.cso",0,0);}
-	//else {
-	//	wiRenderer::graphicsDevice->CreateVertexShader( pSVSBlob->GetBufferPointer(), pSVSBlob->GetBufferSize(), NULL, &lineVS );
-	//
-	//
-
-
-	//	D3D11_INPUT_ELEMENT_DESC layout[] =
-	//	{
-	//		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//	};
-	//	UINT numElements = ARRAYSIZE( layout );
-
-	//	wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pSVSBlob->GetBufferPointer(),
-	//										  pSVSBlob->GetBufferSize(), &lineIL );
-	//}
-
-	//if(pSVSBlob){ pSVSBlob->Release(); pSVSBlob=NULL; }
-	//
-	//ID3DBlob* pSPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/linesPS.cso", &pSPSBlob))){MessageBox(0,L"Failed To load linesPS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreatePixelShader( pSPSBlob->GetBufferPointer(), pSPSBlob->GetBufferSize(), NULL, &linePS );
-
-	//if(pSPSBlob){ pSPSBlob->Release();pSPSBlob=NULL; }
-
-
 }
 void wiRenderer::LoadTessShaders()
 {
 	hullShader = static_cast<HullShader>(wiResourceManager::add("shaders/effectHS.cso", wiResourceManager::HULLSHADER));
 	domainShader = static_cast<DomainShader>(wiResourceManager::add("shaders/effectDS.cso", wiResourceManager::DOMAINSHADER));
 
-	//ID3DBlob* pHSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectHS.cso", &pHSBlob))){MessageBox(0,L"Failed To load effectHS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateHullShader( pHSBlob->GetBufferPointer(), pHSBlob->GetBufferSize(), NULL, &hullShader );
-	//if(pHSBlob) {pHSBlob->Release();pHSBlob=NULL;}
-
-	//ID3DBlob* pDSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/effectDS.cso", &pDSBlob))){MessageBox(0,L"Failed To load effectDS.cso",0,0);}
-	//else wiRenderer::graphicsDevice->CreateDomainShader( pDSBlob->GetBufferPointer(), pDSBlob->GetBufferSize(), NULL, &domainShader );
-	//if(pDSBlob) {pDSBlob->Release();pDSBlob=NULL;}
 }
 void wiRenderer::LoadSkyShaders()
 {
 	skyVS = static_cast<VertexShader>(wiResourceManager::add("shaders/skyVS.cso", wiResourceManager::VERTEXSHADER));
 	skyPS = static_cast<PixelShader>(wiResourceManager::add("shaders/skyPS.cso", wiResourceManager::PIXELSHADER));
 
- //   ID3DBlob* pVSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/skyVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load skyVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &skyVS );
-
-	//if(pVSBlob){ pVSBlob->Release();
-	//pVSBlob=NULL; }
-
-
-	//ID3DBlob* pPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/skyPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load skyPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &skyPS );
-	//
-	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 void wiRenderer::LoadShadowShaders()
 {
@@ -1279,33 +1099,6 @@ void wiRenderer::LoadShadowShaders()
 
 	cubeShGS = static_cast<GeometryShader>(wiResourceManager::add("shaders/cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
 
- //   ID3DBlob* pVSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/shadowVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load shadowVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &shVS );
-	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
-	//
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load cubeShadowVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &cubeShVS );
-	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
-
-	//
-	//ID3DBlob* pPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/shadowPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load shadowPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &shPS );
-	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load cubeShadowPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &cubeShPS );
-	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
-
-
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/cubeShadowGS.cso", &pPSBlob))){MessageBox(0,L"Failed To load cubeShadowGS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateGeometryShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &cubeShGS );
-	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 void wiRenderer::LoadWaterShaders()
 {
@@ -1313,19 +1106,6 @@ void wiRenderer::LoadWaterShaders()
 	waterVS = static_cast<VertexShader>(wiResourceManager::add("shaders/waterVS.cso", wiResourceManager::VERTEXSHADER));
 	waterPS = static_cast<PixelShader>(wiResourceManager::add("shaders/waterPS.cso", wiResourceManager::PIXELSHADER));
 
- //   ID3DBlob* pVSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/waterVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load waterVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &waterVS );
-	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
-
-
-	//
-	//ID3DBlob* pPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/waterPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load waterPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &waterPS );
-	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 void wiRenderer::LoadTrailShaders(){
 	D3D11_INPUT_ELEMENT_DESC layout[] =
@@ -1346,29 +1126,6 @@ void wiRenderer::LoadTrailShaders(){
 
 	trailPS = static_cast<PixelShader>(wiResourceManager::add("shaders/trailPS.cso", wiResourceManager::PIXELSHADER));
 
- //   ID3DBlob* pVSBlob = NULL;
-	//if(FAILED(D3DReadFileToBlob(L"shaders/trailVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load trailVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &trailVS );
-	//
-	//D3D11_INPUT_ELEMENT_DESC layout[] =
- //   {
- //       { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
- //       { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
- //       { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
- //   };
-	//UINT numElements = ARRAYSIZE( layout );
-	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), &trailIL );
-	//
-	//if(pVSBlob) {pVSBlob->Release(); pVSBlob=NULL;}
-
-
-	//
-	//ID3DBlob* pPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/trailPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load trailPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &trailPS );
-
-	//if(pPSBlob){ pPSBlob->Release(); pPSBlob=NULL; }
 }
 
 
@@ -1973,17 +1730,23 @@ XMVECTOR wiRenderer::InterPolateKeyFrames(const float& cf, const int& maxCf, con
 
 	return result;
 }
-Vertex wiRenderer::TransformVertex(const Mesh* mesh, const int& vertexI, const XMMATRIX& mat){
-	XMVECTOR pos = XMLoadFloat4( &mesh->vertices[vertexI].pos );
-	XMVECTOR nor = XMLoadFloat3( &mesh->vertices[vertexI].nor );
-	float inWei[4]={mesh->vertices[vertexI].wei.x
-		,mesh->vertices[vertexI].wei.y
-		,mesh->vertices[vertexI].wei.z
-		,mesh->vertices[vertexI].wei.w};
-	float inBon[4]={mesh->vertices[vertexI].bon.x
-		,mesh->vertices[vertexI].bon.y
-		,mesh->vertices[vertexI].bon.z
-		,mesh->vertices[vertexI].bon.w};
+Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
+{
+	return TransformVertex(mesh, mesh->vertices[vertexI], mat);
+}
+Vertex wiRenderer::TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat){
+	XMVECTOR pos = XMLoadFloat4( &vertex.pos );
+	XMVECTOR nor = XMLoadFloat4(&vertex.nor);
+	float inWei[4] = { 
+		vertex.wei.x
+		,vertex.wei.y
+		,vertex.wei.z
+		,vertex.wei.w};
+	float inBon[4] = { 
+		vertex.bon.x
+		,vertex.bon.y
+		,vertex.bon.z
+		,vertex.bon.w};
 	XMMATRIX sump;
 	if(inWei[0] || inWei[1] || inWei[2] || inWei[3]){
 		sump = XMMATRIX(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
@@ -2000,6 +1763,7 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, const int& vertexI, const X
 		sump = XMMatrixIdentity();
 
 	//sump*=mat;
+	sump = XMMatrixMultiply(sump, mat);
 
 	XMFLOAT3 transformedP,transformedN;
 	XMStoreFloat3( &transformedP,XMVector3Transform(pos,sump) );
@@ -2011,8 +1775,8 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, const int& vertexI, const X
 	XMStoreFloat3( &transformedN,XMVector3Normalize(XMVector3Transform(nor,sump)));
 
 	Vertex retV(transformedP);
-	retV.nor=transformedN;
-	retV.tex=mesh->vertices[vertexI].tex;
+	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z,retV.nor.w);
+	retV.tex = vertex.tex;
 	retV.pre=XMFLOAT4(0,0,0,1);
 
 	return retV;
@@ -2245,7 +2009,7 @@ void wiRenderer::UpdateSoftBodyPinning(){
 					if(m->hasArmature()) 
 						tvert = TransformVertex(m,vi);
 					m->goalPositions[j] = XMFLOAT3(tvert.pos.x,tvert.pos.y,tvert.pos.z);
-					m->goalNormals[j] = tvert.nor;
+					m->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
 					++j;
 				}
 			}
@@ -2262,13 +2026,13 @@ void wiRenderer::UpdateSkinnedVB(){
 		if(m->softBody || m->hasArmature())
 #endif
 		{
-			UpdateBuffer(m->meshVertBuff,m->skinnedVertices.data(),wiRenderer::immediateContext,sizeof(Vertex)*m->skinnedVertices.size());
+			UpdateBuffer(m->meshVertBuff,m->skinnedVertices.data(),wiRenderer::getImmediateContext(),sizeof(Vertex)*m->skinnedVertices.size());
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			//void* dataPtr;
-			//wiRenderer::immediateContext->Map(m->meshVertBuff,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+			//wiRenderer::getImmediateContext()->Map(m->meshVertBuff,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 			//dataPtr = (void*)mappedResource.pData;
 			//memcpy(dataPtr,m->skinnedVertices.data(),sizeof(Vertex)*m->skinnedVertices.size());
-			//wiRenderer::immediateContext->Unmap(m->meshVertBuff,0);
+			//wiRenderer::getImmediateContext()->Unmap(m->meshVertBuff,0);
 		}
 	}
 	wiRenderer::graphicsMutex.unlock();
@@ -2276,7 +2040,11 @@ void wiRenderer::UpdateSkinnedVB(){
 void wiRenderer::UpdateImages(){
 	for(int i=0;i<images.size();++i)
 		images[i]->Update(GameSpeed);
+	for (wiSprite* i : waterRipples)
+		i->Update(GameSpeed);
+
 	ManageImages();
+	ManageWaterRipples();
 }
 void wiRenderer::ManageImages(){
 		while(	
@@ -2291,7 +2059,7 @@ void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const 
 	img->anim.scaleX=0.2f;
 	img->anim.scaleY=0.2f;
 	img->effects.pos=pos;
-	img->effects.rotation=(rand()%1000*0.001f)*2*3.1415f;
+	img->effects.rotation=(wiRandom::getRandom(0,1000)*0.001f)*2*3.1415f;
 	img->effects.siz=XMFLOAT2(1,1);
 	img->effects.typeFlag=WORLD;
 	img->effects.quality=QUALITY_ANISOTROPIC;
@@ -2311,7 +2079,6 @@ void wiRenderer::DrawWaterRipples(ID3D11DeviceContext* context){
 	wiImage::BatchBegin(context);
 	for(wiSprite* i:waterRipples){
 		i->DrawNormal(context);
-		i->Update(GetGameSpeed());
 	}
 }
 
@@ -2386,8 +2153,6 @@ void wiRenderer::DrawDebugSpheres(const XMMATRIX& newView, ID3D11DeviceContext* 
 void wiRenderer::DrawDebugLines(const XMMATRIX& newView, ID3D11DeviceContext* context)
 {
 	if(debugLines){
-		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_LINELIST );
-		//context->IASetInputLayout( lineIL );
 		BindPrimitiveTopology(LINELIST,context);
 		BindVertexLayout(lineIL,context);
 	
@@ -2396,15 +2161,12 @@ void wiRenderer::DrawDebugLines(const XMMATRIX& newView, ID3D11DeviceContext* co
 		BindBlendState(blendState,context);
 
 
-		//context->VSSetShader( lineVS, NULL, 0 );
-		//context->PSSetShader( linePS, NULL, 0 );
 		BindPS(linePS,context);
 		BindVS(lineVS,context);
 
 		BindConstantBufferVS(lineBuffer,0,context);
 
 		for(int i=0;i<boneLines.size();i++){
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			LineBuffer sb;
 			sb.mWorldViewProjection=XMMatrixTranspose(
 				XMLoadFloat4x4(&boneLines[i].desc.transform)
@@ -2413,19 +2175,7 @@ void wiRenderer::DrawDebugLines(const XMMATRIX& newView, ID3D11DeviceContext* co
 			sb.color=boneLines[i].desc.color;
 
 			UpdateBuffer(lineBuffer,&sb,context);
-			//LineBuffer* dataPtr;
-			//context->Map(lineBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr = (LineBuffer*)mappedResource.pData;
-			//memcpy(dataPtr,&sb,sizeof(LineBuffer));
-			//context->Unmap(lineBuffer,0);
 
-			//context->VSSetConstantBuffers( 0, 1, &lineBuffer );
-
-			//UINT stride = sizeof( XMFLOAT3A );
-			//UINT offset = 0;
-			//context->IASetVertexBuffers( 0, 1, &boneLines[i].vertexBuffer, &stride, &offset );
-
-			//context->Draw(2,0);
 			BindVertexBuffer(boneLines[i].vertexBuffer,0,sizeof(XMFLOAT3A),context);
 			Draw(2,context);
 		}
@@ -2984,35 +2734,21 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 	if(culledLights.size()>0)
 	{
 
-	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	BindPrimitiveTopology(TRIANGLELIST,context);
 	BindVertexLayout(vertexLayout,context);
-	//context->IASetInputLayout( vertexLayout );
 
 
-	//context->OMSetDepthStencilState(depthStencilState, STENCILREF_DEFAULT);
 	BindDepthStencilState(depthStencilState,STENCILREF_DEFAULT,context);
 	
-	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//UINT sampleMask   = 0xffffffff;
-	//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 	BindBlendState(blendState,context);
 	
-	//context->PSSetShader( shPS, NULL, 0 );
 	BindPS(shPS,context);
-	//context->PSSetSamplers(0, 1, &texSampler);
 	BindSamplerPS(texSampler,0,context);
 	
-	//context->VSSetShader( shVS, NULL, 0 );
 	BindVS(shVS,context);
-	//context->VSSetConstantBuffers( 0, 1, &shCb );
-	//context->VSSetConstantBuffers( 1, 1, &matCb );
-	//context->PSSetConstantBuffers(1,1,&matCb);
 	BindConstantBufferVS(shCb,0,context);
 	BindConstantBufferVS(matCb,1,context);
 	BindConstantBufferPS(matCb,1,context);
-	//context->VSSetConstantBuffers(3,1,&matIndexBuf);
-	//context->PSSetConstantBuffers(3,1,&matIndexBuf);
 
 	vector<Light*> pointLightsSaved(0);
 
@@ -3060,10 +2796,8 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 					if(visibleInstances.size() && !mesh->isBillboarded){
 						
 						if(!mesh->doubleSided)
-							//context->RSSetState(rssh);
 							BindRasterizerState(rssh,context);
 						else
-							//context->RSSetState(nonCullRSsh);
 							BindRasterizerState(nonCullRSsh,context);
 			
 						//D3D11_MAPPED_SUBRESOURCE mappedResource;
@@ -3074,42 +2808,23 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 						cb.windRandomness=wind.randomness;
 						cb.windWaveSize=wind.waveSize;
 						UpdateBuffer(shCb,&cb,context);
-						//ForShadowMapCB* dataPtr;
-						//context->Map(shCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-						//dataPtr = (ForShadowMapCB*)mappedResource.pData;
-						//memcpy(dataPtr,&cb,sizeof(ForShadowMapCB));
-						//context->Unmap(shCb,0);
-				
-//#ifdef USE_GPU_SKINNING
-//						context->VSSetConstantBuffers( 1, 1, &mesh->boneBuffer );
-//#endif
 
 						
-						int k=0;
-						for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
-							if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
-								if(mesh->softBody || (*viter)->armatureDeform)
-									mesh->instances[0][k] = Instance( XMMatrixIdentity() );
-								else 
-									mesh->instances[0][k]=Instance(
-										XMMatrixTranspose( XMLoadFloat4x4(&(*viter)->world) )
-										);
+						int k = 0;
+						for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
+							if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
+								if (mesh->softBody || (*viter)->armatureDeform)
+									mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), k, GRAPHICSTHREAD_SHADOWS);
+								else
+									mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, GRAPHICSTHREAD_SHADOWS);
 								++k;
 							}
 						}
-						if(k<1)
+						if (k<1)
 							continue;
 
-						UpdateBuffer(mesh->meshInstanceBuffer,mesh->instances[0].data(),context,sizeof(Instance)*visibleInstances.size());
+						mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
 
-			
-						//ID3D11Buffer* vertexBuffers[2] = {
-						//	(mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff)
-						//	,mesh->meshInstanceBuffer};
-						//UINT strides[2] = {sizeof( Vertex ),sizeof(Instance)};
-						//UINT offsets[2] = {0,0};
-						//context->IASetVertexBuffers( 0, 2, vertexBuffers, strides, offsets );
-						//context->IASetIndexBuffer(mesh->meshIndexBuff,DXGI_FORMAT_R32_UINT,0);
 						
 						BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
 						BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
@@ -3124,16 +2839,6 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 								BindTexturePS(iMat->texture,0,context);
 
 						
-								//MaterialCB* mcb = (MaterialCB*)_aligned_malloc(sizeof(MaterialCB),16);
-								//mcb->difColor=XMFLOAT4A(iMat->diffuseColor.x,iMat->diffuseColor.y,iMat->diffuseColor.z,iMat->alpha);
-								//mcb->hasRefNorTexSpe=XMFLOAT4A(iMat->hasRefMap,iMat->hasNormalMap,iMat->hasTexture,iMat->hasSpecularMap);
-								//mcb->specular=iMat->specular;
-								//mcb->refractionIndexMovingTexEnv=XMFLOAT4A(iMat->refraction_index,iMat->texOffset.x,iMat->texOffset.y,iMat->enviroReflection);
-								//mcb->shadeless=iMat->shadeless;
-								//mcb->specular_power=iMat->specular_power;
-								//mcb->toon=iMat->toonshading;
-								//mcb->matIndex=m;
-								//mcb->emit=iMat->emit;
 								
 								MaterialCB* mcb = new MaterialCB(*iMat,m);
 
@@ -3141,24 +2846,6 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 								
 								delete mcb;
 
-								//MaterialCB* MdataPtr;
-								//context->Map(matCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-								//MdataPtr = (MaterialCB*)mappedResource.pData;
-								//memcpy(MdataPtr,&mcb,sizeof(MaterialCB));
-								//context->Unmap(matCb,0);
-					
-								//MatIndexBuf ib;
-								//ib.matIndex=m;
-								//ib.padding=XMFLOAT3(0,0,0);
-
-								//UpdateBuffer(matIndexBuf,&ib,context);
-								//MatIndexBuf* IdataPtr;
-								//context->Map(matIndexBuf,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-								//IdataPtr = (MatIndexBuf*)mappedResource.pData;
-								//memcpy(IdataPtr,&ib,sizeof(MatIndexBuf));
-								//context->Unmap(matIndexBuf,0);
-
-								//context->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),0,0,0);
 								DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
 
 								m++;
@@ -3210,22 +2897,12 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 				lcb.enerdis=l->enerDis;
 				lcb.pos=l->translation;
 				UpdateBuffer(lightCb[1],&lcb,context);
-				//pLightBuffer* dataPtr;
-				//context->Map(lightCb[1],0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-				//dataPtr = (pLightBuffer*)mappedResource.pData;
-				//memcpy(dataPtr,&lcb,sizeof(pLightBuffer));
-				//context->Unmap(lightCb[1],0);
 				
 				CubeShadowCb cb;
 				for(int shcam=0;shcam<l->shadowCam.size();++shcam)
 					cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
 
 				UpdateBuffer(cubeShCb,&cb,context);
-				//CubeShadowCb* dataPtr1;
-				//context->Map(cubeShCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-				//dataPtr1 = (CubeShadowCb*)mappedResource.pData;
-				//memcpy(dataPtr1,&cb,sizeof(CubeShadowCb));
-				//context->Unmap(cubeShCb,0);
 
 				CulledCollection culledwiRenderer;
 				CulledList culledObjects;
@@ -3243,30 +2920,27 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 					if(!mesh->isBillboarded && !visibleInstances.empty()){
 
 							if(!mesh->doubleSided)
-								//context->RSSetState(rssh);
 								BindRasterizerState(rssh,context);
 							else
-								//context->RSSetState(nonCullRSsh);
 								BindRasterizerState(nonCullRSsh,context);
 			
 
-						
-							int k=0;
-							for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
-								if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
-									if(mesh->softBody || (*viter)->armatureDeform)
-										mesh->instances[0][k] = Instance( XMMatrixIdentity() );
-									else 
-										mesh->instances[0][k]=Instance(
-											XMMatrixTranspose( XMLoadFloat4x4(&(*viter)->world) )
-											);
+
+							int k = 0;
+							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
+								if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
+									if (mesh->softBody || (*viter)->armatureDeform)
+										mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), k, GRAPHICSTHREAD_SHADOWS);
+									else
+										mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, GRAPHICSTHREAD_SHADOWS);
 									++k;
 								}
 							}
-							if(k<1)
+							if (k<1)
 								continue;
 
-							UpdateBuffer(mesh->meshInstanceBuffer,mesh->instances[0].data(),context,sizeof(Instance)*visibleInstances.size());
+							mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+
 
 							BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
 							BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
@@ -3279,16 +2953,6 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 								if(!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
 									BindTexturePS(iMat->texture,0,context);
 						
-									//MaterialCB* mcb = (MaterialCB*)_aligned_malloc(sizeof(MaterialCB),16);
-									//mcb->difColor=XMFLOAT4A(iMat->diffuseColor.x,iMat->diffuseColor.y,iMat->diffuseColor.z,iMat->alpha);
-									//mcb->hasRefNorTexSpe=XMFLOAT4A(iMat->hasRefMap,iMat->hasNormalMap,iMat->hasTexture,iMat->hasSpecularMap);
-									//mcb->specular=iMat->specular;
-									//mcb->refractionIndexMovingTexEnv=XMFLOAT4A(iMat->refraction_index,iMat->texOffset.x,iMat->texOffset.y,iMat->enviroReflection);
-									//mcb->shadeless=iMat->shadeless;
-									//mcb->specular_power=iMat->specular_power;
-									//mcb->toon=iMat->toonshading;
-									//mcb->matIndex=m;
-									//mcb->emit=iMat->emit;
 									MaterialCB* mcb = new MaterialCB(*iMat,m);
 
 									UpdateBuffer(matCb,mcb,context);
@@ -3306,55 +2970,37 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 		}
 	}
 		
-	//context->GSSetShader(0,0,0);
 		BindGS(nullptr,context);
 	}
 }
 void wiRenderer::DrawForSO(ID3D11DeviceContext* context)
 {
-	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_POINTLIST );
 	BindPrimitiveTopology(POINTLIST,context);
 	BindVertexLayout(sOIL,context);
-	//context->IASetInputLayout( sOIL );
-	//context->VSSetShader( sOVS, NULL, 0 );
-	//context->GSSetShader( sOGS, NULL, 0 );
 	BindVS(sOVS,context);
 	BindGS(sOGS,context);
-	//context->PSSetShader( 0, NULL, 0);
 	BindPS(nullptr,context);
 
-	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
+	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter)
+	{
 		Mesh* mesh = iter->second;
-		if(mesh->hasArmature() && !mesh->softBody){
-			//UINT stride = sizeof( SkinnedVertex );
-			//UINT offset = 0;
-			//context->IASetVertexBuffers( 0, 1, &mesh->meshVertBuff, &stride, &offset );
-			//context->IASetIndexBuffer(mesh->meshIndexBuff,DXGI_FORMAT_R32_UINT,0);
+		if(mesh->hasArmature() && !mesh->softBody)
+		{
 			BindVertexBuffer(mesh->meshVertBuff,0,sizeof(SkinnedVertex),context);
-			//context->VSSetConstantBuffers( 1, 1, &mesh->boneBuffer );
 			BindConstantBufferVS(mesh->boneBuffer,1,context);
-			//UINT offsetSO[1] = {0};
-			//context->SOSetTargets(1,&mesh->sOutBuffer,offsetSO);
 			BindStreamOutTarget(mesh->sOutBuffer,context);
-			//context->Draw(mesh->vertices.size(),0);
 			Draw(mesh->vertices.size(),context);
-			//context->DrawAuto();
-			//context->DrawIndexed(mesh->indices.size(),0,0);
 		}
 	}
 
-	//context->GSSetShader( 0, NULL, 0 );
-	//context->VSSetShader( 0, NULL, 0 );
 	BindGS(nullptr,context);
 	BindVS(nullptr,context);
-	//UINT offsetSO[1] = {0};
-	//context->SOSetTargets(0,nullptr,offsetSO);
 	BindStreamOutTarget(nullptr,context);
 }
 
 void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3D11DeviceContext* context
 				  , bool BlackOut, SHADED_TYPE shaded
-				  , ID3D11ShaderResourceView* refRes, bool grass, int passIdentifier)
+				  , ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread)
 {
 	
 	if(objects.empty())
@@ -3386,24 +3032,23 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 			}
 		}
 
-		if(DX11Eff && tessF) //context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST );
+		if(DX11Eff && tessF) 
 			BindPrimitiveTopology(PATCHLIST,context);
-		else		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+		else		
 			BindPrimitiveTopology(TRIANGLELIST,context);
-		//context->IASetInputLayout( vertexLayout );
 		BindVertexLayout(vertexLayout,context);
 
-		if(DX11Eff && tessF) //context->VSSetShader( vertexShader, NULL, 0 );
+		if(DX11Eff && tessF)
 			BindVS(vertexShader,context);
-		else //context->VSSetShader( vertexShader10, NULL, 0 );
+		else
 			BindVS(vertexShader10,context);
-		if(DX11Eff && tessF) //context->HSSetShader( hullShader, NULL, 0 );
+		if(DX11Eff && tessF)
 			BindHS(hullShader,context);
-		else		//context->HSSetShader( 0, NULL, 0 );
+		else
 			BindHS(nullptr,context);
-		if(DX11Eff && tessF) //context->DSSetShader( domainShader, NULL, 0 );
+		if(DX11Eff && tessF) 
 			BindDS(domainShader,context);
-		else		//context->DSSetShader( 0, NULL, 0 );
+		else		
 			BindDS(nullptr,context);
 
 		if (wireRender)
@@ -3420,14 +3065,9 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 			else
 				return;
 
-		//BindPS( wireRender?simplestPS:(BlackOut?blackoutPS:(shaded?pixelShader:textureonlyPS)),context);
-	
-
-		//context->VSSetSamplers(0, 1, &texSampler);
-		//context->VSSetShaderResources(0,1,&noiseTex);
 		BindSamplerVS(texSampler,0,context);
 		BindTextureVS(noiseTex,0,context);
-		if(DX11Eff && tessF) //context->DSSetSamplers(0, 1, &texSampler);
+		if(DX11Eff && tessF) 
 			BindSamplerDS(texSampler,0,context);
 		BindSamplerPS(texSampler,0,context);
 		BindSamplerPS(mapSampler,1,context);
@@ -3445,12 +3085,6 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 		BindConstantBufferVS(matCb,2,context);
 		BindConstantBufferPS(matCb,2,context);
 
-		//if(DX11Eff) context->DSSetConstantBuffers(3,1,&matIndexBuf);
-
-	
-		//float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		//UINT sampleMask   = 0xffffffff;
-		//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 		BindBlendState(blendState,context);
 
 		if(!wireRender) {
@@ -3466,10 +3100,8 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 
 
 			if(!mesh->doubleSided)
-				//context->RSSetState(wireRender?wireRS:rasterizerState);
 				BindRasterizerState(wireRender?wireRS:rasterizerState,context);
 			else
-				//context->RSSetState(wireRender?wireRS:nonCullRS);
 				BindRasterizerState(wireRender?wireRS:nonCullRS,context);
 
 			int matsiz = mesh->materialIndices.size();
@@ -3484,54 +3116,22 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 				UpdateBuffer(constantBuffer,&cb,context);
 			}
 
-
-			//Instance* instanceData=new Instance[visibleInstances.size()];
-			//int k=0;
-			//for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
-			//	if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
-			//		if(mesh->softBody || (*viter)->armatureDeform)
-			//			instanceData[k] = Instance( XMMatrixIdentity() );
-			//		else 
-			//			instanceData[k]=Instance(
-			//				XMMatrixTranspose( XMLoadFloat4x4(&(*viter)->world) )
-			//				);
-			//		++k;
-			//	}
-			//}
-			//if(k<1)
-			//	continue;
-
-			//UpdateBuffer(mesh->meshInstanceBuffer,instanceData,context,sizeof(Instance)*visibleInstances.size());
-			//delete[visibleInstances.size()] instanceData;
-
-
-
 			int k=0;
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
 				if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
-					if(mesh->softBody || (*viter)->armatureDeform)
-						mesh->instances[passIdentifier][k] = Instance( XMMatrixIdentity() );
+					if (mesh->softBody || (*viter)->armatureDeform)
+						mesh->AddRenderableInstance(Instance(XMMatrixIdentity()),k,thread);
 					else 
-						mesh->instances[passIdentifier][k]=Instance(
-							XMMatrixTranspose( XMLoadFloat4x4(&(*viter)->world) )
-							);
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, thread);
 					++k;
 				}
 			}
 			if(k<1)
 				continue;
 
-			UpdateBuffer(mesh->meshInstanceBuffer,mesh->instances[passIdentifier].data(),context,sizeof(Instance)*visibleInstances.size());
-			
+			mesh->UpdateRenderableInstances(visibleInstances.size(), thread, context);
 				
 				
-			//ID3D11Buffer* vertexBuffers[2] = {
-			//	(mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff)
-			//	,mesh->meshInstanceBuffer};
-			//UINT strides[2] = {sizeof( Vertex ),sizeof(Instance)};
-			//UINT offsets[2] = {0,0};
-			//context->IASetVertexBuffers( 0, 2, vertexBuffers, strides, offsets );
-			//context->IASetIndexBuffer(mesh->meshIndexBuff,DXGI_FORMAT_R32_UINT,0);
 			BindIndexBuffer(mesh->meshIndexBuff,context);
 			BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
 			BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
@@ -3542,25 +3142,12 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 				if(!iMat->transparent && !iMat->isSky && !iMat->water){
 					
 					if(iMat->shadeless)
-						//context->OMSetDepthStencilState(depthStencilState, STENCILREF_SHADELESS);
 						BindDepthStencilState(depthStencilState,STENCILREF_SHADELESS,context);
 					if(iMat->subsurface_scattering)
-						//context->OMSetDepthStencilState(depthStencilState, STENCILREF_SKIN);
 						BindDepthStencilState(depthStencilState,STENCILREF_SKIN,context);
 					else
-						//context->OMSetDepthStencilState(depthStencilState, mesh->stencilRef);
 						BindDepthStencilState(depthStencilState,mesh->stencilRef,context);
 
-					//MaterialCB* mcb = (MaterialCB*)_aligned_malloc(sizeof(MaterialCB),16);
-					//mcb->difColor=XMFLOAT4A(iMat->diffuseColor.x,iMat->diffuseColor.y,iMat->diffuseColor.z,iMat->alpha);
-					//mcb->hasRefNorTexSpe=XMFLOAT4A(iMat->hasRefMap && refRes,iMat->hasNormalMap,iMat->hasTexture,iMat->hasSpecularMap);
-					//mcb->specular=iMat->specular;
-					//mcb->refractionIndexMovingTexEnv=XMFLOAT4A(iMat->refraction_index,iMat->texOffset.x,iMat->texOffset.y,iMat->enviroReflection);
-					//mcb->shadeless=iMat->shadeless;
-					//mcb->specular_power=iMat->specular_power;
-					//mcb->toon=iMat->toonshading;
-					//mcb->matIndex=m;
-					//mcb->emit=iMat->emit;
 
 					MaterialCB* mcb = new MaterialCB(*iMat,m);
 
@@ -3572,17 +3159,9 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 					if(!wireRender) BindTexturePS(iMat->refMap,4,context);
 					if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
 					if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
-					if(DX11Eff) //context->DSSetShaderResources(0,1,&iMat->displacementMap);
+					if(DX11Eff)
 						BindTextureDS(iMat->displacementMap,0,context);
 					
-					//MatIndexBuf ib;
-					//ib.matIndex=m;
-					//ib.padding=XMFLOAT3(0,0,0);
-
-					//UpdateBuffer(matIndexBuf,&ib,context);
-
-					//context->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),0,0,0);
-
 					DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
 				}
 				m++;
@@ -3591,10 +3170,6 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 		}
 
 		
-		//context->VSSetShader( 0, NULL, 0 );
-		//context->HSSetShader( 0, NULL, 0 );
-		//context->DSSetShader( 0, NULL, 0 );
-		//context->PSSetShader( 0, NULL, 0 );
 		BindPS(nullptr,context);
 		BindVS(nullptr,context);
 		BindDS(nullptr,context);
@@ -3604,7 +3179,7 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 
 }
 void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* nor, ID3D11DeviceContext* context, int passIdentifier){
+		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* nor, ID3D11DeviceContext* context){
 			
 	if(objects_water.empty())
 		return;
@@ -3625,19 +3200,12 @@ void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceVie
 		for(Cullable* object : culledObjects)
 			culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
 
-		//D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 		BindPrimitiveTopology(TRIANGLELIST,context);
 		BindVertexLayout(vertexLayout,context);
-		//context->IASetInputLayout( vertexLayout );
-		//context->PSSetShader( wireRender?simplestPS:waterPS, NULL, 0 );
 		BindPS(wireRender?simplestPS:waterPS,context);
-		//context->VSSetShader( waterVS, NULL, 0 );
 		BindVS(vertexShader10,context);
 
-		//context->PSSetSamplers(0, 1, &texSampler);
-		//context->PSSetSamplers(1, 1, &mapSampler);
 		BindSamplerPS(texSampler,0,context);
 		BindSamplerPS(mapSampler,1,context);
 	
@@ -3647,10 +3215,6 @@ void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceVie
 		if(!wireRender) BindTexturePS(depth,7,context);
 		if(!wireRender) BindTexturePS(nor,8,context);
 
-		//context->VSSetConstantBuffers(0,1,&staticCb);
-
-		//context->PSSetConstantBuffers( 0, 1, &pixelCB );
-		//context->PSSetConstantBuffers( 1, 1, &fxCb );
 		
 		BindConstantBufferVS(staticCb,0,context);
 		BindConstantBufferPS(pixelCB,0,context);
@@ -3660,21 +3224,10 @@ void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceVie
 		BindConstantBufferPS(matCb,2,context);
 
 	
-		//float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		//UINT sampleMask   = 0xffffffff;
-		//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 		BindBlendState(blendState,context);
-		//if(opaque) context->OMSetBlendState(blendState, blendFactor, sampleMask);
-		//if(transparent) context->OMSetBlendState(blendStateTransparent, blendFactor, sampleMask);
-		//context->OMSetDepthStencilState(depthReadStencilState, STENCILREF_EMPTY);
-		//context->RSSetState(wireRender?wireRS:rasterizerState);
 		BindDepthStencilState(depthReadStencilState,STENCILREF_EMPTY,context);
 		BindRasterizerState(wireRender?wireRS:rasterizerState,context);
 	
-		//context->VSSetConstantBuffers( 2, 1, &matCb );
-		//context->PSSetConstantBuffers( 2, 1, &matCb );
-		//context->VSSetConstantBuffers(3,1,&matIndexBuf);
-		//context->PSSetConstantBuffers(3,1,&matIndexBuf);
 
 		
 		for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
@@ -3685,31 +3238,21 @@ void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceVie
 			int matsiz = mesh->materialIndices.size();
 
 				
-			int k=0;
-			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
-				if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
-					if(mesh->softBody || (*viter)->armatureDeform)
-						mesh->instances[passIdentifier][k] = Instance( XMMatrixIdentity() );
-					else 
-						mesh->instances[passIdentifier][k]=Instance(
-							XMMatrixTranspose( XMLoadFloat4x4(&(*viter)->world) )
-							);
+			int k = 0;
+			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
+				if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
+					if (mesh->softBody || (*viter)->armatureDeform)
+						mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), k, GRAPHICSTHREAD_MISC1);
+					else
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, GRAPHICSTHREAD_MISC1);
 					++k;
 				}
 			}
-			if(k<1)
+			if (k<1)
 				continue;
 
-			UpdateBuffer(mesh->meshInstanceBuffer,mesh->instances[passIdentifier].data(),context,sizeof(Instance)*visibleInstances.size());
-			
+			mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_MISC1, context);
 				
-			//ID3D11Buffer* vertexBuffers[2] = {
-			//	(mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff)
-			//	,mesh->meshInstanceBuffer};
-			//UINT strides[2] = {sizeof( Vertex ),sizeof(Instance)};
-			//UINT offsets[2] = {0,0};
-			//context->IASetVertexBuffers( 0, 2, vertexBuffers, strides, offsets );
-			//context->IASetIndexBuffer(mesh->meshIndexBuff,DXGI_FORMAT_R32_UINT,0);
 			BindIndexBuffer(mesh->meshIndexBuff,context);
 			BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
 			BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
@@ -3719,16 +3262,6 @@ void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceVie
 
 				if(iMat->water){
 
-				//MaterialCB* mcb = (MaterialCB*)_aligned_malloc(sizeof(MaterialCB),16);
-				//mcb->difColor=XMFLOAT4(iMat->diffuseColor.x,iMat->diffuseColor.y,iMat->diffuseColor.z,iMat->alpha);
-				//mcb->hasRefNorTexSpe=XMFLOAT4(iMat->hasRefMap,iMat->hasNormalMap,iMat->hasTexture,iMat->hasSpecularMap);
-				//mcb->specular=iMat->specular;
-				//mcb->refractionIndexMovingTexEnv=XMFLOAT4(iMat->refraction_index,iMat->texOffset.x,iMat->texOffset.y,iMat->enviroReflection);
-				//mcb->shadeless=iMat->shadeless;
-				//mcb->specular_power=iMat->specular_power;
-				//mcb->toon=iMat->toonshading;
-				//mcb->matIndex=m;
-				//mcb->emit=iMat->emit;
 				MaterialCB* mcb = new MaterialCB(*iMat,m);
 
 				UpdateBuffer(matCb,mcb,context);
@@ -3738,14 +3271,6 @@ void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceVie
 				if(!wireRender) BindTexturePS(iMat->refMap,4,context);
 				if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
 				if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
-					
-				//MatIndexBuf ib;
-				//ib.matIndex=m;
-				//ib.padding=XMFLOAT3(0,0,0);
-
-				//UpdateBuffer(matIndexBuf,&ib,context);
-
-				//context->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),0,0,0);
 
 				DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
 				}
@@ -3757,7 +3282,7 @@ void wiRenderer::DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceVie
 
 }
 void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context, int passIdentifier){
+		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context){
 
 	if(objects_trans.empty())
 		return;
@@ -3778,19 +3303,11 @@ void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResou
 		for(Cullable* object : culledObjects)
 			culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
 
-		//D3D11_MAPPED_SUBRESOURCE mappedResource;
-
-		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 		BindPrimitiveTopology(TRIANGLELIST,context);
 		BindVertexLayout(vertexLayout,context);
-		//context->IASetInputLayout( vertexLayout );
-		//context->PSSetShader( wireRender?simplestPS:transparentPS, NULL, 0 );
 		BindPS(wireRender?simplestPS:transparentPS,context);
-		//context->VSSetShader( vertexShader10, NULL, 0 );
 		BindVS(vertexShader10,context);
 
-		//context->PSSetSamplers(0, 1, &texSampler);
-		//context->PSSetSamplers(1, 1, &mapSampler);
 		BindSamplerPS(texSampler,0,context);
 		BindSamplerPS(mapSampler,1,context);
 	
@@ -3799,10 +3316,6 @@ void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResou
 		if(!wireRender) BindTexturePS(refracRes,2,context);
 		if(!wireRender) BindTexturePS(depth,7,context);
 
-	
-		//context->VSSetConstantBuffers(0,1,&staticCb);
-		//context->PSSetConstantBuffers( 0, 1, &pixelCB );
-		//context->PSSetConstantBuffers( 1, 1, &fxCb );
 
 		BindConstantBufferVS(staticCb,0,context);
 		BindConstantBufferPS(pixelCB,0,context);
@@ -3811,22 +3324,10 @@ void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResou
 		BindConstantBufferVS(matCb,2,context);
 		BindConstantBufferPS(matCb,2,context);
 
-	
-		//float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		//UINT sampleMask   = 0xffffffff;
-		//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 		BindBlendState(blendState,context);
-		//if(opaque) context->OMSetBlendState(blendState, blendFactor, sampleMask);
-		//if(transparent) context->OMSetBlendState(blendStateTransparent, blendFactor, sampleMask);
-		//context->OMSetDepthStencilState(depthStencilState, STENCILREF_EMPTY);
-		//context->RSSetState(wireRender?wireRS:rasterizerState);
 		BindDepthStencilState(depthStencilState,STENCILREF_TRANSPARENT,context);
 		BindRasterizerState(wireRender?wireRS:rasterizerState,context);
 	
-		//context->VSSetConstantBuffers( 2, 1, &matCb );
-		//context->PSSetConstantBuffers( 2, 1, &matCb );
-		//context->VSSetConstantBuffers(3,1,&matIndexBuf);
-		//context->PSSetConstantBuffers(3,1,&matIndexBuf);
 
 		for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
@@ -3843,55 +3344,32 @@ void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResou
 
 				
 			
-			int k=0;
-			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
-				if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
-					if(mesh->softBody || (*viter)->armatureDeform)
-						mesh->instances[passIdentifier][k] = Instance( XMMatrixIdentity() );
-					else 
-						mesh->instances[passIdentifier][k]=Instance(
-							XMMatrixTranspose( XMLoadFloat4x4(&(*viter)->world) )
-							);
+			int k = 0;
+			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
+				if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
+					if (mesh->softBody || (*viter)->armatureDeform)
+						mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), k, GRAPHICSTHREAD_MISC1);
+					else
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, GRAPHICSTHREAD_MISC1);
 					++k;
 				}
 			}
-			if(k<1)
+			if (k<1)
 				continue;
 
-			UpdateBuffer(mesh->meshInstanceBuffer,mesh->instances[passIdentifier].data(),context,sizeof(Instance)*visibleInstances.size());
-			
+			mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_MISC1, context);
+
 				
-				
-			//ID3D11Buffer* vertexBuffers[2] = {
-			//	(mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff)
-			//	,mesh->meshInstanceBuffer};
-			//UINT strides[2] = {sizeof( Vertex ),sizeof(Instance)};
-			//UINT offsets[2] = {0,0};
-			//context->IASetVertexBuffers( 0, 2, vertexBuffers, strides, offsets );
-			//context->IASetIndexBuffer(mesh->meshIndexBuff,DXGI_FORMAT_R32_UINT,0);
 			BindIndexBuffer(mesh->meshIndexBuff,context);
 			BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
 			BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
 				
-	//#ifdef USE_GPU_SKINNING
-	//		context->VSSetConstantBuffers( 1, 1, &mesh->boneBuffer );
-	//#endif
 
 			int m=0;
 			for(Material* iMat : mesh->materials){
 
 				if(iMat->transparent && iMat->alpha>0 && !iMat->water && !iMat->isSky){
 
-				//MaterialCB* mcb = (MaterialCB*)_aligned_malloc(sizeof(MaterialCB),16);
-				//mcb->difColor=XMFLOAT4(iMat->diffuseColor.x,iMat->diffuseColor.y,iMat->diffuseColor.z,iMat->alpha);
-				//mcb->hasRefNorTexSpe=XMFLOAT4(iMat->hasRefMap,iMat->hasNormalMap,iMat->hasTexture,iMat->hasSpecularMap);
-				//mcb->specular=iMat->specular;
-				//mcb->refractionIndexMovingTexEnv=XMFLOAT4(iMat->refraction_index,iMat->texOffset.x,iMat->texOffset.y,iMat->enviroReflection);
-				//mcb->shadeless=iMat->shadeless;
-				//mcb->specular_power=iMat->specular_power;
-				//mcb->toon=iMat->toonshading;
-				//mcb->matIndex=m;
-				//mcb->emit=iMat->emit;
 					
 				MaterialCB* mcb = new MaterialCB(*iMat,m);
 
@@ -3903,14 +3381,6 @@ void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResou
 				if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
 				if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
 					
-				//MatIndexBuf ib;
-				//ib.matIndex=m;
-				//ib.padding=XMFLOAT3(0,0,0);
-
-				//UpdateBuffer(matIndexBuf,&ib,context);
-
-				//context->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),0,0,0);
-				
 				DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
 				}
 				m++;
@@ -4177,12 +3647,8 @@ void wiRenderer::FinishLoading(){
 	everyObject.insert(everyObject.end(), objects_trans.begin(), objects_trans.end());
 	everyObject.insert(everyObject.end(), objects_water.begin(), objects_water.end());
 
-	for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter)
-		addVertexCount(iter->second->vertices.size());
-
 	physicsEngine->FirstRunWorld();
 	physicsEngine->addWind(wind.direction);
-
 	for (Object* o : everyObject){
 		for (wiEmittedParticle* e : o->eParticleSystems){
 			emitterSystems[e->name].push_back(e);
@@ -4199,12 +3665,35 @@ void wiRenderer::FinishLoading(){
 	Update();
 	UpdateRenderInfo(nullptr);
 	UpdateLights();
-	GeneratewiSPTree(spTree,vector<Cullable*>(objects.begin(),objects.end()),GENERATE_OCTREE);
-	GeneratewiSPTree(spTree_trans,vector<Cullable*>(objects_trans.begin(),objects_trans.end()),GENERATE_OCTREE);
-	GeneratewiSPTree(spTree_water,vector<Cullable*>(objects_water.begin(),objects_water.end()),GENERATE_OCTREE);
-	GeneratewiSPTree(spTree_lights,vector<Cullable*>(lights.begin(),lights.end()),GENERATE_OCTREE);
+	GenerateSPTree(spTree,vector<Cullable*>(objects.begin(),objects.end()),SPTREE_GENERATE_OCTREE);
+	GenerateSPTree(spTree_trans,vector<Cullable*>(objects_trans.begin(),objects_trans.end()),SPTREE_GENERATE_OCTREE);
+	GenerateSPTree(spTree_water,vector<Cullable*>(objects_water.begin(),objects_water.end()),SPTREE_GENERATE_OCTREE);
+	GenerateSPTree(spTree_lights,vector<Cullable*>(lights.begin(),lights.end()),SPTREE_GENERATE_OCTREE);
 	SetUpCubes();
 	SetUpBoneLines();
+
+
+	vector<thread> aoThreads(0);
+
+	for (Object* o : objects)
+	{
+		//if (o->mesh->renderable && !o->mesh->calculatedAO && o->mesh->usedBy.size() == 1 && !o->isDynamic() && o->particleEmitter != Object::EMITTER_INVISIBLE)
+		if (o->mesh->renderable && o->mesh->usedBy.size() <2)
+		{
+			//aoThreads.push_back(thread(CalculateVertexAO, o));
+		}
+	}
+
+	for (auto& t : aoThreads)
+	{
+		t.join();
+	}
+
+	for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter)
+	{
+		//iter->second->CreateBuffers();
+		addVertexCount(iter->second->vertices.size());
+	}
 
 }
 
@@ -4337,8 +3826,6 @@ void wiRenderer::UpdateLights()
 wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickType)
 {
 	RAY ray = getPickRay(cursorX, cursorY);
-	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
-	XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
 
 	CulledCollection culledwiRenderer;
 	CulledList culledObjects;
@@ -4363,42 +3850,13 @@ wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickTyp
 
 		vector<Picked> pickPoints;
 
-		if(!culledObjects.empty())
-		{
-			for(Cullable* culled : culledObjects){
-				Object* object = (Object*)culled;
-				Mesh* mesh = object->mesh;
-				XMMATRIX& objectMat = XMLoadFloat4x4(&object->world);
-
-				for(int i=0;i<mesh->indices.size();i+=3){
-					int i0=mesh->indices[i],i1=mesh->indices[i+1],i2=mesh->indices[i+2];
-					Vertex& v0=mesh->skinnedVertices[i0],v1=mesh->skinnedVertices[i1],v2=mesh->skinnedVertices[i2];
-					XMVECTOR& V0=
-						XMVector4Transform(XMLoadFloat4(&v0.pos),objectMat)
-						,V1=XMVector4Transform(XMLoadFloat4(&v1.pos),objectMat)
-						,V2=XMVector4Transform(XMLoadFloat4(&v2.pos),objectMat);
-					float distance = 0;
-					if(TriangleTests::Intersects(rayOrigin,rayDirection,V0,V1,V2,distance)){
-						XMVECTOR& pos = XMVectorAdd(rayOrigin,rayDirection*distance);
-						XMVECTOR& nor = XMVector3Normalize( XMVector3Cross( XMVectorSubtract(V1,V0),XMVectorSubtract(V2,V1) ) );
-						Picked picked = Picked();
-						picked.object = object;
-						XMStoreFloat3(&picked.position,pos);
-						XMStoreFloat3(&picked.normal,nor);
-						pickPoints.push_back(picked);
-					}
-				}
-
-			}
-		}
+		RayIntersectMeshes(ray, culledObjects, pickPoints);
 
 		if(!pickPoints.empty()){
-			XMFLOAT3 eye;
-			XMStoreFloat3(&eye,rayOrigin);
 			Picked min = pickPoints.front();
-			float mini = wiMath::DistanceEstimated(min.position,eye);
+			float mini = wiMath::DistanceSquared(min.position,ray.origin);
 			for(int i=1;i<pickPoints.size();++i){
-				if(float nm = wiMath::DistanceEstimated(pickPoints[i].position,eye)<mini){
+				if(float nm = wiMath::DistanceSquared(pickPoints[i].position,ray.origin)<mini){
 					min=pickPoints[i];
 					mini=nm;
 				}
@@ -4418,6 +3876,116 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 		,SCREENWIDTH,SCREENHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->Projection,wiRenderer::getCamera()->View,XMMatrixIdentity());
 	XMVECTOR& rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
 	return RAY(lineStart,rayDirection);
+}
+
+void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points, bool dynamicObjects)
+{
+	if (!culledObjects.empty())
+	{
+		XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
+		XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
+
+		for (Cullable* culled : culledObjects){
+			Object* object = (Object*)culled;
+			if (!dynamicObjects && object->isDynamic())
+			{
+				continue;
+			}
+
+			Mesh* mesh = object->mesh;
+			XMMATRIX& objectMat = XMLoadFloat4x4(&object->world);
+
+			for (int i = 0; i<mesh->indices.size(); i += 3){
+				int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
+				Vertex& v0 = mesh->skinnedVertices[i0], v1 = mesh->skinnedVertices[i1], v2 = mesh->skinnedVertices[i2];
+				XMVECTOR& V0 =
+					XMVector4Transform(XMLoadFloat4(&v0.pos), objectMat)
+					, V1 = XMVector4Transform(XMLoadFloat4(&v1.pos), objectMat)
+					, V2 = XMVector4Transform(XMLoadFloat4(&v2.pos), objectMat);
+				float distance = 0;
+				if (TriangleTests::Intersects(rayOrigin, rayDirection, V0, V1, V2, distance)){
+					XMVECTOR& pos = XMVectorAdd(rayOrigin, rayDirection*distance);
+					XMVECTOR& nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V1, V0), XMVectorSubtract(V2, V1)));
+					Picked picked = Picked();
+					picked.object = object;
+					XMStoreFloat3(&picked.position, pos);
+					XMStoreFloat3(&picked.normal, nor);
+					points.push_back(picked);
+				}
+			}
+
+		}
+	}
+}
+
+void wiRenderer::CalculateVertexAO(Object* object)
+{
+	//TODO
+
+	static const float minAmbient = 0.05f;
+	static const float falloff = 0.1f;
+
+	Mesh* mesh = object->mesh;
+
+	XMMATRIX& objectMat = object->getTransform();
+
+	CulledCollection culledwiRenderer;
+	CulledList culledObjects;
+	wiSPTree* searchTree = spTree;
+
+	int ind = 0;
+	for (SkinnedVertex& vert : mesh->vertices)
+	{
+		float ambientShadow = 0.0f;
+
+		XMFLOAT3 vPos, vNor;
+
+		//XMVECTOR p = XMVector4Transform(XMVectorSet(vert.pos.x, vert.pos.y, vert.pos.z, 1), XMLoadFloat4x4(&object->world));
+		//XMVECTOR n = XMVector3Transform(XMVectorSet(vert.nor.x, vert.nor.y, vert.nor.z, 0), XMLoadFloat4x4(&object->world));
+
+		//XMStoreFloat3(&vPos, p);
+		//XMStoreFloat3(&vNor, n);
+
+		Vertex v = TransformVertex(mesh, vert, object->getTransform());
+		vPos.x = v.pos.x;
+		vPos.y = v.pos.y;
+		vPos.z = v.pos.z;
+		vNor.x = v.nor.x;
+		vNor.y = v.nor.y;
+		vNor.z = v.nor.z;
+
+			RAY ray = RAY(vPos, vNor);
+			XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
+			XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
+
+			wiSPTree::getVisible(searchTree->root, ray, culledObjects);
+
+			vector<Picked> points;
+
+			RayIntersectMeshes(ray, culledObjects, points, false);
+
+
+			if (!points.empty()){
+				Picked min = points.front();
+				float mini = wiMath::DistanceSquared(min.position, ray.origin);
+				for (int i = 1; i<points.size(); ++i){
+					if (float nm = wiMath::DistanceSquared(points[i].position, ray.origin)<mini){
+						min = points[i];
+						mini = nm;
+					}
+				}
+
+				float ambientLightIntensity = wiMath::Clamp(abs(wiMath::Distance(ray.origin, min.position)) / falloff, 0, 1);
+				ambientLightIntensity += minAmbient;
+
+				vert.nor.w = ambientLightIntensity;
+				mesh->skinnedVertices[ind].nor.w = ambientLightIntensity;
+			}
+
+			++ind;
+	}
+
+	mesh->calculatedAO = true;
 }
 
 void wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX& transform, const string& ident, PHYSICS* physicsEngine){

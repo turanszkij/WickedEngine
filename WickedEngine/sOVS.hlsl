@@ -3,7 +3,7 @@
 
 struct Input{
 	float4 pos : POSITION;
-	float3 nor : NORMAL;
+	float4 nor : NORMAL;
 	float4 tex : TEXCOORD0;
 	float4 bon : TEXCOORD1;
 	float4 wei : TEXCOORD2;

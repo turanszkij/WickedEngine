@@ -4,6 +4,7 @@
 #include "wiLoader.h"
 #include "wiMath.h"
 #include "wiFrustum.h"
+#include "wiRandom.h"
 
 ID3D11InputLayout* wiHairParticle::il;
 ID3D11VertexShader* wiHairParticle::vs;
@@ -366,13 +367,13 @@ void wiHairParticle::SetUpPatches()
 
 			float density = (float)(denMod[0]+denMod[1]+denMod[2])/3.0f*avgPatchSize;
 			int rdense = ( density - (int)density ) * 100;
-			density+=(rand()%100)<=rdense;
+			density += (wiRandom::getRandom(0, 99)) <= rdense;
 			int PATCHSIZE = material->texture?(int)density:(int)density*10;
 			  
 			if(PATCHSIZE){
 
 				for(int p=0;p<PATCHSIZE;++p){
-					float f=rand()%1000 * 0.001f,g=rand()%1000 * 0.001f;
+					float f = wiRandom::getRandom(0, 1000) * 0.001f, g = wiRandom::getRandom(0, 1000) * 0.001f;
 					if (f + g > 1)
 					{
 						f = 1 - f;
@@ -389,13 +390,13 @@ void wiHairParticle::SetUpPatches()
 						,	g
 						);
 					XMVECTOR nbar=XMVectorBaryCentric(
-							XMLoadFloat3(&v[0]->nor)
-						,	XMLoadFloat3(&v[1]->nor)
-						,	XMLoadFloat3(&v[2]->nor)
+							XMLoadFloat4(&v[0]->nor)
+						,	XMLoadFloat4(&v[1]->nor)
+						,	XMLoadFloat4(&v[2]->nor)
 						,	f
 						,	g
 						);
-					int ti=rand()%3;
+					int ti = wiRandom::getRandom(0, 2);
 					XMVECTOR tangent = XMVector3Normalize( XMVectorSubtract(pos[ti],pos[(ti+1)%3]) );
 					
 					Point addP;
@@ -404,8 +405,8 @@ void wiHairParticle::SetUpPatches()
 					XMStoreFloat4(&addP.tangent,tangent);
 
 					float lbar = lenMod[0] + f*(lenMod[1]-lenMod[0]) + g*(lenMod[2]-lenMod[0]);
-					addP.normalLen.w=length*lbar+(float)(rand()%1001-500)*0.001f*length*lbar;
-					addP.posRand.w=rand()%1000;
+					addP.normalLen.w = length*lbar + (float)(wiRandom::getRandom(0, 1000) - 500)*0.001f*length*lbar;
+					addP.posRand.w = wiRandom::getRandom(0, 1000);
 					patches.back()->add(addP);
 				
 					XMFLOAT3 posN = XMFLOAT3(addP.posRand.x,addP.posRand.y,addP.posRand.z);
@@ -443,7 +444,7 @@ void wiHairParticle::SetUpPatches()
 		}
 	}
 
-	GeneratewiSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),GENERATE_OCTREE);
+	GenerateSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),SPTREE_GENERATE_OCTREE);
 	return;
 }
 void wiHairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMATRIX& newProj, ID3D11DeviceContext *context)

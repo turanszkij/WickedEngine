@@ -587,6 +587,7 @@
     <ClInclude Include="ForwardRenderableComponent.h" />
     <ClInclude Include="RenderableComponent.h" />
     <ClInclude Include="Renderable3DSceneComponent.h" />
+    <ClInclude Include="wiGraphicsThreads.h" />
     <ClInclude Include="wiTextureHelper.h" />
     <ClInclude Include="WickedEngine.h" />
     <ClInclude Include="wiCpuInfo.h" />

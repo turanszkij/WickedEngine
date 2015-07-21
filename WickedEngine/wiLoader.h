@@ -4,6 +4,7 @@
 #include "wiImageEffects.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
+#include "wiGraphicsThreads.h"
 
 class HitSphere;
 class wiParticle;
@@ -21,23 +22,23 @@ typedef map<string,Material*> MaterialCollection;
 
 struct SkinnedVertex
 {
-	XMFLOAT4 pos;
-	XMFLOAT3 nor;
-	XMFLOAT4 tex;
-	XMFLOAT4 bon;
-	XMFLOAT4 wei;
+	XMFLOAT4 pos; //pos, wind
+	XMFLOAT4 nor; //normal, vertex ao
+	XMFLOAT4 tex; //tex, matIndex, padding
+	XMFLOAT4 bon; //bone indices
+	XMFLOAT4 wei; //bone weights
 
 
 	SkinnedVertex(){
 		pos=XMFLOAT4(0,0,0,1);
-		nor=XMFLOAT3(0,0,0);
+		nor=XMFLOAT4(0,0,0,1); 
 		tex=XMFLOAT4(0,0,0,0);
 		bon=XMFLOAT4(0,0,0,0);
 		wei=XMFLOAT4(0,0,0,0);
 	};
 	SkinnedVertex(const XMFLOAT3& newPos){
 		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
-		nor=XMFLOAT3(0,0,0);
+		nor=XMFLOAT4(0,0,0,1);
 		tex=XMFLOAT4(0,0,0,0);
 		bon=XMFLOAT4(0,0,0,0);
 		wei=XMFLOAT4(0,0,0,0);
@@ -45,29 +46,22 @@ struct SkinnedVertex
 };
 struct Vertex
 {
-	XMFLOAT4 pos;
-	XMFLOAT3 nor;
-	XMFLOAT4 tex;
-	XMFLOAT4 pre;
-	//XMFLOAT4 bon;
-	//XMFLOAT4 wei;
-
+	XMFLOAT4 pos; //pos, wind
+	XMFLOAT4 nor; //normal, vertex ao
+	XMFLOAT4 tex; //tex, matIndex, padding
+	XMFLOAT4 pre; //previous frame position
 
 	Vertex(){
 		pos=XMFLOAT4(0,0,0,1);
-		nor=XMFLOAT3(0,0,0);
+		nor=XMFLOAT4(0,0,0,1);
 		tex=XMFLOAT4(0,0,0,0);
 		pre=XMFLOAT4(0,0,0,0);
-		//bon=XMFLOAT4(0,0,0,0);
-		//wei=XMFLOAT4(0,0,0,0);
 	};
 	Vertex(const XMFLOAT3& newPos){
 		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
-		nor=XMFLOAT3(0,0,0);
+		nor=XMFLOAT4(0,0,0,1);
 		tex=XMFLOAT4(0,0,0,0);
 		pre=XMFLOAT4(0,0,0,0);
-		//bon=XMFLOAT4(0,0,0,0);
-		//wei=XMFLOAT4(0,0,0,0);
 	}
 };
 struct Instance
@@ -77,14 +71,27 @@ struct Instance
 	XMFLOAT4A mat2;
 
 	Instance(){
-		mat0=XMFLOAT4A(1,0,0,0);
-		mat0=XMFLOAT4A(0,1,0,0);
-		mat0=XMFLOAT4A(0,0,1,0);
+		mat0 = XMFLOAT4A(1, 0, 0, 0);
+		mat0 = XMFLOAT4A(0, 1, 0, 0);
+		mat0 = XMFLOAT4A(0, 0, 1, 0);
 	}
 	Instance(const XMMATRIX& matIn){
+		Create(matIn);
+	}
+	void Create(const XMMATRIX& matIn)
+	{
 		XMStoreFloat4A(&mat0, matIn.r[0]);
 		XMStoreFloat4A(&mat1, matIn.r[1]);
 		XMStoreFloat4A(&mat2, matIn.r[2]);
+	}
+
+	void* operator new(size_t size)
+	{
+		return _aligned_malloc(size, 16);
+	}
+		void operator delete(void* p)
+	{
+		if (p) _aligned_free(p);
 	}
 };
 struct Material
@@ -286,7 +293,8 @@ struct Mesh{
 	vector<XMFLOAT3>		physicsverts;
 	vector<unsigned int>	physicsindices;
 	vector<int>				physicalmapGP;
-	vector<Instance>		instances[5];
+
+	vector<Instance>		instances[GRAPHICSTHREAD_COUNT];
 
 	ID3D11Buffer* meshVertBuff;
 	ID3D11Buffer* meshInstanceBuffer;
@@ -300,6 +308,8 @@ struct Mesh{
 	bool renderable,doubleSided;
 	STENCILREF stencilRef;
 	vector<int> usedBy;
+
+	bool calculatedAO;
 
 	int armatureIndex;
 	Armature* armature;
@@ -343,8 +353,12 @@ struct Mesh{
 	void LoadFromFile(const string& newName, const string& fname
 		, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier="");
 	bool buffersComplete;
+	void Optimize();
 	void CreateBuffers();
+	void CreateVertexArrays();
 	void AddInstance(int count);
+	void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD thread);
+	void UpdateRenderableInstances(int count, GRAPHICSTHREAD thread, ID3D11DeviceContext* context);
 	void init(){
 		parent="";
 		vertices.resize(0);
@@ -376,6 +390,7 @@ struct Mesh{
 		goalPositions.resize(0);
 		goalNormals.resize(0);
 		buffersComplete=false;
+		calculatedAO = false;
 	}
 	
 	bool hasArmature()const{return armature!=nullptr;}
@@ -491,6 +506,11 @@ struct Object : public Streamable, public Transform
 	ID3D11Buffer* trailBuff;
 
 	int physicsObjectI;
+
+	bool isDynamic()
+	{
+		return ((physicsObjectI >= 0 && !kinematic) || mesh->hasArmature() || mesh->softBody);
+	}
 
 	Object(){};
 	Object(string newName):Transform(){
@@ -885,6 +905,6 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 
 #include "wiSPTree.h"
 class wiSPTree;
-#define GENERATE_QUADTREE 0
-#define GENERATE_OCTREE 1
-void GeneratewiSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type=GENERATE_QUADTREE);
+#define SPTREE_GENERATE_QUADTREE 0
+#define SPTREE_GENERATE_OCTREE 1
+void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type = SPTREE_GENERATE_QUADTREE);

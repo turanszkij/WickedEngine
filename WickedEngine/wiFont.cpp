@@ -256,15 +256,15 @@ void wiFont::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID
 			pos+=fontStyles[style].recSize+sizSpa.x+sizSpa.y;
 		}
 	}
-	//wiRenderer::immediateContext->UpdateSubresource( vertexBuffer, 0, NULL, vertexList.data(), 0, 0 );
+	//wiRenderer::getImmediateContext()->UpdateSubresource( vertexBuffer, 0, NULL, vertexList.data(), 0, 0 );
 
-	wiRenderer::UpdateBuffer(vertexBuffer,vertexList.data(),context==nullptr?wiRenderer::immediateContext:context,sizeof(Vertex) * textlen * 4);
+	wiRenderer::UpdateBuffer(vertexBuffer,vertexList.data(),context==nullptr?wiRenderer::getImmediateContext():context,sizeof(Vertex) * textlen * 4);
 	//D3D11_MAPPED_SUBRESOURCE mappedResource;
 	//Vertex* dataPtr;
-	//wiRenderer::immediateContext->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+	//wiRenderer::getImmediateContext()->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 	//dataPtr = (Vertex*)mappedResource.pData;
 	//memcpy(dataPtr,vertexList.data(),sizeof(Vertex) * textlen * 4);
-	//wiRenderer::immediateContext->Unmap(vertexBuffer,0);
+	//wiRenderer::getImmediateContext()->Unmap(vertexBuffer,0);
 }
 
 void wiFont::LoadVertexBuffer()
@@ -361,7 +361,7 @@ void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSp
 	if(textlen){
 
 		if(context==nullptr)
-			context=wiRenderer::immediateContext;
+			context=wiRenderer::getImmediateContext();
 	
 		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLELIST,context);
 		wiRenderer::BindVertexLayout(vertexLayout,context);

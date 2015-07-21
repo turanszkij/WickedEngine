@@ -11,3 +11,7 @@ int wiRandom::getRandom(int minValue, int maxValue)
 	}
 	return minValue + rand() % (maxValue + 1 - minValue);
 }
+int wiRandom::getRandom(int maxValue)
+{
+	return getRandom(0, maxValue);
+}

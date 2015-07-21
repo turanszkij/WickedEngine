@@ -5,32 +5,44 @@ namespace wiMath
 
 	float Distance(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
-		XMVECTOR vector1 = XMLoadFloat3(&v1);
-		XMVECTOR vector2 = XMLoadFloat3(&v2);
-		XMVECTOR vectorSub = XMVectorSubtract(vector1, vector2);
-		XMVECTOR length = XMVector3Length(vectorSub);
-
-		float Distance = 0.0f;
-		XMStoreFloat(&Distance, length);
-		return Distance;
+		XMVECTOR& vector1 = XMLoadFloat3(&v1);
+		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+		return Distance(vector1, vector2);
 	}
-	float DistanceSqaured(const XMFLOAT3& v1, const XMFLOAT3& v2)
+	float DistanceSquared(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
-		XMVECTOR vector1 = XMLoadFloat3(&v1);
-		XMVECTOR vector2 = XMLoadFloat3(&v2);
-		XMVECTOR vectorSub = XMVectorSubtract(vector1, vector2);
-		XMVECTOR length = XMVector3LengthSq(vectorSub);
-
-		float Distance = 0.0f;
-		XMStoreFloat(&Distance, length);
-		return Distance;
+		XMVECTOR& vector1 = XMLoadFloat3(&v1);
+		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+		return DistanceSquared(vector1, vector2);
 	}
 	float DistanceEstimated(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
-		XMVECTOR vector1 = XMLoadFloat3(&v1);
-		XMVECTOR vector2 = XMLoadFloat3(&v2);
-		XMVECTOR vectorSub = XMVectorSubtract(vector1, vector2);
-		XMVECTOR length = XMVector3LengthEst(vectorSub);
+		XMVECTOR& vector1 = XMLoadFloat3(&v1);
+		XMVECTOR& vector2 = XMLoadFloat3(&v2);
+		return DistanceEstimated(vector1, vector2);
+	}
+	float Distance(const XMVECTOR& v1, const XMVECTOR& v2)
+	{
+		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
+		XMVECTOR& length = XMVector3Length(vectorSub);
+
+		float Distance = 0.0f;
+		XMStoreFloat(&Distance, length);
+		return Distance;
+	}
+	float DistanceSquared(const XMVECTOR& v1, const XMVECTOR& v2)
+	{
+		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
+		XMVECTOR& length = XMVector3LengthSq(vectorSub);
+
+		float Distance = 0.0f;
+		XMStoreFloat(&Distance, length);
+		return Distance;
+	}
+	float DistanceEstimated(const XMVECTOR& v1, const XMVECTOR& v2)
+	{
+		XMVECTOR& vectorSub = XMVectorSubtract(v1, v2);
+		XMVECTOR& length = XMVector3LengthEst(vectorSub);
 
 		float Distance = 0.0f;
 		XMStoreFloat(&Distance, length);

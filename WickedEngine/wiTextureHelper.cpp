@@ -5,17 +5,17 @@ wiTextureHelper::wiTextureHelperInstance* wiTextureHelper::instance = nullptr;
 
 wiTextureHelper::wiTextureHelperInstance::wiTextureHelperInstance()
 {
-	randomTexture = nullptr;
-	whiteTexture = nullptr;
-	blackTexture = nullptr;
-	colorGradeDefaultTexture = nullptr;
+	for (int i = 0; i < HELPERTEXTURE_COUNT; ++i)
+	{
+		helperTextures[i] = nullptr;
+	}
 }
 wiTextureHelper::wiTextureHelperInstance::~wiTextureHelperInstance()
 {
-	wiRenderer::SafeRelease(randomTexture);
-	wiRenderer::SafeRelease(whiteTexture);
-	wiRenderer::SafeRelease(blackTexture);
-	wiRenderer::SafeRelease(colorGradeDefaultTexture);
+	for (int i = 0; i < HELPERTEXTURE_COUNT; ++i)
+	{
+		wiRenderer::SafeRelease(helperTextures[i]);
+	}
 
 	for (auto& x : colorTextures)
 	{
@@ -27,9 +27,9 @@ wiTextureHelper::wiTextureHelperInstance::~wiTextureHelperInstance()
 
 wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64()
 {
-	if (randomTexture != nullptr)
+	if (helperTextures[HELPERTEXTURE_RANDOM64X64] != nullptr)
 	{
-		return randomTexture;
+		return helperTextures[HELPERTEXTURE_RANDOM64X64];
 	}
 
 	static const int dataLength = 64 * 64 * 4;
@@ -42,7 +42,7 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64
 		data[i + 3] = 255;
 	}
 
-	if (FAILED(CreateTexture(randomTexture, data, 64, 64, 4)))
+	if (FAILED(CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64, 4)))
 	{
 		delete[] data;
 		return nullptr;
@@ -50,14 +50,14 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64
 	delete[] data;
 
 
-	return randomTexture;
+	return helperTextures[HELPERTEXTURE_RANDOM64X64];
 }
 
 wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeDefaultTex()
 {
-	if (colorGradeDefaultTexture != nullptr)
+	if (helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT] != nullptr)
 	{
-		return colorGradeDefaultTexture;
+		return helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
 	}
 
 	static const int dataLength = 256 * 16 * 4;
@@ -82,7 +82,7 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeD
 		}
 	}
 
-	if (FAILED(CreateTexture(colorGradeDefaultTexture, data, 256, 16, 4)))
+	if (FAILED(CreateTexture(helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], data, 256, 16, 4)))
 	{
 		delete[] data;
 		return nullptr;
@@ -90,60 +90,17 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeD
 	delete[] data;
 
 
-	return colorGradeDefaultTexture;
+	return helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
 }
 
 wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getWhite()
 {
-	if (whiteTexture != nullptr)
-	{
-		return whiteTexture;
-	}
-
-	static const int dataLength = 2 * 2 * 4;
-	unsigned char* data = new unsigned char[dataLength];
-	for (int i = 0; i < dataLength; ++i)
-	{
-		data[i] = 255;
-	}
-
-	if (FAILED(CreateTexture(whiteTexture, data, 2, 2, 4)))
-	{
-		delete[] data;
-		return nullptr;
-	}
-	delete[] data;
-
-
-	return whiteTexture;
+	return getColor(wiColor(255, 255, 255, 255));
 }
 
 wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getBlack()
 {
-	if (blackTexture != nullptr)
-	{
-		return blackTexture;
-	}
-
-	static const int dataLength = 2 * 2 * 4;
-	unsigned char* data = new unsigned char[dataLength];
-	for (int i = 0; i < dataLength; i += 4)
-	{
-		data[i] = 0;
-		data[i + 1] = 0;
-		data[i + 2] = 0;
-		data[i + 3] = 255;
-	}
-
-	if (FAILED(CreateTexture(blackTexture, data, 2, 2, 4)))
-	{
-		delete[] data;
-		return nullptr;
-	}
-	delete[] data;
-
-
-	return blackTexture;
+	return getColor(wiColor(0, 0, 0, 255));
 }
 
 wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& color)

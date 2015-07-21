@@ -43,7 +43,7 @@ void Renderable3DSceneComponent::Initialize()
 	setLightShaftsEnabled(true);
 	setLensFlareEnabled(true);
 
-	setPreferredThreadingCount(0);
+	setPreferredThreadingCount(4);
 }
 
 void Renderable3DSceneComponent::Load()
@@ -151,8 +151,9 @@ void Renderable3DSceneComponent::Update(){
 	wiRenderer::Update();
 	wiRenderer::UpdateLights();
 	wiRenderer::SychronizeWithPhysicsEngine();
-	wiRenderer::UpdateRenderInfo(wiRenderer::immediateContext);
+	wiRenderer::UpdateRenderInfo(wiRenderer::getImmediateContext());
 	wiRenderer::UpdateSkinnedVB();
+	wiRenderer::UpdateImages();
 }
 
 void Renderable3DSceneComponent::Compose(){
@@ -174,7 +175,7 @@ void Renderable3DSceneComponent::RenderReflections(wiRenderer::DeviceContext con
 		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->View, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->refEye, getWaterPlane().getXMFLOAT4());
 		wiRenderer::DrawWorld(wiRenderer::getCamera()->refView, false, 0, context
 			, false, wiRenderer::SHADED_NONE
-			, nullptr, false, 1);
+			, nullptr, false, GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::DrawSky(wiRenderer::getCamera()->refEye, context);
 	}
 }
@@ -213,16 +214,15 @@ void Renderable3DSceneComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wi
 
 	rtWaterRipple.Activate(context, 0, 0, 0, 0); {
 		wiRenderer::DrawWaterRipples(context);
-		wiRenderer::ManageWaterRipples();
 	}
 	rtWater.Activate(context, mainRT.depth); {
 		wiRenderer::DrawWorldWater(wiRenderer::getCamera()->View, shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
-			, rtWaterRipple.shaderResource.back(), context, 2);
+			, rtWaterRipple.shaderResource.back(), context);
 	}
 
 	rtTransparent.Activate(context, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera()->View, shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
-			, context, 2);
+			, context);
 	}
 
 }

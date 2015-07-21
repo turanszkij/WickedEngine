@@ -41,7 +41,7 @@ HullInputType main(Input input)
 
 		//Out.clip = dot(pos, xClipPlane);
 
-		float3 normal = mul(normalize(input.nor), (float3x3)WORLD);
+		float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
 		affectWind(pos.xyz,xWind,time,input.tex.w,input.id,windRandomness,windWaveSize);
 
 		//VERTEX OFFSET MOTION BLUR

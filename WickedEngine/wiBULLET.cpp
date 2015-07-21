@@ -580,8 +580,10 @@ void BULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
 			mesh->skinnedVertices[i].pre=mesh->skinnedVertices[i].pos;
-			mesh->skinnedVertices[i].pos=XMFLOAT4(nodes[indexP].m_x.getX(),nodes[indexP].m_x.getY(),nodes[indexP].m_x.getZ(),1);
-			mesh->skinnedVertices[i].nor=XMFLOAT3(-nodes[indexP].m_n.getX(),-nodes[indexP].m_n.getY(),-nodes[indexP].m_n.getZ());
+			mesh->skinnedVertices[i].pos = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), 1);
+			mesh->skinnedVertices[i].nor.x = -nodes[indexP].m_n.getX();
+			mesh->skinnedVertices[i].nor.y = -nodes[indexP].m_n.getY();
+			mesh->skinnedVertices[i].nor.z = -nodes[indexP].m_n.getZ();
 			mesh->skinnedVertices[i].tex=mesh->vertices[i].tex;
 		}
 	}

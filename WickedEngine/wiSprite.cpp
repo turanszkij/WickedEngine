@@ -56,7 +56,7 @@ void wiSprite::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* co
 	}
 }
 void wiSprite::Draw(){
-	wiSprite::Draw(NULL,wiRenderer::immediateContext);
+	wiSprite::Draw(NULL,wiRenderer::getImmediateContext());
 }
 void wiSprite::DrawNormal(ID3D11DeviceContext* context){
 	if(normalPointer && effects.opacity<1 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){

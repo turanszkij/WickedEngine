@@ -10,10 +10,13 @@ private:
 	class wiTextureHelperInstance
 	{
 	private:
-		wiRenderer::TextureView randomTexture;
-		wiRenderer::TextureView colorGradeDefaultTexture;
-		wiRenderer::TextureView whiteTexture;
-		wiRenderer::TextureView blackTexture;
+		enum HELPERTEXTURES
+		{
+			HELPERTEXTURE_RANDOM64X64,
+			HELPERTEXTURE_COLORGRADEDEFAULT,
+			HELPERTEXTURE_COUNT
+		};
+		wiRenderer::TextureView helperTextures[HELPERTEXTURE_COUNT];
 
 		unordered_map<unsigned long, wiRenderer::TextureView> colorTextures;
 	public:
@@ -31,7 +34,7 @@ private:
 	static wiTextureHelperInstance* instance;
 
 public:
-	__forceinline static wiTextureHelperInstance* getInstance()
+	inline static wiTextureHelperInstance* getInstance()
 	{
 		if (instance != nullptr)
 			return instance;
@@ -39,7 +42,7 @@ public:
 		return instance = new wiTextureHelperInstance();
 	}
 
-	template<class T>
+	template<typename T>
 	static HRESULT CreateTexture(wiRenderer::TextureView& texture, T* data, UINT width, UINT height, UINT channelCount, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 	{
 		if (data == nullptr)

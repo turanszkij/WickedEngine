@@ -93,7 +93,7 @@ PixelOutputType main(PixelInputType PSIn)
 	bool unshaded = shadeless||colorMask.a;
 	float properties = unshaded?RT_UNSHADED : toonshaded?RT_TOON : 0.0f;
 			
-	Out.col = float4((baseColor.rgb+colorMask.rgb)*(1+emit),1);
+	Out.col = float4((baseColor.rgb+colorMask.rgb)*(1+emit)*PSIn.ao,1);
 	Out.nor = float4((normal.xyz),properties);
 	Out.vel = float4(PSIn.vel.xy*float2(-1,1),specular_power,spec.a);
 

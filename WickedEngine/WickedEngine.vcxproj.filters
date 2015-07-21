@@ -1411,6 +1411,9 @@
     <ClInclude Include="wiWaterPlane.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="wiGraphicsThreads.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />

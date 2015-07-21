@@ -1,8 +1,10 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiGraphicsThreads.h"
 
 struct Transform;
 struct Vertex;
+struct SkinnedVertex;
 struct Material;
 struct Object;
 struct BoneShaderBuffer;
@@ -35,7 +37,8 @@ class  wiRenderTarget;
 class  wiWaterPlane;
 
 typedef map<string,Mesh*> MeshCollection;
-typedef map<string,Material*> MaterialCollection;
+typedef map<string, Material*> MaterialCollection;
+typedef set<Cullable*> CulledList;
 
 class wiRenderer
 {
@@ -94,9 +97,8 @@ public:
 	static GraphicsDevice				graphicsDevice;
 	static DeviceContext				immediateContext;
 	static bool DX11,VSYNC,DEFERREDCONTEXT_SUPPORT;
-	static const int NUM_DCONTEXT = 5;
-	static DeviceContext deferredContexts[NUM_DCONTEXT];
-	static CommandList commandLists[NUM_DCONTEXT];
+	static DeviceContext deferredContexts[GRAPHICSTHREAD_COUNT];
+	static CommandList commandLists[GRAPHICSTHREAD_COUNT];
 	static mutex graphicsMutex;
 #ifndef WINSTORE_SUPPORT
 	static HRESULT InitDevice(HWND window, int screenW, int screenH, bool windowed);
@@ -107,11 +109,14 @@ public:
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
 	static void wiRenderer::ReleaseCommandLists();
 	static void wiRenderer::ExecuteDeferredContexts();
-	static void FinishCommandList(int THREAD);
+	static void FinishCommandList(GRAPHICSTHREAD thread);
 
 	static map<DeviceContext,long> drawCalls;
 	static long getDrawCallCount();
 	static bool getMultithreadingSupport(){ return DEFERREDCONTEXT_SUPPORT; }
+
+	inline static DeviceContext getImmediateContext(){ return immediateContext; }
+	inline static DeviceContext getDeferredContext(GRAPHICSTHREAD thread){ return deferredContexts[thread]; }
 
 	
 	static Sampler ssClampLin,ssClampPoi,ssMirrorLin,ssMirrorPoi,ssWrapLin,ssWrapPoi
@@ -299,13 +304,14 @@ protected:
 
 	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
 	static XMVECTOR InterPolateKeyFrames(const float& currentFrame, const int& frameCount,const std::vector<KeyFrame>& keyframes, KeyFrameType type);
-	static Vertex TransformVertex(const Mesh* mesh, const int& vertexI, const XMMATRIX& mat=XMMatrixIdentity());
-	XMFLOAT3 VertexVelocity(const Mesh* mesh, const int& vertexI);
+	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat=XMMatrixIdentity());
+	static Vertex TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat = XMMatrixIdentity());
+	static XMFLOAT3 VertexVelocity(const Mesh* mesh, const int& vertexI);
 
-	Armature* getArmatureByName(const string& get);
-	int getActionByName(Armature* armature, const string& get);
-	int getBoneByName(Armature* armature, const string& get);
-	Material* getMaterialByName(const string& get);
+	static Armature* getArmatureByName(const string& get);
+	static int getActionByName(Armature* armature, const string& get);
+	static int getBoneByName(Armature* armature, const string& get);
+	static Material* getMaterialByName(const string& get);
 	HitSphere* getSphereByName(const string& get);
 
 	static float GameSpeed,overrideGameSpeed;
@@ -917,16 +923,16 @@ public:
 	inline static void UpdateBuffer(BufferResource& buffer, const T* data,DeviceContext context=immediateContext, int dataSize = -1)
 	{
 		if(buffer != nullptr && data!=nullptr && context != nullptr){
-			D3D11_BUFFER_DESC desc;
+			static D3D11_BUFFER_DESC desc;
 			buffer->GetDesc(&desc);
-			HRESULT hr;
+			static HRESULT hr;
 			if(dataSize>(int)desc.ByteWidth){ //recreate the buffer if new datasize exceeds buffer size [SLOW][TEST!!!!]
 				buffer->Release();
 				desc.ByteWidth=dataSize*2;
 				hr=graphicsDevice->CreateBuffer( &desc, nullptr, &buffer );
 			}
 			if(desc.Usage == D3D11_USAGE_DYNAMIC){
-				D3D11_MAPPED_SUBRESOURCE mappedResource;
+				static D3D11_MAPPED_SUBRESOURCE mappedResource;
 				void* dataPtr;
 				context->Map(buffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 				dataPtr = (void*)mappedResource.pData;
@@ -962,14 +968,14 @@ public:
 	
 	static void DrawSky(const XMVECTOR&, ID3D11DeviceContext* context);
 	static void DrawWorld(const XMMATRIX&, bool DX11Eff, int tessF, ID3D11DeviceContext* context
-		, bool BlackOut, SHADED_TYPE shaded, ID3D11ShaderResourceView* refRes, bool grass, int passIdentifier = 1); //passidentifier is >1 (0 is for shadows)
+		, bool BlackOut, SHADED_TYPE shaded, ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread);
 	static void DrawForSO(ID3D11DeviceContext* context);
 	static void ClearShadowMaps(ID3D11DeviceContext* context);
 	static void DrawForShadowMap(ID3D11DeviceContext* context);
 	static void DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* nor, ID3D11DeviceContext* context, int passIdentifier=1);
+		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* nor, ID3D11DeviceContext* context);
 	static void DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context, int passIdentifier=1);
+		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context);
 	void DrawDebugSpheres(const XMMATRIX&, ID3D11DeviceContext* context);
 	static void DrawDebugLines(const XMMATRIX&, ID3D11DeviceContext* context);
 	static void DrawDebugBoxes(const XMMATRIX&, ID3D11DeviceContext* context);
@@ -1050,6 +1056,8 @@ public:
 	};
 	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);
 	static RAY getPickRay(long cursorX, long cursorY);
+	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points, bool dynamicObjects = true);
+	static void CalculateVertexAO(Object* object);
 
 	static PHYSICS* physicsEngine;
 	static void SychronizeWithPhysicsEngine();

@@ -23,9 +23,6 @@ PixelInputType main(Input input)
 		float4 posPrev = input.pre;
 		float4 vel = float4(0,0,0,1);
 		
-//#ifdef SKINNING_ON
-//		Skinning(pos,posPrev,input.nor,input.bon,input.wei);
-//#endif
 
 		pos = mul( pos,WORLD );
 
@@ -36,7 +33,7 @@ PixelInputType main(Input input)
 
 		Out.clip = dot(pos, xClipPlane);
 		
-		float3 normal = mul(normalize(input.nor), (float3x3)WORLD);
+		float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
 		affectWind(pos.xyz,xWind,time,input.tex.w,input.id,windRandomness,windWaveSize);
 
 		//VERTEX OFFSET MOTION BLUR
@@ -50,25 +47,14 @@ PixelInputType main(Input input)
 		Out.cam = xCamPos.xyz;
 		Out.tex = input.tex.xy;
 		Out.nor = normalize(normal);
-		/*float2x3 tanbin = tangentBinormal(Out.nor);
-		Out.tan=tanbin[0];
-		Out.bin=tanbin[1];*/
 
 
 		Out.ReflectionMapSamplingPos = mul(pos, xRefViewProjection );
-		/*Out.ShadowMapSamplingPos[0] = mul(pos, xShViewOprojection[0] );
-		Out.ShadowMapSamplingPos[1] = mul(pos, xShViewOprojection[1] );
-		Out.ShadowMapSamplingPos[2] = mul(pos, xShViewOprojection[2] );*/
-
-
-	
-		//Out.Position3D = pos.xyz;
-		//Out.EyeVec = normalize(xCamPos.xyz - pos.xyz);
 
 
 		Out.vel = mul( mul(vel.xyz,WORLD), xViewProjection ).xyz;
-		//Out.vel+= (Out.pos.xyz-mul(pos,xPrevViewProjection).xyz)*0.10;
-		//Out.mat = mat;
+
+		Out.ao = input.nor.w;
 
 	}
 

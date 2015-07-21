@@ -10,7 +10,7 @@ cbuffer boneBuffer:register(b1){
 	bonetype prev[MAXBONECOUNT];
 }
 
-inline void Skinning(inout float4 pos, inout float4 posPrev, inout float3 inNor, inout float4 inBon, inout float4 inWei)
+inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 inNor, inout float4 inBon, inout float4 inWei)
 {
 	[branch]if(inWei.x || inWei.y || inWei.z || inWei.w){
 		bonetype sump=0, sumpPrev=0;
@@ -25,10 +25,10 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float3 inNor,
 		sumpPrev/=sumw;
 		pos = mul(pos,sump);
 		posPrev = mul(posPrev,sumpPrev);
-		inNor = mul(inNor,(float3x3)sump);
+		inNor.xyz = mul(inNor.xyz,(float3x3)sump);
 	}
 }
-inline void Skinning(inout float4 pos, inout float3 inNor, inout float4 inBon, inout float4 inWei)
+inline void Skinning(inout float4 pos, inout float4 inNor, inout float4 inBon, inout float4 inWei)
 {
 	[branch]if(inWei.x || inWei.y || inWei.z || inWei.w){
 		bonetype sump=0;
@@ -40,7 +40,7 @@ inline void Skinning(inout float4 pos, inout float3 inNor, inout float4 inBon, i
 		}
 		sump/=sumw;
 		pos = mul(pos,sump);
-		inNor = mul(inNor,(float3x3)sump);
+		inNor.xyz = mul(inNor.xyz,(float3x3)sump);
 	}
 }
 inline void Skinning(inout float4 pos, inout float4 inBon, inout float4 inWei)

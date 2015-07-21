@@ -5,6 +5,7 @@
 #include "wiResourceManager.h"
 #include "wiFrustum.h"
 #include "wiCamera.h"
+#include "wiRandom.h"
 
 //ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
 ID3D11InputLayout   *wiEmittedParticle::vertexLayout;
@@ -70,7 +71,7 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 long wiEmittedParticle::getCount(){return points.size();}
 
 
-int wiEmittedParticle::getRandomPointOnEmitter(){ return rand()%(object->mesh->indices.size()); }
+int wiEmittedParticle::getRandomPointOnEmitter(){ return wiRandom::getRandom(object->mesh->indices.size()-1); }
 
 
 void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
@@ -97,7 +98,7 @@ void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 	default:
 		break;
 	}
-	float f=rand()%1000 * 0.001f,g=rand()%1000 * 0.001f;
+	float f = wiRandom::getRandom(0, 1000) * 0.001f, g = wiRandom::getRandom(0, 1000) * 0.001f;
 	if (f + g > 1)
 	{
 		f = 1 - f;
@@ -114,9 +115,9 @@ void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 		,	g
 		);
 	XMVECTOR& nbar=XMVectorBaryCentric(
-			XMLoadFloat3(&emitterVertexList[object->mesh->indices[gen[0]]].nor)
-		,	XMLoadFloat3(&emitterVertexList[object->mesh->indices[gen[1]]].nor)
-		,	XMLoadFloat3(&emitterVertexList[object->mesh->indices[gen[2]]].nor)
+			XMLoadFloat4(&emitterVertexList[object->mesh->indices[gen[0]]].nor)
+		,	XMLoadFloat4(&emitterVertexList[object->mesh->indices[gen[1]]].nor)
+		,	XMLoadFloat4(&emitterVertexList[object->mesh->indices[gen[2]]].nor)
 		,	f
 		,	g
 		);
@@ -134,7 +135,7 @@ void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 		//pos.z+=getNewPositionModifier();
 
 
-	points.push_back( Point( pos, XMFLOAT4(size,1,rand()%2,rand()%2), vel/*, XMFLOAT3(1,1,1)*/, getNewLifeSpan()
+	points.push_back(Point(pos, XMFLOAT4(size, 1, wiRandom::getRandom(0, 1), wiRandom::getRandom(0, 1)), vel/*, XMFLOAT3(1,1,1)*/, getNewLifeSpan()
 		,rotation*getNewRotationModifier(),scaleX,scaleY ) );
 }
 void wiEmittedParticle::Update(float gamespeed)
@@ -210,10 +211,10 @@ void wiEmittedParticle::Update(float gamespeed)
 	
 	//D3D11_MAPPED_SUBRESOURCE mappedResource;
 	//Point* vertexPtr;
-	//wiRenderer::immediateContext->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+	//wiRenderer::getImmediateContext()->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 	//vertexPtr = (Point*)mappedResource.pData;
 	//memcpy(vertexPtr,renderPoints.data(),sizeof(Point)* renderPoints.size());
-	//wiRenderer::immediateContext->Unmap(vertexBuffer,0);
+	//wiRenderer::getImmediateContext()->Unmap(vertexBuffer,0);
 }
 void wiEmittedParticle::Burst(float num)
 {

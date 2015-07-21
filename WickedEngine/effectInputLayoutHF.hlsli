@@ -3,7 +3,7 @@
 struct Input{
 	uint id: SV_VertexID;
 	float4 pos : POSITION;
-	float3 nor : NORMAL;
+	float4 nor : NORMAL;
 	float4 tex : TEXCOORD0;
 	float4 pre : TEXCOORD1;
 //#ifdef USE_GPU_SKINNING

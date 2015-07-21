@@ -14,7 +14,6 @@ void ForwardRenderableComponent::Initialize()
 	setShadowsEnabled(false);
 
 	setPreferredThreadingCount(4);
-
 }
 void ForwardRenderableComponent::Load()
 {
@@ -67,7 +66,7 @@ void ForwardRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->View, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->Eye, XMFLOAT4(0, 0, 0, 0));
 		wiRenderer::DrawWorld(wiRenderer::getCamera()->View, false, 0, context
 			, false, wiRenderer::SHADED_FORWARD_SIMPLE
-			, nullptr, true);
+			, nullptr, true, GRAPHICSTHREAD_SCENE);
 		wiRenderer::DrawSky(wiRenderer::getCamera()->Eye, context);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera()->View, context);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera()->View, context);
@@ -100,67 +99,67 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 	case 2:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderShadows(wiRenderer::deferredContexts[0]);
-			RenderReflections(wiRenderer::deferredContexts[0]);
-			wiRenderer::FinishCommandList(0);
+			RenderShadows(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SHADOWS));
+			RenderReflections(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SHADOWS));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_SHADOWS);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderScene(wiRenderer::deferredContexts[1]);
-			RenderSecondaryScene(rtMain, rtMain, wiRenderer::deferredContexts[1]);
-			RenderLightShafts(rtMain, wiRenderer::deferredContexts[1]);
-			RenderComposition1(rtMain, wiRenderer::deferredContexts[1]);
-			RenderBloom(wiRenderer::deferredContexts[1]);
-			RenderComposition2(wiRenderer::deferredContexts[1]);
-			wiRenderer::FinishCommandList(1);
+			RenderScene(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			RenderSecondaryScene(rtMain, rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			RenderLightShafts(rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			RenderComposition1(rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			RenderBloom(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			RenderComposition2(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
 		}));
 		break;
 	case 3:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderShadows(wiRenderer::deferredContexts[0]);
-			wiRenderer::FinishCommandList(0);
+			RenderShadows(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SHADOWS));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_SHADOWS);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderReflections(wiRenderer::deferredContexts[1]);
-			wiRenderer::FinishCommandList(1);
+			RenderReflections(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderScene(wiRenderer::deferredContexts[2]);
-			RenderSecondaryScene(rtMain, rtMain, wiRenderer::deferredContexts[2]);
-			RenderLightShafts(rtMain, wiRenderer::deferredContexts[2]);
-			RenderComposition1(rtMain, wiRenderer::deferredContexts[2]);
-			RenderBloom(wiRenderer::deferredContexts[2]);
-			RenderComposition2(wiRenderer::deferredContexts[2]);
-			wiRenderer::FinishCommandList(2);
+			RenderScene(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+			RenderSecondaryScene(rtMain, rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+			RenderLightShafts(rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+			RenderComposition1(rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+			RenderBloom(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+			RenderComposition2(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
 		break;
 	case 4:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderShadows(wiRenderer::deferredContexts[0]);
-			wiRenderer::FinishCommandList(0);
+			RenderShadows(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SHADOWS));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_SHADOWS);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderReflections(wiRenderer::deferredContexts[1]);
-			wiRenderer::FinishCommandList(1);
+			RenderReflections(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderScene(wiRenderer::deferredContexts[2]);
-			wiRenderer::FinishCommandList(2);
+			RenderScene(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
-			RenderSecondaryScene(rtMain, rtMain, wiRenderer::deferredContexts[3]);
-			RenderLightShafts(rtMain, wiRenderer::deferredContexts[3]);
-			RenderComposition1(rtMain, wiRenderer::deferredContexts[3]);
-			RenderBloom(wiRenderer::deferredContexts[3]);
-			RenderComposition2(wiRenderer::deferredContexts[3]);
-			wiRenderer::FinishCommandList(3);
+			RenderSecondaryScene(rtMain, rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
+			RenderLightShafts(rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
+			RenderComposition1(rtMain, wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
+			RenderBloom(wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
+			RenderComposition2(wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
+			wiRenderer::FinishCommandList(GRAPHICSTHREAD_MISC1);
 		}));
 		break;
 	default:
