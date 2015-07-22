@@ -18,7 +18,7 @@ namespace wiHelper
 		ifstream file(fileName, ios::binary | ios::ate);
 		if (file.is_open()){
 
-			dataSize = file.tellg();
+			dataSize = (size_t)file.tellg();
 			file.seekg(0, file.beg);
 			*data = new BYTE[dataSize];
 			file.read((char*)*data, dataSize);

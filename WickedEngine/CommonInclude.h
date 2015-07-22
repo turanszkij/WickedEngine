@@ -38,33 +38,7 @@
 using namespace DirectX;
 using namespace std;
 
-
-//TODO: REMOVE!!!
-#define XBOUNDS 10
-#define CAMERA_POSITIONY 4.0f
-#define DEFAULT_CAMERADISTANCE -9.5f
-#define MODIFIED_CAMERADISTANCE -11.5f
-#define CAMERA_DISTANCE_MODIFIER 10
-#define STARTPOSITION 4.5
-
-
-
-
-enum POVENUM{ //NUMPAD SORTING
-	D_UNUSED,
-	D_DOWNLEFT,
-	D_DOWN,
-	D_RIGHTDOWN,
-	D_LEFT,
-	D_IDLE, //5
-	D_RIGHT,
-	D_LEFTUP,
-	D_UP,
-	D_UPRIGHT,
-};
-
-#define SETTINGSFILE "settings/ProgramSettings.ini"
-
+#define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
 
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

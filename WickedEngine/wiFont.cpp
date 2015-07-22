@@ -14,7 +14,6 @@ ID3D11Buffer*           wiFont::constantBuffer;
 ID3D11SamplerState*			wiFont::sampleState;
 ID3D11RasterizerState*		wiFont::rasterizerState;
 ID3D11DepthStencilState*	wiFont::depthStencilState;
-mutex wiFont::MUTEX;
 UINT wiFont::textlen;
 SHORT wiFont::line,wiFont::pos;
 BOOL wiFont::toDraw;
@@ -24,7 +23,8 @@ vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
 void wiFont::Initialize()
 {
-	line=pos=counter=0;
+	counter = 0;
+	line = pos = 0;
 	toDraw=TRUE;
 	textlen=0;
 	line=pos=0;
@@ -195,7 +195,8 @@ void wiFont::SetUpStaticComponents()
 }
 void wiFont::CleanUpStatic()
 {
-	for(int i=0;i<fontStyles.size();++i) fontStyles[i].CleanUp();
+	for(unsigned int i=0;i<fontStyles.size();++i) 
+		fontStyles[i].CleanUp();
 	fontStyles.clear();
 
 	vertexList.clear();
@@ -217,22 +218,22 @@ void wiFont::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID
 	textlen=wcslen(text);
 	line=0; pos=0;
 	vertexList.resize(textlen*4);
-	for(int i=0;i<vertexList.size();i++){
+	for(unsigned int i=0;i<vertexList.size();i++){
 		vertexList[i].Pos=XMFLOAT2(0,0);
 		vertexList[i].Tex=XMFLOAT2(0,0);
 	}
-	for(int i=0;i<vertexList.size();i+=4){
+	for (unsigned int i = 0; i<vertexList.size(); i += 4){
 
 		FLOAT leftX=0.0f,rightX=(FLOAT)fontStyles[style].charSize,upperY=0.0f,lowerY=(FLOAT)fontStyles[style].charSize;
 		BOOL compatible=FALSE;
 		
 		
-		if(text[i/4]==10){
-			line+=fontStyles[style].recSize;
+		if(text[i/4]==10){ //line break
+			line+=(SHORT)fontStyles[style].recSize;
 			pos=0;
 		}
-		else if(text[i/4]==32){
-			pos+=fontStyles[style].recSize+sizSpa.x+sizSpa.y;
+		else if(text[i/4]==32){ //space
+			pos+=(SHORT)(fontStyles[style].recSize+sizSpa.x+sizSpa.y);
 		}
 		else if(fontStyles[style].lookup[text[i/4]].code==text[i/4]){
 			leftX+=fontStyles[style].lookup[text[i/4]].offX*(FLOAT)fontStyles[style].charSize;
@@ -253,7 +254,7 @@ void wiFont::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID
 			vertexList[i+2].Pos=XMFLOAT2(pos+0-sizSpa.x*0.5f,-fontStyles[style].recSize-line-sizSpa.x*0.5f); vertexList[i+2].Tex=XMFLOAT2(leftX,lowerY);
 			vertexList[i+3].Pos=XMFLOAT2(pos+fontStyles[style].recSize+sizSpa.x*0.5f,-fontStyles[style].recSize-line-sizSpa.x*0.5f); vertexList[i+3].Tex=XMFLOAT2(rightX,lowerY);
 
-			pos+=fontStyles[style].recSize+sizSpa.x+sizSpa.y;
+			pos+=(SHORT)(fontStyles[style].recSize+sizSpa.x+sizSpa.y);
 		}
 	}
 	//wiRenderer::getImmediateContext()->UpdateSubresource( vertexBuffer, 0, NULL, vertexList.data(), 0, 0 );
@@ -372,7 +373,7 @@ void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSp
 		ConstantBuffer* cb = new ConstantBuffer();
 		cb->mProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
 		cb->mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSizSpa.x,newPosSizSpa.y,0) );
-		cb->mDimensions = XMFLOAT4(wiRenderer::RENDERWIDTH, wiRenderer::RENDERHEIGHT, 0, 0);
+		cb->mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
 		
 		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 		delete cb;
@@ -421,7 +422,7 @@ int wiFont::textWidth(const wchar_t* text,FLOAT spacing,const int& style)
 	}
 	if(max==0) max=lineW;
 
-	return max*(fontStyles[style].recSize+spacing);
+	return (int)(max*(fontStyles[style].recSize+spacing));
 }
 int wiFont::textHeight(const wchar_t* text,FLOAT siz,const int& style)
 {
@@ -435,13 +436,16 @@ int wiFont::textHeight(const wchar_t* text,FLOAT siz,const int& style)
 		i++;
 	}
 
-	return lines*(fontStyles[style].recSize+siz);
+	return (int)(lines*(fontStyles[style].recSize+siz));
 }
 
 
 
 
 wiFont::wiFontStyle::wiFontStyle(const string& newName){
+
+	wiRenderer::Lock();
+
 	name=newName;
 
 	for(short i=0;i<127;i++) lookup[i].code=lookup[i].offX=lookup[i].offY=0;
@@ -451,7 +455,6 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 	ss1<<"fonts/"<<name<<".dds";
 	std::ifstream file(ss.str());
 	if(file.is_open()){
-		//CreateWICTextureFromFile(FALSE,wiRenderer::graphicsDevice,0,wss1.str().c_str(),0,&texture,0);
 		texture = (wiRenderer::TextureView)wiResourceManager::add(ss1.str());
 		file>>texWidth>>texHeight>>recSize>>charSize;
 		int i=0;
@@ -465,20 +468,20 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 		file.close();
 	}
 	else {
-		wiHelper::messageBox("Could not load Font Data!"); 
+		wiHelper::messageBox(name,"Could not load Font Data!"); 
 	}
+
+	wiRenderer::Unlock();
 }
 void wiFont::wiFontStyle::CleanUp(){
 	if(texture) texture->Release(); texture=NULL;
 }
 void wiFont::addFontStyle( const string& toAdd ){
-	MUTEX.lock();
 	fontStyles.push_back(wiFontStyle(toAdd));
-	MUTEX.unlock();
 }
 int wiFont::getFontStyleByName( const string& get ){
-	for(int i=0;i<fontStyles.size();i++)
-	if(!strcmp(fontStyles[i].name.c_str(),get.c_str()))
+	for (unsigned int i = 0; i<fontStyles.size(); i++)
+	if(!fontStyles[i].name.compare(get))
 		return i;
 	return 0;
 }

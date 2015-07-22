@@ -18,6 +18,7 @@ bool wiCvar::add(const string& name, const string& value, Data_Type newType)
 	if(get(name))
 		return false;
 	variables.insert< pair<string,Variable*> >( pair<string,Variable*>(name,new Variable(value,newType)) );
+	return true;
 } 
 bool wiCvar::del(const string& name)
 {

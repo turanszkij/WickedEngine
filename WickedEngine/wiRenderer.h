@@ -47,7 +47,7 @@ public:
 #ifndef WINSTORE_SUPPORT
 	typedef IDXGISwapChain*				SwapChain;
 #else
-	typedef IDXGISwapChain1*				SwapChain; 
+	typedef IDXGISwapChain1*			SwapChain; 
 #endif
 	typedef IUnknown*					APIInterface;
 	typedef ID3D11DeviceContext*		DeviceContext;
@@ -118,6 +118,8 @@ public:
 	inline static DeviceContext getImmediateContext(){ return immediateContext; }
 	inline static DeviceContext getDeferredContext(GRAPHICSTHREAD thread){ return deferredContexts[thread]; }
 
+	inline static void Lock(){ graphicsMutex.lock(); }
+	inline static void Unlock(){ graphicsMutex.unlock(); }
 	
 	static Sampler ssClampLin,ssClampPoi,ssMirrorLin,ssMirrorPoi,ssWrapLin,ssWrapPoi
 		,ssClampAni,ssWrapAni,ssMirrorAni,ssComp;
@@ -131,6 +133,8 @@ protected:
 	struct ConstantBuffer
 	{
 		XMVECTOR mDisplace;
+
+		ALIGN_16
 	};
 	struct StaticCB
 	{
@@ -143,6 +147,8 @@ protected:
 		float windRandomness;
 		float windWaveSize;
 		float padding[2];
+
+		ALIGN_16
 	};
 	struct PixelCB
 	{
@@ -152,10 +158,14 @@ protected:
 		XMFLOAT3 mAmbient; float pad1;
 		XMFLOAT4 mSunColor;
 		XMFLOAT3 mFogSEH; float pad2;
+
+		ALIGN_16
 	};
 	struct FxCB{
 		XMFLOAT4 mFx;
 		XMFLOAT4 colorMask;
+
+		ALIGN_16
 	};
 	struct MaterialCB
 	{
@@ -172,9 +182,9 @@ protected:
 		float emit;
 		float padding[3];
 
-		MaterialCB(const Material& mat,UINT materialIndex);
-		void* operator new(size_t size){ void* result = _aligned_malloc(size,16); return result; }
-		void operator delete(void* p){ if(p) _aligned_free(p); }
+		MaterialCB(const Material& mat, UINT materialIndex);
+
+		ALIGN_16
 	};
 	struct ForShadowMapCB
 	{
@@ -182,14 +192,20 @@ protected:
 		XMFLOAT3 mWind; float time;
 		float windRandomness;
 		float windWaveSize;
+
+		ALIGN_16
 	};
 	struct CubeShadowCb{
 		XMMATRIX mViewProjection[6];
+
+		ALIGN_16
 	};
 	struct TessBuffer
 	{
 		XMVECTOR  g_f4Eye;
 		XMFLOAT4A g_f4TessFactors;
+
+		ALIGN_16
 	};
 	struct dLightBuffer
 	{
@@ -197,12 +213,16 @@ protected:
 		XMFLOAT4 col;
 		XMFLOAT4 mBiasResSoftshadow;
 		XMMATRIX mShM[3];
+
+		ALIGN_16
 	};
 	struct pLightBuffer
 	{
 		XMFLOAT3 pos; float pad;
 		XMFLOAT4 col;
 		XMFLOAT4 enerdis;
+
+		ALIGN_16
 	};
 	struct sLightBuffer
 	{
@@ -212,28 +232,40 @@ protected:
 		XMFLOAT4 enerdis;
 		XMFLOAT4 mBiasResSoftshadow;
 		XMMATRIX mShM;
+
+		ALIGN_16
 	};
 	struct vLightBuffer
 	{
 		XMMATRIX world;
 		XMFLOAT4 col;
 		XMFLOAT4 enerdis;
+
+		ALIGN_16
 	};
 	struct LightStaticCB{
 		XMMATRIX mProjInv;
+
+		ALIGN_16
 	};
 	struct LineBuffer{
 		XMMATRIX mWorldViewProjection;
-		XMFLOAT4A color;
+		XMFLOAT4 color;
+
+		ALIGN_16
 	};
 	struct SkyBuffer
 	{
 		XMMATRIX mV;
 		XMMATRIX mP;
+
+		ALIGN_16
 	};
 	struct DecalCBVS
 	{
 		XMMATRIX mWVP;
+
+		ALIGN_16
 	};
 	struct DecalCBPS
 	{
@@ -242,6 +274,8 @@ protected:
 		XMFLOAT3 eye;
 		float opacity;
 		XMFLOAT3 front;
+
+		ALIGN_16
 	};
 	struct ViewPropCB
 	{
@@ -250,6 +284,8 @@ protected:
 		float mZNearP;
 		float mZFarP;
 		float padding[2];
+
+		ALIGN_16
 	};
 
 

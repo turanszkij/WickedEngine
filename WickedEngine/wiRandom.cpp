@@ -6,7 +6,7 @@ int wiRandom::getRandom(int minValue, int maxValue)
 {
 	if (!initialized)
 	{
-		srand(time(0));
+		srand(unsigned(time(0)));
 		initialized = true;
 	}
 	return minValue + rand() % (maxValue + 1 - minValue);

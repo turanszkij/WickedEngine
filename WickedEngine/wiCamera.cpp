@@ -7,8 +7,8 @@ Camera::Camera(int width, int height, float newNear, float newFar, const XMVECTO
 	zNearP=newNear;
 	zFarP=newFar;
 
-	this->width=width;
-	this->height=height;
+	this->width = (float)width;
+	this->height = (float)height;
 
 #ifndef WINSTORE_SUPPORT
 	GetCursorPos(&originalMouse);
@@ -17,7 +17,7 @@ Camera::Camera(int width, int height, float newNear, float newFar, const XMVECTO
     //Initialize the projection matrix
 	Projection = XMMatrixPerspectiveFovLH( XM_PI / 3.0f, width / (FLOAT)height, zNearP, zFarP );
 	//Projection = XMMatrixOrthographicLH(RENDERWIDTH,RENDERHEIGHT,0.1f,10000.0f);
-	Oprojection = XMMatrixOrthographicLH(width,height,0.1f,5000.0f);
+	Oprojection = XMMatrixOrthographicLH((float)width, (float)height, 0.1f, 5000.0f);
 
 	//View Matrix
 	defaultEye = Eye = newEye;

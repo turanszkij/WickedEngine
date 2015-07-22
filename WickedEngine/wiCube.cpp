@@ -4,7 +4,7 @@
 ID3D11Buffer* Cube::vertexBuffer;
 ID3D11Buffer* Cube::indexBuffer;
 
-Cube::Cube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4A& color)
+Cube::Cube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4& color)
 {
 	desc=Description();
 	desc.center=center;
@@ -33,16 +33,16 @@ void Cube::SetUpVertices()
 
 	Vertex* verts = new Vertex[8];
 
-	XMFLOAT3A min = XMFLOAT3A(-1,-1,-1);
-	XMFLOAT3A max = XMFLOAT3A(1,1,1);
+	XMFLOAT3 min = XMFLOAT3(-1,-1,-1);
+	XMFLOAT3 max = XMFLOAT3(1,1,1);
 	verts[0].pos=min;
-	verts[1].pos=XMFLOAT3A(min.x,max.y,min.z);
-	verts[2].pos=XMFLOAT3A(min.x,max.y,max.z);
-	verts[3].pos=XMFLOAT3A(min.x,min.y,max.z);
-	verts[4].pos=XMFLOAT3A(max.x,min.y,min.z);
-	verts[5].pos=XMFLOAT3A(max.x,max.y,min.z);
+	verts[1].pos=XMFLOAT3(min.x,max.y,min.z);
+	verts[2].pos=XMFLOAT3(min.x,max.y,max.z);
+	verts[3].pos=XMFLOAT3(min.x,min.y,max.z);
+	verts[4].pos=XMFLOAT3(max.x,min.y,min.z);
+	verts[5].pos=XMFLOAT3(max.x,max.y,min.z);
 	verts[6].pos=max;
-	verts[7].pos=XMFLOAT3A(max.x,min.y,max.z);
+	verts[7].pos=XMFLOAT3(max.x,min.y,max.z);
 
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );

@@ -42,7 +42,7 @@ wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 
 
 void wiHairParticle::CleanUp(){
-	for(int i=0;i<patches.size();++i)
+	for (unsigned int i = 0; i<patches.size(); ++i)
 		patches[i]->CleanUp();
 	patches.clear();
 	wiRenderer::SafeRelease(vb[0]);
@@ -291,12 +291,12 @@ void wiHairParticle::SetUpPatches()
 
 	int dVG=-1,lVG=-1;
 	if(densityG.compare("")){
-		for(int i=0;i<mesh->vertexGroups.size();++i)
+		for (unsigned int i = 0; i<mesh->vertexGroups.size(); ++i)
 			if(!mesh->vertexGroups[i].name.compare(densityG))
 				dVG=i;
 	}
 	if(lenG.compare("")){
-		for(int i=0;i<mesh->vertexGroups.size();++i)
+		for (unsigned int i = 0; i<mesh->vertexGroups.size(); ++i)
 			if(!mesh->vertexGroups[i].name.compare(lenG))
 				lVG=i;
 	}
@@ -307,7 +307,10 @@ void wiHairParticle::SetUpPatches()
 	else
 		avgPatchSize = (float)count/((float)mesh->indices.size()/3.0f);
 
-	for(int i=0;i<mesh->indices.size()-3;i+=3){
+	if (mesh->indices.size() < 4)
+		return;
+
+	for (unsigned int i = 0; i<mesh->indices.size() - 3; i += 3){
 
 		int vi[]={mesh->indices[i],mesh->indices[i+1],mesh->indices[i+2]};
 		float denMod[]={1,1,1},lenMod[]={1,1,1};
@@ -366,7 +369,7 @@ void wiHairParticle::SetUpPatches()
 		{
 
 			float density = (float)(denMod[0]+denMod[1]+denMod[2])/3.0f*avgPatchSize;
-			int rdense = ( density - (int)density ) * 100;
+			int rdense = (int)(( density - (int)density ) * 100);
 			density += (wiRandom::getRandom(0, 99)) <= rdense;
 			int PATCHSIZE = material->texture?(int)density:(int)density*10;
 			  
@@ -400,13 +403,13 @@ void wiHairParticle::SetUpPatches()
 					XMVECTOR tangent = XMVector3Normalize( XMVectorSubtract(pos[ti],pos[(ti+1)%3]) );
 					
 					Point addP;
-					XMStoreFloat4(&addP.posRand,vbar);
-					XMStoreFloat4(&addP.normalLen,XMVector3Normalize(nbar));
-					XMStoreFloat4(&addP.tangent,tangent);
+					::XMStoreFloat4(&addP.posRand,vbar);
+					::XMStoreFloat4(&addP.normalLen,XMVector3Normalize(nbar));
+					::XMStoreFloat4(&addP.tangent,tangent);
 
 					float lbar = lenMod[0] + f*(lenMod[1]-lenMod[0]) + g*(lenMod[2]-lenMod[0]);
 					addP.normalLen.w = length*lbar + (float)(wiRandom::getRandom(0, 1000) - 500)*0.001f*length*lbar;
-					addP.posRand.w = wiRandom::getRandom(0, 1000);
+					addP.posRand.w = (float)wiRandom::getRandom(0, 1000);
 					patches.back()->add(addP);
 				
 					XMFLOAT3 posN = XMFLOAT3(addP.posRand.x,addP.posRand.y,addP.posRand.z);
@@ -450,11 +453,11 @@ void wiHairParticle::SetUpPatches()
 void wiHairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMATRIX& newProj, ID3D11DeviceContext *context)
 {
 	
-	Frustum frustum = Frustum();
-	XMFLOAT4X4 proj,view;
+	static Frustum frustum = Frustum();
+	static XMFLOAT4X4 proj,view;
 	XMStoreFloat4x4( &proj,newProj );
 	XMStoreFloat4x4( &view,newView );
-	frustum.ConstructFrustum(LOD[2],proj,view);
+	frustum.ConstructFrustum((float)LOD[2], proj, view);
 
 		
 	CulledList culledPatches;
@@ -486,7 +489,7 @@ void wiHairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XM
 		gcb.mProj = XMMatrixTranspose(newProj);
 		gcb.colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,wiRenderer::wind.time);
 		gcb.eye=eye;
-		gcb.drawdistance=LOD[2];
+		gcb.drawdistance = (float)LOD[2];
 		gcb.wind=wiRenderer::wind.direction;
 		gcb.windRandomness=wiRenderer::wind.randomness;
 		gcb.windWaveSize=wiRenderer::wind.waveSize;

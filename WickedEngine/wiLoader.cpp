@@ -121,7 +121,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 			int matIndex;
 			memcpy(&matIndex,buffer+offset,sizeof(int));
 			offset+=sizeof(int);
-			vert.tex.z=matIndex;
+			vert.tex.z = (float)matIndex;
 			
 			int weightCount=0;
 			memcpy(&weightCount,buffer+offset,sizeof(int));
@@ -154,19 +154,19 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 					if(gotBone){ //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
 						if(!vert.wei.x) {
 							vert.wei.x=weightValue;
-							vert.bon.x=BONEINDEX;
+							vert.bon.x = (float)BONEINDEX;
 						}
 						else if(!vert.wei.y) {
 							vert.wei.y=weightValue;
-							vert.bon.y=BONEINDEX;
+							vert.bon.y = (float)BONEINDEX;
 						}
 						else if(!vert.wei.z) {
 							vert.wei.z=weightValue;
-							vert.bon.z=BONEINDEX;
+							vert.bon.z = (float)BONEINDEX;
 						}
 						else if(!vert.wei.w) {
 							vert.wei.w=weightValue;
-							vert.bon.w=BONEINDEX;
+							vert.bon.w = (float)BONEINDEX;
 						}
 					}
 				}

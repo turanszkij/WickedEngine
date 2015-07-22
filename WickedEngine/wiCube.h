@@ -8,12 +8,12 @@ private:
 	struct Description{
 		XMFLOAT3 center,halfwidth;
 		XMFLOAT4X4 transform;
-		XMFLOAT4A color;
+		XMFLOAT4 color;
 
 		Description(){
 			center=XMFLOAT3(0,0,0);
 			halfwidth=XMFLOAT3(1,1,1);
-			color=XMFLOAT4A(1,1,1,1);
+			color=XMFLOAT4(1,1,1,1);
 			transform=XMFLOAT4X4(
 				1,0,0,0,
 				0,1,0,0,
@@ -24,26 +24,18 @@ private:
 	};
 	struct Vertex
 	{
-		XMFLOAT3A	pos;
+		XMFLOAT3	pos;
+		float		padding;
 
-		Vertex(){ pos=XMFLOAT3A(0,0,0); }
-		Vertex(const XMFLOAT3A& newPos){ pos=newPos; }
+		Vertex(){ pos=XMFLOAT3(0,0,0); }
+		Vertex(const XMFLOAT3& newPos){ pos=newPos; }
 
-		void* operator new(size_t size)
-		{
-			return _aligned_malloc(size, 16);
-		}
-		void operator delete(void* p)
-		{
-			if (p) _aligned_free(p);
-		}
+		ALIGN_16
 	};
 	static void SetUpVertices();
 public:
-	Cube(const XMFLOAT3& center=XMFLOAT3(0,0,0), const XMFLOAT3& halfwidth=XMFLOAT3(1,1,1), const XMFLOAT4A& color = XMFLOAT4A(1,1,1,1));
-	void* operator new(size_t size){ void* result = _aligned_malloc(size,16); return result; }
-	void operator delete(void* p){ if(p) _aligned_free(p); }
-	
+	Cube(const XMFLOAT3& center=XMFLOAT3(0,0,0), const XMFLOAT3& halfwidth=XMFLOAT3(1,1,1), const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
+
 	void Transform(const XMFLOAT4X4& mat);
 	void Transform(const XMMATRIX& mat);
 
@@ -53,5 +45,7 @@ public:
 	static ID3D11Buffer* indexBuffer;
 	static void LoadStatic();
 	static void CleanUpStatic();
+
+	ALIGN_16
 };
 

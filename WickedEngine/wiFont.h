@@ -6,8 +6,6 @@ class wiRenderer;
 
 class wiFont
 {
-private:
-	static mutex MUTEX;
 protected:
 	struct Vertex
 	{
@@ -21,16 +19,7 @@ protected:
 		XMMATRIX mTrans;
 		XMFLOAT4 mDimensions;
 		
-		void* operator new(size_t size)
-		{
-
-			void* result = _aligned_malloc(size,16);
-			return result;
-		}	
-		void operator delete(void* p)
-		{
-			if(p) _aligned_free(p);
-		}
+		ALIGN_16
 	};
 	static ID3D11Buffer*           vertexBuffer,*indexBuffer;
 

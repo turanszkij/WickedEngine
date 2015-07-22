@@ -10,7 +10,7 @@ Lines::Lines()
 	SetUpVertices();
 }
 
-Lines::Lines(float newLen, const XMFLOAT4A& newColor, int newParentArmature, int newParentBone)
+Lines::Lines(float newLen, const XMFLOAT4& newColor, int newParentArmature, int newParentBone)
 {
 	desc = Description();
 	desc.length = newLen;
@@ -20,7 +20,7 @@ Lines::Lines(float newLen, const XMFLOAT4A& newColor, int newParentArmature, int
 	SetUpVertices();
 }
 
-Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4A& c)
+Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4& c)
 {
 	desc = Description();
 	desc.length = 0;
@@ -30,8 +30,8 @@ Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4A& c)
 
 	Vertex* verts = new Vertex[2];
 
-	verts[0].pos = XMFLOAT3A(a.x,a.y,a.z);
-	verts[1].pos = XMFLOAT3A(b.x,b.y,b.z);
+	verts[0].pos = XMFLOAT3(a.x,a.y,a.z);
+	verts[1].pos = XMFLOAT3(b.x,b.y,b.z);
 
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
@@ -62,8 +62,8 @@ void Lines::SetUpVertices()
 {
 	Vertex* verts = new Vertex[2];
 
-	verts[0].pos = XMFLOAT3A(0,0,0);
-	verts[1].pos = XMFLOAT3A(0,0,desc.length);
+	verts[0].pos = XMFLOAT3(0,0,0);
+	verts[1].pos = XMFLOAT3(0,0,desc.length);
 
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
