@@ -1,5 +1,11 @@
 #include "Renderable3DSceneComponent.h"
-#include "WickedEngine.h"
+#include "wiRenderer.h"
+#include "wiImage.h"
+#include "wiImageEffects.h"
+#include "wiCamera.h"
+#include "wiStencilRef.h"
+#include "wiHelper.h"
+#include "wiTextureHelper.h"
 
 Renderable3DSceneComponent::Renderable3DSceneComponent()
 {

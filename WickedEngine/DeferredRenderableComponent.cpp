@@ -1,5 +1,11 @@
 #include "DeferredRenderableComponent.h"
-#include "WickedEngine.h"
+#include "wiRenderer.h"
+#include "wiImage.h"
+#include "wiImageEffects.h"
+#include "wiCamera.h"
+#include "wiStencilRef.h"
+#include "wiHelper.h"
+#include "wiTextureHelper.h"
 
 DeferredRenderableComponent::DeferredRenderableComponent(){
 }
@@ -12,7 +18,7 @@ void DeferredRenderableComponent::Initialize()
 	setSSREnabled(true);
 	setSSAOEnabled(true);
 
-	setPreferredThreadingCount(4);
+	setPreferredThreadingCount(0);
 }
 void DeferredRenderableComponent::Load()
 {

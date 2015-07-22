@@ -962,10 +962,10 @@ public:
 			static D3D11_BUFFER_DESC desc;
 			buffer->GetDesc(&desc);
 			static HRESULT hr;
-			if(dataSize>(int)desc.ByteWidth){ //recreate the buffer if new datasize exceeds buffer size [SLOW][TEST!!!!]
+			if (dataSize>(int)desc.ByteWidth){ //recreate the buffer if new datasize exceeds buffer size [SLOW][TEST!!!!]
 				buffer->Release();
-				desc.ByteWidth=dataSize*2;
-				hr=graphicsDevice->CreateBuffer( &desc, nullptr, &buffer );
+				desc.ByteWidth = dataSize * 2;
+				hr = graphicsDevice->CreateBuffer(&desc, nullptr, &buffer);
 			}
 			if(desc.Usage == D3D11_USAGE_DYNAMIC){
 				static D3D11_MAPPED_SUBRESOURCE mappedResource;

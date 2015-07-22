@@ -19,6 +19,8 @@
 #include "wiCpuInfo.h"
 #include "wiLoader.h"
 #include "wiParticle.h"
+#include "wiEmittedParticle.h"
+#include "wiHairParticle.h"
 #include "wiRenderer.h"
 #include "wiDirectInput.h"
 #include "wiXInput.h"
@@ -38,6 +40,7 @@
 #include "wiPHYSICS.h"
 #include "wiBULLET.h"
 #include "wiGraphicsThreads.h"
+#include "wiStencilRef.h"
 
 #include "RenderableComponent.h"
 #include "Renderable3DSceneComponent.h"

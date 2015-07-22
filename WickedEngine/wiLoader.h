@@ -5,6 +5,7 @@
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiGraphicsThreads.h"
+#include "wiStencilRef.h"
 
 struct HitSphere;
 class wiParticle;
@@ -274,15 +275,6 @@ struct VertexGroup{
 	VertexGroup(){name="";}
 	VertexGroup(string n){name=n;}
 	void addVertex(const VertexRef& vRef){vertices.insert(pair<int,float>(vRef.index,vRef.weight));}
-};
-enum STENCILREF{
-	STENCILREF_EMPTY,
-	STENCILREF_SKY,
-	STENCILREF_DEFAULT,
-	STENCILREF_TRANSPARENT,
-	STENCILREF_CHARACTER,
-	STENCILREF_SHADELESS,
-	STENCILREF_SKIN,
 };
 struct Mesh{
 	string name;

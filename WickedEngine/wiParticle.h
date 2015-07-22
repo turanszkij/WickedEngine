@@ -18,6 +18,4 @@ public:
 	static void ChangeRasterizer(){wireRender=!wireRender;}
 };
 
-#include "wiEmittedParticle.h"
-#include "wiHairParticle.h"
 

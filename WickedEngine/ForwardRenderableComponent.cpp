@@ -1,5 +1,10 @@
 #include "ForwardRenderableComponent.h"
-#include "WickedEngine.h"
+#include "wiRenderer.h"
+#include "wiImage.h"
+#include "wiImageEffects.h"
+#include "wiCamera.h"
+#include "wiStencilRef.h"
+#include "wiHelper.h"
 
 ForwardRenderableComponent::ForwardRenderableComponent(){
 }
@@ -13,7 +18,7 @@ void ForwardRenderableComponent::Initialize()
 	setSSAOEnabled(false);
 	setShadowsEnabled(false);
 
-	setPreferredThreadingCount(4);
+	setPreferredThreadingCount(0);
 }
 void ForwardRenderableComponent::Load()
 {
