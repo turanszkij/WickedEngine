@@ -173,6 +173,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="LoadingScreenComponent.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
     <ClCompile Include="BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.cpp" />
@@ -366,6 +367,8 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="frameskipDEF.h" />
+    <ClInclude Include="LoadingScreenComponent.h" />
     <ClInclude Include="wiBackLog.h" />
     <ClInclude Include="wiBULLET.h" />
     <ClInclude Include="BULLET\btBulletCollisionCommon.h" />

@@ -14,10 +14,13 @@ namespace wiInitializer
 
 	void InitializeComponents(int requestedFeautures)
 	{
-		wiResourceManager::SetUp();
-		wiBackLog::Initialize();
-		wiFrameRate::Initialize();
-		wiCpuInfo::Initialize();
+		if (requestedFeautures & WICKEDENGINE_INITIALIZE_MISC)
+		{
+			wiResourceManager::SetUp();
+			wiBackLog::Initialize();
+			wiFrameRate::Initialize();
+			wiCpuInfo::Initialize();
+		}
 
 		if (requestedFeautures & WICKEDENGINE_INITIALIZE_RENDERER)
 		{
@@ -41,14 +44,5 @@ namespace wiInitializer
 			wiMusic::Initialize();
 		}
 
-		if (requestedFeautures & WICKEDENGINE_INITIALIZE_DIRECTINPUT)
-		{
-
-		}
-
-		if (requestedFeautures & WICKEDENGINE_INITIALIZE_XINPUT)
-		{
-
-		}
 	}
 }

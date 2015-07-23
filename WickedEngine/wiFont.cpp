@@ -363,6 +363,8 @@ void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSp
 
 		if(context==nullptr)
 			context=wiRenderer::getImmediateContext();
+		if (context == nullptr)
+			return;
 	
 		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLELIST,context);
 		wiRenderer::BindVertexLayout(vertexLayout,context);

@@ -47,12 +47,14 @@
 #include "Renderable3DSceneComponent.h"
 #include "ForwardRenderableComponent.h"
 #include "DeferredRenderableComponent.h"
+#include "LoadingScreenComponent.h"
 
 
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
 
+#include "frameskipDEF.h"
 
 
 

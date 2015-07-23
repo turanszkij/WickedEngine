@@ -72,7 +72,6 @@ _________________________________________________________
 		- Optimize image rendering
 		- Rewrite camera class
 		- Decouple API from wiRenderer
-		- Add a Loading Screen Component Template
 		- 2D Renderable Component Template (after optimized image rendering)
 		- Multithreaded rendering bug after refactor (flashing geometry)(turned off for the time being)
 	Other:

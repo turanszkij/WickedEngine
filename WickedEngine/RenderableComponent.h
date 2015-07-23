@@ -24,8 +24,10 @@ public:
 	//update logic
 	virtual void Update(){};
 	//Render to layers, rendertargets, etc
+	//This will be rendered offscreen
 	virtual void Render(){};
 	//Compose the rendered layers (for example blend the layers together as Images)
+	//This will be rendered to the backbuffer
 	virtual void Compose(){};
 };
 
