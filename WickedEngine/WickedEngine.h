@@ -41,6 +41,7 @@
 #include "wiBULLET.h"
 #include "wiGraphicsThreads.h"
 #include "wiStencilRef.h"
+#include "wiInitializer.h"
 
 #include "RenderableComponent.h"
 #include "Renderable3DSceneComponent.h"

@@ -335,6 +335,7 @@
     <ClCompile Include="wiHairParticle.cpp" />
     <ClCompile Include="wiHitbox2D.cpp" />
     <ClCompile Include="wiImage.cpp" />
+    <ClCompile Include="wiInitializer.cpp" />
     <ClCompile Include="wiInputManager.cpp" />
     <ClCompile Include="wiLensFlare.cpp" />
     <ClCompile Include="wiLines.cpp" />
@@ -588,6 +589,7 @@
     <ClInclude Include="RenderableComponent.h" />
     <ClInclude Include="Renderable3DSceneComponent.h" />
     <ClInclude Include="wiGraphicsThreads.h" />
+    <ClInclude Include="wiInitializer.h" />
     <ClInclude Include="wiStencilRef.h" />
     <ClInclude Include="wiTextureHelper.h" />
     <ClInclude Include="WickedEngine.h" />

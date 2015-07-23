@@ -38,10 +38,10 @@ wiRenderer::Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ss
 
 map<wiRenderer::DeviceContext,long> wiRenderer::drawCalls;
 
-int wiRenderer::RENDERWIDTH,wiRenderer::RENDERHEIGHT,wiRenderer::SCREENWIDTH,wiRenderer::SCREENHEIGHT,wiRenderer::SHADOWMAPRES,wiRenderer::SOFTSHADOW
+int wiRenderer::RENDERWIDTH,wiRenderer::RENDERHEIGHT,wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=1,wiRenderer::POINTLIGHTSHADOWRES=256;
-bool wiRenderer::HAIRPARTICLEENABLED,wiRenderer::EMITTERSENABLED;
-bool wiRenderer::wireRender,wiRenderer::debugSpheres,wiRenderer::debugLines,wiRenderer::debugBoxes;
+bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
+bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugLines = false, wiRenderer::debugBoxes = false;
 ID3D11BlendState		*wiRenderer::blendState, *wiRenderer::blendStateTransparent, *wiRenderer::blendStateAdd;
 ID3D11Buffer			*wiRenderer::constantBuffer, *wiRenderer::staticCb, *wiRenderer::shCb, *wiRenderer::pixelCB, *wiRenderer::matCb
 	, *wiRenderer::lightCb[3], *wiRenderer::tessBuf, *wiRenderer::lineBuffer, *wiRenderer::skyCb

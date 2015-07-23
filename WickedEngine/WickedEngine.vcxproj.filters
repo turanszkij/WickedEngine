@@ -608,6 +608,9 @@
     <ClCompile Include="wiWaterPlane.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wiInitializer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1415,6 +1418,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wiStencilRef.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiInitializer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
