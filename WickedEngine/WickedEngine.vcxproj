@@ -173,6 +173,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MainComponent.cpp" />
     <ClCompile Include="LoadingScreenComponent.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
@@ -363,11 +364,11 @@
     <ClCompile Include="wiMath.cpp" />
     <ClCompile Include="wiColor.cpp" />
     <ClCompile Include="wiRandom.cpp" />
-    <ClCompile Include="wiWaterPlane.cpp" />
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="frameskipDEF.h" />
+    <ClInclude Include="MainComponent.h" />
     <ClInclude Include="LoadingScreenComponent.h" />
     <ClInclude Include="wiBackLog.h" />
     <ClInclude Include="wiBULLET.h" />

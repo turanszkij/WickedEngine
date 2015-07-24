@@ -7,12 +7,7 @@
 #include "wiHelper.h"
 
 ForwardRenderableComponent::ForwardRenderableComponent(){
-}
-ForwardRenderableComponent::~ForwardRenderableComponent(){
-}
-void ForwardRenderableComponent::Initialize()
-{
-	Renderable3DSceneComponent::Initialize();
+	Renderable3DSceneComponent::setProperties();
 
 	setSSREnabled(false);
 	setSSAOEnabled(false);
@@ -20,11 +15,18 @@ void ForwardRenderableComponent::Initialize()
 
 	setPreferredThreadingCount(0);
 }
+ForwardRenderableComponent::~ForwardRenderableComponent(){
+}
+void ForwardRenderableComponent::Initialize()
+{
+	Renderable3DSceneComponent::Initialize();
+
+	rtMain.Initialize(screenW, screenH, 1, true);
+}
 void ForwardRenderableComponent::Load()
 {
 	Renderable3DSceneComponent::Load();
 
-	rtMain.Initialize(screenW, screenH, 1, true);
 }
 void ForwardRenderableComponent::Start()
 {

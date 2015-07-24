@@ -8,21 +8,18 @@
 #include "wiTextureHelper.h"
 
 DeferredRenderableComponent::DeferredRenderableComponent(){
-}
-DeferredRenderableComponent::~DeferredRenderableComponent(){
-}
-void DeferredRenderableComponent::Initialize()
-{
-	Renderable3DSceneComponent::Initialize();
+	Renderable3DSceneComponent::setProperties();
 
 	setSSREnabled(true);
 	setSSAOEnabled(true);
 
 	setPreferredThreadingCount(0);
 }
-void DeferredRenderableComponent::Load()
+DeferredRenderableComponent::~DeferredRenderableComponent(){
+}
+void DeferredRenderableComponent::Initialize()
 {
-	Renderable3DSceneComponent::Load();
+	Renderable3DSceneComponent::Initialize();
 
 	rtGBuffer.Initialize(
 		screenW, screenH
@@ -37,6 +34,10 @@ void DeferredRenderableComponent::Load()
 		, 1, false, 1, 0
 		, DXGI_FORMAT_R11G11B10_FLOAT
 		);
+}
+void DeferredRenderableComponent::Load()
+{
+	Renderable3DSceneComponent::Load();
 }
 void DeferredRenderableComponent::Start()
 {

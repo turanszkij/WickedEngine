@@ -122,6 +122,8 @@ public:
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 
+	void setProperties();
+
 	Renderable3DSceneComponent();
 	~Renderable3DSceneComponent();
 

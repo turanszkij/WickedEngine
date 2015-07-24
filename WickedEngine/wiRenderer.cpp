@@ -432,7 +432,7 @@ void wiRenderer::SetUpStaticComponents()
 	wiEmittedParticle::SetUpStatic();
 
 	GameSpeed=1;
-	shBias = 9.99995464e-005;
+	shBias = 9.99995464e-005f;
 
 	resetVertexCount();
 	resetVisibleObjectCount();
@@ -598,6 +598,9 @@ void wiRenderer::CleanUpStaticTemp(){
 	
 	if (physicsEngine)
 		physicsEngine->ClearWorld();
+
+	enviroMap = nullptr;
+	colorGrading = nullptr;
 
 	wiRenderer::resetVertexCount();
 	

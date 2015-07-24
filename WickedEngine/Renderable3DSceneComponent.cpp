@@ -9,7 +9,6 @@
 
 Renderable3DSceneComponent::Renderable3DSceneComponent()
 {
-	Initialize();
 }
 Renderable3DSceneComponent::~Renderable3DSceneComponent()
 {
@@ -19,10 +18,8 @@ Renderable3DSceneComponent::~Renderable3DSceneComponent()
 	}
 }
 
-void Renderable3DSceneComponent::Initialize()
+void Renderable3DSceneComponent::setProperties()
 {
-	RenderableComponent::Initialize();
-
 	setLightShaftQuality(0.4f);
 	setBloomDownSample(4.0f);
 	setAlphaParticleDownSample(1.0f);
@@ -52,9 +49,9 @@ void Renderable3DSceneComponent::Initialize()
 	setPreferredThreadingCount(4);
 }
 
-void Renderable3DSceneComponent::Load()
+void Renderable3DSceneComponent::Initialize()
 {
-	RenderableComponent::Load();
+	RenderableComponent::Initialize();
 
 	rtSSR.Initialize(
 		(UINT)(screenW * getSSRQuality()), (UINT)(screenH * getSSRQuality())
@@ -134,17 +131,18 @@ void Renderable3DSceneComponent::Load()
 	for (unsigned int i = 1; i<rtBloom.size(); ++i)
 		rtBloom[i].Initialize(
 		(UINT)(screenW / getBloomDownSample())
-		,(UINT)( screenH / getBloomDownSample())
+		, (UINT)(screenH / getBloomDownSample())
 		, 1, false
 		);
+}
 
+void Renderable3DSceneComponent::Load()
+{
 	RenderableComponent::Load();
 }
 
 void Renderable3DSceneComponent::Start()
 {
-	wiRenderer::SetEnviromentMap(nullptr);
-	wiRenderer::SetColorGrading(nullptr);
 	wiRenderer::SetToDrawDebugBoxes(false);
 	wiRenderer::SetToDrawDebugLines(false);
 	wiRenderer::HAIRPARTICLEENABLED = getHairParticlesEnabled();

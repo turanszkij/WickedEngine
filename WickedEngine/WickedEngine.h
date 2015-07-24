@@ -48,6 +48,7 @@
 #include "ForwardRenderableComponent.h"
 #include "DeferredRenderableComponent.h"
 #include "LoadingScreenComponent.h"
+#include "MainComponent.h"
 
 
 #include "Utility/WicTextureLoader.h"

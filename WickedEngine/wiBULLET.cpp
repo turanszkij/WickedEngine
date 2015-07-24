@@ -93,7 +93,7 @@ void BULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& po
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 
 	btCollisionShape* shape = new btBoxShape(btVector3(sca.x,sca.y,sca.z));
-	shape->setMargin(0.05);
+	shape->setMargin(btScalar(0.05));
 	collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
@@ -203,7 +203,7 @@ void BULLET::addSphere(float rad, const XMFLOAT3& pos
 	}*/
 
 	btCollisionShape* shape = new btSphereShape(btScalar(rad));
-	shape->setMargin(0.05);
+	shape->setMargin(btScalar(0.05));
 	collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
@@ -254,7 +254,7 @@ void BULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 
 	btCollisionShape* shape = new btCapsuleShape(btScalar(rad),btScalar(hei));
-	shape->setMargin(0.05);
+	shape->setMargin(btScalar(0.05));
 	collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
@@ -308,7 +308,7 @@ void BULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3
 	for (unsigned int i = 0; i<vertices.size(); ++i)
 		((btConvexHullShape*)shape)->addPoint(btVector3(vertices[i].pos.x,vertices[i].pos.y,vertices[i].pos.z));
 	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
-	shape->setMargin(0.05);
+	shape->setMargin(btScalar(0.05));
 
 	collisionShapes.push_back(shape);
 
@@ -388,7 +388,7 @@ void BULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector
 	bool useQuantizedAabbCompression = true;
 						
 	btCollisionShape* shape = new btBvhTriangleMeshShape(indexVertexArrays,useQuantizedAabbCompression);
-	shape->setMargin(0.05);
+	shape->setMargin(btScalar(0.05));
 	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
 
 	collisionShapes.push_back(shape);
@@ -542,7 +542,7 @@ void BULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, cons
 		//	btSoftBody::fCollision::CL_RS
 		//	;
 		//softBody->generateClusters(tCount/4);
-		softBody->getCollisionShape()->setMargin(0.2);
+		softBody->getCollisionShape()->setMargin(btScalar(0.2));
 
 		//softBody->m_cfg.collisions	=	
 		//	btSoftBody::fCollision::SDF_RS+btSoftBody::fCollision::VF_SS

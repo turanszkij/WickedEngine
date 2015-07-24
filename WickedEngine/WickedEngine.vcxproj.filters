@@ -605,13 +605,13 @@
     <ClCompile Include="wiDirectInput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="wiWaterPlane.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="wiInitializer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LoadingScreenComponent.cpp">
+      <Filter>ComponentTemplates</Filter>
+    </ClCompile>
+    <ClCompile Include="MainComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1431,6 +1431,9 @@
     </ClInclude>
     <ClInclude Include="frameskipDEF.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainComponent.h">
+      <Filter>ComponentTemplates</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
