@@ -1429,9 +1429,6 @@
     <ClInclude Include="LoadingScreenComponent.h">
       <Filter>ComponentTemplates</Filter>
     </ClInclude>
-    <ClInclude Include="frameskipDEF.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MainComponent.h">
       <Filter>ComponentTemplates</Filter>
     </ClInclude>

@@ -367,7 +367,6 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="frameskipDEF.h" />
     <ClInclude Include="MainComponent.h" />
     <ClInclude Include="LoadingScreenComponent.h" />
     <ClInclude Include="wiBackLog.h" />

@@ -34,11 +34,28 @@ void MainComponent::activateComponent(RenderableComponent* component)
 
 void MainComponent::run()
 {
-	FRAMESKIP_START(getFrameSkip(), 10)
 
-	Update();
+	static Timer timer = Timer();
+	static const double dt = 1.0 / 60.0;
+	static double accumulator = 0.0;
 
-	FRAMESKIP_END
+	accumulator += timer.elapsed() / 1000.0;
+	if (accumulator>10) //application probably lost control
+		accumulator = 0;
+	timer.record();
+
+
+	while (accumulator >= dt)
+	{
+
+		Update();
+
+		accumulator -= dt;
+
+		if (!getFrameSkip())
+			break;
+
+	}
 
 	Render();
 
