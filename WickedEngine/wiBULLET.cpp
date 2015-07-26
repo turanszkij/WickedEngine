@@ -117,7 +117,8 @@ void wiBULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& 
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
 		rbInfo.m_friction=newFriction;
 		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping=newDamping;
+		rbInfo.m_linearDamping = newDamping;
+		rbInfo.m_angularDamping = newDamping;
 		btRigidBody* body = new btRigidBody(rbInfo);
 		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 		body->setActivationState(DISABLE_DEACTIVATION);
@@ -227,6 +228,7 @@ void wiBULLET::addSphere(float rad, const XMFLOAT3& pos
 		rbInfo.m_friction=newFriction;
 		rbInfo.m_restitution=newRestitution;
 		rbInfo.m_linearDamping=newDamping;
+		rbInfo.m_angularDamping = newDamping;
 		btRigidBody* body = new btRigidBody(rbInfo);
 		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 		body->setActivationState(DISABLE_DEACTIVATION);
@@ -278,7 +280,8 @@ void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLO
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
 		rbInfo.m_friction=newFriction;
 		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping=newDamping;
+		rbInfo.m_linearDamping = newDamping;
+		rbInfo.m_angularDamping = newDamping;
 		btRigidBody* body = new btRigidBody(rbInfo);
 		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 		body->setActivationState(DISABLE_DEACTIVATION);
@@ -333,7 +336,8 @@ void wiBULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOA
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
 		rbInfo.m_friction=newFriction;
 		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping=newDamping;
+		rbInfo.m_linearDamping = newDamping;
+		rbInfo.m_angularDamping = newDamping;
 		btRigidBody* body = new btRigidBody(rbInfo);
 		if(kinematic) {
 			body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
@@ -414,7 +418,8 @@ void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vect
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
 		rbInfo.m_friction=newFriction;
 		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping=newDamping;
+		rbInfo.m_linearDamping = newDamping;
+		rbInfo.m_angularDamping = newDamping;
 		btRigidBody* body = new btRigidBody(rbInfo);
 		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 		body->setActivationState( DISABLE_DEACTIVATION );
