@@ -2,12 +2,12 @@
 #include "CommonInclude.h"
 #include "wiTimer.h"
 
-class Timer;
+class wiTimer;
 
 class wiFrameRate
 {
 protected:
-	static Timer timer;
+	static wiTimer timer;
 	static double dt;
 public:
 	static void Initialize();

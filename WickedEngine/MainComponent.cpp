@@ -1,8 +1,8 @@
 #include "MainComponent.h"
 #include "RenderableComponent.h"
-#include "frameskipDEF.h"
 #include "wiRenderer.h"
 #include "wiHelper.h"
+#include "wiTimer.h"
 
 
 MainComponent::MainComponent()
@@ -11,6 +11,10 @@ MainComponent::MainComponent()
 	screenH = 600;
 
 	activeComponent = new RenderableComponent();
+
+	setFrameSkip(true);
+	setTargetFrameRate(60);
+	setApplicationControlLostThreshold(10);
 }
 
 
@@ -27,32 +31,31 @@ void MainComponent::activateComponent(RenderableComponent* component)
 	}
 
 	activeComponent->Stop();
+	component->Start();
 
 	activeComponent = component;
-	activeComponent->Start();
 }
 
 void MainComponent::run()
 {
 
-	static Timer timer = Timer();
-	static const double dt = 1.0 / 60.0;
+	static wiTimer timer = wiTimer();
 	static double accumulator = 0.0;
 
 	accumulator += timer.elapsed() / 1000.0;
-	if (accumulator>10) //application probably lost control
+	if (accumulator>applicationControlLostThreshold) //application probably lost control
 		accumulator = 0;
 	timer.record();
 
 
-	while (accumulator >= dt)
+	while (accumulator >= targetFrameRateInv || !frameskip)
 	{
 
 		Update();
 
-		accumulator -= dt;
+		accumulator -= targetFrameRateInv;
 
-		if (!getFrameSkip())
+		if (!frameskip)
 			break;
 
 	}

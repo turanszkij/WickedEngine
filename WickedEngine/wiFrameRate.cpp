@@ -1,11 +1,11 @@
 #include "wiFrameRate.h"
 
-Timer wiFrameRate::timer;
+wiTimer wiFrameRate::timer;
 double wiFrameRate::dt=0.0;
 
 void wiFrameRate::Initialize()
 {
-	timer = Timer();
+	timer = wiTimer();
 }
 
 void wiFrameRate::Frame(){

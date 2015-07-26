@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 
-class Timer
+class wiTimer
 {
 private:
 	static double PCFreq;
@@ -9,8 +9,8 @@ private:
 
 	double lastTime;
 public:
-	Timer();
-	~Timer();
+	wiTimer();
+	~wiTimer();
 
 	static void Start();
 	static double TotalTime(); 

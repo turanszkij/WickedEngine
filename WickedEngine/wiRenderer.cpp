@@ -1928,7 +1928,7 @@ void wiRenderer::UpdateRenderInfo(ID3D11DeviceContext* context)
 	UpdateBoneLines();
 	UpdateCubes();
 
-	wind.time=(float)((Timer::TotalTime())/1000.0*GameSpeed/2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
+	wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
 }
 void wiRenderer::UpdateObjects(){
 	for (unsigned int i = 0; i<everyObject.size(); i++){

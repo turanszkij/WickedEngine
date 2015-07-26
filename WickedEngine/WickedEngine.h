@@ -55,8 +55,6 @@
 #include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
 
-#include "frameskipDEF.h"
-
 
 
 #ifndef WINSTORE_SUPPORT

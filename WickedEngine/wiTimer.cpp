@@ -1,10 +1,10 @@
 #include "wiTimer.h"
 #include "wiHelper.h"
 
-double Timer::PCFreq=0;
-__int64 Timer::CounterStart=0;
+double wiTimer::PCFreq = 0;
+__int64 wiTimer::CounterStart = 0;
 
-Timer::Timer()
+wiTimer::wiTimer()
 {
 	if(CounterStart==0)
 		Start();
@@ -12,11 +12,11 @@ Timer::Timer()
 }
 
 
-Timer::~Timer()
+wiTimer::~wiTimer()
 {
 }
 
-void Timer::Start()
+void wiTimer::Start()
 {
     LARGE_INTEGER li;
     if(!QueryPerformanceFrequency(&li))
@@ -27,18 +27,18 @@ void Timer::Start()
     QueryPerformanceCounter(&li);
     CounterStart = li.QuadPart;
 }
-double Timer::TotalTime()
+double wiTimer::TotalTime()
 {
     LARGE_INTEGER li;
     QueryPerformanceCounter(&li);
     return double(li.QuadPart-CounterStart)/PCFreq;
 }
 
-void Timer::record()
+void wiTimer::record()
 {
 	lastTime = TotalTime();
 }
-double Timer::elapsed()
+double wiTimer::elapsed()
 {
 	return TotalTime() - lastTime;
 }

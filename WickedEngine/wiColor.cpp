@@ -1,9 +1,14 @@
 #include "wiColor.h"
+#include "wiMath.h"
 
 wiColor::wiColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a) :r(r), g(g), b(b), a(a)
 {
 	rgb = createRGB(r, g, b);
 	rgba = createRGBA(r, g, b, a);
+	R = r / 255.f;
+	G = g / 255.f;
+	B = b / 255.f;
+	A = a / 255.f;
 }
 
 unsigned long wiColor::createRGB(int r, int g, int b)
@@ -15,4 +20,15 @@ unsigned long wiColor::createRGBA(int r, int g, int b, int a)
 	return ((r & 0xff) << 24) + ((g & 0xff) << 16) + ((b & 0xff) << 8)
 		+ (a & 0xff);
 }
+
+wiColor wiColor::fromFloat(float r, float g, float b, float a)
+{
+	return wiColor((unsigned char)(r * 255), (unsigned char)(g * 255), (unsigned char)(b * 255), (unsigned char)(a * 255));
+}
+wiColor wiColor::lerp(const wiColor& a, const wiColor& b, float i)
+{
+	XMFLOAT4& retF = wiMath::Lerp(XMFLOAT4(a.R, a.G, a.B, a.A), XMFLOAT4(b.R, b.G, b.B, b.A), i);
+	return wiColor::fromFloat(retF.x, retF.y, retF.z, retF.w);
+}
+
 

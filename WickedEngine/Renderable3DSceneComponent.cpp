@@ -139,14 +139,14 @@ void Renderable3DSceneComponent::Initialize()
 void Renderable3DSceneComponent::Load()
 {
 	RenderableComponent::Load();
+
+	wiRenderer::HAIRPARTICLEENABLED = getHairParticlesEnabled();
+	wiRenderer::EMITTERSENABLED = getEmittedParticlesEnabled();
 }
 
 void Renderable3DSceneComponent::Start()
 {
-	wiRenderer::SetToDrawDebugBoxes(false);
-	wiRenderer::SetToDrawDebugLines(false);
-	wiRenderer::HAIRPARTICLEENABLED = getHairParticlesEnabled();
-	wiRenderer::EMITTERSENABLED = getEmittedParticlesEnabled();
+	RenderableComponent::Start();
 }
 
 void Renderable3DSceneComponent::Update(){
