@@ -12,7 +12,7 @@
 
 struct RAY;
 
-class BULLET:public PHYSICS
+class wiBULLET:public PHYSICS
 {
 private:
 	btCollisionConfiguration* collisionConfiguration;
@@ -30,8 +30,8 @@ private:
 	static bool grab;
 	static RAY grabRay;
 public:
-	BULLET();
-	~BULLET();
+	wiBULLET();
+	~wiBULLET();
 
 	void addWind(const XMFLOAT3& wind);
 

@@ -46,7 +46,7 @@ void Renderable3DSceneComponent::setProperties()
 	setLightShaftsEnabled(true);
 	setLensFlareEnabled(true);
 
-	setPreferredThreadingCount(4);
+	setPreferredThreadingCount(0);
 }
 
 void Renderable3DSceneComponent::Initialize()

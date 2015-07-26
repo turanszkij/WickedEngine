@@ -38,8 +38,8 @@ Point lights + shadow cubemaps
 Diffuse, specular lighting for all lights
 Soft shadows
 Rigid body physics simulation (HAVOK)
-Rigid body physics simulation (BULLET)
-Soft body physics simulation (BULLET)
+Rigid body physics simulation (wiBULLET)
+Soft body physics simulation (wiBULLET)
 Sound (Xaudio2)
 Frustum culling
 QuadTree culling

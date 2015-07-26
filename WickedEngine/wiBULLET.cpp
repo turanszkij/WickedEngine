@@ -2,10 +2,10 @@
 #include "wiLoader.h"
 
 int PHYSICS::softBodyInterationCount=5;
-bool BULLET::grab=false;
-RAY BULLET::grabRay=RAY();
+bool wiBULLET::grab=false;
+RAY wiBULLET::grabRay=RAY();
 
-BULLET::BULLET()
+wiBULLET::wiBULLET()
 {
 	registeredObjects=-1;
 
@@ -47,14 +47,14 @@ BULLET::BULLET()
 
 
 #ifdef BACKLOG
-	wiBackLog::post("BULLET physics Initialized");
+	wiBackLog::post("wiBULLET physics Initialized");
 #endif
 
 	///-----initialization_end-----
 }
 
 
-BULLET::~BULLET()
+wiBULLET::~wiBULLET()
 {
 	//cleanup in the reverse order of creation/initialization
 	
@@ -84,12 +84,12 @@ BULLET::~BULLET()
 }
 
 
-void BULLET::addWind(const XMFLOAT3& wind){
+void wiBULLET::addWind(const XMFLOAT3& wind){
 	this->wind = btVector3(btScalar(wind.x),btScalar(wind.y),btScalar(wind.z));
 }
 
 
-void BULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 
 	btCollisionShape* shape = new btBoxShape(btVector3(sca.x,sca.y,sca.z));
@@ -141,7 +141,7 @@ void BULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& po
 	
 }
 
-void BULLET::addSphere(float rad, const XMFLOAT3& pos
+void wiBULLET::addSphere(float rad, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	///create a few basic rigid bodies
 	/*btCollisionShape* groundShape = new btshape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
@@ -250,7 +250,7 @@ void BULLET::addSphere(float rad, const XMFLOAT3& pos
 	
 }
 
-void BULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 
 	btCollisionShape* shape = new btCapsuleShape(btScalar(rad),btScalar(hei));
@@ -302,7 +302,7 @@ void BULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT
 	
 }
 
-void BULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	btCollisionShape* shape = new btConvexHullShape();
 	for (unsigned int i = 0; i<vertices.size(); ++i)
@@ -359,7 +359,7 @@ void BULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3
 	
 }
 
-void BULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	
 	int totalVerts = vertices.size();
@@ -439,7 +439,7 @@ void BULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector
 }
 
 
-void BULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 	, float newMass, float newFriction, float newRestitution, float newDamping){
 		
 
@@ -563,7 +563,7 @@ void BULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, cons
 }
 
 
-void BULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
+void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
 	btSoftBody* softBody = btSoftBody::upcast(obj);
 
@@ -588,7 +588,7 @@ void BULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 		}
 	}
 }
-void BULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
+void wiBULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
 	if(!firstRunWorld){
 		btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
 		btSoftBody* softBody = btSoftBody::upcast(obj);
@@ -610,7 +610,7 @@ void BULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
 		}
 	}
 }
-void BULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI){
+void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI){
 	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
 	btRigidBody* rigidBody = btRigidBody::upcast(obj);
 	if(rigidBody){
@@ -622,7 +622,7 @@ void BULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI
 	}
 }
 
-PHYSICS::Transform* BULLET::getObject(int index){
+PHYSICS::Transform* wiBULLET::getObject(int index){
 	
 	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[index];
 	btTransform trans;
@@ -646,7 +646,7 @@ PHYSICS::Transform* BULLET::getObject(int index){
 	return transforms[index];
 }
 
-void BULLET::registerObject(Object* object){
+void wiBULLET::registerObject(Object* object){
 	if(object->rigidBody){
 		XMVECTOR s,r,t;
 		XMMatrixDecompose(&s,&r,&t,XMLoadFloat4x4(&object->world));
@@ -722,22 +722,22 @@ void BULLET::registerObject(Object* object){
 	}
 }
 
-void BULLET::Update(){
+void wiBULLET::Update(){
 	dynamicsWorld->stepSimulation((1.f/60.f));
 }
-void BULLET::MarkForRead(){
+void wiBULLET::MarkForRead(){
 
 }
-void BULLET::UnMarkForRead(){
+void wiBULLET::UnMarkForRead(){
 
 }
-void BULLET::MarkForWrite(){
+void wiBULLET::MarkForWrite(){
 
 }
-void BULLET::UnMarkForWrite(){
+void wiBULLET::UnMarkForWrite(){
 
 }
-void BULLET::ClearWorld(){
+void wiBULLET::ClearWorld(){
 	for(int i=dynamicsWorld->getNumCollisionObjects()-1;i>=0;i--)
 	{
 		btCollisionObject*	obj=dynamicsWorld->getCollisionObjectArray()[i];
@@ -781,24 +781,24 @@ void BULLET::ClearWorld(){
 	transforms.clear();
 	registeredObjects=-1;
 }
-void BULLET::CleanUp(){
+void wiBULLET::CleanUp(){
 	for (unsigned int i = 0; i<transforms.size(); ++i)
 		delete transforms[i];
 	transforms.clear();
 }
 
 
-void* BULLET::operator new(size_t size)
+void* wiBULLET::operator new(size_t size)
 {
 	void* result = _aligned_malloc(size,16);
 	return result;
 }
-void BULLET::operator delete(void* p)
+void wiBULLET::operator delete(void* p)
 {
 	if(p) _aligned_free(p);
 }
 
-void BULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
+void wiBULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
 	int numManifolds = world->getDispatcher()->getNumManifolds();
     for (int i=0;i<numManifolds;i++)
     {
@@ -824,7 +824,7 @@ void BULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
     }
 }
 
-void BULLET::pickingPreTickCallback (btDynamicsWorld *world, btScalar timeStep)
+void wiBULLET::pickingPreTickCallback (btDynamicsWorld *world, btScalar timeStep)
 {
 //	world->getWorldUserInfo();
 //
@@ -859,7 +859,7 @@ void BULLET::pickingPreTickCallback (btDynamicsWorld *world, btScalar timeStep)
 //	}
 //
 }
-void BULLET::setGrab(bool value, const RAY& ray){
+void wiBULLET::setGrab(bool value, const RAY& ray){
 	grab=value;
 	grabRay=ray;
 }

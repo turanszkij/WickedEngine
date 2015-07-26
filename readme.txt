@@ -28,7 +28,7 @@ Set the following dependencies to this library in Visual Studio this way in the 
 1.) Open Project Properties -> Configuration Properties
 2.) C/C++ -> General -> Additional Include Directories: 
 		./WickedEngine
-		./WickedEngine/BULLET
+		./WickedEngine/wiBULLET
 3.) Linker -> General -> Additional Library Directories:
 		Directory of your built .lib file (Debug or Release directory in the solution by default)
 		./WickedEngine/mysql
@@ -46,7 +46,7 @@ ________________________________________________________________________________
 
 	./WickedEngine.sln 						- Visual Studio Solution;
 	./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project;
-	./WickedEngine/BULLET/					- Bullet 2.82 Source files;
+	./WickedEngine/wiBULLET/					- Bullet 2.82 Source files;
 	./WickedEngine/mysql/					- MYSQL C++ libraries;
 	./WickedEngine/shaders/					- Binary shaders output;
 	./WickedEngine/ 						- C++ and shader source files;
