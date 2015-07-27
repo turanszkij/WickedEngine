@@ -38,15 +38,14 @@ Point lights + shadow cubemaps
 Diffuse, specular lighting for all lights
 Soft shadows
 Rigid body physics simulation (HAVOK)
-Rigid body physics simulation (wiBULLET)
-Soft body physics simulation (wiBULLET)
+Rigid body physics simulation (BULLET)
+Soft body physics simulation (BULLET)
 Sound (Xaudio2)
 Frustum culling
 QuadTree culling
 Octree culling
 Input: Windows Keyboard,Windows Mouse,DirectInput(Joypad,Keyboard,Mouse),XINPUT(Joypad)
-Scripting: movement,logic,dynamic cameras,images,sound,animation,ribbon trails, particle systems
-Backlog: log,input,scripting(TODO)
+Backlog: log,input,scripting
 Gamma correction
 Resource Manager
 Screen Space Ambient Occlusion
