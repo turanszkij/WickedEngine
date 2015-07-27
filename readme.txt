@@ -60,6 +60,8 @@ ________________________________________________________________________________
 
 Wicked Engine is an open-source game engine written in C++ for Windows PC. For list of features, see features.txt.
 Documentation is not yet available, but hopefully it will be someday.
+Demos are available at: https://github.com/turanszkij/WickedEngineDemos
+From now on you can easily set up a game project by using the component templates. (see the demos for examples)
 ________________________________________________________________________________________________________________________
 
 _______
