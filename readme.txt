@@ -7,7 +7,7 @@ ________________
 Requirements:   |
 _____________________________________________________________________
 
-Visual Studio 2012+
+Visual Studio 2013+ (earlier versions may be compatible)
 WindowsSDK
 DirectX11 SDK (included in Windows SDK)(legacy SDK not supported)
 _____________________________________________________________________
@@ -37,7 +37,7 @@ Editor: Use Blender 2.72 as the editor of this engine. Set up your scene and exp
 
 Windows 7 support: define _WIN32_WINNT=0x0601 preprocessor on the whole project
 
-Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole project
+Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole project (incomplete)
 _______________________________________________________________________________________________________________
 
 __________
@@ -62,25 +62,65 @@ Wicked Engine is an open-source game engine written in C++ for Windows PC. For l
 Documentation is not yet available, but hopefully it will be someday.
 ________________________________________________________________________________________________________________________
 
-
 _______
 TODOs: |
 _________________________________________________________
 
 	Priority:
 		- FIX XINPUT
+			It stopped working when I moved the solution to Visual Studio 2013
 		- Optimize image rendering
+			The Drawing fuctions are bloated, imageVS is no longer readable by humans, 
+			possible batching optimizations
 		- Rewrite camera class
+			It is probably the very first class for the engine and also the ugliest one, 
+			it was written a long time ago
+			it also has windows api commands (wtf)
 		- Decouple API from wiRenderer
-		- 2D Renderable Component Template (after optimized image rendering)
+			The renderer has become too large, unmanageable, hardly readable. Aside from that it
+			is a good idea to decouple them for possible support of multiple apis in the future...
 		- Multithreaded rendering bug after refactor (flashing geometry)(turned off for the time being)
+			Probably some instancing info being written in multiple theads at once
 	Other:
 		- Cleanup
+			No comment
 		- Documentation
+			Probably not in the near future
 		- HDR pipeline
+			Already using floating point rendertargets, but everything is saturated (except bloom).
+			It needs tone mapping and not much else
 		- Forward rendering pipeline
+			It should support everything that the deferred renderer supports. Now it has only a directional light
+			without shadows, but the lighting fuctions are reusable and already written in separate headers.
 		- Precalculated Ambient Occlusion
+			It has everything it needs in the engine, just need to put it together.
 		- Optimize Meshes
+			Remove duplicate vertices and improve cache coherency
+		- Port to Windows Phone and Win RT
 		- Windows RT controls helper
 		- Texture helper various texture generators (fractal, perlin, etc.) (low priority)
 __________________________________________________________
+
+________
+Editor: |
+________________________________________________________________________________________________________________________
+
+For the time being, Blender software is the editor program for Wicked Engine. I provide an export script which
+you can use to export to the wicked scene format. The script is also going to be updated from time to time to
+remove the known hiccups and bugs.
+	- Names should not contain spaces inside Blender
+		The problem is the c++ side code which parses the text files such as it breaks parsing on spaces. 
+		Mesh files are already exported as binary, so those are okay
+		Suggested fix: write binary export for everything
+	- Separate files generated
+		I've written the exporter to write different categories of the scene to different files for easier debugging
+		from a text editor. If the exporter is rewritten to write binary for everything, such debugging will
+		not be possible so might as well merge the files (except mesh files and error message file)
+	- Only animation supported is skeletal animation
+	- Animation Action names should contain their armature's name so that the exporter matches them correctly
+		Suggested fix: find a better way of matching armatures and actions
+	- Animation only with linear curves (so no curves)
+		Suggested fix: implement curves support into the engine and the exporter
+	- Only one uv map support
+		Light maps and other effects requiring multiple uv maps are not possible yet.
+________________________________________________________________________________________________________________________
