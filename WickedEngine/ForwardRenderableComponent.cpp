@@ -7,7 +7,7 @@
 #include "wiHelper.h"
 
 ForwardRenderableComponent::ForwardRenderableComponent(){
-	Renderable3DSceneComponent::setProperties();
+	Renderable3DComponent::setProperties();
 
 	setSSREnabled(false);
 	setSSAOEnabled(false);
@@ -19,18 +19,18 @@ ForwardRenderableComponent::~ForwardRenderableComponent(){
 }
 void ForwardRenderableComponent::Initialize()
 {
-	Renderable3DSceneComponent::Initialize();
+	Renderable3DComponent::Initialize();
 
 	rtMain.Initialize(screenW, screenH, 1, true);
 }
 void ForwardRenderableComponent::Load()
 {
-	Renderable3DSceneComponent::Load();
+	Renderable3DComponent::Load();
 
 }
 void ForwardRenderableComponent::Start()
 {
-	Renderable3DSceneComponent::Start();
+	Renderable3DComponent::Start();
 }
 void ForwardRenderableComponent::Render(){
 
@@ -94,7 +94,7 @@ void ForwardRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 
 void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value)
 {
-	Renderable3DSceneComponent::setPreferredThreadingCount(value);
+	Renderable3DComponent::setPreferredThreadingCount(value);
 
 	if (!wiRenderer::getMultithreadingSupport())
 	{

@@ -14,6 +14,7 @@ private:
 		{
 			HELPERTEXTURE_RANDOM64X64,
 			HELPERTEXTURE_COLORGRADEDEFAULT,
+			HELPERTEXTURE_NORMALMAPDEFAULT,
 			HELPERTEXTURE_COUNT
 		};
 		wiRenderer::TextureView helperTextures[HELPERTEXTURE_COUNT];
@@ -24,7 +25,8 @@ private:
 		~wiTextureHelperInstance();
 
 		wiRenderer::TextureView getRandom64x64();
-		wiRenderer::TextureView getColorGradeDefaultTex();
+		wiRenderer::TextureView getColorGradeDefault();
+		wiRenderer::TextureView getNormalMapDefault();
 
 		wiRenderer::TextureView getWhite();
 		wiRenderer::TextureView getBlack();

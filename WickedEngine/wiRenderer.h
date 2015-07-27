@@ -363,7 +363,7 @@ public:
 	static void UpdateObjects();
 	static void UpdateSoftBodyPinning();
 	static void UpdateSkinnedVB();
-	static void UpdatewiSPTree(wiSPTree*& tree);
+	static void UpdateSPTree(wiSPTree*& tree);
 	static void UpdateImages();
 	static void ManageImages();
 	static void PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane);

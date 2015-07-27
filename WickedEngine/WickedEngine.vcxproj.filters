@@ -494,9 +494,6 @@
     <ClCompile Include="ForwardRenderableComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
-    <ClCompile Include="Renderable3DSceneComponent.cpp">
-      <Filter>ComponentTemplates</Filter>
-    </ClCompile>
     <ClCompile Include="wiRandom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -612,6 +609,12 @@
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
     <ClCompile Include="MainComponent.cpp">
+      <Filter>ComponentTemplates</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderable3DComponent.cpp">
+      <Filter>ComponentTemplates</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderable2DComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1291,9 +1294,6 @@
     <ClInclude Include="ForwardRenderableComponent.h">
       <Filter>ComponentTemplates</Filter>
     </ClInclude>
-    <ClInclude Include="Renderable3DSceneComponent.h">
-      <Filter>ComponentTemplates</Filter>
-    </ClInclude>
     <ClInclude Include="wiRandom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1430,6 +1430,12 @@
       <Filter>ComponentTemplates</Filter>
     </ClInclude>
     <ClInclude Include="MainComponent.h">
+      <Filter>ComponentTemplates</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderable3DComponent.h">
+      <Filter>ComponentTemplates</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderable2DComponent.h">
       <Filter>ComponentTemplates</Filter>
     </ClInclude>
   </ItemGroup>

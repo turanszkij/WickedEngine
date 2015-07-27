@@ -8,7 +8,7 @@
 #include "wiTextureHelper.h"
 
 DeferredRenderableComponent::DeferredRenderableComponent(){
-	Renderable3DSceneComponent::setProperties();
+	Renderable3DComponent::setProperties();
 
 	setSSREnabled(true);
 	setSSAOEnabled(true);
@@ -19,7 +19,7 @@ DeferredRenderableComponent::~DeferredRenderableComponent(){
 }
 void DeferredRenderableComponent::Initialize()
 {
-	Renderable3DSceneComponent::Initialize();
+	Renderable3DComponent::Initialize();
 
 	rtGBuffer.Initialize(
 		screenW, screenH
@@ -37,11 +37,11 @@ void DeferredRenderableComponent::Initialize()
 }
 void DeferredRenderableComponent::Load()
 {
-	Renderable3DSceneComponent::Load();
+	Renderable3DComponent::Load();
 }
 void DeferredRenderableComponent::Start()
 {
-	Renderable3DSceneComponent::Start();
+	Renderable3DComponent::Start();
 }
 void DeferredRenderableComponent::Render(){
 
@@ -174,7 +174,7 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 
 void DeferredRenderableComponent::setPreferredThreadingCount(unsigned short value)
 {
-	Renderable3DSceneComponent::setPreferredThreadingCount(value);
+	Renderable3DComponent::setPreferredThreadingCount(value);
 
 	if (!wiRenderer::getMultithreadingSupport())
 	{

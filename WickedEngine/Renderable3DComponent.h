@@ -4,7 +4,7 @@
 #include "wiRenderer.h"
 #include "wiWaterPlane.h"
 
-class Renderable3DSceneComponent :
+class Renderable3DComponent :
 	public RenderableComponent
 {
 private:
@@ -124,8 +124,8 @@ public:
 
 	void setProperties();
 
-	Renderable3DSceneComponent();
-	~Renderable3DSceneComponent();
+	Renderable3DComponent();
+	~Renderable3DComponent();
 
 	virtual void Initialize();
 	virtual void Load();

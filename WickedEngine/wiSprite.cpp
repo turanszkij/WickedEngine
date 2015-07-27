@@ -47,6 +47,12 @@ void wiSprite::CreateReference(const string& newTexture, const string& newMask, 
 	}
 }
 void wiSprite::CleanUp(){
+	wiResourceManager::del(texture);
+	wiResourceManager::del(normal);
+	wiResourceManager::del(mask);
+	texture = nullptr;
+	normal = nullptr;
+	mask = nullptr;
 }
 
 void wiSprite::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* context){

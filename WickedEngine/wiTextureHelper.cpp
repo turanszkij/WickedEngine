@@ -53,7 +53,7 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64
 	return helperTextures[HELPERTEXTURE_RANDOM64X64];
 }
 
-wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeDefaultTex()
+wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeDefault()
 {
 	if (helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT] != nullptr)
 	{
@@ -91,6 +91,11 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeD
 
 
 	return helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
+}
+
+wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getNormalMapDefault()
+{
+	return getColor(wiColor(127, 127, 255, 255));
 }
 
 wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getWhite()

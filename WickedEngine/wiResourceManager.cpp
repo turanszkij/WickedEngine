@@ -217,9 +217,17 @@ bool wiResourceManager::del(const string& name)
 		if(res->data)
 			switch(res->type){
 			case Data_Type::IMAGE:
-				((wiRenderer::TextureView)res->data)->Release();
+			case Data_Type::IMAGE_STAGING:
+			case Data_Type::VERTEXSHADER:
+			case Data_Type::PIXELSHADER:
+			case Data_Type::GEOMETRYSHADER:
+			case Data_Type::HULLSHADER:
+			case Data_Type::DOMAINSHADER:
+			case Data_Type::COMPUTESHADER:
+				wiRenderer::SafeRelease(((wiRenderer::APIInterface&)res->data));
 				break;
 			case Data_Type::SOUND:
+			case Data_Type::MUSIC:
 				delete ((SoundResource)res->data);
 				break;
 			default:

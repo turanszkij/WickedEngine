@@ -821,7 +821,7 @@ void wiRenderer::UpdateCubes(){
 		}
 	}
 }
-void wiRenderer::UpdatewiSPTree(wiSPTree*& tree){
+void wiRenderer::UpdateSPTree(wiSPTree*& tree){
 	if(tree && tree->root){
 		wiSPTree* newTree = tree->updateTree(tree->root);
 		if(newTree){
@@ -1920,9 +1920,9 @@ void wiRenderer::UpdateRenderInfo(ID3D11DeviceContext* context)
 #endif
 
 
-		UpdatewiSPTree(spTree);
-		UpdatewiSPTree(spTree_trans);
-		UpdatewiSPTree(spTree_water);
+		UpdateSPTree(spTree);
+		UpdateSPTree(spTree_trans);
+		UpdateSPTree(spTree_water);
 	}
 	
 	UpdateBoneLines();
@@ -3783,7 +3783,7 @@ void wiRenderer::UpdateLights()
 	}
 
 	
-	UpdatewiSPTree(spTree_lights);
+	UpdateSPTree(spTree_lights);
 		
 
 	}

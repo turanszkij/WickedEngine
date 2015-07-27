@@ -1,4 +1,4 @@
-#include "Renderable3DSceneComponent.h"
+#include "Renderable3DComponent.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
 #include "wiImageEffects.h"
@@ -7,10 +7,10 @@
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 
-Renderable3DSceneComponent::Renderable3DSceneComponent()
+Renderable3DComponent::Renderable3DComponent()
 {
 }
-Renderable3DSceneComponent::~Renderable3DSceneComponent()
+Renderable3DComponent::~Renderable3DComponent()
 {
 	for (auto& wt : workerThreads)
 	{
@@ -18,16 +18,16 @@ Renderable3DSceneComponent::~Renderable3DSceneComponent()
 	}
 }
 
-void Renderable3DSceneComponent::setProperties()
+void Renderable3DComponent::setProperties()
 {
 	setLightShaftQuality(0.4f);
 	setBloomDownSample(4.0f);
 	setAlphaParticleDownSample(1.0f);
 	setAdditiveParticleDownSample(1.0f);
 	setReflectionQuality(0.5f);
-	setSSAOQuality(0.3f);
-	setSSAOBlur(2.0f);
-	setSSRQuality(0.5f);
+	setSSAOQuality(0.5f);
+	setSSAOBlur(2.3f);
+	setSSRQuality(0.4f);
 	setBloomStrength(19.3f);
 	setBloomThreshold(0.99f);
 	setBloomSaturation(-3.86f);
@@ -49,7 +49,7 @@ void Renderable3DSceneComponent::setProperties()
 	setPreferredThreadingCount(0);
 }
 
-void Renderable3DSceneComponent::Initialize()
+void Renderable3DComponent::Initialize()
 {
 	RenderableComponent::Initialize();
 
@@ -136,7 +136,7 @@ void Renderable3DSceneComponent::Initialize()
 		);
 }
 
-void Renderable3DSceneComponent::Load()
+void Renderable3DComponent::Load()
 {
 	RenderableComponent::Load();
 
@@ -144,12 +144,12 @@ void Renderable3DSceneComponent::Load()
 	wiRenderer::EMITTERSENABLED = getEmittedParticlesEnabled();
 }
 
-void Renderable3DSceneComponent::Start()
+void Renderable3DComponent::Start()
 {
 	RenderableComponent::Start();
 }
 
-void Renderable3DSceneComponent::Update(){
+void Renderable3DComponent::Update(){
 	RenderableComponent::Update();
 
 	wiRenderer::Update();
@@ -160,14 +160,14 @@ void Renderable3DSceneComponent::Update(){
 	wiRenderer::UpdateImages();
 }
 
-void Renderable3DSceneComponent::Compose(){
+void Renderable3DComponent::Compose(){
 	RenderableComponent::Compose();
 
 	RenderColorGradedComposition();
 
 }
 
-void Renderable3DSceneComponent::RenderReflections(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context){
 	if (!getReflectionsEnabled() || getReflectionQuality() < 0.01f)
 	{
 		return;
@@ -183,7 +183,7 @@ void Renderable3DSceneComponent::RenderReflections(wiRenderer::DeviceContext con
 		wiRenderer::DrawSky(wiRenderer::getCamera()->refEye, context);
 	}
 }
-void Renderable3DSceneComponent::RenderShadows(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderShadows(wiRenderer::DeviceContext context){
 	if (!getShadowsEnabled())
 	{
 		return;
@@ -192,7 +192,7 @@ void Renderable3DSceneComponent::RenderShadows(wiRenderer::DeviceContext context
 	wiRenderer::ClearShadowMaps(context);
 	wiRenderer::DrawForShadowMap(context);
 }
-void Renderable3DSceneComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context)
+void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context)
 {
 	if (getLensFlareEnabled())
 	{
@@ -230,7 +230,7 @@ void Renderable3DSceneComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wi
 	}
 
 }
-void Renderable3DSceneComponent::RenderBloom(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderBloom(wiRenderer::DeviceContext context){
 
 	wiImageEffects fx((float)screenW, (float)screenH);
 
@@ -265,7 +265,7 @@ void Renderable3DSceneComponent::RenderBloom(wiRenderer::DeviceContext context){
 		wiImage::Draw(rtBloom[1].shaderResource.back(), fx, context);
 	}
 }
-void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer::DeviceContext context){
 	if (!getLightShaftsEnabled())
 	{
 		return;
@@ -290,7 +290,7 @@ void Renderable3DSceneComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRen
 		}
 	}
 }
-void Renderable3DSceneComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context){
 	wiImageEffects fx((float)screenW, (float)screenH);
 	wiImage::BatchBegin(context);
 
@@ -323,7 +323,7 @@ void Renderable3DSceneComponent::RenderComposition1(wiRenderTarget& shadedSceneR
 		wiImage::Draw(rtLensFlare.shaderResource.back(), fx, context);
 	}
 }
-void Renderable3DSceneComponent::RenderComposition2(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderComposition2(wiRenderer::DeviceContext context){
 	wiImageEffects fx((float)screenW, (float)screenH);
 	wiImage::BatchBegin(context);
 
@@ -340,7 +340,7 @@ void Renderable3DSceneComponent::RenderComposition2(wiRenderer::DeviceContext co
 		wiImage::Draw(rtBloom.back().shaderResource.back(), fx, context);
 	}
 }
-void Renderable3DSceneComponent::RenderColorGradedComposition(){
+void Renderable3DComponent::RenderColorGradedComposition(){
 
 	wiImageEffects fx((float)screenW, (float)screenH);
 	wiImage::BatchBegin();
@@ -357,14 +357,14 @@ void Renderable3DSceneComponent::RenderColorGradedComposition(){
 		else
 		{
 			fx.process.setColorGrade(true);
-			fx.setMaskMap(wiTextureHelper::getInstance()->getColorGradeDefaultTex());
+			fx.setMaskMap(wiTextureHelper::getInstance()->getColorGradeDefault());
 		}
 	}
 	wiImage::Draw(rtFinal[1].shaderResource.back(), fx);
 }
 
 
-void Renderable3DSceneComponent::setPreferredThreadingCount(unsigned short value)
+void Renderable3DComponent::setPreferredThreadingCount(unsigned short value)
 {
 	for (auto& wt : workerThreads)
 	{

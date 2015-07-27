@@ -26,9 +26,8 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 		color = xTexture.SampleLevel(Sampler,PSIn.tex,0);
 		color=pow(color,GAMMA);
 		float4 lighting = xLightMap.SampleLevel(Sampler,PSIn.tex,0);
-		color.rgb*=lighting.rgb+xAmbient;
+		color.rgb *= lighting.rgb + xAmbient * xAOMap.SampleLevel(Sampler, PSIn.tex, 0).r;
 		color=pow(color,INV_GAMMA);
-		color.rgb *= xAOMap.SampleLevel(Sampler,PSIn.tex,0).r;
 
 		float fog = getFog((depth),xFogSEH);
 		color.rgb = applyFog(color.rgb,xHorizon.rgb,fog);

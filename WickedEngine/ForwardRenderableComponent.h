@@ -1,9 +1,9 @@
 #pragma once
-#include "Renderable3DSceneComponent.h"
+#include "Renderable3DComponent.h"
 
 
 class ForwardRenderableComponent :
-	public Renderable3DSceneComponent
+	public Renderable3DComponent
 {
 protected:
 	wiRenderTarget rtMain;

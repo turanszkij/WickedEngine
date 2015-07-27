@@ -15,6 +15,16 @@ public:
 
 	static wiColor fromFloat(float r = 0, float g = 0, float b = 0, float a = 1);
 	static wiColor lerp(const wiColor& a, const wiColor& b, float i);
+
+	static wiColor Red;
+	static wiColor Green;
+	static wiColor Blue;
+	static wiColor Black;
+	static wiColor White;
+	static wiColor Yellow;
+	static wiColor Purple;
+	static wiColor Cyan;
+	static wiColor Transparent;
 };
 
 

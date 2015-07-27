@@ -1,8 +1,8 @@
 #include "postProcessHF.hlsli"
-static const float strength = 4.f;
-static const float falloff  = -0.8f;
-static const float rad = 0.1f;
-static const float darkness = 1.2f;
+static const float strength = 8.f;
+static const float falloff  = -0.4f;
+static const float rad = 0.26f;
+static const float darkness = 2.3f;
 
 #define NUM_SAMPLES	 16
 static const float invSamples = 1.0 / (float)NUM_SAMPLES;

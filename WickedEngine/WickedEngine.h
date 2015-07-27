@@ -44,7 +44,8 @@
 #include "wiInitializer.h"
 
 #include "RenderableComponent.h"
-#include "Renderable3DSceneComponent.h"
+#include "Renderable2DComponent.h"
+#include "Renderable3DComponent.h"
 #include "ForwardRenderableComponent.h"
 #include "DeferredRenderableComponent.h"
 #include "LoadingScreenComponent.h"

@@ -175,6 +175,7 @@
   <ItemGroup>
     <ClCompile Include="MainComponent.cpp" />
     <ClCompile Include="LoadingScreenComponent.cpp" />
+    <ClCompile Include="Renderable2DComponent.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
     <ClCompile Include="BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.cpp" />
@@ -342,7 +343,7 @@
     <ClCompile Include="wiLensFlare.cpp" />
     <ClCompile Include="wiLines.cpp" />
     <ClCompile Include="wiNetwork.cpp" />
-    <ClCompile Include="Renderable3DSceneComponent.cpp" />
+    <ClCompile Include="Renderable3DComponent.cpp" />
     <ClCompile Include="RenderableComponent.cpp" />
     <ClCompile Include="wiSprite.cpp" />
     <ClCompile Include="wiParticle.cpp" />
@@ -369,6 +370,7 @@
   <ItemGroup>
     <ClInclude Include="MainComponent.h" />
     <ClInclude Include="LoadingScreenComponent.h" />
+    <ClInclude Include="Renderable2DComponent.h" />
     <ClInclude Include="wiBackLog.h" />
     <ClInclude Include="wiBULLET.h" />
     <ClInclude Include="BULLET\btBulletCollisionCommon.h" />
@@ -590,7 +592,7 @@
     <ClInclude Include="DeferredRenderableComponent.h" />
     <ClInclude Include="ForwardRenderableComponent.h" />
     <ClInclude Include="RenderableComponent.h" />
-    <ClInclude Include="Renderable3DSceneComponent.h" />
+    <ClInclude Include="Renderable3DComponent.h" />
     <ClInclude Include="wiGraphicsThreads.h" />
     <ClInclude Include="wiInitializer.h" />
     <ClInclude Include="wiStencilRef.h" />

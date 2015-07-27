@@ -31,4 +31,13 @@ wiColor wiColor::lerp(const wiColor& a, const wiColor& b, float i)
 	return wiColor::fromFloat(retF.x, retF.y, retF.z, retF.w);
 }
 
+wiColor wiColor::Red				= wiColor(255, 0, 0, 255);
+wiColor wiColor::Green				= wiColor(0, 255, 0, 255);
+wiColor wiColor::Blue				= wiColor(0, 0, 255, 255);
+wiColor wiColor::Black				= wiColor(0, 0, 0, 255);
+wiColor wiColor::White				= wiColor(255, 255, 255, 255);
+wiColor wiColor::Yellow				= wiColor(255, 255, 0, 255);
+wiColor wiColor::Purple				= wiColor(255, 0, 255, 255);
+wiColor wiColor::Cyan				= wiColor(0, 255, 255, 255);
+wiColor wiColor::Transparent		= wiColor(0, 0, 0, 0);
 
