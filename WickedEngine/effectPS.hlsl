@@ -18,7 +18,7 @@ PixelOutputType main(PixelInputType PSIn)
 	ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
 	ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
 
-	clip(ditherMask(PSIn.pos.xy, PSIn.dither) - 1);
+	clip(ditherMask(PSIn.pos.xy, PSIn.dither));
 
 	PSIn.tex+=movingTex;
 	[branch]if(hasTex) {
