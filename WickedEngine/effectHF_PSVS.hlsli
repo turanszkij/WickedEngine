@@ -9,7 +9,8 @@ struct PixelInputType
 	float3 cam						: CAMERAPOS;
 	float4 ReflectionMapSamplingPos : TEXCOORD1;
 	float3 vel						: TEXCOORD2;
-	float  ao : AMBIENT_OCCLUSION;
+	float  ao						: AMBIENT_OCCLUSION;
+	float  dither					: DITHER;
 };
 
 cbuffer matBuffer:register(b2){

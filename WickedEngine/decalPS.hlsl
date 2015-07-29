@@ -45,7 +45,7 @@ PixelOutputType main(VertexToPixel PSIn)
 	float3 projTex;
 		projTex.x = projPos.x/projPos.w/2.0f +0.5f;
 		projTex.y = -projPos.y/projPos.w/2.0f +0.5f;
-		projTex.z = projPos.z/projPos.w/2.0f +0.5f;
+		projTex.z = projPos.z/projPos.w;
 	clip( ((saturate(projTex.x) == projTex.x) && (saturate(projTex.y) == projTex.y) && (saturate(projTex.z) == projTex.z))?1:-1 );
 
 	if(hasTexNor & 0x0000010){

@@ -18,6 +18,8 @@ PixelInputType main(Input input)
 				,float4(input.wi0.z,input.wi1.z,input.wi2.z,0)
 				,float4(input.wi0.w,input.wi1.w,input.wi2.w,1)
 			);
+
+		Out.dither = input.dither;
 	
 		float4 pos = input.pos;
 		float4 posPrev = input.pre;

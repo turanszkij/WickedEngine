@@ -70,30 +70,25 @@ struct Instance
 	XMFLOAT4A mat0;
 	XMFLOAT4A mat1;
 	XMFLOAT4A mat2;
+	float dither;
 
-	Instance(){
+	Instance(float dither = 0.0f) :dither(dither){
 		mat0 = XMFLOAT4A(1, 0, 0, 0);
 		mat0 = XMFLOAT4A(0, 1, 0, 0);
 		mat0 = XMFLOAT4A(0, 0, 1, 0);
 	}
-	Instance(const XMMATRIX& matIn){
-		Create(matIn);
+	Instance(const XMMATRIX& matIn, float dither = 0.0f){
+		Create(matIn,dither);
 	}
-	void Create(const XMMATRIX& matIn)
+	void Create(const XMMATRIX& matIn, float dither = 0.0f)
 	{
 		XMStoreFloat4A(&mat0, matIn.r[0]);
 		XMStoreFloat4A(&mat1, matIn.r[1]);
 		XMStoreFloat4A(&mat2, matIn.r[2]);
+		this->dither = dither;
 	}
 
-	void* operator new(size_t size)
-	{
-		return _aligned_malloc(size, 16);
-	}
-		void operator delete(void* p)
-	{
-		if (p) _aligned_free(p);
-	}
+	ALIGN_16
 };
 struct Material
 {
@@ -485,6 +480,8 @@ struct Object : public Streamable, public Transform
 	vector< wiEmittedParticle* > eParticleSystems;
 	vector< wiHairParticle* > hwiParticleSystems;
 
+	float transparency;
+
 	
 	//PHYSICS
 	bool rigidBody, kinematic;
@@ -521,6 +518,7 @@ struct Object : public Streamable, public Transform
 		mass = friction = restitution = damping = 1.0f;
 		physicsType="ACTIVE";
 		physicsObjectI=-1;
+		transparency = 0.0f;
 	}
 
 	void CleanUp(){

@@ -1543,6 +1543,9 @@
     <None Include="windHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
+    <None Include="ditherHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\readme.txt" />

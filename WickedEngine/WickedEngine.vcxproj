@@ -650,6 +650,7 @@
     <None Include="cube.hlsli" />
     <None Include="depthConvertHF.hlsli" />
     <None Include="dirLightHF.hlsli" />
+    <None Include="ditherHF.hlsli" />
     <None Include="effectHF_PS.hlsli" />
     <None Include="effectHF_PSVS.hlsli" />
     <None Include="effectHF_VS.hlsli" />

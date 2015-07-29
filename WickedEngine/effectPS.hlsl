@@ -1,7 +1,7 @@
 #include "effectHF_PS.hlsli"
 #include "effectHF_PSVS.hlsli"
 #include "globalsHF.hlsli"
-
+#include "ditherHF.hlsli"
 
 PixelOutputType main(PixelInputType PSIn)
 {
@@ -13,6 +13,12 @@ PixelOutputType main(PixelInputType PSIn)
 
 	float depth = PSIn.pos.z/PSIn.pos.w;
 	float3 eyevector = normalize(PSIn.cam - PSIn.pos3D);
+
+	float2 ScreenCoord;
+	ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
+	ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
+
+	clip(ditherMask(PSIn.pos.xy, PSIn.dither) - 1);
 
 	PSIn.tex+=movingTex;
 	[branch]if(hasTex) {
@@ -78,20 +84,9 @@ PixelOutputType main(PixelInputType PSIn)
 
 	}
 
-	/*if(xFx.y==1){
-		float avg=0;
-		avg+=baseColor.r; avg+=baseColor.g; avg+=baseColor.b; avg/=3.0f;
-		baseColor=avg;
-	}
-
-	if(xFx.z==1){
-		baseColor.r=1-baseColor.r;
-		baseColor.g=1-baseColor.g;
-		baseColor.b=1-baseColor.b;
-	}*/
-
 	bool unshaded = shadeless||colorMask.a;
-	float properties = unshaded?RT_UNSHADED : toonshaded?RT_TOON : 0.0f;
+	float properties = unshaded ? RT_UNSHADED : toonshaded ? RT_TOON : 0.0f;
+
 			
 	Out.col = float4((baseColor.rgb+colorMask.rgb)*(1+emit)*PSIn.ao,1);
 	Out.nor = float4((normal.xyz),properties);

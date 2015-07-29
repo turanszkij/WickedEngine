@@ -923,6 +923,9 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 						objects.back()->friction>>objects.back()->restitution>>objects.back()->damping>>objects.back()->physicsType>>
 						objects.back()->kinematic;
 					break;
+				case 'T':
+					file >> objects.back()->transparency;
+					break;
 				default: break;
 				}
 			}
@@ -2311,7 +2314,7 @@ void Decal::Update(){
 	XMVECTOR at = XMVectorAdd(eye,frontV);
 	XMVECTOR up = XMVector3Transform( XMVectorSet(0,1,0,0),rotMat );
 	XMStoreFloat4x4(&view, XMMatrixLookAtLH(eye,at,up));
-	XMStoreFloat4x4(&projection, XMMatrixOrthographicLH(scale.x,scale.y,-scale.z,scale.z));
+	XMStoreFloat4x4(&projection, XMMatrixOrthographicLH(scale.x, scale.y, -scale.z * 0.5f, scale.z * 0.5f));
 	XMStoreFloat4x4(&world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&scale))*rotMat*XMMatrixTranslationFromVector(eye));
 
 	bounds.createFromHalfWidth(XMFLOAT3(0,0,0),XMFLOAT3(scale.x,scale.y,scale.z));

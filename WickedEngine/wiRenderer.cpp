@@ -995,6 +995,7 @@ void wiRenderer::LoadBasicShaders()
 			{ "MATI", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+			{ "DITHER", 0, DXGI_FORMAT_R32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::add("shaders/effectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -2780,9 +2781,9 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 						for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
 							if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
 								if (mesh->softBody || (*viter)->armatureDeform)
-									mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), k, GRAPHICSTHREAD_SHADOWS);
+									mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
 								else
-									mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, GRAPHICSTHREAD_SHADOWS);
+									mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
 								++k;
 							}
 						}
@@ -2896,9 +2897,9 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
 								if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
 									if (mesh->softBody || (*viter)->armatureDeform)
-										mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), k, GRAPHICSTHREAD_SHADOWS);
+										mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
 									else
-										mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, GRAPHICSTHREAD_SHADOWS);
+										mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
 									++k;
 								}
 							}
@@ -3086,9 +3087,9 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
 				if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
 					if (mesh->softBody || (*viter)->armatureDeform)
-						mesh->AddRenderableInstance(Instance(XMMatrixIdentity()),k,thread);
+						mesh->AddRenderableInstance(Instance(XMMatrixIdentity(),(*viter)->transparency),k,thread);
 					else 
-						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, thread);
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, thread);
 					++k;
 				}
 			}
@@ -4074,18 +4075,18 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 }
 
 wiRenderer::MaterialCB::MaterialCB(const Material& mat,UINT materialIndex){
-	difColor=XMFLOAT4(mat.diffuseColor.x,mat.diffuseColor.y,mat.diffuseColor.z,mat.alpha);
-	hasRef=mat.refMap!=nullptr;
-	hasNor=mat.normalMap!=nullptr;
-	hasTex=mat.texture!=nullptr;
-	hasSpe=mat.specularMap!=nullptr;
-	specular=mat.specular;
-	refractionIndex=mat.refraction_index;
-	movingTex=mat.texOffset;
-	metallic=mat.enviroReflection;
-	shadeless=mat.shadeless;
-	specular_power=mat.specular_power;
-	toon=mat.toonshading;
-	matIndex=materialIndex;
-	emit=mat.emit;
+	difColor = XMFLOAT4(mat.diffuseColor.x, mat.diffuseColor.y, mat.diffuseColor.z, mat.alpha);
+	hasRef = mat.refMap != nullptr;
+	hasNor = mat.normalMap != nullptr;
+	hasTex = mat.texture != nullptr;
+	hasSpe = mat.specularMap != nullptr;
+	specular = mat.specular;
+	refractionIndex = mat.refraction_index;
+	movingTex = mat.texOffset;
+	metallic = mat.enviroReflection;
+	shadeless = mat.shadeless;
+	specular_power = mat.specular_power;
+	toon = mat.toonshading;
+	matIndex = materialIndex;
+	emit = mat.emit;
 }
