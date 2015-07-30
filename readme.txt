@@ -1,6 +1,6 @@
 ##################################
 ## Wicked Engine		##
-## Created by Turánszki János	##
+## Created by TurÃ¡nszki JÃ¡nos	##
 ##################################
 
 ________________
@@ -28,7 +28,7 @@ Set the following dependencies to this library in Visual Studio this way in the 
 1.) Open Project Properties -> Configuration Properties
 2.) C/C++ -> General -> Additional Include Directories: 
 		./WickedEngine
-		./WickedEngine/wiBULLET
+		./WickedEngine/BULLET
 3.) Linker -> General -> Additional Library Directories:
 		Directory of your built .lib file (Debug or Release directory in the solution by default)
 		./WickedEngine/mysql
