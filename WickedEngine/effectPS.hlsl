@@ -14,11 +14,11 @@ PixelOutputType main(PixelInputType PSIn)
 	float depth = PSIn.pos.z/PSIn.pos.w;
 	float3 eyevector = normalize(PSIn.cam - PSIn.pos3D);
 
-	float2 ScreenCoord;
-	ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
-	ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
+	//float2 ScreenCoord;
+	//ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
+	//ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
 
-	clip(ditherMask(PSIn.pos.xy, PSIn.dither));
+	clip(ditherMask4(PSIn.pos.xy)-PSIn.dither);
 
 	PSIn.tex+=movingTex;
 	[branch]if(hasTex) {
@@ -26,7 +26,6 @@ PixelOutputType main(PixelInputType PSIn)
 	}
 	
 	clip( baseColor.a - 0.1f );
-
 		
 	if(depth){
 
