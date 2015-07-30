@@ -43,13 +43,15 @@ PixelOutputType main(VertexToPixel PSIn)
 	float4 projPos;
 		projPos = mul(float4(pos3D,1),xDecalVP);
 	float3 projTex;
-		projTex.x = projPos.x/projPos.w/2.0f +0.5f;
-		projTex.y = -projPos.y/projPos.w/2.0f +0.5f;
-		projTex.z = projPos.z/projPos.w;
+	float3 clipSpace = projPos.xyz / projPos.w;
+		projTex.xy =  clipSpace.xy*float2(0.5f,-0.5f) + 0.5f;
+		projTex.z =  clipSpace.z;
 	clip( ((saturate(projTex.x) == projTex.x) && (saturate(projTex.y) == projTex.y) && (saturate(projTex.z) == projTex.z))?1:-1 );
 
-	if(hasTexNor & 0x0000010){
-		float3 normal = normalize( cross( ddx(pos3D),ddy(pos3D) ) );
+
+
+	if (hasTexNor & 0x0000010){
+		float3 normal = normalize(cross(ddx(pos3D), ddy(pos3D)));
 		//clip( dot(normal,front)>-0.2?-1:1 ); //clip at oblique angle
 		float4 nortex=xNormal.Sample(texSampler,projTex.xy);
 		float3 eyevector = normalize( eye - pos3D );
@@ -65,6 +67,11 @@ PixelOutputType main(VertexToPixel PSIn)
 	if(hasTexNor & 0x0000001){
 		Out.col=xTexture.Sample(texSampler,projTex.xy);
 		Out.col.a*=opacity;
+		float3 edgeBlend = clipSpace.xyz;
+		edgeBlend.z = edgeBlend.z * 2 - 1;
+		edgeBlend = abs(edgeBlend);
+		Out.col.a *= 1 - pow(max(max(edgeBlend.x, edgeBlend.y), max(edgeBlend.x, edgeBlend.z)), 8);
+		//Out.col.a *= pow(saturate(-dot(normal,front)), 4);
 		clip( Out.col.a<0.05?-1:1 );
 		if(hasTexNor & 0x0000010)
 			Out.nor.a=Out.col.a;
