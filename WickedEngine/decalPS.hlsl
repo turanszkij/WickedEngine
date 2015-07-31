@@ -70,7 +70,7 @@ PixelOutputType main(VertexToPixel PSIn)
 		float3 edgeBlend = clipSpace.xyz;
 		edgeBlend.z = edgeBlend.z * 2 - 1;
 		edgeBlend = abs(edgeBlend);
-		Out.col.a *= 1 - pow(max(max(edgeBlend.x, edgeBlend.y), max(edgeBlend.x, edgeBlend.z)), 8);
+		Out.col.a *= 1 - pow(max(max(edgeBlend.x, edgeBlend.y), edgeBlend.z), 8);
 		//Out.col.a *= pow(saturate(-dot(normal,front)), 4);
 		clip( Out.col.a<0.05?-1:1 );
 		if(hasTexNor & 0x0000010)
