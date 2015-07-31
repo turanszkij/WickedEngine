@@ -3,6 +3,7 @@
 #include "wiResourceManager.h"
 #include "wiImageEffects.h"
 #include "wiRenderer.h"
+#include "wiTextureHelper.h"
 
 deque<string> wiBackLog::stream;
 deque<string> wiBackLog::history;
@@ -18,7 +19,6 @@ int wiBackLog::historyPos=0;
 
 void wiBackLog::Initialize(){
 	//stream.resize(0);
-	wiResourceManager::add("images/logBG.png");
 	pos = (float)wiRenderer::RENDERHEIGHT;
 	scroll=0;
 	state=DISABLED;
@@ -55,7 +55,7 @@ void wiBackLog::Draw(){
 		wiImageEffects fx = wiImageEffects((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
 		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);
-		wiImage::Draw((wiRenderer::TextureView)(wiResourceManager::get("images/logBG.png")->data),fx);
+		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(0,0,240,200)),fx);
 		wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
 		wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}

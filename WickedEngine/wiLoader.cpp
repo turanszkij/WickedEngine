@@ -646,7 +646,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->refMapName=ss.str();
-						currentMat->refMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
+						currentMat->refMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->refMap!=0)
 						currentMat->hasRefMap = true;
@@ -658,7 +658,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->normalMapName=ss.str();
-						currentMat->normalMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
+						currentMat->normalMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->normalMap!=0)
 						currentMat->hasNormalMap = true;
@@ -670,7 +670,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->textureName=ss.str();
-						currentMat->texture=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
+						currentMat->texture = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->texture!=0)
 						currentMat->hasTexture=true;
@@ -683,7 +683,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->displacementMapName=ss.str();
-						currentMat->displacementMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
+						currentMat->displacementMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->displacementMap!=0)
 						currentMat->hasDisplacementMap=true;
@@ -695,7 +695,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->specularMapName=ss.str();
-						currentMat->specularMap=(ID3D11ShaderResourceView*)wiResourceManager::add(ss.str());
+						currentMat->specularMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->specularMap!=0)
 						currentMat->hasSpecularMap=true;
@@ -1547,7 +1547,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					stringstream rim("");
 					rim<<directory<<"rims/"<<t;
 					wiRenderer::TextureView tex=nullptr;
-					if((tex = (wiRenderer::TextureView)wiResourceManager::add(rim.str()))!=nullptr){
+					if ((tex = (wiRenderer::TextureView)wiResourceManager::GetGlobal()->add(rim.str())) != nullptr){
 						lights.back()->lensFlareRimTextures.push_back(tex);
 						lights.back()->lensFlareNames.push_back(rim.str());
 					}
@@ -1910,11 +1910,11 @@ void Material::CleanUp(){
 	if(normalMap) normalMap->Release();
 	if(displacementMap) displacementMap->Release();
 	if(specularMap) specularMap->Release();*/
-	wiResourceManager::del(refMapName);
-	wiResourceManager::del(textureName);
-	wiResourceManager::del(normalMapName);
-	wiResourceManager::del(displacementMapName);
-	wiResourceManager::del(specularMapName);
+	wiResourceManager::GetGlobal()->del(refMapName);
+	wiResourceManager::GetGlobal()->del(textureName);
+	wiResourceManager::GetGlobal()->del(normalMapName);
+	wiResourceManager::GetGlobal()->del(displacementMapName);
+	wiResourceManager::GetGlobal()->del(specularMapName);
 	refMap=nullptr;
 	texture=nullptr;
 	normalMap=nullptr;
@@ -1926,7 +1926,7 @@ void Light::CleanUp(){
 	shadowMap.clear();
 	lensFlareRimTextures.clear();
 	for(string x:lensFlareNames)
-		wiResourceManager::del(x);
+		wiResourceManager::GetGlobal()->del(x);
 	lensFlareNames.clear();
 }
 
@@ -2323,17 +2323,17 @@ void Decal::Update(){
 void Decal::addTexture(const string& tex){
 	texName=tex;
 	if(!tex.empty()){
-		texture=(ID3D11ShaderResourceView*)wiResourceManager::add(tex);
+		texture = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(tex);
 	}
 }
 void Decal::addNormal(const string& nor){
 	norName=nor;
 	if(!nor.empty()){
-		normal=(ID3D11ShaderResourceView*)wiResourceManager::add(nor);
+		normal = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(nor);
 	}
 }
 void Decal::CleanUp(){
-	wiResourceManager::del(texName);
-	wiResourceManager::del(norName);
+	wiResourceManager::GetGlobal()->del(texName);
+	wiResourceManager::GetGlobal()->del(norName);
 }
 #pragma endregion

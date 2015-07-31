@@ -6,18 +6,38 @@
 #include "Utility/DDSTextureLoader.h"
 
 
-wiResourceManager::container wiResourceManager::resources;
 wiResourceManager::filetypes wiResourceManager::types;
-mutex wiResourceManager::MUTEX;
+wiResourceManager* wiResourceManager::globalResources = nullptr;
+
+wiResourceManager::wiResourceManager()
+{
+	if (globalResources == nullptr)
+	{
+		SetUp();
+	}
+}
+wiResourceManager::~wiResourceManager()
+{
+	CleanUp();
+}
+wiResourceManager* wiResourceManager::GetGlobal()
+{
+	if (globalResources == nullptr)
+	{
+		globalResources = new wiResourceManager();
+	}
+	return globalResources;
+}
 
 void wiResourceManager::SetUp()
 {
+	types.clear();
 	types.insert( pair<string,Data_Type>("jpg",IMAGE) );
 	types.insert( pair<string,Data_Type>("JPG",IMAGE) );
 	types.insert( pair<string,Data_Type>("png",IMAGE) );
 	types.insert( pair<string,Data_Type>("PNG",IMAGE) );
 	types.insert( pair<string,Data_Type>("dds",IMAGE) );
-	types.insert( pair<string,Data_Type>("wav",SOUND) );
+	types.insert(pair<string, Data_Type>("wav", SOUND));
 }
 
 const wiResourceManager::Resource* wiResourceManager::get(const string& name)
@@ -228,7 +248,7 @@ bool wiResourceManager::del(const string& name)
 				break;
 			case Data_Type::SOUND:
 			case Data_Type::MUSIC:
-				delete ((SoundResource)res->data);
+				delete ((wiSound*)res->data);
 				break;
 			default:
 				success=false;
@@ -246,14 +266,6 @@ bool wiResourceManager::del(const string& name)
 
 bool wiResourceManager::CleanUp()
 {
-	/*vector<string> names;
-	names.reserve(resources.size());
-	for(container::iterator it=resources.begin();it!=resources.end();++it)
-		names.push_back(it->first);
-	for(const string& s:names)
-		del(s);
-	names.clear();*/
 	resources.clear();
-	types.clear();
 	return true;
 }

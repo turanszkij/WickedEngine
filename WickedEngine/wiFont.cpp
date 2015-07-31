@@ -137,7 +137,7 @@ void wiFont::LoadShaders()
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::add("shaders/fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
@@ -145,7 +145,7 @@ void wiFont::LoadShaders()
 	delete vsinfo;
 
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/fontPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/fontPS.cso", wiResourceManager::PIXELSHADER));
 
 
 
@@ -457,7 +457,7 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 	ss1<<"fonts/"<<name<<".dds";
 	std::ifstream file(ss.str());
 	if(file.is_open()){
-		texture = (wiRenderer::TextureView)wiResourceManager::add(ss1.str());
+		texture = (wiRenderer::TextureView)wiResourceManager::GetGlobal()->add(ss1.str());
 		file>>texWidth>>texHeight>>recSize>>charSize;
 		int i=0;
 		while(!file.eof()){

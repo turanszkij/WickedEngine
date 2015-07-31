@@ -395,8 +395,7 @@ void wiRenderer::SetUpStaticComponents()
 	cam = new Camera(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800, XMVectorSet(0, 4, -4, 1));
 	
 	noiseTex = wiTextureHelper::getInstance()->getRandom64x64();
-	//trailDistortTex = (ID3D11ShaderResourceView*)wiResourceManager::add("images/normalmap1.jpg");
-	trailDistortTex = wiTextureHelper::getInstance()->getColor(wiColor(127, 127, 127, 255));
+	trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
 
 	wireRender=false;
 	debugSpheres=false;
@@ -998,7 +997,7 @@ void wiRenderer::LoadBasicShaders()
 			{ "DITHER", 0, DXGI_FORMAT_R32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::add("shaders/effectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/effectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
 			vertexShader10 = vsinfo->vertexShader;
 			vertexLayout = vsinfo->vertexLayout;
@@ -1019,7 +1018,7 @@ void wiRenderer::LoadBasicShaders()
 		UINT numElements = ARRAYSIZE(oslayout);
 
 
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::add("shaders/sOVS.cso", wiResourceManager::VERTEXSHADER, oslayout, numElements));
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/sOVS.cso", wiResourceManager::VERTEXSHADER, oslayout, numElements));
 		if (vsinfo != nullptr){
 			sOVS = vsinfo->vertexShader;
 			sOIL = vsinfo->vertexLayout;
@@ -1037,29 +1036,29 @@ void wiRenderer::LoadBasicShaders()
 			{ 0, "TEXCOORD", 1, 0, 4, 0 },     // output the first 2 texture coordinates
 		};
 
-		sOGS = static_cast<GeometryShader>(wiResourceManager::add("shaders/sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
+		sOGS = static_cast<GeometryShader>(wiResourceManager::GetGlobal()->add("shaders/sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
 	}
 
 
-	vertexShader = static_cast<VertexShader>(wiResourceManager::add("shaders/effectVS.cso", wiResourceManager::VERTEXSHADER));
-	lightVS[0] = static_cast<VertexShader>(wiResourceManager::add("shaders/dirLightVS.cso", wiResourceManager::VERTEXSHADER));
-	lightVS[1] = static_cast<VertexShader>(wiResourceManager::add("shaders/pointLightVS.cso", wiResourceManager::VERTEXSHADER));
-	lightVS[2] = static_cast<VertexShader>(wiResourceManager::add("shaders/spotLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vSpotLightVS = static_cast<VertexShader>(wiResourceManager::add("shaders/vSpotLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vPointLightVS = static_cast<VertexShader>(wiResourceManager::add("shaders/vPointLightVS.cso", wiResourceManager::VERTEXSHADER));
-	decalVS = static_cast<VertexShader>(wiResourceManager::add("shaders/decalVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShader = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/effectVS.cso", wiResourceManager::VERTEXSHADER));
+	lightVS[0] = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/dirLightVS.cso", wiResourceManager::VERTEXSHADER));
+	lightVS[1] = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/pointLightVS.cso", wiResourceManager::VERTEXSHADER));
+	lightVS[2] = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/spotLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vSpotLightVS = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/vSpotLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vPointLightVS = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/vPointLightVS.cso", wiResourceManager::VERTEXSHADER));
+	decalVS = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/decalVS.cso", wiResourceManager::VERTEXSHADER));
 
-	pixelShader = static_cast<PixelShader>(wiResourceManager::add("shaders/effectPS.cso", wiResourceManager::PIXELSHADER));
-	transparentPS = static_cast<PixelShader>(wiResourceManager::add("shaders/effectPS_transparent.cso", wiResourceManager::PIXELSHADER));
-	simplestPS = static_cast<PixelShader>(wiResourceManager::add("shaders/effectPS_simplest.cso", wiResourceManager::PIXELSHADER));
-	fowardSimplePS = static_cast<PixelShader>(wiResourceManager::add("shaders/effectPS_forwardSimple.cso", wiResourceManager::PIXELSHADER));
-	blackoutPS = static_cast<PixelShader>(wiResourceManager::add("shaders/effectPS_blackout.cso", wiResourceManager::PIXELSHADER));
-	textureonlyPS = static_cast<PixelShader>(wiResourceManager::add("shaders/effectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
-	lightPS[0] = static_cast<PixelShader>(wiResourceManager::add("shaders/dirLightPS.cso", wiResourceManager::PIXELSHADER));
-	lightPS[1] = static_cast<PixelShader>(wiResourceManager::add("shaders/pointLightPS.cso", wiResourceManager::PIXELSHADER));
-	lightPS[2] = static_cast<PixelShader>(wiResourceManager::add("shaders/spotLightPS.cso", wiResourceManager::PIXELSHADER));
-	vLightPS = static_cast<PixelShader>(wiResourceManager::add("shaders/volumeLightPS.cso", wiResourceManager::PIXELSHADER));
-	decalPS = static_cast<PixelShader>(wiResourceManager::add("shaders/decalPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/effectPS.cso", wiResourceManager::PIXELSHADER));
+	transparentPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/effectPS_transparent.cso", wiResourceManager::PIXELSHADER));
+	simplestPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/effectPS_simplest.cso", wiResourceManager::PIXELSHADER));
+	fowardSimplePS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/effectPS_forwardSimple.cso", wiResourceManager::PIXELSHADER));
+	blackoutPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/effectPS_blackout.cso", wiResourceManager::PIXELSHADER));
+	textureonlyPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/effectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
+	lightPS[0] = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/dirLightPS.cso", wiResourceManager::PIXELSHADER));
+	lightPS[1] = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/pointLightPS.cso", wiResourceManager::PIXELSHADER));
+	lightPS[2] = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/spotLightPS.cso", wiResourceManager::PIXELSHADER));
+	vLightPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/volumeLightPS.cso", wiResourceManager::PIXELSHADER));
+	decalPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/decalPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiRenderer::LoadLineShaders()
 {
@@ -1069,7 +1068,7 @@ void wiRenderer::LoadLineShaders()
 	};
 	UINT numElements = ARRAYSIZE(layout);
 
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::add("shaders/linesVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/linesVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		lineVS = vsinfo->vertexShader;
 		lineIL = vsinfo->vertexLayout;
@@ -1077,38 +1076,38 @@ void wiRenderer::LoadLineShaders()
 	delete vsinfo;
 
 
-	linePS = static_cast<PixelShader>(wiResourceManager::add("shaders/linesPS.cso", wiResourceManager::PIXELSHADER));
+	linePS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/linesPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadTessShaders()
 {
-	hullShader = static_cast<HullShader>(wiResourceManager::add("shaders/effectHS.cso", wiResourceManager::HULLSHADER));
-	domainShader = static_cast<DomainShader>(wiResourceManager::add("shaders/effectDS.cso", wiResourceManager::DOMAINSHADER));
+	hullShader = static_cast<HullShader>(wiResourceManager::GetGlobal()->add("shaders/effectHS.cso", wiResourceManager::HULLSHADER));
+	domainShader = static_cast<DomainShader>(wiResourceManager::GetGlobal()->add("shaders/effectDS.cso", wiResourceManager::DOMAINSHADER));
 
 }
 void wiRenderer::LoadSkyShaders()
 {
-	skyVS = static_cast<VertexShader>(wiResourceManager::add("shaders/skyVS.cso", wiResourceManager::VERTEXSHADER));
-	skyPS = static_cast<PixelShader>(wiResourceManager::add("shaders/skyPS.cso", wiResourceManager::PIXELSHADER));
+	skyVS = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/skyVS.cso", wiResourceManager::VERTEXSHADER));
+	skyPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/skyPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadShadowShaders()
 {
 
-	shVS = static_cast<VertexShader>(wiResourceManager::add("shaders/shadowVS.cso", wiResourceManager::VERTEXSHADER));
-	cubeShVS = static_cast<VertexShader>(wiResourceManager::add("shaders/cubeShadowVS.cso", wiResourceManager::VERTEXSHADER));
+	shVS = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/shadowVS.cso", wiResourceManager::VERTEXSHADER));
+	cubeShVS = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/cubeShadowVS.cso", wiResourceManager::VERTEXSHADER));
 
-	shPS = static_cast<PixelShader>(wiResourceManager::add("shaders/shadowPS.cso", wiResourceManager::PIXELSHADER));
-	cubeShPS = static_cast<PixelShader>(wiResourceManager::add("shaders/cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
+	shPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/shadowPS.cso", wiResourceManager::PIXELSHADER));
+	cubeShPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
 
-	cubeShGS = static_cast<GeometryShader>(wiResourceManager::add("shaders/cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
+	cubeShGS = static_cast<GeometryShader>(wiResourceManager::GetGlobal()->add("shaders/cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiRenderer::LoadWaterShaders()
 {
 
-	waterVS = static_cast<VertexShader>(wiResourceManager::add("shaders/waterVS.cso", wiResourceManager::VERTEXSHADER));
-	waterPS = static_cast<PixelShader>(wiResourceManager::add("shaders/waterPS.cso", wiResourceManager::PIXELSHADER));
+	waterVS = static_cast<VertexShader>(wiResourceManager::GetGlobal()->add("shaders/waterVS.cso", wiResourceManager::VERTEXSHADER));
+	waterPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/waterPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadTrailShaders(){
@@ -1120,7 +1119,7 @@ void wiRenderer::LoadTrailShaders(){
 	};
 	UINT numElements = ARRAYSIZE(layout);
 
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::add("shaders/trailVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/trailVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		trailVS = vsinfo->vertexShader;
 		trailIL = vsinfo->vertexLayout;
@@ -1128,7 +1127,7 @@ void wiRenderer::LoadTrailShaders(){
 	delete vsinfo;
 
 
-	trailPS = static_cast<PixelShader>(wiResourceManager::add("shaders/trailPS.cso", wiResourceManager::PIXELSHADER));
+	trailPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/trailPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 

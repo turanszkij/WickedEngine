@@ -81,24 +81,24 @@ void wiImage::LoadShaders()
 {
 
 
-	vertexShader = static_cast<wiRenderer::VertexShader>(wiResourceManager::add("shaders/imageVS.cso", wiResourceManager::VERTEXSHADER));
-	screenVS = static_cast<wiRenderer::VertexShader>(wiResourceManager::add("shaders/screenVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShader = static_cast<wiRenderer::VertexShader>(wiResourceManager::GetGlobal()->add("shaders/imageVS.cso", wiResourceManager::VERTEXSHADER));
+	screenVS = static_cast<wiRenderer::VertexShader>(wiResourceManager::GetGlobal()->add("shaders/screenVS.cso", wiResourceManager::VERTEXSHADER));
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/imagePS.cso", wiResourceManager::PIXELSHADER));
-	blurHPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
-	blurVPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
-	shaftPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/lightShaftPS.cso", wiResourceManager::PIXELSHADER));
-	outlinePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/outlinePS.cso", wiResourceManager::PIXELSHADER));
-	dofPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
-	motionBlurPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/motionBlurPS.cso", wiResourceManager::PIXELSHADER));
-	bloomSeparatePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
-	fxaaPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/fxaa.cso", wiResourceManager::PIXELSHADER));
-	ssaoPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/ssao.cso", wiResourceManager::PIXELSHADER));
-	ssssPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/ssss.cso", wiResourceManager::PIXELSHADER));
-	linDepthPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/linDepthPS.cso", wiResourceManager::PIXELSHADER));
-	colorGradePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/colorGradePS.cso", wiResourceManager::PIXELSHADER));
-	deferredPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/deferredPS.cso", wiResourceManager::PIXELSHADER));
-	ssrPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/ssr.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/imagePS.cso", wiResourceManager::PIXELSHADER));
+	blurHPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
+	blurVPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
+	shaftPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/lightShaftPS.cso", wiResourceManager::PIXELSHADER));
+	outlinePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/outlinePS.cso", wiResourceManager::PIXELSHADER));
+	dofPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
+	motionBlurPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/motionBlurPS.cso", wiResourceManager::PIXELSHADER));
+	bloomSeparatePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
+	fxaaPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/fxaa.cso", wiResourceManager::PIXELSHADER));
+	ssaoPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/ssao.cso", wiResourceManager::PIXELSHADER));
+	ssssPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/ssss.cso", wiResourceManager::PIXELSHADER));
+	linDepthPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/linDepthPS.cso", wiResourceManager::PIXELSHADER));
+	colorGradePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/colorGradePS.cso", wiResourceManager::PIXELSHADER));
+	deferredPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/deferredPS.cso", wiResourceManager::PIXELSHADER));
+	ssrPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/ssr.cso", wiResourceManager::PIXELSHADER));
 	
 
 

@@ -5,23 +5,30 @@
 #include "wiRenderer.h"
 
 
-wiSprite::wiSprite()
+wiSprite::wiSprite(wiResourceManager* contentHolder) :ContentHolder(contentHolder)
 {
 	Init();
 }
-wiSprite::wiSprite(const string& newTexture, const string& newMask, const string& newNormal){
+wiSprite::wiSprite(const string& newTexture, const string& newMask, const string& newNormal, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
+{
 	Init();
 	CreateReference(newTexture,newMask,newNormal);
 }
-wiSprite::wiSprite(const string& newTexture, const string& newMask){
+wiSprite::wiSprite(const string& newTexture, const string& newMask, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
+{
 	Init();
 	CreateReference(newTexture,newMask,"");
 }
-wiSprite::wiSprite(const string& newTexture){
+wiSprite::wiSprite(const string& newTexture, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
+{
 	Init();
 	CreateReference(newTexture,"","");
 }
 void wiSprite::Init(){
+	if (ContentHolder == nullptr)
+	{
+		ContentHolder = wiResourceManager::GetGlobal();
+	}
 	texture="";
 	mask="";
 	normal="";
@@ -33,23 +40,23 @@ void wiSprite::Init(){
 void wiSprite::CreateReference(const string& newTexture, const string& newMask, const string& newNormal){
 	if(newTexture.length()) {
 		texture = newTexture;
-		texturePointer = (ID3D11ShaderResourceView*)wiResourceManager::add(newTexture);
+		texturePointer = (ID3D11ShaderResourceView*)ContentHolder->add(newTexture);
 	}
 	if(newMask.length()) {
-		maskPointer=(ID3D11ShaderResourceView*)wiResourceManager::add(newMask);
+		maskPointer = (ID3D11ShaderResourceView*)ContentHolder->add(newMask);
 		effects.setMaskMap( maskPointer );
 		mask = newMask;
 	}
 	if(newNormal.length()) {
-		normalPointer=(ID3D11ShaderResourceView*)wiResourceManager::add(newNormal);
+		normalPointer = (ID3D11ShaderResourceView*)ContentHolder->add(newNormal);
 		//effects.setNormalMap( normalPointer );
 		normal = newNormal;
 	}
 }
 void wiSprite::CleanUp(){
-	wiResourceManager::del(texture);
-	wiResourceManager::del(normal);
-	wiResourceManager::del(mask);
+	ContentHolder->del(texture);
+	ContentHolder->del(normal);
+	ContentHolder->del(mask);
 	texture = nullptr;
 	normal = nullptr;
 	mask = nullptr;

@@ -819,7 +819,7 @@ void wiBULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
             if (pt.getDistance()<0.f)
             {
 				if(pt.getAppliedImpulse()>10.f){
-					//((SoundEffect*)wiResourceManager::get("sound/select_character.wav")->data)->Play();
+					//TODO: play some sound
 				}
                 const btVector3& ptA = pt.getPositionWorldOnA();
                 const btVector3& ptB = pt.getPositionWorldOnB();

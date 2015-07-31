@@ -2,16 +2,19 @@
 #include "wiImage.h"
 #include "wiImageEffects.h"
 
+class wiResourceManager;
+
 class wiSprite : public wiImage
 {
 private:
 	string texture, mask, normal;
 	ID3D11ShaderResourceView* texturePointer,*normalPointer,*maskPointer;
+	wiResourceManager* ContentHolder;
 public:
-	wiSprite();
-	wiSprite(const string& newTexture, const string& newMask, const string& newNormal);
-	wiSprite(const string& newTexture, const string& newMask);
-	wiSprite(const string& newTexture);
+	wiSprite(wiResourceManager* contentHolder = nullptr);
+	wiSprite(const string& newTexture, const string& newMask, const string& newNormal, wiResourceManager* contentHolder = nullptr);
+	wiSprite(const string& newTexture, const string& newMask, wiResourceManager* contentHolder = nullptr);
+	wiSprite(const string& newTexture, wiResourceManager* contentHolder = nullptr);
 	void Init();
 	void CreateReference(const string& newTexture, const string& newMask, const string& newNormal);
 	void CleanUp();

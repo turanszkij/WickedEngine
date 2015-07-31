@@ -361,7 +361,7 @@ void wiEmittedParticle::LoadShaders()
 		{ "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::add("shaders/pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
@@ -369,10 +369,10 @@ void wiEmittedParticle::LoadShaders()
 	delete vsinfo;
 
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/pointspritePS.cso", wiResourceManager::PIXELSHADER));
-	simplestPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/pointspritePS.cso", wiResourceManager::PIXELSHADER));
+	simplestPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetGlobal()->add("shaders/pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 

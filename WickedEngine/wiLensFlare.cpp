@@ -100,7 +100,7 @@ void wiLensFlare::LoadShaders(){
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::add("shaders/lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		inputLayout = vsinfo->vertexLayout;
@@ -108,9 +108,9 @@ void wiLensFlare::LoadShaders(){
 	delete vsinfo;
 
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::add("shaders/lensFlarePS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::add("shaders/lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetGlobal()->add("shaders/lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 

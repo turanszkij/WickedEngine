@@ -16,7 +16,6 @@ namespace wiInitializer
 	{
 		if (requestedFeautures & WICKEDENGINE_INITIALIZE_MISC)
 		{
-			wiResourceManager::SetUp();
 			wiBackLog::Initialize();
 			wiFrameRate::Initialize();
 			wiCpuInfo::Initialize();

@@ -2,11 +2,14 @@
 #include "CommonInclude.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
+#include "wiResourceManager.h"
 
 class RenderableComponent
 {
 public:
 	static int screenW, screenH;
+
+	wiResourceManager Content;
 
 	RenderableComponent(){}
 	~RenderableComponent(){}
