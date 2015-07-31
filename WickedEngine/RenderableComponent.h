@@ -3,12 +3,14 @@
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiResourceManager.h"
+#include "wiCVars.h"
 
 class RenderableComponent
 {
 public:
 	static int screenW, screenH;
 
+	wiCVars Params;
 	wiResourceManager Content;
 
 	RenderableComponent(){}

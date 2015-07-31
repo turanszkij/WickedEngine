@@ -359,7 +359,7 @@
     <ClCompile Include="Utility\pch.cpp" />
     <ClCompile Include="Utility\ScreenGrab.cpp" />
     <ClCompile Include="Utility\WicTextureLoader.cpp" />
-    <ClCompile Include="wiCvar.cpp" />
+    <ClCompile Include="wiCVars.cpp" />
     <ClCompile Include="wiHelper.cpp" />
     <ClCompile Include="wiLoader.cpp" />
     <ClCompile Include="wiMath.cpp" />
@@ -633,7 +633,7 @@
     <ClInclude Include="Utility\PlatformHelpers.h" />
     <ClInclude Include="Utility\ScreenGrab.h" />
     <ClInclude Include="Utility\WicTextureLoader.h" />
-    <ClInclude Include="wiCvar.h" />
+    <ClInclude Include="wiCVars.h" />
     <ClInclude Include="wiHelper.h" />
     <ClInclude Include="wiLoader.h" />
     <ClInclude Include="wiMath.h" />

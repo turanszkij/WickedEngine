@@ -32,7 +32,7 @@
 #include "wiTimer.h"
 #include "wiHelper.h"
 #include "wiInputManager.h"
-#include "wiCvar.h"
+#include "wiCVars.h"
 #include "wiTextureHelper.h"
 #include "wiRandom.h"
 #include "wiColor.h"

@@ -584,9 +584,6 @@
     <ClCompile Include="wiTimer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="wiCvar.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="wiHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -616,6 +613,9 @@
     </ClCompile>
     <ClCompile Include="Renderable2DComponent.cpp">
       <Filter>ComponentTemplates</Filter>
+    </ClCompile>
+    <ClCompile Include="wiCVars.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1411,9 +1411,6 @@
     <ClInclude Include="wiMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wiCvar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="wiWaterPlane.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1437,6 +1434,9 @@
     </ClInclude>
     <ClInclude Include="Renderable2DComponent.h">
       <Filter>ComponentTemplates</Filter>
+    </ClInclude>
+    <ClInclude Include="wiCVars.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
