@@ -6,6 +6,7 @@ class wiCVars
 {
 public:
 	enum Data_Type{
+		EMPTY,
 		TEXT,
 		INTEGER,
 		FLOAT,
@@ -16,8 +17,12 @@ private:
 	struct Variable{
 		string data;
 		Data_Type type;
-		Variable(const string d, Data_Type t):data(d),type(t){}
+		Variable(const string& d = "", Data_Type t = TEXT):data(d),type(t){}
 
+		bool isValid() const
+		{
+			return type != EMPTY && !data.empty();
+		}
 		string get() const
 		{
 			return data;
@@ -32,6 +37,8 @@ private:
 		}
 		bool getBool() const
 		{
+			if (atoi(data.c_str()) != 0)
+				return true;
 			if (!wiHelper::toUpper(data).compare("TRUE"))
 				return true;
 			return false;
@@ -56,15 +63,18 @@ private:
 			case wiCVars::BOOLEAN:
 				return getBool() == other.getBool();
 				break;
-			case wiCVars::CVAR_DATATYPE_COUNT:
 			default:
 				break;
 			}
 
 			return false;
 		}
+		static Variable Invalid()
+		{
+			return Variable("", EMPTY);
+		}
 	};
-	typedef map<string,Variable*> container;
+	typedef map<string,Variable> container;
 	container variables;
 
 	static wiCVars* globalVars;
@@ -75,7 +85,8 @@ public:
 
 	static void SetUp();
 
-	const Variable* get(const string& name);
+	const Variable get(const string& name);
+	bool set(const string& name, const string& value);
 	bool add(const string& name, const string& value, Data_Type newType = Data_Type::TEXT); 
 	bool del(const string& name);
 	bool CleanUp();

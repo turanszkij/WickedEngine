@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiResourceManager.h"
+#include "wiCVars.h"
 
 class RenderableComponent;
 
@@ -23,6 +24,7 @@ public:
 	void activateComponent(RenderableComponent* component);
 	RenderableComponent* getActiveComponent(){ return activeComponent; }
 
+	wiCVars Props;
 	wiResourceManager Content;
 
 	void	setFrameSkip(bool value){ frameskip = value; }

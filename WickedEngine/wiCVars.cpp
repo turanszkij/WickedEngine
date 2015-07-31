@@ -27,18 +27,26 @@ void wiCVars::SetUp()
 {
 }
 
-const wiCVars::Variable* wiCVars::get(const string& name)
+const wiCVars::Variable wiCVars::get(const string& name)
 {
 	container::iterator it = variables.find(name);
 	if(it!=variables.end())
 		return it->second;
-	else return nullptr;
+	else return Variable::Invalid();
+}
+bool wiCVars::set(const string& name, const string& value)
+{
+	if (!get(name).isValid())
+		return false;
+	container::iterator it = variables.find(name);
+	if (it != variables.end())
+		variables[name].data = value;
 }
 bool wiCVars::add(const string& name, const string& value, Data_Type newType)
 {
-	if(get(name))
+	if(get(name).isValid())
 		return false;
-	variables.insert< pair<string,Variable*> >( pair<string,Variable*>(name,new Variable(value,newType)) );
+	variables.insert< pair<string,Variable> >( pair<string,Variable>(name,Variable(value,newType)) );
 	return true;
 } 
 bool wiCVars::del(const string& name)
