@@ -28,6 +28,7 @@
 #include "wiMath.h"
 #include "wiLensFlare.h"
 #include "wiSound.h"
+#include "wiThreadSafeManager.h"
 #include "wiResourceManager.h"
 #include "wiTimer.h"
 #include "wiHelper.h"

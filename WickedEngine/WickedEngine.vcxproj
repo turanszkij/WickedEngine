@@ -354,6 +354,7 @@
     <ClCompile Include="wiSound.cpp" />
     <ClCompile Include="wiSPTree.cpp" />
     <ClCompile Include="wiTextureHelper.cpp" />
+    <ClCompile Include="wiThreadSafeManager.cpp" />
     <ClCompile Include="wiTimer.cpp" />
     <ClCompile Include="Utility\DDSTextureLoader.cpp" />
     <ClCompile Include="Utility\pch.cpp" />
@@ -625,6 +626,7 @@
     <ClInclude Include="wiSound.h" />
     <ClInclude Include="wiSPTree.h" />
     <ClInclude Include="wiTaskThread.h" />
+    <ClInclude Include="wiThreadSafeManager.h" />
     <ClInclude Include="wiTimer.h" />
     <ClInclude Include="typelib.h" />
     <ClInclude Include="Utility\dds.h" />

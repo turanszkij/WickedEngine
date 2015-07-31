@@ -5,16 +5,12 @@
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"
 
-
 wiResourceManager::filetypes wiResourceManager::types;
 wiResourceManager* wiResourceManager::globalResources = nullptr;
 
 wiResourceManager::wiResourceManager()
 {
-	if (globalResources == nullptr)
-	{
-		SetUp();
-	}
+	wiThreadSafeManager();
 }
 wiResourceManager::~wiResourceManager()
 {
@@ -24,7 +20,10 @@ wiResourceManager* wiResourceManager::GetGlobal()
 {
 	if (globalResources == nullptr)
 	{
-		globalResources = new wiResourceManager();
+		STATICMUTEX.lock();
+		if (globalResources == nullptr)
+			globalResources = new wiResourceManager();
+		STATICMUTEX.unlock();
 	}
 	return globalResources;
 }
@@ -51,6 +50,9 @@ const wiResourceManager::Resource* wiResourceManager::get(const string& name)
 void* wiResourceManager::add(const string& name, Data_Type newType
 	, wiRenderer::VertexLayoutDesc* vertexLayoutDesc, UINT elementCount, D3D11_SO_DECLARATION_ENTRY* streamOutDecl)
 {
+	if (types.empty())
+		SetUp();
+
 	const Resource* res = get(name);
 	if(!res){
 		string ext = name.substr(name.length()-3,name.length());
@@ -266,6 +268,8 @@ bool wiResourceManager::del(const string& name)
 
 bool wiResourceManager::CleanUp()
 {
+	MUTEX.lock();
 	resources.clear();
+	MUTEX.unlock();
 	return true;
 }

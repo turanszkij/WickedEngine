@@ -1,9 +1,10 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiThreadSafeManager.h"
 
 class wiSound;
 
-class wiResourceManager
+class wiResourceManager : public wiThreadSafeManager
 {
 public:
 	enum Data_Type{
@@ -29,17 +30,16 @@ private:
 typedef map<string,Data_Type> filetypes;
 static filetypes types;
 static wiResourceManager* globalResources;
+static void SetUp();
 
 typedef unordered_map<string,Resource*> container;
 container resources;
-mutex MUTEX;
 
 public:
 	wiResourceManager();
 	~wiResourceManager();
 	static wiResourceManager* GetGlobal();
 
-	static void SetUp();
 
 	const Resource* get(const string& name);
 	//specify datatype for shaders

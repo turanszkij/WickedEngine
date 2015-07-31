@@ -1,8 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiHelper.h"
+#include "wiThreadSafeManager.h"
 
-class wiCVars
+class wiCVars : public wiThreadSafeManager
 {
 public:
 	enum Data_Type{
@@ -82,8 +83,6 @@ public:
 	wiCVars();
 	~wiCVars();
 	static wiCVars* GetGlobal();
-
-	static void SetUp();
 
 	const Variable get(const string& name);
 	bool set(const string& name, const string& value);

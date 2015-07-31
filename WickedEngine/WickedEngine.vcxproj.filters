@@ -617,6 +617,9 @@
     <ClCompile Include="wiCVars.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wiThreadSafeManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1436,6 +1439,9 @@
       <Filter>ComponentTemplates</Filter>
     </ClInclude>
     <ClInclude Include="wiCVars.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiThreadSafeManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
