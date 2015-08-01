@@ -51,6 +51,9 @@
     <Filter Include="ComponentTemplates">
       <UniqueIdentifier>{73c2fdb6-071b-400b-912f-37847dacd33c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="LUA">
+      <UniqueIdentifier>{4d8f8d1d-ba7b-4418-9933-725e9d27c0f6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -618,6 +621,111 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="wiThreadSafeManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lapi.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lauxlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lbaselib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lbitlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lcode.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lcorolib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lctype.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\ldblib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\ldebug.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\ldo.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\ldump.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lfunc.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lgc.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\linit.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\liolib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\llex.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lmathlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lmem.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\loadlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lobject.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lopcodes.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\loslib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lparser.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lstate.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lstring.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lstrlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\ltable.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\ltablib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\ltm.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lua.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lundump.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lutf8lib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lvm.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="LUA\lzio.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="wiLua.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1444,6 +1552,87 @@
     <ClInclude Include="wiThreadSafeManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="LUA\lapi.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lauxlib.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lcode.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lctype.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\ldebug.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\ldo.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lfunc.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lgc.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\llex.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\llimits.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lmem.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lobject.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lopcodes.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lparser.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lprefix.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lstate.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lstring.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\ltable.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\ltm.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lua.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lua.hpp">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\luaconf.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lualib.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lundump.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lvm.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="LUA\lzio.h">
+      <Filter>LUA</Filter>
+    </ClInclude>
+    <ClInclude Include="wiLua.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />
@@ -1556,6 +1745,9 @@
   <ItemGroup>
     <Text Include="..\readme.txt" />
     <Text Include="..\features.txt" />
+    <Text Include="info.txt">
+      <Filter>LUA</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="circleGS.hlsl">

@@ -43,6 +43,7 @@
 #include "wiGraphicsThreads.h"
 #include "wiStencilRef.h"
 #include "wiInitializer.h"
+#include "wiLua.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

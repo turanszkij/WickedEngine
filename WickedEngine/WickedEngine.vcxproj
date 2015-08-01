@@ -173,6 +173,40 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="LUA\lapi.c" />
+    <ClCompile Include="LUA\lauxlib.c" />
+    <ClCompile Include="LUA\lbaselib.c" />
+    <ClCompile Include="LUA\lbitlib.c" />
+    <ClCompile Include="LUA\lcode.c" />
+    <ClCompile Include="LUA\lcorolib.c" />
+    <ClCompile Include="LUA\lctype.c" />
+    <ClCompile Include="LUA\ldblib.c" />
+    <ClCompile Include="LUA\ldebug.c" />
+    <ClCompile Include="LUA\ldo.c" />
+    <ClCompile Include="LUA\ldump.c" />
+    <ClCompile Include="LUA\lfunc.c" />
+    <ClCompile Include="LUA\lgc.c" />
+    <ClCompile Include="LUA\linit.c" />
+    <ClCompile Include="LUA\liolib.c" />
+    <ClCompile Include="LUA\llex.c" />
+    <ClCompile Include="LUA\lmathlib.c" />
+    <ClCompile Include="LUA\lmem.c" />
+    <ClCompile Include="LUA\loadlib.c" />
+    <ClCompile Include="LUA\lobject.c" />
+    <ClCompile Include="LUA\lopcodes.c" />
+    <ClCompile Include="LUA\loslib.c" />
+    <ClCompile Include="LUA\lparser.c" />
+    <ClCompile Include="LUA\lstate.c" />
+    <ClCompile Include="LUA\lstring.c" />
+    <ClCompile Include="LUA\lstrlib.c" />
+    <ClCompile Include="LUA\ltable.c" />
+    <ClCompile Include="LUA\ltablib.c" />
+    <ClCompile Include="LUA\ltm.c" />
+    <ClCompile Include="LUA\lua.c" />
+    <ClCompile Include="LUA\lundump.c" />
+    <ClCompile Include="LUA\lutf8lib.c" />
+    <ClCompile Include="LUA\lvm.c" />
+    <ClCompile Include="LUA\lzio.c" />
     <ClCompile Include="MainComponent.cpp" />
     <ClCompile Include="LoadingScreenComponent.cpp" />
     <ClCompile Include="Renderable2DComponent.cpp" />
@@ -342,6 +376,7 @@
     <ClCompile Include="wiInputManager.cpp" />
     <ClCompile Include="wiLensFlare.cpp" />
     <ClCompile Include="wiLines.cpp" />
+    <ClCompile Include="wiLua.cpp" />
     <ClCompile Include="wiNetwork.cpp" />
     <ClCompile Include="Renderable3DComponent.cpp" />
     <ClCompile Include="RenderableComponent.cpp" />
@@ -369,6 +404,32 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LUA\lapi.h" />
+    <ClInclude Include="LUA\lauxlib.h" />
+    <ClInclude Include="LUA\lcode.h" />
+    <ClInclude Include="LUA\lctype.h" />
+    <ClInclude Include="LUA\ldebug.h" />
+    <ClInclude Include="LUA\ldo.h" />
+    <ClInclude Include="LUA\lfunc.h" />
+    <ClInclude Include="LUA\lgc.h" />
+    <ClInclude Include="LUA\llex.h" />
+    <ClInclude Include="LUA\llimits.h" />
+    <ClInclude Include="LUA\lmem.h" />
+    <ClInclude Include="LUA\lobject.h" />
+    <ClInclude Include="LUA\lopcodes.h" />
+    <ClInclude Include="LUA\lparser.h" />
+    <ClInclude Include="LUA\lprefix.h" />
+    <ClInclude Include="LUA\lstate.h" />
+    <ClInclude Include="LUA\lstring.h" />
+    <ClInclude Include="LUA\ltable.h" />
+    <ClInclude Include="LUA\ltm.h" />
+    <ClInclude Include="LUA\lua.h" />
+    <ClInclude Include="LUA\lua.hpp" />
+    <ClInclude Include="LUA\luaconf.h" />
+    <ClInclude Include="LUA\lualib.h" />
+    <ClInclude Include="LUA\lundump.h" />
+    <ClInclude Include="LUA\lvm.h" />
+    <ClInclude Include="LUA\lzio.h" />
     <ClInclude Include="MainComponent.h" />
     <ClInclude Include="LoadingScreenComponent.h" />
     <ClInclude Include="Renderable2DComponent.h" />
@@ -596,6 +657,7 @@
     <ClInclude Include="Renderable3DComponent.h" />
     <ClInclude Include="wiGraphicsThreads.h" />
     <ClInclude Include="wiInitializer.h" />
+    <ClInclude Include="wiLua.h" />
     <ClInclude Include="wiStencilRef.h" />
     <ClInclude Include="wiTextureHelper.h" />
     <ClInclude Include="WickedEngine.h" />
@@ -685,6 +747,7 @@
   <ItemGroup>
     <Text Include="..\features.txt" />
     <Text Include="..\readme.txt" />
+    <Text Include="info.txt" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="bloomSeparatePS.hlsl">
