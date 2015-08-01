@@ -35,7 +35,7 @@ void main(
 	QGS_OUT element = (QGS_OUT)0;
 	element.nor = normal;
 #ifdef GRASS_FADE_DITHER
-	element.fade = pow(saturate(distance(pos.xyz, eye.xyz) / drawdistance), 16);
+	element.fade = pow(saturate(distance(pos.xyz, eye.xyz) / drawdistance), 10);
 #endif
 	
 	element.tex=float2(rand%2?1:0,0);

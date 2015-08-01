@@ -28,7 +28,7 @@ void main(
 	for(uint i=0;i<1;++i){
 		float4 mod = pos + float4(cross(MOD[i], normal), 0);
 #ifdef GRASS_FADE_DITHER
-		const float fade = pow(saturate(distance(pos.xyz, eye.xyz) / drawdistance), 16);
+		const float fade = pow(saturate(distance(pos.xyz, eye.xyz) / drawdistance), 10);
 #else
 		static const float fade = 0;
 #endif
