@@ -5,6 +5,8 @@
 
 PixelOutputType main(PixelInputType PSIn)
 {
+	clip(dither(PSIn.pos.xy) - PSIn.dither);
+
 	PixelOutputType Out = (PixelOutputType)0;
 
 	float3 normal = normalize(PSIn.nor);
@@ -18,7 +20,6 @@ PixelOutputType main(PixelInputType PSIn)
 	//ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
 	//ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
 
-	clip(ditherMask4(PSIn.pos.xy)-PSIn.dither);
 
 	PSIn.tex+=movingTex;
 	[branch]if(hasTex) {

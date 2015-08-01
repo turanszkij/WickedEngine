@@ -25,7 +25,7 @@ void main(
 
 	for(uint i=0;i<6;++i){
 		float4 mod = pos + float4( cross( MOD[i],normal),0 );
-		genBlade(output,xViewProjection,mod,normal,length,1,right,color, wind);
+		genBlade(output,xViewProjection,mod,normal,length,1,right,color, wind, 0);
 	}
 	
 	/*genBlade(output,xViewProjection,pos,normal,length,1,right,color, wind);

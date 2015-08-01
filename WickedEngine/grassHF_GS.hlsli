@@ -1,3 +1,9 @@
+#ifndef GRASSHF_GS
+#define GRASSHF_GS
+
+//undef for length fade instead of dithering
+#define GRASS_FADE_DITHER
+
 struct VS_OUT
 {
 	float4 pos : SV_POSITION;
@@ -9,12 +15,14 @@ struct GS_OUT
 	float4 pos : SV_POSITION;
 	float3 nor : NORMAL;
 	float3 col : COLOR;
+	float  fade : DITHERFADE;
 };
 struct QGS_OUT
 {
 	float4 pos : SV_POSITION;
 	float3 nor : NORMAL;
 	float2 tex : TEXCOORD;
+	float  fade : DITHERFADE;
 };
 cbuffer cbgs:register(b0){
 	float4x4 xView;
@@ -37,11 +45,12 @@ static const float3 MOD[] = {
 };
 
 inline void genBlade(inout TriangleStream< GS_OUT > output, float4x4 xViewProjection, float4 pos, float3 normal
-					 , float length,in float width, float3 right, float3 color,in float3 wind)
+					 , float length,in float width, float3 right, float3 color,in float3 wind,in float fade)
 {
 	//float3 right = cross(front,normal)*0.3;
-	GS_OUT element;
+	GS_OUT element = (GS_OUT)0;
 	element.nor = normal;
+	element.fade = fade;
 
 	width*=0.3;
 	wind*=length*0.1;
@@ -137,4 +146,6 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4x4 xViewProjec
 
 	output.RestartStrip();
 }
+
+#endif //GRASSHF_GS
 

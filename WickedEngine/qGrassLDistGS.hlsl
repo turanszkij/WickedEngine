@@ -18,7 +18,11 @@ void main(
 	float4 pos = float4(input[0].pos.xyz,1);
 	float3 color = saturate(colTime.xyz+sin(pos.x-pos.y-pos.z)*0.013f)*0.5;
 	float3 normal = /*normalize(*/input[0].nor.xyz/*-wind)*/;
+#ifdef GRASS_FADE_DITHER
+	float grassLength = /*lerp( */input[0].nor.w/*,0,pow(saturate(distance(pos.xyz,eye.xyz)/drawdistance),4) )*/;
+#else
 	float grassLength = lerp( input[0].nor.w,0,pow(saturate(distance(pos.xyz,eye.xyz)/drawdistance),4) );
+#endif
 	float3 wind = sin(colTime.w+(pos.x+pos.y+pos.z))*windDir.xyz*0.03*grassLength;
 	//if(rand%(uint)windRandomness) wind=-wind;
 	float3 front = xView._m02_m12_m22;
@@ -28,8 +32,11 @@ void main(
 	frame.xy*=grassLength;
 	pos.xyz-=normal*0.1*grassLength;
 	
-	QGS_OUT element;
+	QGS_OUT element = (QGS_OUT)0;
 	element.nor = normal;
+#ifdef GRASS_FADE_DITHER
+	element.fade = pow(saturate(distance(pos.xyz, eye.xyz) / drawdistance), 16);
+#endif
 	
 	element.tex=float2(rand%2?1:0,0);
 	element.pos=pos;

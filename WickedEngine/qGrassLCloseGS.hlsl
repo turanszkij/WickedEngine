@@ -18,7 +18,7 @@ void main(
 	float4 pos = float4(input[0].pos.xyz,1);
 	float3 color = saturate(colTime.xyz+sin(pos.x-pos.y-pos.z)*0.013f)*0.5;
 	float3 normal = /*normalize(*/input[0].nor.xyz/*-wind)*/;
-	float grassLength = lerp( input[0].nor.w,0,pow(saturate(distance(pos.xyz,eye.xyz)/drawdistance),4) );
+	float grassLength = /*lerp( */input[0].nor.w/*,0,pow(saturate(distance(pos.xyz,eye.xyz)/drawdistance),4) )*/;
 	float3 wind = sin(colTime.w+(pos.x+pos.y+pos.z))*windDir.xyz*0.03*grassLength;
 	//if(rand%(uint)windRandomness) wind=-wind;
 	float3 front = input[0].tan.xyz;
@@ -27,8 +27,8 @@ void main(
 
 	frame.xy*=grassLength;
 	pos.xyz-=normal*0.1*grassLength;
-	
-	QGS_OUT element;
+
+	QGS_OUT element = (QGS_OUT)0;
 	element.nor = normal;
 	
 	element.tex=float2(0,0);

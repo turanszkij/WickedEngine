@@ -5,11 +5,14 @@
 #include "specularHF.hlsli"
 #include "depthConvertHF.hlsli"
 #include "fogHF.hlsli"
+#include "ditherHF.hlsli"
 
 
 
 float4 main(PixelInputType PSIn) : SV_TARGET
 {
+	clip(dither(PSIn.pos.xy) - PSIn.dither);
+
 	float4 baseColor = float4(0, 0, 0, 1);
 	float depth = PSIn.pos2D.z;
 
