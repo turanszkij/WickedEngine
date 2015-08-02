@@ -15,16 +15,20 @@ float wiBackLog::pos;
 int wiBackLog::scroll;
 stringstream wiBackLog::inputArea;
 int wiBackLog::historyPos=0;
+ID3D11ShaderResourceView* wiBackLog::backgroundTex = nullptr;
 
 
 void wiBackLog::Initialize(){
-	//stream.resize(0);
 	pos = (float)wiRenderer::RENDERHEIGHT;
 	scroll=0;
 	state=DISABLED;
 	deletefromline=100;
 	inputArea=stringstream("");
-	//post("wiBackLog Created");
+	const unsigned char colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
+	wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2, 4);
+
+	wiLua::GetGlobal()->Register("backlog_clear", ClearLua);
+	wiLua::GetGlobal()->Register("backlog_post", PostLua);
 }
 void wiBackLog::CleanUp(){
 	stream.clear();
@@ -55,9 +59,11 @@ void wiBackLog::Draw(){
 		wiImageEffects fx = wiImageEffects((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
 		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);
-		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(0,0,240,200)),fx);
-		wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
-		wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
+		wiImage::Draw(backgroundTex, fx);
+		wiFont(getText(), wiFontProps(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
+		wiFont(inputArea.str().c_str(), wiFontProps(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
+		//wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
+		//wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}
 }
 
@@ -97,20 +103,8 @@ void wiBackLog::acceptInput(){
 	if(history.size()>deletefromline){
 		history.pop_front();
 	}
+	wiLua::GetGlobal()->RunText(inputArea.str());
 	inputArea.str("");
-
-#ifdef GAMECOMPONENTS
-	vector<string> command(0);
-	while(!commandStream.eof()){
-		string a = "";
-		commandStream>>a;
-		command.push_back(a);
-	}
-	command.pop_back();
-	GameComponents::consoleCommands.clear();
-	GameComponents::consoleCommands=vector<string>(command.begin(),command.end());
-	GameComponents::wakeConsoleCommand=true;
-#endif
 }
 void wiBackLog::deletefromInput(){
 	stringstream ss(inputArea.str().substr(0,inputArea.str().length()-1));
@@ -138,4 +132,35 @@ void wiBackLog::historyNext(){
 		inputArea.str("");
 		inputArea<<history[history.size()-1-historyPos];
 	}
+}
+
+void wiBackLog::setBackground(ID3D11ShaderResourceView* texture)
+{
+	backgroundTex = texture;
+}
+
+int wiBackLog::ClearLua(lua_State* L)
+{
+	clear();
+	return 0;
+}
+int wiBackLog::PostLua(lua_State* L)
+{
+	int argc = lua_gettop(L);
+
+	stringstream ss("");
+
+	for (int i = 1; i <= argc; i++)
+	{
+		const char* str = lua_tostring(L, i);
+		if (str != nullptr)
+		{
+			ss << str;
+		}
+	}
+
+	wiBackLog::post(ss.str().c_str());
+
+	//number of results
+	return 0;
 }

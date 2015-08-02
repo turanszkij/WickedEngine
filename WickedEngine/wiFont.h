@@ -2,7 +2,33 @@
 #include "CommonInclude.h"
 #define MAX_TEXT 20000
 
-class wiRenderer;
+enum wiFontAlign
+{
+	WIFALIGN_LEFT,
+	//same as mid
+	WIFALIGN_CENTER,
+	//same as center
+	WIFALIGN_MID,
+	WIFALIGN_RIGHT,
+	WIFALIGN_TOP,
+	WIFALIGN_BOTTOM,
+	WIFALIGN_COUNT,
+};
+
+class wiFontProps
+{
+public:
+	int size;
+	int spacingX, spacingY;
+	float posX, posY;
+	wiFontAlign h_align, v_align;
+
+	//zero-based properties: add or subtract from values
+	wiFontProps(float posX = 0, float posY = 0, int size = 0, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
+		, int spacingX = 0, int spacingY = 0)
+		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY)
+	{}
+};
 
 class wiFont
 {
@@ -64,26 +90,27 @@ protected:
 	static vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(const wchar_t* text,XMFLOAT2 sizSpacing,const int& style, ID3D11DeviceContext* context = nullptr);
+	static void ModifyGeo(const wchar_t* text, wiFontProps props, int style, ID3D11DeviceContext* context = nullptr);
+
 public:
 	static void Initialize();
 	static void SetUpStaticComponents();
 	static void CleanUpStatic();
+
+	wstring text;
+	wiFontProps props;
+	int style;
+
+	wiFont(const string& text, wiFontProps props = wiFontProps(), int style = 0);
+	wiFont(const wstring& text, wiFontProps props = wiFontProps(), int style = 0);
+	~wiFont();
+
 	
-	static void DrawBlink(wchar_t* text,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
-	static void Draw(const wchar_t* text,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
-	static void DrawBlink(const std::string& text,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
-	static void Draw(const std::string& text,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
+	void Draw(ID3D11DeviceContext* context = nullptr);
 
-	static void DrawBlink(const string& text,const char* fontStyle,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
-	static void DrawBlink(const wchar_t* text,const char* fontStyle,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
-	static void Draw(const string& text,const char* fontStyle,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
-	static void Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 posSizSpacing=XMFLOAT4(0,0,0,0), const char* Halign="left", const char* Valign="top", ID3D11DeviceContext* context = nullptr);
 
-	static void Blink(DWORD perframe,DWORD invisibleTime);
-
-	static int textWidth(const wchar_t*,FLOAT siz,const int& style);
-	static int textHeight(const wchar_t*,FLOAT siz,const int& style);
+	int textWidth();
+	int textHeight();
 
 	static void addFontStyle( const string& toAdd );
 	static int getFontStyleByName( const string& get );

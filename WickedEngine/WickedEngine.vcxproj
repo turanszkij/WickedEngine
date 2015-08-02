@@ -203,6 +203,7 @@
     <ClCompile Include="LUA\ltablib.c" />
     <ClCompile Include="LUA\ltm.c" />
     <ClCompile Include="LUA\lua.c" />
+    <ClCompile Include="LUA\luac.c" />
     <ClCompile Include="LUA\lundump.c" />
     <ClCompile Include="LUA\lutf8lib.c" />
     <ClCompile Include="LUA\lvm.c" />
@@ -747,7 +748,7 @@
   <ItemGroup>
     <Text Include="..\features.txt" />
     <Text Include="..\readme.txt" />
-    <Text Include="info.txt" />
+    <Text Include="licenses.txt" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="bloomSeparatePS.hlsl">

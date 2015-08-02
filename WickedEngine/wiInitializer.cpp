@@ -34,6 +34,7 @@ namespace wiInitializer
 
 		if (requestedFeautures & WICKEDENGINE_INITIALIZE_FONT)
 		{
+			wiFont::Initialize();
 			wiFont::SetUpStaticComponents();
 		}
 

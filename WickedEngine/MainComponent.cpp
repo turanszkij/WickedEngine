@@ -3,6 +3,9 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "wiTimer.h"
+#include "wiCpuInfo.h"
+#include "wiInputManager.h"
+#include "wiBackLog.h"
 
 
 MainComponent::MainComponent()
@@ -67,6 +70,10 @@ void MainComponent::run()
 
 void MainComponent::Update()
 {
+	wiInputManager::Update();
+	wiCpuInfo::Frame();
+	wiBackLog::Update();
+
 	getActiveComponent()->Update();
 }
 

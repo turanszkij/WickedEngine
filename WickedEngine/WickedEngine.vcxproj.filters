@@ -728,6 +728,9 @@
     <ClCompile Include="wiLua.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LUA\luac.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1745,9 +1748,7 @@
   <ItemGroup>
     <Text Include="..\readme.txt" />
     <Text Include="..\features.txt" />
-    <Text Include="info.txt">
-      <Filter>LUA</Filter>
-    </Text>
+    <Text Include="licenses.txt" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="circleGS.hlsl">

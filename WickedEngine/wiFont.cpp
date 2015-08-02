@@ -21,6 +21,19 @@ DWORD wiFont::counter;
 vector<wiFont::Vertex> wiFont::vertexList;
 vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
+wiFont::wiFont(const string& text, wiFontProps props, int style) : props(props), style(style)
+{
+	this->text = wstring(text.begin(), text.end());
+}
+wiFont::wiFont(const wstring& text, wiFontProps props, int style) : text(text), props(props), style(style)
+{
+
+}
+wiFont::~wiFont()
+{
+
+}
+
 void wiFont::Initialize()
 {
 	counter = 0;
@@ -213,7 +226,7 @@ void wiFont::CleanUpStatic()
 }
 
 
-void wiFont::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID3D11DeviceContext* context)
+void wiFont::ModifyGeo(const wchar_t* text, wiFontProps props, int style, ID3D11DeviceContext* context)
 {
 	textlen=wcslen(text);
 	line=0; pos=0;
@@ -224,48 +237,45 @@ void wiFont::ModifyGeo(const wchar_t* text, XMFLOAT2 sizSpa,const int& style, ID
 	}
 	for (unsigned int i = 0; i<vertexList.size(); i += 4){
 
-		FLOAT leftX=0.0f,rightX=(FLOAT)fontStyles[style].charSize,upperY=0.0f,lowerY=(FLOAT)fontStyles[style].charSize;
-		BOOL compatible=FALSE;
+		float leftX=0.0f,rightX=(float)fontStyles[style].charSize,upperY=0.0f,lowerY=(float)fontStyles[style].charSize;
+		bool compatible=FALSE;
 		
 		
-		if(text[i/4]==10){ //line break
-			line+=(SHORT)fontStyles[style].recSize;
-			pos=0;
+		if (text[i / 4] == '\n'){
+			line += (short)(fontStyles[style].recSize + props.size + props.spacingY);
+			pos = 0;
 		}
-		else if(text[i/4]==32){ //space
-			pos+=(SHORT)(fontStyles[style].recSize+sizSpa.x+sizSpa.y);
+		else if (text[i / 4] == ' '){
+			pos += (short)(fontStyles[style].recSize + props.size + props.spacingX);
+		}
+		else if (text[i / 4] == '\t'){
+			pos += (short)((fontStyles[style].recSize + props.size + props.spacingX) * 5);
 		}
 		else if(fontStyles[style].lookup[text[i/4]].code==text[i/4]){
-			leftX+=fontStyles[style].lookup[text[i/4]].offX*(FLOAT)fontStyles[style].charSize;
-			rightX+=fontStyles[style].lookup[text[i/4]].offX*(FLOAT)fontStyles[style].charSize;
-			upperY+=fontStyles[style].lookup[text[i/4]].offY*(FLOAT)fontStyles[style].charSize;
-			lowerY+=fontStyles[style].lookup[text[i/4]].offY*(FLOAT)fontStyles[style].charSize;
+			leftX += fontStyles[style].lookup[text[i / 4]].offX*(float)fontStyles[style].charSize;
+			rightX += fontStyles[style].lookup[text[i / 4]].offX*(float)fontStyles[style].charSize;
+			upperY += fontStyles[style].lookup[text[i / 4]].offY*(float)fontStyles[style].charSize;
+			lowerY += fontStyles[style].lookup[text[i / 4]].offY*(float)fontStyles[style].charSize;
 			compatible=TRUE;
 		}
 
 		if(compatible){
-			leftX/=(FLOAT)fontStyles[style].texWidth;
-			rightX/=(FLOAT)fontStyles[style].texWidth;
-			upperY/=(FLOAT)fontStyles[style].texHeight;
-			lowerY/=(FLOAT)fontStyles[style].texHeight;
+			leftX /= (float)fontStyles[style].texWidth;
+			rightX /= (float)fontStyles[style].texWidth;
+			upperY /= (float)fontStyles[style].texHeight;
+			lowerY /= (float)fontStyles[style].texHeight;
 
-			vertexList[i].Pos=XMFLOAT2(pos+0-sizSpa.x*0.5f,0-line+sizSpa.x*0.5f); vertexList[i].Tex=XMFLOAT2(leftX,upperY);
-			vertexList[i+1].Pos=XMFLOAT2(pos+fontStyles[style].recSize+sizSpa.x*0.5f,0-line+sizSpa.x*0.5f); vertexList[i+1].Tex=XMFLOAT2(rightX,upperY);
-			vertexList[i+2].Pos=XMFLOAT2(pos+0-sizSpa.x*0.5f,-fontStyles[style].recSize-line-sizSpa.x*0.5f); vertexList[i+2].Tex=XMFLOAT2(leftX,lowerY);
-			vertexList[i+3].Pos=XMFLOAT2(pos+fontStyles[style].recSize+sizSpa.x*0.5f,-fontStyles[style].recSize-line-sizSpa.x*0.5f); vertexList[i+3].Tex=XMFLOAT2(rightX,lowerY);
+			vertexList[i].Pos = XMFLOAT2(pos + 0 - props.size*0.5f, 0 - line + props.size*0.5f); vertexList[i].Tex = XMFLOAT2(leftX, upperY);
+			vertexList[i + 1].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f, 0 - line + props.size*0.5f); vertexList[i + 1].Tex = XMFLOAT2(rightX, upperY);
+			vertexList[i + 2].Pos = XMFLOAT2(pos + 0 - props.size*0.5f, -fontStyles[style].recSize - line - props.size*0.5f); vertexList[i + 2].Tex = XMFLOAT2(leftX, lowerY);
+			vertexList[i + 3].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f, -fontStyles[style].recSize - line - props.size*0.5f); vertexList[i + 3].Tex = XMFLOAT2(rightX, lowerY);
 
-			pos+=(SHORT)(fontStyles[style].recSize+sizSpa.x+sizSpa.y);
+			pos += (short)(fontStyles[style].recSize + props.size + props.spacingX);
 		}
 	}
-	//wiRenderer::getImmediateContext()->UpdateSubresource( vertexBuffer, 0, NULL, vertexList.data(), 0, 0 );
 
 	wiRenderer::UpdateBuffer(vertexBuffer,vertexList.data(),context==nullptr?wiRenderer::getImmediateContext():context,sizeof(Vertex) * textlen * 4);
-	//D3D11_MAPPED_SUBRESOURCE mappedResource;
-	//Vertex* dataPtr;
-	//wiRenderer::getImmediateContext()->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-	//dataPtr = (Vertex*)mappedResource.pData;
-	//memcpy(dataPtr,vertexList.data(),sizeof(Vertex) * textlen * 4);
-	//wiRenderer::getImmediateContext()->Unmap(vertexBuffer,0);
+	
 }
 
 void wiFont::LoadVertexBuffer()
@@ -303,61 +313,21 @@ void wiFont::LoadIndices()
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
 }
 
+void wiFont::Draw(wiRenderer::DeviceContext context){
 
-void wiFont::DrawBlink(wchar_t* text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
-{
-	if(toDraw){
-		Draw(text,newPosSizSpa,Halign,Valign,context);
-	}
-}
-void wiFont::DrawBlink(const std::string& text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
-{
-	if(toDraw){
-		Draw(text,newPosSizSpa,Halign,Valign,context);
-	}
-}
-void wiFont::Draw(const std::string& text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
-{
-	std::wstring ws(text.begin(), text.end());
+	wiFontProps newProps = props;
 
-	Draw(ws.c_str(),newPosSizSpa,Halign,Valign,context);
-}
-void wiFont::Draw(const wchar_t* text, XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context)
-{
-	Draw(text,"",newPosSizSpa,Halign,Valign,context);
-}
-
-void wiFont::DrawBlink(const string& text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
-	if(toDraw){
-		Draw(text,fontStyle,newPosSizSpa,Halign,Valign,context);
-	}
-}
-void wiFont::DrawBlink(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
-	if(toDraw){
-		Draw(text,fontStyle,newPosSizSpa,Halign,Valign,context);
-	}
-}
-void wiFont::Draw(const string& text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
-	wstring ws(text.begin(),text.end());
-	Draw(ws.c_str(),fontStyle,newPosSizSpa,Halign,Valign,context);
-}
-
-
-void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSpa, const char* Halign, const char* Valign, wiRenderer::DeviceContext context){
-	int fontStyleI = getFontStyleByName(fontStyle);
-
-
-	if(!strcmp(Halign,"center") || !strcmp(Valign,"mid"))
-		newPosSizSpa.x-=textWidth(text,newPosSizSpa.w+newPosSizSpa.z,fontStyleI)/2;
-	else if(!strcmp(Halign,"right"))
-		newPosSizSpa.x-=textWidth(text,newPosSizSpa.w+newPosSizSpa.z,fontStyleI);
-	if(!strcmp(Valign,"center") || !strcmp(Valign,"mid"))
-		newPosSizSpa.y+=textHeight(text,newPosSizSpa.z,fontStyleI)*0.5f;
-	else if(!strcmp(Valign,"bottom"))
-		newPosSizSpa.y+=textHeight(text,newPosSizSpa.z,fontStyleI);
+	if(props.h_align==WIFALIGN_CENTER || props.h_align==WIFALIGN_MID)
+		newProps.posX-= textWidth()*0.5f;
+	else if(props.h_align==WIFALIGN_RIGHT)
+		newProps.posX -= textWidth();
+	if (props.v_align == WIFALIGN_CENTER || props.h_align == WIFALIGN_MID)
+		newProps.posY += textHeight()*0.5f;
+	else if(props.v_align==WIFALIGN_BOTTOM)
+		newProps.posY += textHeight();
 
 	
-	ModifyGeo(text,XMFLOAT2(newPosSizSpa.z,newPosSizSpa.w),fontStyleI,context);
+	ModifyGeo(text.c_str(), newProps, style, context);
 
 	if(textlen){
 
@@ -372,13 +342,12 @@ void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSp
 		wiRenderer::BindPS(pixelShader,context);
 
 
-		ConstantBuffer* cb = new ConstantBuffer();
-		cb->mProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
-		cb->mTrans =  XMMatrixTranspose( XMMatrixTranslation(newPosSizSpa.x,newPosSizSpa.y,0) );
-		cb->mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
+		ConstantBuffer cb = ConstantBuffer();
+		cb.mProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
+		cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
+		cb.mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
 		
-		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
-		delete cb;
+		wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
 
 		wiRenderer::BindConstantBufferVS(constantBuffer,0,context);
 
@@ -389,31 +358,19 @@ void wiFont::Draw(const wchar_t* text,const char* fontStyle,XMFLOAT4 newPosSizSp
 		wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),context);
 		wiRenderer::BindIndexBuffer(indexBuffer,context);
 
-		wiRenderer::BindTexturePS(fontStyles[fontStyleI].texture,0,context);
+		wiRenderer::BindTexturePS(fontStyles[style].texture,0,context);
 		wiRenderer::BindSamplerPS(sampleState,0,context);
 		wiRenderer::DrawIndexed(textlen*6,context);
 	}
 }
 
-void wiFont::Blink(DWORD perframe,DWORD invisibleTime)
-{
-	counter++;
-	if(toDraw && counter>perframe){
-		counter=0;
-		toDraw=FALSE;
-	}
-	else if(!toDraw && counter>invisibleTime){
-		counter=0;
-		toDraw=TRUE;
-	}
-}
 
 
-int wiFont::textWidth(const wchar_t* text,FLOAT spacing,const int& style)
+int wiFont::textWidth()
 {
 	int i=0;
 	int max=0,lineW=0;
-	int len=wcslen(text);
+	int len=text.length();
 	while(i<len){
 		if(text[i]==10) {//ENDLINE
 			if(max<lineW) max=lineW;
@@ -424,13 +381,13 @@ int wiFont::textWidth(const wchar_t* text,FLOAT spacing,const int& style)
 	}
 	if(max==0) max=lineW;
 
-	return (int)(max*(fontStyles[style].recSize+spacing));
+	return (int)(max*(fontStyles[style].recSize+props.spacingX));
 }
-int wiFont::textHeight(const wchar_t* text,FLOAT siz,const int& style)
+int wiFont::textHeight()
 {
 	int i=0;
 	int lines=1;
-	int len=wcslen(text);
+	int len=text.length();
 	while(i<len){
 		if(text[i]==10) {//ENDLINE
 			lines++;
@@ -438,7 +395,7 @@ int wiFont::textHeight(const wchar_t* text,FLOAT siz,const int& style)
 		i++;
 	}
 
-	return (int)(lines*(fontStyles[style].recSize+siz));
+	return (int)(lines*(fontStyles[style].recSize+props.size));
 }
 
 

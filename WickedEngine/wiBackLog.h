@@ -1,8 +1,9 @@
-#ifndef BACKLOG
-#define BACKLOG
+#ifndef WIBACKLOG
+#define WIBACKLOG
 #include "CommonInclude.h"
 #include "wiFont.h"
 #include "wiImage.h"
+#include "wiLua.h"
 
 class wiBackLog
 {
@@ -15,12 +16,13 @@ private:
 	static int scroll;
 	static stringstream inputArea;
 	enum State{
-		IDLE,
 		DISABLED,
+		IDLE,
 		ACTIVATING,
 		DEACTIVATING,
 	};
 	static State state;
+	static ID3D11ShaderResourceView* backgroundTex;
 public:
 	static void Initialize();
 	static void CleanUp();
@@ -43,6 +45,11 @@ public:
 	static void historyNext();
 
 	static bool isActive(){return state==IDLE;}
+
+	static void setBackground(ID3D11ShaderResourceView* texture);
+
+	static int ClearLua(lua_State* L);
+	static int PostLua(lua_State* L);
 };
 
 #endif
