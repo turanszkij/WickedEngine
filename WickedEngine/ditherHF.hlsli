@@ -57,7 +57,7 @@ inline float ditherMask8(in float2 pixel)
 
 inline float dither(in float2 pixel)
 {
-	return ditherMask4(pixel);
+	return ditherMask8(pixel);
 }
 
 #endif //DITHER_HF

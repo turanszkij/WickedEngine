@@ -18,14 +18,14 @@ enum wiFontAlign
 class wiFontProps
 {
 public:
-	int size;
-	int spacingX, spacingY;
+	float size;
+	float spacingX, spacingY;
 	float posX, posY;
 	wiFontAlign h_align, v_align;
 
 	//zero-based properties: add or subtract from values
-	wiFontProps(float posX = 0, float posY = 0, int size = 0, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
-		, int spacingX = 0, int spacingY = 0)
+	wiFontProps(float posX = 0, float posY = 0, float size = 0, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
+		, float spacingX = 0, float spacingY = 0)
 		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY)
 	{}
 };
