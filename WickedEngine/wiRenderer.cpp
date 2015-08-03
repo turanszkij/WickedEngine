@@ -38,7 +38,7 @@ wiRenderer::Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ss
 
 map<wiRenderer::DeviceContext,long> wiRenderer::drawCalls;
 
-int wiRenderer::RENDERWIDTH,wiRenderer::RENDERHEIGHT,wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
+int wiRenderer::RENDERWIDTH=1280,wiRenderer::RENDERHEIGHT=720,wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=1,wiRenderer::POINTLIGHTSHADOWRES=256;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugLines = false, wiRenderer::debugBoxes = false;

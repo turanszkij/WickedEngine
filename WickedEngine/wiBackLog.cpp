@@ -50,10 +50,20 @@ void wiBackLog::Scroll(int dir){
 	scroll+=dir;
 }
 void wiBackLog::Update(){
-	if(state==DEACTIVATING) pos+=speed;
-	else if(state==ACTIVATING) pos-=speed;
-	if (pos >= wiRenderer::RENDERHEIGHT) { state = DISABLED; pos = (float)wiRenderer::RENDERHEIGHT; }
-	else if(pos<=0) {state=IDLE; pos=0;}
+	if(state==DEACTIVATING) 
+		pos+=speed;
+	else if(state==ACTIVATING) 
+		pos-=speed;
+	if (pos >= wiRenderer::RENDERHEIGHT) 
+	{ 
+		state = DISABLED; 
+		pos = (float)wiRenderer::RENDERHEIGHT; 
+	}
+	else if(pos<0) 
+	{
+		state=IDLE; 
+		pos=0;
+	}
 }
 void wiBackLog::Draw(){
 	if(state!=DISABLED){
