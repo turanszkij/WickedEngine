@@ -148,31 +148,28 @@ int wiBackLog::ClearLua(lua_State* L)
 }
 int wiBackLog::PostLua(lua_State* L)
 {
-	int argc = lua_gettop(L);
+	int argc = wiLua::SGetArgCount(L);
 
 	stringstream ss("");
 
 	for (int i = 1; i <= argc; i++)
 	{
-		const char* str = lua_tostring(L, i);
-		if (str != nullptr)
-		{
-			ss << str;
-		}
+		ss << wiLua::SGetString(L, i);
 	}
 
-	wiBackLog::post(ss.str().c_str());
+	if (!ss.str().empty())
+		wiBackLog::post(ss.str().c_str());
 
 	//number of results
 	return 0;
 }
 int wiBackLog::FontSizeLua(lua_State* L)
 {
-	int argc = lua_gettop(L);
+	int argc = wiLua::SGetArgCount(L);
 
 	if (argc > 0)
 	{
-		fontSize = lua_tointeger(L, 1);
+		fontSize = wiLua::SGetFloat(L, 1);
 	}
 
 	//number of results

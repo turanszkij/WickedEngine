@@ -1,6 +1,13 @@
 #include "wiLua.h"
 #include "wiBackLog.h"
 
+extern "C"
+{
+#include "LUA\lua.h"
+#include "LUA\lualib.h"
+#include "LUA\lauxlib.h"
+}
+
 wiLua *wiLua::globalLua = nullptr;
 
 wiLua::wiLua()
@@ -129,5 +136,41 @@ int wiLua::DebugOut(lua_State* L)
 
 	//number of results
 	return 0;
+}
+
+string wiLua::SGetString(lua_State* L, int stackpos)
+{
+	const char* str = lua_tostring(L, stackpos);
+	if (str != nullptr)
+		return str;
+	return string("");
+}
+int wiLua::SGetInt(lua_State* L, int stackpos)
+{
+	return static_cast<int>(SGetLongLong(L,stackpos));
+}
+long wiLua::SGetLong(lua_State* L, int stackpos)
+{
+	return static_cast<long>(SGetLongLong(L, stackpos));
+}
+long long wiLua::SGetLongLong(lua_State* L, int stackpos)
+{
+	return lua_tointeger(L, stackpos);
+}
+float wiLua::SGetFloat(lua_State* L, int stackpos)
+{
+	return static_cast<float>(SGetDouble(L, stackpos));
+}
+double wiLua::SGetDouble(lua_State* L, int stackpos)
+{
+	return lua_tonumber(L, stackpos);
+}
+bool wiLua::SGetBool(lua_State* L, int stackpos)
+{
+	return lua_toboolean(L, stackpos) != 0;
+}
+int wiLua::SGetArgCount(lua_State* L)
+{
+	return lua_gettop(L);
 }
 
