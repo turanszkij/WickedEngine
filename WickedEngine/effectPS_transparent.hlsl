@@ -18,6 +18,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 			baseColor = xTextureTex.Sample(texSampler, PSIn.tex+movingTex);
 			//baseColor*=baseColor.a;
 		}
+		baseColor.rgb *= PSIn.instanceColor;
 		//baseColor.a=1;
 		clip( baseColor.a < 0.1f ? -1:1 );
 

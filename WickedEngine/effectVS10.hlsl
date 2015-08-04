@@ -19,7 +19,8 @@ PixelInputType main(Input input)
 				,float4(input.wi0.w,input.wi1.w,input.wi2.w,1)
 			);
 
-		Out.dither = input.dither;
+		Out.instanceColor = input.color_dither.rgb;
+		Out.dither = input.color_dither.a;
 	
 		float4 pos = input.pos;
 		float4 posPrev = input.pre;
@@ -54,7 +55,7 @@ PixelInputType main(Input input)
 		Out.ReflectionMapSamplingPos = mul(pos, xRefViewProjection );
 
 
-		Out.vel = mul( mul(vel.xyz,WORLD), xViewProjection ).xyz;
+		Out.vel = mul( mul(vel.xyz,(float3x3)WORLD), xViewProjection ).xyz;
 
 		Out.ao = input.nor.w;
 

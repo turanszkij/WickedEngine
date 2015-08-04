@@ -50,10 +50,10 @@ HullInputType main(Input input)
 		//	pos = lerp(pos,posPrev,(offsetMod<0?((1-saturate(offsetMod))/**(noiseTex.SampleLevel( texSampler,inTex,0 ).r)*/*0.6f):0));
 		//}
 
-		Out.pos=pos;
-		Out.tex=input.tex;
+		Out.pos=pos.xyz;
+		Out.tex=input.tex.xyz;
 		Out.nor = normalize(normal);
-		Out.vel = mul( mul(vel.xyz,WORLD), xViewProjection );
+		Out.vel = mul( mul(vel.xyz,(float3x3)WORLD), xViewProjection ).xyz;
 
 	}
 

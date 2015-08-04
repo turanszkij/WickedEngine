@@ -13,5 +13,5 @@ struct Input{
 	float4 wi0 : MATI0;
 	float4 wi1 : MATI1;
 	float4 wi2 : MATI2;
-	float  dither : DITHER;
+	float4 color_dither : COLOR_DITHER;
 };

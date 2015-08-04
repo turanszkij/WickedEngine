@@ -70,22 +70,23 @@ struct Instance
 	XMFLOAT4A mat0;
 	XMFLOAT4A mat1;
 	XMFLOAT4A mat2;
-	float dither;
+	XMFLOAT4A color_dither; //rgb:color, a:dither
 
-	Instance(float dither = 0.0f) :dither(dither){
+	Instance(float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)){
 		mat0 = XMFLOAT4A(1, 0, 0, 0);
 		mat0 = XMFLOAT4A(0, 1, 0, 0);
 		mat0 = XMFLOAT4A(0, 0, 1, 0);
+		color_dither = XMFLOAT4A(color.x, color.y, color.z, dither);
 	}
-	Instance(const XMMATRIX& matIn, float dither = 0.0f){
-		Create(matIn,dither);
+	Instance(const XMMATRIX& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)){
+		Create(matIn, dither, color);
 	}
-	void Create(const XMMATRIX& matIn, float dither = 0.0f)
+	void Create(const XMMATRIX& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1))
 	{
 		XMStoreFloat4A(&mat0, matIn.r[0]);
 		XMStoreFloat4A(&mat1, matIn.r[1]);
 		XMStoreFloat4A(&mat2, matIn.r[2]);
-		this->dither = dither;
+		color_dither = XMFLOAT4A(color.x, color.y, color.z, dither);
 	}
 
 	ALIGN_16
@@ -482,6 +483,8 @@ struct Object : public Streamable, public Transform
 
 	float transparency;
 
+	XMFLOAT3 color;
+
 	
 	//PHYSICS
 	bool rigidBody, kinematic;
@@ -519,6 +522,7 @@ struct Object : public Streamable, public Transform
 		physicsType="ACTIVE";
 		physicsObjectI=-1;
 		transparency = 0.0f;
+		color = XMFLOAT3(1, 1, 1);
 	}
 
 	void CleanUp(){

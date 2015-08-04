@@ -11,6 +11,7 @@ struct PixelInputType
 	float3 vel						: TEXCOORD2;
 	float  ao						: AMBIENT_OCCLUSION;
 	float  dither					: DITHER;
+	float3 instanceColor			: INSTANCECOLOR;
 };
 
 cbuffer matBuffer:register(b2){

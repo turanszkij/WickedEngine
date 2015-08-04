@@ -25,6 +25,7 @@ PixelOutputType main(PixelInputType PSIn)
 	[branch]if(hasTex) {
 		baseColor = xTextureTex.Sample(texSampler,PSIn.tex);
 	}
+	baseColor.rgb *= PSIn.instanceColor;
 	
 	clip( baseColor.a - 0.1f );
 		

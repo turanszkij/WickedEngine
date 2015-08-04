@@ -57,9 +57,6 @@ void wiSprite::CleanUp(){
 	ContentHolder->del(texture);
 	ContentHolder->del(normal);
 	ContentHolder->del(mask);
-	texture = nullptr;
-	normal = nullptr;
-	mask = nullptr;
 }
 
 void wiSprite::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* context){

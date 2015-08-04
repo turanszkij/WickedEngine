@@ -21,7 +21,7 @@ PixelInputType main(Input input)
 		Out.pos3D = pos.xyz;
 		Out.cam = xCamPos.xyz;
 		Out.tex = input.tex.xy;
-		Out.nor = mul(input.nor, (float3x3)WORLD);
+		Out.nor = mul(input.nor.xyz, (float3x3)WORLD);
 		/*float2x3 tanbin = tangentBinormal(Out.nor);
 		Out.tan=tanbin[0];
 		Out.bin=tanbin[1];*/

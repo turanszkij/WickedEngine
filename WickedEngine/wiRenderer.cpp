@@ -994,7 +994,7 @@ void wiRenderer::LoadBasicShaders()
 			{ "MATI", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-			{ "DITHER", 0, DXGI_FORMAT_R32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/effectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -3086,9 +3086,9 @@ void wiRenderer::DrawWorld(const XMMATRIX& newView, bool DX11Eff, int tessF, ID3
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
 				if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
 					if (mesh->softBody || (*viter)->armatureDeform)
-						mesh->AddRenderableInstance(Instance(XMMatrixIdentity(),(*viter)->transparency),k,thread);
+						mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k, thread);
 					else 
-						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, thread);
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k, thread);
 					++k;
 				}
 			}
@@ -3314,9 +3314,9 @@ void wiRenderer::DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResou
 			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
 				if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
 					if (mesh->softBody || (*viter)->armatureDeform)
-						mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), k, GRAPHICSTHREAD_MISC1);
+						mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k, GRAPHICSTHREAD_MISC1);
 					else
-						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k, GRAPHICSTHREAD_MISC1);
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k, GRAPHICSTHREAD_MISC1);
 					++k;
 				}
 			}
