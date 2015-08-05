@@ -28,9 +28,9 @@ void wiBackLog::Initialize(){
 	wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2, 4);
 	fontSize = 0;
 
-	wiLua::GetGlobal()->Register("backlog_clear", ClearLua);
-	wiLua::GetGlobal()->Register("backlog_post", PostLua);
-	wiLua::GetGlobal()->Register("backlog_fontsize", FontSizeLua);
+	wiLua::GetGlobal()->RegisterFunc("backlog_clear", ClearLua);
+	wiLua::GetGlobal()->RegisterFunc("backlog_post", PostLua);
+	wiLua::GetGlobal()->RegisterFunc("backlog_fontsize", FontSizeLua);
 }
 void wiBackLog::CleanUp(){
 	stream.clear();

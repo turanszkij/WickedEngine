@@ -1,7 +1,12 @@
 #pragma once
 #include "CommonInclude.h"
 
-struct lua_State;
+extern "C"
+{
+#include "LUA\lua.h"
+#include "LUA\lualib.h"
+#include "LUA\lauxlib.h"
+}
 
 typedef int(*lua_CFunction) (lua_State *L);
 
@@ -19,6 +24,9 @@ private:
 public:
 	wiLua();
 	~wiLua();
+
+	inline lua_State* GetLuaState(){ return m_luaState; }
+
 	//get global lua script manager
 	static wiLua* GetGlobal();
 
@@ -37,8 +45,19 @@ public:
 	//run a script from param
 	bool RunText(const string& script);
 	//register function to use in scripts
-	bool Register(const string& name, lua_CFunction function);
+	bool RegisterFunc(const string& name, lua_CFunction function);
+	//register class
+	void RegisterLibrary(const string& tableName, const luaL_Reg* functions);
+	//register object
+	bool RegisterObject(const string& tableName, const string& name, void* object);
+	//add function to the previously registered object
+	void AddFunc(const string& name, lua_CFunction function);
+	//add function array to the previously registered object
+	void AddFuncArray(const luaL_Reg* functions);
+	//add int member to registered object
+	void AddInt(const string& name, int data);
 
+	//Static function wrappers from here on
 
 	//get string from lua on stack position
 	static string SGetString(lua_State* L, int stackpos);
@@ -56,5 +75,15 @@ public:
 	static bool SGetBool(lua_State* L, int stackpos);
 	//get number of elements in the stack, or index of the top element
 	static int SGetArgCount(lua_State* L);
+	//get class context information
+	static void* SGetUserData(lua_State* L);
+	
+	//push int to lua stack
+	static void SSetInt(lua_State* L, int data);
+	//push pointer (light userdata) to lua stack
+	static void SSetPointer(lua_State* L, void* data);
+	
+	//add new metatable
+	static void SAddMetatable(lua_State* L, const string& name);
 };
 
