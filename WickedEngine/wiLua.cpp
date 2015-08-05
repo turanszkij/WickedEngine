@@ -3,6 +3,7 @@
 
 wiLua *wiLua::globalLua = nullptr;
 
+#define WILUA_ERROR_PREFIX "[Lua Error] "
 
 wiLua::wiLua()
 {
@@ -56,7 +57,7 @@ void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
 		if (str == nullptr)
 			return;
 		stringstream ss("");
-		ss << "[Lua Error] " << str;
+		ss << WILUA_ERROR_PREFIX << str;
 		if (tobacklog)
 		{
 			wiBackLog::post(ss.str().c_str());
@@ -198,6 +199,18 @@ float wiLua::SGetFloat(lua_State* L, int stackpos)
 {
 	return static_cast<float>(SGetDouble(L, stackpos));
 }
+XMFLOAT2 wiLua::SGetFloat2(lua_State* L, int stackpos)
+{
+	return XMFLOAT2(SGetFloat(L,stackpos),SGetFloat(L,stackpos+1));
+}
+XMFLOAT3 wiLua::SGetFloat3(lua_State* L, int stackpos)
+{
+	return XMFLOAT3(SGetFloat(L, stackpos), SGetFloat(L, stackpos + 1), SGetFloat(L, stackpos + 2));
+}
+XMFLOAT4 wiLua::SGetFloat4(lua_State* L, int stackpos)
+{
+	return XMFLOAT4(SGetFloat(L, stackpos), SGetFloat(L, stackpos + 1), SGetFloat(L, stackpos + 2), SGetFloat(L, stackpos + 3));
+}
 double wiLua::SGetDouble(lua_State* L, int stackpos)
 {
 	return lua_tonumber(L, stackpos);
@@ -219,9 +232,58 @@ void wiLua::SSetInt(lua_State* L, int data)
 {
 	lua_pushinteger(L, (lua_Integer)data);
 }
+void wiLua::SSetFloat(lua_State* L, float data)
+{
+	lua_pushnumber(L, (lua_Number)data);
+}
+void wiLua::SSetFloat2(lua_State* L, const XMFLOAT2& data)
+{
+	SSetFloat(L, data.x);
+	SSetFloat(L, data.y);
+}
+void wiLua::SSetFloat3(lua_State* L, const XMFLOAT3& data)
+{
+	SSetFloat(L, data.x);
+	SSetFloat(L, data.y);
+	SSetFloat(L, data.z);
+}
+void wiLua::SSetFloat4(lua_State* L, const XMFLOAT4& data)
+{
+	SSetFloat(L, data.x);
+	SSetFloat(L, data.y);
+	SSetFloat(L, data.z);
+	SSetFloat(L, data.w);
+}
+void wiLua::SSetString(lua_State* L, const string& data)
+{
+	lua_pushstring(L, data.c_str());
+}
 void wiLua::SSetPointer(lua_State* L, void* data)
 {
 	lua_pushlightuserdata(L, data);
+}
+
+void wiLua::SError(lua_State* L, const string& error, bool todebug, bool tobacklog)
+{
+	stringstream ss("");
+	ss << WILUA_ERROR_PREFIX;
+	if (!error.empty())
+	{
+		ss << error;
+	}
+	else
+	{
+		//TODO : can something be retrieved from lua_State? 
+	}
+	if (tobacklog)
+	{
+		wiBackLog::post(ss.str().c_str());
+	}
+	if (todebug)
+	{
+		ss << endl;
+		OutputDebugStringA(ss.str().c_str());
+	}
 }
 
 void wiLua::SAddMetatable(lua_State* L, const string& name)

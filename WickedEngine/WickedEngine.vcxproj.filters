@@ -54,6 +54,9 @@
     <Filter Include="LUA">
       <UniqueIdentifier>{4d8f8d1d-ba7b-4418-9933-725e9d27c0f6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ScriptBinders">
+      <UniqueIdentifier>{719a8bbd-d0a7-4a16-a409-8c3094008dfd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -730,6 +733,9 @@
     </ClCompile>
     <ClCompile Include="LUA\luac.c">
       <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="wiRenderer_BindLua.cpp">
+      <Filter>ScriptBinders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1635,6 +1641,9 @@
     </ClInclude>
     <ClInclude Include="wiLua.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiRenderer_BindLua.h">
+      <Filter>ScriptBinders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

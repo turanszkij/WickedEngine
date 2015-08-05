@@ -113,10 +113,10 @@ bool wiInputManager::press(DWORD button, short playerIndex, InputType inputType)
 	}
 	return false;
 }
-bool wiInputManager::hold(DWORD button, DWORD frames){
-	return hold(button,frames,0,InputType::KEYBOARD);
+bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous){
+	return hold(button, frames, 0, continuous, InputType::KEYBOARD);
 }
-bool wiInputManager::hold(DWORD button, DWORD frames, short playerIndex, InputType inputType){
+bool wiInputManager::hold(DWORD button, DWORD frames, short playerIndex, bool continuous, InputType inputType){
 
 	switch (inputType)
 	{
@@ -149,7 +149,7 @@ bool wiInputManager::hold(DWORD button, DWORD frames, short playerIndex, InputTy
 		inputs.insert(pair<Input,DWORD>(input,0));
 		return false;
 	}
-	else if(iter->second==frames){
+	else if ((!continuous && iter->second == frames) || (continuous && iter->second >= frames)){
 		return true;
 	}
 	return false;

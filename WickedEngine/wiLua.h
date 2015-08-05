@@ -69,6 +69,12 @@ public:
 	static long long SGetLongLong(lua_State* L, int stackpos);
 	//get float from lua on stack position
 	static float SGetFloat(lua_State* L, int stackpos);
+	//get float2 from lua on stack position
+	static XMFLOAT2 SGetFloat2(lua_State* L, int stackpos);
+	//get float3 from lua on stack position
+	static XMFLOAT3 SGetFloat3(lua_State* L, int stackpos);
+	//get float4 from lua on stack position
+	static XMFLOAT4 SGetFloat4(lua_State* L, int stackpos);
 	//get double from lua on stack position
 	static double SGetDouble(lua_State* L, int stackpos);
 	//get bool from lua on stack position
@@ -80,8 +86,21 @@ public:
 	
 	//push int to lua stack
 	static void SSetInt(lua_State* L, int data);
+	//push float to lua stack
+	static void SSetFloat(lua_State* L, float data);
+	//push float2 to lua stack
+	static void SSetFloat2(lua_State* L, const XMFLOAT2& data);
+	//push float3 to lua stack
+	static void SSetFloat3(lua_State* L, const XMFLOAT3& data);
+	//push float4 to lua stack
+	static void SSetFloat4(lua_State* L, const XMFLOAT4& data);
+	//push string to lua stack
+	static void SSetString(lua_State* L, const string& data);
 	//push pointer (light userdata) to lua stack
 	static void SSetPointer(lua_State* L, void* data);
+
+	//throw error
+	static void SError(lua_State* L, const string& error = "", bool todebug = true, bool tobacklog = true);
 	
 	//add new metatable
 	static void SAddMetatable(lua_State* L, const string& name);
@@ -91,7 +110,7 @@ public:
 //Lua Binder -- used Luna C++ binder
 
 
-#define luamethod(class, name) {#name, &class::name}
+#define lunamethod(class, name) {#name, &class::name}
 
 template <typename T> 
 class Luna {

@@ -381,6 +381,7 @@
     <ClCompile Include="wiNetwork.cpp" />
     <ClCompile Include="Renderable3DComponent.cpp" />
     <ClCompile Include="RenderableComponent.cpp" />
+    <ClCompile Include="wiRenderer_BindLua.cpp" />
     <ClCompile Include="wiSprite.cpp" />
     <ClCompile Include="wiParticle.cpp" />
     <ClCompile Include="wiRenderer.cpp" />
@@ -405,6 +406,7 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="wiRenderer_BindLua.h" />
     <ClInclude Include="LUA\lapi.h" />
     <ClInclude Include="LUA\lauxlib.h" />
     <ClInclude Include="LUA\lcode.h" />
