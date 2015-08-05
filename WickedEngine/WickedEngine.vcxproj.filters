@@ -737,6 +737,9 @@
     <ClCompile Include="wiRenderer_BindLua.cpp">
       <Filter>ScriptBinders</Filter>
     </ClCompile>
+    <ClCompile Include="wiResourceManager_BindLua.cpp">
+      <Filter>ScriptBinders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1644,6 +1647,12 @@
     </ClInclude>
     <ClInclude Include="wiRenderer_BindLua.h">
       <Filter>ScriptBinders</Filter>
+    </ClInclude>
+    <ClInclude Include="wiResourceManager_BindLua.h">
+      <Filter>ScriptBinders</Filter>
+    </ClInclude>
+    <ClInclude Include="wiLuna.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

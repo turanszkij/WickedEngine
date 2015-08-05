@@ -10,7 +10,7 @@ deque<string> wiBackLog::history;
 mutex wiBackLog::logMutex;
 wiBackLog::State wiBackLog::state;
 const float wiBackLog::speed=50.0f;
-unsigned int wiBackLog::deletefromline = 100;
+unsigned int wiBackLog::deletefromline = 500;
 float wiBackLog::pos;
 int wiBackLog::scroll;
 stringstream wiBackLog::inputArea;
@@ -22,7 +22,7 @@ void wiBackLog::Initialize(){
 	pos = (float)wiRenderer::RENDERHEIGHT;
 	scroll=0;
 	state=DISABLED;
-	deletefromline=100;
+	deletefromline=500;
 	inputArea=stringstream("");
 	const unsigned char colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
 	wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2, 4);

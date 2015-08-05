@@ -265,15 +265,17 @@ void wiLua::SSetPointer(lua_State* L, void* data)
 
 void wiLua::SError(lua_State* L, const string& error, bool todebug, bool tobacklog)
 {
+	//retrieve line number for error info
+	lua_Debug ar;
+	lua_getstack(L, 1, &ar);
+	lua_getinfo(L, "nSl", &ar);
+	int line = ar.currentline;
+
 	stringstream ss("");
-	ss << WILUA_ERROR_PREFIX;
+	ss << WILUA_ERROR_PREFIX <<"Line "<<line<<": ";
 	if (!error.empty())
 	{
 		ss << error;
-	}
-	else
-	{
-		//TODO : can something be retrieved from lua_State? 
 	}
 	if (tobacklog)
 	{

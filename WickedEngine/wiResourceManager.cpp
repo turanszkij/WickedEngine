@@ -4,6 +4,7 @@
 #include "wiHelper.h"
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"
+#include "wiResourceManager_BindLua.h"
 
 wiResourceManager::filetypes wiResourceManager::types;
 wiResourceManager* wiResourceManager::globalResources = nullptr;
@@ -22,7 +23,10 @@ wiResourceManager* wiResourceManager::GetGlobal()
 	{
 		STATICMUTEX.lock();
 		if (globalResources == nullptr)
+		{
 			globalResources = new wiResourceManager();
+			wiResourceManager_BindLua::Bind();
+		}
 		STATICMUTEX.unlock();
 	}
 	return globalResources;

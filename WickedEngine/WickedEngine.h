@@ -44,6 +44,7 @@
 #include "wiStencilRef.h"
 #include "wiInitializer.h"
 #include "wiLua.h"
+#include "wiLuna.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

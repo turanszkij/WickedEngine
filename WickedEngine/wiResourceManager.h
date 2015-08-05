@@ -19,7 +19,7 @@ public:
 		COMPUTESHADER,
 	};
 
-private:
+protected:
 	struct Resource
 	{
 		void* data;
