@@ -212,6 +212,7 @@
     <ClCompile Include="LoadingScreenComponent.cpp" />
     <ClCompile Include="MainComponent_BindLua.cpp" />
     <ClCompile Include="Renderable2DComponent.cpp" />
+    <ClCompile Include="Renderable2DComponent_BindLua.cpp" />
     <ClCompile Include="Renderable3DComponent_BindLua.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
@@ -411,6 +412,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainComponent_BindLua.h" />
+    <ClInclude Include="Renderable2DComponent_BindLua.h" />
     <ClInclude Include="Renderable3DComponent_BindLua.h" />
     <ClInclude Include="wiLuna.h" />
     <ClInclude Include="wiRenderer_BindLua.h" />

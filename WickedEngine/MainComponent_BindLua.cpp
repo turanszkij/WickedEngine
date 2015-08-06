@@ -1,9 +1,12 @@
 #include "MainComponent_BindLua.h"
 #include "Renderable3DComponent_BindLua.h"
+#include "Renderable2DComponent_BindLua.h"
+#include "wiResourceManager_BindLua.h"
 
 const char MainComponent_BindLua::className[] = "MainComponent";
 
 Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
+	lunamethod(MainComponent_BindLua, GetContent),
 	lunamethod(MainComponent_BindLua, GetActiveComponent),
 	lunamethod(MainComponent_BindLua, SetActiveComponent),
 	lunamethod(MainComponent_BindLua, SetFrameSkip),
@@ -26,16 +29,35 @@ MainComponent_BindLua::~MainComponent_BindLua()
 {
 }
 
+int MainComponent_BindLua::GetContent(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "GetContent() component is empty!");
+		return 0;
+	}
+	Luna<wiResourceManager_BindLua>::push(L, new wiResourceManager_BindLua(&component->Content));
+	return 1;
+}
 int MainComponent_BindLua::GetActiveComponent(lua_State *L)
 {
-	Renderable3DComponent* comp = dynamic_cast<Renderable3DComponent*>(component->getActiveComponent());
-	if (comp != nullptr)
+	//return 3d component if the active one is of that type
+	Renderable3DComponent* comp3D = dynamic_cast<Renderable3DComponent*>(component->getActiveComponent());
+	if (comp3D != nullptr)
 	{
-		Luna<Renderable3DComponent_BindLua>::push(L, new Renderable3DComponent_BindLua(comp));
+		Luna<Renderable3DComponent_BindLua>::push(L, new Renderable3DComponent_BindLua(comp3D));
 		return 1;
 	}
 
-	wiLua::SError(L, "GetActiveComponent() Warning: type of active component not registered with lua!");
+	//return 2d component if the active one is of that type
+	Renderable2DComponent* comp2D = dynamic_cast<Renderable2DComponent*>(component->getActiveComponent());
+	if (comp2D != nullptr)
+	{
+		Luna<Renderable2DComponent_BindLua>::push(L, new Renderable2DComponent_BindLua(comp2D));
+		return 1;
+	}
+
+	wiLua::SError(L, "GetActiveComponent() Warning: type of active component not registered!");
 	return 0;
 }
 int MainComponent_BindLua::SetActiveComponent(lua_State *L)

@@ -26,6 +26,11 @@ Renderable3DComponent_BindLua::~Renderable3DComponent_BindLua()
 
 int Renderable3DComponent_BindLua::GetContent(lua_State *L)
 {
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "GetContent() component is empty!");
+		return 0;
+	}
 	Luna<wiResourceManager_BindLua>::push(L, new wiResourceManager_BindLua(&component->Content));
 	return 1;
 }

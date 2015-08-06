@@ -103,7 +103,6 @@ int wiResourceManager_BindLua::Del(lua_State *L)
 int wiResourceManager_BindLua::List(lua_State *L)
 {
 	stringstream ss("");
-	ss << "Resources of: " << wiLua::SGetString(L, 1) << endl;
 	for (auto& x : resources->resources)
 	{
 		ss << x.first << endl;
