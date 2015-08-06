@@ -1,5 +1,4 @@
 #include "LoadingScreenComponent_BindLua.h"
-#include "wiResourceManager_BindLua.h"
 
 const char LoadingScreenComponent_BindLua::className[] = "LoadingScreenComponent";
 
@@ -12,8 +11,9 @@ Luna<LoadingScreenComponent_BindLua>::PropertyType LoadingScreenComponent_BindLu
 	{ NULL, NULL }
 };
 
-LoadingScreenComponent_BindLua::LoadingScreenComponent_BindLua(LoadingScreenComponent* component) :component(component)
+LoadingScreenComponent_BindLua::LoadingScreenComponent_BindLua(LoadingScreenComponent* component)
 {
+	this->component = component;
 }
 
 LoadingScreenComponent_BindLua::LoadingScreenComponent_BindLua(lua_State *L)

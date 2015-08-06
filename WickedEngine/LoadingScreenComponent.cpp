@@ -4,6 +4,7 @@
 
 LoadingScreenComponent::LoadingScreenComponent()
 {
+	Renderable2DComponent::Renderable2DComponent();
 	loaders.clear();
 	finish = nullptr;
 	LoadingScreenComponent_BindLua::Bind();

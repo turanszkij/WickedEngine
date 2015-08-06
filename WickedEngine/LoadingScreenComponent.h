@@ -1,9 +1,9 @@
 #pragma once
-#include "RenderableComponent.h"
+#include "Renderable2DComponent.h"
 #include <atomic>
 
 class LoadingScreenComponent :
-	public RenderableComponent
+	public Renderable2DComponent
 {
 private:
 	struct LoaderTask

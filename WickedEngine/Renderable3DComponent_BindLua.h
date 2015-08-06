@@ -5,7 +5,7 @@
 
 class Renderable3DComponent_BindLua
 {
-private:
+protected:
 	Renderable3DComponent* component;
 public:
 	static const char className[];

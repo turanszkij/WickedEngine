@@ -5,6 +5,7 @@
 #include "wiCamera.h"
 #include "wiStencilRef.h"
 #include "wiHelper.h"
+#include "ForwardRenderableComponent_BindLua.h"
 
 ForwardRenderableComponent::ForwardRenderableComponent(){
 	Renderable3DComponent::setProperties();
@@ -14,6 +15,8 @@ ForwardRenderableComponent::ForwardRenderableComponent(){
 	setShadowsEnabled(false);
 
 	setPreferredThreadingCount(0);
+
+	ForwardRenderableComponent_BindLua::Bind();
 }
 ForwardRenderableComponent::~ForwardRenderableComponent(){
 }

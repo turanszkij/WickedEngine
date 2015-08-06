@@ -6,6 +6,7 @@
 #include "wiStencilRef.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
+#include "DeferredRenderableComponent_BindLua.h"
 
 DeferredRenderableComponent::DeferredRenderableComponent(){
 	Renderable3DComponent::setProperties();
@@ -14,6 +15,8 @@ DeferredRenderableComponent::DeferredRenderableComponent(){
 	setSSAOEnabled(true);
 
 	setPreferredThreadingCount(0);
+
+	DeferredRenderableComponent_BindLua::Bind();
 }
 DeferredRenderableComponent::~DeferredRenderableComponent(){
 }
