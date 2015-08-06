@@ -757,7 +757,9 @@
   <ItemGroup>
     <Text Include="..\features.txt" />
     <Text Include="..\readme.txt" />
-    <Text Include="fonts\basic.txt" />
+    <Text Include="fonts\basic.txt">
+      <DeploymentContent>true</DeploymentContent>
+    </Text>
     <Text Include="licenses.txt" />
   </ItemGroup>
   <ItemGroup>
@@ -2145,7 +2147,9 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="fonts\basic.dds" />
+    <Image Include="fonts\basic.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
