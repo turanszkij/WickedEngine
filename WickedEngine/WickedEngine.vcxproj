@@ -383,6 +383,7 @@
     <ClCompile Include="RenderableComponent.cpp" />
     <ClCompile Include="wiRenderer_BindLua.cpp" />
     <ClCompile Include="wiResourceManager_BindLua.cpp" />
+    <ClCompile Include="wiSound_BindLua.cpp" />
     <ClCompile Include="wiSprite.cpp" />
     <ClCompile Include="wiParticle.cpp" />
     <ClCompile Include="wiRenderer.cpp" />
@@ -664,6 +665,7 @@
     <ClInclude Include="wiInitializer.h" />
     <ClInclude Include="wiLua.h" />
     <ClInclude Include="wiResourceManager_BindLua.h" />
+    <ClInclude Include="wiSound_BindLua.h" />
     <ClInclude Include="wiStencilRef.h" />
     <ClInclude Include="wiTextureHelper.h" />
     <ClInclude Include="WickedEngine.h" />

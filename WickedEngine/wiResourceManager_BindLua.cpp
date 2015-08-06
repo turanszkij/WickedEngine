@@ -1,4 +1,7 @@
 #include "wiResourceManager_BindLua.h"
+#include "wiSound_BindLua.h"
+
+#include "wiHelper.h"
 
 
 const char wiResourceManager_BindLua::className[] = "Resource";
@@ -28,9 +31,26 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 	if (argc > 1)
 	{
 		string name = wiLua::SGetString(L, 2);
-		void* data = add(name);
-		wiLua::SSetString(L, (data != nullptr ? "ok" : "not found"));
-		return 1;
+		const Resource* data = get(name);
+		if (data != nullptr)
+		{
+			switch (data->type)
+			{
+			case Data_Type::MUSIC:
+			case Data_Type::SOUND:
+				Luna<wiSound_BindLua>::push(L, new wiSound_BindLua((wiSound*)data->data));
+				return 1;
+				break;
+			default:
+				wiLua::SError(L, "Resource:Get(string name) resource type not supported!");
+				break;
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "Resource:Get(string name) resource not found!");
+		}
+		return 0;
 	}
 	else
 	{
@@ -44,13 +64,22 @@ int wiResourceManager_BindLua::Add(lua_State *L)
 	if (argc > 1)
 	{
 		string name = wiLua::SGetString(L, 2);
-		void* data = add(name); 
+		Data_Type type = Data_Type::DYNAMIC;
+		if (argc > 2) //type info also provided in this case
+		{
+			string typeStr = wiHelper::toUpper( wiLua::SGetString(L, 3) );
+			if (!typeStr.compare("SOUND"))
+				type = Data_Type::SOUND;
+			else if (!typeStr.compare("MUSIC"))
+				type = Data_Type::MUSIC;
+		}
+		void* data = add(name, type);
 		wiLua::SSetString(L, (data != nullptr ? "ok" : "not found"));
 		return 1;
 	}
 	else
 	{
-		wiLua::SError(L, "Resource:Add(string name) not enough arguments!");
+		wiLua::SError(L, "Resource:Add(string name, (opt) string type) not enough arguments!");
 	}
 	return 0;
 }
@@ -83,7 +112,12 @@ int wiResourceManager_BindLua::List(lua_State *L)
 
 void wiResourceManager_BindLua::Bind()
 {
-	Luna<wiResourceManager_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-	wiLua::GetGlobal()->RegisterObject(className, "globalResources", wiResourceManager::GetGlobal());
+	static bool initialized = false;
+	if (!initialized)
+	{
+		Luna<wiResourceManager_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		wiLua::GetGlobal()->RegisterObject(className, "globalResources", wiResourceManager::GetGlobal());
+		initialized = true;
+	}
 }
 

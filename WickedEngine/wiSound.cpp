@@ -1,4 +1,5 @@
 #include "wiSound.h"
+#include "wiSound_BindLua.h"
 
 IXAudio2* wiSoundEffect::pXAudio2;
 IXAudio2MasteringVoice* wiSoundEffect::pMasterVoice;
@@ -213,6 +214,8 @@ float wiSoundEffect::GetVolume(){
 }
 HRESULT wiSoundEffect::Initialize()
 {
+	wiSound_BindLua::Bind();
+
 	HRESULT hr;
 	pXAudio2 = nullptr;
 	if(FAILED( hr = XAudio2Create( &pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR ) ))
@@ -287,6 +290,8 @@ float wiMusic::GetVolume(){
 }
 HRESULT wiMusic::Initialize()
 {
+	wiSound_BindLua::Bind();
+
 	HRESULT hr;
 	pXAudio2 = nullptr;
 	if(FAILED( hr = XAudio2Create( &pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR ) ))

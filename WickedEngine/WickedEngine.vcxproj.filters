@@ -740,6 +740,9 @@
     <ClCompile Include="wiResourceManager_BindLua.cpp">
       <Filter>ScriptBinders</Filter>
     </ClCompile>
+    <ClCompile Include="wiSound_BindLua.cpp">
+      <Filter>ScriptBinders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1653,6 +1656,9 @@
     </ClInclude>
     <ClInclude Include="wiLuna.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiSound_BindLua.h">
+      <Filter>ScriptBinders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

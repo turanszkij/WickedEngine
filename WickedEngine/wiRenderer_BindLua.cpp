@@ -8,17 +8,22 @@ namespace wiRenderer_BindLua
 
 	void Bind()
 	{
-		wiLua::GetGlobal()->RegisterFunc("GetArmatures", GetArmatures);
-		wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
-		wiLua::GetGlobal()->RegisterFunc("GetObjectProp", GetObjectProp);
-		wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
-		wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
-		wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
-		wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
-		wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
+		static bool initialized = false;
+		if (!initialized)
+		{
+			initialized = true;
+			wiLua::GetGlobal()->RegisterFunc("GetArmatures", GetArmatures);
+			wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
+			wiLua::GetGlobal()->RegisterFunc("GetObjectProp", GetObjectProp);
+			wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
+			wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
+			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
+			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
+			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
 
-		wiLua::GetGlobal()->RegisterFunc("SetObjectProp", SetObjectProp);
-		wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
+			wiLua::GetGlobal()->RegisterFunc("SetObjectProp", SetObjectProp);
+			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
+		}
 	}
 
 	int GetArmatures(lua_State* L)
