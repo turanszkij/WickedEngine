@@ -1,8 +1,11 @@
 #include "wiSprite_BindLua.h"
+#include "wiImageEffects_BindLua.h"
 
 const char wiSprite_BindLua::className[] = "Sprite";
 
 Luna<wiSprite_BindLua>::FunctionType wiSprite_BindLua::methods[] = {
+	lunamethod(wiSprite_BindLua, SetEffects),
+	lunamethod(wiSprite_BindLua, GetEffects),
 	{ NULL, NULL }
 };
 Luna<wiSprite_BindLua>::PropertyType wiSprite_BindLua::properties[] = {
@@ -35,6 +38,39 @@ wiSprite_BindLua::wiSprite_BindLua(lua_State *L)
 
 wiSprite_BindLua::~wiSprite_BindLua()
 {
+}
+
+int wiSprite_BindLua::SetEffects(lua_State *L)
+{
+	if (sprite == nullptr)
+	{
+		wiLua::SError(L, "GetEffects() sprite is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		wiImageEffects_BindLua* effects = Luna<wiImageEffects_BindLua>::check(L, 2);
+		if (effects != nullptr)
+		{
+			sprite->effects = effects->effects;
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetEffects(ImageEffects effects) not enough arguments!");
+	}
+	return 0;
+}
+int wiSprite_BindLua::GetEffects(lua_State *L)
+{
+	if (sprite == nullptr)
+	{
+		wiLua::SError(L, "GetEffects() sprite is null!");
+		return 0;
+	}
+	Luna<wiImageEffects_BindLua>::push(L, new wiImageEffects_BindLua(sprite->effects));
+	return 1;
 }
 
 void wiSprite_BindLua::Bind()

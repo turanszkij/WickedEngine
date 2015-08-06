@@ -10,6 +10,7 @@
 #include "wiRenderer_BindLua.h"
 #include "wiSound_BindLua.h"
 #include "wiSprite_BindLua.h"
+#include "wiImageEffects_BindLua.h"
 
 wiLua *wiLua::globalLua = nullptr;
 
@@ -44,6 +45,7 @@ wiLua* wiLua::GetGlobal()
 		wiRenderer_BindLua::Bind();
 		wiSound_BindLua::Bind();
 		wiSprite_BindLua::Bind();
+		wiImageEffects_BindLua::Bind();
 	}
 	return globalLua;
 }

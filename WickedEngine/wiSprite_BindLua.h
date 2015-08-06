@@ -5,9 +5,9 @@
 
 class wiSprite_BindLua
 {
-private:
-	wiSprite* sprite;
 public:
+	wiSprite* sprite;
+
 	static const char className[];
 	static Luna<wiSprite_BindLua>::FunctionType methods[];
 	static Luna<wiSprite_BindLua>::PropertyType properties[];
@@ -15,6 +15,9 @@ public:
 	wiSprite_BindLua(wiSprite* sprite = nullptr);
 	wiSprite_BindLua(lua_State *L);
 	~wiSprite_BindLua();
+
+	int SetEffects(lua_State *L);
+	int GetEffects(lua_State *L);
 
 	static void Bind();
 };
