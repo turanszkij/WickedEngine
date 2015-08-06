@@ -749,6 +749,9 @@
     <ClCompile Include="Renderable3DComponent_BindLua.cpp">
       <Filter>ScriptBinders</Filter>
     </ClCompile>
+    <ClCompile Include="MainComponent_BindLua.cpp">
+      <Filter>ScriptBinders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1667,6 +1670,9 @@
       <Filter>ScriptBinders</Filter>
     </ClInclude>
     <ClInclude Include="Renderable3DComponent_BindLua.h">
+      <Filter>ScriptBinders</Filter>
+    </ClInclude>
+    <ClInclude Include="MainComponent_BindLua.h">
       <Filter>ScriptBinders</Filter>
     </ClInclude>
   </ItemGroup>

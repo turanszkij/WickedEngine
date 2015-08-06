@@ -33,7 +33,7 @@ public:
 	int		getTargetFrameRate(){ return targetFrameRate; }
 	void	setApplicationControlLostThreshold(int value){ applicationControlLostThreshold = value; }
 
-	virtual void Initialize(){};
+	virtual void Initialize();
 	virtual void Update();
 	virtual void Render();
 	virtual void Compose();

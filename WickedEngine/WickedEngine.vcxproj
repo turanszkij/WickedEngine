@@ -210,6 +210,7 @@
     <ClCompile Include="LUA\lzio.c" />
     <ClCompile Include="MainComponent.cpp" />
     <ClCompile Include="LoadingScreenComponent.cpp" />
+    <ClCompile Include="MainComponent_BindLua.cpp" />
     <ClCompile Include="Renderable2DComponent.cpp" />
     <ClCompile Include="Renderable3DComponent_BindLua.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
@@ -409,6 +410,7 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MainComponent_BindLua.h" />
     <ClInclude Include="Renderable3DComponent_BindLua.h" />
     <ClInclude Include="wiLuna.h" />
     <ClInclude Include="wiRenderer_BindLua.h" />

@@ -6,7 +6,7 @@
 #include "wiCpuInfo.h"
 #include "wiInputManager.h"
 #include "wiBackLog.h"
-
+#include "MainComponent_BindLua.h"
 
 MainComponent::MainComponent()
 {
@@ -18,12 +18,19 @@ MainComponent::MainComponent()
 	setFrameSkip(true);
 	setTargetFrameRate(60);
 	setApplicationControlLostThreshold(10);
+
+	MainComponent_BindLua::Bind();
 }
 
 
 MainComponent::~MainComponent()
 {
 	activeComponent->Unload();
+}
+
+void MainComponent::Initialize()
+{
+	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
 }
 
 void MainComponent::activateComponent(RenderableComponent* component)
@@ -41,7 +48,6 @@ void MainComponent::activateComponent(RenderableComponent* component)
 
 void MainComponent::run()
 {
-
 	static wiTimer timer = wiTimer();
 	static double accumulator = 0.0;
 

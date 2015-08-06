@@ -19,7 +19,6 @@ public:
 		COMPUTESHADER,
 	};
 
-protected:
 	struct Resource
 	{
 		void* data;
@@ -27,13 +26,15 @@ protected:
 
 		Resource(void* newData, Data_Type newType) :data(newData), type(newType){};
 	};
+	typedef unordered_map<string, Resource*> container;
+	container resources;
+
+protected:
 typedef map<string,Data_Type> filetypes;
 static filetypes types;
 static wiResourceManager* globalResources;
 static void SetUp();
 
-typedef unordered_map<string,Resource*> container;
-container resources;
 
 public:
 	wiResourceManager();

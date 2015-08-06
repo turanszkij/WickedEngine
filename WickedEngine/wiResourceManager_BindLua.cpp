@@ -1,6 +1,5 @@
 #include "wiResourceManager_BindLua.h"
 #include "wiSound_BindLua.h"
-
 #include "wiHelper.h"
 
 
@@ -17,9 +16,12 @@ Luna<wiResourceManager_BindLua>::PropertyType wiResourceManager_BindLua::propert
 	{ NULL, NULL }
 };
 
+wiResourceManager_BindLua::wiResourceManager_BindLua(wiResourceManager* resources) :resources(resources)
+{
+}
 wiResourceManager_BindLua::wiResourceManager_BindLua(lua_State *L)
 {
-	wiResourceManager::wiResourceManager();
+	resources = nullptr;
 }
 wiResourceManager_BindLua::~wiResourceManager_BindLua()
 {
@@ -31,13 +33,13 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 	if (argc > 1)
 	{
 		string name = wiLua::SGetString(L, 2);
-		const Resource* data = get(name);
+		const wiResourceManager::Resource* data = resources->get(name);
 		if (data != nullptr)
 		{
 			switch (data->type)
 			{
-			case Data_Type::MUSIC:
-			case Data_Type::SOUND:
+			case wiResourceManager::Data_Type::MUSIC:
+			case wiResourceManager::Data_Type::SOUND:
 				Luna<wiSound_BindLua>::push(L, new wiSound_BindLua((wiSound*)data->data));
 				return 1;
 				break;
@@ -64,16 +66,16 @@ int wiResourceManager_BindLua::Add(lua_State *L)
 	if (argc > 1)
 	{
 		string name = wiLua::SGetString(L, 2);
-		Data_Type type = Data_Type::DYNAMIC;
+		wiResourceManager::Data_Type type = wiResourceManager::Data_Type::DYNAMIC;
 		if (argc > 2) //type info also provided in this case
 		{
 			string typeStr = wiHelper::toUpper( wiLua::SGetString(L, 3) );
 			if (!typeStr.compare("SOUND"))
-				type = Data_Type::SOUND;
+				type = wiResourceManager::Data_Type::SOUND;
 			else if (!typeStr.compare("MUSIC"))
-				type = Data_Type::MUSIC;
+				type = wiResourceManager::Data_Type::MUSIC;
 		}
-		void* data = add(name, type);
+		void* data = resources->add(name, type);
 		wiLua::SSetString(L, (data != nullptr ? "ok" : "not found"));
 		return 1;
 	}
@@ -89,7 +91,7 @@ int wiResourceManager_BindLua::Del(lua_State *L)
 	if (argc > 1)
 	{
 		string name = wiLua::SGetString(L, 2);
-		wiLua::SSetString(L, (del(name) ? "ok" : "not found"));
+		wiLua::SSetString(L, (resources->del(name) ? "ok" : "not found"));
 		return 1;
 	}
 	else
@@ -102,7 +104,7 @@ int wiResourceManager_BindLua::List(lua_State *L)
 {
 	stringstream ss("");
 	ss << "Resources of: " << wiLua::SGetString(L, 1) << endl;
-	for (auto& x : resources)
+	for (auto& x : resources->resources)
 	{
 		ss << x.first << endl;
 	}
@@ -116,7 +118,7 @@ void wiResourceManager_BindLua::Bind()
 	if (!initialized)
 	{
 		Luna<wiResourceManager_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		wiLua::GetGlobal()->RegisterObject(className, "globalResources", wiResourceManager::GetGlobal());
+		wiLua::GetGlobal()->RegisterObject(className, "globalResources", new wiResourceManager_BindLua(wiResourceManager::GetGlobal()));
 		initialized = true;
 	}
 }

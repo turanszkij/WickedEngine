@@ -5,13 +5,16 @@
 
 //extends the resourcemanager to be accessed by lua scripts using the Luna wrapper
 
-class wiResourceManager_BindLua:public wiResourceManager
+class wiResourceManager_BindLua : public wiResourceManager
 {
+private:
+	wiResourceManager* resources;
 public:
 	static const char className[];
 	static Luna<wiResourceManager_BindLua>::FunctionType methods[];
 	static Luna<wiResourceManager_BindLua>::PropertyType properties[];
 
+	wiResourceManager_BindLua(wiResourceManager* resources = nullptr);
 	wiResourceManager_BindLua(lua_State *L);
 	~wiResourceManager_BindLua();
 
