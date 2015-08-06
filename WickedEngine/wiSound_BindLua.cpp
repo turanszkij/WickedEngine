@@ -29,7 +29,7 @@ int wiSound_BindLua::Play(lua_State* L)
 {
 	if (sound == nullptr)
 	{
-		wiLua::SError(L, "Play(int delay) sound resource not loaded!");
+		wiLua::SError(L, "Play(opt int delay) sound resource not loaded!");
 		return 0;
 	}
 
