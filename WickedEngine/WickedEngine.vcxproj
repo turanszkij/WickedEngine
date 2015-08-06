@@ -727,7 +727,9 @@
     <ClInclude Include="wiXInput.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\io_export_wicked_wi_bin.py" />
+    <None Include="..\io_export_wicked_wi_bin.py">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="blurHF.hlsli" />
     <None Include="circle.hlsli" />
     <None Include="cone.hlsli" />
@@ -766,11 +768,11 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />
+    <Text Include="..\licenses.txt" />
     <Text Include="..\readme.txt" />
     <Text Include="fonts\basic.txt">
       <DeploymentContent>true</DeploymentContent>
     </Text>
-    <Text Include="licenses.txt" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="bloomSeparatePS.hlsl">
