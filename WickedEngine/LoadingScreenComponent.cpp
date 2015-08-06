@@ -1,10 +1,12 @@
 #include "LoadingScreenComponent.h"
+#include "LoadingScreenComponent_BindLua.h"
 
 
 LoadingScreenComponent::LoadingScreenComponent()
 {
 	loaders.clear();
 	finish = nullptr;
+	LoadingScreenComponent_BindLua::Bind();
 }
 
 

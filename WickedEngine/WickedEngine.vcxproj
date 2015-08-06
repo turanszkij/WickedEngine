@@ -173,6 +173,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="LoadingScreenComponent_BindLua.cpp" />
     <ClCompile Include="LUA\lapi.c" />
     <ClCompile Include="LUA\lauxlib.c" />
     <ClCompile Include="LUA\lbaselib.c" />
@@ -411,6 +412,7 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="LoadingScreenComponent_BindLua.h" />
     <ClInclude Include="MainComponent_BindLua.h" />
     <ClInclude Include="Renderable2DComponent_BindLua.h" />
     <ClInclude Include="Renderable3DComponent_BindLua.h" />
