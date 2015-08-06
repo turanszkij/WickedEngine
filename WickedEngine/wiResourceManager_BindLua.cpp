@@ -44,7 +44,7 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 				return 1;
 				break;
 			default:
-				wiLua::SError(L, "Resource:Get(string name) resource type not supported!");
+				wiLua::SError(L, "Resource:Get(string name) resource type not supported in scripts!");
 				break;
 			}
 		}

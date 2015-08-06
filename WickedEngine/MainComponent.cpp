@@ -51,22 +51,27 @@ void MainComponent::run()
 	static wiTimer timer = wiTimer();
 	static double accumulator = 0.0;
 
-	accumulator += timer.elapsed() / 1000.0;
-	if (accumulator>applicationControlLostThreshold) //application probably lost control
-		accumulator = 0;
-	timer.record();
-
-
-	while (accumulator >= targetFrameRateInv || !frameskip)
+	if (frameskip)
 	{
+		accumulator += timer.elapsed() / 1000.0;
+		if (accumulator > applicationControlLostThreshold) //application probably lost control
+			accumulator = 0;
+		timer.record();
 
+
+		while (accumulator >= targetFrameRateInv)
+		{
+
+			Update();
+
+			accumulator -= targetFrameRateInv;
+
+		}
+
+	}
+	else
+	{
 		Update();
-
-		accumulator -= targetFrameRateInv;
-
-		if (!frameskip)
-			break;
-
 	}
 
 	Render();
