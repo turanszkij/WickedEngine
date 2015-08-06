@@ -1,6 +1,8 @@
 #include "wiResourceManager_BindLua.h"
 #include "wiSound_BindLua.h"
 #include "wiHelper.h"
+#include "Texture_BindLua.h"
+#include "wiRenderer.h"
 
 
 const char wiResourceManager_BindLua::className[] = "Resource";
@@ -29,6 +31,11 @@ wiResourceManager_BindLua::~wiResourceManager_BindLua()
 
 int wiResourceManager_BindLua::Get(lua_State *L)
 {
+	if (resources == nullptr)
+	{
+		wiLua::SError(L, "Get(string name) resources is empty!");
+		return 0;
+	}
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
 	{
@@ -38,6 +45,10 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 		{
 			switch (data->type)
 			{
+			case wiResourceManager::Data_Type::IMAGE:
+				Luna<Texture_BindLua>::push(L, new Texture_BindLua((wiRenderer::TextureView)data->data));
+				return 1;
+				break;
 			case wiResourceManager::Data_Type::MUSIC:
 			case wiResourceManager::Data_Type::SOUND:
 				Luna<wiSound_BindLua>::push(L, new wiSound_BindLua((wiSound*)data->data));
@@ -62,6 +73,11 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 }
 int wiResourceManager_BindLua::Add(lua_State *L)
 {
+	if (resources == nullptr)
+	{
+		wiLua::SError(L, "Get(string name) resources is empty!");
+		return 0;
+	}
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
 	{
@@ -87,6 +103,11 @@ int wiResourceManager_BindLua::Add(lua_State *L)
 }
 int wiResourceManager_BindLua::Del(lua_State *L)
 {
+	if (resources == nullptr)
+	{
+		wiLua::SError(L, "Get(string name) resources is empty!");
+		return 0;
+	}
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
 	{
@@ -102,6 +123,11 @@ int wiResourceManager_BindLua::Del(lua_State *L)
 }
 int wiResourceManager_BindLua::List(lua_State *L)
 {
+	if (resources == nullptr)
+	{
+		wiLua::SError(L, "Get(string name) resources is empty!");
+		return 0;
+	}
 	stringstream ss("");
 	for (auto& x : resources->resources)
 	{
@@ -116,6 +142,7 @@ void wiResourceManager_BindLua::Bind()
 	static bool initialized = false;
 	if (!initialized)
 	{
+		Texture_BindLua::Bind();
 		Luna<wiResourceManager_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 		wiLua::GetGlobal()->RegisterObject(className, "globalResources", new wiResourceManager_BindLua(wiResourceManager::GetGlobal()));
 		initialized = true;

@@ -1,5 +1,4 @@
 #include "LoadingScreenComponent.h"
-#include "LoadingScreenComponent_BindLua.h"
 
 
 LoadingScreenComponent::LoadingScreenComponent()
@@ -7,7 +6,6 @@ LoadingScreenComponent::LoadingScreenComponent()
 	Renderable2DComponent::Renderable2DComponent();
 	loaders.clear();
 	finish = nullptr;
-	LoadingScreenComponent_BindLua::Bind();
 }
 
 

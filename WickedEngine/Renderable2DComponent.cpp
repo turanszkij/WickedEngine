@@ -1,14 +1,11 @@
 #include "Renderable2DComponent.h"
 #include "wiResourceManager.h"
 #include "wiSprite.h"
-#include "Renderable2DComponent_BindLua.h"
 
 Renderable2DComponent::Renderable2DComponent()
 {
 	setSpriteSpeed(1.f);
 	m_sprites.clear();
-
-	Renderable2DComponent_BindLua::Bind();
 }
 
 

@@ -1,5 +1,6 @@
 #include "Renderable2DComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
+#include "wiSprite.h"
 
 const char Renderable2DComponent_BindLua::className[] = "Renderable2DComponent";
 
@@ -39,10 +40,28 @@ int Renderable2DComponent_BindLua::GetContent(lua_State *L)
 
 int Renderable2DComponent_BindLua::AddSprite(lua_State *L)
 {
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "GetContent() component is empty!");
+		return 0;
+	}
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
 	{
-		//TODO
+		string tex = wiLua::SGetString(L, 2);
+		string mask = "";
+		string nor = "";
+		if (argc > 2)
+		{
+			mask = wiLua::SGetString(L, 3);
+			if (argc > 3)
+			{
+				nor = wiLua::SGetString(L, 4);
+			}
+		}
+		wiSprite* sprite = new wiSprite(tex,mask,nor,&component->Content);
+		sprite->effects = wiImageEffects(100, 100);
+		component->addSprite(sprite);
 	}
 	else
 	{

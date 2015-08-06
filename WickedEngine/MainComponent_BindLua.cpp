@@ -1,6 +1,8 @@
 #include "MainComponent_BindLua.h"
 #include "Renderable3DComponent_BindLua.h"
 #include "Renderable2DComponent_BindLua.h"
+#include "DeferredRenderableComponent_BindLua.h"
+#include "ForwardRenderableComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
 
 const char MainComponent_BindLua::className[] = "MainComponent";
@@ -41,6 +43,22 @@ int MainComponent_BindLua::GetContent(lua_State *L)
 }
 int MainComponent_BindLua::GetActiveComponent(lua_State *L)
 {
+	//return deferred 3d component if the active one is of that type
+	DeferredRenderableComponent* compDef3D = dynamic_cast<DeferredRenderableComponent*>(component->getActiveComponent());
+	if (compDef3D != nullptr)
+	{
+		Luna<DeferredRenderableComponent_BindLua>::push(L, new DeferredRenderableComponent_BindLua(compDef3D));
+		return 1;
+	}
+
+	//return forward 3d component if the active one is of that type
+	ForwardRenderableComponent* compFwd3D = dynamic_cast<ForwardRenderableComponent*>(component->getActiveComponent());
+	if (compFwd3D != nullptr)
+	{
+		Luna<ForwardRenderableComponent_BindLua>::push(L, new ForwardRenderableComponent_BindLua(compFwd3D));
+		return 1;
+	}
+
 	//return 3d component if the active one is of that type
 	Renderable3DComponent* comp3D = dynamic_cast<Renderable3DComponent*>(component->getActiveComponent());
 	if (comp3D != nullptr)

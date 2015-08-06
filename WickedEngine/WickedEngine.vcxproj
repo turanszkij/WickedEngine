@@ -217,6 +217,7 @@
     <ClCompile Include="Renderable2DComponent.cpp" />
     <ClCompile Include="Renderable2DComponent_BindLua.cpp" />
     <ClCompile Include="Renderable3DComponent_BindLua.cpp" />
+    <ClCompile Include="Texture_BindLua.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
     <ClCompile Include="BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.cpp" />
@@ -397,6 +398,7 @@
     <ClCompile Include="wiResourceManager.cpp" />
     <ClCompile Include="wiServer.cpp" />
     <ClCompile Include="wiSound.cpp" />
+    <ClCompile Include="wiSprite_BindLua.cpp" />
     <ClCompile Include="wiSPTree.cpp" />
     <ClCompile Include="wiTextureHelper.cpp" />
     <ClCompile Include="wiThreadSafeManager.cpp" />
@@ -420,6 +422,7 @@
     <ClInclude Include="MainComponent_BindLua.h" />
     <ClInclude Include="Renderable2DComponent_BindLua.h" />
     <ClInclude Include="Renderable3DComponent_BindLua.h" />
+    <ClInclude Include="Texture_BindLua.h" />
     <ClInclude Include="wiLuna.h" />
     <ClInclude Include="wiRenderer_BindLua.h" />
     <ClInclude Include="LUA\lapi.h" />
@@ -678,6 +681,7 @@
     <ClInclude Include="wiLua.h" />
     <ClInclude Include="wiResourceManager_BindLua.h" />
     <ClInclude Include="wiSound_BindLua.h" />
+    <ClInclude Include="wiSprite_BindLua.h" />
     <ClInclude Include="wiStencilRef.h" />
     <ClInclude Include="wiTextureHelper.h" />
     <ClInclude Include="WickedEngine.h" />

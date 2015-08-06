@@ -764,6 +764,12 @@
     <ClCompile Include="DeferredRenderableComponent_BindLua.cpp">
       <Filter>ScriptBinders</Filter>
     </ClCompile>
+    <ClCompile Include="Texture_BindLua.cpp">
+      <Filter>ScriptBinders</Filter>
+    </ClCompile>
+    <ClCompile Include="wiSprite_BindLua.cpp">
+      <Filter>ScriptBinders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1697,6 +1703,12 @@
       <Filter>ScriptBinders</Filter>
     </ClInclude>
     <ClInclude Include="ForwardRenderableComponent_BindLua.h">
+      <Filter>ScriptBinders</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture_BindLua.h">
+      <Filter>ScriptBinders</Filter>
+    </ClInclude>
+    <ClInclude Include="wiSprite_BindLua.h">
       <Filter>ScriptBinders</Filter>
     </ClInclude>
   </ItemGroup>

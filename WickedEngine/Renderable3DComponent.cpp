@@ -6,11 +6,9 @@
 #include "wiStencilRef.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "Renderable3DComponent_BindLua.h"
 
 Renderable3DComponent::Renderable3DComponent()
 {
-	Renderable3DComponent_BindLua::Bind();
 }
 Renderable3DComponent::~Renderable3DComponent()
 {

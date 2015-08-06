@@ -20,7 +20,6 @@
 #include "wiWaterPlane.h"
 #include "wiGraphicsThreads.h"
 #include "wiRandom.h"
-#include "wiRenderer_BindLua.h"
 
 #pragma region STATICS
 D3D_DRIVER_TYPE						wiRenderer::driverType;
@@ -468,8 +467,6 @@ void wiRenderer::SetUpStaticComponents()
 		,1,false
 		);
 
-	
-	wiRenderer_BindLua::Bind();
 }
 void wiRenderer::CleanUpStatic()
 {

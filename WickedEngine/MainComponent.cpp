@@ -18,8 +18,6 @@ MainComponent::MainComponent()
 	setFrameSkip(true);
 	setTargetFrameRate(60);
 	setApplicationControlLostThreshold(10);
-
-	MainComponent_BindLua::Bind();
 }
 
 
