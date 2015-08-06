@@ -23,6 +23,8 @@ namespace wiRenderer_BindLua
 
 			wiLua::GetGlobal()->RegisterFunc("SetObjectProp", SetObjectProp);
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
+
+			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 		}
 	}
 
@@ -245,4 +247,24 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
+	int LoadModel(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			string dir = wiLua::SGetString(L, 1);
+			string name = wiLua::SGetString(L, 2);
+			string identifier = "common";
+			if (argc > 2)
+			{
+				identifier = wiLua::SGetString(L, 3);
+			}
+			wiRenderer::LoadModel(dir, name, XMMatrixIdentity(), identifier, wiRenderer::physicsEngine);
+		}
+		else
+		{
+			wiLua::SError(L, "LoadModel(string directory, string name, opt string identifier) not enough arguments!");
+		}
+		return 0;
+	}
 };

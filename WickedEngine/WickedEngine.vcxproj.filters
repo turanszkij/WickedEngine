@@ -57,6 +57,9 @@
     <Filter Include="ScriptBinders">
       <UniqueIdentifier>{719a8bbd-d0a7-4a16-a409-8c3094008dfd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="fonts">
+      <UniqueIdentifier>{5faa1a83-4a1b-4e70-a9b0-4b935d033095}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -741,6 +744,9 @@
       <Filter>ScriptBinders</Filter>
     </ClCompile>
     <ClCompile Include="wiSound_BindLua.cpp">
+      <Filter>ScriptBinders</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderable3DComponent_BindLua.cpp">
       <Filter>ScriptBinders</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1660,6 +1666,9 @@
     <ClInclude Include="wiSound_BindLua.h">
       <Filter>ScriptBinders</Filter>
     </ClInclude>
+    <ClInclude Include="Renderable3DComponent_BindLua.h">
+      <Filter>ScriptBinders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />
@@ -1773,6 +1782,9 @@
     <Text Include="..\readme.txt" />
     <Text Include="..\features.txt" />
     <Text Include="licenses.txt" />
+    <Text Include="fonts\basic.txt">
+      <Filter>fonts</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="circleGS.hlsl">
@@ -1994,5 +2006,10 @@
     <FxCompile Include="ssr.hlsl">
       <Filter>shaders\image</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="fonts\basic.dds">
+      <Filter>fonts</Filter>
+    </Image>
   </ItemGroup>
 </Project>

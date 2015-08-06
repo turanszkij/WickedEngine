@@ -211,6 +211,7 @@
     <ClCompile Include="MainComponent.cpp" />
     <ClCompile Include="LoadingScreenComponent.cpp" />
     <ClCompile Include="Renderable2DComponent.cpp" />
+    <ClCompile Include="Renderable3DComponent_BindLua.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
     <ClCompile Include="BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.cpp" />
@@ -408,6 +409,7 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Renderable3DComponent_BindLua.h" />
     <ClInclude Include="wiLuna.h" />
     <ClInclude Include="wiRenderer_BindLua.h" />
     <ClInclude Include="LUA\lapi.h" />
@@ -755,6 +757,7 @@
   <ItemGroup>
     <Text Include="..\features.txt" />
     <Text Include="..\readme.txt" />
+    <Text Include="fonts\basic.txt" />
     <Text Include="licenses.txt" />
   </ItemGroup>
   <ItemGroup>
@@ -2140,6 +2143,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="fonts\basic.dds" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
