@@ -1607,6 +1607,43 @@ HitSphere* wiRenderer::getSphereByName(const string& get){
 			return hs;
 	return nullptr;
 }
+Object* wiRenderer::getObjectByName(const string& name)
+{
+	for (auto& x : objects)
+	{
+		if (!x->name.compare(name))
+		{
+			return x;
+		}
+	}
+	for (auto& x : objects_trans)
+	{
+		if (!x->name.compare(name))
+		{
+			return x;
+		}
+	}
+	for (auto& x : objects_water)
+	{
+		if (!x->name.compare(name))
+		{
+			return x;
+		}
+	}
+
+	return nullptr;
+}
+Light* wiRenderer::getLightByName(const string& name)
+{
+	for (auto& x : lights)
+	{
+		if (!x->name.compare(name))
+		{
+			return x;
+		}
+	}
+	return nullptr;
+}
 
 void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat){
 	float cf = armature->currentFrame;

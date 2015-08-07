@@ -2,6 +2,7 @@
 #include "wiRenderer.h"
 #include "wiLoader.h"
 #include "wiHelper.h"
+#include "wiLoader_BindLua.h"
 
 namespace wiRenderer_BindLua
 {
@@ -14,14 +15,13 @@ namespace wiRenderer_BindLua
 			initialized = true;
 			wiLua::GetGlobal()->RegisterFunc("GetArmatures", GetArmatures);
 			wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
-			wiLua::GetGlobal()->RegisterFunc("GetObjectProp", GetObjectProp);
+			wiLua::GetGlobal()->RegisterFunc("GetObject", GetObjectLua);
 			wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
 			wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
 			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
 			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
 			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
 
-			wiLua::GetGlobal()->RegisterFunc("SetObjectProp", SetObjectProp);
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
@@ -58,72 +58,23 @@ namespace wiRenderer_BindLua
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
-	int GetObjectProp(lua_State* L)
+	int GetObjectLua(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
+		if (argc > 0)
 		{
-			//name,property
 			string name = wiLua::SGetString(L, 1);
-			string prop = wiHelper::toUpper( wiLua::SGetString(L, 2) );
-			Object* found = nullptr;
-			for (auto& x : wiRenderer::objects)
+			Object* object = wiRenderer::getObjectByName(name);
+			if (object != nullptr)
 			{
-				if (!x->name.compare(name))
-				{
-					found = x;
-					break;
-				}
-			}
-			if (found == nullptr)
-			{
-				for (auto& x : wiRenderer::objects_trans)
-				{
-					if (!x->name.compare(name))
-					{
-						found = x;
-						break;
-					}
-				}
-				if (found == nullptr)
-				{
-					for (auto& x : wiRenderer::objects_water)
-					{
-						if (!x->name.compare(name))
-						{
-							found = x;
-							break;
-						}
-					}
-				}
-			}
-			if (found != nullptr)
-			{
-				if (prop.find("TRANSP")!=string::npos)
-				{
-					wiLua::SSetFloat(L, found->transparency);
-					return 1;
-				}
-				else if (prop.find("COLOR")!=string::npos)
-				{
-					wiLua::SSetFloat3(L, found->color);
-					return 3;
-				}
-				else
-				{
-					wiLua::SError(L, "GetObjectProp(string name,string property) no such property!");
-					return 0;
-				}
+				Luna<Object_BindLua>::push(L, new Object_BindLua(object));
+				return 1;
 			}
 			else
 			{
-				wiLua::SError(L, "GetObjectProp(string name,string property) no such object!");
+				wiLua::SError(L, "GetObject(String name) object not found!");
 				return 0;
 			}
-		}
-		else
-		{
-			wiLua::SError(L, "GetObjectProp(string name,string property) not enough arguments!");
 		}
 		return 0;
 	}
@@ -167,72 +118,6 @@ namespace wiRenderer_BindLua
 	}
 
 
-	int SetObjectProp(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
-		{
-			//name,property
-			string name = wiLua::SGetString(L, 1);
-			string prop = wiHelper::toUpper(wiLua::SGetString(L, 2));
-			Object* found = nullptr;
-			for (auto& x : wiRenderer::objects)
-			{
-				if (!x->name.compare(name))
-				{
-					found = x;
-					break;
-				}
-			}
-			if (found == nullptr)
-			{
-				for (auto& x : wiRenderer::objects_trans)
-				{
-					if (!x->name.compare(name))
-					{
-						found = x;
-						break;
-					}
-				}
-				if (found == nullptr)
-				{
-					for (auto& x : wiRenderer::objects_water)
-					{
-						if (!x->name.compare(name))
-						{
-							found = x;
-							break;
-						}
-					}
-				}
-			}
-			if (found != nullptr)
-			{
-				if (prop.find("TRANSP") != string::npos)
-				{
-					found->transparency = wiLua::SGetFloat(L, 3);
-				}
-				else if (prop.find("COLOR") != string::npos)
-				{
-					found->color = wiLua::SGetFloat3(L, 3);
-				}
-				else
-				{
-					wiLua::SError(L, "GetObjectProp(string name,string property) no such property!");
-				}
-			}
-			else
-			{
-				wiLua::SError(L, "GetObjectProp(string name,string property) no such object!");
-				return 0;
-			}
-		}
-		else
-		{
-			wiLua::SError(L, "GetObjectProp(string name,string property) not enough arguments!");
-		}
-		return 0;
-	}
 	int SetGameSpeed(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);

@@ -14,6 +14,7 @@
 #include "wiImageEffects_BindLua.h"
 #include "SpriteAnim_BindLua.h"
 #include "wiResourceManager_BindLua.h"
+#include "wiLoader_BindLua.h"
 
 wiLua *wiLua::globalLua = nullptr;
 
@@ -54,6 +55,7 @@ wiLua* wiLua::GetGlobal()
 		wiImageEffects_BindLua::Bind();
 		SpriteAnim_BindLua::Bind();
 		wiResourceManager_BindLua::Bind();
+		wiLoader_BindLua::Bind();
 	}
 	return globalLua;
 }

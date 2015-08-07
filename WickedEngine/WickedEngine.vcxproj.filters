@@ -779,6 +779,9 @@
     <ClCompile Include="RenderableComponent_BindLua.cpp">
       <Filter>Lua Bindings</Filter>
     </ClCompile>
+    <ClCompile Include="wiLoader_BindLua.cpp">
+      <Filter>Lua Bindings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1727,6 +1730,9 @@
       <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="RenderableComponent_BindLua.h">
+      <Filter>Lua Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="wiLoader_BindLua.h">
       <Filter>Lua Bindings</Filter>
     </ClInclude>
   </ItemGroup>

@@ -344,11 +344,6 @@ protected:
 	static Vertex TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat = XMMatrixIdentity());
 	static XMFLOAT3 VertexVelocity(const Mesh* mesh, const int& vertexI);
 
-	static Armature* getArmatureByName(const string& get);
-	static int getActionByName(Armature* armature, const string& get);
-	static int getBoneByName(Armature* armature, const string& get);
-	static Material* getMaterialByName(const string& get);
-	HitSphere* getSphereByName(const string& get);
 
 	static float GameSpeed,overrideGameSpeed;
 
@@ -387,6 +382,15 @@ public:
 	static TextureView GetEnviromentMap(){ return enviroMap; }
 	static void SetNoiseTexture(TextureView tex){ noiseTex = tex; }
 	static TextureView GetNoiseTexture(){ return noiseTex; }
+
+
+	static Armature* getArmatureByName(const string& get);
+	static int getActionByName(Armature* armature, const string& get);
+	static int getBoneByName(Armature* armature, const string& get);
+	static Material* getMaterialByName(const string& get);
+	HitSphere* getSphereByName(const string& get);
+	static Object* getObjectByName(const string& name);
+	static Light* getLightByName(const string& name);
 	
 private:
 	static vector<TextureView> textureSlotsPS;
