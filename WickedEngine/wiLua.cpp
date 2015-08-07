@@ -1,6 +1,7 @@
 #include "wiLua.h"
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
+#include "RenderableComponent_BindLua.h"
 #include "Renderable2DComponent_BindLua.h"
 #include "LoadingScreenComponent_BindLua.h"
 #include "Renderable3DComponent_BindLua.h"
@@ -11,6 +12,8 @@
 #include "wiSound_BindLua.h"
 #include "wiSprite_BindLua.h"
 #include "wiImageEffects_BindLua.h"
+#include "SpriteAnim_BindLua.h"
+#include "wiResourceManager_BindLua.h"
 
 wiLua *wiLua::globalLua = nullptr;
 
@@ -36,6 +39,7 @@ wiLua* wiLua::GetGlobal()
 		globalLua = new wiLua();
 
 		MainComponent_BindLua::Bind();
+		RenderableComponent_BindLua::Bind();
 		Renderable2DComponent_BindLua::Bind();
 		LoadingScreenComponent_BindLua::Bind();
 		Renderable3DComponent_BindLua::Bind();
@@ -44,8 +48,12 @@ wiLua* wiLua::GetGlobal()
 		Texture_BindLua::Bind();
 		wiRenderer_BindLua::Bind();
 		wiSound_BindLua::Bind();
+		wiSoundEffect_BindLua::Bind();
+		wiMusic_BindLua::Bind();
 		wiSprite_BindLua::Bind();
 		wiImageEffects_BindLua::Bind();
+		SpriteAnim_BindLua::Bind();
+		wiResourceManager_BindLua::Bind();
 	}
 	return globalLua;
 }

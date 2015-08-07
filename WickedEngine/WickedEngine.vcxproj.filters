@@ -54,11 +54,11 @@
     <Filter Include="LUA">
       <UniqueIdentifier>{4d8f8d1d-ba7b-4418-9933-725e9d27c0f6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ScriptBinders">
-      <UniqueIdentifier>{719a8bbd-d0a7-4a16-a409-8c3094008dfd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="fonts">
       <UniqueIdentifier>{5faa1a83-4a1b-4e70-a9b0-4b935d033095}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lua Bindings">
+      <UniqueIdentifier>{719a8bbd-d0a7-4a16-a409-8c3094008dfd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -738,40 +738,46 @@
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="wiRenderer_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="wiResourceManager_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="wiSound_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="Renderable3DComponent_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="MainComponent_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="Renderable2DComponent_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="LoadingScreenComponent_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="ForwardRenderableComponent_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="DeferredRenderableComponent_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="Texture_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="wiSprite_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
     <ClCompile Include="wiImageEffects_BindLua.cpp">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
+    </ClCompile>
+    <ClCompile Include="SpriteAnim_BindLua.cpp">
+      <Filter>Lua Bindings</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderableComponent_BindLua.cpp">
+      <Filter>Lua Bindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1679,43 +1685,49 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wiRenderer_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="wiResourceManager_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="wiLuna.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wiSound_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="Renderable3DComponent_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="MainComponent_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="Renderable2DComponent_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="LoadingScreenComponent_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="DeferredRenderableComponent_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="ForwardRenderableComponent_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="Texture_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="wiSprite_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="wiImageEffects_BindLua.h">
-      <Filter>ScriptBinders</Filter>
+      <Filter>Lua Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="SpriteAnim_BindLua.h">
+      <Filter>Lua Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderableComponent_BindLua.h">
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

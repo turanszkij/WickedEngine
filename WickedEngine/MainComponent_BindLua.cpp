@@ -1,8 +1,10 @@
 #include "MainComponent_BindLua.h"
+#include "RenderableComponent_BindLua.h"
 #include "Renderable3DComponent_BindLua.h"
 #include "Renderable2DComponent_BindLua.h"
 #include "DeferredRenderableComponent_BindLua.h"
 #include "ForwardRenderableComponent_BindLua.h"
+#include "LoadingScreenComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
 
 const char MainComponent_BindLua::className[] = "MainComponent";
@@ -43,6 +45,12 @@ int MainComponent_BindLua::GetContent(lua_State *L)
 }
 int MainComponent_BindLua::GetActiveComponent(lua_State *L)
 {
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "GetActiveComponent() component is empty!");
+		return 0;
+	}
+
 	//return deferred 3d component if the active one is of that type
 	DeferredRenderableComponent* compDef3D = dynamic_cast<DeferredRenderableComponent*>(component->getActiveComponent());
 	if (compDef3D != nullptr)
@@ -67,6 +75,14 @@ int MainComponent_BindLua::GetActiveComponent(lua_State *L)
 		return 1;
 	}
 
+	//return loading component if the active one is of that type
+	LoadingScreenComponent* compLoad = dynamic_cast<LoadingScreenComponent*>(component->getActiveComponent());
+	if (compLoad != nullptr)
+	{
+		Luna<LoadingScreenComponent_BindLua>::push(L, new LoadingScreenComponent_BindLua(compLoad));
+		return 1;
+	}
+
 	//return 2d component if the active one is of that type
 	Renderable2DComponent* comp2D = dynamic_cast<Renderable2DComponent*>(component->getActiveComponent());
 	if (comp2D != nullptr)
@@ -75,25 +91,85 @@ int MainComponent_BindLua::GetActiveComponent(lua_State *L)
 		return 1;
 	}
 
+	//return component if the active one is of that type
+	RenderableComponent* comp = dynamic_cast<RenderableComponent*>(component->getActiveComponent());
+	if (comp != nullptr)
+	{
+		Luna<RenderableComponent_BindLua>::push(L, new RenderableComponent_BindLua(comp));
+		return 1;
+	}
+
 	wiLua::SError(L, "GetActiveComponent() Warning: type of active component not registered!");
 	return 0;
 }
 int MainComponent_BindLua::SetActiveComponent(lua_State *L)
 {
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetActiveComponent(RenderableComponent component) component is empty!");
+		return 0;
+	}
+
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
 	{
-		//TODO
+		ForwardRenderableComponent_BindLua* compFwd3D = Luna<ForwardRenderableComponent_BindLua>::lightcheck(L, 2);
+		if (compFwd3D != nullptr)
+		{
+			component->activateComponent(compFwd3D->component);
+			return 0;
+		}
+
+		DeferredRenderableComponent_BindLua* compDef3D = Luna<DeferredRenderableComponent_BindLua>::lightcheck(L, 2);
+		if (compDef3D != nullptr)
+		{
+			component->activateComponent(compDef3D->component);
+			return 0;
+		}
+
+		Renderable3DComponent_BindLua* comp3D = Luna<Renderable3DComponent_BindLua>::lightcheck(L, 2);
+		if (comp3D != nullptr)
+		{
+			component->activateComponent(comp3D->component);
+			return 0;
+		}
+
+		LoadingScreenComponent_BindLua* compLoad = Luna<LoadingScreenComponent_BindLua>::lightcheck(L, 2);
+		if (compLoad != nullptr)
+		{
+			component->activateComponent(compLoad->component);
+			return 0;
+		}
+
+		Renderable2DComponent_BindLua* comp2D = Luna<Renderable2DComponent_BindLua>::lightcheck(L, 2);
+		if (comp2D != nullptr)
+		{
+			component->activateComponent(comp2D->component);
+			return 0;
+		}
+
+		RenderableComponent_BindLua* comp = Luna<RenderableComponent_BindLua>::lightcheck(L, 2);
+		if (comp != nullptr)
+		{
+			component->activateComponent(comp->component);
+			return 0;
+		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetActiveComponent(Renderable3DComponent component) not enought arguments!");
+		wiLua::SError(L, "SetActiveComponent(RenderableComponent component) not enought arguments!");
 		return 0;
 	}
 	return 0;
 }
 int MainComponent_BindLua::SetFrameSkip(lua_State *L)
 {
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetFrameSkip(bool enabled) component is empty!");
+		return 0;
+	}
+
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
 	{

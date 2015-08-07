@@ -18,6 +18,8 @@ public:
 
 	int SetEffects(lua_State *L);
 	int GetEffects(lua_State *L);
+	int SetAnim(lua_State *L);
+	int GetAnim(lua_State *L);
 
 	static void Bind();
 };

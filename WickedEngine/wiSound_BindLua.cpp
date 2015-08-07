@@ -87,3 +87,68 @@ int wiSound_BindLua::MusicVolume(lua_State *L)
 	return 1;
 }
 
+
+
+const char wiSoundEffect_BindLua::className[] = "SoundEffect";
+
+Luna<wiSoundEffect_BindLua>::FunctionType wiSoundEffect_BindLua::methods[] = {
+	lunamethod(wiSoundEffect_BindLua, Play),
+	lunamethod(wiSoundEffect_BindLua, Stop),
+	{ NULL, NULL }
+};
+Luna<wiSoundEffect_BindLua>::PropertyType wiSoundEffect_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+wiSoundEffect_BindLua::wiSoundEffect_BindLua(lua_State *L)
+{
+	wiSoundEffect_BindLua::wiSound_BindLua();
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		sound = new wiSoundEffect(wiLua::SGetString(L, 1));
+	}
+}
+
+void wiSoundEffect_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<wiSoundEffect_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+const char wiMusic_BindLua::className[] = "Music";
+
+Luna<wiMusic_BindLua>::FunctionType wiMusic_BindLua::methods[] = {
+	lunamethod(wiMusic_BindLua, Play),
+	lunamethod(wiMusic_BindLua, Stop),
+	{ NULL, NULL }
+};
+Luna<wiMusic_BindLua>::PropertyType wiMusic_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+wiMusic_BindLua::wiMusic_BindLua(lua_State *L)
+{
+	wiSoundEffect_BindLua::wiSound_BindLua();
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		sound = new wiMusic(wiLua::SGetString(L, 1));
+	}
+}
+
+void wiMusic_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<wiMusic_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+

@@ -217,6 +217,8 @@
     <ClCompile Include="Renderable2DComponent.cpp" />
     <ClCompile Include="Renderable2DComponent_BindLua.cpp" />
     <ClCompile Include="Renderable3DComponent_BindLua.cpp" />
+    <ClCompile Include="RenderableComponent_BindLua.cpp" />
+    <ClCompile Include="SpriteAnim_BindLua.cpp" />
     <ClCompile Include="Texture_BindLua.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
@@ -423,6 +425,8 @@
     <ClInclude Include="MainComponent_BindLua.h" />
     <ClInclude Include="Renderable2DComponent_BindLua.h" />
     <ClInclude Include="Renderable3DComponent_BindLua.h" />
+    <ClInclude Include="RenderableComponent_BindLua.h" />
+    <ClInclude Include="SpriteAnim_BindLua.h" />
     <ClInclude Include="Texture_BindLua.h" />
     <ClInclude Include="wiImageEffects_BindLua.h" />
     <ClInclude Include="wiLuna.h" />

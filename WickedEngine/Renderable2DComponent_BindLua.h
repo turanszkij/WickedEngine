@@ -2,12 +2,13 @@
 #include "wiLua.h"
 #include "wiLuna.h"
 #include "Renderable2DComponent.h"
+#include "RenderableComponent_BindLua.h"
 
-class Renderable2DComponent_BindLua
+class Renderable2DComponent_BindLua : public RenderableComponent_BindLua
 {
-protected:
-	Renderable2DComponent* component;
 public:
+	Renderable2DComponent* component;
+
 	static const char className[];
 	static Luna<Renderable2DComponent_BindLua>::FunctionType methods[];
 	static Luna<Renderable2DComponent_BindLua>::PropertyType properties[];
