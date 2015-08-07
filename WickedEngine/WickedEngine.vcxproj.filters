@@ -1735,6 +1735,9 @@
     <ClInclude Include="wiLoader_BindLua.h">
       <Filter>Lua Bindings</Filter>
     </ClInclude>
+    <ClInclude Include="wiLua_Globals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />

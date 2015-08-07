@@ -1,4 +1,5 @@
 #include "wiLua.h"
+#include "wiLua_Globals.h"
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
 #include "RenderableComponent_BindLua.h"
@@ -56,6 +57,8 @@ wiLua* wiLua::GetGlobal()
 		SpriteAnim_BindLua::Bind();
 		wiResourceManager_BindLua::Bind();
 		wiLoader_BindLua::Bind();
+
+		globalLua->RunText(wiLua_Globals);
 	}
 	return globalLua;
 }

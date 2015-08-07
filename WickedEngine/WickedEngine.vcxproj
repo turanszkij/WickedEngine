@@ -431,6 +431,7 @@
     <ClInclude Include="Texture_BindLua.h" />
     <ClInclude Include="wiImageEffects_BindLua.h" />
     <ClInclude Include="wiLoader_BindLua.h" />
+    <ClInclude Include="wiLua_Globals.h" />
     <ClInclude Include="wiLuna.h" />
     <ClInclude Include="wiRenderer_BindLua.h" />
     <ClInclude Include="LUA\lapi.h" />
