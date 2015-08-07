@@ -17,5 +17,6 @@ namespace wiRenderer_BindLua
 	int SetGameSpeed(lua_State* L);
 
 	int LoadModel(lua_State* L);
+	int FinishLoading(lua_State* L);
 };
 

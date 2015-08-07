@@ -25,6 +25,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
+			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
 		}
 	}
 
@@ -150,6 +151,11 @@ namespace wiRenderer_BindLua
 		{
 			wiLua::SError(L, "LoadModel(string directory, string name, opt string identifier) not enough arguments!");
 		}
+		return 0;
+	}
+	int FinishLoading(lua_State* L)
+	{
+		wiRenderer::FinishLoading();
 		return 0;
 	}
 };
