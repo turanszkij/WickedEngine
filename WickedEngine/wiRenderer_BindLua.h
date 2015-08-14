@@ -7,6 +7,7 @@ namespace wiRenderer_BindLua
 	void Bind();
 
 	int GetArmatures(lua_State* L);
+	int GetArmature(lua_State* L);
 	int GetObjects(lua_State* L);
 	int GetObjectLua(lua_State* L);
 	int GetMeshes(lua_State* L);

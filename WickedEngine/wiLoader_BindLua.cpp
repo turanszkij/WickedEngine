@@ -5,6 +5,7 @@ namespace wiLoader_BindLua
 	void Bind()
 	{
 		Object_BindLua::Bind();
+		Armature_BindLua::Bind();
 	}
 }
 
@@ -96,5 +97,94 @@ void Object_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Object_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+const char Armature_BindLua::className[] = "Armature";
+
+Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
+	lunamethod(Armature_BindLua, GetActions),
+	lunamethod(Armature_BindLua, GetBones),
+	lunamethod(Armature_BindLua, ChangeAction),
+	{ NULL, NULL }
+};
+Luna<Armature_BindLua>::PropertyType Armature_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+Armature_BindLua::Armature_BindLua(Armature* armature) :armature(armature)
+{
+}
+Armature_BindLua::Armature_BindLua(lua_State *L)
+{
+	armature = nullptr;
+}
+Armature_BindLua::~Armature_BindLua()
+{
+}
+
+int Armature_BindLua::GetActions(lua_State *L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "GetActions() armature is null!");
+		return 0;
+	}
+	stringstream ss("");
+	for (auto& x : armature->actions)
+	{
+		ss << x.name << endl;
+	}
+	wiLua::SSetString(L, ss.str());
+	return 1;
+}
+int Armature_BindLua::GetBones(lua_State *L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "GetBones() armature is null!");
+		return 0;
+	}
+	stringstream ss("");
+	for (auto& x : armature->boneCollection)
+	{
+		ss << x->name << endl;
+	}
+	wiLua::SSetString(L, ss.str());
+	return 1;
+}
+int Armature_BindLua::ChangeAction(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "SetAction(String name) armature is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		string armatureName = wiLua::SGetString(L, 2);
+		if (!armature->ChangeAction(armatureName))
+		{
+			wiLua::SError(L, "SetAction(String name) action not found!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetAction(String name) not enough arguments!");
+	}
+	return 0;
+}
+
+void Armature_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Armature_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

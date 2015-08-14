@@ -129,7 +129,7 @@ int wiResourceManager_BindLua::List(lua_State *L)
 		return 0;
 	}
 	stringstream ss("");
-	for (auto& x : resources->resources)
+	for (auto x : resources->resources)
 	{
 		ss << x.first << endl;
 	}

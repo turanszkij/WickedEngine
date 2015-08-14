@@ -29,3 +29,23 @@ public:
 	static void Bind();
 };
 
+class Armature_BindLua
+{
+public:
+	Armature* armature;
+
+	static const char className[];
+	static Luna<Armature_BindLua>::FunctionType methods[];
+	static Luna<Armature_BindLua>::PropertyType properties[];
+
+	Armature_BindLua(Armature* armature = nullptr);
+	Armature_BindLua(lua_State* L);
+	~Armature_BindLua();
+
+	int GetActions(lua_State* L);
+	int GetBones(lua_State* L);
+
+	int ChangeAction(lua_State* L);
+
+	static void Bind();
+};

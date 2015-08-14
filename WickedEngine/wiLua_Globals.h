@@ -5,6 +5,21 @@ static const char* wiLua_Globals = R"(
 -- Wicked Engine lua globals
 ------------------------------------------
 
+-- Get table element count (list length)
+function len(T)
+  local count = 0
+  for _ in pairs(T) do 
+	count = count + 1 end
+  return count
+end
+
+-- Post list elements to backlog
+backlog_post_list = function(a)
+	for key,value in pairs(a) do
+		backlog_post(value)
+	end
+end
+
 -- Print prints to debug output by default
 local print = debugout
 

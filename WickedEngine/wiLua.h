@@ -103,6 +103,8 @@ public:
 	static void SSetString(lua_State* L, const string& data);
 	//push pointer (light userdata) to lua stack
 	static void SSetPointer(lua_State* L, void* data);
+	//push null to lua stack
+	static void SSetNull(lua_State* L);
 
 	//throw error
 	static void SError(lua_State* L, const string& error = "", bool todebug = true, bool tobacklog = true);

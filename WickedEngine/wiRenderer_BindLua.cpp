@@ -14,6 +14,7 @@ namespace wiRenderer_BindLua
 		{
 			initialized = true;
 			wiLua::GetGlobal()->RegisterFunc("GetArmatures", GetArmatures);
+			wiLua::GetGlobal()->RegisterFunc("GetArmature", GetArmature);
 			wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
 			wiLua::GetGlobal()->RegisterFunc("GetObject", GetObjectLua);
 			wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
@@ -36,7 +37,6 @@ namespace wiRenderer_BindLua
 	int GetArmatures(lua_State* L)
 	{
 		stringstream ss("");
-		ss << "Armature list:" << endl;
 		for (auto& x : wiRenderer::armatures)
 		{
 			ss << x->name << endl;
@@ -44,10 +44,29 @@ namespace wiRenderer_BindLua
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
+	int GetArmature(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			string name = wiLua::SGetString(L, 1);
+			Armature* armature = wiRenderer::getArmatureByName(name);
+			if (armature != nullptr)
+			{
+				Luna<Armature_BindLua>::push(L, new Armature_BindLua(armature));
+				return 1;
+			}
+			else
+			{
+				wiLua::SError(L, "GetArmature(String name) object not found!");
+				return 0;
+			}
+		}
+		return 0;
+	}
 	int GetObjects(lua_State* L)
 	{
 		stringstream ss("");
-		ss << "Object list:" << endl;
 		for (auto& x : wiRenderer::objects)
 		{
 			ss << x->name << endl;
@@ -86,32 +105,27 @@ namespace wiRenderer_BindLua
 	int GetMeshes(lua_State* L)
 	{
 		stringstream ss("");
-		ss << "Mesh list:" << endl;
 		for (auto& x : wiRenderer::meshes)
 		{
-			ss << x.second->name << endl;
+			ss << x.first << endl;
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
 	int GetLights(lua_State* L)
 	{
-		stringstream ss("");
-		ss << "Light list:" << endl;
 		for (auto& x : wiRenderer::lights)
 		{
-			ss << x->name << endl;
+			wiLua::SSetString(L, x->name);
 		}
-		wiLua::SSetString(L, ss.str());
-		return 1;
+		return wiRenderer::lights.size();
 	}
 	int GetMaterials(lua_State* L)
 	{
 		stringstream ss("");
-		ss << "Material list:" << endl;
 		for (auto& x : wiRenderer::materials)
 		{
-			ss << x.second->name << endl;
+			ss << x.first << endl;
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;

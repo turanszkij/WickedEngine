@@ -309,6 +309,10 @@ void wiLua::SSetPointer(lua_State* L, void* data)
 {
 	lua_pushlightuserdata(L, data);
 }
+void wiLua::SSetNull(lua_State* L)
+{
+	lua_pushnil(L);
+}
 
 void wiLua::SError(lua_State* L, const string& error, bool todebug, bool tobacklog)
 {

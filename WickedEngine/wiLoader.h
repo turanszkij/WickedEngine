@@ -655,6 +655,22 @@ public:
 		boneCollection.clear();
 		rootbones.clear();
 	}
+
+	bool ChangeAction(const string& actionName)
+	{
+		int i = 0;
+		for (Action& x : actions)
+		{
+			if (!x.name.compare(actionName))
+			{
+				prevAction = activeAction;
+				activeAction = i;
+				return true;
+			}
+			i++;
+		}
+		return false;
+	}
 };
 struct SHCAM{	
 	XMFLOAT4X4 View,Projection;
