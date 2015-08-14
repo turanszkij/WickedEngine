@@ -27,6 +27,7 @@ wiLua::wiLua()
 	m_luaState = luaL_newstate();
 	luaL_openlibs(m_luaState);
 	RegisterFunc("debugout", DebugOut);
+	RunText(wiLua_Globals);
 }
 
 wiLua::~wiLua()
@@ -58,7 +59,6 @@ wiLua* wiLua::GetGlobal()
 		wiResourceManager_BindLua::Bind();
 		wiLoader_BindLua::Bind();
 
-		globalLua->RunText(wiLua_Globals);
 	}
 	return globalLua;
 }
@@ -190,6 +190,13 @@ void wiLua::AddInt(const string& name, int data)
 	lua_setfield(m_luaState, -2, name.c_str());
 }
 
+void wiLua::SetDeltaTime(double dt)
+{
+	lua_getglobal(m_luaState, "wakeUpWaitingThreads");
+	SSetDouble(m_luaState, dt);
+	lua_call(m_luaState, 1, 0);
+}
+
 int wiLua::DebugOut(lua_State* L)
 {
 	int argc = lua_gettop(L); 
@@ -289,6 +296,10 @@ void wiLua::SSetFloat4(lua_State* L, const XMFLOAT4& data)
 	SSetFloat(L, data.y);
 	SSetFloat(L, data.z);
 	SSetFloat(L, data.w);
+}
+void wiLua::SSetDouble(lua_State* L, double data)
+{
+	lua_pushnumber(L, (lua_Number)data);
 }
 void wiLua::SSetString(lua_State* L, const string& data)
 {

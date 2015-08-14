@@ -57,6 +57,9 @@ public:
 	//add int member to registered object
 	void AddInt(const string& name, int data);
 
+	//set delta time to use with lua
+	void SetDeltaTime(double dt);
+
 	//Static function wrappers from here on
 
 	//get string from lua on stack position
@@ -94,6 +97,8 @@ public:
 	static void SSetFloat3(lua_State* L, const XMFLOAT3& data);
 	//push float4 to lua stack
 	static void SSetFloat4(lua_State* L, const XMFLOAT4& data);
+	//push double to lua stack
+	static void SSetDouble(lua_State* L, double data);
 	//push string to lua stack
 	static void SSetString(lua_State* L, const string& data);
 	//push pointer (light userdata) to lua stack
