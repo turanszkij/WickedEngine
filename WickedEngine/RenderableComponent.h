@@ -8,8 +8,6 @@
 class RenderableComponent
 {
 public:
-	static int screenW, screenH;
-
 	wiCVars Params;
 	wiResourceManager Content;
 

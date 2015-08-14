@@ -21,6 +21,10 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
 			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
 			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
+			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
+			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
+			wiLua::GetGlobal()->RegisterFunc("GetRenderWidth", GetRenderWidth);
+			wiLua::GetGlobal()->RegisterFunc("GetRenderHeight", GetRenderHeight);
 
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
 
@@ -115,6 +119,26 @@ namespace wiRenderer_BindLua
 	int GetGameSpeed(lua_State* L)
 	{
 		wiLua::SSetFloat(L, wiRenderer::GetGameSpeed());
+		return 1;
+	}
+	int GetScreenWidth(lua_State* L)
+	{
+		wiLua::SSetInt(L, wiRenderer::SCREENWIDTH);
+		return 1;
+	}
+	int GetScreenHeight(lua_State* L)
+	{
+		wiLua::SSetInt(L, wiRenderer::SCREENHEIGHT);
+		return 1;
+	}
+	int GetRenderWidth(lua_State* L)
+	{
+		wiLua::SSetInt(L, wiRenderer::RENDERWIDTH);
+		return 1;
+	}
+	int GetRenderHeight(lua_State* L)
+	{
+		wiLua::SSetInt(L, wiRenderer::RENDERHEIGHT);
 		return 1;
 	}
 

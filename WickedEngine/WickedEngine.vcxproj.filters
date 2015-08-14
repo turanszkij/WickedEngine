@@ -497,9 +497,6 @@
     <ClCompile Include="DeferredRenderableComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
-    <ClCompile Include="RenderableComponent.cpp">
-      <Filter>ComponentTemplates</Filter>
-    </ClCompile>
     <ClCompile Include="ForwardRenderableComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>

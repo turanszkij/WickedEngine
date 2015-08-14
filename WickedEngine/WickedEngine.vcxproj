@@ -391,7 +391,6 @@
     <ClCompile Include="wiLua.cpp" />
     <ClCompile Include="wiNetwork.cpp" />
     <ClCompile Include="Renderable3DComponent.cpp" />
-    <ClCompile Include="RenderableComponent.cpp" />
     <ClCompile Include="wiRenderer_BindLua.cpp" />
     <ClCompile Include="wiResourceManager_BindLua.cpp" />
     <ClCompile Include="wiSound_BindLua.cpp" />

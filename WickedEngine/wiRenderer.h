@@ -129,6 +129,15 @@ public:
 	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 
+	static int GetScreenWidth(){ return SCREENWIDTH; }
+	static int GetScreenHeight(){ return SCREENHEIGHT; }
+	static int GetRenderWidth(){ return RENDERWIDTH; }
+	static int GetRenderHeight(){ return RENDERHEIGHT; }
+	static int SetScreenWidth(int value){ SCREENWIDTH = value; }
+	static int SetScreenHeight(int value){ SCREENHEIGHT = value; }
+	static int SetRenderWidth(int value){ RENDERWIDTH = value; }
+	static int SetRenderHeight(int value){ RENDERHEIGHT = value; }
+
 protected:
 	struct ConstantBuffer
 	{

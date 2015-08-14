@@ -22,15 +22,15 @@ void DeferredRenderableComponent::Initialize()
 	Renderable3DComponent::Initialize();
 
 	rtGBuffer.Initialize(
-		screenW, screenH
+		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
 		, 3, true, 1, 0
 		, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtDeferred.Initialize(
-		screenW, screenH
+		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0);
 	rtLight.Initialize(
-		screenW, screenH
+		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
 		, 1, false, 1, 0
 		, DXGI_FORMAT_R11G11B10_FLOAT
 		);
@@ -78,7 +78,7 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 	static const int tessellationQuality = 0;
 
 	wiRenderer::UpdatePerFrameCB(context);
-	wiImageEffects fx((float)screenW, (float)screenH);
+	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
 	rtGBuffer.Activate(context); {
 		wiRenderer::UpdatePerRenderCB(context, tessellationQuality);

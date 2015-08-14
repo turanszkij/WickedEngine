@@ -13,6 +13,10 @@ namespace wiRenderer_BindLua
 	int GetLights(lua_State* L);
 	int GetMaterials(lua_State* L);
 	int GetGameSpeed(lua_State* L);
+	int GetScreenWidth(lua_State* L);
+	int GetScreenHeight(lua_State* L);
+	int GetRenderWidth(lua_State* L);
+	int GetRenderHeight(lua_State* L);
 
 	int SetGameSpeed(lua_State* L);
 
