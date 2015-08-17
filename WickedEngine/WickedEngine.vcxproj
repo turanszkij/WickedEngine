@@ -385,6 +385,7 @@
     <ClCompile Include="wiImageEffects_BindLua.cpp" />
     <ClCompile Include="wiInitializer.cpp" />
     <ClCompile Include="wiInputManager.cpp" />
+    <ClCompile Include="wiInputManager_BindLua.cpp" />
     <ClCompile Include="wiLensFlare.cpp" />
     <ClCompile Include="wiLines.cpp" />
     <ClCompile Include="wiLoader_BindLua.cpp" />
@@ -429,6 +430,7 @@
     <ClInclude Include="SpriteAnim_BindLua.h" />
     <ClInclude Include="Texture_BindLua.h" />
     <ClInclude Include="wiImageEffects_BindLua.h" />
+    <ClInclude Include="wiInputManager_BindLua.h" />
     <ClInclude Include="wiLoader_BindLua.h" />
     <ClInclude Include="wiLua_Globals.h" />
     <ClInclude Include="wiLuna.h" />

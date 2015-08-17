@@ -15,6 +15,9 @@ public:
 	RenderableComponent_BindLua(lua_State *L);
 	~RenderableComponent_BindLua();
 
+	virtual int GetContent(lua_State* L);
+	virtual int Initialize(lua_State* L);
+
 	static void Bind();
 };
 

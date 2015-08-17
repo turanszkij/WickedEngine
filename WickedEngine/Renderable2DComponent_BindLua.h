@@ -7,8 +7,6 @@
 class Renderable2DComponent_BindLua : public RenderableComponent_BindLua
 {
 public:
-	Renderable2DComponent* component;
-
 	static const char className[];
 	static Luna<Renderable2DComponent_BindLua>::FunctionType methods[];
 	static Luna<Renderable2DComponent_BindLua>::PropertyType properties[];
@@ -17,7 +15,6 @@ public:
 	Renderable2DComponent_BindLua(lua_State *L);
 	~Renderable2DComponent_BindLua();
 
-	virtual int GetContent(lua_State *L);
 	virtual int AddSprite(lua_State *L);
 
 	static void Bind();

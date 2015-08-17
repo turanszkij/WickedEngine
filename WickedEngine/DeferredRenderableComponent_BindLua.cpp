@@ -4,6 +4,7 @@ const char DeferredRenderableComponent_BindLua::className[] = "DeferredRenderabl
 
 Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableComponent_BindLua::methods[] = {
 	lunamethod(DeferredRenderableComponent_BindLua, GetContent),
+	lunamethod(DeferredRenderableComponent_BindLua, Initialize),
 	{ NULL, NULL }
 };
 Luna<DeferredRenderableComponent_BindLua>::PropertyType DeferredRenderableComponent_BindLua::properties[] = {

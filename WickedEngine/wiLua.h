@@ -60,6 +60,9 @@ public:
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
 
+	//send a signal to lua
+	void Signal(const string& name);
+
 	//Static function wrappers from here on
 
 	//get string from lua on stack position

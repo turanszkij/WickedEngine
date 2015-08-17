@@ -4,6 +4,7 @@ const char ForwardRenderableComponent_BindLua::className[] = "ForwardRenderableC
 
 Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponent_BindLua::methods[] = {
 	lunamethod(ForwardRenderableComponent_BindLua, GetContent),
+	lunamethod(ForwardRenderableComponent_BindLua, Initialize),
 	{ NULL, NULL }
 };
 Luna<ForwardRenderableComponent_BindLua>::PropertyType ForwardRenderableComponent_BindLua::properties[] = {

@@ -197,6 +197,13 @@ void wiLua::SetDeltaTime(double dt)
 	lua_call(m_luaState, 1, 0);
 }
 
+void wiLua::Signal(const string& name)
+{
+	lua_getglobal(m_luaState, "signal");
+	SSetString(m_luaState, name.c_str());
+	lua_call(m_luaState, 1, 0);
+}
+
 int wiLua::DebugOut(lua_State* L)
 {
 	int argc = lua_gettop(L); 

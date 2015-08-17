@@ -5,6 +5,7 @@ const char LoadingScreenComponent_BindLua::className[] = "LoadingScreenComponent
 Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLua::methods[] = {
 	lunamethod(LoadingScreenComponent_BindLua, GetContent),
 	lunamethod(LoadingScreenComponent_BindLua, AddSprite),
+	lunamethod(LoadingScreenComponent_BindLua, Initialize),
 	{ NULL, NULL }
 };
 Luna<LoadingScreenComponent_BindLua>::PropertyType LoadingScreenComponent_BindLua::properties[] = {
