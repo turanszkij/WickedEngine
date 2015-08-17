@@ -5,6 +5,13 @@ const char ForwardRenderableComponent_BindLua::className[] = "ForwardRenderableC
 Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponent_BindLua::methods[] = {
 	lunamethod(ForwardRenderableComponent_BindLua, GetContent),
 	lunamethod(ForwardRenderableComponent_BindLua, Initialize),
+	lunamethod(ForwardRenderableComponent_BindLua, Load),
+	lunamethod(ForwardRenderableComponent_BindLua, Unload),
+	lunamethod(ForwardRenderableComponent_BindLua, Start),
+	lunamethod(ForwardRenderableComponent_BindLua, Stop),
+	lunamethod(ForwardRenderableComponent_BindLua, Update),
+	lunamethod(ForwardRenderableComponent_BindLua, Render),
+	lunamethod(ForwardRenderableComponent_BindLua, Compose),
 	{ NULL, NULL }
 };
 Luna<ForwardRenderableComponent_BindLua>::PropertyType ForwardRenderableComponent_BindLua::properties[] = {

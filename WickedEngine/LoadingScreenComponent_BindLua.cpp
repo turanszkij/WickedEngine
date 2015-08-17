@@ -6,6 +6,13 @@ Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLu
 	lunamethod(LoadingScreenComponent_BindLua, GetContent),
 	lunamethod(LoadingScreenComponent_BindLua, AddSprite),
 	lunamethod(LoadingScreenComponent_BindLua, Initialize),
+	lunamethod(LoadingScreenComponent_BindLua, Load),
+	lunamethod(LoadingScreenComponent_BindLua, Unload),
+	lunamethod(LoadingScreenComponent_BindLua, Start),
+	lunamethod(LoadingScreenComponent_BindLua, Stop),
+	lunamethod(LoadingScreenComponent_BindLua, Update),
+	lunamethod(LoadingScreenComponent_BindLua, Render),
+	lunamethod(LoadingScreenComponent_BindLua, Compose),
 	{ NULL, NULL }
 };
 Luna<LoadingScreenComponent_BindLua>::PropertyType LoadingScreenComponent_BindLua::properties[] = {

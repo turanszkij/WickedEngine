@@ -8,6 +8,13 @@ Luna<Renderable2DComponent_BindLua>::FunctionType Renderable2DComponent_BindLua:
 	lunamethod(Renderable2DComponent_BindLua, GetContent),
 	lunamethod(Renderable2DComponent_BindLua, AddSprite),
 	lunamethod(Renderable2DComponent_BindLua, Initialize),
+	lunamethod(Renderable2DComponent_BindLua, Load),
+	lunamethod(Renderable2DComponent_BindLua, Unload),
+	lunamethod(Renderable2DComponent_BindLua, Start),
+	lunamethod(Renderable2DComponent_BindLua, Stop),
+	lunamethod(Renderable2DComponent_BindLua, Update),
+	lunamethod(Renderable2DComponent_BindLua, Render),
+	lunamethod(Renderable2DComponent_BindLua, Compose),
 	{ NULL, NULL }
 };
 Luna<Renderable2DComponent_BindLua>::PropertyType Renderable2DComponent_BindLua::properties[] = {

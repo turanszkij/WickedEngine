@@ -6,6 +6,13 @@ const char RenderableComponent_BindLua::className[] = "RenderableComponent";
 Luna<RenderableComponent_BindLua>::FunctionType RenderableComponent_BindLua::methods[] = {
 	lunamethod(RenderableComponent_BindLua, GetContent),
 	lunamethod(RenderableComponent_BindLua, Initialize),
+	lunamethod(RenderableComponent_BindLua, Load),
+	lunamethod(RenderableComponent_BindLua, Unload),
+	lunamethod(RenderableComponent_BindLua, Start),
+	lunamethod(RenderableComponent_BindLua, Stop),
+	lunamethod(RenderableComponent_BindLua, Update),
+	lunamethod(RenderableComponent_BindLua, Render),
+	lunamethod(RenderableComponent_BindLua, Compose),
 	{ NULL, NULL }
 };
 Luna<RenderableComponent_BindLua>::PropertyType RenderableComponent_BindLua::properties[] = {
@@ -45,6 +52,83 @@ int RenderableComponent_BindLua::Initialize(lua_State* L)
 		return 0;
 	}
 	component->Initialize();
+	return 0;
+}
+
+int RenderableComponent_BindLua::Load(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "Load() component is null!");
+		return 0;
+	}
+	component->Load();
+	return 0;
+}
+
+int RenderableComponent_BindLua::Unload(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "Unload() component is null!");
+		return 0;
+	}
+	component->Unload();
+	return 0;
+}
+
+int RenderableComponent_BindLua::Start(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "Start() component is null!");
+		return 0;
+	}
+	component->Start();
+	return 0;
+}
+
+int RenderableComponent_BindLua::Stop(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "Stop() component is null!");
+		return 0;
+	}
+	component->Stop();
+	return 0;
+}
+
+int RenderableComponent_BindLua::Update(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "Update() component is null!");
+		return 0;
+	}
+	component->Update();
+	return 0;
+}
+
+int RenderableComponent_BindLua::Render(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "Render() component is null!");
+		return 0;
+	}
+	component->Render();
+	return 0;
+}
+
+int RenderableComponent_BindLua::Compose(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "Compose() component is null!");
+		return 0;
+	}
+	component->Compose();
 	return 0;
 }
 
