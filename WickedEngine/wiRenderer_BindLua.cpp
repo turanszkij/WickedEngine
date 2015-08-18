@@ -13,6 +13,8 @@ namespace wiRenderer_BindLua
 		if (!initialized)
 		{
 			initialized = true;
+			wiLua::GetGlobal()->RegisterFunc("GetTransforms", GetTransforms);
+			wiLua::GetGlobal()->RegisterFunc("GetTransform", GetTransform);
 			wiLua::GetGlobal()->RegisterFunc("GetArmatures", GetArmatures);
 			wiLua::GetGlobal()->RegisterFunc("GetArmature", GetArmature);
 			wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
@@ -34,6 +36,49 @@ namespace wiRenderer_BindLua
 		}
 	}
 
+	int GetTransforms(lua_State* L)
+	{
+		stringstream ss("");
+		for (auto& x : wiRenderer::transforms)
+		{
+			ss << x.first << endl;
+		}
+		wiLua::SSetString(L, ss.str());
+		return 1;
+	}
+	int GetTransform(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			string name = wiLua::SGetString(L, 1);
+			Transform* transform = wiRenderer::getTransformByName(name);
+			if (transform != nullptr)
+			{
+				Object* object = dynamic_cast<Object*>(transform);
+				if (object != nullptr)
+				{
+					Luna<Object_BindLua>::push(L, new Object_BindLua(object));
+					return 1;
+				}
+				Armature* armature = dynamic_cast<Armature*>(transform);
+				if (armature != nullptr)
+				{
+					Luna<Armature_BindLua>::push(L, new Armature_BindLua(armature));
+					return 1;
+				}
+
+				Luna<Transform_BindLua>::push(L, new Transform_BindLua(transform));
+				return 1;
+			}
+			else
+			{
+				wiLua::SError(L, "GetTransform(String name) transform not found!");
+				return 0;
+			}
+		}
+		return 0;
+	}
 	int GetArmatures(lua_State* L)
 	{
 		stringstream ss("");
@@ -58,7 +103,7 @@ namespace wiRenderer_BindLua
 			}
 			else
 			{
-				wiLua::SError(L, "GetArmature(String name) object not found!");
+				wiLua::SError(L, "GetArmature(String name) armature not found!");
 				return 0;
 			}
 		}

@@ -8,7 +8,47 @@ namespace wiLoader_BindLua
 	void Bind();
 }
 
-class Object_BindLua
+class Node_BindLua
+{
+public:
+	Node* node;
+
+	static const char className[];
+	static Luna<Node_BindLua>::FunctionType methods[];
+	static Luna<Node_BindLua>::PropertyType properties[];
+
+	Node_BindLua(Node* node = nullptr);
+	Node_BindLua(lua_State *L);
+	~Node_BindLua();
+
+	int GetName(lua_State* L);
+	int SetName(lua_State* L);
+
+	static void Bind();
+};
+
+class Transform_BindLua : public Node_BindLua
+{
+public:
+	Transform* transform;
+
+	static const char className[];
+	static Luna<Transform_BindLua>::FunctionType methods[];
+	static Luna<Transform_BindLua>::PropertyType properties[];
+
+	Transform_BindLua(Transform* transform = nullptr);
+	Transform_BindLua(lua_State *L);
+	~Transform_BindLua();
+
+	int DoTransform(lua_State* L);
+	int AttachTo(lua_State* L);
+	int Detach(lua_State* L);
+	int ApplyTransform(lua_State* L);
+
+	static void Bind();
+};
+
+class Object_BindLua : public Transform_BindLua
 {
 public:
 	Object* object;
@@ -29,7 +69,7 @@ public:
 	static void Bind();
 };
 
-class Armature_BindLua
+class Armature_BindLua : public Transform_BindLua
 {
 public:
 	Armature* armature;

@@ -1568,6 +1568,15 @@ void wiRenderer::SetUpStates()
 }
 
 
+Transform* wiRenderer::getTransformByName(const string& get)
+{
+	auto transf = transforms.find(get);
+	if (transf != transforms.end())
+	{
+		return transf->second;
+	}
+	return nullptr;
+}
 Armature* wiRenderer::getArmatureByName(const string& get)
 {
 	for(Armature* armature : armatures)

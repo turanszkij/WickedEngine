@@ -393,6 +393,7 @@ public:
 	static TextureView GetNoiseTexture(){ return noiseTex; }
 
 
+	static Transform* getTransformByName(const string& name);
 	static Armature* getArmatureByName(const string& get);
 	static int getActionByName(Armature* armature, const string& get);
 	static int getBoneByName(Armature* armature, const string& get);
