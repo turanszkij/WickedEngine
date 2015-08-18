@@ -71,34 +71,34 @@ HRESULT DirectInput::Initialize(HINSTANCE hinstance, HWND hwnd)
 		return E_FAIL;
 	}
 
-	// Initialize the direct input interface for the keyboard.
-	result = m_directInput->CreateDevice(GUID_SysKeyboard, &m_keyboard, NULL);
-	if(FAILED(result))
-	{
-		return E_FAIL;
-	}
+	//// Initialize the direct input interface for the keyboard.
+	//result = m_directInput->CreateDevice(GUID_SysKeyboard, &m_keyboard, NULL);
+	//if(FAILED(result))
+	//{
+	//	return E_FAIL;
+	//}
 
-	// Set the data format.  In this case since it is a keyboard we can use the predefined data format.
-	result = m_keyboard->SetDataFormat(&c_dfDIKeyboard);
-	if(FAILED(result))
-	{
-		return E_FAIL;
-	}
+	//// Set the data format.  In this case since it is a keyboard we can use the predefined data format.
+	//result = m_keyboard->SetDataFormat(&c_dfDIKeyboard);
+	//if(FAILED(result))
+	//{
+	//	return E_FAIL;
+	//}
 
-	// Set the cooperative level of the keyboard to not share with other programs.
-	result = m_keyboard->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
-	if(FAILED(result))
-	{
-		return E_FAIL;
-	}
+	//// Set the cooperative level of the keyboard to not share with other programs.
+	//result = m_keyboard->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
+	//if(FAILED(result))
+	//{
+	//	return E_FAIL;
+	//}
 
-	// Now acquire the keyboard.
-	result = m_keyboard->Acquire();
-	if(FAILED(result))
-	{
-		return E_FAIL;
-	}
-	m_keyboard->GetDeviceState(sizeof(m_keyboardState), (LPVOID)&m_keyboardState);
+	//// Now acquire the keyboard.
+	//result = m_keyboard->Acquire();
+	//if(FAILED(result))
+	//{
+	//	return E_FAIL;
+	//}
+	//m_keyboard->GetDeviceState(sizeof(m_keyboardState), (LPVOID)&m_keyboardState);
 
 	InitJoy(hwnd);
 
@@ -179,22 +179,22 @@ void DirectInput::Shutdown()
 
 bool DirectInput::Frame()
 {
-	if(m_keyboard==nullptr)
-		return false;
-	// Read the keyboard device.
-	HRESULT result = m_keyboard->GetDeviceState(sizeof(m_keyboardState), (LPVOID)&m_keyboardState);
-	if(FAILED(result))
-	{
-		// If the keyboard lost focus or was not acquired then try to get control back.
-		if((result == DIERR_INPUTLOST) || (result == DIERR_NOTACQUIRED))
-		{
-			m_keyboard->Acquire();
-		}
-		else
-		{
-			return false;
-		}
-	}
+	//if(m_keyboard==nullptr)
+	//	return false;
+	//// Read the keyboard device.
+	//HRESULT result = m_keyboard->GetDeviceState(sizeof(m_keyboardState), (LPVOID)&m_keyboardState);
+	//if(FAILED(result))
+	//{
+	//	// If the keyboard lost focus or was not acquired then try to get control back.
+	//	if((result == DIERR_INPUTLOST) || (result == DIERR_NOTACQUIRED))
+	//	{
+	//		m_keyboard->Acquire();
+	//	}
+	//	else
+	//	{
+	//		return false;
+	//	}
+	//}
 	for(short i=0;i<connectedJoys;i++)
 		poll(joystick[i],&joyState[i]);
 		

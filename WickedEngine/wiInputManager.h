@@ -43,10 +43,10 @@ public:
 	typedef map<Input,DWORD,Input::LessComparer> InputCollection;
 	static InputCollection inputs;
 	
-	
+	static bool down(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
 	static bool press(DWORD button);
-	static bool press(DWORD button, short playerIndex, InputType inputType = InputType::DIRECTINPUT_JOYPAD);
+	static bool press(DWORD button, short playerIndex, InputType inputType = InputType::XINPUT_JOYPAD);
 	static bool hold(DWORD button, DWORD frames = 30, bool continuous = false);
-	static bool hold(DWORD button, DWORD frames = 30, short playerIndex = 0, bool continuous = false, InputType inputType = InputType::DIRECTINPUT_JOYPAD);
+	static bool hold(DWORD button, DWORD frames = 30, short playerIndex = 0, bool continuous = false, InputType inputType = InputType::XINPUT_JOYPAD);
 };
 

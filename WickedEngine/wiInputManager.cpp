@@ -6,6 +6,12 @@ XInput* wiInputManager::xinput=nullptr;
 DirectInput* wiInputManager::dinput=nullptr;
 wiInputManager::InputCollection wiInputManager::inputs;
 
+
+#define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
+#define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
+#define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
+
+
 void wiInputManager::addXInput(XInput* input){
 	xinput=input;
 }
@@ -75,32 +81,33 @@ void wiInputManager::Update(){
 	}
 }
 
+bool wiInputManager::down(DWORD button, InputType inputType, short playerindex)
+{
+	switch (inputType)
+	{
+	case KEYBOARD:
+		return KEY_DOWN(static_cast<int>(button)) | KEY_TOGGLE(static_cast<int>(button));
+		break;
+	case XINPUT_JOYPAD:
+		if (xinput != nullptr && xinput->isButtonDown(playerindex, button))
+			return true;
+		break;
+	case DIRECTINPUT_JOYPAD:
+		if (xinput != nullptr && xinput->isButtonDown(playerindex, button)){
+			return true;
+		}
+		break;
+	default:break;
+	}
+	return false;
+}
 bool wiInputManager::press(DWORD button){
 	return press(button,0,InputType::KEYBOARD);
 }
 bool wiInputManager::press(DWORD button, short playerIndex, InputType inputType){
 
-	switch (inputType)
-	{
-	case wiInputManager::DIRECTINPUT_JOYPAD:
-		if(dinput!=nullptr && !dinput->isButtonDown(playerIndex,button)){
-			return false;
-		}
-		break;
-	case wiInputManager::XINPUT_JOYPAD:
-		if(xinput!=nullptr && !xinput->isButtonDown(playerIndex,button)){
-			return false;
-		}
-		break;
-	case wiInputManager::KEYBOARD:
-		if(dinput!=nullptr && !dinput->IsKeyDown(button)){
-			return false;
-		}
-		break;
-	default:
+	if (!down(button, inputType, playerIndex))
 		return false;
-		break;
-	}
 
 	Input input = Input();
 	input.button=button;
@@ -118,27 +125,8 @@ bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous){
 }
 bool wiInputManager::hold(DWORD button, DWORD frames, short playerIndex, bool continuous, InputType inputType){
 
-	switch (inputType)
-	{
-	case wiInputManager::DIRECTINPUT_JOYPAD:
-		if(dinput!=nullptr && !dinput->isButtonDown(playerIndex,button)){
-			return false;
-		}
-		break;
-	case wiInputManager::XINPUT_JOYPAD:
-		if(xinput!=nullptr && !xinput->isButtonDown(playerIndex,button)){
-			return false;
-		}
-		break;
-	case wiInputManager::KEYBOARD:
-		if(dinput!=nullptr && !dinput->IsKeyDown(button)){
-			return false;
-		}
-		break;
-	default:
+	if (!down(button, inputType, playerIndex))
 		return false;
-		break;
-	}
 
 	Input input = Input();
 	input.button=button;
