@@ -42,34 +42,13 @@ void wiInputManager::Update(){
 
 		bool todelete = false;
 
-		switch (type)
+		if (down(button, type, playerIndex))
 		{
-		case wiInputManager::DIRECTINPUT_JOYPAD:
-			if(dinput!=nullptr && dinput->isButtonDown(playerIndex,button)){
-				iter->second++;
-			}
-			else{
-				todelete=true;
-			}
-			break;
-		case wiInputManager::XINPUT_JOYPAD:
-			if(xinput!=nullptr && xinput->isButtonDown(playerIndex,button)){
-				iter->second++;
-			}
-			else{
-				todelete=true;
-			}
-			break;
-		case wiInputManager::KEYBOARD:
-			if(dinput!=nullptr && dinput->IsKeyDown(button)){
-				iter->second++;
-			}
-			else{
-				todelete=true;
-			}
-			break;
-		default:
-			break;
+			iter->second++;
+		}
+		else
+		{
+			todelete = true;
 		}
 
 		if(todelete){
@@ -101,18 +80,15 @@ bool wiInputManager::down(DWORD button, InputType inputType, short playerindex)
 	}
 	return false;
 }
-bool wiInputManager::press(DWORD button){
-	return press(button,0,InputType::KEYBOARD);
-}
-bool wiInputManager::press(DWORD button, short playerIndex, InputType inputType){
+bool wiInputManager::press(DWORD button, InputType inputType, short playerindex){
 
-	if (!down(button, inputType, playerIndex))
+	if (!down(button, inputType, playerindex))
 		return false;
 
 	Input input = Input();
 	input.button=button;
 	input.type=inputType;
-	input.playerIndex=playerIndex;
+	input.playerIndex = playerindex;
 	InputCollection::iterator iter = inputs.find(input);
 	if(iter==inputs.end()){
 		inputs.insert(InputCollection::value_type(input,0));
@@ -120,10 +96,7 @@ bool wiInputManager::press(DWORD button, short playerIndex, InputType inputType)
 	}
 	return false;
 }
-bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous){
-	return hold(button, frames, 0, continuous, InputType::KEYBOARD);
-}
-bool wiInputManager::hold(DWORD button, DWORD frames, short playerIndex, bool continuous, InputType inputType){
+bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType inputType, short playerIndex){
 
 	if (!down(button, inputType, playerIndex))
 		return false;

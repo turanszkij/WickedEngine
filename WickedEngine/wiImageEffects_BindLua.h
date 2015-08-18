@@ -16,6 +16,12 @@ public:
 	wiImageEffects_BindLua(lua_State *L);
 	~wiImageEffects_BindLua();
 
+	int GetPos(lua_State* L);
+	int GetSize(lua_State* L);
+
+	int SetPos(lua_State* L);
+	int SetSize(lua_State* L);
+
 	static void Bind();
 };
 
