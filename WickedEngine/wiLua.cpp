@@ -160,11 +160,8 @@ bool wiLua::RegisterObject(const string& tableName, const string& name, void* ob
 {
 	RegisterLibrary(tableName, nullptr);
 
+	// does this call need to be checked? eg. userData == nullptr?
 	void **userData = static_cast<void**>(lua_newuserdata(m_luaState, sizeof(void*)));
-	if (userData == nullptr || *userData == nullptr)
-	{
-		return false;
-	}
 	*(userData) = object;
 
 	luaL_setmetatable(m_luaState, tableName.c_str());
