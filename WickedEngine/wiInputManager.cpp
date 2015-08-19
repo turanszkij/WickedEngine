@@ -72,7 +72,7 @@ bool wiInputManager::down(DWORD button, InputType inputType, short playerindex)
 			return true;
 		break;
 	case DIRECTINPUT_JOYPAD:
-		if (xinput != nullptr && xinput->isButtonDown(playerindex, button)){
+		if (dinput != nullptr && ( dinput->isButtonDown(playerindex, button) || dinput->getDirections(playerindex)==button )){
 			return true;
 		}
 		break;

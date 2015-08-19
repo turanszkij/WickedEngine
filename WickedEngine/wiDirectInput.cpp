@@ -267,7 +267,7 @@ HRESULT DirectInput::poll(IDirectInputDevice8* joy,DIJOYSTATE2 *js)
 
 bool DirectInput::isButtonDown(short pIndex, unsigned int buttoncode)
 {
-	if(connectedJoys)
+	if(connectedJoys && buttoncode < 128)
 		if(joyState[pIndex].rgbButtons[buttoncode-1]!=0)
 			return true;
 	return false;
