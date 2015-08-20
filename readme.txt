@@ -3,6 +3,16 @@
 ## Created by Turánszki János	##
 ##################################
 
+__________
+Overview: |
+________________________________________________________________________________________________________________________
+
+Wicked Engine is an open-source game engine written in C++ for Windows PC. For list of features, see features.txt.
+Documentation is not yet available, but hopefully it will be someday.
+Demos are available at: https://github.com/turanszkij/WickedEngineDemos
+From now on you can easily set up a game project by using the component templates. (see the demos for examples)
+________________________________________________________________________________________________________________________
+
 ________________
 Requirements:   |
 _____________________________________________________________________
@@ -53,24 +63,12 @@ ________________________________________________________________________________
 	./io_export_wicked_wi_bin.py 			- Blender 2.72 script to export scene;
 ________________________________________________________________________________________________
 
-
-__________
-Overview: |
-________________________________________________________________________________________________________________________
-
-Wicked Engine is an open-source game engine written in C++ for Windows PC. For list of features, see features.txt.
-Documentation is not yet available, but hopefully it will be someday.
-Demos are available at: https://github.com/turanszkij/WickedEngineDemos
-From now on you can easily set up a game project by using the component templates. (see the demos for examples)
-________________________________________________________________________________________________________________________
-
 _______
 TODOs: |
 _________________________________________________________
 
 	Priority:
-		- FIX XINPUT
-			It stopped working when I moved the solution to Visual Studio 2013
+		- Lua script bindings for most engine features
 		- Optimize image rendering
 			The Drawing fuctions are bloated, imageVS is no longer readable by humans, 
 			possible batching optimizations

@@ -19,7 +19,7 @@ private:
 
 	struct CONTROLLER_STATE
 	{
-		//XINPUT_STATE state;
+		XINPUT_STATE state;
 		bool bConnected;
 	};
 

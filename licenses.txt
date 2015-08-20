@@ -1,7 +1,5 @@
 Wicked Engine:
 
-The MIT License (MIT)
-
 Copyright (c) 2015 Wicked Engine
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
