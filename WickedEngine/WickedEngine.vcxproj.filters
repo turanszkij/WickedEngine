@@ -782,6 +782,9 @@
     <ClCompile Include="wiInputManager_BindLua.cpp">
       <Filter>Lua Bindings</Filter>
     </ClCompile>
+    <ClCompile Include="wiRawInput.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1740,6 +1743,9 @@
     </ClInclude>
     <ClInclude Include="wiInputManager_BindLua.h">
       <Filter>Lua Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="wiRawInput.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

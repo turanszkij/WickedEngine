@@ -1,22 +1,31 @@
 #include "wiInputManager.h"
 #include "wiXInput.h"
 #include "wiDirectInput.h"
+#include "wiRawInput.h"
 
-XInput* wiInputManager::xinput=nullptr;
-DirectInput* wiInputManager::dinput=nullptr;
+wiXInput* wiInputManager::xinput = nullptr;
+wiDirectInput* wiInputManager::dinput = nullptr;
+wiRawInput* wiInputManager::rawinput = nullptr;
 wiInputManager::InputCollection wiInputManager::inputs;
 
-
+#ifndef WINSTORE_SUPPORT
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
-#define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
+#else
+#define KEY_DOWN(vk_code) (false)
+#define KEY_TOGGLE(vk_code) (false)
+#endif //WINSTORE_SUPPORT
+#define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
 
-void wiInputManager::addXInput(XInput* input){
+void wiInputManager::addXInput(wiXInput* input){
 	xinput=input;
 }
-void wiInputManager::addDirectInput(DirectInput* input){
-	dinput=input;
+void wiInputManager::addDirectInput(wiDirectInput* input){
+	dinput = input;
+}
+void wiInputManager::addRawInput(wiRawInput* input){
+	rawinput = input;
 }
 
 void wiInputManager::CleanUp(){
@@ -33,6 +42,9 @@ void wiInputManager::Update(){
 	}
 	if(xinput){
 		xinput->UpdateControllerState();
+	}
+	if (rawinput){
+		//rawinput->RetrieveBufferedData();
 	}
 
 	for(InputCollection::iterator iter=inputs.begin();iter!=inputs.end();){

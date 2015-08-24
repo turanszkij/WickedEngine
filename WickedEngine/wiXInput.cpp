@@ -2,7 +2,7 @@
 #include "wiXInput.h"
 
 
-XInput::XInput(void)
+wiXInput::wiXInput()
 {
 	g_bDeadZoneOn = true;
 	for(int i=0;i<MAX_CONTROLLERS;++i){
@@ -11,7 +11,7 @@ XInput::XInput(void)
 	}
 }
 
-HRESULT XInput::UpdateControllerState()
+HRESULT wiXInput::UpdateControllerState()
 {
     DWORD dwResult = 0;
     for( DWORD i = 0; i < MAX_CONTROLLERS; i++ )
@@ -29,24 +29,23 @@ HRESULT XInput::UpdateControllerState()
     return S_OK;
 }
 
-DWORD XInput::GetButtons(SHORT newPlayerIndex)
+DWORD wiXInput::GetButtons(SHORT newPlayerIndex)
 {
 	if(controllers[newPlayerIndex].bConnected)
 		return controllers[newPlayerIndex].state.Gamepad.wButtons;
 	return 0;
 }
-DWORD XInput::GetDirections(short newPlayerIndex){
+DWORD wiXInput::GetDirections(short newPlayerIndex){
 	if(controllers[newPlayerIndex].bConnected)
 		return controllers[newPlayerIndex].state.Gamepad.wButtons;
 	return 0;
 }
-bool XInput::isButtonDown(short newPlayerIndex,DWORD checkforButton){
+bool wiXInput::isButtonDown(short newPlayerIndex, DWORD checkforButton){
 	if(controllers[newPlayerIndex].bConnected)
 		return (controllers[newPlayerIndex].state.Gamepad.wButtons & checkforButton) != 0;
 	return false;
 }
 
-void XInput::CleanUp()
+void wiXInput::CleanUp()
 {
-	delete(this);
 }

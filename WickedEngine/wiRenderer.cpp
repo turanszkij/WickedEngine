@@ -182,8 +182,8 @@ HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window)
 
 #ifdef WINSTORE_SUPPORT
 	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
-	sd.Width = SCREENWIDTH = window->Bounds.Width;
-	sd.Height = SCREENHEIGHT = window->Bounds.Height;
+	sd.Width = SCREENWIDTH = (int)window->Bounds.Width;
+	sd.Height = SCREENHEIGHT = (int)window->Bounds.Height;
 	sd.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // This is the most common swap chain format.
 	sd.Stereo = false;
 	sd.SampleDesc.Count = 1; // Don't use multi-sampling.

@@ -103,7 +103,7 @@ public:
 #ifndef WINSTORE_SUPPORT
 	static HRESULT InitDevice(HWND window, int screenW, int screenH, bool windowed);
 #else
-	static HRESULT InitDevice(Windows::UI::Core::CoreWindow^ window, bool requestMultiThreading);
+	static HRESULT InitDevice(Windows::UI::Core::CoreWindow^ window);
 #endif
 	static void DestroyDevice();
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);

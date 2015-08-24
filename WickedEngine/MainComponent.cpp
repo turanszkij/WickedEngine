@@ -117,5 +117,18 @@ bool MainComponent::setWindow(HWND hWnd, HINSTANCE hInst)
 
 	return true;
 }
+#else
+bool MainComponent::setWindow(Windows::UI::Core::CoreWindow^ window)
+{
+	screenW = (int)window->Bounds.Width;
+	screenH = (int)window->Bounds.Height;
+	if (FAILED(wiRenderer::InitDevice(window)))
+	{
+		wiHelper::messageBox("Could not initialize D3D device!", "Fatal Error!");
+		return false;
+	}
+
+	return true;
+}
 #endif
 

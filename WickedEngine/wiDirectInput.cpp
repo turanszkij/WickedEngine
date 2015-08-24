@@ -119,7 +119,7 @@ LCleanup:
 	return bIsXinputDevice;
 }
 
-DirectInput::DirectInput(HINSTANCE hinstance, HWND hwnd)
+wiDirectInput::wiDirectInput(HINSTANCE hinstance, HWND hwnd)
 {
 	for(int i=0;i<256;++i){
 		m_keyboardState[i]=0;
@@ -131,7 +131,7 @@ DirectInput::DirectInput(HINSTANCE hinstance, HWND hwnd)
 IDirectInputDevice8* m_keyboard = 0;
 IDirectInputDevice8* joystick[2] = {0,0};
 IDirectInput8*  m_directInput = 0;
-	short DirectInput::connectedJoys=0;
+short wiDirectInput::connectedJoys = 0;
 
 BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context)
 {
@@ -142,7 +142,7 @@ BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context)
 		return DIENUM_CONTINUE;
 
     // Obtain an interface to the enumerated joystick.
-    hr = m_directInput->CreateDevice(instance->guidInstance, &joystick[DirectInput::connectedJoys], NULL);
+    hr = m_directInput->CreateDevice(instance->guidInstance, &joystick[wiDirectInput::connectedJoys], NULL);
 
     // If it failed, then we can't use this joystick. (Maybe the user unplugged
     // it while we were in the middle of enumerating it.)
@@ -152,8 +152,8 @@ BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context)
 
     // Stop enumeration. Note: we're just taking the first joystick we get. You
     // could store all the enumerated joysticks and let the user pick.
-	DirectInput::connectedJoys++;
-	if(DirectInput::connectedJoys<2)
+	wiDirectInput::connectedJoys++;
+	if (wiDirectInput::connectedJoys<2)
 		return DIENUM_CONTINUE;
 	else 
 		return DIENUM_STOP;
@@ -171,7 +171,7 @@ BOOL CALLBACK enumAxesCallback(const DIDEVICEOBJECTINSTANCE* instance, VOID* con
 	propRange.lMax              = +1000; 
     
 	// Set the range for the axis
-	for(short i=0;i<DirectInput::connectedJoys;i++)
+	for (short i = 0; i<wiDirectInput::connectedJoys; i++)
 		if (FAILED(joystick[i]->SetProperty(DIPROP_RANGE, &propRange.diph))) {
 			return DIENUM_STOP;
 		}
@@ -180,7 +180,7 @@ BOOL CALLBACK enumAxesCallback(const DIDEVICEOBJECTINSTANCE* instance, VOID* con
 }
 
 
-HRESULT DirectInput::Initialize(HINSTANCE hinstance, HWND hwnd)
+HRESULT wiDirectInput::Initialize(HINSTANCE hinstance, HWND hwnd)
 {
 	HRESULT result;
 
@@ -225,7 +225,7 @@ HRESULT DirectInput::Initialize(HINSTANCE hinstance, HWND hwnd)
 
 	return S_OK;
 }
-HRESULT DirectInput::InitJoy(HWND hwnd){
+HRESULT wiDirectInput::InitJoy(HWND hwnd){
 	HRESULT result;
 	// Look for the first simple joystick we can find.
 	if (FAILED(result = m_directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, ::enumCallback, NULL, DIEDFL_ATTACHEDONLY))) {
@@ -269,7 +269,7 @@ HRESULT DirectInput::InitJoy(HWND hwnd){
 	return S_OK;
 }
 
-void DirectInput::Shutdown()
+void wiDirectInput::Shutdown()
 {
 	// Release the keyboard.
 	if(m_keyboard)
@@ -298,7 +298,7 @@ void DirectInput::Shutdown()
 	return;
 }
 
-bool DirectInput::Frame()
+bool wiDirectInput::Frame()
 {
 	//if(m_keyboard==nullptr)
 	//	return false;
@@ -322,7 +322,7 @@ bool DirectInput::Frame()
 	return true;
 }
 
-bool DirectInput::IsKeyDown(INT code)
+bool wiDirectInput::IsKeyDown(INT code)
 {
 	if(m_keyboardState[code] & 0x80)
 	{
@@ -331,7 +331,7 @@ bool DirectInput::IsKeyDown(INT code)
 
 	return false;
 }
-int DirectInput::GetPressedKeys()
+int wiDirectInput::GetPressedKeys()
 {
 	int ret=0;
 	for(int i=0;i<256;i++)
@@ -345,7 +345,7 @@ int DirectInput::GetPressedKeys()
 
 
 
-HRESULT DirectInput::poll(IDirectInputDevice8* joy,DIJOYSTATE2 *js)
+HRESULT wiDirectInput::poll(IDirectInputDevice8* joy, DIJOYSTATE2 *js)
 {
     HRESULT     hr;
 
@@ -386,14 +386,14 @@ HRESULT DirectInput::poll(IDirectInputDevice8* joy,DIJOYSTATE2 *js)
     return S_OK;
 }
 
-bool DirectInput::isButtonDown(short pIndex, unsigned int buttoncode)
+bool wiDirectInput::isButtonDown(short pIndex, unsigned int buttoncode)
 {
 	if(connectedJoys && buttoncode < 128)
 		if(joyState[pIndex].rgbButtons[buttoncode-1]!=0)
 			return true;
 	return false;
 }
-DWORD DirectInput::getDirections(short pIndex)
+DWORD wiDirectInput::getDirections(short pIndex)
 {
 	DWORD buttons=0;
 	if(connectedJoys)

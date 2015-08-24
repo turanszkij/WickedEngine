@@ -1,11 +1,8 @@
 #ifndef WICKED_ENGINE_VERSION
-#define WICKED_ENGINE_VERSION "1.01"
+#define WICKED_ENGINE_VERSION "0.9"
 
 #include "CommonInclude.h"
 
-#ifndef WINSTORE_SUPPORT
-#include "mysql/mysql.h"
-#endif
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiBackLog.h"
@@ -24,6 +21,7 @@
 #include "wiRenderer.h"
 #include "wiDirectInput.h"
 #include "wiXInput.h"
+#include "wiRawInput.h"
 #include "wiTaskThread.h"
 #include "wiMath.h"
 #include "wiLensFlare.h"
@@ -59,6 +57,9 @@
 #include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
 
+#ifndef WINSTORE_SUPPORT
+#include "mysql/mysql.h"
+#endif
 
 
 #ifndef WINSTORE_SUPPORT

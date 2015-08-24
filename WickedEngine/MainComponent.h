@@ -43,6 +43,9 @@ public:
 	HWND window;
 	HINSTANCE instance;
 	bool setWindow(HWND hWnd, HINSTANCE hInst);
+#else
+	Windows::UI::Core::CoreWindow^ window;
+	bool setWindow(Windows::UI::Core::CoreWindow^ window);
 #endif
 
 };

@@ -176,41 +176,111 @@
     <ClCompile Include="DeferredRenderableComponent_BindLua.cpp" />
     <ClCompile Include="ForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="LoadingScreenComponent_BindLua.cpp" />
-    <ClCompile Include="LUA\lapi.c" />
-    <ClCompile Include="LUA\lauxlib.c" />
-    <ClCompile Include="LUA\lbaselib.c" />
-    <ClCompile Include="LUA\lbitlib.c" />
-    <ClCompile Include="LUA\lcode.c" />
-    <ClCompile Include="LUA\lcorolib.c" />
-    <ClCompile Include="LUA\lctype.c" />
-    <ClCompile Include="LUA\ldblib.c" />
-    <ClCompile Include="LUA\ldebug.c" />
-    <ClCompile Include="LUA\ldo.c" />
-    <ClCompile Include="LUA\ldump.c" />
-    <ClCompile Include="LUA\lfunc.c" />
-    <ClCompile Include="LUA\lgc.c" />
-    <ClCompile Include="LUA\linit.c" />
-    <ClCompile Include="LUA\liolib.c" />
-    <ClCompile Include="LUA\llex.c" />
-    <ClCompile Include="LUA\lmathlib.c" />
-    <ClCompile Include="LUA\lmem.c" />
-    <ClCompile Include="LUA\loadlib.c" />
-    <ClCompile Include="LUA\lobject.c" />
-    <ClCompile Include="LUA\lopcodes.c" />
-    <ClCompile Include="LUA\loslib.c" />
-    <ClCompile Include="LUA\lparser.c" />
-    <ClCompile Include="LUA\lstate.c" />
-    <ClCompile Include="LUA\lstring.c" />
-    <ClCompile Include="LUA\lstrlib.c" />
-    <ClCompile Include="LUA\ltable.c" />
-    <ClCompile Include="LUA\ltablib.c" />
-    <ClCompile Include="LUA\ltm.c" />
-    <ClCompile Include="LUA\lua.c" />
-    <ClCompile Include="LUA\luac.c" />
-    <ClCompile Include="LUA\lundump.c" />
-    <ClCompile Include="LUA\lutf8lib.c" />
-    <ClCompile Include="LUA\lvm.c" />
-    <ClCompile Include="LUA\lzio.c" />
+    <ClCompile Include="LUA\lapi.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lauxlib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lbaselib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lbitlib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lcode.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lcorolib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lctype.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\ldblib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\ldebug.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\ldo.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\ldump.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lfunc.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lgc.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\linit.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\liolib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\llex.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lmathlib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lmem.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\loadlib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lobject.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lopcodes.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\loslib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lparser.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lstate.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lstring.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lstrlib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\ltable.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\ltablib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\ltm.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lua.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\luac.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lundump.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lutf8lib.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lvm.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="LUA\lzio.c">
+      <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">false</CompileAsWinRT>
+    </ClCompile>
     <ClCompile Include="MainComponent.cpp" />
     <ClCompile Include="LoadingScreenComponent.cpp" />
     <ClCompile Include="MainComponent_BindLua.cpp" />
@@ -392,6 +462,7 @@
     <ClCompile Include="wiLua.cpp" />
     <ClCompile Include="wiNetwork.cpp" />
     <ClCompile Include="Renderable3DComponent.cpp" />
+    <ClCompile Include="wiRawInput.cpp" />
     <ClCompile Include="wiRenderer_BindLua.cpp" />
     <ClCompile Include="wiResourceManager_BindLua.cpp" />
     <ClCompile Include="wiSound_BindLua.cpp" />
@@ -434,6 +505,7 @@
     <ClInclude Include="wiLoader_BindLua.h" />
     <ClInclude Include="wiLua_Globals.h" />
     <ClInclude Include="wiLuna.h" />
+    <ClInclude Include="wiRawInput.h" />
     <ClInclude Include="wiRenderer_BindLua.h" />
     <ClInclude Include="LUA\lapi.h" />
     <ClInclude Include="LUA\lauxlib.h" />

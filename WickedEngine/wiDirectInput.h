@@ -1,11 +1,5 @@
 #pragma once
 
-
-#ifndef WINSTORE_SUPPORT
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
-#pragma comment(lib,"dinput8.lib")
-
 #define POV_IDLE 4294967292
 #define POV_UP 1
 #define POV_UPRIGHT 4501
@@ -15,17 +9,23 @@
 #define POV_DOWNLEFT 22501
 #define POV_LEFT 27001
 #define POV_LEFTUP 31501
+
+#ifndef WINSTORE_SUPPORT
+#define DIRECTINPUT_VERSION 0x0800
+#include <dinput.h>
+#pragma comment(lib,"dinput8.lib")
+
 #else
 #include <Windows.h>
 #endif
 
-class DirectInput
+class wiDirectInput
 {
 #ifndef WINSTORE_SUPPORT
 	friend BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context);
 	friend BOOL CALLBACK enumAxesCallback(const DIDEVICEOBJECTINSTANCE* instance, VOID* context);
 public:
-	DirectInput(HINSTANCE, HWND);
+	wiDirectInput(HINSTANCE, HWND);
 
 	void Shutdown();
 	bool Frame();
@@ -52,7 +52,7 @@ private:
 
 #else
 public:
-	DirectInput(HINSTANCE hinst, HWND hwnd){}
+	wiDirectInput(HINSTANCE hinst, HWND hwnd){}
 	void Shutdown(){}
 	bool Frame(){ return false; }
 	bool IsKeyDown(INT){ return false; }

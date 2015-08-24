@@ -1,17 +1,20 @@
 #pragma once
 #include "CommonInclude.h"
 
-class XInput;
-class DirectInput;
+class wiXInput;
+class wiDirectInput;
+class wiRawInput;
 
 class wiInputManager
 {
 public:
-	static XInput* xinput;
-	static DirectInput* dinput;
+	static wiXInput* xinput;
+	static wiDirectInput* dinput;
+	static wiRawInput* rawinput;
 
-	static void addXInput(XInput* input);
-	static void addDirectInput(DirectInput* input);
+	static void addXInput(wiXInput* input);
+	static void addDirectInput(wiDirectInput* input);
+	static void addRawInput(wiRawInput* input);
 
 	static void Update();
 	static void CleanUp();
@@ -20,6 +23,8 @@ public:
 		DIRECTINPUT_JOYPAD,
 		XINPUT_JOYPAD,
 		KEYBOARD,
+		RAWINPUT_JOYPAD,
+		INPUTTYPE_COUNT
 	};
 	struct Input{
 		InputType type;
