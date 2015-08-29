@@ -785,6 +785,12 @@
     <ClCompile Include="wiRawInput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Matrix_BindLua.cpp">
+      <Filter>Lua Bindings</Filter>
+    </ClCompile>
+    <ClCompile Include="Vector_BindLua.cpp">
+      <Filter>Lua Bindings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1746,6 +1752,12 @@
     </ClInclude>
     <ClInclude Include="wiRawInput.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix_BindLua.h">
+      <Filter>Lua Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="Vector_BindLua.h">
+      <Filter>Lua Bindings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
