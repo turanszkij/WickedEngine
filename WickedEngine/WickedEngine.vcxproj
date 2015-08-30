@@ -2251,6 +2251,7 @@
   <ItemGroup>
     <Image Include="fonts\basic.dds">
       <DeploymentContent>true</DeploymentContent>
+      <FileType>Resx</FileType>
     </Image>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

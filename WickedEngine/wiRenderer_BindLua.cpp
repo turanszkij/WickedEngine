@@ -3,6 +3,7 @@
 #include "wiLoader.h"
 #include "wiHelper.h"
 #include "wiLoader_BindLua.h"
+#include "Matrix_BindLua.h"
 
 namespace wiRenderer_BindLua
 {
@@ -224,15 +225,28 @@ namespace wiRenderer_BindLua
 			string dir = wiLua::SGetString(L, 1);
 			string name = wiLua::SGetString(L, 2);
 			string identifier = "common";
+			XMMATRIX transform = XMMatrixIdentity();
 			if (argc > 2)
 			{
 				identifier = wiLua::SGetString(L, 3);
+				if (argc > 3)
+				{
+					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 4);
+					if (matrix != nullptr)
+					{
+						transform = matrix->matrix;
+					}
+					else
+					{
+						wiLua::SError(L, "LoadModel(string directory, string name, opt string identifier, opt Matrix transform) argument is not a matrix!");
+					}
+				}
 			}
 			wiRenderer::LoadModel(dir, name, XMMatrixIdentity(), identifier, wiRenderer::physicsEngine);
 		}
 		else
 		{
-			wiLua::SError(L, "LoadModel(string directory, string name, opt string identifier) not enough arguments!");
+			wiLua::SError(L, "LoadModel(string directory, string name, opt string identifier, opt Matrix transform) not enough arguments!");
 		}
 		return 0;
 	}

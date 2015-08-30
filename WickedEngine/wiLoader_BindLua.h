@@ -48,6 +48,7 @@ public:
 	int Rotate(lua_State* L);
 	int Translate(lua_State* L);
 	int MatrixTransform(lua_State* L);
+	int GetMatrix(lua_State* L);
 
 	static void Bind();
 };

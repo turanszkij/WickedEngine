@@ -96,6 +96,7 @@ Luna<Transform_BindLua>::FunctionType Transform_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, Rotate),
 	lunamethod(Transform_BindLua, Translate),
 	lunamethod(Transform_BindLua, MatrixTransform),
+	lunamethod(Transform_BindLua, GetMatrix),
 	{ NULL, NULL }
 };
 Luna<Transform_BindLua>::PropertyType Transform_BindLua::properties[] = {
@@ -293,6 +294,11 @@ int Transform_BindLua::MatrixTransform(lua_State* L)
 	}
 	return 0;
 }
+int Transform_BindLua::GetMatrix(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(transform->getTransform()));
+	return 1;
+}
 
 void Transform_BindLua::Bind()
 {
@@ -387,6 +393,7 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, Rotate),
 	lunamethod(Transform_BindLua, Translate),
 	lunamethod(Transform_BindLua, MatrixTransform),
+	lunamethod(Transform_BindLua, GetMatrix),
 
 	lunamethod(Object_BindLua, SetTransparency),
 	lunamethod(Object_BindLua, GetTransparency),
@@ -498,6 +505,7 @@ Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, Rotate),
 	lunamethod(Transform_BindLua, Translate),
 	lunamethod(Transform_BindLua, MatrixTransform),
+	lunamethod(Transform_BindLua, GetMatrix),
 
 	lunamethod(Armature_BindLua, GetActions),
 	lunamethod(Armature_BindLua, GetBones),
