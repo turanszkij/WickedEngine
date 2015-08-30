@@ -16,6 +16,8 @@ public:
 	Matrix_BindLua(lua_State* L);
 	~Matrix_BindLua();
 
+	int GetRow(lua_State* L);
+
 	static int Translation(lua_State* L);
 	static int Rotation(lua_State* L);
 	static int RotationX(lua_State* L);

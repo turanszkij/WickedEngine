@@ -7,6 +7,7 @@ using namespace DirectX;
 const char Matrix_BindLua::className[] = "Matrix";
 
 Luna<Matrix_BindLua>::FunctionType Matrix_BindLua::methods[] = {
+	lunamethod(Matrix_BindLua, GetRow),
 	{ NULL, NULL }
 };
 Luna<Matrix_BindLua>::PropertyType Matrix_BindLua::properties[] = {
@@ -48,10 +49,25 @@ Matrix_BindLua::Matrix_BindLua(lua_State* L)
 
 }
 
-
 Matrix_BindLua::~Matrix_BindLua()
 {
 }
+
+int Matrix_BindLua::GetRow(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	int row = 0;
+	if (argc > 1)
+	{
+		row = wiLua::SGetInt(L, 2);
+		if (row < 0 || row > 3)
+			row = 0;
+	}
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(matrix.r[row]));
+	return 1;
+}
+
+
 
 int Matrix_BindLua::Translation(lua_State* L)
 {

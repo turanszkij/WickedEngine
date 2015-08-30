@@ -27,6 +27,14 @@ public:
 	int SetZ(lua_State* L);
 	int SetW(lua_State* L);
 
+	int Transform(lua_State* L);
+
+	static int Dot(lua_State* L);
+	static int Cross(lua_State* L);
+	static int Multiply(lua_State* L);
+	static int Add(lua_State* L);
+	static int Subtract(lua_State* L);
+
 	static void Bind();
 
 	ALIGN_16

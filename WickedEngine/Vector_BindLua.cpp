@@ -1,4 +1,5 @@
 #include "Vector_BindLua.h"
+#include "Matrix_BindLua.h"
 
 using namespace DirectX;
 
@@ -14,6 +15,7 @@ Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 	lunamethod(Vector_BindLua, SetY),
 	lunamethod(Vector_BindLua, SetZ),
 	lunamethod(Vector_BindLua, SetW),
+	lunamethod(Vector_BindLua, Transform),
 	{ NULL, NULL }
 };
 Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -119,6 +121,105 @@ int Vector_BindLua::SetW(lua_State* L)
 	return 0;
 }
 
+int Vector_BindLua::Transform(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
+		if (mat)
+		{
+			vector = XMVector4Transform(vector, mat->matrix);
+		}
+		else
+			wiLua::SError(L, "Transform(Matrix matrix) argument is not a Matrix!");
+	}
+	else
+		wiLua::SError(L, "Transform(Matrix matrix) not enough arguments!");
+	return 0;
+}
+
+
+int Vector_BindLua::Dot(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v1 && v2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Dot(v1->vector,v2->vector)));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "VectorDot(Vector v1,v2) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::Cross(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v1 && v2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Cross(v1->vector, v2->vector)));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "VectorCross(Vector v1,v2) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::Multiply(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v1 && v2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorMultiply(v1->vector, v2->vector)));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "VectorMultiply(Vector v1,v2) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::Add(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v1 && v2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorAdd(v1->vector, v2->vector)));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "VectorAdd(Vector v1,v2) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::Subtract(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v1 && v2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSubtract(v1->vector, v2->vector)));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "VectorSubtract(Vector v1,v2) not enough arguments!");
+	return 0;
+}
 
 void Vector_BindLua::Bind()
 {
@@ -127,6 +228,11 @@ void Vector_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Vector_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		wiLua::GetGlobal()->RegisterFunc("VectorAdd", Add);
+		wiLua::GetGlobal()->RegisterFunc("VectorSubtract", Subtract);
+		wiLua::GetGlobal()->RegisterFunc("VectorMultiply", Multiply);
+		wiLua::GetGlobal()->RegisterFunc("VectorDot", Dot);
+		wiLua::GetGlobal()->RegisterFunc("VectorCross", Cross);
 	}
 }
 
