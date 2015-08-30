@@ -67,6 +67,7 @@ public:
 
 	//get string from lua on stack position
 	static string SGetString(lua_State* L, int stackpos);
+	static bool SIsString(lua_State* L, int stackpos);
 	//get int from lua on stack position
 	static int SGetInt(lua_State* L, int stackpos);
 	//get long from lua on stack position

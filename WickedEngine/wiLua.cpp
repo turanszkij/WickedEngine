@@ -234,6 +234,10 @@ string wiLua::SGetString(lua_State* L, int stackpos)
 		return str;
 	return string("");
 }
+bool wiLua::SIsString(lua_State* L, int stackpos)
+{
+	return lua_isstring(L, stackpos) != 0;
+}
 int wiLua::SGetInt(lua_State* L, int stackpos)
 {
 	return static_cast<int>(SGetLongLong(L,stackpos));

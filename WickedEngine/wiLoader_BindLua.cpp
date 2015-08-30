@@ -1,4 +1,6 @@
 #include "wiLoader_BindLua.h"
+#include "Vector_BindLua.h"
+#include "Matrix_BindLua.h"
 
 namespace wiLoader_BindLua
 {
@@ -28,7 +30,6 @@ Luna<Node_BindLua>::PropertyType Node_BindLua::properties[] = {
 
 Node_BindLua::Node_BindLua(Node* node)
 {
-	node = node;
 	this->node = node;
 }
 Node_BindLua::Node_BindLua(lua_State *L)
@@ -86,10 +87,14 @@ Luna<Transform_BindLua>::FunctionType Transform_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, GetName),
 	lunamethod(Transform_BindLua, SetName),
 
-	lunamethod(Transform_BindLua, DoTransform),
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),
+	lunamethod(Transform_BindLua, DetachChild),
 	lunamethod(Transform_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, Scale),
+	lunamethod(Transform_BindLua, Rotate),
+	lunamethod(Transform_BindLua, Translate),
+	lunamethod(Transform_BindLua, MatrixTransform),
 	{ NULL, NULL }
 };
 Luna<Transform_BindLua>::PropertyType Transform_BindLua::properties[] = {
@@ -103,26 +108,188 @@ Transform_BindLua::Transform_BindLua(Transform* transform)
 }
 Transform_BindLua::Transform_BindLua(lua_State *L)
 {
+	Node_BindLua();
 	transform = new Transform();
 }
 Transform_BindLua::~Transform_BindLua()
 {
 }
 
-int Transform_BindLua::DoTransform(lua_State* L)
-{
-	return 0;
-}
 int Transform_BindLua::AttachTo(lua_State* L)
 {
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Transform_BindLua* parent = Luna<Transform_BindLua>::lightcheck(L, 2);
+		if (parent == nullptr)
+			parent = Luna<Object_BindLua>::lightcheck(L, 2);
+		if (parent == nullptr)
+			parent = Luna<Armature_BindLua>::lightcheck(L, 2);
+		if (parent != nullptr)
+		{
+			int s = 1, r = 1, t = 1;
+			if (argc > 2)
+			{
+				t = wiLua::SGetInt(L, 3);
+				if (argc > 3)
+				{
+					r = wiLua::SGetInt(L, 4);
+					if (argc > 4)
+					{
+						s = wiLua::SGetInt(L, 5);
+					}
+				}
+			}
+			transform->attachTo(parent->transform,t,r,s);
+		}
+		else
+		{
+			wiLua::SError(L, "AttachTo(Transform parent, opt boolean translation,rotation,scale) argument is not a Transform!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "AttachTo(Transform parent, opt boolean translation,rotation,scale) not enough arguments!");
+	}
 	return 0;
 }
 int Transform_BindLua::Detach(lua_State* L)
 {
+	int argc = wiLua::SGetArgCount(L);
+	int eraseFromParent = 1;
+	if (argc > 1)
+	{
+		eraseFromParent = wiLua::SGetInt(L, 2);
+	}
+	transform->detach(eraseFromParent);
+	return 0;
+}
+int Transform_BindLua::DetachChild(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Transform_BindLua* child = Luna<Transform_BindLua>::lightcheck(L, 2);
+		if (child == nullptr)
+			child = Luna<Object_BindLua>::lightcheck(L, 2);
+		if (child == nullptr)
+			child = Luna<Armature_BindLua>::lightcheck(L, 2);
+		if (child != nullptr)
+		{
+			transform->detachChild(child->transform);
+			return 0;
+		}
+	}
+	transform->detachChild();
 	return 0;
 }
 int Transform_BindLua::ApplyTransform(lua_State* L)
 {
+	int argc = wiLua::SGetArgCount(L);
+	int s = 1, r = 1, t = 1;
+	if (argc > 1)
+	{
+		t = wiLua::SGetInt(L, 2);
+		if (argc > 2)
+		{
+			r = wiLua::SGetInt(L, 3);
+			if (argc > 3)
+			{
+				s = wiLua::SGetInt(L, 4);
+			}
+		}
+	}
+	transform->applyTransform(t, r, s);
+	return 0;
+}
+int Transform_BindLua::Scale(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v != nullptr)
+		{
+			XMFLOAT3 scale;
+			XMStoreFloat3(&scale, v->vector);
+			transform->transform(XMFLOAT3(0, 0, 0), XMFLOAT4(0, 0, 0, 1), scale);
+		}
+		else
+		{
+			wiLua::SError(L, "Scale(Vector vector) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "Scale(Vector vector) not enough arguments!");
+	}
+	return 0;
+}
+int Transform_BindLua::Rotate(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v != nullptr)
+		{
+			XMFLOAT4 quaternion;
+			XMStoreFloat4(&quaternion, XMQuaternionRotationRollPitchYawFromVector(v->vector));
+			transform->transform(XMFLOAT3(0, 0, 0), quaternion);
+		}
+		else
+		{
+			wiLua::SError(L, "Rotate(Vector vectorRollPitchYaw) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "Rotate(Vector vectorRollPitchYaw) not enough arguments!");
+	}
+	return 0;
+}
+int Transform_BindLua::Translate(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v != nullptr)
+		{
+			XMFLOAT3 translate;
+			XMStoreFloat3(&translate, v->vector);
+			transform->transform(translate);
+		}
+		else
+		{
+			wiLua::SError(L, "Translate(Vector vector) argument is not a vector!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "Translate(Vector vector) not enough arguments!");
+	}
+	return 0;
+}
+int Transform_BindLua::MatrixTransform(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 2);
+		if (m != nullptr)
+		{
+			transform->transform(m->matrix);
+		}
+		else
+		{
+			wiLua::SError(L, "MatrixTransform(Matrix matrix) argument is not a matrix!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "MatrixTransform(Matrix matrix) not enough arguments!");
+	}
 	return 0;
 }
 
@@ -145,10 +312,14 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Object_BindLua, GetName),
 	lunamethod(Object_BindLua, SetName),
 
-	lunamethod(Object_BindLua, DoTransform),
-	lunamethod(Object_BindLua, AttachTo),
-	lunamethod(Object_BindLua, Detach),
-	lunamethod(Object_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, AttachTo),
+	lunamethod(Transform_BindLua, Detach),
+	lunamethod(Transform_BindLua, DetachChild),
+	lunamethod(Transform_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, Scale),
+	lunamethod(Transform_BindLua, Rotate),
+	lunamethod(Transform_BindLua, Translate),
+	lunamethod(Transform_BindLua, MatrixTransform),
 
 	lunamethod(Object_BindLua, SetTransparency),
 	lunamethod(Object_BindLua, GetTransparency),
@@ -163,11 +334,12 @@ Luna<Object_BindLua>::PropertyType Object_BindLua::properties[] = {
 Object_BindLua::Object_BindLua(Object* object)
 {
 	node = object;
+	transform = object;
 	this->object = object;
 }
 Object_BindLua::Object_BindLua(lua_State *L)
 {
-	node = nullptr;
+	Transform_BindLua();
 	object = nullptr;
 }
 Object_BindLua::~Object_BindLua()
@@ -250,10 +422,14 @@ Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Armature_BindLua, GetName),
 	lunamethod(Armature_BindLua, SetName),
 
-	lunamethod(Armature_BindLua, DoTransform),
-	lunamethod(Armature_BindLua, AttachTo),
-	lunamethod(Armature_BindLua, Detach),
-	lunamethod(Armature_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, AttachTo),
+	lunamethod(Transform_BindLua, Detach),
+	lunamethod(Transform_BindLua, DetachChild),
+	lunamethod(Transform_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, Scale),
+	lunamethod(Transform_BindLua, Rotate),
+	lunamethod(Transform_BindLua, Translate),
+	lunamethod(Transform_BindLua, MatrixTransform),
 
 	lunamethod(Armature_BindLua, GetActions),
 	lunamethod(Armature_BindLua, GetBones),
@@ -267,11 +443,12 @@ Luna<Armature_BindLua>::PropertyType Armature_BindLua::properties[] = {
 Armature_BindLua::Armature_BindLua(Armature* armature)
 {
 	node = armature;
+	transform = armature;
 	this->armature = armature;
 }
 Armature_BindLua::Armature_BindLua(lua_State *L)
 {
-	node = nullptr;
+	Transform_BindLua();
 	armature = nullptr;
 }
 Armature_BindLua::~Armature_BindLua()

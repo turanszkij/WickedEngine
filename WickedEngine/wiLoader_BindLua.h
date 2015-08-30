@@ -40,10 +40,14 @@ public:
 	Transform_BindLua(lua_State *L);
 	~Transform_BindLua();
 
-	int DoTransform(lua_State* L);
 	int AttachTo(lua_State* L);
 	int Detach(lua_State* L);
+	int DetachChild(lua_State* L);
 	int ApplyTransform(lua_State* L);
+	int Scale(lua_State* L);
+	int Rotate(lua_State* L);
+	int Translate(lua_State* L);
+	int MatrixTransform(lua_State* L);
 
 	static void Bind();
 };

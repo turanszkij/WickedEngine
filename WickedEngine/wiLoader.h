@@ -441,7 +441,7 @@ struct Transform : public Node, public Load_Debug_Properties
 	//detach from parent
 	void detach(int erasefromParent = 1);
 	void applyTransform(int t=1, int r=1, int s=1);
-	void transform(const XMFLOAT3& t = XMFLOAT3(0,0,0), const XMFLOAT4& r = XMFLOAT4(0,0,0,0), const XMFLOAT3& s = XMFLOAT3(0,0,0));
+	void transform(const XMFLOAT3& t = XMFLOAT3(0,0,0), const XMFLOAT4& r = XMFLOAT4(0,0,0,1), const XMFLOAT3& s = XMFLOAT3(1,1,1));
 	void transform(const XMMATRIX& m = XMMatrixIdentity());
 };
 struct Cullable

@@ -6,9 +6,9 @@
 
 class Vector_BindLua
 {
-private:
-	DirectX::XMVECTOR vector;
 public:
+	DirectX::XMVECTOR vector;
+
 	static const char className[];
 	static Luna<Vector_BindLua>::FunctionType methods[];
 	static Luna<Vector_BindLua>::PropertyType properties[];

@@ -5,9 +5,9 @@
 
 class Matrix_BindLua
 {
-private:
-	DirectX::XMMATRIX matrix;
 public:
+	DirectX::XMMATRIX matrix;
+
 	static const char className[];
 	static Luna<Matrix_BindLua>::FunctionType methods[];
 	static Luna<Matrix_BindLua>::PropertyType properties[];
