@@ -34,6 +34,8 @@ public:
 	static int Multiply(lua_State* L);
 	static int Add(lua_State* L);
 	static int Subtract(lua_State* L);
+	static int Lerp(lua_State* L);
+	static int Slerp(lua_State* L);
 
 	static void Bind();
 
