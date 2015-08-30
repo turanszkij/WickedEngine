@@ -317,6 +317,10 @@ void wiLua::SSetString(lua_State* L, const string& data)
 {
 	lua_pushstring(L, data.c_str());
 }
+void wiLua::SSetBool(lua_State* L, bool data)
+{
+	lua_pushboolean(L, static_cast<int>(data));
+}
 void wiLua::SSetPointer(lua_State* L, void* data)
 {
 	lua_pushlightuserdata(L, data);

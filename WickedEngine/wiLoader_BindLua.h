@@ -52,7 +52,25 @@ public:
 	static void Bind();
 };
 
-class Object_BindLua : public Transform_BindLua
+class Cullable_BindLua
+{
+public:
+	Cullable* cullable;
+
+	static const char className[];
+	static Luna<Cullable_BindLua>::FunctionType methods[];
+	static Luna<Cullable_BindLua>::PropertyType properties[];
+
+	Cullable_BindLua(Cullable* cullable = nullptr);
+	Cullable_BindLua(lua_State *L);
+	~Cullable_BindLua();
+
+	int Intersects(lua_State *L);
+
+	static void Bind();
+};
+
+class Object_BindLua : public Cullable_BindLua, public Transform_BindLua
 {
 public:
 	Object* object;

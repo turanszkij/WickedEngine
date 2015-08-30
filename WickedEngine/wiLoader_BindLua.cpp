@@ -8,6 +8,7 @@ namespace wiLoader_BindLua
 	{
 		Node_BindLua::Bind();
 		Transform_BindLua::Bind();
+		Cullable_BindLua::Bind();
 		Object_BindLua::Bind();
 		Armature_BindLua::Bind();
 	}
@@ -84,8 +85,8 @@ void Node_BindLua::Bind()
 const char Transform_BindLua::className[] = "Transform";
 
 Luna<Transform_BindLua>::FunctionType Transform_BindLua::methods[] = {
-	lunamethod(Transform_BindLua, GetName),
-	lunamethod(Transform_BindLua, SetName),
+	lunamethod(Node_BindLua, GetName),
+	lunamethod(Node_BindLua, SetName),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),
@@ -305,12 +306,78 @@ void Transform_BindLua::Bind()
 
 
 
+const char Cullable_BindLua::className[] = "Cullable";
+
+Luna<Cullable_BindLua>::FunctionType Cullable_BindLua::methods[] = {
+	lunamethod(Cullable_BindLua, Intersects),
+	{ NULL, NULL }
+};
+Luna<Cullable_BindLua>::PropertyType Cullable_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+Cullable_BindLua::Cullable_BindLua(Cullable* cullable)
+{
+	if (cullable == nullptr)
+	{
+		this->cullable = new Cullable();
+	}
+	else
+		this->cullable = cullable;
+}
+Cullable_BindLua::Cullable_BindLua(lua_State *L)
+{
+	cullable = new Cullable();
+}
+Cullable_BindLua::~Cullable_BindLua()
+{
+}
+
+int Cullable_BindLua::Intersects(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Cullable_BindLua* target = Luna<Cullable_BindLua>::lightcheck(L, 2);
+		if (target == nullptr)
+			target = Luna<Object_BindLua>::lightcheck(L, 2);
+		if (target != nullptr)
+		{
+			AABB::INTERSECTION_TYPE intersection = cullable->bounds.intersects(target->cullable->bounds);
+			wiLua::SSetBool(L, intersection > AABB::INTERSECTION_TYPE::OUTSIDE);
+			return 1;
+		}
+		else
+		{
+			wiLua::SError(L, "Intersects(Cullable cullable) argument is not a Cullable!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "Intersects(Cullable cullable) not enough arguments!");
+	}
+	return 0;
+}
+
+void Cullable_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Cullable_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
 
 const char Object_BindLua::className[] = "Object";
 
 Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
-	lunamethod(Object_BindLua, GetName),
-	lunamethod(Object_BindLua, SetName),
+	lunamethod(Node_BindLua, GetName),
+	lunamethod(Node_BindLua, SetName),
+
+	lunamethod(Cullable_BindLua, Intersects),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),
@@ -335,6 +402,7 @@ Object_BindLua::Object_BindLua(Object* object)
 {
 	node = object;
 	transform = object;
+	cullable = object;
 	this->object = object;
 }
 Object_BindLua::Object_BindLua(lua_State *L)
@@ -419,8 +487,8 @@ void Object_BindLua::Bind()
 const char Armature_BindLua::className[] = "Armature";
 
 Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
-	lunamethod(Armature_BindLua, GetName),
-	lunamethod(Armature_BindLua, SetName),
+	lunamethod(Node_BindLua, GetName),
+	lunamethod(Node_BindLua, SetName),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),

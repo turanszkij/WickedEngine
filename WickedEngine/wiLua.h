@@ -105,6 +105,8 @@ public:
 	static void SSetDouble(lua_State* L, double data);
 	//push string to lua stack
 	static void SSetString(lua_State* L, const string& data);
+	//push bool to lua stack
+	static void SSetBool(lua_State* L, bool data);
 	//push pointer (light userdata) to lua stack
 	static void SSetPointer(lua_State* L, void* data);
 	//push null to lua stack
