@@ -25,5 +25,7 @@ namespace wiRenderer_BindLua
 
 	int LoadModel(lua_State* L);
 	int FinishLoading(lua_State* L);
+
+	int Pick(lua_State* L);
 };
 

@@ -11,6 +11,7 @@ namespace wiLoader_BindLua
 		Cullable_BindLua::Bind();
 		Object_BindLua::Bind();
 		Armature_BindLua::Bind();
+		Ray_BindLua::Bind();
 	}
 }
 
@@ -97,6 +98,8 @@ Luna<Transform_BindLua>::FunctionType Transform_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, Translate),
 	lunamethod(Transform_BindLua, MatrixTransform),
 	lunamethod(Transform_BindLua, GetMatrix),
+	lunamethod(Transform_BindLua, ClearTransform),
+	lunamethod(Transform_BindLua, SetTransform),
 	{ NULL, NULL }
 };
 Luna<Transform_BindLua>::PropertyType Transform_BindLua::properties[] = {
@@ -299,6 +302,36 @@ int Transform_BindLua::GetMatrix(lua_State* L)
 	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(transform->getTransform()));
 	return 1;
 }
+int Transform_BindLua::ClearTransform(lua_State* L)
+{
+	transform->Clear();
+	return 0;
+}
+int Transform_BindLua::SetTransform(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Transform_BindLua* t = Luna<Transform_BindLua>::lightcheck(L, 2);
+		if (t == nullptr)
+			t = Luna<Object_BindLua>::lightcheck(L, 2);
+		if (t == nullptr)
+			t = Luna<Armature_BindLua>::lightcheck(L, 2);
+		if (t != nullptr)
+		{
+			*transform = *t->transform;
+		}
+		else
+		{
+			wiLua::SError(L, "SetTransform(Transform t) argument is not a Transform!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetTransform(Transform t) not enough arguments!");
+	}
+	return 0;
+}
 
 void Transform_BindLua::Bind()
 {
@@ -355,7 +388,25 @@ int Cullable_BindLua::Intersects(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "Intersects(Cullable cullable) argument is not a Cullable!");
+			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 2);
+			if (ray != nullptr)
+			{
+				wiLua::SSetBool(L, cullable->bounds.intersects(ray->ray));
+				return 1;
+			}
+			else
+			{
+				Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
+				if (vec != nullptr)
+				{
+					XMFLOAT3 point;
+					XMStoreFloat3(&point, vec->vector);
+					wiLua::SSetBool(L, cullable->bounds.intersects(point));
+					return 1;
+				}
+				else
+					wiLua::SError(L, "Intersects(Cullable cullable) argument is not a Cullable!");
+			}
 		}
 	}
 	else
@@ -394,6 +445,8 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, Translate),
 	lunamethod(Transform_BindLua, MatrixTransform),
 	lunamethod(Transform_BindLua, GetMatrix),
+	lunamethod(Transform_BindLua, ClearTransform),
+	lunamethod(Transform_BindLua, SetTransform),
 
 	lunamethod(Object_BindLua, SetTransparency),
 	lunamethod(Object_BindLua, GetTransparency),
@@ -506,10 +559,19 @@ Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, Translate),
 	lunamethod(Transform_BindLua, MatrixTransform),
 	lunamethod(Transform_BindLua, GetMatrix),
+	lunamethod(Transform_BindLua, ClearTransform),
+	lunamethod(Transform_BindLua, SetTransform),
 
+	lunamethod(Armature_BindLua, GetAction),
 	lunamethod(Armature_BindLua, GetActions),
 	lunamethod(Armature_BindLua, GetBones),
+	lunamethod(Armature_BindLua, GetFrame),
+	lunamethod(Armature_BindLua, GetFrameCount),
 	lunamethod(Armature_BindLua, ChangeAction),
+	lunamethod(Armature_BindLua, StopAction),
+	lunamethod(Armature_BindLua, PauseAction),
+	lunamethod(Armature_BindLua, PlayAction),
+	lunamethod(Armature_BindLua, ResetAction),
 	{ NULL, NULL }
 };
 Luna<Armature_BindLua>::PropertyType Armature_BindLua::properties[] = {
@@ -531,6 +593,16 @@ Armature_BindLua::~Armature_BindLua()
 {
 }
 
+int Armature_BindLua::GetAction(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "GetAction() armature is null!");
+		return 0;
+	}
+	wiLua::SSetString(L, armature->actions[armature->activeAction].name);
+	return 1;
+}
 int Armature_BindLua::GetActions(lua_State *L)
 {
 	if (armature == nullptr)
@@ -561,6 +633,27 @@ int Armature_BindLua::GetBones(lua_State *L)
 	wiLua::SSetString(L, ss.str());
 	return 1;
 }
+int Armature_BindLua::GetFrame(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "GetFrame() armature is null!");
+		return 0;
+	}
+	wiLua::SSetFloat(L, armature->currentFrame);
+	return 1;
+}
+int Armature_BindLua::GetFrameCount(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "GetFrameCount() armature is null!");
+		return 0;
+	}
+	wiLua::SSetFloat(L, armature->actions[armature->activeAction].frameCount);
+	return 1;
+}
+
 int Armature_BindLua::ChangeAction(lua_State* L)
 {
 	if (armature == nullptr)
@@ -583,6 +676,46 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 	}
 	return 0;
 }
+int Armature_BindLua::StopAction(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "StopAction() armature is null!");
+		return 0;
+	}
+	armature->StopAction();
+	return 0;
+}
+int Armature_BindLua::PauseAction(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "PauseAction() armature is null!");
+		return 0;
+	}
+	armature->PauseAction();
+	return 0;
+}
+int Armature_BindLua::PlayAction(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "PlayAction() armature is null!");
+		return 0;
+	}
+	armature->PlayAction();
+	return 0;
+}
+int Armature_BindLua::ResetAction(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "ResetAction() armature is null!");
+		return 0;
+	}
+	armature->ResetAction();
+	return 0;
+}
 
 void Armature_BindLua::Bind()
 {
@@ -591,5 +724,63 @@ void Armature_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Armature_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+const char Ray_BindLua::className[] = "Ray";
+
+Luna<Ray_BindLua>::FunctionType Ray_BindLua::methods[] = {
+	{ NULL, NULL }
+};
+Luna<Ray_BindLua>::PropertyType Ray_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+Ray_BindLua::Ray_BindLua(const RAY& ray) :ray(ray)
+{
+}
+Ray_BindLua::Ray_BindLua(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	XMVECTOR origin = XMVectorSet(0, 0, 0, 0), direction = XMVectorSet(0, 0, 1, 0);
+	if (argc > 0)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v1)
+			origin = v1->vector;
+		if (argc > 1)
+		{
+			Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (v2)
+				direction = v2->vector;
+		}
+	}
+	ray = RAY(origin, direction);
+}
+Ray_BindLua::~Ray_BindLua()
+{
+}
+
+int Ray_BindLua::GetOrigin(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&ray.origin)));
+	return 1;
+}
+int Ray_BindLua::GetDirection(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&ray.direction)));
+	return 1;
+}
+
+void Ray_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Ray_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

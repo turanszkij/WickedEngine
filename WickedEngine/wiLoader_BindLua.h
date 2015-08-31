@@ -49,6 +49,8 @@ public:
 	int Translate(lua_State* L);
 	int MatrixTransform(lua_State* L);
 	int GetMatrix(lua_State* L);
+	int ClearTransform(lua_State* L);
+	int SetTransform(lua_State* L);
 
 	static void Bind();
 };
@@ -105,10 +107,37 @@ public:
 	Armature_BindLua(lua_State* L);
 	~Armature_BindLua();
 
+	int GetAction(lua_State* L);
 	int GetActions(lua_State* L);
 	int GetBones(lua_State* L);
+	int GetFrame(lua_State* L);
+	int GetFrameCount(lua_State* L);
 
 	int ChangeAction(lua_State* L);
+	int StopAction(lua_State* L);
+	int PauseAction(lua_State* L);
+	int PlayAction(lua_State* L);
+	int ResetAction(lua_State* L);
 
 	static void Bind();
 };
+
+class Ray_BindLua
+{
+public:
+	RAY ray;
+
+	static const char className[];
+	static Luna<Ray_BindLua>::FunctionType methods[];
+	static Luna<Ray_BindLua>::PropertyType properties[];
+
+	Ray_BindLua(const RAY& ray);
+	Ray_BindLua(lua_State* L);
+	~Ray_BindLua();
+
+	int GetOrigin(lua_State* L);
+	int GetDirection(lua_State* L);
+
+	static void Bind();
+};
+

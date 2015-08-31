@@ -1878,10 +1878,13 @@ void wiRenderer::Update(float amount)
 				int activeAction = armature->activeAction;
 				int prevAction = armature->prevAction;
 				
-				cf = armature->currentFrame += amount;
+				cf = armature->currentFrame += (armature->playing ? amount : 0.f);
 				maxCf = armature->actions[activeAction].frameCount;
-				if((int)cf>maxCf)
-					cf = armature->currentFrame = 1;
+				if ((int)cf > maxCf)
+				{
+					armature->ResetAction();
+					cf = armature->currentFrame;
+				}
 
 				{
 					for (unsigned int j = 0; j<armature->rootbones.size(); ++j){
@@ -3836,42 +3839,40 @@ void wiRenderer::UpdateLights()
 	}
 }
 
-wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickType)
+wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType)
 {
-	RAY ray = getPickRay(cursorX, cursorY);
-
 	CulledCollection culledwiRenderer;
 	CulledList culledObjects;
 	wiSPTree* searchTree = nullptr;
 	switch (pickType)
 	{
 	case wiRenderer::PICK_OPAQUE:
-		searchTree=spTree;
+		searchTree = spTree;
 		break;
 	case wiRenderer::PICK_TRANSPARENT:
-		searchTree=spTree_trans;
+		searchTree = spTree_trans;
 		break;
 	case wiRenderer::PICK_WATER:
-		searchTree=spTree_water;
+		searchTree = spTree_water;
 		break;
 	default:
 		break;
 	}
-	if(searchTree)
+	if (searchTree)
 	{
-		wiSPTree::getVisible(searchTree->root,ray,culledObjects);
+		wiSPTree::getVisible(searchTree->root, ray, culledObjects);
 
 		vector<Picked> pickPoints;
 
 		RayIntersectMeshes(ray, culledObjects, pickPoints);
 
-		if(!pickPoints.empty()){
+		if (!pickPoints.empty()){
 			Picked min = pickPoints.front();
-			float mini = wiMath::DistanceSquared(min.position,ray.origin);
-			for(unsigned int i=1;i<pickPoints.size();++i){
-				if(float nm = wiMath::DistanceSquared(pickPoints[i].position,ray.origin)<mini){
-					min=pickPoints[i];
-					mini=nm;
+			float mini = wiMath::DistanceSquared(min.position, ray.origin);
+			for (unsigned int i = 1; i<pickPoints.size(); ++i){
+				if (float nm = wiMath::DistanceSquared(pickPoints[i].position, ray.origin)<mini){
+					min = pickPoints[i];
+					mini = nm;
 				}
 			}
 			return min;
@@ -3880,6 +3881,12 @@ wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickTyp
 	}
 
 	return Picked();
+}
+wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickType)
+{
+	RAY ray = getPickRay(cursorX, cursorY);
+
+	return Pick(ray, pickType);
 }
 
 RAY wiRenderer::getPickRay(long cursorX, long cursorY){
@@ -3918,7 +3925,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				float distance = 0;
 				if (TriangleTests::Intersects(rayOrigin, rayDirection, V0, V1, V2, distance)){
 					XMVECTOR& pos = XMVectorAdd(rayOrigin, rayDirection*distance);
-					XMVECTOR& nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V1, V0), XMVectorSubtract(V2, V1)));
+					XMVECTOR& nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0)));
 					Picked picked = Picked();
 					picked.object = object;
 					XMStoreFloat3(&picked.position, pos);

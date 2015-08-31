@@ -16,6 +16,8 @@ Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 	lunamethod(Vector_BindLua, SetZ),
 	lunamethod(Vector_BindLua, SetW),
 	lunamethod(Vector_BindLua, Transform),
+	lunamethod(Vector_BindLua, Length),
+	lunamethod(Vector_BindLua, Normalize),
 	{ NULL, NULL }
 };
 Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -137,6 +139,16 @@ int Vector_BindLua::Transform(lua_State* L)
 	else
 		wiLua::SError(L, "Transform(Matrix matrix) not enough arguments!");
 	return 0;
+}
+int Vector_BindLua::Length(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Length(vector)));
+	return 1;
+}
+int Vector_BindLua::Normalize(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Normalize(vector)));
+	return 1;
 }
 
 

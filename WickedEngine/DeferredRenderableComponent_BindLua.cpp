@@ -12,6 +12,19 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(DeferredRenderableComponent_BindLua, Update),
 	lunamethod(DeferredRenderableComponent_BindLua, Render),
 	lunamethod(DeferredRenderableComponent_BindLua, Compose),
+
+	lunamethod(Renderable3DComponent_BindLua, SetSSAOEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSSREnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetShadowsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetReflectionsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetFXAAEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetBloomEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetColorGradingEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetEmitterParticlesEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetVolumeLightsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetLightShaftsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),
 	{ NULL, NULL }
 };
 Luna<DeferredRenderableComponent_BindLua>::PropertyType DeferredRenderableComponent_BindLua::properties[] = {

@@ -1105,6 +1105,7 @@ public:
 		Picked():object(nullptr){}
 	};
 	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);
+	static Picked Pick(RAY& ray, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);
 	static RAY getPickRay(long cursorX, long cursorY);
 	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points, bool dynamicObjects = true);
 	static void CalculateVertexAO(Object* object);

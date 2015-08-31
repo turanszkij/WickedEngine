@@ -28,6 +28,8 @@ public:
 	int SetW(lua_State* L);
 
 	int Transform(lua_State* L);
+	int Length(lua_State* L);
+	int Normalize(lua_State* L);
 
 	static int Dot(lua_State* L);
 	static int Cross(lua_State* L);

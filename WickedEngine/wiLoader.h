@@ -414,13 +414,7 @@ struct Transform : public Node, public Load_Debug_Properties
 	int copyParentT,copyParentR,copyParentS;
 
 	Transform():Node(){
-		parent=nullptr;
-		copyParentT=copyParentR=copyParentS=1;
-		boneRelativity=boneRelativityPrev=nullptr;
-		translation_rest=translation=translationPrev=XMFLOAT3(0,0,0);
-		scale_rest=scale=scalePrev=XMFLOAT3(1,1,1);
-		rotation_rest=rotation=rotationPrev=XMFLOAT4(0,0,0,1);
-		world_rest=world=worldPrev=parent_inv_rest=XMFLOAT4X4(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+		Clear();
 	}
 	~Transform(){
 		if(boneRelativity!=nullptr){
@@ -432,6 +426,16 @@ struct Transform : public Node, public Load_Debug_Properties
 			boneRelativityPrev=nullptr;
 		}
 	};
+	void Clear()
+	{
+		parent = nullptr;
+		copyParentT = copyParentR = copyParentS = 1;
+		boneRelativity = boneRelativityPrev = nullptr;
+		translation_rest = translation = translationPrev = XMFLOAT3(0, 0, 0);
+		scale_rest = scale = scalePrev = XMFLOAT3(1, 1, 1);
+		rotation_rest = rotation = rotationPrev = XMFLOAT4(0, 0, 0, 1);
+		world_rest = world = worldPrev = parent_inv_rest = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+	}
 
 	virtual XMMATRIX getTransform(int getTranslation = 1, int getRotation = 1, int getScale = 1);
 	//attach to parent
@@ -633,6 +637,7 @@ public:
 	float currentFrame, prevActionResolveFrame;
 	vector<Action> actions;
 	
+	bool playing;
 
 	Armature(){}
 	Armature(string newName,string identifier):Transform(){
@@ -647,6 +652,7 @@ public:
 		prevActionResolveFrame=0;
 		actions.resize(0);
 		XMStoreFloat4x4(&world,XMMatrixIdentity());
+		playing = true;
 	}
 	void CleanUp(){
 		actions.clear();
@@ -670,6 +676,23 @@ public:
 			i++;
 		}
 		return false;
+	}
+	void ResetAction()
+	{
+		currentFrame = 1;
+	}
+	void PauseAction()
+	{
+		playing = false;
+	}
+	void StopAction()
+	{
+		ResetAction();
+		PauseAction();
+	}
+	void PlayAction()
+	{
+		playing = true;
 	}
 };
 struct SHCAM{	

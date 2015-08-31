@@ -3,6 +3,7 @@
 #include "wiLoader.h"
 #include "wiHelper.h"
 #include "wiLoader_BindLua.h"
+#include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 
 namespace wiRenderer_BindLua
@@ -34,6 +35,7 @@ namespace wiRenderer_BindLua
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
+			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 		}
 	}
 
@@ -253,6 +255,24 @@ namespace wiRenderer_BindLua
 	int FinishLoading(lua_State* L)
 	{
 		wiRenderer::FinishLoading();
+		return 0;
+	}
+
+	int Pick(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
+			if (ray != nullptr)
+			{
+				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, wiRenderer::PICKTYPE::PICK_OPAQUE);
+				Luna<Object_BindLua>::push(L, new Object_BindLua(pick.object));
+				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
+				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
+				return 3;
+			}
+		}
 		return 0;
 	}
 };

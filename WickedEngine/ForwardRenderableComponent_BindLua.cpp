@@ -12,6 +12,19 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(ForwardRenderableComponent_BindLua, Update),
 	lunamethod(ForwardRenderableComponent_BindLua, Render),
 	lunamethod(ForwardRenderableComponent_BindLua, Compose),
+
+	lunamethod(Renderable3DComponent_BindLua, SetSSAOEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSSREnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetShadowsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetReflectionsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetFXAAEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetBloomEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetColorGradingEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetEmitterParticlesEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetVolumeLightsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetLightShaftsEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),
 	{ NULL, NULL }
 };
 Luna<ForwardRenderableComponent_BindLua>::PropertyType ForwardRenderableComponent_BindLua::properties[] = {
