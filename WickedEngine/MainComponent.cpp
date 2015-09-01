@@ -86,6 +86,8 @@ void MainComponent::Update()
 	wiBackLog::Update();
 
 	getActiveComponent()->Update();
+
+	wiLua::GetGlobal()->Update();
 }
 
 void MainComponent::Render()

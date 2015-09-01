@@ -59,6 +59,8 @@ public:
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
+	//update lua scripts which are waiting for a game tick
+	void Update();
 
 	//send a signal to lua
 	void Signal(const string& name);

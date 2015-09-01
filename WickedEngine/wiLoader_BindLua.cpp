@@ -473,6 +473,7 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Object_BindLua, GetTransparency),
 	lunamethod(Object_BindLua, SetColor),
 	lunamethod(Object_BindLua, GetColor),
+	lunamethod(Object_BindLua, IsValid),
 	{ NULL, NULL }
 };
 Luna<Object_BindLua>::PropertyType Object_BindLua::properties[] = {
@@ -551,6 +552,11 @@ int Object_BindLua::GetColor(lua_State *L)
 	wiLua::SSetFloat3(L, object->color);
 	return 3;
 }
+int Object_BindLua::IsValid(lua_State *L)
+{
+	wiLua::SSetBool(L, object != nullptr);
+	return 1;
+}
 
 void Object_BindLua::Bind()
 {
@@ -596,6 +602,7 @@ Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Armature_BindLua, PauseAction),
 	lunamethod(Armature_BindLua, PlayAction),
 	lunamethod(Armature_BindLua, ResetAction),
+	lunamethod(Armature_BindLua, IsValid),
 	{ NULL, NULL }
 };
 Luna<Armature_BindLua>::PropertyType Armature_BindLua::properties[] = {
@@ -675,6 +682,11 @@ int Armature_BindLua::GetFrameCount(lua_State* L)
 		return 0;
 	}
 	wiLua::SSetFloat(L, (float)armature->actions[armature->activeAction].frameCount);
+	return 1;
+}
+int Armature_BindLua::IsValid(lua_State *L)
+{
+	wiLua::SSetBool(L, armature != nullptr);
 	return 1;
 }
 

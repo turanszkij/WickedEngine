@@ -127,5 +127,8 @@ function signal(signalName)
     end
 end 
 
+function tick()
+	waitSignal("game_update_tick")
+end
 
 )";

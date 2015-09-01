@@ -93,6 +93,7 @@ public:
 	int GetTransparency(lua_State *L);
 	int SetColor(lua_State *L);
 	int GetColor(lua_State *L);
+	int IsValid(lua_State *L);
 
 	static void Bind();
 };
@@ -115,6 +116,7 @@ public:
 	int GetBones(lua_State* L);
 	int GetFrame(lua_State* L);
 	int GetFrameCount(lua_State* L);
+	int IsValid(lua_State *L);
 
 	int ChangeAction(lua_State* L);
 	int StopAction(lua_State* L);

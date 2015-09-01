@@ -197,6 +197,10 @@ void wiLua::SetDeltaTime(double dt)
 	SSetDouble(m_luaState, dt);
 	lua_call(m_luaState, 1, 0);
 }
+void wiLua::Update()
+{
+	Signal("game_update_tick");
+}
 
 void wiLua::Signal(const string& name)
 {

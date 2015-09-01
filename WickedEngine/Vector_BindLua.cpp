@@ -143,7 +143,7 @@ int Vector_BindLua::Transform(lua_State* L)
 }
 int Vector_BindLua::Length(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Length(vector)));
+	wiLua::SSetFloat(L, XMVectorGetX(XMVector3Length(vector)));
 	return 1;
 }
 int Vector_BindLua::Normalize(lua_State* L)
