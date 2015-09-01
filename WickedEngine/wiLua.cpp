@@ -18,6 +18,7 @@
 #include "wiLoader_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
+#include "wiInputManager_BindLua.h"
 
 wiLua *wiLua::globalLua = nullptr;
 
@@ -62,6 +63,7 @@ wiLua* wiLua::GetGlobal()
 		wiLoader_BindLua::Bind();
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
+		wiInputManager_BindLua::Bind();
 
 	}
 	return globalLua;

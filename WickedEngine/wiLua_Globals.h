@@ -127,8 +127,14 @@ function signal(signalName)
     end
 end 
 
+-- Wait until the game engine update function runs again
 function tick()
 	waitSignal("game_update_tick")
+end
+
+-- linear interpolation
+function math.lerp(a,b,t)
+	return (a + (b-a)*t);
 end
 
 )";
