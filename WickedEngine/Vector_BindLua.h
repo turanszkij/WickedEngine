@@ -30,6 +30,7 @@ public:
 	int Transform(lua_State* L);
 	int Length(lua_State* L);
 	int Normalize(lua_State* L);
+	int QuaternionNormalize(lua_State* L);
 
 	static int Dot(lua_State* L);
 	static int Cross(lua_State* L);
@@ -37,6 +38,10 @@ public:
 	static int Add(lua_State* L);
 	static int Subtract(lua_State* L);
 	static int Lerp(lua_State* L);
+
+
+	static int QMultiply(lua_State* L);
+	static int QuaternionFromAxis(lua_State* L);
 	static int Slerp(lua_State* L);
 
 	static void Bind();

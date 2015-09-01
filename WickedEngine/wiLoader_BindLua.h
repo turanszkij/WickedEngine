@@ -51,6 +51,9 @@ public:
 	int GetMatrix(lua_State* L);
 	int ClearTransform(lua_State* L);
 	int SetTransform(lua_State* L);
+	int GetPosition(lua_State* L);
+	int GetRotation(lua_State* L);
+	int GetScale(lua_State* L);
 
 	static void Bind();
 };

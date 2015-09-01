@@ -100,6 +100,9 @@ Luna<Transform_BindLua>::FunctionType Transform_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, GetMatrix),
 	lunamethod(Transform_BindLua, ClearTransform),
 	lunamethod(Transform_BindLua, SetTransform),
+	lunamethod(Transform_BindLua, GetPosition),
+	lunamethod(Transform_BindLua, GetRotation),
+	lunamethod(Transform_BindLua, GetScale),
 	{ NULL, NULL }
 };
 Luna<Transform_BindLua>::PropertyType Transform_BindLua::properties[] = {
@@ -332,6 +335,21 @@ int Transform_BindLua::SetTransform(lua_State* L)
 	}
 	return 0;
 }
+int Transform_BindLua::GetPosition(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&transform->translation)));
+	return 1;
+}
+int Transform_BindLua::GetRotation(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&transform->rotation)));
+	return 1;
+}
+int Transform_BindLua::GetScale(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&transform->scale)));
+	return 1;
+}
 
 void Transform_BindLua::Bind()
 {
@@ -447,6 +465,9 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, GetMatrix),
 	lunamethod(Transform_BindLua, ClearTransform),
 	lunamethod(Transform_BindLua, SetTransform),
+	lunamethod(Transform_BindLua, GetPosition),
+	lunamethod(Transform_BindLua, GetRotation),
+	lunamethod(Transform_BindLua, GetScale),
 
 	lunamethod(Object_BindLua, SetTransparency),
 	lunamethod(Object_BindLua, GetTransparency),
@@ -561,6 +582,9 @@ Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, GetMatrix),
 	lunamethod(Transform_BindLua, ClearTransform),
 	lunamethod(Transform_BindLua, SetTransform),
+	lunamethod(Transform_BindLua, GetPosition),
+	lunamethod(Transform_BindLua, GetRotation),
+	lunamethod(Transform_BindLua, GetScale),
 
 	lunamethod(Armature_BindLua, GetAction),
 	lunamethod(Armature_BindLua, GetActions),
@@ -650,7 +674,7 @@ int Armature_BindLua::GetFrameCount(lua_State* L)
 		wiLua::SError(L, "GetFrameCount() armature is null!");
 		return 0;
 	}
-	wiLua::SSetFloat(L, armature->actions[armature->activeAction].frameCount);
+	wiLua::SSetFloat(L, (float)armature->actions[armature->activeAction].frameCount);
 	return 1;
 }
 

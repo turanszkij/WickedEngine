@@ -18,6 +18,7 @@ Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 	lunamethod(Vector_BindLua, Transform),
 	lunamethod(Vector_BindLua, Length),
 	lunamethod(Vector_BindLua, Normalize),
+	lunamethod(Vector_BindLua, QuaternionNormalize),
 	{ NULL, NULL }
 };
 Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -150,6 +151,11 @@ int Vector_BindLua::Normalize(lua_State* L)
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Normalize(vector)));
 	return 1;
 }
+int Vector_BindLua::QuaternionNormalize(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMQuaternionNormalize(vector)));
+	return 1;
+}
 
 
 
@@ -250,6 +256,39 @@ int Vector_BindLua::Lerp(lua_State* L)
 	wiLua::SError(L, "VectorLerp(Vector v1,v2, float t) not enough arguments!");
 	return 0;
 }
+
+
+int Vector_BindLua::QMultiply(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (v1 && v2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMQuaternionMultiply(v1->vector, v2->vector)));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "QuaternionMultiply(Vector v1,v2) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::QuaternionFromAxis(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* v1 = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v1)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMQuaternionRotationRollPitchYawFromVector(v1->vector)));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "QuaternionFromAxis(Vector v1,v2) not enough arguments!");
+	return 0;
+}
 int Vector_BindLua::Slerp(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -281,6 +320,8 @@ void Vector_BindLua::Bind()
 		wiLua::GetGlobal()->RegisterFunc("VectorDot", Dot);
 		wiLua::GetGlobal()->RegisterFunc("VectorCross", Cross);
 		wiLua::GetGlobal()->RegisterFunc("VectorLerp", Lerp);
+		wiLua::GetGlobal()->RegisterFunc("QuaternionMultiply", QMultiply);
+		wiLua::GetGlobal()->RegisterFunc("QuaternionFromAxis", QuaternionFromAxis);
 		wiLua::GetGlobal()->RegisterFunc("QuaternionSlerp", Slerp);
 	}
 }
