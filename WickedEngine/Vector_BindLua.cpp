@@ -19,6 +19,15 @@ Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 	lunamethod(Vector_BindLua, Length),
 	lunamethod(Vector_BindLua, Normalize),
 	lunamethod(Vector_BindLua, QuaternionNormalize),
+	lunamethod(Vector_BindLua, Add),
+	lunamethod(Vector_BindLua, Subtract),
+	lunamethod(Vector_BindLua, Multiply),
+	lunamethod(Vector_BindLua, Dot),
+	lunamethod(Vector_BindLua, Cross),
+	lunamethod(Vector_BindLua, Lerp),
+	lunamethod(Vector_BindLua, Slerp),
+	lunamethod(Vector_BindLua, QuaternionMultiply),
+	lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
 	{ NULL, NULL }
 };
 Luna<Vector_BindLua>::PropertyType Vector_BindLua::properties[] = {
@@ -172,7 +181,7 @@ int Vector_BindLua::Dot(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "VectorDot(Vector v1,v2) not enough arguments!");
+	wiLua::SError(L, "Dot(Vector v1,v2) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Cross(lua_State* L)
@@ -188,7 +197,7 @@ int Vector_BindLua::Cross(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "VectorCross(Vector v1,v2) not enough arguments!");
+	wiLua::SError(L, "Cross(Vector v1,v2) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Multiply(lua_State* L)
@@ -204,7 +213,7 @@ int Vector_BindLua::Multiply(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "VectorMultiply(Vector v1,v2) not enough arguments!");
+	wiLua::SError(L, "Multiply(Vector v1,v2) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Add(lua_State* L)
@@ -220,7 +229,7 @@ int Vector_BindLua::Add(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "VectorAdd(Vector v1,v2) not enough arguments!");
+	wiLua::SError(L, "Add(Vector v1,v2) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Subtract(lua_State* L)
@@ -236,7 +245,7 @@ int Vector_BindLua::Subtract(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "VectorSubtract(Vector v1,v2) not enough arguments!");
+	wiLua::SError(L, "Subtract(Vector v1,v2) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Lerp(lua_State* L)
@@ -253,12 +262,12 @@ int Vector_BindLua::Lerp(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "VectorLerp(Vector v1,v2, float t) not enough arguments!");
+	wiLua::SError(L, "Lerp(Vector v1,v2, float t) not enough arguments!");
 	return 0;
 }
 
 
-int Vector_BindLua::QMultiply(lua_State* L)
+int Vector_BindLua::QuaternionMultiply(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 1)
@@ -274,7 +283,7 @@ int Vector_BindLua::QMultiply(lua_State* L)
 	wiLua::SError(L, "QuaternionMultiply(Vector v1,v2) not enough arguments!");
 	return 0;
 }
-int Vector_BindLua::QuaternionFromAxis(lua_State* L)
+int Vector_BindLua::QuaternionFromRollPitchYaw(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -314,15 +323,7 @@ void Vector_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Vector_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		wiLua::GetGlobal()->RegisterFunc("VectorAdd", Add);
-		wiLua::GetGlobal()->RegisterFunc("VectorSubtract", Subtract);
-		wiLua::GetGlobal()->RegisterFunc("VectorMultiply", Multiply);
-		wiLua::GetGlobal()->RegisterFunc("VectorDot", Dot);
-		wiLua::GetGlobal()->RegisterFunc("VectorCross", Cross);
-		wiLua::GetGlobal()->RegisterFunc("VectorLerp", Lerp);
-		wiLua::GetGlobal()->RegisterFunc("QuaternionMultiply", QMultiply);
-		wiLua::GetGlobal()->RegisterFunc("QuaternionFromAxis", QuaternionFromAxis);
-		wiLua::GetGlobal()->RegisterFunc("QuaternionSlerp", Slerp);
+		wiLua::GetGlobal()->RunText("vector = Vector()");
 	}
 }
 

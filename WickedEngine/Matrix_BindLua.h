@@ -18,18 +18,18 @@ public:
 
 	int GetRow(lua_State* L);
 
-	static int Translation(lua_State* L);
-	static int Rotation(lua_State* L);
-	static int RotationX(lua_State* L);
-	static int RotationY(lua_State* L);
-	static int RotationZ(lua_State* L);
-	static int RotationQuaternion(lua_State* L);
-	static int Scale(lua_State* L);
+	int Translation(lua_State* L);
+	int Rotation(lua_State* L);
+	int RotationX(lua_State* L);
+	int RotationY(lua_State* L);
+	int RotationZ(lua_State* L);
+	int RotationQuaternion(lua_State* L);
+	int Scale(lua_State* L);
 
-	static int Multiply(lua_State* L);
-	static int Add(lua_State* L);
-	static int Transpose(lua_State* L);
-	static int Inverse(lua_State* L);
+	int Multiply(lua_State* L);
+	int Add(lua_State* L);
+	int Transpose(lua_State* L);
+	int Inverse(lua_State* L);
 
 	static void Bind();
 

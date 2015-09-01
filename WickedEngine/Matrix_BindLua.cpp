@@ -8,6 +8,17 @@ const char Matrix_BindLua::className[] = "Matrix";
 
 Luna<Matrix_BindLua>::FunctionType Matrix_BindLua::methods[] = {
 	lunamethod(Matrix_BindLua, GetRow),
+	lunamethod(Matrix_BindLua, Translation),
+	lunamethod(Matrix_BindLua, Rotation),
+	lunamethod(Matrix_BindLua, RotationX),
+	lunamethod(Matrix_BindLua, RotationY),
+	lunamethod(Matrix_BindLua, RotationZ),
+	lunamethod(Matrix_BindLua, RotationQuaternion),
+	lunamethod(Matrix_BindLua, Scale),
+	lunamethod(Matrix_BindLua, Add),
+	lunamethod(Matrix_BindLua, Multiply),
+	lunamethod(Matrix_BindLua, Transpose),
+	lunamethod(Matrix_BindLua, Inverse),
 	{ NULL, NULL }
 };
 Luna<Matrix_BindLua>::PropertyType Matrix_BindLua::properties[] = {
@@ -182,7 +193,7 @@ int Matrix_BindLua::Multiply(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "MatrixMultiply(Matrix m1,m2) not enough arguments!");
+	wiLua::SError(L, "Multiply(Matrix m1,m2) not enough arguments!");
 	return 0;
 }
 int Matrix_BindLua::Add(lua_State* L)
@@ -198,7 +209,7 @@ int Matrix_BindLua::Add(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "MatrixAdd(Matrix m1,m2) not enough arguments!");
+	wiLua::SError(L, "Add(Matrix m1,m2) not enough arguments!");
 	return 0;
 }
 int Matrix_BindLua::Transpose(lua_State* L)
@@ -213,7 +224,7 @@ int Matrix_BindLua::Transpose(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "MatrixTranspose(Matrix m) not enough arguments!");
+	wiLua::SError(L, "Transpose(Matrix m) not enough arguments!");
 	return 0;
 }
 int Matrix_BindLua::Inverse(lua_State* L)
@@ -229,7 +240,7 @@ int Matrix_BindLua::Inverse(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "MatrixTranspose(Matrix m) not enough arguments!");
+	wiLua::SError(L, "Transpose(Matrix m) not enough arguments!");
 	return 0;
 }
 
@@ -241,16 +252,6 @@ void Matrix_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Matrix_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		wiLua::GetGlobal()->RegisterFunc("MatrixTranslation", Translation);
-		wiLua::GetGlobal()->RegisterFunc("MatrixRotation", Rotation);
-		wiLua::GetGlobal()->RegisterFunc("MatrixRotationX", RotationX);
-		wiLua::GetGlobal()->RegisterFunc("MatrixRotationY", RotationY);
-		wiLua::GetGlobal()->RegisterFunc("MatrixRotationZ", RotationZ);
-		wiLua::GetGlobal()->RegisterFunc("MatrixRotationQuaternion", RotationQuaternion);
-		wiLua::GetGlobal()->RegisterFunc("MatrixScale", Scale);
-		wiLua::GetGlobal()->RegisterFunc("MatrixAdd", Add);
-		wiLua::GetGlobal()->RegisterFunc("MatrixMultiply", Multiply);
-		wiLua::GetGlobal()->RegisterFunc("MatrixTranspose", Transpose);
-		wiLua::GetGlobal()->RegisterFunc("MatrixInverse", Inverse);
+		wiLua::GetGlobal()->RunText("matrix = Matrix()");
 	}
 }

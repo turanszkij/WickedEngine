@@ -32,17 +32,17 @@ public:
 	int Normalize(lua_State* L);
 	int QuaternionNormalize(lua_State* L);
 
-	static int Dot(lua_State* L);
-	static int Cross(lua_State* L);
-	static int Multiply(lua_State* L);
-	static int Add(lua_State* L);
-	static int Subtract(lua_State* L);
-	static int Lerp(lua_State* L);
+	int Dot(lua_State* L);
+	int Cross(lua_State* L);
+	int Multiply(lua_State* L);
+	int Add(lua_State* L);
+	int Subtract(lua_State* L);
+	int Lerp(lua_State* L);
 
 
-	static int QMultiply(lua_State* L);
-	static int QuaternionFromAxis(lua_State* L);
-	static int Slerp(lua_State* L);
+	int QuaternionMultiply(lua_State* L);
+	int QuaternionFromRollPitchYaw(lua_State* L);
+	int Slerp(lua_State* L);
 
 	static void Bind();
 
