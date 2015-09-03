@@ -74,6 +74,7 @@ void ForwardRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 			, false, wiRenderer::SHADED_FORWARD_SIMPLE
 			, nullptr, true, GRAPHICSTHREAD_SCENE);
 		wiRenderer::DrawSky(context);
+		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), context);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), context);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), context);
 	}

@@ -307,7 +307,7 @@ protected:
 	
 
 
-	static bool						wireRender, debugSpheres, debugLines, debugBoxes;
+	static bool						wireRender, debugSpheres, debugBoneLines, debugBoxes;
 	static ID3D11BlendState*		blendState, *blendStateTransparent, *blendStateAdd;
 	static ID3D11Buffer*			constantBuffer, *staticCb, *shCb, *pixelCB, *matCb, *lightCb[3], *tessBuf
 		, *lineBuffer, *trailCB, *lightStaticCb, *vLightCb,*cubeShCb,*fxCb,*skyCb,*decalCbVS,*decalCbPS,*viewPropCB;
@@ -382,7 +382,7 @@ public:
 	static float shBias;
 	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}
 	static void SetToDrawDebugSpheres(bool param){debugSpheres=param;}
-	static void SetToDrawDebugLines(bool param){debugLines=param;}
+	static void SetToDrawDebugBoneLines(bool param){ debugBoneLines = param; }
 	static void SetToDrawDebugBoxes(bool param){debugBoxes=param;}
 	static bool GetToDrawDebugSpheres(){return debugSpheres;};
 	static bool GetToDrawDebugBoxes(){return debugBoxes;};
@@ -1027,6 +1027,7 @@ public:
 	static void DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
 		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context);
 	void DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context);
+	static void DrawDebugBoneLines(Camera* camera, ID3D11DeviceContext* context);
 	static void DrawDebugLines(Camera* camera, ID3D11DeviceContext* context);
 	static void DrawDebugBoxes(Camera* camera, ID3D11DeviceContext* context);
 	static void DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark = false);
@@ -1065,7 +1066,8 @@ public:
 	static MeshCollection meshes;
 	static MaterialCollection materials;
 	static vector<Armature*> armatures;
-	static vector<Lines> boneLines;
+	static vector<Lines*> boneLines;
+	static vector<Lines*> linesTemp;
 	static vector<Cube> cubes;
 	static vector<Light*> lights;
 	static map<string,vector<wiEmittedParticle*>> emitterSystems;

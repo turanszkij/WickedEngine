@@ -34,6 +34,7 @@ public:
 	Lines();
 	Lines(float newLen, const XMFLOAT4& newColor, int newParentArmature, int newParentBone);
 	Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4& c);
+	~Lines();
 	void CleanUp();
 	void Transform(const XMFLOAT4X4& mat);
 

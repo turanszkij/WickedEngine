@@ -128,8 +128,13 @@ function signal(signalName)
 end 
 
 -- Wait until the game engine update function runs again
-function tick()
+function update()
 	waitSignal("game_update_tick")
+end
+
+-- Wait until the game engine drawing function runs again
+function render()
+	waitSignal("game_render_tick")
 end
 
 -- linear interpolation

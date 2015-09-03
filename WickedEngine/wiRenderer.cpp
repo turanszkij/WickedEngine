@@ -40,7 +40,7 @@ map<wiRenderer::DeviceContext,long> wiRenderer::drawCalls;
 int wiRenderer::RENDERWIDTH=1280,wiRenderer::RENDERHEIGHT=720,wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=1,wiRenderer::POINTLIGHTSHADOWRES=256;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
-bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugLines = false, wiRenderer::debugBoxes = false;
+bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
 ID3D11BlendState		*wiRenderer::blendState, *wiRenderer::blendStateTransparent, *wiRenderer::blendStateAdd;
 ID3D11Buffer			*wiRenderer::constantBuffer, *wiRenderer::staticCb, *wiRenderer::shCb, *wiRenderer::pixelCB, *wiRenderer::matCb
 	, *wiRenderer::lightCb[3], *wiRenderer::tessBuf, *wiRenderer::lineBuffer, *wiRenderer::skyCb
@@ -95,7 +95,8 @@ vector<Object*>		wiRenderer::objects_water;
 MeshCollection		wiRenderer::meshes;
 MaterialCollection	wiRenderer::materials;
 vector<Armature*>	wiRenderer::armatures;
-vector<Lines>		wiRenderer::boneLines;
+vector<Lines*>		wiRenderer::boneLines;
+vector<Lines*>		wiRenderer::linesTemp;
 vector<Cube>		wiRenderer::cubes;
 vector<Light*>		wiRenderer::lights;
 map<string,vector<wiEmittedParticle*>> wiRenderer::emitterSystems;
@@ -670,8 +671,8 @@ void wiRenderer::CleanUpStaticTemp(){
 	materials.clear();
 
 
-	for (unsigned int i = 0; i<boneLines.size(); i++)
-		boneLines[i].CleanUp();
+	for (unsigned int i = 0; i < boneLines.size(); i++)
+		delete boneLines[i];
 	boneLines.clear();
 
 	cubes.clear();
@@ -746,23 +747,23 @@ void wiRenderer::SetUpBoneLines()
 	boneLines.resize(0);
 	for (unsigned int i = 0; i<armatures.size(); i++){
 		for (unsigned int j = 0; j<armatures[i]->boneCollection.size(); j++){
-			boneLines.push_back( Lines(armatures[i]->boneCollection[j]->length,XMFLOAT4A(1,1,1,1),i,j) );
+			boneLines.push_back( new Lines(armatures[i]->boneCollection[j]->length,XMFLOAT4A(1,1,1,1),i,j) );
 		}
 	}
 }
 void wiRenderer::UpdateBoneLines()
 {
-	if(debugLines)
+	if (debugBoneLines)
 		for (unsigned int i = 0; i<boneLines.size(); i++){
-			int armatureI=boneLines[i].parentArmature;
-			int boneI=boneLines[i].parentBone;
+			int armatureI=boneLines[i]->parentArmature;
+			int boneI = boneLines[i]->parentBone;
 
 			//XMMATRIX rest = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->recursiveRest) ;
 			//XMMATRIX pose = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->world) ;
 			//XMFLOAT4X4 finalM;
 			//XMStoreFloat4x4( &finalM,  /*rest**/pose );
 
-			boneLines[i].Transform(armatures[armatureI]->boneCollection[boneI]->world);
+			boneLines[i]->Transform(armatures[armatureI]->boneCollection[boneI]->world);
 		}
 }
 void iterateSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col);
@@ -2172,9 +2173,9 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context)
 	}
 	
 }
-void wiRenderer::DrawDebugLines(Camera* camera, ID3D11DeviceContext* context)
+void wiRenderer::DrawDebugBoneLines(Camera* camera, ID3D11DeviceContext* context)
 {
-	if(debugLines){
+	if(debugBoneLines){
 		BindPrimitiveTopology(LINELIST,context);
 		BindVertexLayout(lineIL,context);
 	
@@ -2190,18 +2191,51 @@ void wiRenderer::DrawDebugLines(Camera* camera, ID3D11DeviceContext* context)
 
 		for (unsigned int i = 0; i<boneLines.size(); i++){
 			LineBuffer sb;
-			sb.mWorldViewProjection=XMMatrixTranspose(
-				XMLoadFloat4x4(&boneLines[i].desc.transform)
+			sb.mWorldViewProjection = XMMatrixTranspose(
+				XMLoadFloat4x4(&boneLines[i]->desc.transform)
 				*camera->GetViewProjection()
 				);
-			sb.color=boneLines[i].desc.color;
+			sb.color = boneLines[i]->desc.color;
 
-			UpdateBuffer(lineBuffer,&sb,context);
+			UpdateBuffer(lineBuffer, &sb, context);
 
-			BindVertexBuffer(boneLines[i].vertexBuffer,0,sizeof(XMFLOAT3A),context);
-			Draw(2,context);
+			BindVertexBuffer(boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), context);
+			Draw(2, context);
 		}
 	}
+}
+void wiRenderer::DrawDebugLines(Camera* camera, ID3D11DeviceContext* context)
+{
+	if (linesTemp.empty())
+		return;
+
+	BindPrimitiveTopology(LINELIST, context);
+	BindVertexLayout(lineIL, context);
+
+	BindRasterizerState(rssh, context);
+	BindDepthStencilState(xRayStencilState, STENCILREF_EMPTY, context);
+	BindBlendState(blendState, context);
+
+
+	BindPS(linePS, context);
+	BindVS(lineVS, context);
+
+	BindConstantBufferVS(lineBuffer, 0, context);
+
+	for (unsigned int i = 0; i<linesTemp.size(); i++){
+		LineBuffer sb;
+		sb.mWorldViewProjection = XMMatrixTranspose(
+			XMLoadFloat4x4(&linesTemp[i]->desc.transform)
+			*camera->GetViewProjection()
+			);
+		sb.color = linesTemp[i]->desc.color;
+
+		UpdateBuffer(lineBuffer, &sb, context);
+
+		BindVertexBuffer(linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), context);
+		Draw(2, context);
+	}
+	linesTemp.clear();
 }
 void wiRenderer::DrawDebugBoxes(Camera* camera, ID3D11DeviceContext* context)
 {
@@ -2731,256 +2765,256 @@ void wiRenderer::ClearShadowMaps(ID3D11DeviceContext* context){
 }
 void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 {
-	if(GameSpeed){
+	if (GameSpeed){
 
-	Frustum frustum = Frustum();
-	frustum.ConstructFrustum(cam->zFarP,cam->Projection,cam->View);
-
-		
-	CulledList culledLights;
-	if(spTree_lights)
-		wiSPTree::getVisible(spTree_lights->root,frustum,culledLights);
-
-	if(culledLights.size()>0)
-	{
-
-	BindPrimitiveTopology(TRIANGLELIST,context);
-	BindVertexLayout(vertexLayout,context);
+		Frustum frustum = Frustum();
+		frustum.ConstructFrustum(cam->zFarP, cam->Projection, cam->View);
 
 
-	BindDepthStencilState(depthStencilState,STENCILREF_DEFAULT,context);
-	
-	BindBlendState(blendState,context);
-	
-	BindPS(shPS,context);
-	BindSamplerPS(texSampler,0,context);
-	
-	BindVS(shVS,context);
-	BindConstantBufferVS(shCb,0,context);
-	BindConstantBufferVS(matCb,1,context);
-	BindConstantBufferPS(matCb,1,context);
+		CulledList culledLights;
+		if (spTree_lights)
+			wiSPTree::getVisible(spTree_lights->root, frustum, culledLights);
 
-	vector<Light*> pointLightsSaved(0);
+		if (culledLights.size()>0)
+		{
 
-	//DIRECTIONAL AND SPOTLIGHT 2DSHADOWMAPS
-	for(Cullable* c : culledLights){
-	Light* l=(Light*)c;
-	if(l->type!=Light::POINT){
+			BindPrimitiveTopology(TRIANGLELIST, context);
+			BindVertexLayout(vertexLayout, context);
 
-		for (unsigned int index = 0; index<l->shadowMap.size(); ++index){
-			l->shadowMap[index].Set(context);
-			
-			CulledCollection culledwiRenderer;
-			CulledList culledObjects;
 
-			if(l->type==Light::DIRECTIONAL){
-				const float siz = l->shadowCam[index].size * 0.5f;
-				const float f = l->shadowCam[index].farplane;
-				AABB boundingbox;
-				boundingbox.createFromHalfWidth(XMFLOAT3(0,0,0),XMFLOAT3(siz,f,siz));
-				if(spTree)
-					wiSPTree::getVisible(spTree->root,boundingbox.get(
-							XMMatrixInverse(0,XMLoadFloat4x4(&l->shadowCam[index].View))
-						),culledObjects);
-			}
-			else if(l->type==Light::SPOT){
-				Frustum frustum = Frustum();
-				XMFLOAT4X4 proj,view;
-				XMStoreFloat4x4( &proj,XMLoadFloat4x4(&l->shadowCam[index].Projection) );
-				XMStoreFloat4x4( &view,XMLoadFloat4x4(&l->shadowCam[index].View) );
-				frustum.ConstructFrustum(l->shadowCam[index].farplane, proj, view);
-				if(spTree)
-					wiSPTree::getVisible(spTree->root,frustum,culledObjects);
-			}
+			BindDepthStencilState(depthStencilState, STENCILREF_DEFAULT, context);
 
-			if(!culledObjects.empty()){
+			BindBlendState(blendState, context);
 
-				for(Cullable* object : culledObjects){
-					culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
-				}
-				
-				for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
-					Mesh* mesh = iter->first;
-					CulledObjectList& visibleInstances = iter->second;
+			BindPS(shPS, context);
+			BindSamplerPS(texSampler, 0, context);
 
-					if(visibleInstances.size() && !mesh->isBillboarded){
-						
-						if(!mesh->doubleSided)
-							BindRasterizerState(rssh,context);
-						else
-							BindRasterizerState(nonCullRSsh,context);
-			
-						//D3D11_MAPPED_SUBRESOURCE mappedResource;
-						ForShadowMapCB cb;
-						cb.mViewProjection = l->shadowCam[index].getVP();
-						cb.mWind=wind.direction;
-						cb.time=wind.time;
-						cb.windRandomness=wind.randomness;
-						cb.windWaveSize=wind.waveSize;
-						UpdateBuffer(shCb,&cb,context);
+			BindVS(shVS, context);
+			BindConstantBufferVS(shCb, 0, context);
+			BindConstantBufferVS(matCb, 1, context);
+			BindConstantBufferPS(matCb, 1, context);
 
-						
-						int k = 0;
-						for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
-							if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
-								if (mesh->softBody || (*viter)->armatureDeform)
-									mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
-								else
-									mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
-								++k;
-							}
+			vector<Light*> pointLightsSaved(0);
+
+			//DIRECTIONAL AND SPOTLIGHT 2DSHADOWMAPS
+			for (Cullable* c : culledLights){
+				Light* l = (Light*)c;
+				if (l->type != Light::POINT){
+
+					for (unsigned int index = 0; index<l->shadowMap.size(); ++index){
+						l->shadowMap[index].Set(context);
+
+						CulledCollection culledwiRenderer;
+						CulledList culledObjects;
+
+						if (l->type == Light::DIRECTIONAL){
+							const float siz = l->shadowCam[index].size * 0.5f;
+							const float f = l->shadowCam[index].farplane;
+							AABB boundingbox;
+							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
+							if (spTree)
+								wiSPTree::getVisible(spTree->root, boundingbox.get(
+								XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam[index].View))
+								), culledObjects);
 						}
-						if (k<1)
-							continue;
-
-						mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
-
-						
-						BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
-						BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
-						BindIndexBuffer(mesh->meshIndexBuff,context);
-			
-				
-						int matsiz = mesh->materialIndices.size();
-						int m=0;
-						for(Material* iMat : mesh->materials){
-
-							if(!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-								BindTexturePS(iMat->texture,0,context);
-
-						
-								
-								MaterialCB* mcb = new MaterialCB(*iMat,m);
-
-								UpdateBuffer(matCb,mcb,context);
-								
-								delete mcb;
-
-								DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
-
-								m++;
-							}
+						else if (l->type == Light::SPOT){
+							Frustum frustum = Frustum();
+							XMFLOAT4X4 proj, view;
+							XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam[index].Projection));
+							XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam[index].View));
+							frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, proj, view);
+							if (spTree)
+								wiSPTree::getVisible(spTree->root, frustum, culledObjects);
 						}
-					}
-				}
 
-			}
-		}
-	}
-	else{
-		pointLightsSaved.push_back(l);
-	}
-	}
+						if (!culledObjects.empty()){
 
-		if(!pointLightsSaved.empty() && POINTLIGHTSHADOW){
+							for (Cullable* object : culledObjects){
+								culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+							}
 
+							for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+								Mesh* mesh = iter->first;
+								CulledObjectList& visibleInstances = iter->second;
 
-			set<Light*,Cullable> orderedLights;
-			for(Light* l : pointLightsSaved){
-				l->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(l->translation,wiRenderer::getCamera()->translation))*1000;
-				orderedLights.insert(l);
-			}
+								if (visibleInstances.size() && !mesh->isBillboarded){
 
-			int cube_shadowrenders_remain = POINTLIGHTSHADOW;
-
-			BindPS(cubeShPS,context);
-			BindVS(cubeShVS,context);
-			BindGS(cubeShGS,context);
-			BindConstantBufferGS(cubeShCb,0,context);
-			BindConstantBufferPS(lightCb[1],2,context);
-			for(Light* l : orderedLights){
-
-				for (unsigned int index = 0; index<l->shadowMap.size(); ++index){
-				if(cube_shadowrenders_remain<=0)
-					break;
-				cube_shadowrenders_remain-=1;
-				l->shadowMap[index].Set(context);
-
-				Frustum frustum = Frustum();
-				XMFLOAT4X4 proj,view;
-				XMStoreFloat4x4( &proj,XMLoadFloat4x4(&l->shadowCam[index].Projection) );
-				XMStoreFloat4x4( &view,XMLoadFloat4x4(&l->shadowCam[index].View) );
-				frustum.ConstructFrustum(l->shadowCam[index].farplane, proj, view);
-
-				//D3D11_MAPPED_SUBRESOURCE mappedResource;
-				pLightBuffer lcb;
-				lcb.enerdis=l->enerDis;
-				lcb.pos=l->translation;
-				UpdateBuffer(lightCb[1],&lcb,context);
-				
-				CubeShadowCb cb;
-				for (unsigned int shcam = 0; shcam<l->shadowCam.size(); ++shcam)
-					cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
-
-				UpdateBuffer(cubeShCb,&cb,context);
-
-				CulledCollection culledwiRenderer;
-				CulledList culledObjects;
-
-				if(spTree)
-					wiSPTree::getVisible(spTree->root,l->bounds,culledObjects);
-
-				for(Cullable* object : culledObjects)
-					culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
-				
-				for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
-					Mesh* mesh = iter->first;
-					CulledObjectList& visibleInstances = iter->second;
-
-					if(!mesh->isBillboarded && !visibleInstances.empty()){
-
-							if(!mesh->doubleSided)
-								BindRasterizerState(rssh,context);
-							else
-								BindRasterizerState(nonCullRSsh,context);
-			
-
-
-							int k = 0;
-							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
-								if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
-									if (mesh->softBody || (*viter)->armatureDeform)
-										mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+									if (!mesh->doubleSided)
+										BindRasterizerState(rssh, context);
 									else
-										mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
-									++k;
+										BindRasterizerState(nonCullRSsh, context);
+
+									//D3D11_MAPPED_SUBRESOURCE mappedResource;
+									ForShadowMapCB cb;
+									cb.mViewProjection = l->shadowCam[index].getVP();
+									cb.mWind = wind.direction;
+									cb.time = wind.time;
+									cb.windRandomness = wind.randomness;
+									cb.windWaveSize = wind.waveSize;
+									UpdateBuffer(shCb, &cb, context);
+
+
+									int k = 0;
+									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
+										if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
+											if (mesh->softBody || (*viter)->armatureDeform)
+												mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+											else
+												mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+											++k;
+										}
+									}
+									if (k<1)
+										continue;
+
+									mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+
+
+									BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
+									BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
+									BindIndexBuffer(mesh->meshIndexBuff, context);
+
+
+									int matsiz = mesh->materialIndices.size();
+									int m = 0;
+									for (Material* iMat : mesh->materials){
+
+										if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
+											BindTexturePS(iMat->texture, 0, context);
+
+
+
+											MaterialCB* mcb = new MaterialCB(*iMat, m);
+
+											UpdateBuffer(matCb, mcb, context);
+
+											delete mcb;
+
+											DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
+
+											m++;
+										}
+									}
 								}
 							}
-							if (k<1)
-								continue;
 
-							mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
-
-
-							BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
-							BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
-							BindIndexBuffer(mesh->meshIndexBuff,context);
-			
-				
-							int matsiz = mesh->materialIndices.size();
-							int m=0;
-							for(Material* iMat : mesh->materials){
-								if(!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-									BindTexturePS(iMat->texture,0,context);
-						
-									MaterialCB* mcb = new MaterialCB(*iMat,m);
-
-									UpdateBuffer(matCb,mcb,context);
-									delete mcb;
-
-									DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
-								}
-									m++;
-							}
 						}
-						visibleInstances.clear();
+					}
+				}
+				else{
+					pointLightsSaved.push_back(l);
+				}
+			}
+
+			if (!pointLightsSaved.empty() && POINTLIGHTSHADOW){
+
+
+				set<Light*, Cullable> orderedLights;
+				for (Light* l : pointLightsSaved){
+					l->lastSquaredDistMulThousand = (long)(wiMath::DistanceEstimated(l->translation, cam->translation) * 1000);
+					orderedLights.insert(l);
+				}
+
+				int cube_shadowrenders_remain = POINTLIGHTSHADOW;
+
+				BindPS(cubeShPS, context);
+				BindVS(cubeShVS, context);
+				BindGS(cubeShGS, context);
+				BindConstantBufferGS(cubeShCb, 0, context);
+				BindConstantBufferPS(lightCb[1], 2, context);
+				for (Light* l : orderedLights){
+
+					for (unsigned int index = 0; index<l->shadowMap.size(); ++index){
+						if (cube_shadowrenders_remain <= 0)
+							break;
+						cube_shadowrenders_remain -= 1;
+						l->shadowMap[index].Set(context);
+
+						Frustum frustum = Frustum();
+						XMFLOAT4X4 proj, view;
+						XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam[index].Projection));
+						XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam[index].View));
+						frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, proj, view);
+
+						//D3D11_MAPPED_SUBRESOURCE mappedResource;
+						pLightBuffer lcb;
+						lcb.enerdis = l->enerDis;
+						lcb.pos = l->translation;
+						UpdateBuffer(lightCb[1], &lcb, context);
+
+						CubeShadowCb cb;
+						for (unsigned int shcam = 0; shcam<l->shadowCam.size(); ++shcam)
+							cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
+
+						UpdateBuffer(cubeShCb, &cb, context);
+
+						CulledCollection culledwiRenderer;
+						CulledList culledObjects;
+
+						if (spTree)
+							wiSPTree::getVisible(spTree->root, l->bounds, culledObjects);
+
+						for (Cullable* object : culledObjects)
+							culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+
+						for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+							Mesh* mesh = iter->first;
+							CulledObjectList& visibleInstances = iter->second;
+
+							if (!mesh->isBillboarded && !visibleInstances.empty()){
+
+								if (!mesh->doubleSided)
+									BindRasterizerState(rssh, context);
+								else
+									BindRasterizerState(nonCullRSsh, context);
+
+
+
+								int k = 0;
+								for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
+									if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
+										if (mesh->softBody || (*viter)->armatureDeform)
+											mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+										else
+											mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+										++k;
+									}
+								}
+								if (k<1)
+									continue;
+
+								mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+
+
+								BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
+								BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
+								BindIndexBuffer(mesh->meshIndexBuff, context);
+
+
+								int matsiz = mesh->materialIndices.size();
+								int m = 0;
+								for (Material* iMat : mesh->materials){
+									if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
+										BindTexturePS(iMat->texture, 0, context);
+
+										MaterialCB* mcb = new MaterialCB(*iMat, m);
+
+										UpdateBuffer(matCb, mcb, context);
+										delete mcb;
+
+										DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
+									}
+									m++;
+								}
+							}
+							visibleInstances.clear();
+						}
 					}
 				}
 			}
 		}
-	}
-		
-		BindGS(nullptr,context);
+
+		BindGS(nullptr, context);
 	}
 }
 void wiRenderer::DrawForSO(ID3D11DeviceContext* context)

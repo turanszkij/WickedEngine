@@ -61,6 +61,8 @@ public:
 	void SetDeltaTime(double dt);
 	//update lua scripts which are waiting for a game tick
 	void Update();
+	//issue lua drawing commands which are waiting for a render tick
+	void Render();
 
 	//send a signal to lua
 	void Signal(const string& name);

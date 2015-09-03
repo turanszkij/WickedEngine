@@ -1,5 +1,6 @@
 #include "wiRenderer_BindLua.h"
 #include "wiRenderer.h"
+#include "wiLines.h"
 #include "wiLoader.h"
 #include "wiHelper.h"
 #include "wiLoader_BindLua.h"
@@ -36,6 +37,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
+			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
 		}
 	}
 
@@ -273,6 +275,37 @@ namespace wiRenderer_BindLua
 				return 3;
 			}
 		}
+		return 0;
+	}
+
+	int DrawLine(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (a && b)
+			{
+				XMFLOAT3 xa, xb;
+				XMFLOAT4 xc = XMFLOAT4(1, 1, 1, 1);
+				XMStoreFloat3(&xa, a->vector);
+				XMStoreFloat3(&xb, b->vector);
+				if (argc > 2)
+				{
+					Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
+					if (c)
+						XMStoreFloat4(&xc, c->vector);
+					else
+						wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+				}
+				wiRenderer::linesTemp.push_back(new Lines(xa, xb, xc));
+			}
+			else
+				wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+		}
+		else
+			wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
 		return 0;
 	}
 };

@@ -150,6 +150,7 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 			, getSSAOEnabled() ? rtSSAO.back().shaderResource.back() : wiTextureHelper::getInstance()->getWhite()
 			, context, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(context);
+		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), context);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), context);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), context);
 	}

@@ -203,6 +203,10 @@ void wiLua::Update()
 {
 	Signal("game_update_tick");
 }
+void wiLua::Render()
+{
+	Signal("game_render_tick");
+}
 
 void wiLua::Signal(const string& name)
 {

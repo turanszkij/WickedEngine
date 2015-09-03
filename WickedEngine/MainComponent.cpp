@@ -85,13 +85,15 @@ void MainComponent::Update()
 	wiCpuInfo::Frame();
 	wiBackLog::Update();
 
-	getActiveComponent()->Update();
-
 	wiLua::GetGlobal()->Update();
+
+	getActiveComponent()->Update();
 }
 
 void MainComponent::Render()
 {
+	wiLua::GetGlobal()->Render();
+
 	getActiveComponent()->Render();
 }
 

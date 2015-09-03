@@ -27,5 +27,6 @@ namespace wiRenderer_BindLua
 	int FinishLoading(lua_State* L);
 
 	int Pick(lua_State* L);
+	int DrawLine(lua_State* L);
 };
 

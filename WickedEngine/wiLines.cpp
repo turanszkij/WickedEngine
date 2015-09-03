@@ -49,6 +49,10 @@ Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4& c)
 		verts=NULL;
 	}
 }
+Lines::~Lines()
+{
+	CleanUp();
+}
 
 void Lines::CleanUp()
 {

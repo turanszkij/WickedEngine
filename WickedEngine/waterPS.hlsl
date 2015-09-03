@@ -59,11 +59,13 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		float mod = saturate(0.05*(refDepth-depth));
 		float3 dullColor = lerp(refractiveColor,diffuseColor.rgb, saturate(eyeDot));
 		refractiveColor = lerp(refractiveColor, dullColor, mod).rgb;
-
 		
 		//FRESNEL TERM
 		float fresnelTerm = abs(eyeDot);
 		baseColor.rgb = lerp(reflectiveColor, refractiveColor, fresnelTerm);
+
+		//DULL COLOR
+		baseColor.rgb = lerp(baseColor.rgb, diffuseColor.rgb, 0.16);
 
 		baseColor.rgb=pow(baseColor.rgb,GAMMA);
 		
