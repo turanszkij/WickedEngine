@@ -4,7 +4,6 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiFrustum.h"
-#include "wiCamera.h"
 #include "wiRandom.h"
 
 //ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
@@ -228,15 +227,12 @@ void wiEmittedParticle::Burst(float num)
 }
 
 
-void wiEmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG)
+void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG)
 {
 	if(!points.empty()){
 		
 		Frustum frustum = Frustum();
-		XMFLOAT4X4 proj,view;
-		XMStoreFloat4x4( &proj,wiRenderer::getCamera()->Projection );
-		XMStoreFloat4x4( &view,newView );
-		frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP,proj,view);
+		frustum.ConstructFrustum(camera->zFarP,camera->Projection,camera->View);
 
 		if(frustum.CheckBox(bounding_box->corners)){
 			
@@ -259,9 +255,9 @@ void wiEmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11
 			wiRenderer::BindTexturePS(depth,1,context);
 
 			ConstantBuffer cb;
-			cb.mView = XMMatrixTranspose(newView);
-			cb.mProjection = XMMatrixTranspose( wiRenderer::getCamera()->Projection );
-			cb.mCamPos = eye;
+			cb.mView = XMMatrixTranspose(camera->GetView());
+			cb.mProjection = XMMatrixTranspose( camera->GetProjection() );
+			cb.mCamPos = camera->GetEye();
 			cb.mAdd.x = additive;
 			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
 
@@ -312,13 +308,13 @@ void wiEmittedParticle::Draw(const XMVECTOR eye, const XMMATRIX& newView, ID3D11
 		}
 	}
 }
-void wiEmittedParticle::DrawPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
+void wiEmittedParticle::DrawPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
 	if(material->premultipliedTexture)
-		Draw(eye,view,context,depth,FLAG);
+		Draw(camera,context,depth,FLAG);
 }
-void wiEmittedParticle::DrawNonPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
+void wiEmittedParticle::DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
 	if(!material->premultipliedTexture)
-		Draw(eye,view,context,depth,FLAG);
+		Draw(camera,context,depth,FLAG);
 }
 
 

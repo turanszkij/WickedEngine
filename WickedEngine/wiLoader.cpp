@@ -1710,7 +1710,7 @@ void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worl
 	}
 	file.close();
 }
-void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<ActionCamera>& cameras
+void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
 				   ,const vector<Armature*>& armatures, map<string,Transform*>& transforms){
 	stringstream filename("");
 	filename<<directory<<name;
@@ -1736,7 +1736,7 @@ void LoadWiCameras(const string&directory, const string& name, const string& ide
 					stringstream identified_parentArmature("");
 					identified_parentArmature<<parentA<<identifier;
 			
-					cameras.push_back(ActionCamera(
+					cameras.push_back(Camera(
 						trans,rot
 						,name)
 						);
@@ -1830,7 +1830,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 				  , vector<Light*>& lights
 				  , vector<HitSphere*>& spheres
 				  , WorldInfo& worldInfo, Wind& wind
-				  , vector<ActionCamera>& cameras
+				  , vector<Camera>& cameras
 				  , vector<Armature*>& l_armatures
 				  , vector<Object*>& l_objects
 				  , map<string,Transform*>& transforms
@@ -1846,7 +1846,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 	vector<HitSphere*>		l_spheres;
 	WorldInfo				l_worldInfo = worldInfo;
 	Wind					l_wind = wind;
-	vector<ActionCamera>	l_cameras;
+	vector<Camera>	l_cameras;
 	map<string,Transform*>  l_transforms;
 	list<Decal*>			l_decals;
 

@@ -4,6 +4,7 @@
 struct Material;
 struct AABB;
 struct Light;
+struct Camera;
 
 class wiEmittedParticle :
 	public wiParticle
@@ -95,9 +96,9 @@ public:
 
 #define DRAW_DEFAULT 0
 #define DRAW_DARK 1
-	void Draw(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
-	void DrawPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
-	void DrawNonPremul(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
+	void Draw(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
+	void DrawPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
+	void DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
 	void CleanUp();
 
 	std::string name;

@@ -793,13 +793,6 @@ struct Light : public Cullable , public Transform
 		lensFlareNames.resize(0);
 	}
 	void CleanUp();
-	static string getTypeStr(int type){
-		if(type==Light::DIRECTIONAL) return "dirLightMesh";
-		else if(type==Light::POINT) return "pointLightMesh";
-		else if(type==Light::SPOT) return "spotLightMesh";
-		else if(type==3) return "pointLightHaloMesh";
-		return "";
-	}
 };
 struct Decal : public Cullable, public Transform
 {
@@ -833,31 +826,126 @@ struct Wind{
 	float waveSize;
 	Wind():direction(XMFLOAT3(0,0,0)),time(0),randomness(5),waveSize(1){}
 };
-struct ActionCamera:public Transform{
+struct Camera:public Transform{
+	XMFLOAT4X4 View, Projection, OProjection;
+	XMFLOAT3 At, Up;
+	float updownRot, leftrightRot;
+	float width, height;
+	float zNearP, zFarP;
 	
-	ActionCamera():Transform(){
+	Camera():Transform(){
 	}
-	ActionCamera(const XMFLOAT3& newPos, const XMFLOAT4& newRot,
+	Camera(const XMFLOAT3& newPos, const XMFLOAT4& newRot,
 		const string& newName):Transform()
 	{
 		translation_rest=newPos;
 		rotation_rest=newRot;
 		name=newName;
+		getTransform();
 	}
-	//ActionCamera transformed(const XMFLOAT3& translation, const XMFLOAT4& rotation, const XMFLOAT3& scale){
-	//	XMVECTOR t = XMVector3Transform( XMLoadFloat3( &pos ), XMMatrixTranslationFromVector( XMLoadFloat3(&translation) ) );
-	//	XMVECTOR r = XMQuaternionMultiply( XMLoadFloat4( &rot ), XMLoadFloat4( &rotation ) );
+	void SetUp(int newWidth, int newHeight, float newNear, float newFar)
+	{
+		XMMATRIX View, Projection, OProjection;
+		XMVECTOR At, Up, Eye = this->GetEye();
 
-	//	XMFLOAT3 newPos;
-	//	XMStoreFloat3( &newPos,t );
-	//	XMFLOAT4 newRot;
-	//	XMStoreFloat4( &newRot,r );
+		zNearP = newNear;
+		zFarP = newFar;
 
-	//	return ActionCamera(
-	//		newPos, newRot
-	//		,name,parentA,parentB,armatureI,boneI
-	//		);
-	//}
+		width = (float)newWidth;
+		height = (float)newHeight;
+
+
+		Projection = XMMatrixPerspectiveFovLH(XM_PI / 3.0f, (float)width / (float)height, zNearP, zFarP);
+		OProjection = XMMatrixOrthographicLH((float)width, (float)height, 0.1f, 5000.0f);
+
+
+		At = XMVectorAdd(Eye, XMVectorSet(0.0f, -1, 0, 0.0f));
+		Up = XMVectorAdd(Eye, XMVectorSet(0.0f, 0, 1, 0.0f));
+		View = XMMatrixLookAtLH(Eye, At, Up);
+
+
+		leftrightRot = 0;
+		updownRot = 0;
+
+		XMStoreFloat4x4(&this->View, View);
+		XMStoreFloat4x4(&this->Projection, Projection);
+		XMStoreFloat4x4(&this->OProjection, OProjection);
+		XMStoreFloat3(&this->At, At);
+		XMStoreFloat3(&this->Up, Up);
+	}
+	void Update()
+	{
+		getTransform();
+
+		XMMATRIX View, Projection;
+		XMVECTOR At, Up, Eye = this->GetEye();
+
+		XMMATRIX cameraRot = XMMatrixRotationX(updownRot - XM_PI / 2.0f)*XMMatrixRotationY(leftrightRot);
+
+		XMVECTOR cameraOrigTarg = XMVectorSet(0, -1, 0, 0);
+		At = XMVector3Transform(cameraOrigTarg, cameraRot);
+		XMVECTOR cameraFinalTarg = XMVectorAdd(Eye, At);
+
+
+
+		XMVECTOR cameraOrigUp = XMVectorSet(0, 0, 1, 0);
+		Up = XMVector3Transform(cameraOrigUp, cameraRot);
+		View = XMMatrixLookAtLH(Eye, cameraFinalTarg, Up);
+
+
+		XMStoreFloat4x4(&this->View, View);
+		XMStoreFloat3(&this->At, At);
+		XMStoreFloat3(&this->Up, Up);
+	}
+	void Move(const XMVECTOR& movevector)
+	{
+		XMMATRIX cameraRot = XMMatrixRotationX(updownRot)*XMMatrixRotationY(leftrightRot);
+		XMVECTOR rotVect = XMVector3Transform(movevector * 0.1f, cameraRot);
+		XMVECTOR Eye = XMLoadFloat3(&translation_rest);
+		Eye += rotVect;
+
+		XMStoreFloat3(&translation_rest, Eye);
+	}
+	// TODO: now it just reflects a standard upward plane on the origo, but should be able to reflect to any plane
+	void Reflect(Camera* toReflect, const XMFLOAT4& plane = XMFLOAT4(0,1,0,0))
+	{
+		*this = *toReflect;
+		translation_rest.y *= -1;
+		updownRot *= -1;
+		Up.x *= -1;
+		Up.y *= -1;
+		Up.z *= -1;
+		Update();
+	}
+
+	XMVECTOR GetEye()
+	{
+		return XMLoadFloat3(&translation);
+	}
+	XMVECTOR GetAt()
+	{
+		return XMLoadFloat3(&At);
+	}
+	XMVECTOR GetUp()
+	{
+		return XMLoadFloat3(&Up);
+	}
+	XMMATRIX GetView()
+	{
+		return XMLoadFloat4x4(&View);
+	}
+	XMMATRIX GetProjection()
+	{
+		return XMLoadFloat4x4(&Projection);
+	}
+	XMMATRIX GetOProjection()
+	{
+		return XMLoadFloat4x4(&OProjection);
+	}
+	XMMATRIX GetViewProjection()
+	{
+		return XMMatrixMultiply(GetView(),GetProjection());
+	}
 };
 struct HitSphere:public SPHERE, public Transform{
 	float radius_saved, radius;
@@ -915,7 +1003,7 @@ void LoadWiLights(const string& directory, const string& filename, const string&
 void LoadWiHitSpheres(const string& directory, const string& name, const string& identifier, vector<HitSphere*>& spheres
 					  ,const vector<Armature*>& armatures, map<string,Transform*>& transforms);
 void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worldInfo, Wind& wind);
-void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<ActionCamera>& cameras
+void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
 				   ,const vector<Armature*>& armatures, map<string,Transform*>& transforms);
 void LoadWiDecals(const string&directory, const string& name, const string& texturesDir, list<Decal*>& decals);
 
@@ -927,7 +1015,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 				  , vector<Light*>& lights
 				  , vector<HitSphere*>& spheres
 				  , WorldInfo& worldInfo, Wind& wind
-				  , vector<ActionCamera>& cameras
+				  , vector<Camera>& cameras
 				  , vector<Armature*>& l_armatures
 				  , vector<Object*>& l_objects
 				  , map<string,Transform*>& transforms

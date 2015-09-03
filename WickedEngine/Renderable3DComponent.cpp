@@ -2,10 +2,10 @@
 #include "wiRenderer.h"
 #include "wiImage.h"
 #include "wiImageEffects.h"
-#include "wiCamera.h"
 #include "wiStencilRef.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
+#include "wiLoader.h"
 
 Renderable3DComponent::Renderable3DComponent()
 {
@@ -164,7 +164,6 @@ void Renderable3DComponent::Compose(){
 	RenderableComponent::Compose();
 
 	RenderColorGradedComposition();
-
 }
 
 void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context){
@@ -176,11 +175,21 @@ void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context)
 	rtReflection.Activate(context); {
 		wiRenderer::UpdatePerRenderCB(context, 0);
 		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->View, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->refEye, getWaterPlane().getXMFLOAT4());
-		wiRenderer::DrawWorld(wiRenderer::getCamera()->refView, false, 0, context
+
+		// reverse clipping if underwater
+		XMFLOAT4 water = getWaterPlane().getXMFLOAT4();
+		if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&getWaterPlane().getXMFLOAT4()), wiRenderer::getCamera()->GetEye())) < 0 )
+		{
+			water.x *= -1;
+			water.y *= -1;
+			water.z *= -1;
+		}
+
+		wiRenderer::UpdatePerViewCB(context, wiRenderer::getRefCamera(), wiRenderer::getCamera(), water);
+		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, context
 			, false, wiRenderer::SHADED_NONE
 			, nullptr, false, GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::DrawSky(wiRenderer::getCamera()->refEye, context);
+		wiRenderer::DrawSky(context);
 	}
 }
 void Renderable3DComponent::RenderShadows(wiRenderer::DeviceContext context){
@@ -204,28 +213,28 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	if (getVolumeLightsEnabled())
 	{
 		rtVolumeLight.Activate(context, mainRT.depth);
-		wiRenderer::DrawVolumeLights(wiRenderer::getCamera()->View, context);
+		wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), context);
 	}
 
 	if (getEmittedParticlesEnabled())
 	{
 		rtParticle.Activate(context, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
-		wiRenderer::DrawSoftParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, context, rtLinearDepth.shaderResource.back());
+		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), context, rtLinearDepth.shaderResource.back());
 		
 		rtParticleAdditive.Activate(context, 0, 0, 0, 1);  //OFFSCREEN RENDER ADDITIVEPARTICLES
-		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera()->Eye, wiRenderer::getCamera()->View, context, rtLinearDepth.shaderResource.back());
+		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera(), context, rtLinearDepth.shaderResource.back());
 	}
 
 	rtWaterRipple.Activate(context, 0, 0, 0, 0); {
 		wiRenderer::DrawWaterRipples(context);
 	}
 	rtWater.Activate(context, mainRT.depth); {
-		wiRenderer::DrawWorldWater(wiRenderer::getCamera()->View, shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
+		wiRenderer::DrawWorldWater(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
 			, rtWaterRipple.shaderResource.back(), context);
 	}
 
 	rtTransparent.Activate(context, mainRT.depth); {
-		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera()->View, shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
+		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
 			, context);
 	}
 
@@ -276,14 +285,14 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer
 	rtSun[0].Activate(context, mainRT.depth); {
 		wiRenderer::UpdatePerRenderCB(context, 0);
 		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(1, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::DrawSky(wiRenderer::getCamera()->Eye, context);
+		wiRenderer::DrawSky(context);
 	}
 
 	wiImage::BatchBegin(context);
 	rtSun[1].Activate(context); {
 		wiImageEffects fxs = fx;
 		fxs.blendFlag = BLENDMODE_ADDITIVE;
-		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->View, XMMatrixIdentity());
+		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 		{
 			XMStoreFloat2(&fxs.sunPos, sunPos);
 			wiImage::Draw(rtSun[0].shaderResource.back(), fxs, context);

@@ -21,8 +21,6 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 			screenPos.x = PSIn.pos2D.x/PSIn.pos2D.w/2.0f + 0.5f;
 			screenPos.y = -PSIn.pos2D.y/PSIn.pos2D.w/2.0f + 0.5f;
 		
-		float depth = PSIn.pos2D.z;
-		float refDepth = ( xDepthMap.Sample(mapSampler,screenPos) );
 
 
 		//NORMALMAP
@@ -51,30 +49,27 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 			RefTex.x = PSIn.ReflectionMapSamplingPos.x/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 			RefTex.y = -PSIn.ReflectionMapSamplingPos.y/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 		float3 reflectiveColor = xTextureRef.SampleLevel(mapSampler,RefTex+bumpColor,0).rgb;
-		
 	
 		//REFRACTION 
-		float2 perturbatedRefrTexCoords = screenPos + bumpColor;   
-		float3 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords,0));
+		float2 perturbatedRefrTexCoords = screenPos + bumpColor;
+		float depth = PSIn.pos2D.z;
+		float refDepth = (xDepthMap.Sample(mapSampler, perturbatedRefrTexCoords));
+		float3 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0));
+		float eyeDot = dot(normal, eyevector);
 		float mod = saturate(0.05*(refDepth-depth));
-		refractiveColor = lerp(refractiveColor,float4(0,0,0.23,1),mod).rgb;
-		//baseColor.rgb=lerp(baseColor,refractiveColor,diffuseColor.a);
+		float3 dullColor = lerp(refractiveColor,diffuseColor.rgb, saturate(eyeDot));
+		refractiveColor = lerp(refractiveColor, dullColor, mod).rgb;
 
 		
 		//FRESNEL TERM
-		float fresnelTerm = dot(normal, eyevector);
-		float3 combinedColor = lerp(reflectiveColor, refractiveColor, fresnelTerm);
-
-
-		//DULL COLOR
-		float3 dullColor = diffuseColor.rgb;
-		baseColor.rgb = lerp(combinedColor, dullColor, 0.16);
+		float fresnelTerm = abs(eyeDot);
+		baseColor.rgb = lerp(reflectiveColor, refractiveColor, fresnelTerm);
 
 		baseColor.rgb=pow(baseColor.rgb,GAMMA);
 		
 		
 		//SOFT EDGE
-		float fade = saturate(0.3* (refDepth-depth));
+		float fade = saturate(0.3* abs(refDepth-depth));
 		baseColor.a*=fade;
 		
 		baseColor.rgb*= clamp( saturate( abs(dot(xSun,PSIn.nor)) *xSunColor.rgb ),xAmbient,1 );

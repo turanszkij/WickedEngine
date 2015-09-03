@@ -17,9 +17,10 @@ struct Light;
 struct Decal;
 struct WorldInfo;
 struct Wind;
-struct ActionCamera;
+struct Camera;
 struct HitSphere;
 struct RAY;
+struct Camera;
 
 
 class  Lines;
@@ -32,7 +33,7 @@ class  wiSPTree;
 class  TaskThread;
 struct Cullable;
 class  PHYSICS;
-class  Camera;
+//class  Camera;
 class  wiRenderTarget;
 class  wiWaterPlane;
 
@@ -1005,8 +1006,7 @@ public:
 	static void UpdatePerWorldCB(ID3D11DeviceContext* context);
 	static void UpdatePerFrameCB(ID3D11DeviceContext* context);
 	static void UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF);
-	static void UpdatePerViewCB(ID3D11DeviceContext* context, const XMMATRIX& newView, const XMMATRIX& newRefView, const XMMATRIX& newProjection
-							 , const XMVECTOR& newEye, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
+	static void UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
 	static void UpdatePerEffectCB(ID3D11DeviceContext* context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
 
 	enum SHADED_TYPE
@@ -1016,32 +1016,32 @@ public:
 		SHADED_FORWARD_SIMPLE=2
 	};
 	
-	static void DrawSky(const XMVECTOR&, ID3D11DeviceContext* context);
-	static void DrawWorld(const XMMATRIX&, bool DX11Eff, int tessF, ID3D11DeviceContext* context
+	static void DrawSky(ID3D11DeviceContext* context);
+	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11DeviceContext* context
 		, bool BlackOut, SHADED_TYPE shaded, ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread);
 	static void DrawForSO(ID3D11DeviceContext* context);
 	static void ClearShadowMaps(ID3D11DeviceContext* context);
 	static void DrawForShadowMap(ID3D11DeviceContext* context);
-	static void DrawWorldWater(const XMMATRIX& newView, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
+	static void DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
 		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* nor, ID3D11DeviceContext* context);
-	static void DrawWorldTransparent(const XMMATRIX& newView, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
+	static void DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
 		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context);
-	void DrawDebugSpheres(const XMMATRIX&, ID3D11DeviceContext* context);
-	static void DrawDebugLines(const XMMATRIX&, ID3D11DeviceContext* context);
-	static void DrawDebugBoxes(const XMMATRIX&, ID3D11DeviceContext* context);
-	static void DrawSoftParticles(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark = false);
-	static void DrawSoftPremulParticles(const XMVECTOR eye, const XMMATRIX& view, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark = false);
+	void DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context);
+	static void DrawDebugLines(Camera* camera, ID3D11DeviceContext* context);
+	static void DrawDebugBoxes(Camera* camera, ID3D11DeviceContext* context);
+	static void DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark = false);
+	static void DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark = false);
 	static void DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
 	static void DrawImagesAdd(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
 	//alpha-opaque
 	static void DrawImages(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
 	static void DrawImagesNormals(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
-	static void DrawLights(const XMMATRIX&, ID3D11DeviceContext* context
+	static void DrawLights(Camera* camera, ID3D11DeviceContext* context
 		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* normal, ID3D11ShaderResourceView* material
 		, unsigned int stencilRef = 2);
-	static void DrawVolumeLights(const XMMATRIX&, ID3D11DeviceContext* context);
+	static void DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context);
 	static void DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth, const int& RENDERWIDTH, const int& RENDERHEIGHT);
-	static void DrawDecals(const XMMATRIX& newView, DeviceContext context, TextureView depth);
+	static void DrawDecals(Camera* camera, DeviceContext context, TextureView depth);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();
@@ -1069,7 +1069,7 @@ public:
 	static vector<Cube> cubes;
 	static vector<Light*> lights;
 	static map<string,vector<wiEmittedParticle*>> emitterSystems;
-	vector<ActionCamera> cameras;
+	vector<Camera> cameras;
 	vector<HitSphere*> spheres;
 	static map<string,Transform*> transforms;
 	static list<Decal*> decals;
@@ -1084,8 +1084,9 @@ public:
 
 	static wiRenderTarget normalMapRT, imagesRT, imagesRTAdd;
 	
-	static Camera* cam;
+	static Camera* cam, *refCam;
 	static Camera* getCamera(){ return cam; }
+	static Camera* getRefCamera(){ return refCam; }
 
 	float getSphereRadius(const int& index);
 

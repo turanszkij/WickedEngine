@@ -3,6 +3,7 @@
 
 class wiSPTree;
 struct Material;
+struct Camera;
 
 class wiHairParticle :
 	public wiParticle
@@ -56,7 +57,7 @@ public:
 	void CleanUp();
 
 	void SetUpPatches();
-	void Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMATRIX& newProj, ID3D11DeviceContext *context);
+	void Draw(Camera* camera, ID3D11DeviceContext *context);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();

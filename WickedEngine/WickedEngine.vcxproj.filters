@@ -512,9 +512,6 @@
     <ClCompile Include="wiBULLET.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="wiCamera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="wiClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1487,9 +1484,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wiPHYSICS.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wiCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wiClient.h">

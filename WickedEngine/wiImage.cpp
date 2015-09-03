@@ -3,7 +3,6 @@
 #include "wiRenderer.h"
 #include "wiImageEffects.h"
 #include "wiLoader.h"
-#include "wiCamera.h"
 #include "wiHelper.h"
 
 #pragma region STATICS
@@ -297,13 +296,13 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			ConstantBuffer cb;
 			if(effects.typeFlag==SCREEN){
-				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
+				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetOProjection() );
 				cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::RENDERWIDTH / 2 - effects.siz.x / 2, -wiRenderer::RENDERHEIGHT / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(-wiRenderer::RENDERWIDTH / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::RENDERHEIGHT / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
 				cb.mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
-				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->View * wiRenderer::getCamera()->Projection );
+				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection() );
 				XMMATRIX faceRot = XMMatrixIdentity();
 				if(effects.lookAt.w){
 					XMVECTOR vvv = (effects.lookAt.x==1 && !effects.lookAt.y && !effects.lookAt.z)?XMVectorSet(0,1,0,0):XMVectorSet(1,0,0,0);
@@ -582,7 +581,7 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 	cb.mAmbient=wiRenderer::worldInfo.ambient;
 	//cb.mBiasResSoftshadow=shadowProps;
 	cb.mHorizon=wiRenderer::worldInfo.horizon;
-	cb.mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::getCamera()->View*wiRenderer::getCamera()->Projection) );
+	cb.mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::getCamera()->GetView()*wiRenderer::getCamera()->GetProjection()) );
 	cb.mFogSEH=wiRenderer::worldInfo.fogSEH;
 
 	wiRenderer::UpdateBuffer(deferredCb,&cb,context);

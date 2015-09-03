@@ -2,7 +2,7 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
-#include "wiCamera.h"
+#include "wiLoader.h"
 
 
 ID3D11Buffer		*wiFont::vertexBuffer,*wiFont::indexBuffer;
@@ -343,7 +343,7 @@ void wiFont::Draw(wiRenderer::DeviceContext context){
 
 
 		ConstantBuffer cb = ConstantBuffer();
-		cb.mProjection = XMMatrixTranspose( wiRenderer::getCamera()->Oprojection );
+		cb.mProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetOProjection() );
 		cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
 		cb.mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
 		

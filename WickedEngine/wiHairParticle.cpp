@@ -450,14 +450,11 @@ void wiHairParticle::SetUpPatches()
 	GenerateSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),SPTREE_GENERATE_OCTREE);
 	return;
 }
-void wiHairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XMMATRIX& newProj, ID3D11DeviceContext *context)
+void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 {
 	
 	static Frustum frustum = Frustum();
-	static XMFLOAT4X4 proj,view;
-	XMStoreFloat4x4( &proj,newProj );
-	XMStoreFloat4x4( &view,newView );
-	frustum.ConstructFrustum((float)LOD[2], proj, view);
+	frustum.ConstructFrustum((float)LOD[2], camera->Projection, camera->View);
 
 		
 	CulledList culledPatches;
@@ -485,10 +482,10 @@ void wiHairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XM
 
 
 		CBGS gcb;
-		gcb.mView = XMMatrixTranspose(newView);
-		gcb.mProj = XMMatrixTranspose(newProj);
+		gcb.mView = XMMatrixTranspose(camera->GetView());
+		gcb.mProj = XMMatrixTranspose(camera->GetProjection());
 		gcb.colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,wiRenderer::wind.time);
-		gcb.eye=eye;
+		gcb.eye=camera->translation;
 		gcb.drawdistance = (float)LOD[2];
 		gcb.wind=wiRenderer::wind.direction;
 		gcb.windRandomness=wiRenderer::wind.randomness;
@@ -515,7 +512,7 @@ void wiHairParticle::Draw(const XMFLOAT3& eye, const XMMATRIX& newView, const XM
 				Cullable* culled = *iter;
 				Patch* patch = ((PatchHolder*)culled)->patch;
 
-				float dis = wiMath::Distance(eye,((PatchHolder*)culled)->bounds.getCenter());
+				float dis = wiMath::Distance(camera->translation,((PatchHolder*)culled)->bounds.getCenter());
 
 				if(dis<LOD[i]){
 					culledPatches.erase(iter++);

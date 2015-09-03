@@ -72,10 +72,6 @@ _________________________________________________________
 		- Optimize image rendering
 			The Drawing fuctions are bloated, imageVS is no longer readable by humans, 
 			possible batching optimizations
-		- Rewrite camera class
-			It is probably the very first class for the engine and also the ugliest one, 
-			it was written a long time ago
-			it also has windows api commands (wtf)
 		- Decouple API from wiRenderer
 			The renderer has become too large, unmanageable, hardly readable. Aside from that it
 			is a good idea to decouple them for possible support of multiple apis in the future...

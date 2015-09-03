@@ -6,7 +6,6 @@
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiBackLog.h"
-#include "wiCamera.h"
 #include "wiFrustum.h"
 #include "wiImageEffects.h"
 #include "wiImage.h"

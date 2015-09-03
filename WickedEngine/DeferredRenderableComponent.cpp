@@ -2,7 +2,6 @@
 #include "wiRenderer.h"
 #include "wiImage.h"
 #include "wiImageEffects.h"
-#include "wiCamera.h"
 #include "wiStencilRef.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
@@ -82,11 +81,11 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 
 	rtGBuffer.Activate(context); {
 		wiRenderer::UpdatePerRenderCB(context, tessellationQuality);
-		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->View, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->Eye);
+		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera(), wiRenderer::getRefCamera());
 
 
 		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::DrawWorld(wiRenderer::getCamera()->View, wiRenderer::DX11, tessellationQuality, context, false
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), wiRenderer::DX11, tessellationQuality, context, false
 			, wiRenderer::SHADED_DEFERRED, rtReflection.shaderResource.front(), true, GRAPHICSTHREAD_SCENE);
 
 
@@ -105,11 +104,11 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 	dtDepthCopy.CopyFrom(*rtGBuffer.depth, context);
 
 	rtGBuffer.Set(context); {
-		wiRenderer::DrawDecals(wiRenderer::getCamera()->View, context, dtDepthCopy.shaderResource);
+		wiRenderer::DrawDecals(wiRenderer::getCamera(), context, dtDepthCopy.shaderResource);
 	}
 
 	rtLight.Activate(context, rtGBuffer.depth); {
-		wiRenderer::DrawLights(wiRenderer::getCamera()->View, context,
+		wiRenderer::DrawLights(wiRenderer::getCamera(), context,
 			dtDepthCopy.shaderResource, rtGBuffer.shaderResource[1], rtGBuffer.shaderResource[2]);
 	}
 
@@ -150,9 +149,9 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 			, rtLinearDepth.shaderResource.back(), rtLight.shaderResource.front(), rtGBuffer.shaderResource[1]
 			, getSSAOEnabled() ? rtSSAO.back().shaderResource.back() : wiTextureHelper::getInstance()->getWhite()
 			, context, STENCILREF_DEFAULT);
-		wiRenderer::DrawSky(wiRenderer::getCamera()->Eye, context);
-		wiRenderer::DrawDebugLines(wiRenderer::getCamera()->View, context);
-		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera()->View, context);
+		wiRenderer::DrawSky(context);
+		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), context);
+		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), context);
 	}
 
 

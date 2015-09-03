@@ -439,7 +439,6 @@
     </ClCompile>
     <ClCompile Include="BULLET\LinearMath\btSerializer.cpp" />
     <ClCompile Include="BULLET\LinearMath\btVector3.cpp" />
-    <ClCompile Include="wiCamera.cpp" />
     <ClCompile Include="wiClient.cpp" />
     <ClCompile Include="wiCpuInfo.cpp" />
     <ClCompile Include="wiCube.cpp" />
@@ -755,7 +754,6 @@
     <ClInclude Include="BULLET\LinearMath\btTransform.h" />
     <ClInclude Include="BULLET\LinearMath\btTransformUtil.h" />
     <ClInclude Include="BULLET\LinearMath\btVector3.h" />
-    <ClInclude Include="wiCamera.h" />
     <ClInclude Include="wiClient.h" />
     <ClInclude Include="CommonInclude.h" />
     <ClInclude Include="DeferredRenderableComponent.h" />

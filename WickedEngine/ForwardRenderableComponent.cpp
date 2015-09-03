@@ -2,7 +2,6 @@
 #include "wiRenderer.h"
 #include "wiImage.h"
 #include "wiImageEffects.h"
-#include "wiCamera.h"
 #include "wiStencilRef.h"
 #include "wiHelper.h"
 
@@ -70,13 +69,13 @@ void ForwardRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 		wiRenderer::UpdatePerFrameCB(context);
 		wiRenderer::UpdatePerRenderCB(context, 0);
 		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera()->View, wiRenderer::getCamera()->refView, wiRenderer::getCamera()->Projection, wiRenderer::getCamera()->Eye, XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::DrawWorld(wiRenderer::getCamera()->View, false, 0, context
+		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera(), wiRenderer::getRefCamera());
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, 0, context
 			, false, wiRenderer::SHADED_FORWARD_SIMPLE
 			, nullptr, true, GRAPHICSTHREAD_SCENE);
-		wiRenderer::DrawSky(wiRenderer::getCamera()->Eye, context);
-		wiRenderer::DrawDebugLines(wiRenderer::getCamera()->View, context);
-		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera()->View, context);
+		wiRenderer::DrawSky(context);
+		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), context);
+		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), context);
 	}
 
 	rtLinearDepth.Activate(context); {
