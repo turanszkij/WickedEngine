@@ -1,11 +1,11 @@
 #pragma once
-#include "RenderableComponent.h"
+#include "Renderable2DComponent.h"
 #include "wiTaskThread.h"
 #include "wiRenderer.h"
 #include "wiWaterPlane.h"
 
 class Renderable3DComponent :
-	public RenderableComponent
+	public Renderable2DComponent
 {
 private:
 	float lightShaftQuality;

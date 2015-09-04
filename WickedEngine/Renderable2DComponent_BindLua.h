@@ -16,6 +16,7 @@ public:
 	~Renderable2DComponent_BindLua();
 
 	virtual int AddSprite(lua_State *L);
+	virtual int AddFont(lua_State* L);
 
 	static void Bind();
 };

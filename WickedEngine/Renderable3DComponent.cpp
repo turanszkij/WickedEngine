@@ -164,6 +164,8 @@ void Renderable3DComponent::Compose(){
 	RenderableComponent::Compose();
 
 	RenderColorGradedComposition();
+
+	Renderable2DComponent::Compose();
 }
 
 void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context){

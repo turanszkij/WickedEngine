@@ -788,6 +788,9 @@
     <ClCompile Include="Vector_BindLua.cpp">
       <Filter>Lua Bindings</Filter>
     </ClCompile>
+    <ClCompile Include="wiFont_BindLua.cpp">
+      <Filter>Lua Bindings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1751,6 +1754,9 @@
       <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="Vector_BindLua.h">
+      <Filter>Lua Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="wiFont_BindLua.h">
       <Filter>Lua Bindings</Filter>
     </ClInclude>
   </ItemGroup>

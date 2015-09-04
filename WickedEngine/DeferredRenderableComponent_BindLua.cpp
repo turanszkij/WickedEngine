@@ -3,6 +3,9 @@
 const char DeferredRenderableComponent_BindLua::className[] = "DeferredRenderableComponent";
 
 Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableComponent_BindLua::methods[] = {
+	lunamethod(Renderable2DComponent_BindLua, AddSprite),
+	lunamethod(Renderable2DComponent_BindLua, AddFont),
+
 	lunamethod(DeferredRenderableComponent_BindLua, GetContent),
 	lunamethod(DeferredRenderableComponent_BindLua, Initialize),
 	lunamethod(DeferredRenderableComponent_BindLua, Load),

@@ -448,6 +448,7 @@
     <ClCompile Include="wiEmittedParticle.cpp" />
     <ClCompile Include="wiFont.cpp" />
     <ClCompile Include="ForwardRenderableComponent.cpp" />
+    <ClCompile Include="wiFont_BindLua.cpp" />
     <ClCompile Include="wiFrameRate.cpp" />
     <ClCompile Include="wiFrustum.cpp" />
     <ClCompile Include="wiHairParticle.cpp" />
@@ -503,6 +504,7 @@
     <ClInclude Include="SpriteAnim_BindLua.h" />
     <ClInclude Include="Texture_BindLua.h" />
     <ClInclude Include="Vector_BindLua.h" />
+    <ClInclude Include="wiFont_BindLua.h" />
     <ClInclude Include="wiImageEffects_BindLua.h" />
     <ClInclude Include="wiInputManager_BindLua.h" />
     <ClInclude Include="wiLoader_BindLua.h" />

@@ -2,6 +2,7 @@
 #include "RenderableComponent.h"
 
 class wiSprite;
+class wiFont;
 
 class Renderable2DComponent :
 	public RenderableComponent
@@ -10,6 +11,7 @@ private:
 	float m_spriteSpeed;
 protected:
 	vector<wiSprite*> m_sprites;
+	vector<wiFont*> m_fonts;
 public:
 	Renderable2DComponent();
 	~Renderable2DComponent();
@@ -24,5 +26,6 @@ public:
 	void addSprite(wiSprite* sprite);
 	void setSpriteSpeed(float value){ m_spriteSpeed = value; }
 	float getSpriteSpeed(){ return m_spriteSpeed; }
+	void addFont(wiFont* font);
 };
 
