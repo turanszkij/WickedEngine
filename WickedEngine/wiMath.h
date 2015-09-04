@@ -24,5 +24,7 @@ namespace wiMath
 							, float atInterval);
 	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT3& a,const XMFLOAT3&b, const XMFLOAT3& c, float t);
 	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT4& a,const XMFLOAT4&b, const XMFLOAT4& c, float t);
+
+	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion);
 };
 

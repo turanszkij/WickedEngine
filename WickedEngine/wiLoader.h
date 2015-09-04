@@ -6,6 +6,7 @@
 #include "wiDepthTarget.h"
 #include "wiGraphicsThreads.h"
 #include "wiStencilRef.h"
+#include "wiMath.h"
 
 struct HitSphere;
 class wiParticle;
@@ -447,6 +448,9 @@ struct Transform : public Node, public Load_Debug_Properties
 	void applyTransform(int t=1, int r=1, int s=1);
 	void transform(const XMFLOAT3& t = XMFLOAT3(0,0,0), const XMFLOAT4& r = XMFLOAT4(0,0,0,1), const XMFLOAT3& s = XMFLOAT3(1,1,1));
 	void transform(const XMMATRIX& m = XMMatrixIdentity());
+	void Translate(const XMFLOAT3& value);
+	void RotateRollPitchYaw(const XMFLOAT3& value);
+	void Scale(const XMFLOAT3& value);
 };
 struct Cullable
 {
@@ -829,7 +833,6 @@ struct Wind{
 struct Camera:public Transform{
 	XMFLOAT4X4 View, Projection, OProjection;
 	XMFLOAT3 At, Up;
-	float updownRot, leftrightRot;
 	float width, height;
 	float zNearP, zFarP;
 	
@@ -846,7 +849,7 @@ struct Camera:public Transform{
 	void SetUp(int newWidth, int newHeight, float newNear, float newFar)
 	{
 		XMMATRIX View, Projection, OProjection;
-		XMVECTOR At, Up, Eye = this->GetEye();
+		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
 
 		zNearP = newNear;
 		zFarP = newFar;
@@ -859,39 +862,30 @@ struct Camera:public Transform{
 		OProjection = XMMatrixOrthographicLH((float)width, (float)height, 0.1f, 5000.0f);
 
 
-		At = XMVectorAdd(Eye, XMVectorSet(0.0f, -1, 0, 0.0f));
-		Up = XMVectorAdd(Eye, XMVectorSet(0.0f, 0, 1, 0.0f));
-		View = XMMatrixLookAtLH(Eye, At, Up);
-
-
-		leftrightRot = 0;
-		updownRot = 0;
-
 		XMStoreFloat4x4(&this->View, View);
 		XMStoreFloat4x4(&this->Projection, Projection);
 		XMStoreFloat4x4(&this->OProjection, OProjection);
 		XMStoreFloat3(&this->At, At);
 		XMStoreFloat3(&this->Up, Up);
+
+		Update();
 	}
 	void Update()
 	{
 		getTransform();
 
-		XMMATRIX View, Projection;
-		XMVECTOR At, Up, Eye = this->GetEye();
+		UpdateProps();
+	}
+	void UpdateProps()
+	{
+		XMMATRIX View;
+		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye = this->GetEye();
 
-		XMMATRIX cameraRot = XMMatrixRotationX(updownRot - XM_PI / 2.0f)*XMMatrixRotationY(leftrightRot);
+		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
+		At = XMVector3Transform(At, camRot);
+		Up = XMVector3Transform(Up, camRot);
 
-		XMVECTOR cameraOrigTarg = XMVectorSet(0, -1, 0, 0);
-		At = XMVector3Transform(cameraOrigTarg, cameraRot);
-		XMVECTOR cameraFinalTarg = XMVectorAdd(Eye, At);
-
-
-
-		XMVECTOR cameraOrigUp = XMVectorSet(0, 0, 1, 0);
-		Up = XMVector3Transform(cameraOrigUp, cameraRot);
-		View = XMMatrixLookAtLH(Eye, cameraFinalTarg, Up);
-
+		View = XMMatrixLookToLH(Eye, At, Up);
 
 		XMStoreFloat4x4(&this->View, View);
 		XMStoreFloat3(&this->At, At);
@@ -899,23 +893,36 @@ struct Camera:public Transform{
 	}
 	void Move(const XMVECTOR& movevector)
 	{
-		XMMATRIX cameraRot = XMMatrixRotationX(updownRot)*XMMatrixRotationY(leftrightRot);
-		XMVECTOR rotVect = XMVector3Transform(movevector * 0.1f, cameraRot);
+		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
+		XMVECTOR rotVect = XMVector3Transform(movevector, camRot);
 		XMVECTOR Eye = XMLoadFloat3(&translation_rest);
 		Eye += rotVect;
 
 		XMStoreFloat3(&translation_rest, Eye);
 	}
-	// TODO: now it just reflects a standard upward plane on the origo, but should be able to reflect to any plane
 	void Reflect(Camera* toReflect, const XMFLOAT4& plane = XMFLOAT4(0,1,0,0))
 	{
 		*this = *toReflect;
-		translation_rest.y *= -1;
-		updownRot *= -1;
-		Up.x *= -1;
-		Up.y *= -1;
-		Up.z *= -1;
-		Update();
+
+		XMMATRIX reflectMatrix = XMMatrixReflect(XMLoadFloat4(&plane));
+
+		XMMATRIX View;
+		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye = this->GetEye();
+
+		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
+		At = XMVector3Transform(At, camRot);
+		Up = XMVector3Transform(Up, camRot);
+
+		At = XMVector3Transform(At, reflectMatrix);
+		Up = XMVector3Transform(Up, reflectMatrix);
+		Eye = XMVectorSetW(Eye, 1);
+		Eye = XMVector4Transform(Eye, reflectMatrix);
+
+		View = XMMatrixLookToLH(Eye, At, Up);
+
+		XMStoreFloat4x4(&this->View, View);
+		XMStoreFloat3(&this->At, At);
+		XMStoreFloat3(&this->Up, Up);
 	}
 
 	XMVECTOR GetEye()

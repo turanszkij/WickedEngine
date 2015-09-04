@@ -20,6 +20,7 @@ namespace wiRenderer_BindLua
 	int GetScreenHeight(lua_State* L);
 	int GetRenderWidth(lua_State* L);
 	int GetRenderHeight(lua_State* L);
+	int GetCamera(lua_State* L);
 
 	int SetGameSpeed(lua_State* L);
 
@@ -28,5 +29,6 @@ namespace wiRenderer_BindLua
 
 	int Pick(lua_State* L);
 	int DrawLine(lua_State* L);
+	int PutWaterRipple(lua_State* L);
 };
 

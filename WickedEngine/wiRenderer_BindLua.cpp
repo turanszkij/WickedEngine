@@ -6,6 +6,7 @@
 #include "wiLoader_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
+#include "wiWaterPlane.h"
 
 namespace wiRenderer_BindLua
 {
@@ -31,6 +32,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
 			wiLua::GetGlobal()->RegisterFunc("GetRenderWidth", GetRenderWidth);
 			wiLua::GetGlobal()->RegisterFunc("GetRenderHeight", GetRenderHeight);
+			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
 
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
 
@@ -38,6 +40,10 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
+			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
+			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0");
+			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 1");
+			wiLua::GetGlobal()->RunText("PICK_WATER = 2");
 		}
 	}
 
@@ -205,6 +211,11 @@ namespace wiRenderer_BindLua
 		wiLua::SSetInt(L, wiRenderer::RENDERHEIGHT);
 		return 1;
 	}
+	int GetCamera(lua_State* L)
+	{
+		Luna<Transform_BindLua>::push(L, new Transform_BindLua(wiRenderer::getCamera()));
+		return 1;
+	}
 
 
 	int SetGameSpeed(lua_State* L)
@@ -268,7 +279,12 @@ namespace wiRenderer_BindLua
 			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 			if (ray != nullptr)
 			{
-				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, wiRenderer::PICKTYPE::PICK_OPAQUE);
+				wiRenderer::PICKTYPE pickType = wiRenderer::PICKTYPE::PICK_OPAQUE;
+				if (argc > 1)
+				{
+					pickType = (wiRenderer::PICKTYPE)wiLua::SGetInt(L, 2);
+				}
+				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, pickType);
 				Luna<Object_BindLua>::push(L, new Object_BindLua(pick.object));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -306,6 +322,27 @@ namespace wiRenderer_BindLua
 		}
 		else
 			wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
+		return 0;
+	}
+
+	int PutWaterRipple(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			string name = wiLua::SGetString(L, 1);
+			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (v)
+			{
+				XMFLOAT3 pos;
+				XMStoreFloat3(&pos, v->vector);
+				wiRenderer::PutWaterRipple(name, pos, wiWaterPlane());
+			}
+			else
+				wiLua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");
+		}
+		else
+			wiLua::SError(L, "PutWaterRipple(String imagename, Vector position) not enough arguments!");
 		return 0;
 	}
 };

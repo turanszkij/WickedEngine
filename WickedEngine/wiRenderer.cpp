@@ -2143,7 +2143,7 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context)
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			LineBuffer sb;
 			sb.mWorldViewProjection=XMMatrixTranspose(
-				XMMatrixRotationX(wiRenderer::getCamera()->updownRot)*XMMatrixRotationY(wiRenderer::getCamera()->leftrightRot)*
+				XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
 				XMMatrixScaling( spheres[i]->radius,spheres[i]->radius,spheres[i]->radius ) *
 				XMMatrixTranslationFromVector( XMLoadFloat3(&spheres[i]->translation) )
 				*camera->GetViewProjection()
@@ -2684,7 +2684,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context)
 						sca = l->enerDis.y*l->enerDis.x*0.01f;
 						world = XMMatrixTranspose(
 							XMMatrixScaling(sca,sca,sca)*
-							XMMatrixRotationX(camera->updownRot)*XMMatrixRotationY(camera->leftrightRot)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
 							XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
 							);
 					}

@@ -2271,7 +2271,7 @@ void Transform::transform(const XMFLOAT3& t, const XMFLOAT4& r, const XMFLOAT3& 
 	translation_rest.y+=t.y;
 	translation_rest.z+=t.z;
 	
-	XMStoreFloat4(&rotation_rest,XMQuaternionMultiply(XMLoadFloat4(&rotation_rest),XMLoadFloat4(&r)));
+	XMStoreFloat4(&rotation_rest,XMQuaternionNormalize(XMQuaternionMultiply(XMLoadFloat4(&rotation_rest),XMLoadFloat4(&r))));
 	
 	scale_rest.x*=s.x;
 	scale_rest.y*=s.y;
@@ -2287,6 +2287,27 @@ void Transform::transform(const XMMATRIX& m){
 		XMStoreFloat3(&t,v[2]);
 		transform(t,r,s);
 	}
+}
+void Transform::Translate(const XMFLOAT3& value)
+{
+	transform(value);
+}
+void Transform::RotateRollPitchYaw(const XMFLOAT3& value)
+{
+	XMVECTOR quat = XMLoadFloat4(&rotation_rest);
+	XMVECTOR x = XMQuaternionRotationRollPitchYaw(value.x, 0, 0);
+	XMVECTOR y = XMQuaternionRotationRollPitchYaw(0, value.y, 0);
+	XMVECTOR z = XMQuaternionRotationRollPitchYaw(0, 0, value.z);
+
+	quat = XMQuaternionMultiply(x, quat);
+	quat = XMQuaternionMultiply(quat, y);
+	quat = XMQuaternionMultiply(z, quat);
+
+	XMStoreFloat4(&rotation_rest, quat);
+}
+void Transform::Scale(const XMFLOAT3& value)
+{
+	transform(XMFLOAT3(0, 0, 0), XMFLOAT4(0, 0, 0, 1), value);
 }
 
 #pragma endregion

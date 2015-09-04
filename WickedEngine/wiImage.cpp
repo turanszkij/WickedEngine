@@ -316,7 +316,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 					;
 				}
 				else
-					faceRot=XMMatrixRotationX(wiRenderer::getCamera()->updownRot)*XMMatrixRotationY(wiRenderer::getCamera()->leftrightRot);
+					faceRot=XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
 				cb.mTrans = XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x,effects.scale.y,1)
 					*XMMatrixRotationZ(effects.rotation)

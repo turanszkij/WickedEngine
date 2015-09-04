@@ -31,6 +31,7 @@ void wiBackLog::Initialize(){
 	wiLua::GetGlobal()->RegisterFunc("backlog_clear", ClearLua);
 	wiLua::GetGlobal()->RegisterFunc("backlog_post", PostLua);
 	wiLua::GetGlobal()->RegisterFunc("backlog_fontsize", FontSizeLua);
+	wiLua::GetGlobal()->RegisterFunc("backlog_isactive", IsActiveLua);
 }
 void wiBackLog::CleanUp(){
 	stream.clear();
@@ -185,3 +186,9 @@ int wiBackLog::FontSizeLua(lua_State* L)
 	//number of results
 	return 0;
 }
+int wiBackLog::IsActiveLua(lua_State* L)
+{
+	wiLua::SSetBool(L, isActive());
+	return 1;
+}
+

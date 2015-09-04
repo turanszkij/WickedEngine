@@ -53,7 +53,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		//REFRACTION 
 		float2 perturbatedRefrTexCoords = screenPos + bumpColor;
 		float depth = PSIn.pos2D.z;
-		float refDepth = (xDepthMap.Sample(mapSampler, perturbatedRefrTexCoords));
+		float refDepth = (xDepthMap.Sample(mapSampler, screenPos));
 		float3 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0));
 		float eyeDot = dot(normal, eyevector);
 		float mod = saturate(0.05*(refDepth-depth));

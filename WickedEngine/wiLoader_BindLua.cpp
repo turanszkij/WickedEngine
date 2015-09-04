@@ -220,7 +220,7 @@ int Transform_BindLua::Scale(lua_State* L)
 		{
 			XMFLOAT3 scale;
 			XMStoreFloat3(&scale, v->vector);
-			transform->transform(XMFLOAT3(0, 0, 0), XMFLOAT4(0, 0, 0, 1), scale);
+			transform->Scale(scale);
 		}
 		else
 		{
@@ -241,9 +241,9 @@ int Transform_BindLua::Rotate(lua_State* L)
 		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
 		if (v != nullptr)
 		{
-			XMFLOAT4 quaternion;
-			XMStoreFloat4(&quaternion, XMQuaternionRotationRollPitchYawFromVector(v->vector));
-			transform->transform(XMFLOAT3(0, 0, 0), quaternion);
+			XMFLOAT3 rollPitchYaw;
+			XMStoreFloat3(&rollPitchYaw, v->vector);
+			transform->RotateRollPitchYaw(rollPitchYaw);
 		}
 		else
 		{
@@ -266,7 +266,7 @@ int Transform_BindLua::Translate(lua_State* L)
 		{
 			XMFLOAT3 translate;
 			XMStoreFloat3(&translate, v->vector);
-			transform->transform(translate);
+			transform->Translate(translate);
 		}
 		else
 		{

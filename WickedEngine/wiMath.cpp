@@ -121,5 +121,13 @@ namespace wiMath
 	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT4& a, const XMFLOAT4&b, const XMFLOAT4& c, float t){
 		return getQuadraticBezierPos(XMFLOAT3(a.x, a.y, a.z), XMFLOAT3(b.x, b.y, b.z), XMFLOAT3(c.x, c.y, c.z), t);
 	}
+	
+	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion)
+	{
+		float roll = atan2(2 * quaternion.x*quaternion.w - 2 * quaternion.y*quaternion.z, 1 - 2 * quaternion.x*quaternion.x - 2 * quaternion.z*quaternion.z);
+		float pitch = atan2(2 * quaternion.y*quaternion.w - 2 * quaternion.x*quaternion.z, 1 - 2 * quaternion.y*quaternion.y - 2 * quaternion.z*quaternion.z);
+		float yaw = asin(2 * quaternion.x*quaternion.y + 2 * quaternion.z*quaternion.w);
 
+		return XMFLOAT3(roll, pitch, yaw);
+	}
 }

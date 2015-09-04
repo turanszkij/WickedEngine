@@ -52,6 +52,7 @@ public:
 	static int ClearLua(lua_State* L);
 	static int PostLua(lua_State* L);
 	static int FontSizeLua(lua_State* L);
+	static int IsActiveLua(lua_State* L);
 };
 
 #endif
