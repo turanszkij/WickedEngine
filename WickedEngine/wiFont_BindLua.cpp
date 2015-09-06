@@ -1,5 +1,6 @@
 #include "wiFont_BindLua.h"
 #include "wiFont.h"
+#include "CommonInclude.h"
 
 const char wiFont_BindLua::className[] = "Font";
 
@@ -32,7 +33,7 @@ wiFont_BindLua::wiFont_BindLua(lua_State* L)
 }
 wiFont_BindLua::~wiFont_BindLua()
 {
-	delete font;
+	SAFE_DELETE(font);
 }
 
 

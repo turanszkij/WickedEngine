@@ -2131,20 +2131,7 @@ void HitSphere::CleanUpStatic()
 
 #pragma region BONE
 XMMATRIX Bone::getTransform(int getTranslation, int getRotation, int getScale){
-	//XMMATRIX& w = XMMatrixTranslation(0,0,length)*XMLoadFloat4x4(&world);
-
-	//if(getTranslation&&getRotation&&getScale){
-	//	return w;
-	//}
-	//XMVECTOR v[3];
-	//XMMATRIX& identity = XMMatrixIdentity();
-	//XMMatrixDecompose(&v[0],&v[1],&v[2],w);
-
-	//return  (getScale?XMMatrixScalingFromVector(v[0]):identity)*
-	//		(getRotation?XMMatrixRotationQuaternion(v[1]):identity)*
-	//		(getTranslation?XMMatrixTranslationFromVector(v[2]):identity)
-	//		;
-
+	
 	return XMMatrixTranslation(0,0,length)*XMLoadFloat4x4(&world);
 }
 #pragma endregion

@@ -595,6 +595,7 @@ Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Armature_BindLua, GetAction),
 	lunamethod(Armature_BindLua, GetActions),
 	lunamethod(Armature_BindLua, GetBones),
+	lunamethod(Armature_BindLua, GetBone),
 	lunamethod(Armature_BindLua, GetFrame),
 	lunamethod(Armature_BindLua, GetFrameCount),
 	lunamethod(Armature_BindLua, ChangeAction),
@@ -663,6 +664,25 @@ int Armature_BindLua::GetBones(lua_State *L)
 	}
 	wiLua::SSetString(L, ss.str());
 	return 1;
+}
+int Armature_BindLua::GetBone(lua_State *L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "GetBone() armature is null!");
+		return 0;
+	}
+	string name = wiLua::SGetString(L, 2);
+	for (auto& x : armature->boneCollection)
+	{
+		if (!x->name.compare(name))
+		{
+			Luna<Transform_BindLua>::push(L, new Transform_BindLua(x));
+			return 1;
+		}
+	}
+	wiLua::SError(L, "GetBone(String name) bone not found!");
+	return 0;
 }
 int Armature_BindLua::GetFrame(lua_State* L)
 {

@@ -2235,6 +2235,9 @@ void wiRenderer::DrawDebugLines(Camera* camera, ID3D11DeviceContext* context)
 		BindVertexBuffer(linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), context);
 		Draw(2, context);
 	}
+
+	for (Lines* x : linesTemp)
+		delete x;
 	linesTemp.clear();
 }
 void wiRenderer::DrawDebugBoxes(Camera* camera, ID3D11DeviceContext* context)

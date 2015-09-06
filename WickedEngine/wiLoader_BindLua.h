@@ -114,6 +114,7 @@ public:
 	int GetAction(lua_State* L);
 	int GetActions(lua_State* L);
 	int GetBones(lua_State* L);
+	int GetBone(lua_State* L);
 	int GetFrame(lua_State* L);
 	int GetFrameCount(lua_State* L);
 	int IsValid(lua_State *L);

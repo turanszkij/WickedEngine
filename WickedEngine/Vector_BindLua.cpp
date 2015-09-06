@@ -141,7 +141,8 @@ int Vector_BindLua::Transform(lua_State* L)
 		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
 		if (mat)
 		{
-			vector = XMVector4Transform(vector, mat->matrix);
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector4Transform(vector, mat->matrix)));
+			return 1;
 		}
 		else
 			wiLua::SError(L, "Transform(Matrix matrix) argument is not a Matrix!");
