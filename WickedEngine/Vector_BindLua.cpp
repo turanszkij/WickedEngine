@@ -177,7 +177,7 @@ int Vector_BindLua::Dot(lua_State* L)
 		Vector_BindLua* v2 = Luna<Vector_BindLua>::lightcheck(L, 2);
 		if (v1 && v2)
 		{
-			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3Dot(v1->vector,v2->vector)));
+			wiLua::SSetFloat(L, XMVectorGetX(XMVector3Dot(v1->vector, v2->vector)));
 			return 1;
 		}
 	}
@@ -210,6 +210,16 @@ int Vector_BindLua::Multiply(lua_State* L)
 		if (v1 && v2)
 		{
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorMultiply(v1->vector, v2->vector)));
+			return 1;
+		}
+		else if (v1)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(v1->vector * wiLua::SGetFloat(L, 2)));
+			return 1;
+		}
+		else if (v2)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(wiLua::SGetFloat(L, 1) * v1->vector));
 			return 1;
 		}
 	}
