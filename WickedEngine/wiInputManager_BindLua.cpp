@@ -1,5 +1,6 @@
 #include "wiInputManager_BindLua.h"
 #include "wiInputManager.h"
+#include "Vector_BindLua.h"
 
 const char wiInputManager_BindLua::className[] = "InputManager";
 
@@ -7,6 +8,7 @@ Luna<wiInputManager_BindLua>::FunctionType wiInputManager_BindLua::methods[] = {
 	lunamethod(wiInputManager_BindLua, Down),
 	lunamethod(wiInputManager_BindLua, Press),
 	lunamethod(wiInputManager_BindLua, Hold),
+	lunamethod(wiInputManager_BindLua, Pointer),
 	{ NULL, NULL }
 };
 Luna<wiInputManager_BindLua>::PropertyType wiInputManager_BindLua::properties[] = {
@@ -51,6 +53,11 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 		return 1;
 	}
 	return 0;
+}
+int wiInputManager_BindLua::Pointer(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInputManager::pointer())));
+	return 1;
 }
 
 void wiInputManager_BindLua::Bind()

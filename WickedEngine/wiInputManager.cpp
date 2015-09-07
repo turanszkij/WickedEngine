@@ -127,3 +127,12 @@ bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType
 	}
 	return false;
 }
+XMFLOAT4 wiInputManager::pointer()
+{
+#ifndef WINSTORE_SUPPORT
+	POINT p;
+	GetCursorPos(&p);
+	return XMFLOAT4((float)p.x, (float)p.y, 0, 0);
+#endif
+	return XMFLOAT4(0, 0, 0, 0);
+}

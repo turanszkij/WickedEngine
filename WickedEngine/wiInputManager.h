@@ -48,8 +48,14 @@ public:
 	typedef map<Input,DWORD,Input::LessComparer> InputCollection;
 	static InputCollection inputs;
 	
+	//check if a button is down
 	static bool down(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
+	//check if a button is pressed once
 	static bool press(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
+	//check if a button is held down
 	static bool hold(DWORD button, DWORD frames = 30, bool continuous = false, InputType inputType = InputType::KEYBOARD, short playerIndex = 0);
+	//get pointer position (eg. mouse pointer)
+	static XMFLOAT4 pointer();
+
 };
 
