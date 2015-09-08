@@ -23,7 +23,12 @@ int wiInputManager_BindLua::Down(lua_State* L)
 	if (argc > 0)
 	{
 		int code = wiLua::SGetInt(L, 1);
-		wiLua::SSetBool( L, wiInputManager::down((DWORD)code) );
+		wiInputManager::InputType type = wiInputManager::KEYBOARD;
+		if (argc > 1)
+		{
+			type = (wiInputManager::InputType)wiLua::SGetInt(L, 2);
+		}
+		wiLua::SSetBool(L, wiInputManager::down((DWORD)code, type));
 		return 1;
 	}
 	return 0;
@@ -34,7 +39,12 @@ int wiInputManager_BindLua::Press(lua_State* L)
 	if (argc > 0)
 	{
 		int code = wiLua::SGetInt(L, 1);
-		wiLua::SSetBool(L, wiInputManager::press((DWORD)code));
+		wiInputManager::InputType type = wiInputManager::KEYBOARD;
+		if (argc > 1)
+		{
+			type = (wiInputManager::InputType)wiLua::SGetInt(L, 2);
+		}
+		wiLua::SSetBool(L, wiInputManager::press((DWORD)code, type));
 		return 1;
 	}
 	return 0;
@@ -50,7 +60,17 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 		{
 			duration = wiLua::SGetInt(L, 2);
 		}
-		wiLua::SSetBool(L, wiInputManager::hold((DWORD)code, (DWORD)duration));
+		bool continuous = false;
+		if (argc > 2)
+		{
+			continuous = wiLua::SGetBool(L, 3);
+		}
+		wiInputManager::InputType type = wiInputManager::KEYBOARD;
+		if (argc > 3)
+		{
+			type = (wiInputManager::InputType)wiLua::SGetInt(L, 4);
+		}
+		wiLua::SSetBool(L, wiInputManager::hold((DWORD)code, (DWORD)duration, continuous, type));
 		return 1;
 	}
 	return 0;
@@ -88,6 +108,13 @@ void wiInputManager_BindLua::Bind()
 		initialized = true;
 		Luna<wiInputManager_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 		wiLua::GetGlobal()->RunText("input = InputManager()");
+
+		//Input types
+		wiLua::GetGlobal()->RunText("DIRECTINPUT_JOYPAD		= 0");
+		wiLua::GetGlobal()->RunText("XINPUT_JOYPAD			= 1");
+		wiLua::GetGlobal()->RunText("KEYBOARD				= 2");
+		wiLua::GetGlobal()->RunText("RAWINPUT_JOYPAD		= 3");
+		wiLua::GetGlobal()->RunText("MOUSE					= 4");
 
 		//Keyboard
 		wiLua::GetGlobal()->RunText("VK_UP			= 0x26");
