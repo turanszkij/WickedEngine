@@ -25,6 +25,8 @@ public:
 	int RotationZ(lua_State* L);
 	int RotationQuaternion(lua_State* L);
 	int Scale(lua_State* L);
+	int LookTo(lua_State* L);
+	int LookAt(lua_State* L);
 
 	int Multiply(lua_State* L);
 	int Add(lua_State* L);

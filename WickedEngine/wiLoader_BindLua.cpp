@@ -789,6 +789,8 @@ void Armature_BindLua::Bind()
 const char Ray_BindLua::className[] = "Ray";
 
 Luna<Ray_BindLua>::FunctionType Ray_BindLua::methods[] = {
+	lunamethod(Ray_BindLua, GetOrigin),
+	lunamethod(Ray_BindLua, GetDirection),
 	{ NULL, NULL }
 };
 Luna<Ray_BindLua>::PropertyType Ray_BindLua::properties[] = {

@@ -15,6 +15,9 @@ Luna<Matrix_BindLua>::FunctionType Matrix_BindLua::methods[] = {
 	lunamethod(Matrix_BindLua, RotationZ),
 	lunamethod(Matrix_BindLua, RotationQuaternion),
 	lunamethod(Matrix_BindLua, Scale),
+	lunamethod(Matrix_BindLua, LookTo),
+	lunamethod(Matrix_BindLua, LookAt),
+
 	lunamethod(Matrix_BindLua, Add),
 	lunamethod(Matrix_BindLua, Multiply),
 	lunamethod(Matrix_BindLua, Transpose),
@@ -177,6 +180,60 @@ int Matrix_BindLua::Scale(lua_State* L)
 		}
 	}
 	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(mat));
+	return 1;
+}
+
+int Matrix_BindLua::LookTo(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* dir = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (pos != nullptr && dir != nullptr)
+		{
+			XMVECTOR Up;
+			if (argc > 3)
+			{
+				Vector_BindLua* up = Luna<Vector_BindLua>::lightcheck(L, 3);
+				Up = up->vector;
+			}
+			else
+				Up = XMVectorSet(0, 1, 0, 0);
+			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixLookToLH(pos->vector, dir->vector, Up)));
+		}
+		else
+			wiLua::SError(L, "LookTo(Vector eye, Vector direction, opt Vector up) argument is not a Vector!");
+	}
+	else
+		wiLua::SError(L, "LookTo(Vector eye, Vector direction, opt Vector up) not enough arguments!");
+	return 1;
+}
+
+int Matrix_BindLua::LookAt(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* dir = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (dir != nullptr)
+		{
+			XMVECTOR Up;
+			if (argc > 3)
+			{
+				Vector_BindLua* up = Luna<Vector_BindLua>::lightcheck(L, 3);
+				Up = up->vector;
+			}
+			else
+				Up = XMVectorSet(0, 1, 0, 0);
+			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixLookAtLH(pos->vector, dir->vector, Up)));
+		}
+		else
+			wiLua::SError(L, "LookAt(Vector eye, Vector focusPos, opt Vector up) argument is not a Vector!");
+	}
+	else
+		wiLua::SError(L, "LookAt(Vector eye, Vector focusPos, opt Vector up) not enough arguments!");
 	return 1;
 }
 
