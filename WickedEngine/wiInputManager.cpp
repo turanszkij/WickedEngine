@@ -136,3 +136,10 @@ XMFLOAT4 wiInputManager::pointer()
 #endif
 	return XMFLOAT4(0, 0, 0, 0);
 }
+void wiInputManager::setpointer(const XMFLOAT4& props)
+{
+#ifndef WINSTORE_SUPPORT
+	SetCursorPos((int)props.x, (int)props.y);
+#endif
+}
+

@@ -9,6 +9,7 @@ Luna<wiInputManager_BindLua>::FunctionType wiInputManager_BindLua::methods[] = {
 	lunamethod(wiInputManager_BindLua, Press),
 	lunamethod(wiInputManager_BindLua, Hold),
 	lunamethod(wiInputManager_BindLua, Pointer),
+	lunamethod(wiInputManager_BindLua, SetPointer),
 	{ NULL, NULL }
 };
 Luna<wiInputManager_BindLua>::PropertyType wiInputManager_BindLua::properties[] = {
@@ -59,6 +60,25 @@ int wiInputManager_BindLua::Pointer(lua_State* L)
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInputManager::pointer())));
 	return 1;
 }
+int wiInputManager_BindLua::SetPointer(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			XMFLOAT4 props;
+			XMStoreFloat4(&props, vec->vector);
+			wiInputManager::setpointer(props);
+		}
+		else
+			wiLua::SError(L, "SetPointer(Vector props) argument is not a Vector!");
+	}
+	else
+		wiLua::SError(L, "SetPointer(Vector props) not enough arguments!");
+	return 0;
+}
 
 void wiInputManager_BindLua::Bind()
 {
@@ -68,6 +88,8 @@ void wiInputManager_BindLua::Bind()
 		initialized = true;
 		Luna<wiInputManager_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 		wiLua::GetGlobal()->RunText("input = InputManager()");
+
+		//Keyboard
 		wiLua::GetGlobal()->RunText("VK_UP			= 0x26");
 		wiLua::GetGlobal()->RunText("VK_DOWN		= 0x28");
 		wiLua::GetGlobal()->RunText("VK_LEFT		= 0x25");
@@ -76,5 +98,9 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("VK_RETURN		= 0x0D");
 		wiLua::GetGlobal()->RunText("VK_RSHIFT		= 0xA1");
 		wiLua::GetGlobal()->RunText("VK_LSHIFT		= 0xA0");
+
+		//Mouse
+		wiLua::GetGlobal()->RunText("VK_LBUTTON		= 0x01");
+		wiLua::GetGlobal()->RunText("VK_RBUTTON		= 0x02");
 	}
 }

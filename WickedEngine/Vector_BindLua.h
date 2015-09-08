@@ -38,6 +38,8 @@ public:
 	int Add(lua_State* L);
 	int Subtract(lua_State* L);
 	int Lerp(lua_State* L);
+	int Clamp(lua_State* L);
+	int Saturate(lua_State* L);
 
 
 	int QuaternionMultiply(lua_State* L);

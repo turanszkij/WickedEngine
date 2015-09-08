@@ -26,6 +26,8 @@ Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 	lunamethod(Vector_BindLua, Cross),
 	lunamethod(Vector_BindLua, Lerp),
 	lunamethod(Vector_BindLua, Slerp),
+	lunamethod(Vector_BindLua, Clamp),
+	lunamethod(Vector_BindLua, Normalize),
 	lunamethod(Vector_BindLua, QuaternionMultiply),
 	lunamethod(Vector_BindLua, QuaternionFromRollPitchYaw),
 	{ NULL, NULL }
@@ -324,6 +326,44 @@ int Vector_BindLua::Slerp(lua_State* L)
 		}
 	}
 	wiLua::SError(L, "QuaternionSlerp(Vector v1,v2, float t) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::Clamp(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 2)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		float a = wiLua::SGetFloat(L, 2);
+		float b = wiLua::SGetFloat(L, 3);
+		if (vec != nullptr)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorClamp(vec->vector,XMVectorSet(a,a,a,a),XMVectorSet(b,b,b,b))));
+			return 1;
+		}
+		else
+			wiLua::SError(L, "Clamp(Vector vector, float min,max) argument is not a Vector!");
+	}
+	else
+		wiLua::SError(L, "Clamp(Vector vector, float min,max) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::Saturate(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSaturate(vec->vector)));
+			return 1;
+		}
+		else
+			wiLua::SError(L, "Saturate(Vector vector) argument is not a Vector!");
+	}
+	else
+		wiLua::SError(L, "Saturate(Vector vector) not enough arguments!");
 	return 0;
 }
 
