@@ -8,8 +8,9 @@ Luna<wiInputManager_BindLua>::FunctionType wiInputManager_BindLua::methods[] = {
 	lunamethod(wiInputManager_BindLua, Down),
 	lunamethod(wiInputManager_BindLua, Press),
 	lunamethod(wiInputManager_BindLua, Hold),
-	lunamethod(wiInputManager_BindLua, Pointer),
+	lunamethod(wiInputManager_BindLua, GetPointer),
 	lunamethod(wiInputManager_BindLua, SetPointer),
+	lunamethod(wiInputManager_BindLua, HidePointer),
 	{ NULL, NULL }
 };
 Luna<wiInputManager_BindLua>::PropertyType wiInputManager_BindLua::properties[] = {
@@ -75,9 +76,9 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 	}
 	return 0;
 }
-int wiInputManager_BindLua::Pointer(lua_State* L)
+int wiInputManager_BindLua::GetPointer(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInputManager::pointer())));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInputManager::getpointer())));
 	return 1;
 }
 int wiInputManager_BindLua::SetPointer(lua_State* L)
@@ -97,6 +98,17 @@ int wiInputManager_BindLua::SetPointer(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "SetPointer(Vector props) not enough arguments!");
+	return 0;
+}
+int wiInputManager_BindLua::HidePointer(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		wiInputManager::hidepointer(wiLua::SGetBool(L, 1));
+	}
+	else
+		wiLua::SError(L, "HidePointer(bool value) not enough arguments!");
 	return 0;
 }
 
@@ -127,6 +139,7 @@ void wiInputManager_BindLua::Bind()
 
 		//Mouse
 		wiLua::GetGlobal()->RunText("VK_LBUTTON		= 0x01");
+		wiLua::GetGlobal()->RunText("VK_MBUTTON		= 0x04");
 		wiLua::GetGlobal()->RunText("VK_RBUTTON		= 0x02");
 	}
 }

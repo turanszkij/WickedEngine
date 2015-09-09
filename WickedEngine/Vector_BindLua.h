@@ -31,6 +31,8 @@ public:
 	int Length(lua_State* L);
 	int Normalize(lua_State* L);
 	int QuaternionNormalize(lua_State* L);
+	int Clamp(lua_State* L);
+	int Saturate(lua_State* L);
 
 	int Dot(lua_State* L);
 	int Cross(lua_State* L);
@@ -38,8 +40,6 @@ public:
 	int Add(lua_State* L);
 	int Subtract(lua_State* L);
 	int Lerp(lua_State* L);
-	int Clamp(lua_State* L);
-	int Saturate(lua_State* L);
 
 
 	int QuaternionMultiply(lua_State* L);

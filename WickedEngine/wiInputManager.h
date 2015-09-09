@@ -55,9 +55,11 @@ public:
 	//check if a button is held down
 	static bool hold(DWORD button, DWORD frames = 30, bool continuous = false, InputType inputType = InputType::KEYBOARD, short playerIndex = 0);
 	//get pointer position (eg. mouse pointer) + 2 unused
-	static XMFLOAT4 pointer();
-	//set pointer position (eg. mouse pointer) + 2 unused
+	static XMFLOAT4 getpointer();
+	//set pointer position (eg. mouse pointer)
 	static void setpointer(const XMFLOAT4& props);
+	//hide pointer
+	static void hidepointer(bool value);
 
 };
 

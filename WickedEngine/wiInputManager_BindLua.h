@@ -15,8 +15,9 @@ public:
 	int Down(lua_State* L);
 	int Press(lua_State* L);
 	int Hold(lua_State* L);
-	int Pointer(lua_State* L);
+	int GetPointer(lua_State* L);
 	int SetPointer(lua_State* L);
+	int HidePointer(lua_State* L);
 
 
 	static void Bind();

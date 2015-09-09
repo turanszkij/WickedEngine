@@ -127,7 +127,7 @@ bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType
 	}
 	return false;
 }
-XMFLOAT4 wiInputManager::pointer()
+XMFLOAT4 wiInputManager::getpointer()
 {
 #ifndef WINSTORE_SUPPORT
 	POINT p;
@@ -140,6 +140,12 @@ void wiInputManager::setpointer(const XMFLOAT4& props)
 {
 #ifndef WINSTORE_SUPPORT
 	SetCursorPos((int)props.x, (int)props.y);
+#endif
+}
+void wiInputManager::hidepointer(bool value)
+{
+#ifndef WINSTORE_SUPPORT
+	ShowCursor(!value);
 #endif
 }
 
