@@ -13,7 +13,7 @@ float4 main(VSOut PSIn):SV_TARGET
 	float3 sun = 0;
 	float3 col = 0;
 	[branch]if(xFx.x==0){
-		col = lerp(xHorizon.rgb,enviroTex.SampleLevel( texSampler,nor,0 ).rgb,saturate(nor.y/0.3f));
+		col = /*lerp( xHorizon.rgb,*/ enviroTex.SampleLevel( texSampler,nor,0 ).rgb/*, saturate(nor.y/0.3f) )*/;
 		sun = clamp(pow(dot(xSun,nor),256)*xSunColor.rgb, 0, inf);
 	}
 	else{

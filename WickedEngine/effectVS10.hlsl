@@ -55,7 +55,7 @@ PixelInputType main(Input input)
 		Out.ReflectionMapSamplingPos = mul(pos, xRefViewProjection );
 
 
-		Out.vel = mul( mul(vel.xyz,(float3x3)WORLD), xViewProjection ).xyz;
+		Out.vel = mul( vel.xyz, xViewProjection ).xyz;
 
 		Out.ao = input.nor.w;
 

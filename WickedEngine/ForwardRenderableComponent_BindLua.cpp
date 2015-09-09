@@ -28,6 +28,8 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(Renderable3DComponent_BindLua, SetVolumeLightsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLightShaftsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetMotionBlurEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSSSEnabled),
 	{ NULL, NULL }
 };
 Luna<ForwardRenderableComponent_BindLua>::PropertyType ForwardRenderableComponent_BindLua::properties[] = {

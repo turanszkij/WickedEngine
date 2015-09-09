@@ -29,6 +29,8 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, SetVolumeLightsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLightShaftsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetMotionBlurEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSSSEnabled),
 	{ NULL, NULL }
 };
 Luna<Renderable3DComponent_BindLua>::PropertyType Renderable3DComponent_BindLua::properties[] = {
@@ -204,6 +206,32 @@ int Renderable3DComponent_BindLua::SetLensFlareEnabled(lua_State* L)
 		((Renderable3DComponent*)component)->setLensFlareEnabled(wiLua::SGetBool(L, 2));
 	else
 		wiLua::SError(L, "SetLensFlareEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetMotionBlurEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetMotionBlurEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 1)
+		((Renderable3DComponent*)component)->setMotionBlurEnabled(wiLua::SGetBool(L, 2));
+	else
+		wiLua::SError(L, "SetMotionBlurEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetSSSEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetSSSEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 1)
+		((Renderable3DComponent*)component)->setSSSEnabled(wiLua::SGetBool(L, 2));
+	else
+		wiLua::SError(L, "SetSSSEnabled(bool value) not enough arguments!");
 	return 0;
 }
 

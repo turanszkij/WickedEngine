@@ -155,6 +155,37 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), context);
 	}
 
+	//if (getSSSEnabled())
+	//{
+	//	wiImage::BatchBegin(context, STENCILREF_SKIN);
+	//	fx.quality = QUALITY_BILINEAR;
+	//	fx.sampleFlag = SAMPLEMODE_CLAMP;
+	//	fx.setDepthMap(rtLinearDepth.shaderResource.back());
+	//	for (int i = 0; i<rtSSS.size() - 1; ++i){
+	//		rtSSS[i].Activate(context, rtGBuffer.depth);
+	//		XMFLOAT2 dir = XMFLOAT2(0, 0);
+	//		static const float stren = 0.018f;
+	//		if (i % 2)
+	//			dir.x = stren*((float)wiRenderer::GetScreenHeight() / (float)wiRenderer::GetScreenWidth());
+	//		else
+	//			dir.y = stren;
+	//		fx.process.setSSSS(dir);
+	//		if (i == 0)
+	//			wiImage::Draw(rtDeferred.shaderResource.back(), fx, context);
+	//		else
+	//			wiImage::Draw(rtSSS[i - 1].shaderResource.back(), fx, context);
+	//	}
+	//	fx.process.clear();
+	//	rtSSS.back().Activate(context, rtGBuffer.depth); {
+	//		wiImage::BatchBegin(context);
+	//		fx.quality = QUALITY_NEAREST;
+	//		fx.sampleFlag = SAMPLEMODE_CLAMP;
+	//		fx.blendFlag = BLENDMODE_OPAQUE;
+	//		wiImage::Draw(rtDeferred.shaderResource.front(), fx, context);
+	//		wiImage::BatchBegin(context, STENCILREF_SKIN);
+	//		wiImage::Draw(rtSSS[rtSSS.size() - 2].shaderResource.back(), fx, context);
+	//	}
+	//}
 
 	if (getSSREnabled()){
 		rtSSR.Activate(context); {
@@ -168,6 +199,24 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 			wiImage::Draw(rtDeferred.shaderResource.front(), fx, context);
 			fx.process.clear();
 		}
+	}
+
+	if (getMotionBlurEnabled()){ //MOTIONBLUR
+		wiImage::BatchBegin(context);
+		rtMotionBlur.Activate(context);
+		fx.process.setMotionBlur(true);
+		fx.setVelocityMap(rtGBuffer.shaderResource.back());
+		fx.setDepthMap(rtLinearDepth.shaderResource.back());
+		fx.blendFlag = BLENDMODE_OPAQUE;
+		if (getSSREnabled()){
+			wiImage::Draw(rtDeferred.shaderResource.front(), fx, context);
+			fx.blendFlag = BLENDMODE_ALPHA;
+			wiImage::Draw(rtSSR.shaderResource.front(), fx, context);
+		}
+		else{
+			wiImage::Draw(rtDeferred.shaderResource.front(), fx, context);
+		}
+		fx.process.clear();
 	}
 }
 

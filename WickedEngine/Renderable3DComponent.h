@@ -34,11 +34,14 @@ private:
 	bool volumeLightsEnabled;
 	bool lightShaftsEnabled;
 	bool lensFlareEnabled;
+	bool motionBlurEnabled;
+	bool sssEnabled;
 
 protected:
 	wiRenderTarget
 		rtReflection
 		, rtSSR
+		, rtMotionBlur
 		, rtVolumeLight
 		, rtTransparent
 		, rtWater
@@ -49,7 +52,7 @@ protected:
 		, rtLensFlare
 		, rtFinal[2]
 		;
-	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
+	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO, rtSSS;
 	wiDepthTarget dtDepthCopy;
 
 	vector<wiTaskThread*> workerThreads;
@@ -90,6 +93,8 @@ public:
 	bool getVolumeLightsEnabled(){ return volumeLightsEnabled; }
 	bool getLightShaftsEnabled(){ return lightShaftsEnabled; }
 	bool getLensFlareEnabled(){ return lensFlareEnabled; }
+	bool getMotionBlurEnabled(){ return motionBlurEnabled; }
+	bool getSSSEnabled(){ return sssEnabled; }
 
 	unsigned short getThreadingCount(){ return workerThreads.size(); }
 
@@ -119,6 +124,8 @@ public:
 	void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
 	void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
 	void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
+	void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
+	void setSSSEnabled(bool value){ sssEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

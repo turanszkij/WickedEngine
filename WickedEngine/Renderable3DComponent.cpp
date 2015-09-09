@@ -45,6 +45,8 @@ void Renderable3DComponent::setProperties()
 	setVolumeLightsEnabled(true);
 	setLightShaftsEnabled(true);
 	setLensFlareEnabled(true);
+	setMotionBlurEnabled(true);
+	setSSSEnabled(true);
 
 	setPreferredThreadingCount(0);
 }
@@ -55,6 +57,9 @@ void Renderable3DComponent::Initialize()
 
 	rtSSR.Initialize(
 		(UINT)(wiRenderer::GetScreenWidth() * getSSRQuality()), (UINT)(wiRenderer::GetScreenHeight() * getSSRQuality())
+		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	rtMotionBlur.Initialize(
+		(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	rtLinearDepth.Initialize(
 		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
@@ -104,9 +109,14 @@ void Renderable3DComponent::Initialize()
 	rtSSAO.resize(3);
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
 		rtSSAO[i].Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*getSSAOQuality()), (UINT)(wiRenderer::GetScreenHeight()*getSSAOQuality())
-		, 1, false, 1, 0, DXGI_FORMAT_R8_UNORM
-		);
+			(UINT)(wiRenderer::GetScreenWidth()*getSSAOQuality()), (UINT)(wiRenderer::GetScreenHeight()*getSSAOQuality())
+			, 1, false, 1, 0, DXGI_FORMAT_R8_UNORM
+			);
+	rtSSS.resize(3);
+	for (int i = 0; i < 3; ++i)
+		rtSSS[i].Initialize(
+			(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
+			, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
 
 	rtSun.resize(2);
@@ -311,7 +321,10 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wi
 	wiImage::Draw(shadedSceneRT.shaderResource.front(), fx, context);
 
 	fx.blendFlag = BLENDMODE_ALPHA;
-	if (getSSREnabled()){
+	if (getMotionBlurEnabled()){
+		wiImage::Draw(rtMotionBlur.shaderResource.back(), fx, context);
+	}
+	else if (getSSREnabled()){
 		wiImage::Draw(rtSSR.shaderResource.back(), fx, context);
 	}
 	wiImage::Draw(rtWater.shaderResource.back(), fx, context);
