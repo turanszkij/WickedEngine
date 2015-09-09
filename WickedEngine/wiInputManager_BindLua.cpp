@@ -114,7 +114,6 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("XINPUT_JOYPAD			= 1");
 		wiLua::GetGlobal()->RunText("KEYBOARD				= 2");
 		wiLua::GetGlobal()->RunText("RAWINPUT_JOYPAD		= 3");
-		wiLua::GetGlobal()->RunText("MOUSE					= 4");
 
 		//Keyboard
 		wiLua::GetGlobal()->RunText("VK_UP			= 0x26");

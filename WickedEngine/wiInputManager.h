@@ -19,13 +19,11 @@ public:
 	static void Update();
 	static void CleanUp();
 
-	// do not change order! (it is used in lua)
 	enum InputType{
 		DIRECTINPUT_JOYPAD,
 		XINPUT_JOYPAD,
 		KEYBOARD,
 		RAWINPUT_JOYPAD,
-		MOUSE,
 		INPUTTYPE_COUNT
 	};
 	struct Input{

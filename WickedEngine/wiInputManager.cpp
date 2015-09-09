@@ -11,11 +11,9 @@ wiInputManager::InputCollection wiInputManager::inputs;
 #ifndef WINSTORE_SUPPORT
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
-#define MOUSEBUTTONDOWN(vk_code) (GetAsyncKeyState(vk_code) & 0x8000)
 #else
 #define KEY_DOWN(vk_code) (false)
 #define KEY_TOGGLE(vk_code) (false)
-#define MOUSEBUTTONDOWN(vk_code) (false)
 #endif //WINSTORE_SUPPORT
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
@@ -89,9 +87,6 @@ bool wiInputManager::down(DWORD button, InputType inputType, short playerindex)
 		if (dinput != nullptr && ( dinput->isButtonDown(playerindex, button) || dinput->getDirections(playerindex)==button )){
 			return true;
 		}
-		break;
-	case MOUSE:
-		return MOUSEBUTTONDOWN(static_cast<int>(button)) != 0;
 		break;
 	default:break;
 	}
