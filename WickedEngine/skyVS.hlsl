@@ -3,19 +3,23 @@
 cbuffer skyCB:register(b3){
 	float4x4 xV;
 	float4x4 xP;
-	float4   xSun;
+	float4x4 xPrevView;
+	float4x4 xPrevProjection;
 }
 
 struct VSOut{
 	float4 pos : SV_POSITION;
 	float3 nor : TEXCOORD0;
+	float4 pos2D : SCREENPOSITION;
+	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 
 VSOut main(uint vid : SV_VERTEXID)
 {
 	VSOut Out = (VSOut)0;
-	Out.pos=mul(mul(float4(ICOSPHERE[vid],1),(float3x3)xV),xP);
+	Out.pos=Out.pos2D=mul(mul(float4(ICOSPHERE[vid],1),(float3x3)xV),xP);
 	Out.nor=ICOSPHERE[vid];
+	Out.pos2DPrev = mul(mul(float4(ICOSPHERE[vid], 1), (float3x3)xPrevView), xPrevProjection);
 	return Out;
 }
 

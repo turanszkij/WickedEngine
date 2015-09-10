@@ -23,10 +23,13 @@ struct QGS_OUT
 	float3 nor : NORMAL;
 	float2 tex : TEXCOORD;
 	float  fade : DITHERFADE;
+	float4 pos2D : SCREENPOSITION;
+	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 cbuffer cbgs:register(b0){
 	float4x4 xView;
 	float4x4 xProjection;
+	float4x4 xPrevViewProjection;
 	float4 colTime;
 	float3 eye;
 	float drawdistance;

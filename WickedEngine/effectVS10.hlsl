@@ -24,15 +24,18 @@ PixelInputType main(Input input)
 	
 		float4 pos = input.pos;
 		float4 posPrev = input.pre;
-		float4 vel = float4(0,0,0,1);
+		//float4 vel = float4(0,0,0,1);
 		
 
 		pos = mul( pos,WORLD );
 
-		if(posPrev.w){
-			posPrev = mul( posPrev,WORLD );
-			vel = pos - posPrev;
+		[branch]
+		if (posPrev.w){
+			posPrev = mul(posPrev, WORLD);
+			//vel = pos - posPrev;
 		}
+		else
+			posPrev = pos;
 
 		Out.clip = dot(pos, xClipPlane);
 		
@@ -46,6 +49,7 @@ PixelInputType main(Input input)
 		//}
 
 		Out.pos = Out.pos2D = mul( pos, xViewProjection );
+		Out.pos2DPrev = mul(posPrev, xPrevViewProjection);
 		Out.pos3D = pos.xyz;
 		Out.cam = xCamPos.xyz;
 		Out.tex = input.tex.xy;
@@ -55,7 +59,7 @@ PixelInputType main(Input input)
 		Out.ReflectionMapSamplingPos = mul(pos, xRefViewProjection );
 
 
-		Out.vel = mul( vel.xyz, xViewProjection ).xyz;
+		//Out.vel = mul( vel.xyz, xViewProjection ).xyz;
 
 		Out.ao = input.nor.w;
 

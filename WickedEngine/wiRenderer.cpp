@@ -68,7 +68,7 @@ float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 int wiRenderer::visibleCount;
 float wiRenderer::shBias;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
-Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr;
+Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
 PHYSICS* wiRenderer::physicsEngine = nullptr;
 Wind wiRenderer::wind;
 WorldInfo wiRenderer::worldInfo;
@@ -397,6 +397,7 @@ void wiRenderer::SetUpStaticComponents()
 	cam->SetUp(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800);
 	refCam = new Camera();
 	refCam->SetUp(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800);
+	prevFrameCam = new Camera;
 	
 	noiseTex = wiTextureHelper::getInstance()->getRandom64x64();
 	trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
@@ -1868,6 +1869,7 @@ XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, const int& vertexI){
 }
 void wiRenderer::Update(float amount)
 {
+	*prevFrameCam = *cam;
 	cam->Update();
 	refCam->Reflect(cam);
 
@@ -3432,30 +3434,16 @@ void wiRenderer::DrawSky(ID3D11DeviceContext* context)
 	if (enviroMap == nullptr)
 		return;
 
-	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	BindPrimitiveTopology(TRIANGLELIST,context);
-	//context->RSSetState(backFaceRS);
-	//context->OMSetDepthStencilState(depthReadStencilState, STENCILREF_SKY);
-	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//UINT sampleMask   = 0xffffffff;
-	//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 	BindRasterizerState(backFaceRS,context);
 	BindDepthStencilState(depthReadStencilState,STENCILREF_SKY,context);
 	BindBlendState(blendState,context);
 	
-	//context->VSSetShader( skyVS, NULL, 0 );
-	//context->PSSetShader( skyPS, NULL, 0 );
 	BindVS(skyVS,context);
 	BindPS(skyPS,context);
 	
 	BindTexturePS(enviroMap,0,context);
-	//context->PSSetSamplers(0, 1, &skySampler);
 	BindSamplerPS(skySampler,0,context);
-	
-	//context->VSSetConstantBuffers( 3, 1, &skyCb );
-	//context->PSSetConstantBuffers( 0, 1, &pixelCB );
-
-	//context->Draw(240,0);
 
 	BindConstantBufferVS(skyCb,3,context);
 	BindConstantBufferPS(pixelCB,0,context);
@@ -3552,17 +3540,6 @@ void wiRenderer::UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF){
 		UpdateBuffer(tessBuf,&tb,context);
 	}
 
-	//D3D11_MAPPED_SUBRESOURCE mappedResource;
-	//if(tessF){
-	//	TessBuffer tb;
-	//	tb.g_f4Eye = wiRenderer::getCamera()->Eye;
-	//	tb.g_f4TessFactors = XMFLOAT4A( tessF,2,4,6 );
-	//	TessBuffer* dataPtr;
-	//	context->Map(tessBuf,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-	//	dataPtr = (TessBuffer*)mappedResource.pData;
-	//	memcpy(dataPtr,&tb,sizeof(TessBuffer));
-	//	context->Unmap(tessBuf,0);
-	//}
 }
 void wiRenderer::UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane){
 
@@ -3570,6 +3547,7 @@ void wiRenderer::UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, C
 	StaticCB cb;
 	cb.mViewProjection = XMMatrixTranspose(camera->GetViewProjection());
 	cb.mRefViewProjection = XMMatrixTranspose( refCamera->GetViewProjection());
+	cb.mPrevViewProjection = XMMatrixTranspose(prevFrameCam->GetViewProjection());
 	cb.mCamPos = camera->GetEye();
 	cb.mClipPlane = newClipPlane;
 	cb.mWind=wind.direction;
@@ -3580,7 +3558,9 @@ void wiRenderer::UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, C
 
 	SkyBuffer scb;
 	scb.mV=XMMatrixTranspose(camera->GetView());
-	scb.mP=XMMatrixTranspose(camera->GetProjection());
+	scb.mP = XMMatrixTranspose(camera->GetProjection());
+	scb.mPrevView = XMMatrixTranspose(prevFrameCam->GetView());
+	scb.mPrevProjection = XMMatrixTranspose(prevFrameCam->GetProjection());
 	UpdateBuffer(skyCb,&scb,context);
 
 	UpdateBuffer(trailCB, &XMMatrixTranspose(camera->GetViewProjection()), context);

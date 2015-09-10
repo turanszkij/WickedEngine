@@ -53,7 +53,7 @@ HullInputType main(Input input)
 		Out.pos=pos.xyz;
 		Out.tex=input.tex.xyz;
 		Out.nor = normalize(normal);
-		Out.vel = mul( mul(vel.xyz,(float3x3)WORLD), xViewProjection ).xyz;
+		//Out.vel = mul( mul(vel.xyz,(float3x3)WORLD), xViewProjection ).xyz;
 
 	}
 

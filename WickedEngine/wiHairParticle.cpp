@@ -484,6 +484,7 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 		CBGS gcb;
 		gcb.mView = XMMatrixTranspose(camera->GetView());
 		gcb.mProj = XMMatrixTranspose(camera->GetProjection());
+		gcb.mPrevViewProjection = XMMatrixTranspose(wiRenderer::prevFrameCam->GetViewProjection());
 		gcb.colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,wiRenderer::wind.time);
 		gcb.eye=camera->translation;
 		gcb.drawdistance = (float)LOD[2];

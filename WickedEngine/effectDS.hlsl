@@ -126,7 +126,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	//Out.EyeVec = normalize(xCamPos.xyz - vertexPosition.xyz);
 	
 	
-	Out.vel = vertexVel;
+	//Out.vel = vertexVel;
 	//Out.vel += (Out.pos.xyz-mul(vertexPosition,xPrevViewProjection).xyz)*0.10;
 	//Out.mat = mat;
 

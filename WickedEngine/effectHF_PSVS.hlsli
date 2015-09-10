@@ -6,9 +6,9 @@ struct PixelInputType
 	float3 nor						: NORMAL;
 	float4 pos2D					: SCREENPOSITION;
 	float3 pos3D					: WORLDPOSITION;
+	float4 pos2DPrev				: SCREENPOSITIONPREV;
 	float3 cam						: CAMERAPOS;
 	float4 ReflectionMapSamplingPos : TEXCOORD1;
-	float3 vel						: TEXCOORD2;
 	float  ao						: AMBIENT_OCCLUSION;
 	float  dither					: DITHER;
 	float3 instanceColor			: INSTANCECOLOR;

@@ -99,7 +99,7 @@ int Renderable3DComponent_BindLua::SetReflectionsEnabled(lua_State* L)
 		return 0;
 	}
 	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setShadowsEnabled(wiLua::SGetBool(L, 2));
+		((Renderable3DComponent*)component)->setReflectionsEnabled(wiLua::SGetBool(L, 2));
 	else
 		wiLua::SError(L, "SetShadowsEnabled(bool value) not enough arguments!");
 	return 0;

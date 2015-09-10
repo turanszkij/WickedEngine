@@ -18,7 +18,6 @@ private:
 	float reflectionQuality;
 	float ssaoQuality;
 	float ssaoBlur;
-	float ssrQuality; 
 
 	wiWaterPlane waterPlane;
 
@@ -77,7 +76,6 @@ public:
 	float getReflectionQuality(){ return reflectionQuality; }
 	float getSSAOQuality(){ return ssaoQuality; }
 	float getSSAOBlur(){ return ssaoBlur; }
-	float getSSRQuality(){ return ssrQuality; }
 
 	wiWaterPlane getWaterPlane(){ return waterPlane; }
 
@@ -108,7 +106,6 @@ public:
 	void setReflectionQuality(float value){ reflectionQuality = value; }
 	void setSSAOQuality(float value){ ssaoQuality = value; }
 	void setSSAOBlur(float value){ ssaoBlur = value; }
-	void setSSRQuality(float value){ ssrQuality = value; }
 
 	void setWaterPlane(const wiWaterPlane& value){ waterPlane = value; }
 

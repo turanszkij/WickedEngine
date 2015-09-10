@@ -34,25 +34,33 @@ void main(
 	element.tex=float2(0,0);
 	element.pos=pos;
 	element.pos.xyz+=-right*frame.x+normal*frame.y+wind;
-	element.pos = mul(element.pos,xViewProjection);
+	float4 savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 
 	element.tex=float2(1,0);
 	element.pos=pos;
 	element.pos.xyz+=right*frame.x+normal*frame.y+wind;
-	element.pos = mul(element.pos,xViewProjection);
+	savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 
 	element.tex=float2(0,1);
 	element.pos=pos;
-	element.pos.xyz+=-right*frame.x;
-	element.pos = mul(element.pos,xViewProjection);
+	element.pos.xyz += -right*frame.x;
+	savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 	
 	element.tex=float2(1,1);
 	element.pos=pos;
-	element.pos.xyz+=right*frame.x;
-	element.pos = mul(element.pos,xViewProjection);
+	element.pos.xyz += right*frame.x;
+	savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 
 	output.RestartStrip();
@@ -61,25 +69,33 @@ void main(
 
 	element.tex=float2(0,0);
 	element.pos=pos;
-	element.pos.xyz+=-front*frame.x+normal*frame.y+wind;
-	element.pos = mul(element.pos,xViewProjection);
+	element.pos.xyz += -front*frame.x + normal*frame.y + wind;
+	savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 
 	element.tex=float2(1,0);
 	element.pos=pos;
-	element.pos.xyz+=front*frame.x+normal*frame.y+wind;
-	element.pos = mul(element.pos,xViewProjection);
+	element.pos.xyz += front*frame.x + normal*frame.y + wind;
+	savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 
 	element.tex=float2(0,1);
 	element.pos=pos;
-	element.pos.xyz+=-front*frame.x;
-	element.pos = mul(element.pos,xViewProjection);
+	element.pos.xyz += -front*frame.x;
+	savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 	
 	element.tex=float2(1,1);
 	element.pos=pos;
-	element.pos.xyz+=front*frame.x;
-	element.pos = mul(element.pos,xViewProjection);
+	element.pos.xyz += front*frame.x;
+	savedPos = element.pos;
+	element.pos = element.pos2D = mul(element.pos, xViewProjection);
+	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
 	output.Append(element);
 }

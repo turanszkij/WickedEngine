@@ -44,6 +44,8 @@ private:
 		XMMATRIX mProjection;
 		XMVECTOR mCamPos;
 		XMFLOAT4 mAdd;
+
+		ALIGN_16
 	};
 	ID3D11Buffer		   *vertexBuffer;
 	static ID3D11InputLayout   *vertexLayout;

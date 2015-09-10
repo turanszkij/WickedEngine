@@ -4,12 +4,28 @@
 struct VSOut{
 	float4 pos : SV_POSITION;
 	float3 nor : TEXCOORD0;
+	float4 pos2D : SCREENPOSITION;
+	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 
-float4 main(VSOut PSIn):SV_TARGET
+struct PSOut{
+	float4 col : SV_TARGET0;
+	float4 nor : SV_TARGET1;
+	float4 vel : SV_TARGET2;
+};
+
+PSOut main(VSOut PSIn)
 {
+	float2 ScreenCoord, ScreenCoordPrev;
+	ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
+	ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
+	ScreenCoordPrev.x = PSIn.pos2DPrev.x / PSIn.pos2DPrev.w / 2.0f + 0.5f;
+	ScreenCoordPrev.y = -PSIn.pos2DPrev.y / PSIn.pos2DPrev.w / 2.0f + 0.5f;
+	float2 vel = ScreenCoord - ScreenCoordPrev;
+
 	static const float overBright = 1.005f;
-	float3 nor = normalize(PSIn.nor)*overBright;
+	float3 inNor = normalize(PSIn.nor);
+	float3 nor = inNor*overBright;
 	float3 sun = 0;
 	float3 col = 0;
 	[branch]if(xFx.x==0){
@@ -19,7 +35,13 @@ float4 main(VSOut PSIn):SV_TARGET
 	else{
 		sun = clamp(pow(dot(xSun,nor),64)*xSunColor.rgb, 0, inf);
 	}
-	return float4( col+sun ,1);
+	//return float4( col+sun ,1);
+
+	PSOut Out = (PSOut)0;
+	Out.col = float4(col + sun, 1);
+	Out.nor = float4(inNor,0);
+	Out.vel = float4(vel, 0, 0);
+	return Out;
 }
 
 //struct VSOut{

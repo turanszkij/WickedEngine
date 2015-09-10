@@ -552,7 +552,7 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 
 	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
 	wiRenderer::BindRasterizerState(rasterizerState,context);
-	wiRenderer::BindDepthStencilState(depthStencilStateLess,stencilRef,context);
+	wiRenderer::BindDepthStencilState(depthNoStencilState,stencilRef,context);
 
 	//context->VSSetShader(screenVS,0,0);
 	//context->PSSetShader(deferredPS,0,0);

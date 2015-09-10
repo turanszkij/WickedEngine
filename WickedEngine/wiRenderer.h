@@ -150,6 +150,7 @@ protected:
 	{
 		XMMATRIX mViewProjection;
 		XMMATRIX mRefViewProjection;
+		XMMATRIX mPrevViewProjection;
 		XMVECTOR mCamPos;
 		//XMFLOAT4A mMotionBlur;
 		XMFLOAT4 mClipPlane;
@@ -268,6 +269,8 @@ protected:
 	{
 		XMMATRIX mV;
 		XMMATRIX mP;
+		XMMATRIX mPrevView;
+		XMMATRIX mPrevProjection;
 
 		ALIGN_16
 	};
@@ -1086,7 +1089,7 @@ public:
 
 	static wiRenderTarget normalMapRT, imagesRT, imagesRTAdd;
 	
-	static Camera* cam, *refCam;
+	static Camera* cam, *refCam, *prevFrameCam;
 	static Camera* getCamera(){ return cam; }
 	static Camera* getRefCamera(){ return refCam; }
 

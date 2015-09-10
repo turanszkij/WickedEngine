@@ -16,9 +16,11 @@ PixelOutputType main(PixelInputType PSIn)
 	float depth = PSIn.pos.z/PSIn.pos.w;
 	float3 eyevector = normalize(PSIn.cam - PSIn.pos3D);
 
-	//float2 ScreenCoord;
-	//ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
-	//ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
+	float2 ScreenCoord, ScreenCoordPrev;
+	ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
+	ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
+	ScreenCoordPrev.x = PSIn.pos2DPrev.x / PSIn.pos2DPrev.w / 2.0f + 0.5f;
+	ScreenCoordPrev.y = -PSIn.pos2DPrev.y / PSIn.pos2DPrev.w / 2.0f + 0.5f;
 
 
 	PSIn.tex+=movingTex;
@@ -88,10 +90,12 @@ PixelOutputType main(PixelInputType PSIn)
 	bool unshaded = shadeless||colorMask.a;
 	float properties = unshaded ? RT_UNSHADED : toonshaded ? RT_TOON : 0.0f;
 
+	float2 vel = ScreenCoord - ScreenCoordPrev;
+
 			
 	Out.col = float4((baseColor.rgb+colorMask.rgb)*(1+emit)*PSIn.ao,1);
 	Out.nor = float4((normal.xyz),properties);
-	Out.vel = float4(PSIn.vel.xy*float2(-1,1),specular_power,spec.a);
+	Out.vel = float4(/*PSIn.vel.xy*float2(-1,1)*/ vel,specular_power,spec.a);
 
 	
 	return Out;

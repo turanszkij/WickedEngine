@@ -9,6 +9,7 @@ protected:
 	wiRenderTarget rtGBuffer, rtDeferred, rtLight;
 
 	virtual void RenderScene(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
+	wiRenderTarget& GetFinalRT();
 
 public:
 	DeferredRenderableComponent();

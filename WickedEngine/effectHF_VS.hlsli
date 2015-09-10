@@ -4,6 +4,7 @@
 cbuffer staticBuffer:register(b0){
 	float4x4 xViewProjection;
 	float4x4 xRefViewProjection;
+	float4x4 xPrevViewProjection;
 	float4	 xCamPos;
 	float4	 xClipPlane;
 	float3	 xWind; float time;

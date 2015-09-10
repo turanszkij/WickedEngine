@@ -17,11 +17,10 @@ cbuffer prop:register(b0){
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	float4 color=0;
-	float  depth  = ( xSceneDepthMap.Load(int4(PSIn.pos.xy,0,0)).r );
+	float4 color = xTexture.Load(int3(PSIn.pos.xy, 0));
+	float  depth = xSceneDepthMap.Load(int3(PSIn.pos.xy, 0)).r;
 
 	[branch]if(depth<zFarP){
-		color = xTexture.SampleLevel(Sampler,PSIn.tex,0);
 		color=pow(color,GAMMA);
 		float4 lighting = xLightMap.SampleLevel(Sampler,PSIn.tex,0);
 		color.rgb *= lighting.rgb + xAmbient * xAOMap.SampleLevel(Sampler, PSIn.tex, 0).r;

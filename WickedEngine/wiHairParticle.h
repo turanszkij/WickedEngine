@@ -33,12 +33,15 @@ private:
 	{
 		XMMATRIX mView;
 		XMMATRIX mProj;
+		XMMATRIX mPrevViewProjection;
 		XMFLOAT4 colTime;
 		XMFLOAT3 eye; float drawdistance;
 		XMFLOAT3 wind; float pad;
 		float windRandomness;
 		float windWaveSize;
 		float padding[2];
+
+		ALIGN_16
 	};
 	static ID3D11InputLayout* il;
 	static ID3D11VertexShader* vs;

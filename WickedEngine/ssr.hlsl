@@ -129,26 +129,11 @@ float4 main( VertextoPixel input ) : SV_Target
 			* saturate( ( g_fSearchDist - length( vViewPos - vHitPos ) ) * g_fSearchDistInv )	//reflected object distance fade
 			* vCoords.w																			//rayhit binary fade
 			;
-	//float3 vReflectionColor = loadScene(vCoords.xy).rgb;
 
-	//float3 vReflectionColor=0;
+	float3 vReflectionColor = xTexture.SampleLevel(Sampler, vCoords.xy, 3).rgb;
+	float3 vSceneColor = xTexture.Load(int3(input.pos.x,input.pos.y,0)).rgb;
 
-	//static const float range = 2.5f;
-	//float2 dim;
-	//xTexture.GetDimensions(dim.x, dim.y);
-	//dim /= 2.f;
-	//float samples = 0;
-	//for (float x = -range; x <= range; x += 1.f){
-	//	for (float y = -range; y <= range; y += 1.f){
-	//		vReflectionColor += xTexture.SampleLevel(Sampler, vCoords.xy+float2(x,y)/dim, 4);
-	//		samples += 1.f;
-	//	}
-	//}
-	//vReflectionColor /= samples;
-
-	float3 vReflectionColor = xTexture.SampleLevel(Sampler, vCoords.xy, 3);
-
-	o = float4(vReflectionColor, fReflectionIntensity);
+	o = float4(lerp(vSceneColor, vReflectionColor, fReflectionIntensity), 1);
 
 	return o;
 

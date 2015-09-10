@@ -27,7 +27,6 @@ void Renderable3DComponent::setProperties()
 	setReflectionQuality(0.5f);
 	setSSAOQuality(0.5f);
 	setSSAOBlur(2.3f);
-	setSSRQuality(0.4f);
 	setBloomStrength(19.3f);
 	setBloomThreshold(0.99f);
 	setBloomSaturation(-3.86f);
@@ -56,7 +55,7 @@ void Renderable3DComponent::Initialize()
 	RenderableComponent::Initialize();
 
 	rtSSR.Initialize(
-		(UINT)(wiRenderer::GetScreenWidth() * getSSRQuality()), (UINT)(wiRenderer::GetScreenHeight() * getSSRQuality())
+		(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	rtMotionBlur.Initialize(
 		(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
@@ -319,14 +318,7 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wi
 
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	wiImage::Draw(shadedSceneRT.shaderResource.front(), fx, context);
-
 	fx.blendFlag = BLENDMODE_ALPHA;
-	if (getMotionBlurEnabled()){
-		wiImage::Draw(rtMotionBlur.shaderResource.back(), fx, context);
-	}
-	else if (getSSREnabled()){
-		wiImage::Draw(rtSSR.shaderResource.back(), fx, context);
-	}
 	wiImage::Draw(rtWater.shaderResource.back(), fx, context);
 	wiImage::Draw(rtTransparent.shaderResource.back(), fx, context);
 	if (getEmittedParticlesEnabled()){
