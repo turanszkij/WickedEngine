@@ -31,6 +31,10 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetMotionBlurEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSSSEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldEnabled),
+
+	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
+	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
 	{ NULL, NULL }
 };
 Luna<Renderable3DComponent_BindLua>::PropertyType Renderable3DComponent_BindLua::properties[] = {
@@ -59,8 +63,8 @@ int Renderable3DComponent_BindLua::SetSSAOEnabled(lua_State* L)
 		wiLua::SError(L, "SetSSAOEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setSSAOEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setSSAOEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetSSAOEnabled(bool value) not enough arguments!");
 	return 0;
@@ -72,8 +76,8 @@ int Renderable3DComponent_BindLua::SetSSREnabled(lua_State* L)
 		wiLua::SError(L, "SetSSREnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setSSREnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setSSREnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetSSREnabled(bool value) not enough arguments!");
 	return 0;
@@ -85,8 +89,8 @@ int Renderable3DComponent_BindLua::SetShadowsEnabled(lua_State* L)
 		wiLua::SError(L, "SetShadowsEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setShadowsEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setShadowsEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetShadowsEnabled(bool value) not enough arguments!");
 	return 0;
@@ -98,8 +102,8 @@ int Renderable3DComponent_BindLua::SetReflectionsEnabled(lua_State* L)
 		wiLua::SError(L, "SetShadowsEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setReflectionsEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setReflectionsEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetShadowsEnabled(bool value) not enough arguments!");
 	return 0;
@@ -111,8 +115,8 @@ int Renderable3DComponent_BindLua::SetFXAAEnabled(lua_State* L)
 		wiLua::SError(L, "SetFXAAEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setFXAAEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setFXAAEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetFXAAEnabled(bool value) not enough arguments!");
 	return 0;
@@ -124,8 +128,8 @@ int Renderable3DComponent_BindLua::SetBloomEnabled(lua_State* L)
 		wiLua::SError(L, "SetBloomEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setBloomEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setBloomEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetBloomEnabled(bool value) not enough arguments!");
 	return 0;
@@ -137,8 +141,8 @@ int Renderable3DComponent_BindLua::SetColorGradingEnabled(lua_State* L)
 		wiLua::SError(L, "SetColorGradingEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setColorGradingEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setColorGradingEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetColorGradingEnabled(bool value) not enough arguments!");
 	return 0;
@@ -150,8 +154,8 @@ int Renderable3DComponent_BindLua::SetEmitterParticlesEnabled(lua_State* L)
 		wiLua::SError(L, "SetEmitterParticlesEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setEmitterParticlesEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setEmitterParticlesEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetEmitterParticlesEnabled(bool value) not enough arguments!");
 	return 0;
@@ -163,8 +167,8 @@ int Renderable3DComponent_BindLua::SetHairParticlesEnabled(lua_State* L)
 		wiLua::SError(L, "SetHairParticlesEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setHairParticlesEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setHairParticlesEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetHairParticlesEnabled(bool value) not enough arguments!");
 	return 0;
@@ -176,8 +180,8 @@ int Renderable3DComponent_BindLua::SetVolumeLightsEnabled(lua_State* L)
 		wiLua::SError(L, "SetVolumeLightsEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setVolumeLightsEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setVolumeLightsEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetVolumeLightsEnabled(bool value) not enough arguments!");
 	return 0;
@@ -189,8 +193,8 @@ int Renderable3DComponent_BindLua::SetLightShaftsEnabled(lua_State* L)
 		wiLua::SError(L, "SetLightShaftsEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setLightShaftsEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setLightShaftsEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetLightShaftsEnabled(bool value) not enough arguments!");
 	return 0;
@@ -202,8 +206,8 @@ int Renderable3DComponent_BindLua::SetLensFlareEnabled(lua_State* L)
 		wiLua::SError(L, "SetLensFlareEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setLensFlareEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setLensFlareEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetLensFlareEnabled(bool value) not enough arguments!");
 	return 0;
@@ -215,8 +219,8 @@ int Renderable3DComponent_BindLua::SetMotionBlurEnabled(lua_State* L)
 		wiLua::SError(L, "SetMotionBlurEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setMotionBlurEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setMotionBlurEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetMotionBlurEnabled(bool value) not enough arguments!");
 	return 0;
@@ -228,10 +232,57 @@ int Renderable3DComponent_BindLua::SetSSSEnabled(lua_State* L)
 		wiLua::SError(L, "SetSSSEnabled(bool value) component is null!");
 		return 0;
 	}
-	if (wiLua::SGetArgCount(L) > 1)
-		((Renderable3DComponent*)component)->setSSSEnabled(wiLua::SGetBool(L, 2));
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setSSSEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetSSSEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetDepthOfFieldEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetDepthOfFieldEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((Renderable3DComponent*)component)->setDepthOfFieldEnabled(wiLua::SGetBool(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetDepthOfFieldEnabled(bool value) not enough arguments!");
+	return 0;
+}
+
+
+int Renderable3DComponent_BindLua::SetDepthOfFieldFocus(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetDepthOfFieldFocus(float value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((Renderable3DComponent*)component)->setDepthOfFieldFocus(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetDepthOfFieldFocus(float value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetDepthOfFieldStrength(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetDepthOfFieldStrength(float value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((Renderable3DComponent*)component)->setDepthOfFieldStrength(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetDepthOfFieldStrength(float value) not enough arguments!");
 	return 0;
 }
 

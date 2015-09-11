@@ -31,6 +31,8 @@ void Renderable3DComponent::setProperties()
 	setBloomThreshold(0.99f);
 	setBloomSaturation(-3.86f);
 	setWaterPlane(wiWaterPlane());
+	setDepthOfFieldFocus(10.f);
+	setDepthOfFieldStrength(2.2f);
 
 	setSSAOEnabled(true);
 	setSSREnabled(true);
@@ -46,6 +48,7 @@ void Renderable3DComponent::setProperties()
 	setLensFlareEnabled(true);
 	setMotionBlurEnabled(true);
 	setSSSEnabled(true);
+	setDepthOfFieldEnabled(true);
 
 	setPreferredThreadingCount(0);
 }
@@ -98,6 +101,16 @@ void Renderable3DComponent::Initialize()
 		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	rtFinal[1].Initialize(
+		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		, 1, false);
+
+	rtDof[0].Initialize(
+		(UINT)(wiRenderer::GetScreenWidth()*0.4f), (UINT)(wiRenderer::GetScreenHeight()*0.4f)
+		, 1, false);
+	rtDof[1].Initialize(
+		(UINT)(wiRenderer::GetScreenWidth()*0.4f), (UINT)(wiRenderer::GetScreenHeight()*0.4f)
+		, 1, false);
+	rtDof[2].Initialize(
 		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
 		, 1, false);
 
@@ -341,13 +354,41 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wi
 }
 void Renderable3DComponent::RenderComposition2(wiRenderer::DeviceContext context){
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	fx.blendFlag = BLENDMODE_OPAQUE;
 	wiImage::BatchBegin(context);
+
+	if (getDepthOfFieldEnabled())
+	{
+		// downsample + blur
+		rtDof[0].Activate(context);
+		fx.blur = getDepthOfFieldStrength();
+		fx.blurDir = 0;
+		wiImage::Draw(rtFinal[0].shaderResource.back(), fx, context);
+
+		rtDof[1].Activate(context);
+		fx.blurDir = 1;
+		wiImage::Draw(rtDof[0].shaderResource.back(), fx, context);
+		fx.blur = 0;
+		fx.process.clear();
+
+		// depth of field compose pass
+		rtDof[2].Activate(context);
+		fx.process.setDOF(getDepthOfFieldFocus());
+		fx.setMaskMap(rtDof[1].shaderResource.back());
+		fx.setDepthMap(rtLinearDepth.shaderResource.back());
+		wiImage::Draw(rtFinal[0].shaderResource.back(), fx, context);
+		fx.setMaskMap(nullptr);
+		fx.setDepthMap(nullptr);
+		fx.process.clear();
+	}
 
 	rtFinal[1].Activate(context);
 
-	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.process.setFXAA(getFXAAEnabled());
-	wiImage::Draw(rtFinal[0].shaderResource.back(), fx, context);
+	if (getDepthOfFieldEnabled())
+		wiImage::Draw(rtDof[2].shaderResource.back(), fx, context);
+	else
+		wiImage::Draw(rtFinal[0].shaderResource.back(), fx, context);
 	fx.process.clear();
 
 	if (getBloomEnabled())

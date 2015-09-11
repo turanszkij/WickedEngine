@@ -111,44 +111,44 @@ int MainComponent_BindLua::SetActiveComponent(lua_State *L)
 	}
 
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		ForwardRenderableComponent_BindLua* compFwd3D = Luna<ForwardRenderableComponent_BindLua>::lightcheck(L, 2);
+		ForwardRenderableComponent_BindLua* compFwd3D = Luna<ForwardRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compFwd3D != nullptr)
 		{
 			component->activateComponent(compFwd3D->component);
 			return 0;
 		}
 
-		DeferredRenderableComponent_BindLua* compDef3D = Luna<DeferredRenderableComponent_BindLua>::lightcheck(L, 2);
+		DeferredRenderableComponent_BindLua* compDef3D = Luna<DeferredRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compDef3D != nullptr)
 		{
 			component->activateComponent(compDef3D->component);
 			return 0;
 		}
 
-		Renderable3DComponent_BindLua* comp3D = Luna<Renderable3DComponent_BindLua>::lightcheck(L, 2);
+		Renderable3DComponent_BindLua* comp3D = Luna<Renderable3DComponent_BindLua>::lightcheck(L, 1);
 		if (comp3D != nullptr)
 		{
 			component->activateComponent(comp3D->component);
 			return 0;
 		}
 
-		LoadingScreenComponent_BindLua* compLoad = Luna<LoadingScreenComponent_BindLua>::lightcheck(L, 2);
+		LoadingScreenComponent_BindLua* compLoad = Luna<LoadingScreenComponent_BindLua>::lightcheck(L, 1);
 		if (compLoad != nullptr)
 		{
 			component->activateComponent(compLoad->component);
 			return 0;
 		}
 
-		Renderable2DComponent_BindLua* comp2D = Luna<Renderable2DComponent_BindLua>::lightcheck(L, 2);
+		Renderable2DComponent_BindLua* comp2D = Luna<Renderable2DComponent_BindLua>::lightcheck(L, 1);
 		if (comp2D != nullptr)
 		{
 			component->activateComponent(comp2D->component);
 			return 0;
 		}
 
-		RenderableComponent_BindLua* comp = Luna<RenderableComponent_BindLua>::lightcheck(L, 2);
+		RenderableComponent_BindLua* comp = Luna<RenderableComponent_BindLua>::lightcheck(L, 1);
 		if (comp != nullptr)
 		{
 			component->activateComponent(comp->component);
@@ -171,9 +171,9 @@ int MainComponent_BindLua::SetFrameSkip(lua_State *L)
 	}
 
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		component->setFrameSkip(wiLua::SGetBool(L, 2));
+		component->setFrameSkip(wiLua::SGetBool(L, 1));
 	}
 	else
 		wiLua::SError(L, "SetFrameSkip(bool enabled) not enought arguments!");

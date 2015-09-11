@@ -30,6 +30,10 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetMotionBlurEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSSSEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldEnabled),
+
+	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
+	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
 	{ NULL, NULL }
 };
 Luna<DeferredRenderableComponent_BindLua>::PropertyType DeferredRenderableComponent_BindLua::properties[] = {

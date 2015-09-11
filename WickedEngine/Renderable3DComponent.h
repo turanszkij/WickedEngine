@@ -18,6 +18,8 @@ private:
 	float reflectionQuality;
 	float ssaoQuality;
 	float ssaoBlur;
+	float dofFocus;
+	float dofStrength;
 
 	wiWaterPlane waterPlane;
 
@@ -35,6 +37,7 @@ private:
 	bool lensFlareEnabled;
 	bool motionBlurEnabled;
 	bool sssEnabled;
+	bool depthOfFieldEnabled;
 
 protected:
 	wiRenderTarget
@@ -50,6 +53,7 @@ protected:
 		, rtParticleAdditive
 		, rtLensFlare
 		, rtFinal[2]
+		, rtDof[3]
 		;
 	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO, rtSSS;
 	wiDepthTarget dtDepthCopy;
@@ -76,6 +80,8 @@ public:
 	float getReflectionQuality(){ return reflectionQuality; }
 	float getSSAOQuality(){ return ssaoQuality; }
 	float getSSAOBlur(){ return ssaoBlur; }
+	float getDepthOfFieldFocus(){ return ssaoBlur; }
+	float getDepthOfFieldStrength(){ return ssaoBlur; }
 
 	wiWaterPlane getWaterPlane(){ return waterPlane; }
 
@@ -93,6 +99,7 @@ public:
 	bool getLensFlareEnabled(){ return lensFlareEnabled; }
 	bool getMotionBlurEnabled(){ return motionBlurEnabled; }
 	bool getSSSEnabled(){ return sssEnabled; }
+	bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
 
 	unsigned short getThreadingCount(){ return workerThreads.size(); }
 
@@ -106,6 +113,8 @@ public:
 	void setReflectionQuality(float value){ reflectionQuality = value; }
 	void setSSAOQuality(float value){ ssaoQuality = value; }
 	void setSSAOBlur(float value){ ssaoBlur = value; }
+	void setDepthOfFieldFocus(float value){ dofFocus = value; }
+	void setDepthOfFieldStrength(float value){ dofStrength = value; }
 
 	void setWaterPlane(const wiWaterPlane& value){ waterPlane = value; }
 
@@ -123,6 +132,7 @@ public:
 	void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
 	void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
 	void setSSSEnabled(bool value){ sssEnabled = value; }
+	void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

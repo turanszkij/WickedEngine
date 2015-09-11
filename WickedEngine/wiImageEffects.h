@@ -72,7 +72,7 @@ public:
 		bool colorGrade;
 			
 		void clear(){active=motionBlur=outline=fxaa=ssao=linDepth=colorGrade=ssr=false;dofStrength=0;ssss=XMFLOAT2(0,0);}
-		void setDOF(float value){dofStrength=value;active=(value<0.01?true:false);}
+		void setDOF(float value){dofStrength=value;active=value>FLT_EPSILON;}
 		void setMotionBlur(bool value){motionBlur=value;active=value;}
 		void setOutline(bool value){outline=value;active=value;}
 		void setFXAA(bool value){fxaa=value;active=value;}
