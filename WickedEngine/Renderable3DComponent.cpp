@@ -48,7 +48,7 @@ void Renderable3DComponent::setProperties()
 	setLensFlareEnabled(true);
 	setMotionBlurEnabled(true);
 	setSSSEnabled(true);
-	setDepthOfFieldEnabled(true);
+	setDepthOfFieldEnabled(false);
 
 	setPreferredThreadingCount(0);
 }
@@ -105,10 +105,10 @@ void Renderable3DComponent::Initialize()
 		, 1, false);
 
 	rtDof[0].Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*0.4f), (UINT)(wiRenderer::GetScreenHeight()*0.4f)
+		(UINT)(wiRenderer::GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetScreenHeight()*0.5f)
 		, 1, false);
 	rtDof[1].Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*0.4f), (UINT)(wiRenderer::GetScreenHeight()*0.4f)
+		(UINT)(wiRenderer::GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetScreenHeight()*0.5f)
 		, 1, false);
 	rtDof[2].Initialize(
 		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()

@@ -80,8 +80,8 @@ public:
 	float getReflectionQuality(){ return reflectionQuality; }
 	float getSSAOQuality(){ return ssaoQuality; }
 	float getSSAOBlur(){ return ssaoBlur; }
-	float getDepthOfFieldFocus(){ return ssaoBlur; }
-	float getDepthOfFieldStrength(){ return ssaoBlur; }
+	float getDepthOfFieldFocus(){ return dofFocus; }
+	float getDepthOfFieldStrength(){ return dofStrength; }
 
 	wiWaterPlane getWaterPlane(){ return waterPlane; }
 
