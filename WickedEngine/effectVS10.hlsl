@@ -29,6 +29,13 @@ PixelInputType main(Input input)
 
 		pos = mul( pos,WORLD );
 
+
+		Out.clip = dot(pos, xClipPlane);
+		
+		float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
+		affectWind(pos.xyz,xWind,time,input.tex.w,input.id,windRandomness,windWaveSize);
+
+
 		[branch]
 		if (posPrev.w){
 			posPrev = mul(posPrev, WORLD);
@@ -36,11 +43,6 @@ PixelInputType main(Input input)
 		}
 		else
 			posPrev = pos;
-
-		Out.clip = dot(pos, xClipPlane);
-		
-		float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
-		affectWind(pos.xyz,xWind,time,input.tex.w,input.id,windRandomness,windWaveSize);
 
 		//VERTEX OFFSET MOTION BLUR
 		//if(xMotionBlur.x){
