@@ -18,6 +18,7 @@ public:
 	~MainComponent();
 
 	int screenW, screenH;
+	bool fullscreen;
 
 	void run();
 

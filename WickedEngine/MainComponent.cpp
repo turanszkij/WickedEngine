@@ -10,8 +10,9 @@
 
 MainComponent::MainComponent()
 {
-	screenW = 800;
-	screenH = 600;
+	screenW = 0;
+	screenH = 0;
+	fullscreen = false;
 
 	activeComponent = new RenderableComponent();
 
@@ -110,12 +111,15 @@ bool MainComponent::setWindow(HWND hWnd, HINSTANCE hInst)
 	window = hWnd;
 	instance = hInst;
 
-	RECT rect = RECT();
-	GetClientRect(hWnd, &rect);
-	screenW = rect.right - rect.left;
-	screenH = rect.bottom - rect.top;
+	if (screenH == 0 && screenW == 0)
+	{
+		RECT rect = RECT();
+		GetClientRect(hWnd, &rect);
+		screenW = rect.right - rect.left;
+		screenH = rect.bottom - rect.top;
+	}
 
-	if (FAILED(wiRenderer::InitDevice(window, screenW, screenH, true)))
+	if (FAILED(wiRenderer::InitDevice(window, screenW, screenH, !fullscreen)))
 	{
 		wiHelper::messageBox("Could not initialize D3D device!", "Fatal Error!", window);
 		return false;
