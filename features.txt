@@ -37,7 +37,7 @@ Spotlights + shadow maps
 Point lights + shadow cubemaps
 Diffuse, specular lighting for all lights
 Soft shadows
-Rigid body physics simulation (HAVOK)
+Rigid body physics simulation (HAVOK) [NOT PUBLIC]
 Rigid body physics simulation (BULLET)
 Soft body physics simulation (BULLET)
 Sound (Xaudio2)
