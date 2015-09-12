@@ -121,12 +121,12 @@ void wiFont::SetUpStates()
 	
 	D3D11_BLEND_DESC bd;
 	ZeroMemory(&bd, sizeof(bd));
-	bd.RenderTarget[0].BlendEnable=TRUE;
+	bd.RenderTarget[0].BlendEnable = TRUE;
 	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendState);
@@ -343,7 +343,7 @@ void wiFont::Draw(wiRenderer::DeviceContext context){
 
 
 		ConstantBuffer cb = ConstantBuffer();
-		cb.mProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetOProjection() );
+		cb.mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetScreenWidth(),(float)wiRenderer::GetScreenHeight(),0,100) );
 		cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
 		cb.mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
 		

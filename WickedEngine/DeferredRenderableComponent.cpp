@@ -34,6 +34,8 @@ void DeferredRenderableComponent::Initialize()
 		, 1, false, 1, 0
 		, DXGI_FORMAT_R11G11B10_FLOAT
 		);
+
+	Renderable2DComponent::Initialize();
 }
 void DeferredRenderableComponent::Load()
 {
@@ -71,6 +73,7 @@ void DeferredRenderableComponent::Render(){
 		RenderComposition2();
 	}
 
+	Renderable2DComponent::Render();
 }
 
 

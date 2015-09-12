@@ -61,13 +61,13 @@ int wiImageEffects_BindLua::GetMipLevel(lua_State* L)
 int wiImageEffects_BindLua::SetPos(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		effects.pos.x = wiLua::SGetFloat(L, 2);
+		effects.pos.x = wiLua::SGetFloat(L, 1);
+		if (argc > 1)
+			effects.pos.y = wiLua::SGetFloat(L, 2);
 		if (argc > 2)
-			effects.pos.y = wiLua::SGetFloat(L, 3);
-		if (argc > 3)
-			effects.pos.z = wiLua::SGetFloat(L, 4);
+			effects.pos.z = wiLua::SGetFloat(L, 3);
 	}
 	else
 	{
@@ -78,11 +78,11 @@ int wiImageEffects_BindLua::SetPos(lua_State* L)
 int wiImageEffects_BindLua::SetSize(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		effects.siz.x = wiLua::SGetFloat(L, 2);
-		if (argc > 2)
-			effects.siz.y = wiLua::SGetFloat(L, 3);
+		effects.siz.x = wiLua::SGetFloat(L, 1);
+		if (argc > 1)
+			effects.siz.y = wiLua::SGetFloat(L, 2);
 	}
 	else
 	{
@@ -93,9 +93,9 @@ int wiImageEffects_BindLua::SetSize(lua_State* L)
 int wiImageEffects_BindLua::SetOpacity(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		effects.opacity = wiLua::SGetFloat(L, 2);
+		effects.opacity = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -106,9 +106,9 @@ int wiImageEffects_BindLua::SetOpacity(lua_State* L)
 int wiImageEffects_BindLua::SetFade(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		effects.fade = wiLua::SGetFloat(L, 2);
+		effects.fade = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -119,9 +119,9 @@ int wiImageEffects_BindLua::SetFade(lua_State* L)
 int wiImageEffects_BindLua::SetRotation(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		effects.rotation = wiLua::SGetFloat(L, 2);
+		effects.rotation = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -132,9 +132,9 @@ int wiImageEffects_BindLua::SetRotation(lua_State* L)
 int wiImageEffects_BindLua::SetMipLevel(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		effects.mipLevel = wiLua::SGetFloat(L, 2);
+		effects.mipLevel = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{

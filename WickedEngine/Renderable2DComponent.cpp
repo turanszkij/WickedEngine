@@ -2,6 +2,7 @@
 #include "wiResourceManager.h"
 #include "wiSprite.h"
 #include "wiFont.h"
+#include "wiRenderer.h"
 
 Renderable2DComponent::Renderable2DComponent()
 {
@@ -18,7 +19,9 @@ Renderable2DComponent::~Renderable2DComponent()
 
 void Renderable2DComponent::Initialize()
 {
-	
+	rtFinal.Initialize(
+		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		, 1, false);
 }
 
 void Renderable2DComponent::Load()
@@ -44,8 +47,10 @@ void Renderable2DComponent::Update()
 		x->Update(getSpriteSpeed());
 	}
 }
-void Renderable2DComponent::Compose()
+void Renderable2DComponent::Render()
 {
+	rtFinal.Activate(wiRenderer::getImmediateContext(), 0, 0, 0, 0);
+
 	wiImage::BatchBegin();
 
 	for (wiSprite* x : m_sprites)
@@ -57,6 +62,11 @@ void Renderable2DComponent::Compose()
 	{
 		x->Draw();
 	}
+}
+void Renderable2DComponent::Compose()
+{
+	wiImage::BatchBegin();
+	wiImage::Draw(rtFinal.shaderResource.back(), wiImageEffects((float)wiRenderer::GetScreenWidth(),(float)wiRenderer::GetScreenHeight()));
 }
 
 

@@ -60,9 +60,9 @@ int Node_BindLua::SetName(lua_State* L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		node->name = wiLua::SGetString(L, 2);
+		node->name = wiLua::SGetString(L, 1);
 	}
 	else
 	{
@@ -126,25 +126,25 @@ Transform_BindLua::~Transform_BindLua()
 int Transform_BindLua::AttachTo(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Transform_BindLua* parent = Luna<Transform_BindLua>::lightcheck(L, 2);
+		Transform_BindLua* parent = Luna<Transform_BindLua>::lightcheck(L, 1);
 		if (parent == nullptr)
-			parent = Luna<Object_BindLua>::lightcheck(L, 2);
+			parent = Luna<Object_BindLua>::lightcheck(L, 1);
 		if (parent == nullptr)
-			parent = Luna<Armature_BindLua>::lightcheck(L, 2);
+			parent = Luna<Armature_BindLua>::lightcheck(L, 1);
 		if (parent != nullptr)
 		{
 			int s = 1, r = 1, t = 1;
-			if (argc > 2)
+			if (argc > 1)
 			{
-				t = wiLua::SGetInt(L, 3);
-				if (argc > 3)
+				t = wiLua::SGetInt(L, 2);
+				if (argc > 2)
 				{
-					r = wiLua::SGetInt(L, 4);
-					if (argc > 4)
+					r = wiLua::SGetInt(L, 3);
+					if (argc > 3)
 					{
-						s = wiLua::SGetInt(L, 5);
+						s = wiLua::SGetInt(L, 4);
 					}
 				}
 			}
@@ -165,9 +165,9 @@ int Transform_BindLua::Detach(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	int eraseFromParent = 1;
-	if (argc > 1)
+	if (argc > 0)
 	{
-		eraseFromParent = wiLua::SGetInt(L, 2);
+		eraseFromParent = wiLua::SGetInt(L, 1);
 	}
 	transform->detach(eraseFromParent);
 	return 0;
@@ -175,13 +175,13 @@ int Transform_BindLua::Detach(lua_State* L)
 int Transform_BindLua::DetachChild(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Transform_BindLua* child = Luna<Transform_BindLua>::lightcheck(L, 2);
+		Transform_BindLua* child = Luna<Transform_BindLua>::lightcheck(L, 1);
 		if (child == nullptr)
-			child = Luna<Object_BindLua>::lightcheck(L, 2);
+			child = Luna<Object_BindLua>::lightcheck(L, 1);
 		if (child == nullptr)
-			child = Luna<Armature_BindLua>::lightcheck(L, 2);
+			child = Luna<Armature_BindLua>::lightcheck(L, 1);
 		if (child != nullptr)
 		{
 			transform->detachChild(child->transform);
@@ -195,15 +195,15 @@ int Transform_BindLua::ApplyTransform(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	int s = 1, r = 1, t = 1;
-	if (argc > 1)
+	if (argc > 0)
 	{
-		t = wiLua::SGetInt(L, 2);
-		if (argc > 2)
+		t = wiLua::SGetInt(L, 1);
+		if (argc > 1)
 		{
-			r = wiLua::SGetInt(L, 3);
-			if (argc > 3)
+			r = wiLua::SGetInt(L, 2);
+			if (argc > 2)
 			{
-				s = wiLua::SGetInt(L, 4);
+				s = wiLua::SGetInt(L, 3);
 			}
 		}
 	}
@@ -213,9 +213,9 @@ int Transform_BindLua::ApplyTransform(lua_State* L)
 int Transform_BindLua::Scale(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (v != nullptr)
 		{
 			XMFLOAT3 scale;
@@ -236,9 +236,9 @@ int Transform_BindLua::Scale(lua_State* L)
 int Transform_BindLua::Rotate(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (v != nullptr)
 		{
 			XMFLOAT3 rollPitchYaw;
@@ -259,9 +259,9 @@ int Transform_BindLua::Rotate(lua_State* L)
 int Transform_BindLua::Translate(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (v != nullptr)
 		{
 			XMFLOAT3 translate;
@@ -282,9 +282,9 @@ int Transform_BindLua::Translate(lua_State* L)
 int Transform_BindLua::MatrixTransform(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 2);
+		Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 1);
 		if (m != nullptr)
 		{
 			transform->transform(m->matrix);
@@ -313,13 +313,13 @@ int Transform_BindLua::ClearTransform(lua_State* L)
 int Transform_BindLua::SetTransform(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Transform_BindLua* t = Luna<Transform_BindLua>::lightcheck(L, 2);
+		Transform_BindLua* t = Luna<Transform_BindLua>::lightcheck(L, 1);
 		if (t == nullptr)
-			t = Luna<Object_BindLua>::lightcheck(L, 2);
+			t = Luna<Object_BindLua>::lightcheck(L, 1);
 		if (t == nullptr)
-			t = Luna<Armature_BindLua>::lightcheck(L, 2);
+			t = Luna<Armature_BindLua>::lightcheck(L, 1);
 		if (t != nullptr)
 		{
 			*transform = *t->transform;
@@ -393,11 +393,11 @@ Cullable_BindLua::~Cullable_BindLua()
 int Cullable_BindLua::Intersects(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		Cullable_BindLua* target = Luna<Cullable_BindLua>::lightcheck(L, 2);
+		Cullable_BindLua* target = Luna<Cullable_BindLua>::lightcheck(L, 1);
 		if (target == nullptr)
-			target = Luna<Object_BindLua>::lightcheck(L, 2);
+			target = Luna<Object_BindLua>::lightcheck(L, 1);
 		if (target != nullptr)
 		{
 			AABB::INTERSECTION_TYPE intersection = cullable->bounds.intersects(target->cullable->bounds);
@@ -406,7 +406,7 @@ int Cullable_BindLua::Intersects(lua_State* L)
 		}
 		else
 		{
-			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 2);
+			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 			if (ray != nullptr)
 			{
 				wiLua::SSetBool(L, cullable->bounds.intersects(ray->ray));
@@ -414,7 +414,7 @@ int Cullable_BindLua::Intersects(lua_State* L)
 			}
 			else
 			{
-				Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
+				Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 				if (vec != nullptr)
 				{
 					XMFLOAT3 point;
@@ -504,9 +504,9 @@ int Object_BindLua::SetTransparency(lua_State *L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		object->transparency = wiLua::SGetFloat(L, 2);
+		object->transparency = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -532,9 +532,9 @@ int Object_BindLua::SetColor(lua_State *L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 3)
+	if (argc > 2)
 	{
-		object->color = wiLua::SGetFloat3(L, 2);
+		object->color = wiLua::SGetFloat3(L, 1);
 	}
 	else
 	{
@@ -672,7 +672,7 @@ int Armature_BindLua::GetBone(lua_State *L)
 		wiLua::SError(L, "GetBone() armature is null!");
 		return 0;
 	}
-	string name = wiLua::SGetString(L, 2);
+	string name = wiLua::SGetString(L, 1);
 	for (auto& x : armature->boneCollection)
 	{
 		if (!x->name.compare(name))
@@ -718,9 +718,9 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		string armatureName = wiLua::SGetString(L, 2);
+		string armatureName = wiLua::SGetString(L, 1);
 		if (!armature->ChangeAction(armatureName))
 		{
 			wiLua::SError(L, "SetAction(String name) action not found!");

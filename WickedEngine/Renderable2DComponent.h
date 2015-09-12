@@ -9,6 +9,7 @@ class Renderable2DComponent :
 {
 private:
 	float m_spriteSpeed;
+	wiRenderTarget rtFinal;
 protected:
 	vector<wiSprite*> m_sprites;
 	vector<wiFont*> m_fonts;
@@ -21,6 +22,7 @@ public:
 	virtual void Unload();
 	virtual void Start();
 	virtual void Update();
+	virtual void Render();
 	virtual void Compose();
 
 	void addSprite(wiSprite* sprite);

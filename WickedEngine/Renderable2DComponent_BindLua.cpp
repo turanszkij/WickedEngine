@@ -46,9 +46,9 @@ int Renderable2DComponent_BindLua::AddSprite(lua_State *L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		wiSprite_BindLua* sprite = Luna<wiSprite_BindLua>::lightcheck(L, 2);
+		wiSprite_BindLua* sprite = Luna<wiSprite_BindLua>::lightcheck(L, 1);
 		if (sprite != nullptr)
 		{
 			Renderable2DComponent* ccomp = dynamic_cast<Renderable2DComponent*>(component);
@@ -78,9 +78,9 @@ int Renderable2DComponent_BindLua::AddFont(lua_State* L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 2);
+		wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 1);
 		if (font != nullptr)
 		{
 			Renderable2DComponent* ccomp = dynamic_cast<Renderable2DComponent*>(component);

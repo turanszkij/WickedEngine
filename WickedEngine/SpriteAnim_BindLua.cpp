@@ -27,9 +27,9 @@ SpriteAnim_BindLua::~SpriteAnim_BindLua()
 int SpriteAnim_BindLua::SetRot(lua_State *L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		anim.rot = wiLua::SGetFloat(L, 2);
+		anim.rot = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{

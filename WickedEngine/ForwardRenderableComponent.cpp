@@ -21,6 +21,8 @@ void ForwardRenderableComponent::Initialize()
 	Renderable3DComponent::Initialize();
 
 	rtMain.Initialize(wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight(), 1, true);
+
+	Renderable2DComponent::Initialize();
 }
 void ForwardRenderableComponent::Load()
 {
@@ -59,6 +61,7 @@ void ForwardRenderableComponent::Render(){
 		RenderComposition2();
 	}
 
+	Renderable2DComponent::Render();
 }
 
 

@@ -100,6 +100,8 @@ void MainComponent::Render()
 void MainComponent::Compose()
 {
 	getActiveComponent()->Compose();
+
+	wiBackLog::Draw();
 }
 
 #ifndef WINSTORE_SUPPORT

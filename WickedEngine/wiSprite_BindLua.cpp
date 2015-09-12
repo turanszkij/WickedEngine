@@ -51,9 +51,9 @@ int wiSprite_BindLua::SetEffects(lua_State *L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		wiImageEffects_BindLua* effects = Luna<wiImageEffects_BindLua>::check(L, 2);
+		wiImageEffects_BindLua* effects = Luna<wiImageEffects_BindLua>::check(L, 1);
 		if (effects != nullptr)
 		{
 			sprite->effects = effects->effects;
@@ -83,9 +83,9 @@ int wiSprite_BindLua::SetAnim(lua_State *L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		SpriteAnim_BindLua* anim = Luna<SpriteAnim_BindLua>::check(L, 2);
+		SpriteAnim_BindLua* anim = Luna<SpriteAnim_BindLua>::check(L, 1);
 		if (anim != nullptr)
 		{
 			sprite->anim = anim->anim;
