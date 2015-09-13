@@ -20,6 +20,7 @@ _____________________________________________________________________
 Visual Studio 2013+ (earlier versions may be compatible)
 WindowsSDK
 DirectX11 SDK (included in Windows SDK)(legacy SDK not supported)
+DirectX11 June 2010 Redist (Only if you want to support Windows 7 because it uses Xaudio 2.7!)
 _____________________________________________________________________
 
 ___________

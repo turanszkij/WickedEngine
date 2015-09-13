@@ -7,6 +7,7 @@
 #include "wiBackLog.h"
 #include "wiCpuInfo.h"
 #include "wiSound.h"
+#include "wiHelper.h"
 
 
 namespace wiInitializer
@@ -40,8 +41,17 @@ namespace wiInitializer
 
 		if (requestedFeautures & WICKEDENGINE_INITIALIZE_SOUND)
 		{
-			wiSoundEffect::Initialize();
-			wiMusic::Initialize();
+			if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
+			{
+				stringstream ss("");
+				ss << "Failed to Initialize Audio Device!";
+#if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
+				//
+#else
+				ss << " Install June 2010 DirectX Redistributable!";
+#endif
+				wiHelper::messageBox(ss.str());
+			}
 		}
 
 	}

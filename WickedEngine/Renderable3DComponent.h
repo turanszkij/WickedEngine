@@ -101,7 +101,7 @@ public:
 	bool getSSSEnabled(){ return sssEnabled; }
 	bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
 
-	unsigned short getThreadingCount(){ return workerThreads.size(); }
+	unsigned short getThreadingCount(){ return (unsigned short)workerThreads.size(); }
 
 	void setLightShaftQuality(float value){ lightShaftQuality = value; }
 	void setBloomDownSample(float value){ bloomDownSample = value; }

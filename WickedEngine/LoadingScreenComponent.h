@@ -15,6 +15,11 @@ private:
 		{
 			active.store(false);
 		}
+		LoaderTask(const LoaderTask& l)
+		{
+			functionBody = l.functionBody;
+			active.store(l.active.load());
+		}
 	};
 	vector< LoaderTask > loaders;
 	void doLoadingTasks();
