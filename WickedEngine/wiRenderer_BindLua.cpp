@@ -7,6 +7,7 @@
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiWaterPlane.h"
+#include "Texture_BindLua.h"
 
 namespace wiRenderer_BindLua
 {
@@ -38,6 +39,9 @@ namespace wiRenderer_BindLua
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
+			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
+			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
+
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
 			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
@@ -268,6 +272,40 @@ namespace wiRenderer_BindLua
 	int FinishLoading(lua_State* L)
 	{
 		wiRenderer::FinishLoading();
+		return 0;
+	}
+	int SetEnvironmentMap(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
+			if (tex != nullptr)
+			{
+				wiRenderer::SetEnviromentMap(tex->texture);
+			}
+			else
+				wiLua::SError(L, "SetEnvironmentMap(Texture cubemap) argument is not a texture!");
+		}
+		else
+			wiLua::SError(L, "SetEnvironmentMap(Texture cubemap) not enough arguments!");
+		return 0;
+	}
+	int SetColorGrading(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
+			if (tex != nullptr)
+			{
+				wiRenderer::SetColorGrading(tex->texture);
+			}
+			else
+				wiLua::SError(L, "SetColorGrading(Texture texture2D) argument is not a texture!");
+		}
+		else
+			wiLua::SError(L, "SetColorGrading(Texture texture2D) not enough arguments!");
 		return 0;
 	}
 

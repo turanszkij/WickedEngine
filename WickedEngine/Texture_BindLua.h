@@ -5,9 +5,9 @@
 
 class Texture_BindLua
 {
-private:
-	wiRenderer::TextureView texture;
 public:
+	wiRenderer::TextureView texture;
+
 	static const char className[];
 	static Luna<Texture_BindLua>::FunctionType methods[];
 	static Luna<Texture_BindLua>::PropertyType properties[];

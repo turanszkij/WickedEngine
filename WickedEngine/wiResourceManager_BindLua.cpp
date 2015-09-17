@@ -37,9 +37,9 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		string name = wiLua::SGetString(L, 2);
+		string name = wiLua::SGetString(L, 1);
 		const wiResourceManager::Resource* data = resources->get(name);
 		if (data != nullptr)
 		{
@@ -55,19 +55,19 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 				return 1;
 				break;
 			default:
-				wiLua::SError(L, "Resource:Get(string name) resource type not supported in scripts!");
+				wiLua::SError(L, "Get(string name) resource type not supported in scripts!");
 				break;
 			}
 		}
 		else
 		{
-			wiLua::SError(L, "Resource:Get(string name) resource not found!");
+			wiLua::SError(L, "Get(string name) resource not found!");
 		}
 		return 0;
 	}
 	else
 	{
-		wiLua::SError(L, "Resource:Get(string name) not enough arguments!");
+		wiLua::SError(L, "Get(string name) not enough arguments!");
 	}
 	return 0;
 }
@@ -75,17 +75,17 @@ int wiResourceManager_BindLua::Add(lua_State *L)
 {
 	if (resources == nullptr)
 	{
-		wiLua::SError(L, "Get(string name) resources is empty!");
+		wiLua::SError(L, "Add(string name) resources is empty!");
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		string name = wiLua::SGetString(L, 2);
+		string name = wiLua::SGetString(L, 1);
 		wiResourceManager::Data_Type type = wiResourceManager::Data_Type::DYNAMIC;
-		if (argc > 2) //type info also provided in this case
+		if (argc > 1) //type info also provided in this case
 		{
-			string typeStr = wiHelper::toUpper( wiLua::SGetString(L, 3) );
+			string typeStr = wiHelper::toUpper( wiLua::SGetString(L, 2) );
 			if (!typeStr.compare("SOUND"))
 				type = wiResourceManager::Data_Type::SOUND;
 			else if (!typeStr.compare("MUSIC"))
@@ -105,19 +105,19 @@ int wiResourceManager_BindLua::Del(lua_State *L)
 {
 	if (resources == nullptr)
 	{
-		wiLua::SError(L, "Get(string name) resources is empty!");
+		wiLua::SError(L, "Del(string name) resources is empty!");
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 1)
+	if (argc > 0)
 	{
-		string name = wiLua::SGetString(L, 2);
+		string name = wiLua::SGetString(L, 1);
 		wiLua::SSetString(L, (resources->del(name) ? "ok" : "not found"));
 		return 1;
 	}
 	else
 	{
-		wiLua::SError(L, "Resource:Del(string name) not enough arguments!");
+		wiLua::SError(L, "Del(string name) not enough arguments!");
 	}
 	return 0;
 }
@@ -125,7 +125,7 @@ int wiResourceManager_BindLua::List(lua_State *L)
 {
 	if (resources == nullptr)
 	{
-		wiLua::SError(L, "Get(string name) resources is empty!");
+		wiLua::SError(L, "List(string name) resources is empty!");
 		return 0;
 	}
 	stringstream ss("");

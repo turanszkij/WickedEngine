@@ -13,6 +13,8 @@ Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLu
 	lunamethod(LoadingScreenComponent_BindLua, Update),
 	lunamethod(LoadingScreenComponent_BindLua, Render),
 	lunamethod(LoadingScreenComponent_BindLua, Compose),
+
+	lunamethod(LoadingScreenComponent_BindLua, AddLoadingComponent),
 	{ NULL, NULL }
 };
 Luna<LoadingScreenComponent_BindLua>::PropertyType LoadingScreenComponent_BindLua::properties[] = {
@@ -29,9 +31,27 @@ LoadingScreenComponent_BindLua::LoadingScreenComponent_BindLua(lua_State *L)
 	component = new LoadingScreenComponent();
 }
 
-
 LoadingScreenComponent_BindLua::~LoadingScreenComponent_BindLua()
 {
+}
+
+//TODO
+int LoadingScreenComponent_BindLua::AddLoadingComponent(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		RenderableComponent_BindLua* comp = Luna<RenderableComponent_BindLua>::lightcheck(L, 1);
+		if (comp != nullptr)
+		{
+			loadingScreen->addLoadingComponent(comp->component);
+		}
+		else
+			wiLua::SError(L, "AddLoadingComponent(RenderableComponent component) argument is not a RenderableComponent!");
+	}
+	else
+		wiLua::SError(L, "AddLoadingComponent(RenderableComponent component) not enough arguments!");
+	return 0;
 }
 
 void LoadingScreenComponent_BindLua::Bind()

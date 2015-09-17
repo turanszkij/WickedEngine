@@ -7,6 +7,8 @@
 class LoadingScreenComponent_BindLua : public Renderable2DComponent_BindLua
 {
 public:
+	LoadingScreenComponent* loadingScreen;
+
 	static const char className[];
 	static Luna<LoadingScreenComponent_BindLua>::FunctionType methods[];
 	static Luna<LoadingScreenComponent_BindLua>::PropertyType properties[];
@@ -14,6 +16,8 @@ public:
 	LoadingScreenComponent_BindLua(LoadingScreenComponent* component = nullptr);
 	LoadingScreenComponent_BindLua(lua_State *L);
 	~LoadingScreenComponent_BindLua();
+
+	int AddLoadingComponent(lua_State* L);
 
 	static void Bind();
 };

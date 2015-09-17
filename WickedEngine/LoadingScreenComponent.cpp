@@ -33,6 +33,13 @@ void LoadingScreenComponent::addLoadingFunction(function<void()> loadingFunction
 	}
 }
 
+void LoadingScreenComponent::addLoadingComponent(RenderableComponent* component)
+{
+	//TODO
+	//addLoadingFunction(bind(&RenderableComponent::Load, this, component));
+	//onFinished(bind(&RenderableComponent::Start, this, component));
+}
+
 void LoadingScreenComponent::onFinished(function<void()> finishFunction)
 {
 	if (finishFunction != nullptr)

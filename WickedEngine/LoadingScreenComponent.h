@@ -34,6 +34,8 @@ public:
 	//Add a loading task which should be executed
 	//use std::bind( YourFunctionPointer )
 	void addLoadingFunction(function<void()> loadingFunction);
+	//Helper for loading a whole renderable component
+	void addLoadingComponent(RenderableComponent* component);
 	//Set a function that should be called when the loading finishes
 	//use std::bind( YourFunctionPointer )
 	void onFinished(function<void()> finishFunction);
