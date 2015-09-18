@@ -20,6 +20,10 @@ public:
 	int GetActiveComponent(lua_State *L);
 	int SetActiveComponent(lua_State *L);
 	int SetFrameSkip(lua_State *L);
+	int SetInfoDisplay(lua_State *L);
+	int SetWatermarkDisplay(lua_State *L);
+	int SetFPSDisplay(lua_State *L);
+	int SetCPUDisplay(lua_State *L);
 
 	static void Bind();
 };

@@ -49,5 +49,24 @@ public:
 	bool setWindow(Windows::UI::Core::CoreWindow^ window);
 #endif
 
+
+	struct InfoDisplayer
+	{
+		// activate the whole display
+		bool active;
+		// display engine version number
+		bool watermark;
+		// display framerate
+		bool fpsinfo;
+		// display cpu utilization
+		bool cpuinfo;
+		// text size
+		float size;
+
+		InfoDisplayer() :active(false), watermark(true), fpsinfo(true), cpuinfo(true), size(-7.f)
+		{}
+	};
+	// display all-time engine information text
+	InfoDisplayer infoDisplay;
 };
 

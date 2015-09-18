@@ -14,6 +14,10 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, GetActiveComponent),
 	lunamethod(MainComponent_BindLua, SetActiveComponent),
 	lunamethod(MainComponent_BindLua, SetFrameSkip),
+	lunamethod(MainComponent_BindLua, SetInfoDisplay),
+	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
+	lunamethod(MainComponent_BindLua, SetFPSDisplay),
+	lunamethod(MainComponent_BindLua, SetCPUDisplay),
 	{ NULL, NULL }
 };
 Luna<MainComponent_BindLua>::PropertyType MainComponent_BindLua::properties[] = {
@@ -177,6 +181,70 @@ int MainComponent_BindLua::SetFrameSkip(lua_State *L)
 	}
 	else
 		wiLua::SError(L, "SetFrameSkip(bool enabled) not enought arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetInfoDisplay(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetInfoDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.active = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetInfoDisplay(bool active) not enough arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetWatermarkDisplay(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetWatermarkDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.watermark = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetWatermarkDisplay(bool active) not enough arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetFPSDisplay(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetFPSDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.fpsinfo = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetFPSDisplay(bool active) not enough arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetCPUDisplay(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetCPUDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.cpuinfo = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetCPUDisplay(bool active) not enough arguments!");
 	return 0;
 }
 

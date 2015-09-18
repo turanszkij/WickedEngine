@@ -7,6 +7,7 @@
 #include "wiInputManager.h"
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
+#include "WickedEngine.h"
 
 MainComponent::MainComponent()
 {
@@ -19,6 +20,8 @@ MainComponent::MainComponent()
 	setFrameSkip(true);
 	setTargetFrameRate(60);
 	setApplicationControlLostThreshold(10);
+
+	infoDisplay = InfoDisplayer();
 }
 
 
@@ -101,6 +104,26 @@ void MainComponent::Render()
 void MainComponent::Compose()
 {
 	getActiveComponent()->Compose();
+
+
+	if (infoDisplay.active)
+	{
+		stringstream ss("");
+		if (infoDisplay.watermark)
+		{
+			ss << string("Wicked Engine ") + string(WICKED_ENGINE_VERSION) << endl;
+		}
+		if (infoDisplay.fpsinfo)
+		{
+			ss.precision(2);
+			ss << fixed << wiFrameRate::FPS() << " FPS" << endl;
+		}
+		if (infoDisplay.cpuinfo)
+		{
+			ss << "CPU: " << wiCpuInfo::GetCpuPercentage() << "%" << endl;
+		}
+		wiFont(ss.str(), wiFontProps(0, 0, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, infoDisplay.size)).Draw();
+	}
 
 	wiBackLog::Draw();
 }
