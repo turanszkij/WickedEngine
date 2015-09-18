@@ -261,7 +261,7 @@ namespace wiRenderer_BindLua
 					}
 				}
 			}
-			wiRenderer::LoadModel(dir, name, XMMatrixIdentity(), identifier, wiRenderer::physicsEngine);
+			wiRenderer::LoadModel(dir, name, transform, identifier, wiRenderer::physicsEngine);
 		}
 		else
 		{
