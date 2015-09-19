@@ -25,9 +25,11 @@ namespace wiRenderer_BindLua
 	int SetGameSpeed(lua_State* L);
 
 	int LoadModel(lua_State* L);
+	int LoadWorldInfo(lua_State* L);
 	int FinishLoading(lua_State* L);
 	int SetEnvironmentMap(lua_State* L);
 	int SetColorGrading(lua_State* L);
+	int HairParticleSettings(lua_State* L);
 
 	int Pick(lua_State* L);
 	int DrawLine(lua_State* L);

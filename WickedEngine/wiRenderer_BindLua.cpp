@@ -8,6 +8,7 @@
 #include "Matrix_BindLua.h"
 #include "wiWaterPlane.h"
 #include "Texture_BindLua.h"
+#include "wiHairParticle.h"
 
 namespace wiRenderer_BindLua
 {
@@ -38,9 +39,11 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
+			wiLua::GetGlobal()->RegisterFunc("LoadWorldInfo", LoadWorldInfo);
 			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
+			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
 
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
@@ -269,6 +272,21 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
+	int LoadWorldInfo(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			string dir = wiLua::SGetString(L, 1);
+			string name = wiLua::SGetString(L, 2);
+			wiRenderer::LoadWorldInfo(dir, name);
+		}
+		else
+		{
+			wiLua::SError(L, "LoadWorldInfo(string directory, string name) not enough arguments!");
+		}
+		return 0;
+	}
 	int FinishLoading(lua_State* L)
 	{
 		wiRenderer::FinishLoading();
@@ -306,6 +324,25 @@ namespace wiRenderer_BindLua
 		}
 		else
 			wiLua::SError(L, "SetColorGrading(Texture texture2D) not enough arguments!");
+		return 0;
+	}
+	int HairParticleSettings(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		int lod0 = 20, lod1 = 50, lod2 = 200;
+		if (argc > 0)
+		{
+			lod0 = wiLua::SGetInt(L, 1);
+			if (argc > 1)
+			{
+				lod1 = wiLua::SGetInt(L, 2);
+				if (argc > 2)
+				{
+					lod2 = wiLua::SGetInt(L, 3);
+				}
+			}
+		}
+		wiHairParticle::Settings(lod0, lod1, lod2);
 		return 0;
 	}
 

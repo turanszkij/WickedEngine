@@ -1120,5 +1120,6 @@ public:
 	static void SychronizeWithPhysicsEngine();
 
 	static void LoadModel(const string& dir, const string& name, const XMMATRIX& transform = XMMatrixIdentity(), const string& ident = "common", PHYSICS* physicsEngine = nullptr);
+	static void LoadWorldInfo(const string& dir, const string& name);
 };
 

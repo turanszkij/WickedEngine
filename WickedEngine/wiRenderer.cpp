@@ -2511,7 +2511,7 @@ void wiRenderer::DrawLights(Camera* camera, ID3D11DeviceContext* context
 
 	
 	Frustum frustum = Frustum();
-	frustum.ConstructFrustum(camera->zFarP,camera->Projection,camera->View);
+	frustum.ConstructFrustum(min(camera->zFarP, worldInfo.fogSEH.y),camera->Projection,camera->View);
 	
 	CulledList culledObjects;
 	if(spTree_lights)
@@ -2638,7 +2638,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context)
 {
 	
 	Frustum frustum = Frustum();
-	frustum.ConstructFrustum(camera->zFarP, camera->Projection, camera->View);
+	frustum.ConstructFrustum(min(camera->zFarP, worldInfo.fogSEH.y), camera->Projection, camera->View);
 
 		
 		CulledList culledObjects;
@@ -3699,21 +3699,22 @@ void wiRenderer::UpdateLights()
 			XMVECTOR c,d,e,e1,e2;
 			c = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH / 2, (float)RENDERHEIGHT / 2, 1, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 			d = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH / 2, (float)RENDERHEIGHT / 2, 0, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			
-			float f = l->shadowCam[0].size/(float)SHADOWMAPRES;
-			e=	XMVectorFloor( XMVectorLerp(d,c,lerp)/f	)*f;
-			f = l->shadowCam[1].size/(float)SHADOWMAPRES;
-			e1=	XMVectorFloor( XMVectorLerp(d,c,lerp1)/f)*f;
-			f = l->shadowCam[2].size/(float)SHADOWMAPRES;
-			e2=	XMVectorFloor( XMVectorLerp(d,c,lerp2)/f)*f;
 
-			//static float rot=0.0f;
-			////rot+=0.001f;
-			//XMStoreFloat4(&l->rotation,XMQuaternionMultiply(XMLoadFloat4(&l->rotation_rest),XMQuaternionRotationAxis(XMVectorSet(1,0,0,0),rot)));
+			if (!l->shadowCam.empty()) {
+
+				float f = l->shadowCam[0].size/(float)SHADOWMAPRES;
+				e=	XMVectorFloor( XMVectorLerp(d,c,lerp)/f	)*f;
+				f = l->shadowCam[1].size/(float)SHADOWMAPRES;
+				e1=	XMVectorFloor( XMVectorLerp(d,c,lerp1)/f)*f;
+				f = l->shadowCam[2].size/(float)SHADOWMAPRES;
+				e2=	XMVectorFloor( XMVectorLerp(d,c,lerp2)/f)*f;
+
+				//static float rot=0.0f;
+				////rot+=0.001f;
+				//XMStoreFloat4(&l->rotation,XMQuaternionMultiply(XMLoadFloat4(&l->rotation_rest),XMQuaternionRotationAxis(XMVectorSet(1,0,0,0),rot)));
 
 
-			XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation_rest));
-			if(l->shadowCam.size()>0){
+				XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation_rest));
 				l->shadowCam[0].Update(rrr*XMMatrixTranslationFromVector(e));
 				if(l->shadowCam.size()>1){
 					l->shadowCam[1].Update(rrr*XMMatrixTranslationFromVector(e1));
@@ -3996,7 +3997,10 @@ void wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX
 
 	unique_identifier++;
 }
-
+void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
+{
+	LoadWiWorldInfo(dir, name, worldInfo, wind);
+}
 
 void wiRenderer::SychronizeWithPhysicsEngine()
 {

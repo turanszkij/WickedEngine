@@ -43,6 +43,9 @@ function rand()
     return V/D40
 end
 
+-- seeding the system random
+math.randomseed( os.time() )
+
 
 
 -- This table is indexed by coroutine and simply contains the time at which the coroutine
