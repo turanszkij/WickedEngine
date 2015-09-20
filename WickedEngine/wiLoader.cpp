@@ -1419,16 +1419,15 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 				{
 					lights.push_back(new Light());
 					lights.back()->type=Light::POINT;
-					bool shadow;
 					string lname = "";
-					file>>lname>>shadow;
+					file>>lname>> lights.back()->shadow;
 					stringstream identified_name("");
 					identified_name<<lname<<identifier;
 					lights.back()->name=identified_name.str();
-					if(shadow){
-						lights.back()->shadowMap.resize(1);
-						lights.back()->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
-					}
+					//if(shadow){
+					//	lights.back()->shadowMap.resize(1);
+					//	lights.back()->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
+					//}
 					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::POINT)];
 					
 					transforms.insert(pair<string,Transform*>(lights.back()->name,lights.back()));
@@ -1438,13 +1437,16 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 				{
 					lights.push_back(new Light());
 					lights.back()->type=Light::DIRECTIONAL;
-					file>>lights.back()->name;
-					lights.back()->shadowMap.resize(3);
-					for(int i=0;i<3;++i)
-						lights.back()->shadowMap[i].Initialize(
-							wiRenderer::SHADOWMAPRES,wiRenderer::SHADOWMAPRES
-							,0,true
+					file>>lights.back()->name; 
+					lights.back()->shadow = true;
+					lights.back()->shadowMaps_dirLight.resize(3);
+					for (int i = 0; i < 3; ++i)
+					{
+						lights.back()->shadowMaps_dirLight[i].Initialize(
+							wiRenderer::SHADOWMAPRES, wiRenderer::SHADOWMAPRES
+							, 0, true
 							);
+					}
 					//lightGwiRenderer[Light::getTypeStr(Light::DIRECTIONAL)]->usedBy.push_back(lights.size()-1);
 					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::DIRECTIONAL)];
 				}
@@ -1454,15 +1456,14 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					lights.push_back(new Light());
 					lights.back()->type=Light::SPOT;
 					file>>lights.back()->name;
-					bool shadow;
-					file>>shadow>>lights.back()->enerDis.z;
-					if(shadow){
-						lights.back()->shadowMap.resize(1);
-						lights.back()->shadowMap[0].Initialize(
-							wiRenderer::SHADOWMAPRES,wiRenderer::SHADOWMAPRES
-							,0,true
-							);
-					}
+					file>>lights.back()->shadow>>lights.back()->enerDis.z;
+					//if(shadow){
+					//	lights.back()->shadowMap.resize(1);
+					//	lights.back()->shadowMap[0].Initialize(
+					//		wiRenderer::SHADOWMAPRES,wiRenderer::SHADOWMAPRES
+					//		,0,true
+					//		);
+					//}
 					//lightGwiRenderer[Light::getTypeStr(Light::SPOT)]->usedBy.push_back(lights.size()-1);
 					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::SPOT)];
 				}
@@ -1921,9 +1922,14 @@ void Material::CleanUp(){
 	displacementMap=nullptr;
 	specularMap=nullptr;
 }
+
+
+vector<wiRenderTarget> Light::shadowMaps_pointLight;
+vector<wiRenderTarget> Light::shadowMaps_spotLight;
 void Light::CleanUp(){
 	shadowCam.clear();
-	shadowMap.clear();
+	//shadowMap.clear();
+	shadowMaps_dirLight.clear();
 	lensFlareRimTextures.clear();
 	for(string x:lensFlareNames)
 		wiResourceManager::GetGlobal()->del(x);

@@ -44,6 +44,9 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
 			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
+			wiLua::GetGlobal()->RegisterFunc("SetDirectionalLightShadowProps", SetDirectionalLightShadowProps);
+			wiLua::GetGlobal()->RegisterFunc("SetPointLightShadowProps", SetPointLightShadowProps);
+			wiLua::GetGlobal()->RegisterFunc("SetSpotLightShadowProps", SetSpotLightShadowProps);
 
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
@@ -343,6 +346,39 @@ namespace wiRenderer_BindLua
 			}
 		}
 		wiHairParticle::Settings(lod0, lod1, lod2);
+		return 0;
+	}
+	int SetDirectionalLightShadowProps(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			wiRenderer::SetDirectionalLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+		}
+		else
+			wiLua::SError(L, "SetDirectionalLightShadowProps(int resolution, int softshadowQuality) not enough arguments!");
+		return 0;
+	}
+	int SetPointLightShadowProps(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			wiRenderer::SetPointLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+		}
+		else
+			wiLua::SError(L, "SetPointLightShadowProps(int shadowMapCount, int resolution) not enough arguments!");
+		return 0;
+	}
+	int SetSpotLightShadowProps(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			wiRenderer::SetSpotLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+		}
+		else
+			wiLua::SError(L, "SetSpotLightShadowProps(int shadowMapCount, int resolution) not enough arguments!");
 		return 0;
 	}
 

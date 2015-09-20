@@ -30,6 +30,9 @@ namespace wiRenderer_BindLua
 	int SetEnvironmentMap(lua_State* L);
 	int SetColorGrading(lua_State* L);
 	int HairParticleSettings(lua_State* L);
+	int SetDirectionalLightShadowProps(lua_State* L);
+	int SetPointLightShadowProps(lua_State* L);
+	int SetSpotLightShadowProps(lua_State* L);
 
 	int Pick(lua_State* L);
 	int DrawLine(lua_State* L);

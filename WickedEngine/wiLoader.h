@@ -773,10 +773,16 @@ struct Light : public Cullable , public Transform
 	XMFLOAT4 color;
 	XMFLOAT4 enerDis;
 	bool noHalo;
+	bool shadow;
 	vector<ID3D11ShaderResourceView*> lensFlareRimTextures;
 	vector<string> lensFlareNames;
 
-	vector<wiRenderTarget> shadowMap;
+	//vector<wiRenderTarget> shadowMap;
+	static vector<wiRenderTarget> shadowMaps_pointLight;
+	static vector<wiRenderTarget> shadowMaps_spotLight;
+	vector<wiRenderTarget> shadowMaps_dirLight;
+	int shadowMap_index;
+
 	vector<SHCAM> shadowCam;
 
 	enum LightType{
@@ -790,11 +796,13 @@ struct Light : public Cullable , public Transform
 		color=XMFLOAT4(0,0,0,0);
 		enerDis=XMFLOAT4(0,0,0,0);
 		type=LightType::POINT;
-		shadowMap.resize(0);
+		//shadowMap.resize(0);
+		shadow = false;
 		shadowCam.resize(0);
 		noHalo=false;
 		lensFlareRimTextures.resize(0);
 		lensFlareNames.resize(0);
+		shadowMap_index = -1;
 	}
 	void CleanUp();
 };
