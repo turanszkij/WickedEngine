@@ -144,5 +144,19 @@ end
 function math.lerp(a,b,t)
 	return (a + (b-a)*t);
 end
+-- clamp number between min,max
+function clamp(x,min,max)
+	if(x < min) then
+		return min
+	elseif(x > max) then
+		return max
+	else
+		return x
+	end
+end
+-- clamp number between 0,1
+function saturate(x)
+	return clamp(x,0,1)
+end
 
 )";

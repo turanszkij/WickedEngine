@@ -54,6 +54,8 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0");
 			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 1");
 			wiLua::GetGlobal()->RunText("PICK_WATER = 2");
+
+			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
 		}
 	}
 
@@ -404,38 +406,36 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
-
 	int DrawLine(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
 		{
-			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
-			Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
-			if (a && b)
+			int argc = wiLua::SGetArgCount(L);
+			if (argc > 1)
 			{
-				XMFLOAT3 xa, xb;
-				XMFLOAT4 xc = XMFLOAT4(1, 1, 1, 1);
-				XMStoreFloat3(&xa, a->vector);
-				XMStoreFloat3(&xb, b->vector);
-				if (argc > 2)
+				Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
+				Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
+				if (a && b)
 				{
-					Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
-					if (c)
-						XMStoreFloat4(&xc, c->vector);
-					else
-						wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+					XMFLOAT3 xa, xb;
+					XMFLOAT4 xc = XMFLOAT4(1, 1, 1, 1);
+					XMStoreFloat3(&xa, a->vector);
+					XMStoreFloat3(&xb, b->vector);
+					if (argc > 2)
+					{
+						Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
+						if (c)
+							XMStoreFloat4(&xc, c->vector);
+						else
+							wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+					}
+					wiRenderer::linesTemp.push_back(new Lines(xa, xb, xc));
 				}
-				wiRenderer::linesTemp.push_back(new Lines(xa, xb, xc));
+				else
+					wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
 			}
 			else
-				wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+				wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
+			return 0;
 		}
-		else
-			wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
-		return 0;
-	}
-
 	int PutWaterRipple(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -454,6 +454,12 @@ namespace wiRenderer_BindLua
 		}
 		else
 			wiLua::SError(L, "PutWaterRipple(String imagename, Vector position) not enough arguments!");
+		return 0;
+	}
+
+	int ClearWorld(lua_State* L)
+	{
+		wiRenderer::CleanUpStaticTemp();
 		return 0;
 	}
 };

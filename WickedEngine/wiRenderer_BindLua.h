@@ -37,5 +37,7 @@ namespace wiRenderer_BindLua
 	int Pick(lua_State* L);
 	int DrawLine(lua_State* L);
 	int PutWaterRipple(lua_State* L);
+
+	int ClearWorld(lua_State* L);
 };
 
