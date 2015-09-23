@@ -20,6 +20,7 @@
 #include "Matrix_BindLua.h"
 #include "wiInputManager_BindLua.h"
 #include "wiFont_BindLua.h"
+#include "wiBackLog_BindLua.h"
 
 wiLua *wiLua::globalLua = nullptr;
 
@@ -66,6 +67,7 @@ wiLua* wiLua::GetGlobal()
 		Matrix_BindLua::Bind();
 		wiInputManager_BindLua::Bind();
 		wiFont_BindLua::Bind();
+		wiBackLog_BindLua::Bind();
 
 	}
 	return globalLua;
@@ -375,5 +377,3 @@ void wiLua::SAddMetatable(lua_State* L, const string& name)
 {
 	luaL_newmetatable(L, name.c_str());
 }
-
-

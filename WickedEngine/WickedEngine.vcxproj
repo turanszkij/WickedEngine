@@ -293,6 +293,7 @@
     <ClCompile Include="Texture_BindLua.cpp" />
     <ClCompile Include="Vector_BindLua.cpp" />
     <ClCompile Include="wiBackLog.cpp" />
+    <ClCompile Include="wiBackLog_BindLua.cpp" />
     <ClCompile Include="wiBULLET.cpp" />
     <ClCompile Include="BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.cpp" />
     <ClCompile Include="BULLET\BulletCollision\BroadphaseCollision\btBroadphaseProxy.cpp" />
@@ -504,6 +505,7 @@
     <ClInclude Include="SpriteAnim_BindLua.h" />
     <ClInclude Include="Texture_BindLua.h" />
     <ClInclude Include="Vector_BindLua.h" />
+    <ClInclude Include="wiBackLog_BindLua.h" />
     <ClInclude Include="wiFont_BindLua.h" />
     <ClInclude Include="wiImageEffects_BindLua.h" />
     <ClInclude Include="wiInputManager_BindLua.h" />

@@ -14,10 +14,6 @@ ID3D11Buffer*           wiFont::constantBuffer;
 ID3D11SamplerState*			wiFont::sampleState;
 ID3D11RasterizerState*		wiFont::rasterizerState;
 ID3D11DepthStencilState*	wiFont::depthStencilState;
-UINT wiFont::textlen;
-SHORT wiFont::line,wiFont::pos;
-BOOL wiFont::toDraw;
-DWORD wiFont::counter;
 vector<wiFont::Vertex> wiFont::vertexList;
 vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
@@ -36,13 +32,6 @@ wiFont::~wiFont()
 
 void wiFont::Initialize()
 {
-	counter = 0;
-	line = pos = 0;
-	toDraw=TRUE;
-	textlen=0;
-	line=pos=0;
-
-	
 	indexBuffer=NULL;
 	vertexBuffer=NULL;
 	vertexLayout=NULL;
@@ -226,11 +215,10 @@ void wiFont::CleanUpStatic()
 }
 
 
-void wiFont::ModifyGeo(const wchar_t* text, wiFontProps props, int style, ID3D11DeviceContext* context)
+void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, ID3D11DeviceContext* context)
 {
-	textlen=wcslen(text);
-	line=0; pos=0;
-	vertexList.resize(textlen*4);
+	int line = 0, pos = 0;
+	vertexList.resize(text.length()*4);
 	for(unsigned int i=0;i<vertexList.size();i++){
 		vertexList[i].Pos=XMFLOAT2(0,0);
 		vertexList[i].Tex=XMFLOAT2(0,0);
@@ -274,7 +262,7 @@ void wiFont::ModifyGeo(const wchar_t* text, wiFontProps props, int style, ID3D11
 		}
 	}
 
-	wiRenderer::UpdateBuffer(vertexBuffer,vertexList.data(),context==nullptr?wiRenderer::getImmediateContext():context,sizeof(Vertex) * textlen * 4);
+	wiRenderer::UpdateBuffer(vertexBuffer,vertexList.data(),context==nullptr?wiRenderer::getImmediateContext():context,sizeof(Vertex) * text.length() * 4);
 	
 }
 
@@ -327,9 +315,9 @@ void wiFont::Draw(wiRenderer::DeviceContext context){
 		newProps.posY += textHeight();
 
 	
-	ModifyGeo(text.c_str(), newProps, style, context);
+	ModifyGeo(text, newProps, style, context);
 
-	if(textlen){
+	if(text.length()>0){
 
 		if(context==nullptr)
 			context=wiRenderer::getImmediateContext();
@@ -360,7 +348,7 @@ void wiFont::Draw(wiRenderer::DeviceContext context){
 
 		wiRenderer::BindTexturePS(fontStyles[style].texture,0,context);
 		wiRenderer::BindSamplerPS(sampleState,0,context);
-		wiRenderer::DrawIndexed(textlen*6,context);
+		wiRenderer::DrawIndexed(text.length()*6,context);
 	}
 }
 
@@ -399,6 +387,14 @@ int wiFont::textHeight()
 }
 
 
+void wiFont::SetText(const string& text)
+{
+	this->text = wstring(text.begin(), text.end());
+}
+void wiFont::SetText(const wstring& text)
+{
+	this->text = text;
+}
 
 
 wiFont::wiFontStyle::wiFontStyle(const string& newName){

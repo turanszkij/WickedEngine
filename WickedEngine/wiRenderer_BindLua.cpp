@@ -13,52 +13,6 @@
 namespace wiRenderer_BindLua
 {
 
-	void Bind()
-	{
-		static bool initialized = false;
-		if (!initialized)
-		{
-			initialized = true;
-			wiLua::GetGlobal()->RegisterFunc("GetTransforms", GetTransforms);
-			wiLua::GetGlobal()->RegisterFunc("GetTransform", GetTransform);
-			wiLua::GetGlobal()->RegisterFunc("GetArmatures", GetArmatures);
-			wiLua::GetGlobal()->RegisterFunc("GetArmature", GetArmature);
-			wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
-			wiLua::GetGlobal()->RegisterFunc("GetObject", GetObjectLua);
-			wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
-			wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
-			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
-			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
-			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
-			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
-			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
-			wiLua::GetGlobal()->RegisterFunc("GetRenderWidth", GetRenderWidth);
-			wiLua::GetGlobal()->RegisterFunc("GetRenderHeight", GetRenderHeight);
-			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
-
-			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
-
-			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
-			wiLua::GetGlobal()->RegisterFunc("LoadWorldInfo", LoadWorldInfo);
-			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
-			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
-			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
-			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
-			wiLua::GetGlobal()->RegisterFunc("SetDirectionalLightShadowProps", SetDirectionalLightShadowProps);
-			wiLua::GetGlobal()->RegisterFunc("SetPointLightShadowProps", SetPointLightShadowProps);
-			wiLua::GetGlobal()->RegisterFunc("SetSpotLightShadowProps", SetSpotLightShadowProps);
-
-			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
-			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
-			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
-			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0");
-			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 1");
-			wiLua::GetGlobal()->RunText("PICK_WATER = 2");
-
-			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
-		}
-	}
-
 	int GetTransforms(lua_State* L)
 	{
 		stringstream ss("");
@@ -461,5 +415,51 @@ namespace wiRenderer_BindLua
 	{
 		wiRenderer::CleanUpStaticTemp();
 		return 0;
+	}
+
+	void Bind()
+	{
+		static bool initialized = false;
+		if (!initialized)
+		{
+			initialized = true;
+			wiLua::GetGlobal()->RegisterFunc("GetTransforms", GetTransforms);
+			wiLua::GetGlobal()->RegisterFunc("GetTransform", GetTransform);
+			wiLua::GetGlobal()->RegisterFunc("GetArmatures", GetArmatures);
+			wiLua::GetGlobal()->RegisterFunc("GetArmature", GetArmature);
+			wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
+			wiLua::GetGlobal()->RegisterFunc("GetObject", GetObjectLua);
+			wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
+			wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
+			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
+			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
+			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
+			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
+			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
+			wiLua::GetGlobal()->RegisterFunc("GetRenderWidth", GetRenderWidth);
+			wiLua::GetGlobal()->RegisterFunc("GetRenderHeight", GetRenderHeight);
+			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
+
+			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
+
+			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
+			wiLua::GetGlobal()->RegisterFunc("LoadWorldInfo", LoadWorldInfo);
+			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
+			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
+			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
+			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
+			wiLua::GetGlobal()->RegisterFunc("SetDirectionalLightShadowProps", SetDirectionalLightShadowProps);
+			wiLua::GetGlobal()->RegisterFunc("SetPointLightShadowProps", SetPointLightShadowProps);
+			wiLua::GetGlobal()->RegisterFunc("SetSpotLightShadowProps", SetSpotLightShadowProps);
+
+			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
+			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
+			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
+			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0");
+			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 1");
+			wiLua::GetGlobal()->RunText("PICK_WATER = 2");
+
+			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
+		}
 	}
 };

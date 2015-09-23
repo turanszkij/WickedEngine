@@ -16,7 +16,7 @@ int wiBackLog::scroll;
 stringstream wiBackLog::inputArea;
 int wiBackLog::historyPos=0;
 ID3D11ShaderResourceView* wiBackLog::backgroundTex = nullptr;
-float wiBackLog::fontSize = 0;
+wiFont wiBackLog::font;
 
 void wiBackLog::Initialize(){
 	pos = (float)wiRenderer::RENDERHEIGHT;
@@ -26,12 +26,7 @@ void wiBackLog::Initialize(){
 	inputArea=stringstream("");
 	const unsigned char colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
 	wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2, 4);
-	fontSize = 0;
-
-	wiLua::GetGlobal()->RegisterFunc("backlog_clear", ClearLua);
-	wiLua::GetGlobal()->RegisterFunc("backlog_post", PostLua);
-	wiLua::GetGlobal()->RegisterFunc("backlog_fontsize", FontSizeLua);
-	wiLua::GetGlobal()->RegisterFunc("backlog_isactive", IsActiveLua);
+	font = wiFont("", wiFontProps(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8));
 }
 void wiBackLog::CleanUp(){
 	stream.clear();
@@ -73,8 +68,9 @@ void wiBackLog::Draw(){
 		fx.pos=XMFLOAT3(0,pos,0);
 		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);
 		wiImage::Draw(backgroundTex, fx);
-		wiFont(getText(), wiFontProps(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, fontSize, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
-		wiFont(inputArea.str().c_str(), wiFontProps(5, -(float)wiRenderer::RENDERHEIGHT + 10, fontSize, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
+		font.SetText(getText());
+		font.Draw();
+		wiFont(inputArea.str().c_str(), wiFontProps(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
 		//wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
 		//wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}
@@ -152,43 +148,4 @@ void wiBackLog::setBackground(ID3D11ShaderResourceView* texture)
 	backgroundTex = texture;
 }
 
-int wiBackLog::ClearLua(lua_State* L)
-{
-	clear();
-	return 0;
-}
-int wiBackLog::PostLua(lua_State* L)
-{
-	int argc = wiLua::SGetArgCount(L);
-
-	stringstream ss("");
-
-	for (int i = 1; i <= argc; i++)
-	{
-		ss << wiLua::SGetString(L, i);
-	}
-
-	if (!ss.str().empty())
-		wiBackLog::post(ss.str().c_str());
-
-	//number of results
-	return 0;
-}
-int wiBackLog::FontSizeLua(lua_State* L)
-{
-	int argc = wiLua::SGetArgCount(L);
-
-	if (argc > 0)
-	{
-		fontSize = wiLua::SGetFloat(L, 1);
-	}
-
-	//number of results
-	return 0;
-}
-int wiBackLog::IsActiveLua(lua_State* L)
-{
-	wiLua::SSetBool(L, isActive());
-	return 1;
-}
 

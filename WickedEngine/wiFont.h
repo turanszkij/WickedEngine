@@ -66,12 +66,6 @@ protected:
 
 
 
-	static UINT textlen;
-	static SHORT line,pos;
-	static BOOL toDraw;
-	static DWORD counter;
-
-
 	struct wiFontStyle{
 		string name;
 		ID3D11ShaderResourceView *texture;
@@ -90,7 +84,7 @@ protected:
 	static vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(const wchar_t* text, wiFontProps props, int style, ID3D11DeviceContext* context = nullptr);
+	static void ModifyGeo(const wstring& text, wiFontProps props, int style, ID3D11DeviceContext* context = nullptr);
 
 public:
 	static void Initialize();
@@ -101,7 +95,7 @@ public:
 	wiFontProps props;
 	int style;
 
-	wiFont(const string& text, wiFontProps props = wiFontProps(), int style = 0);
+	wiFont(const string& text = "", wiFontProps props = wiFontProps(), int style = 0);
 	wiFont(const wstring& text, wiFontProps props = wiFontProps(), int style = 0);
 	~wiFont();
 
@@ -114,6 +108,9 @@ public:
 
 	static void addFontStyle( const string& toAdd );
 	static int getFontStyleByName( const string& get );
+
+	void SetText(const string& text);
+	void SetText(const wstring& text);
 
 	void CleanUp();
 };

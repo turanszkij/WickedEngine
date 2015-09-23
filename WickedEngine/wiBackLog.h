@@ -22,8 +22,6 @@ private:
 		DEACTIVATING,
 	};
 	static State state;
-	static ID3D11ShaderResourceView* backgroundTex;
-	static float fontSize;
 public:
 	static void Initialize();
 	static void CleanUp();
@@ -49,10 +47,8 @@ public:
 
 	static void setBackground(ID3D11ShaderResourceView* texture);
 
-	static int ClearLua(lua_State* L);
-	static int PostLua(lua_State* L);
-	static int FontSizeLua(lua_State* L);
-	static int IsActiveLua(lua_State* L);
+	static ID3D11ShaderResourceView* backgroundTex;
+	static wiFont font;
 };
 
 #endif
