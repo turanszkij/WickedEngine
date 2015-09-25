@@ -46,15 +46,12 @@ end
 -- seeding the system random
 math.randomseed( os.time() )
 
-
-
 -- This table is indexed by coroutine and simply contains the time at which the coroutine
 -- should be woken up.
 local WAITING_ON_TIME = {}
 
 -- Keep track of how long the game has been running.
 local CURRENT_TIME = 0
-
 function waitSeconds(seconds)  
     -- Grab a reference to the current running coroutine.
     local co = coroutine.running()
@@ -92,13 +89,15 @@ function wakeUpWaitingThreads(deltaTime)
     end
 end
 
-
 -- This function is just a quick wrapper to start a coroutine.
 function runProcess(func)  
     local co = coroutine.create(func)
-    return coroutine.resume(co)
+    local success, errorMsg = coroutine.resume(co)
+	if not success then
+		error("[Lua Error] "..errorMsg)
+	end
+	return success
 end
-
 
 -- Signal helpers
 local WAITING_ON_SIGNAL = {}
@@ -145,7 +144,7 @@ function math.lerp(a,b,t)
 	return (a + (b-a)*t);
 end
 -- clamp number between min,max
-function clamp(x,min,max)
+function math.clamp(x,min,max)
 	if(x < min) then
 		return min
 	elseif(x > max) then
@@ -155,8 +154,12 @@ function clamp(x,min,max)
 	end
 end
 -- clamp number between 0,1
-function saturate(x)
+function math.saturate(x)
 	return clamp(x,0,1)
+end
+-- round number to nearest integer
+function math.round(x)
+	return x + 0.5 - ( x + 0.5 ) % 1;
 end
 
 )";
