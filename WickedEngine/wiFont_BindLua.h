@@ -19,6 +19,9 @@ public:
 
 	int GetProperties(lua_State* L);
 	int SetProperties(lua_State* L);
+	int SetText(lua_State* L);
+	int GetText(lua_State* L);
+
 
 	static void Bind();
 };

@@ -72,6 +72,8 @@ public:
 	~Cullable_BindLua();
 
 	int Intersects(lua_State *L);
+	int GetAABB(lua_State* L);
+	int SetAABB(lua_State* L);
 
 	static void Bind();
 };
@@ -143,6 +145,27 @@ public:
 
 	int GetOrigin(lua_State* L);
 	int GetDirection(lua_State* L);
+
+	static void Bind();
+};
+
+class AABB_BindLua
+{
+public:
+	AABB aabb;
+
+	static const char className[];
+	static Luna<AABB_BindLua>::FunctionType methods[];
+	static Luna<AABB_BindLua>::PropertyType properties[];
+
+	AABB_BindLua(const AABB& ray);
+	AABB_BindLua(lua_State* L);
+	~AABB_BindLua();
+
+	int Intersects(lua_State* L);
+	int Transform(lua_State* L);
+	int GetMin(lua_State* L);
+	int GetMax(lua_State* L);
 
 	static void Bind();
 };

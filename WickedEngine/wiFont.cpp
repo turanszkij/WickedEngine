@@ -395,7 +395,14 @@ void wiFont::SetText(const wstring& text)
 {
 	this->text = text;
 }
-
+wstring wiFont::GetText()
+{
+	return text;
+}
+string wiFont::GetTextA()
+{
+	return string(text.begin(),text.end());
+}
 
 wiFont::wiFontStyle::wiFontStyle(const string& newName){
 

@@ -12,6 +12,7 @@ namespace wiLoader_BindLua
 		Object_BindLua::Bind();
 		Armature_BindLua::Bind();
 		Ray_BindLua::Bind();
+		AABB_BindLua::Bind();
 	}
 }
 
@@ -367,6 +368,8 @@ const char Cullable_BindLua::className[] = "Cullable";
 
 Luna<Cullable_BindLua>::FunctionType Cullable_BindLua::methods[] = {
 	lunamethod(Cullable_BindLua, Intersects),
+	lunamethod(Cullable_BindLua, GetAABB),
+	lunamethod(Cullable_BindLua, SetAABB),
 	{ NULL, NULL }
 };
 Luna<Cullable_BindLua>::PropertyType Cullable_BindLua::properties[] = {
@@ -433,6 +436,28 @@ int Cullable_BindLua::Intersects(lua_State* L)
 	}
 	return 0;
 }
+int Cullable_BindLua::GetAABB(lua_State* L)
+{
+	Luna<AABB_BindLua>::push(L, new AABB_BindLua(cullable->bounds));
+	return 1;
+}
+int Cullable_BindLua::SetAABB(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc < 0)
+	{
+		AABB_BindLua* box = Luna<AABB_BindLua>::lightcheck(L, 1);
+		if (box)
+		{
+
+		}
+		else
+			wiLua::SError(L, "SetAABB(AABB aabb) argument is not an AABB!");
+	}
+	else
+		wiLua::SError(L, "SetAABB(AABB aabb) not enough arguments!");
+	return 0;
+}
 
 void Cullable_BindLua::Bind()
 {
@@ -453,6 +478,8 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Node_BindLua, SetName),
 
 	lunamethod(Cullable_BindLua, Intersects),
+	lunamethod(Cullable_BindLua, GetAABB),
+	lunamethod(Cullable_BindLua, SetAABB),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),
@@ -840,5 +867,105 @@ void Ray_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Ray_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+const char AABB_BindLua::className[] = "AABB";
+
+Luna<AABB_BindLua>::FunctionType AABB_BindLua::methods[] = {
+	lunamethod(AABB_BindLua, Intersects),
+	lunamethod(AABB_BindLua, Transform),
+	lunamethod(AABB_BindLua, GetMin),
+	lunamethod(AABB_BindLua, GetMax),
+	{ NULL, NULL }
+};
+Luna<AABB_BindLua>::PropertyType AABB_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+AABB_BindLua::AABB_BindLua(const AABB& aabb) :aabb(aabb)
+{
+}
+AABB_BindLua::AABB_BindLua(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* min = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Vector_BindLua* max = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (min && max)
+		{
+			XMFLOAT3 fmin, fmax;
+			XMStoreFloat3(&fmin, min->vector);
+			XMStoreFloat3(&fmax, max->vector);
+			aabb = AABB(wiMath::Min(fmin, fmax), wiMath::Max(fmin, fmax));
+		}
+		else
+			wiLua::SError(L, "AABB(Vector min,max) one of the arguments is not an AABB!");
+	}
+	else
+		aabb = AABB(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0));
+}
+AABB_BindLua::~AABB_BindLua()
+{
+}
+
+int AABB_BindLua::Intersects(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		AABB_BindLua* box = Luna<AABB_BindLua>::lightcheck(L, 1);
+		if (box)
+		{
+			wiLua::SSetBool(L, aabb.intersects(box->aabb) != AABB::INTERSECTION_TYPE::OUTSIDE);
+			return 1;
+		}
+		else
+			wiLua::SError(L, "Intersects(AABB aabb) argument is not an AABB!");
+	}
+	else
+		wiLua::SError(L, "Intersects(AABB aabb) not enough arguments!");
+	return 0;
+}
+int AABB_BindLua::Transform(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 1);
+		if (mat)
+		{
+			Luna<AABB_BindLua>::push(L, new AABB_BindLua(aabb.get(mat->matrix)));
+			return 1;
+		}
+		else
+			wiLua::SError(L, "Transform(Matrix mat) argument is not a Matrix!");
+	}
+	else
+		wiLua::SError(L, "Transform(Matrix mat) not enough arguments!");
+	return 0;
+}
+int AABB_BindLua::GetMin(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&aabb.getMin())));
+	return 1;
+}
+int AABB_BindLua::GetMax(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&aabb.getMax())));
+	return 1;
+}
+
+void AABB_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<AABB_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

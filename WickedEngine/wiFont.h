@@ -111,6 +111,8 @@ public:
 
 	void SetText(const string& text);
 	void SetText(const wstring& text);
+	wstring GetText();
+	string GetTextA();
 
 	void CleanUp();
 };
