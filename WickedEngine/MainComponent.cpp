@@ -50,6 +50,12 @@ void MainComponent::activateComponent(RenderableComponent* component)
 
 void MainComponent::run()
 {
+	static bool startupScriptProcessed = false;
+	if (!startupScriptProcessed) {
+		wiLua::GetGlobal()->RunFile("startup.lua");
+		startupScriptProcessed = true;
+	}
+
 	static wiTimer timer = wiTimer();
 	static double accumulator = 0.0;
 	const double elapsedTime = timer.elapsed() / 1000.0;

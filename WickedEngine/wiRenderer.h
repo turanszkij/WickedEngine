@@ -44,7 +44,7 @@ typedef set<Cullable*> CulledList;
 class wiRenderer
 {
 public:
-#define API_CALL_STRICTNESS
+//#define API_CALL_STRICTNESS
 #ifndef WINSTORE_SUPPORT
 	typedef IDXGISwapChain*				SwapChain;
 #else
