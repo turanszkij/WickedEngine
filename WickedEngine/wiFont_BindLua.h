@@ -17,10 +17,17 @@ public:
 	wiFont_BindLua(lua_State* L);
 	~wiFont_BindLua();
 
-	int GetProperties(lua_State* L);
-	int SetProperties(lua_State* L);
 	int SetText(lua_State* L);
+	int SetSize(lua_State* L);
+	int SetPos(lua_State* L);
+	int SetSpacing(lua_State* L);
+	int SetAlign(lua_State* L);
+
 	int GetText(lua_State* L);
+	int GetSize(lua_State* L);
+	int GetPos(lua_State* L);
+	int GetSpacing(lua_State* L);
+	int GetAlign(lua_State* L);
 
 
 	static void Bind();

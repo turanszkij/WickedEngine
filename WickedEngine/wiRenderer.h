@@ -1100,6 +1100,8 @@ public:
 
 	string DIRECTORY;
 
+
+	// Do not alter order because it is bound to lua manually
 	enum PICKTYPE
 	{
 		PICK_OPAQUE,

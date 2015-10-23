@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #define MAX_TEXT 20000
 
+// Do not alter order because it is bound to lua manually
 enum wiFontAlign
 {
 	WIFALIGN_LEFT,

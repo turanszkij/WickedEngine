@@ -1,14 +1,22 @@
 #include "wiFont_BindLua.h"
 #include "wiFont.h"
 #include "CommonInclude.h"
+#include "Vector_BindLua.h"
 
 const char wiFont_BindLua::className[] = "Font";
 
 Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {
-	lunamethod(wiFont_BindLua, GetProperties),
-	lunamethod(wiFont_BindLua, SetProperties),
 	lunamethod(wiFont_BindLua, GetText),
+	lunamethod(wiFont_BindLua, SetSize),
+	lunamethod(wiFont_BindLua, SetPos),
+	lunamethod(wiFont_BindLua, SetSpacing),
+	lunamethod(wiFont_BindLua, SetAlign),
+
 	lunamethod(wiFont_BindLua, SetText),
+	lunamethod(wiFont_BindLua, GetSize),
+	lunamethod(wiFont_BindLua, GetPos),
+	lunamethod(wiFont_BindLua, GetSpacing),
+	lunamethod(wiFont_BindLua, GetAlign),
 	{ NULL, NULL }
 };
 Luna<wiFont_BindLua>::PropertyType wiFont_BindLua::properties[] = {
@@ -39,16 +47,6 @@ wiFont_BindLua::~wiFont_BindLua()
 }
 
 
-int wiFont_BindLua::GetProperties(lua_State* L)
-{
-	//TODO
-	return 0;
-}
-int wiFont_BindLua::SetProperties(lua_State* L)
-{
-	//TODO
-	return 0;
-}
 int wiFont_BindLua::SetText(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -56,10 +54,94 @@ int wiFont_BindLua::SetText(lua_State* L)
 		font->SetText(wiLua::SGetString(L, 1));
 	return 0;
 }
+int wiFont_BindLua::SetSize(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		font->props.size = wiLua::SGetFloat(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetSize(float size) not enough arguments!");
+	return 0;
+}
+int wiFont_BindLua::SetPos(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (param != nullptr)
+		{
+			font->props.posX = XMVectorGetX(param->vector);
+			font->props.posY = XMVectorGetY(param->vector);
+		}
+		else
+			wiLua::SError(L, "SetSize(Vector size) argument is not a vector!");
+	}
+	else
+		wiLua::SError(L, "SetPos(Vector size) not enough arguments!");
+	return 0;
+}
+int wiFont_BindLua::SetSpacing(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (param != nullptr)
+		{
+			font->props.spacingX = XMVectorGetX(param->vector);
+			font->props.spacingY = XMVectorGetY(param->vector);
+		}
+		else
+			wiLua::SError(L, "SetSpacing(Vector size) argument is not a vector!");
+	}
+	else
+		wiLua::SError(L, "SetSpacing(Vector size) not enough arguments!");
+	return 0;
+}
+int wiFont_BindLua::SetAlign(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		font->props.h_align = (wiFontAlign)wiLua::SGetInt(L, 1);
+		if (argc > 1)
+		{
+			font->props.v_align = (wiFontAlign)wiLua::SGetInt(L, 2);
+		}
+	}
+	else
+		wiLua::SError(L, "SetAlign(WIFALIGN Halign, opt WIFALIGN Valign) not enough arguments!");
+	return 0;
+}
+
 int wiFont_BindLua::GetText(lua_State* L)
 {
 	wiLua::SSetString(L, font->GetTextA());
 	return 1;
+}
+int wiFont_BindLua::GetSize(lua_State* L)
+{
+	wiLua::SSetFloat(L, font->props.size);
+	return 1;
+}
+int wiFont_BindLua::GetPos(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet(font->props.posX, font->props.posY, 0, 0)));
+	return 1;
+}
+int wiFont_BindLua::GetSpacing(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet(font->props.spacingX, font->props.spacingY, 0, 0)));
+	return 1;
+}
+int wiFont_BindLua::GetAlign(lua_State* L)
+{
+	wiLua::SSetInt(L, font->props.h_align);
+	wiLua::SSetInt(L, font->props.v_align);
+	return 2;
 }
 
 void wiFont_BindLua::Bind()
@@ -69,5 +151,13 @@ void wiFont_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<wiFont_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+
+
+		wiLua::GetGlobal()->RunText("WIFALIGN_LEFT = 0");
+		wiLua::GetGlobal()->RunText("WIFALIGN_CENTER = 1");
+		wiLua::GetGlobal()->RunText("WIFALIGN_MID = 2");
+		wiLua::GetGlobal()->RunText("WIFALIGN_RIGHT = 3");
+		wiLua::GetGlobal()->RunText("WIFALIGN_TOP = 4");
+		wiLua::GetGlobal()->RunText("WIFALIGN_BOTTOM = 5");
 	}
 }
