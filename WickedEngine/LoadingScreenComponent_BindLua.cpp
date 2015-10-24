@@ -3,8 +3,13 @@
 const char LoadingScreenComponent_BindLua::className[] = "LoadingScreenComponent";
 
 Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLua::methods[] = {
-	lunamethod(LoadingScreenComponent_BindLua, GetContent),
-	lunamethod(LoadingScreenComponent_BindLua, AddSprite),
+	lunamethod(Renderable2DComponent_BindLua, GetContent),
+	lunamethod(Renderable2DComponent_BindLua, AddSprite),
+	lunamethod(Renderable2DComponent_BindLua, AddFont),
+	lunamethod(Renderable2DComponent_BindLua, RemoveSprite),
+	lunamethod(Renderable2DComponent_BindLua, RemoveFont),
+	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
+	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
 	lunamethod(LoadingScreenComponent_BindLua, Initialize),
 	lunamethod(LoadingScreenComponent_BindLua, Load),
 	lunamethod(LoadingScreenComponent_BindLua, Unload),

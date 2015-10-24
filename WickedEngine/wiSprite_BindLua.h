@@ -21,6 +21,8 @@ public:
 	int SetAnim(lua_State *L);
 	int GetAnim(lua_State *L);
 
+	int Destroy(lua_State* L);
+
 	static void Bind();
 };
 

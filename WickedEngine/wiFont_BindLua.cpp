@@ -17,6 +17,8 @@ Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {
 	lunamethod(wiFont_BindLua, GetPos),
 	lunamethod(wiFont_BindLua, GetSpacing),
 	lunamethod(wiFont_BindLua, GetAlign),
+
+	lunamethod(wiFont_BindLua, Destroy),
 	{ NULL, NULL }
 };
 Luna<wiFont_BindLua>::PropertyType wiFont_BindLua::properties[] = {
@@ -43,7 +45,6 @@ wiFont_BindLua::wiFont_BindLua(lua_State* L)
 }
 wiFont_BindLua::~wiFont_BindLua()
 {
-	SAFE_DELETE(font);
 }
 
 
@@ -142,6 +143,17 @@ int wiFont_BindLua::GetAlign(lua_State* L)
 	wiLua::SSetInt(L, font->props.h_align);
 	wiLua::SSetInt(L, font->props.v_align);
 	return 2;
+}
+
+int wiFont_BindLua::Destroy(lua_State* L)
+{
+	if (font != nullptr)
+	{
+		font->CleanUp();
+		delete font;
+		font = nullptr;
+	}
+	return 0;
 }
 
 void wiFont_BindLua::Bind()

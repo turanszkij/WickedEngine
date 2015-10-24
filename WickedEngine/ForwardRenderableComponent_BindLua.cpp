@@ -5,6 +5,10 @@ const char ForwardRenderableComponent_BindLua::className[] = "ForwardRenderableC
 Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponent_BindLua::methods[] = {
 	lunamethod(Renderable2DComponent_BindLua, AddSprite),
 	lunamethod(Renderable2DComponent_BindLua, AddFont),
+	lunamethod(Renderable2DComponent_BindLua, RemoveSprite),
+	lunamethod(Renderable2DComponent_BindLua, RemoveFont),
+	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
+	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
 
 	lunamethod(ForwardRenderableComponent_BindLua, GetContent),
 	lunamethod(ForwardRenderableComponent_BindLua, Initialize),

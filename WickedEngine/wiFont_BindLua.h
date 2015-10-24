@@ -29,6 +29,8 @@ public:
 	int GetSpacing(lua_State* L);
 	int GetAlign(lua_State* L);
 
+	int Destroy(lua_State* L);
+
 
 	static void Bind();
 };

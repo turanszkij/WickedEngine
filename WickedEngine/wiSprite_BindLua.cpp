@@ -9,6 +9,8 @@ Luna<wiSprite_BindLua>::FunctionType wiSprite_BindLua::methods[] = {
 	lunamethod(wiSprite_BindLua, GetEffects),
 	lunamethod(wiSprite_BindLua, SetAnim),
 	lunamethod(wiSprite_BindLua, GetAnim),
+
+	lunamethod(wiSprite_BindLua, Destroy),
 	{ NULL, NULL }
 };
 Luna<wiSprite_BindLua>::PropertyType wiSprite_BindLua::properties[] = {
@@ -106,6 +108,17 @@ int wiSprite_BindLua::GetAnim(lua_State *L)
 	}
 	Luna<SpriteAnim_BindLua>::push(L, new SpriteAnim_BindLua(sprite->anim));
 	return 1;
+}
+
+int wiSprite_BindLua::Destroy(lua_State* L)
+{
+	if (sprite != nullptr)
+	{
+		sprite->CleanUp();
+		delete sprite;
+		sprite = nullptr;
+	}
+	return 0;
 }
 
 void wiSprite_BindLua::Bind()

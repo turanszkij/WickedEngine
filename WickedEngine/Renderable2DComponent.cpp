@@ -106,7 +106,24 @@ void Renderable2DComponent::addSprite(wiSprite* sprite)
 {
 	m_sprites.push_back(sprite);
 }
+void Renderable2DComponent::removeSprite(wiSprite* sprite)
+{
+	m_sprites.remove(sprite);
+}
+void Renderable2DComponent::clearSprites()
+{
+	m_sprites.clear();
+}
+
 void Renderable2DComponent::addFont(wiFont* font)
 {
 	m_fonts.push_back(font);
+}
+void Renderable2DComponent::removeFont(wiFont* font)
+{
+	m_fonts.remove(font);
+}
+void Renderable2DComponent::clearFonts()
+{
+	m_fonts.clear();
 }

@@ -15,8 +15,12 @@ public:
 	Renderable2DComponent_BindLua(lua_State *L);
 	~Renderable2DComponent_BindLua();
 
-	virtual int AddSprite(lua_State *L);
-	virtual int AddFont(lua_State* L);
+	int AddSprite(lua_State *L);
+	int AddFont(lua_State* L);
+	int RemoveSprite(lua_State *L);
+	int RemoveFont(lua_State* L);
+	int ClearSprites(lua_State *L);
+	int ClearFonts(lua_State* L);
 
 	static void Bind();
 };

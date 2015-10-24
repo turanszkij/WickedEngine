@@ -6,6 +6,10 @@ const char Renderable3DComponent_BindLua::className[] = "Renderable3DComponent";
 Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua::methods[] = {
 	lunamethod(Renderable2DComponent_BindLua, AddSprite),
 	lunamethod(Renderable2DComponent_BindLua, AddFont),
+	lunamethod(Renderable2DComponent_BindLua, RemoveSprite),
+	lunamethod(Renderable2DComponent_BindLua, RemoveFont),
+	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
+	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
 
 	lunamethod(Renderable3DComponent_BindLua, GetContent),
 	lunamethod(Renderable3DComponent_BindLua, Initialize),

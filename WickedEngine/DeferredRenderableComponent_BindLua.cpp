@@ -5,6 +5,10 @@ const char DeferredRenderableComponent_BindLua::className[] = "DeferredRenderabl
 Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableComponent_BindLua::methods[] = {
 	lunamethod(Renderable2DComponent_BindLua, AddSprite),
 	lunamethod(Renderable2DComponent_BindLua, AddFont),
+	lunamethod(Renderable2DComponent_BindLua, RemoveSprite),
+	lunamethod(Renderable2DComponent_BindLua, RemoveFont),
+	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
+	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
 
 	lunamethod(DeferredRenderableComponent_BindLua, GetContent),
 	lunamethod(DeferredRenderableComponent_BindLua, Initialize),

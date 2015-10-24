@@ -26,8 +26,13 @@ public:
 	virtual void Compose();
 
 	void addSprite(wiSprite* sprite);
+	void removeSprite(wiSprite* sprite);
+	void clearSprites();
 	void setSpriteSpeed(float value){ m_spriteSpeed = value; }
 	float getSpriteSpeed(){ return m_spriteSpeed; }
+
 	void addFont(wiFont* font);
+	void removeFont(wiFont* font);
+	void clearFonts();
 };
 
