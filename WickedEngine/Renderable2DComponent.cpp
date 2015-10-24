@@ -32,9 +32,19 @@ void Renderable2DComponent::Unload()
 {
 	for (wiSprite* x : m_sprites)
 	{
-		x->CleanUp();
+		if (x != nullptr)
+			x->CleanUp();
+		SAFE_DELETE(x);
 	}
 	m_sprites.clear();
+
+	for (wiFont* x : m_fonts)
+	{
+		if (x != nullptr)
+			x->CleanUp();
+		SAFE_DELETE(x);
+	}
+	m_fonts.clear();
 }
 void Renderable2DComponent::Start()
 {
@@ -42,9 +52,29 @@ void Renderable2DComponent::Start()
 }
 void Renderable2DComponent::Update()
 {
+	vector<wiSprite*> spritesToDelete(0);
+	vector<wiFont*> fontsToDelete(0);
+
 	for (wiSprite* x : m_sprites)
 	{
-		x->Update(getSpriteSpeed());
+		if (x != nullptr)
+			x->Update(getSpriteSpeed());
+		else
+			spritesToDelete.push_back(x);
+	}
+	for (wiFont* x : m_fonts)
+	{
+		if (x == nullptr)
+			fontsToDelete.push_back(x);
+	}
+
+	for (wiSprite* x : spritesToDelete)
+	{
+		m_sprites.remove(x);
+	}
+	for (wiFont* x : fontsToDelete)
+	{
+		m_fonts.remove(x);
 	}
 }
 void Renderable2DComponent::Render()
@@ -55,12 +85,14 @@ void Renderable2DComponent::Render()
 
 	for (wiSprite* x : m_sprites)
 	{
-		x->Draw();
+		if(x != nullptr)
+			x->Draw();
 	}
 
 	for (wiFont* x : m_fonts)
 	{
-		x->Draw();
+		if (x != nullptr)
+			x->Draw();
 	}
 }
 void Renderable2DComponent::Compose()

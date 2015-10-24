@@ -11,8 +11,8 @@ private:
 	float m_spriteSpeed;
 	wiRenderTarget rtFinal;
 protected:
-	vector<wiSprite*> m_sprites;
-	vector<wiFont*> m_fonts;
+	list<wiSprite*> m_sprites;
+	list<wiFont*> m_fonts;
 public:
 	Renderable2DComponent();
 	~Renderable2DComponent();

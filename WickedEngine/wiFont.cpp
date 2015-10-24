@@ -447,3 +447,8 @@ int wiFont::getFontStyleByName( const string& get ){
 		return i;
 	return 0;
 }
+
+void wiFont::CleanUp()
+{
+
+}
