@@ -9,6 +9,7 @@
 #include "wiWaterPlane.h"
 #include "Texture_BindLua.h"
 #include "wiHairParticle.h"
+#include "wiPHYSICS.h"
 
 namespace wiRenderer_BindLua
 {
@@ -355,6 +356,23 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
+	int SetPhysicsParams(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::physicsEngine->rigidBodyPhysicsEnabled = wiLua::SGetBool(L, 1);
+			if (argc > 1)
+			{
+				wiRenderer::physicsEngine->softBodyPhysicsEnabled = wiLua::SGetBool(L, 2);
+				if (argc > 2)
+				{
+					wiRenderer::physicsEngine->softBodyIterationCount = wiLua::SGetInt(L, 3);
+				}
+			}
+		}
+		return 0;
+	}
 
 	int Pick(lua_State* L)
 	{
@@ -471,6 +489,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetSpotLightShadowProps", SetSpotLightShadowProps);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
+			wiLua::GetGlobal()->RegisterFunc("SetPhysicsParams", SetPhysicsParams);
 
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);

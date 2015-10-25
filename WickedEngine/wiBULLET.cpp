@@ -1,7 +1,8 @@
 #include "wiBULLET.h"
 #include "wiLoader.h"
 
-int PHYSICS::softBodyInterationCount=5;
+int PHYSICS::softBodyIterationCount=5;
+bool PHYSICS::rigidBodyPhysicsEnabled = true, PHYSICS::softBodyPhysicsEnabled = true;
 bool wiBULLET::grab=false;
 RAY wiBULLET::grabRay=RAY();
 
@@ -446,7 +447,6 @@ void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vect
 
 void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 	, float newMass, float newFriction, float newRestitution, float newDamping){
-		
 
 	const int vCount = mesh->physicsverts.size();
 	btScalar* btVerts = new btScalar[vCount*3];
@@ -493,7 +493,7 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 		softBody->transform(shapeTransform);
 
 
-		softBody->m_cfg.piterations	=	softBodyInterationCount;
+		softBody->m_cfg.piterations	=	softBodyIterationCount;
 		softBody->m_cfg.aeromodel=btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
 
 		softBody->m_cfg.kAHR		=btScalar(.69); //0.69		Anchor hardness  [0,1]
@@ -569,6 +569,9 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 
 
 void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
+	if (!softBodyPhysicsEnabled)
+		return;
+
 	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
 	btSoftBody* softBody = btSoftBody::upcast(obj);
 
@@ -594,6 +597,9 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 	}
 }
 void wiBULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
+	if (!softBodyPhysicsEnabled)
+		return;
+
 	if(!firstRunWorld){
 		btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
 		btSoftBody* softBody = btSoftBody::upcast(obj);
@@ -652,7 +658,7 @@ PHYSICS::Transform* wiBULLET::getObject(int index){
 }
 
 void wiBULLET::registerObject(Object* object){
-	if(object->rigidBody){
+	if(object->rigidBody && rigidBodyPhysicsEnabled){
 		XMVECTOR s,r,t;
 		XMMatrixDecompose(&s,&r,&t,XMLoadFloat4x4(&object->world));
 		XMFLOAT3 S,T;
@@ -705,7 +711,7 @@ void wiBULLET::registerObject(Object* object){
 		}
 	}
 
-	if(object->mesh->softBody){
+	if(object->mesh->softBody && softBodyPhysicsEnabled){
 		XMFLOAT3 s,t;
 		XMFLOAT4 r;
 		if(object->mesh->hasArmature()){
@@ -728,7 +734,8 @@ void wiBULLET::registerObject(Object* object){
 }
 
 void wiBULLET::Update(){
-	dynamicsWorld->stepSimulation((1.f/60.f));
+	if(rigidBodyPhysicsEnabled || softBodyPhysicsEnabled)
+		dynamicsWorld->stepSimulation((1.f/60.f));
 }
 void wiBULLET::MarkForRead(){
 

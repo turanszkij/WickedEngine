@@ -20,7 +20,8 @@ public:
 			position=newPos;
 		}
 	};
-	static int softBodyInterationCount;
+	static int softBodyIterationCount;
+	static bool rigidBodyPhysicsEnabled, softBodyPhysicsEnabled;
 protected:
 	vector<Transform*> transforms;
 	bool firstRunWorld;
