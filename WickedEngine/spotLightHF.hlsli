@@ -48,11 +48,8 @@ inline float spotLight(in float3 pos3D, in float3 normal, out float attenuation,
 		l=saturate(dot(normalize(lightDir.xyz),normalize(normal)))*lightEnerDisCone.x;
 		[branch]if(toonshaded) toon(l);
 
-		float4 ShPos;
-			ShPos = mul(float4(pos3D,1),xShMat);
-		float2 ShTex;
-			ShTex.x = ShPos.x/ShPos.w/2.0f +0.5f;
-			ShTex.y = -ShPos.y/ShPos.w/2.0f +0.5f;
+		float4 ShPos = mul(float4(pos3D,1),xShMat);
+		float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f,-0.5f) + float2(0.5f,0.5f);
 		[branch]if((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 		{
 			//light.r+=1.0f;

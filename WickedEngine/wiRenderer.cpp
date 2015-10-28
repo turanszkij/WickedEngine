@@ -66,7 +66,6 @@ ID3D11SamplerState		*wiRenderer::skySampler;
 wiRenderer::TextureView wiRenderer::noiseTex,wiRenderer::trailDistortTex,wiRenderer::enviroMap,wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 int wiRenderer::visibleCount;
-float wiRenderer::shBias;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
 PHYSICS* wiRenderer::physicsEngine = nullptr;
@@ -436,7 +435,6 @@ void wiRenderer::SetUpStaticComponents()
 	wiEmittedParticle::SetUpStatic();
 
 	GameSpeed=1;
-	shBias = 9.99995464e-005f;
 
 	resetVertexCount();
 	resetVisibleObjectCount();
@@ -2563,7 +2561,7 @@ void wiRenderer::DrawLights(Camera* camera, ID3D11DeviceContext* context
 					-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
 					);
 				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-				lcb.mBiasResSoftshadow=XMFLOAT4(shBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
 					lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
 					BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,4+shmap,context);
@@ -2604,7 +2602,7 @@ void wiRenderer::DrawLights(Camera* camera, ID3D11DeviceContext* context
 					-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
 					);
 				lcb.world=world;
-				lcb.mBiasResSoftshadow=XMFLOAT4(shBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
 				lcb.mShM = XMMatrixIdentity();
 				lcb.col=l->color;
 				lcb.enerdis=l->enerDis;
@@ -3414,7 +3412,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 	Light::shadowMaps_spotLight.resize(shadowMapCount);
 	for (int i = 0; i < shadowMapCount; ++i)
 	{
-		Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, 0, true);
+		Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, 1, true);
 	}
 }
 
@@ -4031,7 +4029,7 @@ void wiRenderer::SetUpLights()
 
 		}
 		else if(l->type==Light::SPOT && l->shadow){
-			l->shadowCam.push_back( SHCAM(l->rotation,wiRenderer::getCamera()->zNearP,l->enerDis.y,l->enerDis.z) );
+			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0,0,1),wiRenderer::getCamera()->zNearP,l->enerDis.y,l->enerDis.z) );
 		}
 		else if(l->type==Light::POINT && l->shadow){
 			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5f,-0.5f,-0.5f,-0.5f),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //+x

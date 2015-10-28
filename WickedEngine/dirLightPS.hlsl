@@ -43,6 +43,6 @@ float4 main( VertexToPixel PSIn ) : SV_TARGET
 			color=float4(1,1,1,1);
 
 	}
-	
-	return clamp(color,0,inf);
+
+	return max(color, 0);
 }

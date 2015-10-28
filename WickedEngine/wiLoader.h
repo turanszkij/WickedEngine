@@ -785,6 +785,8 @@ struct Light : public Cullable , public Transform
 
 	vector<SHCAM> shadowCam;
 
+	float shadowBias;
+
 	enum LightType{
 		DIRECTIONAL,
 		POINT,
@@ -803,6 +805,7 @@ struct Light : public Cullable , public Transform
 		lensFlareRimTextures.resize(0);
 		lensFlareNames.resize(0);
 		shadowMap_index = -1;
+		shadowBias = 0.00001f;
 	}
 	void CleanUp();
 };

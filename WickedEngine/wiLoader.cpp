@@ -1424,6 +1424,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					stringstream identified_name("");
 					identified_name<<lname<<identifier;
 					lights.back()->name=identified_name.str();
+					lights.back()->shadowBias = 0.00001f;
 					//if(shadow){
 					//	lights.back()->shadowMap.resize(1);
 					//	lights.back()->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
@@ -1440,6 +1441,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					file>>lights.back()->name; 
 					lights.back()->shadow = true;
 					lights.back()->shadowMaps_dirLight.resize(3);
+					lights.back()->shadowBias = 9.99995464e-005f;
 					for (int i = 0; i < 3; ++i)
 					{
 						lights.back()->shadowMaps_dirLight[i].Initialize(
@@ -1457,6 +1459,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					lights.back()->type=Light::SPOT;
 					file>>lights.back()->name;
 					file>>lights.back()->shadow>>lights.back()->enerDis.z;
+					lights.back()->shadowBias = 0.00001f;
 					//if(shadow){
 					//	lights.back()->shadowMap.resize(1);
 					//	lights.back()->shadowMap[0].Initialize(

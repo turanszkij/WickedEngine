@@ -385,7 +385,6 @@ public:
 	static void ChangeRasterizer(){wireRender=!wireRender;};
 	static bool GetRasterizer(){return wireRender;};
 	static WorldInfo worldInfo;
-	static float shBias;
 	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}
 	static void SetToDrawDebugSpheres(bool param){debugSpheres=param;}
 	static void SetToDrawDebugBoneLines(bool param){ debugBoneLines = param; }

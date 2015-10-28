@@ -51,6 +51,6 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 
 	}
 
-	
-	return clamp(light,0,inf);
+
+	return max(light, 0);
 }
