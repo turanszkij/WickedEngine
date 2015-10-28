@@ -18,6 +18,7 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
 	lunamethod(MainComponent_BindLua, SetFPSDisplay),
 	lunamethod(MainComponent_BindLua, SetCPUDisplay),
+	lunamethod(MainComponent_BindLua, SetColorGradePaletteDisplay),
 	{ NULL, NULL }
 };
 Luna<MainComponent_BindLua>::PropertyType MainComponent_BindLua::properties[] = {
@@ -245,6 +246,22 @@ int MainComponent_BindLua::SetCPUDisplay(lua_State *L)
 	}
 	else
 		wiLua::SError(L, "SetCPUDisplay(bool active) not enough arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetColorGradePaletteDisplay(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetColorGradePaletteDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->colorGradingPaletteDisplayEnabled = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetColorGradePaletteDisplay(bool active) not enough arguments!");
 	return 0;
 }
 

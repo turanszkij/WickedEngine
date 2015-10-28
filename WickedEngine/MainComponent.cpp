@@ -21,7 +21,8 @@ MainComponent::MainComponent()
 	setTargetFrameRate(60);
 	setApplicationControlLostThreshold(10);
 
-	infoDisplay = InfoDisplayer();
+	infoDisplay = InfoDisplayer(); 
+	colorGradingPaletteDisplayEnabled = false;
 }
 
 
@@ -111,7 +112,7 @@ void MainComponent::Compose()
 {
 	getActiveComponent()->Compose();
 
-
+	// Draw the information display
 	if (infoDisplay.active)
 	{
 		stringstream ss("");
@@ -129,6 +130,13 @@ void MainComponent::Compose()
 			ss << "CPU: " << wiCpuInfo::GetCpuPercentage() << "%" << endl;
 		}
 		wiFont(ss.str(), wiFontProps(0, 0, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, infoDisplay.size)).Draw();
+	}
+
+	// Draw the color grading palette
+	if (colorGradingPaletteDisplayEnabled)
+	{
+		wiImage::BatchBegin();
+		wiImage::Draw(wiTextureHelper::getInstance()->getColorGradeDefault(), wiImageEffects(0, 0, 256, 16));
 	}
 
 	wiBackLog::Draw();
