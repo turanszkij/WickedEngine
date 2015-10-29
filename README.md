@@ -1,38 +1,28 @@
-##################################
-## Wicked Engine		##
-## Created by Turánszki János	##
-##################################
+# Wicked Engine
+## Created by Turánszki János
 
-__________
-Overview: |
-________________________________________________________________________________________________________________________
+### Overview:
 
 Wicked Engine is an open-source game engine written in C++ for Windows PC. For list of features, see features.txt.
 Documentation is not yet available, but hopefully it will be someday.
 Demos are available at: https://github.com/turanszkij/WickedEngineDemos
 From now on you can easily set up a game project by using the component templates. (see the demos for examples)
-________________________________________________________________________________________________________________________
 
-________________
-Requirements:   |
-_____________________________________________________________________
+
+### Requirements:
 
 Visual Studio 2013+ (earlier versions may be compatible)
 WindowsSDK
 DirectX11 SDK (included in Windows SDK)(legacy SDK not supported)
 DirectX11 June 2010 Redist (Only if you want to support Windows 7 because it uses Xaudio 2.7!)
-_____________________________________________________________________
 
-___________
-Hardware:  |
-__________________________________
+
+### Hardware: 
 
 DirectX 10+ Graphics card
-__________________________________
 
-________
-Usage:  |
-_______________________________________________________________________________________________________________
+
+### Usage: 
 
 Set the following dependencies to this library in Visual Studio this way in the implementing project:
 
@@ -49,11 +39,9 @@ Editor: Use Blender 2.72 as the editor of this engine. Set up your scene and exp
 Windows 7 support: define _WIN32_WINNT=0x0601 preprocessor on the whole project
 
 Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole project (incomplete)
-_______________________________________________________________________________________________________________
 
-__________
-Contents: |
-________________________________________________________________________________________________
+
+### Contents:
 
 	./WickedEngine.sln 						- Visual Studio Solution;
 	./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project;
@@ -62,11 +50,9 @@ ________________________________________________________________________________
 	./WickedEngine/shaders/					- Binary shaders output;
 	./WickedEngine/ 						- C++ and shader source files;
 	./io_export_wicked_wi_bin.py 			- Blender 2.72 script to export scene;
-________________________________________________________________________________________________
 
-_______
-TODOs: |
-_________________________________________________________
+
+### TODOs:
 
 	Priority:
 		- Lua script bindings for most engine features
@@ -94,11 +80,9 @@ _________________________________________________________
 		- Port to Windows Phone and Win RT
 		- Windows RT controls helper
 		- Texture helper various texture generators (fractal, perlin, etc.) (low priority)
-__________________________________________________________
 
-________
-Editor: |
-________________________________________________________________________________________________________________________
+
+### Editor:
 
 For the time being, Blender software is the editor program for Wicked Engine. I provide an export script which
 you can use to export to the wicked scene format. The script is also going to be updated from time to time to
@@ -118,4 +102,3 @@ remove the known hiccups and bugs.
 		Suggested fix: implement curves support into the engine and the exporter
 	- Only one uv map support
 		Light maps and other effects requiring multiple uv maps are not possible yet.
-________________________________________________________________________________________________________________________

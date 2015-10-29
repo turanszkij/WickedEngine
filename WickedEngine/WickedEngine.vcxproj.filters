@@ -1875,12 +1875,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\readme.txt" />
     <Text Include="..\features.txt" />
     <Text Include="..\licenses.txt" />
     <Text Include="fonts\basic.txt">
       <Filter>fonts</Filter>
     </Text>
+    <Text Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="circleGS.hlsl">

@@ -864,7 +864,7 @@
   <ItemGroup>
     <Text Include="..\features.txt" />
     <Text Include="..\licenses.txt" />
-    <Text Include="..\readme.txt" />
+    <Text Include="..\README.md" />
     <Text Include="fonts\basic.txt">
       <DeploymentContent>true</DeploymentContent>
     </Text>
