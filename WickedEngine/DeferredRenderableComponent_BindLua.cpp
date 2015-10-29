@@ -38,6 +38,8 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
+
+	lunamethod(Renderable3DComponent_BindLua, SetPreferredThreadingCount),
 	{ NULL, NULL }
 };
 Luna<DeferredRenderableComponent_BindLua>::PropertyType DeferredRenderableComponent_BindLua::properties[] = {

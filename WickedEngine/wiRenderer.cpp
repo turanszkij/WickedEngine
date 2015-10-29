@@ -2879,16 +2879,16 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 										for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 											if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE) {
 												if (mesh->softBody || (*viter)->armatureDeform)
-													mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+													mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SCENE);
 												else
-													mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+													mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SCENE);
 												++k;
 											}
 										}
 										if (k < 1)
 											continue;
 
-										mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+										mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SCENE, context);
 
 
 										BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
@@ -2983,16 +2983,16 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 										if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE) {
 											if (mesh->softBody || (*viter)->armatureDeform)
-												mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+												mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SCENE);
 											else
-												mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+												mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SCENE);
 											++k;
 										}
 									}
 									if (k < 1)
 										continue;
 
-									mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+									mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SCENE, context);
 
 
 									BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
@@ -3088,16 +3088,16 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 								if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE) {
 									if (mesh->softBody || (*viter)->armatureDeform)
-										mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+										mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SCENE);
 									else
-										mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
+										mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SCENE);
 									++k;
 								}
 							}
 							if (k < 1)
 								continue;
 
-							mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+							mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SCENE, context);
 
 
 							BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);

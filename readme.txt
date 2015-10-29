@@ -76,8 +76,6 @@ _________________________________________________________
 		- Decouple API from wiRenderer
 			The renderer has become too large, unmanageable, hardly readable. Aside from that it
 			is a good idea to decouple them for possible support of multiple apis in the future...
-		- Multithreaded rendering bug after refactor (flashing geometry)(turned off for the time being)
-			Probably some instancing info being written in multiple theads at once
 	Other:
 		- Cleanup
 			No comment

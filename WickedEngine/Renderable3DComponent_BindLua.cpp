@@ -39,6 +39,8 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
+
+	lunamethod(Renderable3DComponent_BindLua, SetPreferredThreadingCount),
 	{ NULL, NULL }
 };
 Luna<Renderable3DComponent_BindLua>::PropertyType Renderable3DComponent_BindLua::properties[] = {
@@ -290,6 +292,21 @@ int Renderable3DComponent_BindLua::SetDepthOfFieldStrength(lua_State* L)
 	return 0;
 }
 
+int Renderable3DComponent_BindLua::SetPreferredThreadingCount(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetPreferredThreadingCount(int value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((Renderable3DComponent*)component)->setPreferredThreadingCount((unsigned short)wiLua::SGetInt(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetPreferredThreadingCount(int value) not enough arguments!");
+	return 0;
+}
 
 void Renderable3DComponent_BindLua::Bind()
 {

@@ -137,7 +137,7 @@ void MainComponent::Compose()
 	{
 		wiImage::BatchBegin();
 		wiImage::Draw(wiTextureHelper::getInstance()->getColorGradeDefault(), wiImageEffects(0, 0, 256, 16));
-		wiImage::Draw(wiRenderer::GetColorGrading(), wiImageEffects(screenW-256, 0, 256, 16));
+		wiImage::Draw(wiRenderer::GetColorGrading(), wiImageEffects(screenW-256.f, 0, 256, 16));
 	}
 
 	wiBackLog::Draw();

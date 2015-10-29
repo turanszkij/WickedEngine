@@ -34,6 +34,8 @@ public:
 	int SetDepthOfFieldFocus(lua_State* L);
 	int SetDepthOfFieldStrength(lua_State* L);
 
+	int SetPreferredThreadingCount(lua_State* L);
+
 	static void Bind();
 };
 
