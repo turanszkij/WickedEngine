@@ -54,51 +54,51 @@ Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole pr
 
 ### TODOs:
 
-	Priority:
-		- Lua script bindings for most engine features
-		- Optimize image rendering
-			The Drawing fuctions are bloated, imageVS is no longer readable by humans, 
-			possible batching optimizations
-		- Decouple API from wiRenderer
-			The renderer has become too large, unmanageable, hardly readable. Aside from that it
-			is a good idea to decouple them for possible support of multiple apis in the future...
-	Other:
-		- Cleanup
-			No comment
-		- Documentation
-			Probably not in the near future
-		- HDR pipeline
-			Already using floating point rendertargets, but everything is saturated (except bloom).
-			It needs tone mapping and not much else
-		- Forward rendering pipeline
-			It should support everything that the deferred renderer supports. Now it has only a directional light
-			without shadows, but the lighting fuctions are reusable and already written in separate headers.
-		- Precalculated Ambient Occlusion
-			It has everything it needs in the engine, just need to put it together.
-		- Optimize Meshes
-			Remove duplicate vertices and improve cache coherency
-		- Port to Windows Phone and Win RT
-		- Windows RT controls helper
-		- Texture helper various texture generators (fractal, perlin, etc.) (low priority)
+Priority:
+	- Lua script bindings for most engine features
+	- Optimize image rendering
+		The Drawing fuctions are bloated, imageVS is no longer readable by humans, 
+		possible batching optimizations
+	- Decouple API from wiRenderer
+		The renderer has become too large, unmanageable, hardly readable. Aside from that it
+		is a good idea to decouple them for possible support of multiple apis in the future...
+Other:
+	- Cleanup
+		No comment
+	- Documentation
+		Probably not in the near future
+	- HDR pipeline
+		Already using floating point rendertargets, but everything is saturated (except bloom).
+		It needs tone mapping and not much else
+	- Forward rendering pipeline
+		It should support everything that the deferred renderer supports. Now it has only a directional light
+		without shadows, but the lighting fuctions are reusable and already written in separate headers.
+	- Precalculated Ambient Occlusion
+		It has everything it needs in the engine, just need to put it together.
+	- Optimize Meshes
+		Remove duplicate vertices and improve cache coherency
+	- Port to Windows Phone and Win RT
+	- Windows RT controls helper
+	- Texture helper various texture generators (fractal, perlin, etc.) (low priority)
 
 
 ### Editor:
 
-	For the time being, Blender software is the editor program for Wicked Engine. I provide an export script which
-	you can use to export to the wicked scene format. The script is also going to be updated from time to time to
-	remove the known hiccups and bugs.
-		- Names should not contain spaces inside Blender
-			The problem is the c++ side code which parses the text files such as it breaks parsing on spaces. 
-			Mesh files are already exported as binary, so those are okay
-			Suggested fix: write binary export for everything
-		- Separate files generated
-			I've written the exporter to write different categories of the scene to different files for easier debugging
-			from a text editor. If the exporter is rewritten to write binary for everything, such debugging will
-			not be possible so might as well merge the files (except mesh files and error message file)
-		- Only animation supported is skeletal animation
-		- Animation Action names should contain their armature's name so that the exporter matches them correctly
-			Suggested fix: find a better way of matching armatures and actions
-		- Animation only with linear curves (so no curves)
-			Suggested fix: implement curves support into the engine and the exporter
-		- Only one uv map support
-			Light maps and other effects requiring multiple uv maps are not possible yet.
+For the time being, Blender software is the editor program for Wicked Engine. I provide an export script which
+you can use to export to the wicked scene format. The script is also going to be updated from time to time to
+remove the known hiccups and bugs.
+	- Names should not contain spaces inside Blender
+		The problem is the c++ side code which parses the text files such as it breaks parsing on spaces. 
+		Mesh files are already exported as binary, so those are okay
+		Suggested fix: write binary export for everything
+	- Separate files generated
+		I've written the exporter to write different categories of the scene to different files for easier debugging
+		from a text editor. If the exporter is rewritten to write binary for everything, such debugging will
+		not be possible so might as well merge the files (except mesh files and error message file)
+	- Only animation supported is skeletal animation
+	- Animation Action names should contain their armature's name so that the exporter matches them correctly
+		Suggested fix: find a better way of matching armatures and actions
+	- Animation only with linear curves (so no curves)
+		Suggested fix: implement curves support into the engine and the exporter
+	- Only one uv map support
+		Light maps and other effects requiring multiple uv maps are not possible yet.
