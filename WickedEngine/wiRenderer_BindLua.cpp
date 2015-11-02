@@ -447,9 +447,15 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
+
 	int ClearWorld(lua_State* L)
 	{
 		wiRenderer::CleanUpStaticTemp();
+		return 0;
+	}
+	int ReloadShaders(lua_State* L)
+	{
+		wiRenderer::ReloadShaders();
 		return 0;
 	}
 
@@ -499,6 +505,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RunText("PICK_WATER = 2");
 
 			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
+			wiLua::GetGlobal()->RegisterFunc("ReloadShaders", ReloadShaders);
 		}
 	}
 };

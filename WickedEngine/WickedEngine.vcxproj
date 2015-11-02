@@ -846,6 +846,7 @@
     <None Include="imageHF.hlsli" />
     <None Include="lightHF.hlsli" />
     <None Include="normalsCompressHF.hlsli" />
+    <None Include="packHF.hlsli" />
     <None Include="pointLightHF.hlsli" />
     <None Include="postProcessHF.hlsli" />
     <None Include="quad.hlsli" />

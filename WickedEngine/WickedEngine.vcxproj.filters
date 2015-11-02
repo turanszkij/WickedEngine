@@ -1873,6 +1873,9 @@
     <None Include="ditherHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
+    <None Include="packHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />

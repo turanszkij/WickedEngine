@@ -405,31 +405,16 @@ void wiRenderer::SetUpStaticComponents()
 	debugSpheres=false;
 	
 	
-	thread sub1(wiRenderer::LoadBasicShaders);
-	thread sub2(wiRenderer::LoadShadowShaders);
-	thread sub3(wiRenderer::LoadSkyShaders);
-	thread sub4(wiRenderer::LoadLineShaders);
-	thread sub5(wiRenderer::LoadTrailShaders);
-	thread sub6(wiRenderer::LoadWaterShaders);
+	wiRenderer::LoadBasicShaders();
+	wiRenderer::LoadShadowShaders();
+	wiRenderer::LoadSkyShaders();
+	wiRenderer::LoadLineShaders();
+	wiRenderer::LoadTrailShaders();
+	wiRenderer::LoadWaterShaders();
 	wiRenderer::LoadTessShaders();
 
 	wiRenderer::SetUpStates();
 	wiRenderer::LoadBuffers();
-
-	
-	sub2.join();
-	sub3.join();
-	sub4.join();
-	sub5.join();
-	sub6.join();
-	sub1.join();
-
-	sub1.~thread();
-	sub2.~thread();
-	sub3.~thread();
-	sub4.~thread();
-	sub5.~thread();
-	sub6.~thread();
 	
 	wiHairParticle::SetUpStatic();
 	wiEmittedParticle::SetUpStatic();
@@ -1137,6 +1122,21 @@ void wiRenderer::LoadTrailShaders(){
 
 	trailPS = static_cast<PixelShader>(wiResourceManager::GetGlobal()->add("shaders/trailPS.cso", wiResourceManager::PIXELSHADER));
 
+}
+
+void wiRenderer::ReloadShaders()
+{
+	// TODO
+
+	//graphicsMutex.lock();
+	//LoadBasicShaders();
+	//LoadLineShaders();
+	//LoadTessShaders();
+	//LoadSkyShaders();
+	//LoadShadowShaders();
+	//LoadWaterShaders();
+	//LoadTrailShaders();
+	//graphicsMutex.unlock();
 }
 
 

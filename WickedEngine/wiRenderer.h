@@ -407,6 +407,8 @@ public:
 	HitSphere* getSphereByName(const string& get);
 	static Object* getObjectByName(const string& name);
 	static Light* getLightByName(const string& name);
+
+	static void ReloadShaders();
 	
 private:
 	static vector<TextureView> textureSlotsPS;
