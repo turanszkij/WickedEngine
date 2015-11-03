@@ -1137,6 +1137,8 @@ void wiRenderer::ReloadShaders()
 	//LoadWaterShaders();
 	//LoadTrailShaders();
 	//graphicsMutex.unlock();
+
+	//wiResourceManager::GetGlobal()->ReloadResources(wiResourceManager::Data_Type::PIXELSHADER);
 }
 
 

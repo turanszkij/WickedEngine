@@ -270,8 +270,33 @@ bool wiResourceManager::del(const string& name)
 
 bool wiResourceManager::CleanUp()
 {
+	// TODO
 	MUTEX.lock();
 	resources.clear();
 	MUTEX.unlock();
 	return true;
+}
+
+void wiResourceManager::ReloadResources(Data_Type type)
+{
+	//TODO
+
+	vector<string> reloadableNames(0);
+	vector<Data_Type> reloadableTypes(0);
+	
+
+	for (container::iterator it = resources.begin(); it != resources.end(); ++it)
+	{
+		if (it->second->type == type)
+		{
+			reloadableNames.push_back(it->first);
+			reloadableTypes.push_back(it->second->type);
+		}
+	}
+
+	for (unsigned int i = 0; i < reloadableNames.size(); ++i)
+	{
+		del(reloadableNames[i]);
+		add(reloadableNames[i], reloadableTypes[i]);
+	}
 }

@@ -1,6 +1,6 @@
 #include "postProcessHF.hlsli"
 
-cbuffer prop:register(b0){
+cbuffer prop:register(b0) {
 	float4 xAmbient;
 	float4 xHorizon;
 	float4x4 matProjInv;
@@ -8,34 +8,42 @@ cbuffer prop:register(b0){
 };
 #include "reconstructPositionHF.hlsli"
 
-static const float	g_fRayStep = 0.05f;
-static const float	g_fMinRayStep = 0.02f;
-static const int	g_iMaxSteps = 50;
-static const float	g_fSearchDist = 30.f;
+
+// Ne lepegessunk 0-kat, akkor mar inkabb kicsit tobbet inkabb
+static const float	g_fMinRayStep = 0.01f;
+// Hany lepesben keressunk durvan
+static const int	g_iMaxSteps = 16;
+// Durva kereses fazisban mennyire durvuljon minden lepesben
+static const float	g_fRayStep = 1.18f;
+// Ha durva talalat van akkor finomitsuk azt ennyi lepesben
+static const int	g_iNumBinarySearchSteps = 16;
+// Tavoli tukorkepek fadelesehez (view space)
+static const float	g_fSearchDist = 80.f;
 static const float	g_fSearchDistInv = 1.0f / g_fSearchDist;
-static const int	g_iNumBinarySearchSteps = 15;
-static const float	g_fMaxDDepth = 1.4f;
-static const float	g_fMaxDDepthInv = 1.0f / g_fMaxDDepth;
+// Minel kisebb, annal pontosabb tukrozodes talalatok lesznek csak megtartva
+static const float  g_fRayhitThreshold = 0.9f;
 
-static const float	g_fReflectionSpecularFalloffExponent = 2.0f;
+bool bInsideScreen(in float2 vCoord)
+{
+	if (vCoord.x < 0 || vCoord.x > 1 || vCoord.y < 0 || vCoord.y > 1)
+		return false;
+	return true;
+}
 
-float3 SSRBinarySearch(float3 vDir, inout float3 vHitCoord, out float fDepthDiff)
+float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 {
 	float fDepth;
 
 	for (int i = 0; i < g_iNumBinarySearchSteps; i++)
 	{
 		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), matProj);
-			vProjectedCoord.xy *= float2(1, -1);
 		vProjectedCoord.xy /= vProjectedCoord.w;
-		vProjectedCoord.xy = vProjectedCoord.xy * 0.5 + 0.5;
+		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
 		fDepth = loadMask(vProjectedCoord.xy).r; //contains linearDepth!
+		float fDepthDiff = vHitCoord.z - fDepth;
 
-		fDepthDiff = vHitCoord.z - fDepth;
-
-		[branch]
-		if (fDepthDiff < 0.0f)
+		if (fDepthDiff <= 0.0f)
 			vHitCoord += vDir;
 
 		vDir *= 0.5f;
@@ -43,67 +51,55 @@ float3 SSRBinarySearch(float3 vDir, inout float3 vHitCoord, out float fDepthDiff
 	}
 
 	float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), matProj);
-		vProjectedCoord.xy *= float2(1, -1);
 	vProjectedCoord.xy /= vProjectedCoord.w;
-	vProjectedCoord.xy = vProjectedCoord.xy * 0.5 + 0.5;
+	vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-	return float3(vProjectedCoord.xy, fDepth);
+	fDepth = loadMask(vProjectedCoord.xy).r; //contains linearDepth!
+	float fDepthDiff = vHitCoord.z - fDepth;
+
+	return float4(vProjectedCoord.xy, fDepth, abs(fDepthDiff) < g_fRayhitThreshold ? 1.0f : 0.0f);
 }
 
-float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord, out float fDepthDiff)
+float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 {
-	vDir *= g_fRayStep;
-
 	float fDepth;
 
 	for (int i = 0; i < g_iMaxSteps; i++)
 	{
-		float fPrevDepth = vHitCoord.z;
-
 		vHitCoord += vDir;
 
 		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), matProj);
-			vProjectedCoord.xy *= float2(1, -1);
 		vProjectedCoord.xy /= vProjectedCoord.w;
-		vProjectedCoord.xy = vProjectedCoord.xy * 0.5 + 0.5;
+		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
 		fDepth = loadMask(vProjectedCoord.xy).r; //contains linearDepth!
 
-		fDepthDiff = fPrevDepth - fDepth;
+		float fDepthDiff = vHitCoord.z - fDepth;
 
 		[branch]
-		if (fDepthDiff > 0.0f && fDepthDiff < g_fMaxDDepth)
-			return float4(SSRBinarySearch(vDir, vHitCoord, fDepthDiff), 1.0f);
+		if (fDepthDiff > 0.0f)
+			return SSRBinarySearch(vDir, vHitCoord);
+
+		vDir *= g_fRayStep;
 
 	}
 
 	return float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-float4 main( VertextoPixel input ) : SV_Target
+float4 main(VertextoPixel input) : SV_Target
 {
 	float4 o = 1;
-
-	//float3 vSceneColor = loadScene(input.tex).rgb;
 
 	float4 vNormZ;
 	vNormZ.rgb = loadNormal(input.tex).rgb;
 	vNormZ.a = loadDepth(input.tex);
 
 	float2 vRougnessSpec = loadVelocity(input.tex).zw; //specular_power,specular intensity
-	//float fSpecularModifier = (1 - clamp(vRougnessSpec.x, 0, 256) / 256.f)*vRougnessSpec.y;
+													   //float fSpecularModifier = (1 - clamp(vRougnessSpec.x, 0, 256) / 256.f)*vRougnessSpec.y;
 
 	float3 vWorldPos = getPosition(input.tex, vNormZ.a);
 
-
-	//if (vRougnessSpec.y == 0.0f)
-	//{
-	//	//o.rgb = vSceneColor;
-	//	o.rgb = float4(0, 0, 0, 0);
-	//	return o;
-	//}
-
-	//clip(fSpecularModifier < 0.01f ? -1 : 1);
 
 	//Reflection vector
 	float3 vViewPos = mul(float4(vWorldPos.xyz, 1), matView).xyz;
@@ -113,22 +109,26 @@ float4 main( VertextoPixel input ) : SV_Target
 
 	//Raycast
 	float3 vHitPos = vViewPos;
-	float fDepthDiff;
 
-	float4 vCoords = SSRRayMarch(vReflectDir * max(g_fMinRayStep, vViewPos.z), vHitPos, fDepthDiff);
+	float4 vCoords = SSRRayMarch(vReflectDir /** max( g_fMinRayStep, vViewPos.z )*/, vHitPos);
 
-	float2 vCoordsDiff = abs( vCoords.xy - 0.5f );
+	float2 vCoordsEdgeFact = float2(1, 1) - pow(saturate(abs(vCoords.xy - float2(0.5f, 0.5f)) * 2), 0.5f);
+	float fScreenEdgeFactor = saturate(min(vCoordsEdgeFact.x, vCoordsEdgeFact.y));
 
-	float fScreenEdgeFactor = saturate( 1.0f - ( vCoordsDiff.x + vCoordsDiff.y ) );
+	if (!bInsideScreen(vCoords))
+		fScreenEdgeFactor = 0;
+
 
 	//Color
 	float fReflectionIntensity =
-			pow(vRougnessSpec.y, g_fReflectionSpecularFalloffExponent) *						//specular fade
-			fScreenEdgeFactor *																	//screen fade
-			saturate(vReflectDir.z)																//camera facing fade
-			* saturate( ( g_fSearchDist - length( vViewPos - vHitPos ) ) * g_fSearchDistInv )	//reflected object distance fade
-			* vCoords.w																			//rayhit binary fade
-			;
+		saturate(
+			pow(vRougnessSpec.y, 2) *															//specular fade
+			fScreenEdgeFactor *																	// screen fade
+			saturate(vReflectDir.z)																// camera facing fade
+			* saturate((g_fSearchDist - distance(vViewPos, vHitPos)) * g_fSearchDistInv)	// reflected object distance fade
+			* vCoords.w																			// rayhit binary fade
+			);
+
 
 	float3 vReflectionColor = xTexture.SampleLevel(Sampler, vCoords.xy, 3).rgb;
 	float3 vSceneColor = xTexture.Load(int3(input.pos.x,input.pos.y,0)).rgb;
