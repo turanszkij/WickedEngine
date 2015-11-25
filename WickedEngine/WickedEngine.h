@@ -56,14 +56,7 @@
 #include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
 
-#ifndef WINSTORE_SUPPORT
-#include "mysql/mysql.h"
-#endif
 
-
-#ifndef WINSTORE_SUPPORT
-#pragma comment(lib,"lib32/libmysql.lib")
-#endif
 #pragma comment(lib,"WickedEngine.lib")
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"Dxgi.lib")

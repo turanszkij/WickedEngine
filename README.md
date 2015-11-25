@@ -32,7 +32,6 @@ Set the following dependencies to this library in Visual Studio this way in the 
 		./WickedEngine/BULLET
 3. Linker -> General -> Additional Library Directories:
 		Directory of your built .lib file (Debug or Release directory in the solution by default)
-		./WickedEngine/mysql
 
 Editor: Use Blender 2.72 as the editor of this engine. Set up your scene and export it with the provided script
 
@@ -46,7 +45,6 @@ Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole pr
 - ./WickedEngine.sln 					- Visual Studio Solution; 
 - ./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project; 
 - ./WickedEngine/BULLET/					- Bullet 2.82 Source files; 
-- ./WickedEngine/mysql/					- MYSQL C++ libraries; 
 - ./WickedEngine/shaders/					- Binary shaders output; 
 - ./WickedEngine/ 						- C++ and shader source files; 
 - ./io_export_wicked_wi_bin.py 			- Blender 2.72 script to export scene; 

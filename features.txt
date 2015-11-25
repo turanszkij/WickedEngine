@@ -3,8 +3,7 @@ Feature list
 
 Image rendering,animation : 2D,3D space
 Font rendering
-Server connection (MYSQL)
-Client-server multiplayer (TCP)
+TCP Networking
 Blender-exporter: 3D meshes,objects,armatures,animation,materials,lights,hitspheres,wind,world info,dynamic cameras,ribbon trails,particle systems
 3D vertex mesh rendering
 Keyframe-based skeletal animation for 3D meshes (skinning on CPU or GPU), objects and lights

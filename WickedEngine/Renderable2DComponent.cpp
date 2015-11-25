@@ -184,6 +184,7 @@ int Renderable2DComponent::getSpriteOrder(wiSprite* sprite)
 			}
 		}
 	}
+	return 0;
 }
 
 void Renderable2DComponent::addFont(wiFont* font, const string& layer)
@@ -237,6 +238,7 @@ int Renderable2DComponent::getFontOrder(wiFont* font)
 			}
 		}
 	}
+	return 0;
 }
 
 
