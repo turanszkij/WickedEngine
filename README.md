@@ -60,7 +60,7 @@ Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole pr
 ### Scripting API:
 
 You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running.
-For further details, please check the scripting API documentation: [Wicked Engine Scripting API](Scripting API Documentation.md)
+For further details, please check the scripting API documentation: [Wicked Engine Scripting API](ScriptingAPI-Documentation.md)
 
 
 ### Editor:
