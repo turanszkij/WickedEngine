@@ -12,13 +12,58 @@ This is a collection and explanation of scripting features in Wicked Engine.
 		1. ImageEffects
 		2. SpriteAnim
 	3. Texture
-	4. Vector
-	5. Matrix
-	6. Scene
+	4. Sound
+		1. SoundEffect
+		2. Music
+	5. Vector
+	6. Matrix
+	7. Scene
 		1. Node
 		2. Transform
 		3. Cullable
 		4. Object
 		5. Armature
 		6. Ray
-		7. AABB (Axis Aligned Bounding Box)
+		7. AABB
+		
+## Introduction and usage
+Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
+syntax and features of the widely used Lua language, accompanied by its fast interpreter.
+Apart from the common features, certain engine features are also available to use.
+You can load lua script files and execute them, or the engine scripting console (also known as the BackLog)
+can also be used to execute single line scripts.
+Upon startup, the engine will try to load a startup script file named startup.lua in the root directory of 
+the application. If not found, an error message will be thrown follwed by the normal execution by the program.
+In the startup file, you can specify any startup logic, for example loading content or anything.
+
+The setting up and usage of the BackLog is the responsibility of the target application, but the recommended way to set it up
+is included in all of the demo projects. It is mapped to te HOME button by default.
+
+## Engine manipulation
+The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
+
+### BackLog
+
+### Renderer
+
+## Utility Tools
+The scripting API provides certain engine features to be used in development.
+
+### Font
+### Sprite
+#### ImageEffects
+#### SpriteAnim
+### Texture
+### Sound
+#### SoundEffect
+#### Music
+### Vector
+### Matrix
+### Scene
+#### Node
+#### Transform
+#### Cullable
+#### Object
+#### Armature
+#### Ray
+#### AABB
