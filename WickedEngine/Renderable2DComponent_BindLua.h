@@ -22,6 +22,12 @@ public:
 	int ClearSprites(lua_State *L);
 	int ClearFonts(lua_State* L);
 
+	int AddLayer(lua_State* L);
+	int GetLayers(lua_State* L);
+	int SetLayerOrder(lua_State* L);
+	int SetSpriteOrder(lua_State* L);
+	int SetFontOrder(lua_State* L);
+
 	static void Bind();
 };
 

@@ -11,6 +11,12 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
 	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
 
+	lunamethod(Renderable2DComponent_BindLua, AddLayer),
+	lunamethod(Renderable2DComponent_BindLua, GetLayers),
+	lunamethod(Renderable2DComponent_BindLua, SetLayerOrder),
+	lunamethod(Renderable2DComponent_BindLua, SetSpriteOrder),
+	lunamethod(Renderable2DComponent_BindLua, SetFontOrder),
+
 	lunamethod(Renderable3DComponent_BindLua, GetContent),
 	lunamethod(Renderable3DComponent_BindLua, Initialize),
 	lunamethod(Renderable3DComponent_BindLua, Load),

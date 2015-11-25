@@ -41,8 +41,6 @@ public:
 	~wiResourceManager();
 	static wiResourceManager* GetGlobal();
 
-	void ReloadResources(Data_Type type);
-
 	const Resource* get(const string& name);
 	//specify datatype for shaders
 	void* add(const string& name, Data_Type newType = Data_Type::DYNAMIC

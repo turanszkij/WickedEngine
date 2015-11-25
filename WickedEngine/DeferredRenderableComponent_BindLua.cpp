@@ -10,6 +10,12 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
 	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
 
+	lunamethod(Renderable2DComponent_BindLua, AddLayer),
+	lunamethod(Renderable2DComponent_BindLua, GetLayers),
+	lunamethod(Renderable2DComponent_BindLua, SetLayerOrder),
+	lunamethod(Renderable2DComponent_BindLua, SetSpriteOrder),
+	lunamethod(Renderable2DComponent_BindLua, SetFontOrder),
+
 	lunamethod(DeferredRenderableComponent_BindLua, GetContent),
 	lunamethod(DeferredRenderableComponent_BindLua, Initialize),
 	lunamethod(DeferredRenderableComponent_BindLua, Load),

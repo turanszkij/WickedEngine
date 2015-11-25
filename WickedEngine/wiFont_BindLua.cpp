@@ -78,10 +78,10 @@ int wiFont_BindLua::SetPos(lua_State* L)
 			font->props.posY = XMVectorGetY(param->vector);
 		}
 		else
-			wiLua::SError(L, "SetSize(Vector size) argument is not a vector!");
+			wiLua::SError(L, "SetSize(Vector pos) argument is not a vector!");
 	}
 	else
-		wiLua::SError(L, "SetPos(Vector size) not enough arguments!");
+		wiLua::SError(L, "SetPos(Vector pos) not enough arguments!");
 	return 0;
 }
 int wiFont_BindLua::SetSpacing(lua_State* L)
@@ -96,10 +96,10 @@ int wiFont_BindLua::SetSpacing(lua_State* L)
 			font->props.spacingY = XMVectorGetY(param->vector);
 		}
 		else
-			wiLua::SError(L, "SetSpacing(Vector size) argument is not a vector!");
+			wiLua::SError(L, "SetSpacing(Vector spacing) argument is not a vector!");
 	}
 	else
-		wiLua::SError(L, "SetSpacing(Vector size) not enough arguments!");
+		wiLua::SError(L, "SetSpacing(Vector spacing) not enough arguments!");
 	return 0;
 }
 int wiFont_BindLua::SetAlign(lua_State* L)

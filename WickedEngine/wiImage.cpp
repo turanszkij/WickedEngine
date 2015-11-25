@@ -292,6 +292,28 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effects,ID3D11DeviceContext* context){
 	if(!context)
 		return;
+
+	{
+		// This equals the old BatchBegin
+		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
+		wiRenderer::BindRasterizerState(rasterizerState, context);
+		switch (effects.stencilComp)
+		{
+		case D3D11_COMPARISON_LESS:
+			wiRenderer::BindDepthStencilState(depthStencilStateLess, effects.stencilRef, context);
+			break;
+		case D3D11_COMPARISON_GREATER:
+			wiRenderer::BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, context);
+			break;
+		default:
+			wiRenderer::BindDepthStencilState(depthNoStencilState, effects.stencilRef, context);
+			break;
+		}
+		wiRenderer::BindBlendState(blendState, context);
+		wiRenderer::BindVS(vertexShader, context);
+		wiRenderer::BindPS(pixelShader, context);
+	}
+
 	if(!effects.blur){
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			ConstantBuffer cb;
@@ -604,56 +626,56 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 	wiRenderer::Draw(4,context);
 }
 
-
-void wiImage::BatchBegin()
-{
-	BatchBegin(wiRenderer::getImmediateContext());
-}
-void wiImage::BatchBegin(ID3D11DeviceContext* context)
-{
-	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
-
-	//context->RSSetState(rasterizerState);
-	//context->OMSetDepthStencilState(depthNoStencilState, 0);
-
-	
-	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
-	wiRenderer::BindRasterizerState(rasterizerState,context);
-	wiRenderer::BindDepthStencilState(depthNoStencilState, 0, context);
-
-	
-	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//UINT sampleMask   = 0xffffffff;
-	//context->OMSetBlendState(blendState,blendFactor,sampleMask);
-	wiRenderer::BindBlendState(blendState,context);
-
-	//context->VSSetShader( vertexShader, NULL, 0 );
-	//context->PSSetShader( pixelShader, NULL, 0 );
-	wiRenderer::BindVS(vertexShader,context);
-	wiRenderer::BindPS(pixelShader,context);
-}
-void wiImage::BatchBegin(ID3D11DeviceContext* context, unsigned int stencilref, bool stencilOpLess)
-{
-	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
-
-	//context->RSSetState(rasterizerState);
-	//context->OMSetDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref);
-
-	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
-	wiRenderer::BindRasterizerState(rasterizerState,context);
-	wiRenderer::BindDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref, context);
-
-	
-	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//UINT sampleMask   = 0xffffffff;
-	//context->OMSetBlendState(blendState,blendFactor,sampleMask);
-	wiRenderer::BindBlendState(blendState,context);
-
-	//context->VSSetShader( vertexShader, NULL, 0 );
-	//context->PSSetShader( pixelShader, NULL, 0 );
-	wiRenderer::BindVS(vertexShader,context);
-	wiRenderer::BindPS(pixelShader,context);
-}
+//
+//void wiImage::BatchBegin()
+//{
+//	BatchBegin(wiRenderer::getImmediateContext());
+//}
+//void wiImage::BatchBegin(ID3D11DeviceContext* context)
+//{
+//	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+//
+//	//context->RSSetState(rasterizerState);
+//	//context->OMSetDepthStencilState(depthNoStencilState, 0);
+//
+//	
+//	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
+//	wiRenderer::BindRasterizerState(rasterizerState,context);
+//	wiRenderer::BindDepthStencilState(depthNoStencilState, 0, context);
+//
+//	
+//	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+//	//UINT sampleMask   = 0xffffffff;
+//	//context->OMSetBlendState(blendState,blendFactor,sampleMask);
+//	wiRenderer::BindBlendState(blendState,context);
+//
+//	//context->VSSetShader( vertexShader, NULL, 0 );
+//	//context->PSSetShader( pixelShader, NULL, 0 );
+//	wiRenderer::BindVS(vertexShader,context);
+//	wiRenderer::BindPS(pixelShader,context);
+//}
+//void wiImage::BatchBegin(ID3D11DeviceContext* context, unsigned int stencilref, bool stencilOpLess)
+//{
+//	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+//
+//	//context->RSSetState(rasterizerState);
+//	//context->OMSetDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref);
+//
+//	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
+//	wiRenderer::BindRasterizerState(rasterizerState,context);
+//	wiRenderer::BindDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref, context);
+//
+//	
+//	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+//	//UINT sampleMask   = 0xffffffff;
+//	//context->OMSetBlendState(blendState,blendFactor,sampleMask);
+//	wiRenderer::BindBlendState(blendState,context);
+//
+//	//context->VSSetShader( vertexShader, NULL, 0 );
+//	//context->PSSetShader( pixelShader, NULL, 0 );
+//	wiRenderer::BindVS(vertexShader,context);
+//	wiRenderer::BindPS(pixelShader,context);
+//}
 
 
 void wiImage::Load(){

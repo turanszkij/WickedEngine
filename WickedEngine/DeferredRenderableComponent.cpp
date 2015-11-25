@@ -97,7 +97,6 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 
 
 	rtLinearDepth.Activate(context); {
-		wiImage::BatchBegin(context);
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
@@ -119,7 +118,9 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 
 
 	if (getSSAOEnabled()){
-		wiImage::BatchBegin(context, STENCILREF_DEFAULT);
+		//wiImage::BatchBegin(context, STENCILREF_DEFAULT);
+		fx.stencilRef = STENCILREF_DEFAULT;
+		fx.stencilComp = D3D11_COMPARISON_LESS;
 		rtSSAO[0].Activate(context); {
 			fx.process.setSSAO(true);
 			fx.setDepthMap(rtLinearDepth.shaderResource.back());
@@ -145,6 +146,8 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 			wiImage::Draw(rtSSAO[1].shaderResource.back(), fx, context);
 			fx.blur = 0;
 		}
+		fx.stencilRef = 0;
+		fx.stencilComp = 0;
 	}
 
 
@@ -160,7 +163,9 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 
 	if (getSSSEnabled())
 	{
-		wiImage::BatchBegin(context, STENCILREF_SKIN);
+		//wiImage::BatchBegin(context, STENCILREF_SKIN);
+		fx.stencilRef = STENCILREF_SKIN;
+		fx.stencilComp = D3D11_COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.setDepthMap(rtLinearDepth.shaderResource.back());
@@ -180,19 +185,26 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 		}
 		fx.process.clear();
 		rtSSS.back().Activate(context, rtGBuffer.depth); {
-			wiImage::BatchBegin(context);
+			//wiImage::BatchBegin(context);
 			fx.quality = QUALITY_NEAREST;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			fx.blendFlag = BLENDMODE_OPAQUE;
+			fx.stencilRef = 0;
+			fx.stencilComp = 0;
 			wiImage::Draw(rtDeferred.shaderResource.front(), fx, context);
-			wiImage::BatchBegin(context, STENCILREF_SKIN);
+			//wiImage::BatchBegin(context, STENCILREF_SKIN);
+			fx.stencilRef = STENCILREF_SKIN;
+			fx.stencilComp = D3D11_COMPARISON_LESS;
 			wiImage::Draw(rtSSS[rtSSS.size() - 2].shaderResource.back(), fx, context);
 		}
+
+		fx.stencilRef = 0;
+		fx.stencilComp = 0;
 	}
 
 	if (getSSREnabled()){
 		rtSSR.Activate(context); {
-			wiImage::BatchBegin(context);
+			//wiImage::BatchBegin(context);
 			context->GenerateMips(rtDeferred.shaderResource[0]);
 			fx.process.setSSR(true);
 			fx.setDepthMap(dtDepthCopy.shaderResource);
@@ -208,7 +220,7 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 	}
 
 	if (getMotionBlurEnabled()){ //MOTIONBLUR
-		wiImage::BatchBegin(context);
+		//wiImage::BatchBegin(context);
 		rtMotionBlur.Activate(context);
 		fx.process.setMotionBlur(true);
 		fx.setVelocityMap(rtGBuffer.shaderResource.back());

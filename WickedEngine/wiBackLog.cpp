@@ -63,7 +63,7 @@ void wiBackLog::Update(){
 }
 void wiBackLog::Draw(){
 	if(state!=DISABLED){
-		wiImage::BatchBegin();
+		//wiImage::BatchBegin();
 		wiImageEffects fx = wiImageEffects((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
 		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);

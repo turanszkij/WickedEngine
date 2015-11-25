@@ -836,14 +836,30 @@ public:
 			context->OMGetBlendState(&b,nullptr,nullptr);
 			if(b!=state){
 		#endif
-				float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-				UINT sampleMask   = 0xffffffff;
+				static float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+				static UINT sampleMask   = 0xffffffff;
 				context->OMSetBlendState(state,blendFactor,sampleMask);
 		#ifdef API_CALL_STRICTNESS
 			}
 			if(b!=nullptr) b->Release();
 		#endif
 		}
+	}
+	inline static void BindBlendStateEx(BlendState state, const XMFLOAT4& blendFactor = XMFLOAT4(1,1,1,1), UINT sampleMask = 0xffffffff,
+		DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+#ifdef API_CALL_STRICTNESS
+			BlendState b;
+			context->OMGetBlendState(&b, nullptr, nullptr);
+			if (b != state) {
+#endif
+				float fblendFactor[4] = { blendFactor.x, blendFactor.y, blendFactor.z, blendFactor.w };
+				context->OMSetBlendState(state, fblendFactor, sampleMask);
+#ifdef API_CALL_STRICTNESS
+		}
+			if (b != nullptr) b->Release();
+#endif
+	}
 	}
 	inline static void BindDepthStencilState(DepthStencilState state, UINT stencilRef, DeviceContext context=immediateContext){
 		if(context!=nullptr){

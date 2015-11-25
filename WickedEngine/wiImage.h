@@ -76,9 +76,13 @@ public:
 		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* lightmap, ID3D11ShaderResourceView* normal
 		, ID3D11ShaderResourceView* ao, ID3D11DeviceContext* context, int stencilref = 0);
 
-	static void BatchBegin();
-	static void BatchBegin(ID3D11DeviceContext* context);
-	static void BatchBegin(ID3D11DeviceContext* context, unsigned int stencilref, bool stencilOpLess=true);
+
+	//// DEPRECATED
+	//static void BatchBegin();
+	//// DEPRECATED
+	//static void BatchBegin(ID3D11DeviceContext* context);
+	//// DEPRECATED
+	//static void BatchBegin(ID3D11DeviceContext* context, unsigned int stencilref, bool stencilOpLess=true);
 
 	static void Load();
 	static void CleanUp();

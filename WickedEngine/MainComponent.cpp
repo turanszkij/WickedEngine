@@ -135,7 +135,7 @@ void MainComponent::Compose()
 	// Draw the color grading palette
 	if (colorGradingPaletteDisplayEnabled)
 	{
-		wiImage::BatchBegin();
+		//wiImage::BatchBegin();
 		wiImage::Draw(wiTextureHelper::getInstance()->getColorGradeDefault(), wiImageEffects(0, 0, 256, 16));
 		wiImage::Draw(wiRenderer::GetColorGrading(), wiImageEffects(screenW-256.f, 0, 256, 16));
 	}

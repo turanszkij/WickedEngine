@@ -88,7 +88,7 @@ void ForwardRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
 		fx.process.setLinDepth(true);
-		wiImage::BatchBegin(context);
+		//wiImage::BatchBegin(context);
 		wiImage::Draw(rtMain.depth->shaderResource, fx, context);
 	}
 

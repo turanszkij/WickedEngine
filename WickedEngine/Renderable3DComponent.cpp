@@ -267,7 +267,7 @@ void Renderable3DComponent::RenderBloom(wiRenderer::DeviceContext context){
 
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 
 	rtBloom[0].Activate(context);
 	{
@@ -312,7 +312,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer
 		wiRenderer::DrawSky(context);
 	}
 
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 	rtSun[1].Activate(context); {
 		wiImageEffects fxs = fx;
 		fxs.blendFlag = BLENDMODE_ADDITIVE;
@@ -325,7 +325,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer
 }
 void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context){
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 
 	rtFinal[0].Activate(context);
 
@@ -355,7 +355,7 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wi
 void Renderable3DComponent::RenderComposition2(wiRenderer::DeviceContext context){
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 
 	if (getDepthOfFieldEnabled())
 	{
@@ -400,7 +400,7 @@ void Renderable3DComponent::RenderComposition2(wiRenderer::DeviceContext context
 void Renderable3DComponent::RenderColorGradedComposition(){
 
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
-	wiImage::BatchBegin();
+	//wiImage::BatchBegin();
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_NEAREST;
 

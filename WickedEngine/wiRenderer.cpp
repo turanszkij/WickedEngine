@@ -391,6 +391,14 @@ void wiRenderer::SetUpStaticComponents()
 	hullShader=NULL;
 	domainShader=NULL;
 
+	thread t1(wiRenderer::LoadBasicShaders);
+	thread t2(wiRenderer::LoadShadowShaders);
+	thread t3(wiRenderer::LoadSkyShaders);
+	thread t4(wiRenderer::LoadLineShaders);
+	thread t5(wiRenderer::LoadTrailShaders);
+	thread t6(wiRenderer::LoadWaterShaders);
+	thread t7(wiRenderer::LoadTessShaders);
+
 	//cam = new Camera(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800, XMVectorSet(0, 4, -4, 1));
 	cam = new Camera();
 	cam->SetUp(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800);
@@ -405,13 +413,7 @@ void wiRenderer::SetUpStaticComponents()
 	debugSpheres=false;
 	
 	
-	wiRenderer::LoadBasicShaders();
-	wiRenderer::LoadShadowShaders();
-	wiRenderer::LoadSkyShaders();
-	wiRenderer::LoadLineShaders();
-	wiRenderer::LoadTrailShaders();
-	wiRenderer::LoadWaterShaders();
-	wiRenderer::LoadTessShaders();
+
 
 	wiRenderer::SetUpStates();
 	wiRenderer::LoadBuffers();
@@ -459,6 +461,13 @@ void wiRenderer::SetUpStaticComponents()
 	SetPointLightShadowProps(2, 512);
 	SetSpotLightShadowProps(2, 512);
 
+	t1.join();
+	t2.join();
+	t3.join();
+	t4.join();
+	t5.join();
+	t6.join();
+	t7.join();
 }
 void wiRenderer::CleanUpStatic()
 {
@@ -1126,19 +1135,37 @@ void wiRenderer::LoadTrailShaders(){
 
 void wiRenderer::ReloadShaders()
 {
-	// TODO
+	//// TODO : Also delete shaders from resourcemanager!
+	//wiResourceManager::GetGlobal()->del("shaders/effectVS10.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/sOVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/sOGS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/effectVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/dirLightVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/pointLightVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/spotLightVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/vSpotLightVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/vPointLightVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/decalVS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/effectPS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/effectPS_transparent.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/effectPS_simplest.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/effectPS_forwardSimple.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/effectPS_blackout.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/effectPS_textureonly.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/dirLightPS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/pointLightPS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/spotLightPS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/volumeLightPS.cso");
+	//wiResourceManager::GetGlobal()->del("shaders/decalPS.cso");
 
-	//graphicsMutex.lock();
+
 	//LoadBasicShaders();
-	//LoadLineShaders();
-	//LoadTessShaders();
-	//LoadSkyShaders();
-	//LoadShadowShaders();
-	//LoadWaterShaders();
-	//LoadTrailShaders();
-	//graphicsMutex.unlock();
-
-	//wiResourceManager::GetGlobal()->ReloadResources(wiResourceManager::Data_Type::PIXELSHADER);
+	////LoadLineShaders();
+	////LoadTessShaders();
+	////LoadSkyShaders();
+	////LoadShadowShaders();
+	////LoadWaterShaders();
+	////LoadTrailShaders();
 }
 
 
@@ -2105,7 +2132,7 @@ void wiRenderer::ManageWaterRipples(){
 		waterRipples.pop_front();
 }
 void wiRenderer::DrawWaterRipples(ID3D11DeviceContext* context){
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 	for(wiSprite* i:waterRipples){
 		i->DrawNormal(context);
 	}
@@ -2466,7 +2493,7 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 }
 void wiRenderer::DrawImagesAdd(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes){
 	imagesRTAdd.Activate(context,0,0,0,1);
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ADDITIVE){
 			/*ID3D11ShaderResourceView* nor = x->effects.normalMap;
@@ -2485,7 +2512,7 @@ void wiRenderer::DrawImagesAdd(ID3D11DeviceContext* context, ID3D11ShaderResourc
 }
 void wiRenderer::DrawImages(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes){
 	imagesRT.Activate(context,0,0,0,0);
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ALPHA || x->effects.blendFlag==BLENDMODE_OPAQUE){
 			/*ID3D11ShaderResourceView* nor = x->effects.normalMap;
@@ -2504,7 +2531,7 @@ void wiRenderer::DrawImages(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 }
 void wiRenderer::DrawImagesNormals(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes){
 	normalMapRT.Activate(context,0,0,0,0);
-	wiImage::BatchBegin(context);
+	//wiImage::BatchBegin(context);
 	for(wiSprite* x : images){
 		x->DrawNormal(context);
 	}

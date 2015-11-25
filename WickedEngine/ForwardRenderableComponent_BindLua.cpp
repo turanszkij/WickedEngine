@@ -10,6 +10,12 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
 	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
 
+	lunamethod(Renderable2DComponent_BindLua, AddLayer),
+	lunamethod(Renderable2DComponent_BindLua, GetLayers),
+	lunamethod(Renderable2DComponent_BindLua, SetLayerOrder),
+	lunamethod(Renderable2DComponent_BindLua, SetSpriteOrder),
+	lunamethod(Renderable2DComponent_BindLua, SetFontOrder),
+
 	lunamethod(ForwardRenderableComponent_BindLua, GetContent),
 	lunamethod(ForwardRenderableComponent_BindLua, Initialize),
 	lunamethod(ForwardRenderableComponent_BindLua, Load),

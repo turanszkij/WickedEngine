@@ -7,8 +7,7 @@
 Renderable2DComponent::Renderable2DComponent()
 {
 	setSpriteSpeed(1.f);
-	m_sprites.clear();
-	m_fonts.clear();
+	addLayer(DEFAULT_RENDERLAYER);
 }
 
 
@@ -30,21 +29,22 @@ void Renderable2DComponent::Load()
 }
 void Renderable2DComponent::Unload()
 {
-	for (wiSprite* x : m_sprites)
+	for (auto& x : layers)
 	{
-		if (x != nullptr)
-			x->CleanUp();
-		SAFE_DELETE(x);
+		for (auto& y : x.entities)
+		{
+			if (y.sprite != nullptr)
+			{
+				y.sprite->CleanUp();
+				delete y.sprite;
+			}
+			if (y.font != nullptr)
+			{
+				y.font->CleanUp();
+				delete y.font;
+			}
+		}
 	}
-	m_sprites.clear();
-
-	for (wiFont* x : m_fonts)
-	{
-		if (x != nullptr)
-			x->CleanUp();
-		SAFE_DELETE(x);
-	}
-	m_fonts.clear();
 }
 void Renderable2DComponent::Start()
 {
@@ -52,78 +52,249 @@ void Renderable2DComponent::Start()
 }
 void Renderable2DComponent::Update()
 {
-	vector<wiSprite*> spritesToDelete(0);
-	vector<wiFont*> fontsToDelete(0);
+	//vector<wiSprite*> spritesToDelete(0);
+	//vector<wiFont*> fontsToDelete(0);
 
-	for (wiSprite* x : m_sprites)
-	{
-		if (x != nullptr)
-			x->Update(getSpriteSpeed());
-		else
-			spritesToDelete.push_back(x);
-	}
-	for (wiFont* x : m_fonts)
-	{
-		if (x == nullptr)
-			fontsToDelete.push_back(x);
-	}
+	//for (wiSprite* x : m_sprites)
+	//{
+	//	if (x != nullptr)
+	//		x->Update(getSpriteSpeed());
+	//	else
+	//		spritesToDelete.push_back(x);
+	//}
+	//for (wiFont* x : m_fonts)
+	//{
+	//	if (x == nullptr)
+	//		fontsToDelete.push_back(x);
+	//}
 
-	for (wiSprite* x : spritesToDelete)
+	//for (wiSprite* x : spritesToDelete)
+	//{
+	//	m_sprites.remove(x);
+	//}
+	//for (wiFont* x : fontsToDelete)
+	//{
+	//	m_fonts.remove(x);
+	//}
+	
+	for (auto& x : layers)
 	{
-		m_sprites.remove(x);
-	}
-	for (wiFont* x : fontsToDelete)
-	{
-		m_fonts.remove(x);
+		for (auto& y : x.entities)
+		{
+			if (y.sprite != nullptr)
+			{
+				y.sprite->Update(getSpriteSpeed());
+			}
+			if (y.font != nullptr)
+			{
+				// this is intentianally left blank
+			}
+		}
 	}
 }
 void Renderable2DComponent::Render()
 {
 	rtFinal.Activate(wiRenderer::getImmediateContext(), 0, 0, 0, 0);
 
-	wiImage::BatchBegin();
+	//wiImage::BatchBegin();
 
-	for (wiSprite* x : m_sprites)
+
+	for (auto& x : layers)
 	{
-		if(x != nullptr)
-			x->Draw();
+		for (auto& y : x.entities)
+		{
+			if (y.sprite != nullptr)
+			{
+				y.sprite->Draw();
+			}
+			if (y.font != nullptr)
+			{
+				y.font->Draw();
+			}
+		}
 	}
 
-	for (wiFont* x : m_fonts)
-	{
-		if (x != nullptr)
-			x->Draw();
-	}
+	//for (wiSprite* x : m_sprites)
+	//{
+	//	if(x != nullptr)
+	//		x->Draw();
+	//}
+
+	//for (wiFont* x : m_fonts)
+	//{
+	//	if (x != nullptr)
+	//		x->Draw();
+	//}
 }
 void Renderable2DComponent::Compose()
 {
-	wiImage::BatchBegin();
+	//wiImage::BatchBegin();
 	wiImage::Draw(rtFinal.shaderResource.back(), wiImageEffects((float)wiRenderer::GetScreenWidth(),(float)wiRenderer::GetScreenHeight()));
 }
 
 
-void Renderable2DComponent::addSprite(wiSprite* sprite)
+void Renderable2DComponent::addSprite(wiSprite* sprite, const string& layer)
 {
-	m_sprites.push_back(sprite);
+	for (auto& x : layers)
+	{
+		if (!x.name.compare(layer))
+		{
+			LayeredRenderEntity entity = LayeredRenderEntity();
+			entity.type = LayeredRenderEntity::SPRITE;
+			entity.sprite = sprite;
+			x.entities.push_back(entity);
+		}
+	}
+	SortLayers();
 }
 void Renderable2DComponent::removeSprite(wiSprite* sprite)
 {
-	m_sprites.remove(sprite);
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+			if (y.sprite == sprite)
+			{
+				
+			}
+		}
+	}
 }
 void Renderable2DComponent::clearSprites()
 {
-	m_sprites.clear();
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+
+		}
+	}
 }
 
-void Renderable2DComponent::addFont(wiFont* font)
+void Renderable2DComponent::addFont(wiFont* font, const string& layer)
 {
-	m_fonts.push_back(font);
+	for (auto& x : layers)
+	{
+		if (!x.name.compare(layer))
+		{
+			LayeredRenderEntity entity = LayeredRenderEntity();
+			entity.type = LayeredRenderEntity::FONT;
+			entity.font = font;
+			x.entities.push_back(entity);
+		}
+	}
+	SortLayers();
 }
 void Renderable2DComponent::removeFont(wiFont* font)
 {
-	m_fonts.remove(font);
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+
+		}
+	}
 }
 void Renderable2DComponent::clearFonts()
 {
-	m_fonts.clear();
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+
+		}
+	}
+}
+
+
+void Renderable2DComponent::addLayer(const string& name)
+{
+	for (auto& x : layers)
+	{
+		if (!x.name.compare(name))
+			return;
+	}
+	RenderLayer layer = RenderLayer(name);
+	layer.order = layers.size();
+	layers.push_back(layer);
+	layers.back().entities.clear();
+}
+void Renderable2DComponent::setLayerOrder(const string& name, int order)
+{
+	for (auto& x : layers)
+	{
+		if (!x.name.compare(name))
+		{
+			x.order = order;
+			break;
+		}
+	}
+	SortLayers();
+}
+void Renderable2DComponent::SetSpriteOrder(wiSprite* sprite, int order)
+{
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+			if (y.type == LayeredRenderEntity::SPRITE && y.sprite == sprite)
+			{
+				y.order = order;
+			}
+		}
+	}
+	SortLayers();
+}
+void Renderable2DComponent::SetFontOrder(wiFont* font, int order)
+{
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+			if (y.type == LayeredRenderEntity::FONT && y.font == font)
+			{
+				y.order = order;
+			}
+		}
+	}
+	SortLayers();
+}
+void Renderable2DComponent::SortLayers()
+{
+	if (layers.empty())
+	{
+		return;
+	}
+
+	for (size_t i = 0; i < layers.size() - 1; ++i)
+	{
+		for (size_t j = i + 1; j < layers.size(); ++j)
+		{
+			if (layers[i].order > layers[j].order)
+			{
+				RenderLayer swap = layers[i];
+				layers[i] = layers[j];
+				layers[j] = swap;
+			}
+		}
+	}
+	for (auto& x : layers)
+	{
+		if (x.entities.empty())
+		{
+			continue;
+		}
+		for (size_t i = 0; i < x.entities.size() - 1; ++i)
+		{
+			for (size_t j = i + 1; j < x.entities.size(); ++j)
+			{
+				if (x.entities[i].order > x.entities[j].order)
+				{
+					LayeredRenderEntity swap = x.entities[i];
+					x.entities[i] = x.entities[j];
+					x.entities[j] = swap;
+				}
+			}
+		}
+	}
 }
