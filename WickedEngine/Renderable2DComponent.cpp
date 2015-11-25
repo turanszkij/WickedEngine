@@ -155,10 +155,11 @@ void Renderable2DComponent::removeSprite(wiSprite* sprite)
 		{
 			if (y.sprite == sprite)
 			{
-				
+				y.sprite = nullptr;
 			}
 		}
 	}
+	CleanLayers();
 }
 void Renderable2DComponent::clearSprites()
 {
@@ -166,7 +167,21 @@ void Renderable2DComponent::clearSprites()
 	{
 		for (auto& y : x.entities)
 		{
-
+			y.sprite = nullptr;
+		}
+	}
+	CleanLayers();
+}
+int Renderable2DComponent::getSpriteOrder(wiSprite* sprite)
+{
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+			if (y.sprite == sprite)
+			{
+				return y.order;
+			}
 		}
 	}
 }
@@ -191,9 +206,13 @@ void Renderable2DComponent::removeFont(wiFont* font)
 	{
 		for (auto& y : x.entities)
 		{
-
+			if (y.font == font)
+			{
+				y.font = nullptr;
+			}
 		}
 	}
+	CleanLayers();
 }
 void Renderable2DComponent::clearFonts()
 {
@@ -201,7 +220,21 @@ void Renderable2DComponent::clearFonts()
 	{
 		for (auto& y : x.entities)
 		{
-
+			y.font = nullptr;
+		}
+	}
+	CleanLayers();
+}
+int Renderable2DComponent::getFontOrder(wiFont* font)
+{
+	for (auto& x : layers)
+	{
+		for (auto& y : x.entities)
+		{
+			if (y.font == font)
+			{
+				return y.order;
+			}
 		}
 	}
 }
@@ -298,3 +331,25 @@ void Renderable2DComponent::SortLayers()
 		}
 	}
 }
+
+void Renderable2DComponent::CleanLayers()
+{
+	for (auto& x : layers)
+	{
+		if (x.entities.empty())
+		{
+			continue;
+		}
+		vector<LayeredRenderEntity> cleanEntities(0);
+		for (auto& y : x.entities)
+		{
+			if (y.sprite != nullptr || y.font!=nullptr)
+			{
+				cleanEntities.push_back(y);
+			}
+		}
+		x.entities.clear();
+		x.entities = cleanEntities;
+	}
+}
+

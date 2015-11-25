@@ -13,6 +13,8 @@ Luna<Renderable2DComponent_BindLua>::FunctionType Renderable2DComponent_BindLua:
 	lunamethod(Renderable2DComponent_BindLua, RemoveFont),
 	lunamethod(Renderable2DComponent_BindLua, ClearSprites),
 	lunamethod(Renderable2DComponent_BindLua, ClearFonts),
+	lunamethod(Renderable2DComponent_BindLua, GetSpriteOrder),
+	lunamethod(Renderable2DComponent_BindLua, GetFontOrder),
 	lunamethod(Renderable2DComponent_BindLua, AddLayer),
 	lunamethod(Renderable2DComponent_BindLua, GetLayers),
 	lunamethod(Renderable2DComponent_BindLua, SetLayerOrder),
@@ -214,6 +216,72 @@ int Renderable2DComponent_BindLua::ClearFonts(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "ClearFonts() not a Renderable2DComponent!");
+	}
+	return 0;
+}
+int Renderable2DComponent_BindLua::GetSpriteOrder(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "GetSpriteOrder() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		wiSprite_BindLua* sprite = Luna<wiSprite_BindLua>::lightcheck(L, 1);
+		if (sprite != nullptr)
+		{
+			Renderable2DComponent* ccomp = dynamic_cast<Renderable2DComponent*>(component);
+			if (ccomp != nullptr)
+			{
+				wiLua::SSetInt(L, ccomp->getSpriteOrder(sprite->sprite));
+				return 1;
+			}
+			else
+			{
+				wiLua::SError(L, "GetSpriteOrder(Sprite sprite) not a Renderable2DComponent!");
+			}
+		}
+		else
+			wiLua::SError(L, "GetSpriteOrder(Sprite sprite) argument is not a Sprite!");
+	}
+	else
+	{
+		wiLua::SError(L, "GetSpriteOrder(Sprite sprite) not enough arguments!");
+	}
+	return 0;
+}
+int Renderable2DComponent_BindLua::GetFontOrder(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "GetFontOrder() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		wiFont_BindLua* font = Luna<wiFont_BindLua>::lightcheck(L, 1);
+		if (font != nullptr)
+		{
+			Renderable2DComponent* ccomp = dynamic_cast<Renderable2DComponent*>(component);
+			if (ccomp != nullptr)
+			{
+				wiLua::SSetInt(L, ccomp->getFontOrder(font->font));
+				return 1;
+			}
+			else
+			{
+				wiLua::SError(L, "GetFontOrder(Font font) not a Renderable2DComponent!");
+			}
+		}
+		else
+			wiLua::SError(L, "GetFontOrder(Font font) argument is not a Sprite!");
+	}
+	else
+	{
+		wiLua::SError(L, "GetFontOrder(Font font) not enough arguments!");
 	}
 	return 0;
 }

@@ -21,6 +21,8 @@ public:
 	int RemoveFont(lua_State* L);
 	int ClearSprites(lua_State *L);
 	int ClearFonts(lua_State* L);
+	int GetSpriteOrder(lua_State* L);
+	int GetFontOrder(lua_State* L);
 
 	int AddLayer(lua_State* L);
 	int GetLayers(lua_State* L);

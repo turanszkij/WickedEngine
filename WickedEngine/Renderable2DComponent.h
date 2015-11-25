@@ -61,10 +61,12 @@ public:
 	void clearSprites();
 	void setSpriteSpeed(float value){ m_spriteSpeed = value; }
 	float getSpriteSpeed(){ return m_spriteSpeed; }
+	int getSpriteOrder(wiSprite* sprite);
 
 	void addFont(wiFont* font, const string& layer = DEFAULT_RENDERLAYER);
 	void removeFont(wiFont* font);
 	void clearFonts();
+	int getFontOrder(wiFont* font);
 
 	vector<RenderLayer> layers;
 	void addLayer(const string& name);
@@ -72,5 +74,6 @@ public:
 	void SetSpriteOrder(wiSprite* sprite, int order);
 	void SetFontOrder(wiFont* font, int order);
 	void SortLayers();
+	void CleanLayers();
 };
 
