@@ -1876,6 +1876,7 @@
     <None Include="packHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
+    <None Include="..\ScriptingAPI-Documentation.md" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />
