@@ -47,12 +47,9 @@ namespace wiHelper
 	{
 #ifndef WINSTORE_SUPPORT
 		CreateDirectoryA("screenshots", 0);
-		time_t t = std::time(nullptr);
-		struct tm time_info;
-		localtime_s(&time_info, &t);
 		stringstream ss("");
 		if (name.length() <= 0)
-			ss << "screenshots/sc_" << std::put_time(&time_info, "%d-%m-%Y %H-%M-%S") << ".png";
+			ss << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
 		else
 			ss << name;
 		wstringstream wss(L"");
@@ -69,5 +66,15 @@ namespace wiHelper
 		}
 		res->Release();
 #endif
+	}
+
+	string getCurrentDateTimeAsString()
+	{
+		time_t t = std::time(nullptr);
+		struct tm time_info;
+		localtime_s(&time_info, &t);
+		stringstream ss("");
+		ss << std::put_time(&time_info, "%d-%m-%Y %H-%M-%S");
+		return ss.str();
 	}
 }

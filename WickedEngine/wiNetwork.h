@@ -11,7 +11,7 @@
 
 #ifndef WINSTORE_SUPPORT
 
-class Network
+class wiNetwork
 {
 protected:
 	
@@ -32,8 +32,8 @@ public:
 	static const int PACKET_TYPE_OTHER = 2;
 	bool success;
 
-	Network(void);
-	~Network(void);
+	wiNetwork(void);
+	~wiNetwork(void);
 
 	virtual bool changeName(const string& newName){
 		name=newName;

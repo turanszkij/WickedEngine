@@ -468,6 +468,7 @@
     <ClCompile Include="wiLua.cpp" />
     <ClCompile Include="wiNetwork.cpp" />
     <ClCompile Include="Renderable3DComponent.cpp" />
+    <ClCompile Include="wiNetwork_BindLua.cpp" />
     <ClCompile Include="wiRawInput.cpp" />
     <ClCompile Include="wiRenderer_BindLua.cpp" />
     <ClCompile Include="wiResourceManager_BindLua.cpp" />
@@ -515,6 +516,7 @@
     <ClInclude Include="wiLoader_BindLua.h" />
     <ClInclude Include="wiLua_Globals.h" />
     <ClInclude Include="wiLuna.h" />
+    <ClInclude Include="wiNetwork_BindLua.h" />
     <ClInclude Include="wiRawInput.h" />
     <ClInclude Include="wiRenderer_BindLua.h" />
     <ClInclude Include="LUA\lapi.h" />

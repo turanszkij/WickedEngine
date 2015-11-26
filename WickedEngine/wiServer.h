@@ -9,13 +9,13 @@
 #include <map>
 
 
-class Server : public Network
+class wiServer : public wiNetwork
 {
 private:
 	map<SOCKET,string> clients;
 public:
-	Server(const string& newName = "SERVER", int port = PORT, const string& ipaddress = "0.0.0.0");
-	~Server(void);
+	wiServer(const string& newName = "SERVER", const string& ipaddress = "0.0.0.0", int port = PORT);
+	~wiServer(void);
 
 	bool active(){return !clients.empty();}
 
@@ -78,7 +78,7 @@ public:
 			SOCKET new_socket = CreateAccepter();
 
 			if(new_socket != SOCKET_ERROR){
-				if(Network::sendText(name,new_socket)){
+				if(wiNetwork::sendText(name,new_socket)){
 					stringstream ss("");
 					ss<<"Name sent, client ["<<new_socket<<"] connected";
 					wiBackLog::post(ss.str().c_str());
@@ -100,7 +100,7 @@ public:
 			if (FD_ISSET( it->first , &readfds))
 			{
 				int command;
-				bool receiveSuccess = Network::receiveData(command,it->first);
+				bool receiveSuccess = wiNetwork::receiveData(command,it->first);
 
 				if(!receiveSuccess){
 					wiBackLog::post("Client disconnected.");
@@ -134,7 +134,7 @@ public:
 						}
 					case PACKET_TYPE_OTHER:
 						{
-							Network::receiveData(data,it->first);
+							wiNetwork::receiveData(data,it->first);
 							break;
 						}
 					default:

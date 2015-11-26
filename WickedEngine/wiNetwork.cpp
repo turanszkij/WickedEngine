@@ -3,19 +3,19 @@
 
 #ifndef WINSTORE_SUPPORT
 
-Network::Network(void)
+wiNetwork::wiNetwork(void)
 {
 	name="UNNAMED_NETWORK";
 }
 
 
-Network::~Network(void)
+wiNetwork::~wiNetwork(void)
 {
 	CloseConnection();
 }
 
 
-bool Network::sendText(const std::string& text, SOCKET socket){
+bool wiNetwork::sendText(const std::string& text, SOCKET socket){
 	if(sendData((int)text.length(),socket)){
 		int sent = send(socket, text.c_str(), text.length(), 0);
 
@@ -31,7 +31,7 @@ bool Network::sendText(const std::string& text, SOCKET socket){
 	return false;
 }
 
-bool Network::receiveText(std::string& text, SOCKET socket){
+bool wiNetwork::receiveText(std::string& text, SOCKET socket){
 	int textlen;
 	if(receiveData(textlen,socket)){
 		char* puffer=new char[textlen];

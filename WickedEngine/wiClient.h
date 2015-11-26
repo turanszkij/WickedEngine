@@ -5,11 +5,11 @@
 
 #ifndef WINSTORE_SUPPORT
 
-class Client : public Network
+class wiClient : public wiNetwork
 {
 public:
-	Client(const string& newName = "CLIENT", const string& ipaddress = "127.0.0.1", int port = PORT);
-	~Client(void);
+	wiClient(const string& newName = "CLIENT", const string& ipaddress = "127.0.0.1", int port = PORT);
+	~wiClient(void);
 
 	string serverName;
 
@@ -24,7 +24,7 @@ public:
 	}
 	template <typename T>
 	bool receiveData(T& value){
-		return Network::receiveData(value,s);
+		return wiNetwork::receiveData(value,s);
 	}
 
 	bool changeName(const string& newName);
@@ -128,7 +128,7 @@ public:
 					}
 				case PACKET_TYPE_OTHER:
 					{
-						Network::receiveData(data,s);
+						wiNetwork::receiveData(data,s);
 						break;
 					}
 				default:

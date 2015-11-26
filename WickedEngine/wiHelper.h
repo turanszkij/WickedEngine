@@ -13,6 +13,8 @@ namespace wiHelper
 	void messageBox(const string& msg, const string& caption = "Warning!", HWND hWnd = nullptr);
 
 	void screenshot(const string& name = "");
+
+	string getCurrentDateTimeAsString();
 };
 
 #endif

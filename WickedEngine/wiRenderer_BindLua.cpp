@@ -475,7 +475,6 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
 			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
 			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
-			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
 			wiLua::GetGlobal()->RegisterFunc("GetRenderWidth", GetRenderWidth);

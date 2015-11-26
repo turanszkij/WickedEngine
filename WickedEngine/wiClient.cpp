@@ -3,7 +3,7 @@
 
 #ifndef WINSTORE_SUPPORT
 
-Client::Client(const string& newName, const string& ipaddress, int port)
+wiClient::wiClient(const string& newName, const string& ipaddress, int port)
 {
 	if(ConnectToHost(port,ipaddress.length()<=1?"127.0.0.1":ipaddress.c_str())){
 		success=true;
@@ -25,26 +25,26 @@ Client::Client(const string& newName, const string& ipaddress, int port)
 }
 
 
-Client::~Client(void)
+wiClient::~wiClient(void)
 {
-	Network::~Network();
+	wiNetwork::~wiNetwork();
 }
 
 
-bool Client::sendText(const string& text){
-	return Network::sendText(text,s);
+bool wiClient::sendText(const string& text){
+	return wiNetwork::sendText(text,s);
 }
-bool Client::receiveText(string& text){
-	return Network::receiveText(text,s);
+bool wiClient::receiveText(string& text){
+	return wiNetwork::receiveText(text,s);
 }
-bool Client::changeName(const string& newName){
-	Network::changeName(newName);
-	Network::sendData(Network::PACKET_TYPE_CHANGENAME,s);
-	return Network::sendText(newName,s);
+bool wiClient::changeName(const string& newName){
+	wiNetwork::changeName(newName);
+	wiNetwork::sendData(wiNetwork::PACKET_TYPE_CHANGENAME,s);
+	return wiNetwork::sendText(newName,s);
 }
-bool Client::sendMessage(const string& text){
-	Network::sendData(Network::PACKET_TYPE_TEXTMESSAGE,s);
-	return Network::sendText(text,s);
+bool wiClient::sendMessage(const string& text){
+	wiNetwork::sendData(wiNetwork::PACKET_TYPE_TEXTMESSAGE,s);
+	return wiNetwork::sendText(text,s);
 }
 
 #endif

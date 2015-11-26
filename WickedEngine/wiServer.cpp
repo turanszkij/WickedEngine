@@ -5,7 +5,7 @@
 using namespace std;
 
 
-Server::Server(const string& newName, int port, const string& ipaddress)
+wiServer::wiServer(const string& newName, const string& ipaddress, int port)
 {
 	name=newName;
 	if(ListenOnPort(port,ipaddress.length()<=1?"0.0.0.0":ipaddress.c_str())){
@@ -23,15 +23,15 @@ Server::Server(const string& newName, int port, const string& ipaddress)
 }
 
 
-Server::~Server(void)
+wiServer::~wiServer(void)
 {
 	for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
 		closesocket(it->first);
 	}
-	Network::~Network();
+	wiNetwork::~wiNetwork();
 }
 
-bool Server::ListenOnPort(int portno, const char* ipaddress)
+bool wiServer::ListenOnPort(int portno, const char* ipaddress)
 {
 	int error = WSAStartup(SCK_VERSION2,&w);
 
@@ -75,7 +75,7 @@ bool Server::ListenOnPort(int portno, const char* ipaddress)
 
 	return true;
 }
-SOCKET Server::CreateAccepter(){
+SOCKET wiServer::CreateAccepter(){
 	struct sockaddr_in caller;
 	int addrlen = sizeof(caller);
 	SOCKET newsock = accept(s,(struct sockaddr *) &caller, &addrlen);
@@ -93,7 +93,7 @@ SOCKET Server::CreateAccepter(){
 
 
 
-vector<string> Server::listClients()
+vector<string> wiServer::listClients()
 {
 	vector<string> ret(0);
 	for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
@@ -104,24 +104,24 @@ vector<string> Server::listClients()
 	return ret;
 }
 
-bool Server::sendText(const string& text, int packettype, const string& clientName, int clientID){
+bool wiServer::sendText(const string& text, int packettype, const string& clientName, int clientID){
 	int sentTo=0;
 
 	if(clientName.length()<=0){ //send to everyone
 		for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
-			sentTo += Network::sendData(packettype,it->first) && Network::sendText(text,it->first);
+			sentTo += wiNetwork::sendData(packettype,it->first) && wiNetwork::sendText(text,it->first);
 		}
 	}
 	else if(clientID<0){ //send to all of same name
 		for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
 			if(!clientName.compare(it->second)){
-				sentTo += Network::sendData(packettype,it->first) && Network::sendText(text,it->first);
+				sentTo += wiNetwork::sendData(packettype,it->first) && wiNetwork::sendText(text,it->first);
 			}
 		}
 	}
 	else{ //send to specific client
 		if(clients.find(clientID) != clients.end()){
-			sentTo += Network::sendData(packettype,clientID) && Network::sendText(text,clientID);
+			sentTo += wiNetwork::sendData(packettype,clientID) && wiNetwork::sendText(text,clientID);
 		}
 	}
 
@@ -131,12 +131,12 @@ bool Server::sendText(const string& text, int packettype, const string& clientNa
 	return sentTo>0;
 }
 
-bool Server::changeName(const string& newName){
-	Network::changeName(newName);
-	return sendText(newName, Network::PACKET_TYPE_CHANGENAME);
+bool wiServer::changeName(const string& newName){
+	wiNetwork::changeName(newName);
+	return sendText(newName, wiNetwork::PACKET_TYPE_CHANGENAME);
 }
-bool Server::sendMessage(const string& text, const string& clientName, int clientID){
-	return sendText(text, Network::PACKET_TYPE_TEXTMESSAGE, clientName, clientID);
+bool wiServer::sendMessage(const string& text, const string& clientName, int clientID){
+	return sendText(text, wiNetwork::PACKET_TYPE_TEXTMESSAGE, clientName, clientID);
 }
 
 #endif

@@ -21,6 +21,7 @@
 #include "wiInputManager_BindLua.h"
 #include "wiFont_BindLua.h"
 #include "wiBackLog_BindLua.h"
+#include "wiNetwork_BindLua.h"
 
 wiLua *wiLua::globalLua = nullptr;
 
@@ -68,6 +69,8 @@ wiLua* wiLua::GetGlobal()
 		wiInputManager_BindLua::Bind();
 		wiFont_BindLua::Bind();
 		wiBackLog_BindLua::Bind();
+		wiClient_BindLua::Bind();
+		wiServer_BindLua::Bind();
 
 	}
 	return globalLua;
