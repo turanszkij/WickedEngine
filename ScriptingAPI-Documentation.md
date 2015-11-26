@@ -57,6 +57,7 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 - backlog_fontsize(float size)
 - backlog_isactive()
 - backlog_fontrowspacing(float spacing)
+
 ### Renderer
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
@@ -125,6 +126,7 @@ Gives you the ability to render text with a custom font.
 - GetSpacing()
 - GetAlign()
 - Destroy()
+
 ### Sprite
 Render images on the screen.
 - [constructor]Sprite(opt string texture, opt string maskTexture, opt string normalMapTexture)
@@ -133,6 +135,7 @@ Render images on the screen.
 - SetAnim(SpriteAnim anim)
 - GetAnim()
 - Destroy()
+
 #### ImageEffects
 Specify Sprite properties, like position, size, etc.
 - [constructor]ImageEffects(opt float width, opt float height)
@@ -149,13 +152,16 @@ Specify Sprite properties, like position, size, etc.
 - SetFade(float fade)
 - SetRotation(float rotation)
 - SetMipLevel(float mipLevel)
+
 #### SpriteAnim
 Animate Sprites easily with this helper.
 - [constructor]SpriteAnim()
 - SetRot(float rotation)
+
 ### Texture
 Just holds texture information in VRAM.
 - [void-constructor]Texture()
+
 ### Sound
 Load a Sound file, either sound effect or music.
 - [outer]SoundVolume(opt float volume)
@@ -163,12 +169,15 @@ Load a Sound file, either sound effect or music.
 - [void-constructor]Sound()
 - Play(opt int delay)
 - Stop()
+
 #### SoundEffect
 Sound Effects are for playing a sound file once. Inherits the methods from Sound.
 - [constructor]SoundEffect(string soundFile)
+
 #### Music
 Music is for playing sound files in the background, along with sound effects. Inherits the methods from Sound.
 - [constructor]SoundEffect(string soundFile)
+
 ### Vector
 A four component floating point vector. Provides efficient calculations with SIMD support.
 - [outer]vector
@@ -194,36 +203,51 @@ A four component floating point vector. Provides efficient calculations with SIM
 - QuaternionMultiply(Vector v1,v2)
 - QuaternionFromAxis(Vector v1,v2)
 - QuaternionSlerp(Vector v1,v2, float t)
+
 ### Matrix
 A four by four matrix, efficient calculations with SIMD support.
+
 ### Scene
 Manipulate the 3D scene with these objects. 
+
 #### Node
 The basic entity in the scene. Everything is a node. It has a name.
+
 #### Transform
 Everything in the scene is a transform. It defines a point in the space by location, size, and rotation.
 It provides several key features of parenting. It is a Node.
+
 #### Cullable
 Can be tested againt the view frustum, AABBs, rays, space partitioning trees. It is a Transform.
+
 #### Object
 It is a renderable entity (optionally), which contains a Mesh and is Cullable.
+
 #### Armature
 It animates meshes. It is a Transform.
+
 #### Ray
 Can intersect with AABBs, Cullables.
+
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with any shape, or ray.
+
 ### Renderable Components
 A RenderableComponent describes a scene wich can render itself.
+
 #### Renderable2DComponent
 It can hold Sprites and Fonts and can sort them by layers, update and render them.
+
 #### Renderable3DComponent
 A 3D scene can either be rendered by a Forward or Deferred render path.
+
 ##### ForwardRenderableComponent
 It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
+
 ##### DeferredRenderableComponent
 It renders the scene contained by the Renderer in a deferred render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
+
 #### LoadingScreenComponent
 It is a Renderable2DComponent but one that internally manages resource loading and can display information about the process.
