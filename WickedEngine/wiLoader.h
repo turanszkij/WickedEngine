@@ -7,6 +7,7 @@
 #include "wiGraphicsThreads.h"
 #include "wiStencilRef.h"
 #include "wiMath.h"
+#include "wiFrustum.h"
 
 struct HitSphere;
 class wiParticle;
@@ -846,6 +847,7 @@ struct Camera:public Transform{
 	XMFLOAT3 At, Up;
 	float width, height;
 	float zNearP, zFarP;
+	Frustum frustum;
 	
 	Camera():Transform(){
 	}
@@ -901,6 +903,8 @@ struct Camera:public Transform{
 		XMStoreFloat4x4(&this->View, View);
 		XMStoreFloat3(&this->At, At);
 		XMStoreFloat3(&this->Up, Up);
+
+		frustum.ConstructFrustum(zFarP, Projection, this->View);
 	}
 	void Move(const XMVECTOR& movevector)
 	{
@@ -934,6 +938,8 @@ struct Camera:public Transform{
 		XMStoreFloat4x4(&this->View, View);
 		XMStoreFloat3(&this->At, At);
 		XMStoreFloat3(&this->Up, Up);
+
+		frustum.ConstructFrustum(zFarP, Projection, this->View);
 	}
 
 	XMVECTOR GetEye()

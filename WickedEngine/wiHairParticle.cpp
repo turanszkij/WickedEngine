@@ -453,7 +453,7 @@ void wiHairParticle::SetUpPatches()
 void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 {
 	
-	static Frustum frustum = Frustum();
+	Frustum frustum = Frustum();
 	frustum.ConstructFrustum((float)LOD[2], camera->Projection, camera->View);
 
 		

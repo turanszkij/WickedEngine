@@ -231,10 +231,8 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, ID3D1
 {
 	if(!points.empty()){
 		
-		Frustum frustum = Frustum();
-		frustum.ConstructFrustum(camera->zFarP,camera->Projection,camera->View);
 
-		if(frustum.CheckBox(bounding_box->corners)){
+		if(camera->frustum.CheckBox(bounding_box->corners)){
 			
 			vector<Point> renderPoints=vector<Point>(points.begin(),points.end());
 			wiRenderer::UpdateBuffer(vertexBuffer,renderPoints.data(),context,sizeof(Point)* renderPoints.size());
@@ -590,7 +588,7 @@ void wiEmittedParticle::CleanUpStatic()
 	if(blendStateAlpha) blendStateAlpha->Release(); blendStateAlpha = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
 }
-long wiEmittedParticle::getNumwiParticles()
+long wiEmittedParticle::getNumParticles()
 {
 	long retval=0;
 	for(wiEmittedParticle* e:systems)

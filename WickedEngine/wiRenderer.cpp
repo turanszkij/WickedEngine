@@ -2743,13 +2743,10 @@ void wiRenderer::DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context)
 
 void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth, const int& RENDERWIDTH, const int& RENDERHEIGHT){
 	
-	Frustum frustum = Frustum();
-	frustum.ConstructFrustum(cam->zFarP,cam->Projection,cam->View);
-
 		
 	CulledList culledObjects;
 	if(spTree_lights)
-		wiSPTree::getVisible(spTree_lights->root,frustum,culledObjects);
+		wiSPTree::getVisible(spTree_lights->root,cam->frustum,culledObjects);
 
 	for(Cullable* c:culledObjects)
 	{
@@ -2802,13 +2799,9 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 {
 	if (GameSpeed) {
 
-		Frustum frustum = Frustum();
-		frustum.ConstructFrustum(cam->zFarP, cam->Projection, cam->View);
-
-
 		CulledList culledLights;
 		if (spTree_lights)
-			wiSPTree::getVisible(spTree_lights->root, frustum, culledLights);
+			wiSPTree::getVisible(spTree_lights->root, cam->frustum, culledLights);
 
 		if (culledLights.size() > 0)
 		{
@@ -2934,7 +2927,8 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 
 
-												MaterialCB mcb = MaterialCB(*iMat, m);
+												static MaterialCB mcb;
+												mcb.Create(*iMat, m);
 
 												UpdateBuffer(matCb, &mcb, context);
 
@@ -3038,7 +3032,8 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 
 
-											MaterialCB mcb = MaterialCB(*iMat, m);
+											static MaterialCB mcb;
+											mcb.Create(*iMat, m);
 
 											UpdateBuffer(matCb, &mcb, context);
 
@@ -3140,7 +3135,8 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 								if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
 									BindTexturePS(iMat->texture, 0, context);
 
-									MaterialCB mcb = MaterialCB(*iMat, m);
+									static MaterialCB mcb;
+									mcb.Create(*iMat, m);
 
 									UpdateBuffer(matCb, &mcb, context);
 
@@ -3453,13 +3449,10 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 	if(objects.empty())
 		return;
 
-	Frustum frustum = Frustum();
-	frustum.ConstructFrustum(camera->zFarP,camera->Projection,camera->View);
-
 	CulledCollection culledwiRenderer;
 	CulledList culledObjects;
 	if(spTree)
-		wiSPTree::getVisible(spTree->root,frustum,culledObjects);
+		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
 		//wiSPTree::getAll(spTree->root,culledObjects);
 
 	if(!culledObjects.empty())
@@ -3591,11 +3584,11 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 						BindDepthStencilState(depthStencilState,mesh->stencilRef,context);
 
 
-					MaterialCB* mcb = new MaterialCB(*iMat,m);
+					static MaterialCB mcb[GRAPHICSTHREAD_COUNT];
+					mcb[thread].Create(*iMat,m);
 
-					UpdateBuffer(matCb,mcb,context);
+					UpdateBuffer(matCb,&mcb[thread],context);
 					
-					delete mcb;
 
 					if(!wireRender) BindTexturePS(iMat->texture,3,context);
 					if(!wireRender) BindTexturePS(iMat->refMap,4,context);
@@ -3626,13 +3619,11 @@ void wiRenderer::DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refrac
 	if(objects_water.empty())
 		return;
 
-	Frustum frustum = Frustum();
-	frustum.ConstructFrustum(camera->zFarP, camera->Projection, camera->View);
 
 	CulledCollection culledwiRenderer;
 	CulledList culledObjects;
 	if(spTree_water)
-		wiSPTree::getVisible(spTree_water->root,frustum,culledObjects);
+		wiSPTree::getVisible(spTree_water->root, camera->frustum,culledObjects);
 
 	if(!culledObjects.empty())
 	{
@@ -3701,10 +3692,11 @@ void wiRenderer::DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refrac
 
 				if(iMat->water){
 
-				MaterialCB* mcb = new MaterialCB(*iMat,m);
 
-				UpdateBuffer(matCb,mcb,context);
-				_aligned_free(mcb);
+				static MaterialCB mcb[GRAPHICSTHREAD_COUNT];
+				mcb[GRAPHICSTHREAD_MISC1].Create(*iMat, m);
+
+				UpdateBuffer(matCb, &mcb[GRAPHICSTHREAD_MISC1], context);
 
 				if(!wireRender) BindTexturePS(iMat->texture,3,context);
 				if(!wireRender) BindTexturePS(iMat->refMap,4,context);
@@ -3726,13 +3718,11 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 	if(objects_trans.empty())
 		return;
 
-	Frustum frustum = Frustum();
-	frustum.ConstructFrustum(camera->zFarP,camera->Projection,camera->View);
 
 	CulledCollection culledwiRenderer;
 	CulledList culledObjects;
 	if(spTree_trans)
-		wiSPTree::getVisible(spTree_trans->root,frustum,culledObjects);
+		wiSPTree::getVisible(spTree_trans->root, camera->frustum,culledObjects);
 
 	if(!culledObjects.empty())
 	{
@@ -3806,11 +3796,11 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 
 				if(iMat->transparent && iMat->alpha>0 && !iMat->water && !iMat->isSky){
 
-					
-				MaterialCB* mcb = new MaterialCB(*iMat,m);
 
-				UpdateBuffer(matCb,mcb,context);
-				_aligned_free(mcb);
+				static MaterialCB mcb[GRAPHICSTHREAD_COUNT];
+				mcb[GRAPHICSTHREAD_MISC1].Create(*iMat, m);
+
+				UpdateBuffer(matCb, &mcb[GRAPHICSTHREAD_MISC1], context);
 
 				if(!wireRender) BindTexturePS(iMat->texture,3,context);
 				if(!wireRender) BindTexturePS(iMat->refMap,4,context);
@@ -3854,8 +3844,6 @@ void wiRenderer::DrawSky(ID3D11DeviceContext* context)
 void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView depth)
 {
 	if(!decals.empty()){
-		Frustum frustum = Frustum();
-		frustum.ConstructFrustum(camera->zFarP, camera->Projection, camera->View);
 
 		BindTexturePS(depth,1,context);
 		BindSamplerPS(ssClampAni,0,context);
@@ -3872,7 +3860,7 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 
 		for(Decal* decal : decals){
 
-			if((decal->texture || decal->normal) && frustum.CheckBox(decal->bounds.corners)){
+			if((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds.corners)){
 				
 				BindTexturePS(decal->texture,2,context);
 				BindTexturePS(decal->normal,3,context);
@@ -4451,7 +4439,7 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 	}
 }
 
-wiRenderer::MaterialCB::MaterialCB(const Material& mat,UINT materialIndex){
+void wiRenderer::MaterialCB::Create(const Material& mat,UINT materialIndex){
 	difColor = XMFLOAT4(mat.diffuseColor.x, mat.diffuseColor.y, mat.diffuseColor.z, mat.alpha);
 	hasRef = mat.refMap != nullptr;
 	hasNor = mat.normalMap != nullptr;

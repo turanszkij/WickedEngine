@@ -196,7 +196,9 @@ protected:
 		float emit;
 		float padding[3];
 
-		MaterialCB(const Material& mat, UINT materialIndex);
+		MaterialCB() {};
+		MaterialCB(const Material& mat, UINT materialIndex) { Create(mat,materialIndex); };
+		void Create(const Material& mat, UINT materialIndex);
 
 		ALIGN_16
 	};

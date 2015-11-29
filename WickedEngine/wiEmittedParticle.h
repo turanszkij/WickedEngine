@@ -91,7 +91,7 @@ public:
 	static void CleanUpStatic();
 
 	long getCount();
-	static long getNumwiParticles();
+	static long getNumParticles();
 
 	void Update(float gamespeed);
 	void Burst(float num);
