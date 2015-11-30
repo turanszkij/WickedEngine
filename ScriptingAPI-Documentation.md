@@ -1,5 +1,6 @@
 # Wicked Engine Scripting API Documentation
 This is a collection and explanation of scripting features in Wicked Engine.
+The documentation completion is still pending....
 
 ## Contents
 1. Introduction and usage
@@ -31,13 +32,17 @@ This is a collection and explanation of scripting features in Wicked Engine.
 			1. ForwardRenderableComponent
 			2. DeferredRenderableComponent
 		4. LoadingScreenComponent
+	9. Network
+		1. Server
+		2. Client
+	10. Input Handling
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
 syntax and features of the widely used Lua language, accompanied by its fast interpreter.
 Apart from the common features, certain engine features are also available to use.
 You can load lua script files and execute them, or the engine scripting console (also known as the BackLog)
-can also be used to execute single line scripts.
+can also be used to execute single line scripts (or you can execute file scripts by the dofile command here).
 Upon startup, the engine will try to load a startup script file named startup.lua in the root directory of 
 the application. If not found, an error message will be thrown follwed by the normal execution by the program.
 In the startup file, you can specify any startup logic, for example loading content or anything.
@@ -176,7 +181,7 @@ Sound Effects are for playing a sound file once. Inherits the methods from Sound
 
 #### Music
 Music is for playing sound files in the background, along with sound effects. Inherits the methods from Sound.
-- [constructor]SoundEffect(string soundFile)
+- [constructor]Music(string soundFile)
 
 ### Vector
 A four component floating point vector. Provides efficient calculations with SIMD support.
@@ -206,31 +211,99 @@ A four component floating point vector. Provides efficient calculations with SIM
 
 ### Matrix
 A four by four matrix, efficient calculations with SIMD support.
+- [outer]matrix
+- [constructor]Matrix(opt float m00,m01,m02,m03,m10,m11,m12,m13,m20,m21,m22,m23,m30,m31,m32,m33)
+- Translation(opt Vector vector) : Matrix result
+- Rotation(opt Vector rollPitchYaw) : Matrix result
+- RotationX(opt float angleInRadians) : Matrix result
+- RotationY(opt float angleInRadians) : Matrix result
+- RotationZ(opt float angleInRadians) : Matrix result
+- RotationQuaternion(opt Vector quaternion) : Matrix result
+- Scale(opt Vector scaleXYZ) : Matrix result
+- LookTo(Vector eye,direction, opt Vector up) : Matrix result
+- LookAt(Vector eye,focusPos, opt Vector up) : Matrix result
+- Multiply(Matrix m1,m2) : Matrix result
+- Add(Matrix m1,m2) : Matrix result
+- Transpose(Matrix m) : Matrix result
+- Inverse(Matrix m) : Matrix result, float determinant
 
 ### Scene
 Manipulate the 3D scene with these objects. 
 
 #### Node
-The basic entity in the scene. Everything is a node. It has a name.
+The basic entity in the scene. It has a name.
+- [constructor]Node()
+- GetName() : string
+- SetName(string name)
 
 #### Transform
 Everything in the scene is a transform. It defines a point in the space by location, size, and rotation.
-It provides several key features of parenting. It is a Node.
+It provides several key features of parenting. 
+It inherits functions from Node.
+- [constructor]Transform()
+- AttachTo(Transform parent, opt boolean translation,rotation,scale)
+- Detach(opt boolean eraseFromParent) [warning: Leave the parameter unless you know what you are doing]
+- Scale(Vector vector)
+- Rotate(Vector vectorRollPitchYaw)
+- Translate(Vector vector)
+- MatrixTransform(Matrix matrix)
+- GetMatrix() : Matrix result
+- ClearTransform()
+- SetTransform(Transform t)
+- GetPosition() : Vector result
+- GetRotation() : Vector resultQuaternion
+- GetScale() : Vector resultXYZ
 
 #### Cullable
-Can be tested againt the view frustum, AABBs, rays, space partitioning trees. It is a Transform.
+Can be tested againt the view frustum, AABBs, rays, space partitioning trees. 
+It inherits functions from Transform.
+- [constructor]Cullable()
+- Intersects(Cullable cullable)
+- Intersects(Ray cullable)
+- Intersects(Vector cullable)
+- GetAABB() : AABB result
+- SetAABB(AABB aabb)
 
 #### Object
-It is a renderable entity (optionally), which contains a Mesh and is Cullable.
+It is a renderable entity (optionally), which contains a Mesh.
+It inherits functions from Cullable.
+- [void-constructor]Object()
+- SetTransparency(float value)
+- GetTransparency() : float? result
+- SetColor(float r,g,b)
+- GetColor() : float? r,g,b
+- IsValid() : boolean result
 
 #### Armature
-It animates meshes. It is a Transform.
+It animates meshes.
+It inherits functions from Transform.
+- [void-constructor]Armature()
+- GetAction() : string? result
+- GetActions() : string? result
+- GetBones() : string? result
+- GetBone(String name) : Transform? result
+- GetFrame() : float? result
+- GetFrameCount() : float? result
+- IsValid() : boolean result
+- ChangeAction(String name)
+- StopAction()
+- PauseAction()
+- PlayAction()
+- ResetAction()
 
 #### Ray
 Can intersect with AABBs, Cullables.
+- [constructor]Ray(opt Vector origin, direction)
+- GetOrigin() : Vector result
+- GetDirection() : Vector result
 
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with any shape, or ray.
+- [constructor]AABB(opt Vector min,max)
+- Intersects(AABB aabb)
+- Transform(Matrix mat)
+- GetMin() : Vector result
+- GetMax() : Vector result
 
 ### Renderable Components
 A RenderableComponent describes a scene wich can render itself.
@@ -251,3 +324,41 @@ only the effects to render the scene. The scene is managed and ultimately render
 
 #### LoadingScreenComponent
 It is a Renderable2DComponent but one that internally manages resource loading and can display information about the process.
+
+### Network
+Here are the network communication features.
+
+#### Server
+A TCP host to which clients can connect and communicate with each other or the server.
+
+#### Client
+A TCP client which provides features to communicate with other clients over the internet or local area network connection.
+
+### Input Handling
+These provide functions to check the state of the input devices.
+- [outer]input : InputManager
+- [void-constructor]InputManager()
+- Down(int code, opt int type = KEYBOARD)
+- Press(int code, opt int type = KEYBOARD)
+- Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = KEYBOARD)
+
+#### Input types
+- [outer]DIRECTINPUT_JOYPAD : int
+- [outer]XINPUT_JOYPAD : int
+- [outer]KEYBOARD : int
+
+#### Keyboard Key codes
+- [outer]VK_UP : int
+- [outer]VK_DOWN : int
+- [outer]VK_LEFT : int
+- [outer]VK_RIGHT : int
+- [outer]VK_SPACE : int
+- [outer]VK_RETURN : int
+- [outer]VK_RSHIFT : int
+- [outer]VK_LSHIFT : int
+- You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
+
+#### Mouse Key Codes
+- [outer]VK_LBUTTON : int
+- [outer]VK_MBUTTON : int
+- [outer]VK_RBUTTON : int

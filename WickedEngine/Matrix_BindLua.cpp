@@ -186,7 +186,7 @@ int Matrix_BindLua::Scale(lua_State* L)
 int Matrix_BindLua::LookTo(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
+	if (argc > 1)
 	{
 		Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 1);
 		Vector_BindLua* dir = Luna<Vector_BindLua>::lightcheck(L, 2);
@@ -213,7 +213,7 @@ int Matrix_BindLua::LookTo(lua_State* L)
 int Matrix_BindLua::LookAt(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
+	if (argc > 1)
 	{
 		Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 1);
 		Vector_BindLua* dir = Luna<Vector_BindLua>::lightcheck(L, 2);
@@ -294,10 +294,11 @@ int Matrix_BindLua::Inverse(lua_State* L)
 		{
 			XMVECTOR det;
 			Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(XMMatrixInverse(&det, m1->matrix)));
-			return 1;
+			wiLua::SSetFloat(L, XMVectorGetX(det));
+			return 2;
 		}
 	}
-	wiLua::SError(L, "Transpose(Matrix m) not enough arguments!");
+	wiLua::SError(L, "Inverse(Matrix m) not enough arguments!");
 	return 0;
 }
 

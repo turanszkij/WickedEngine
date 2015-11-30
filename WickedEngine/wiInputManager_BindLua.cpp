@@ -32,6 +32,8 @@ int wiInputManager_BindLua::Down(lua_State* L)
 		wiLua::SSetBool(L, wiInputManager::down((DWORD)code, type));
 		return 1;
 	}
+	else
+		wiLua::SError(L, "Down(int code, opt int type = KEYBOARD) not enough arguments!");
 	return 0;
 }
 int wiInputManager_BindLua::Press(lua_State* L)
@@ -48,6 +50,8 @@ int wiInputManager_BindLua::Press(lua_State* L)
 		wiLua::SSetBool(L, wiInputManager::press((DWORD)code, type));
 		return 1;
 	}
+	else
+		wiLua::SError(L, "Press(int code, opt int type = KEYBOARD) not enough arguments!");
 	return 0;
 }
 int wiInputManager_BindLua::Hold(lua_State* L)
@@ -74,6 +78,8 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 		wiLua::SSetBool(L, wiInputManager::hold((DWORD)code, (DWORD)duration, continuous, type));
 		return 1;
 	}
+	else
+		wiLua::SError(L, "Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = KEYBOARD) not enough arguments!");
 	return 0;
 }
 int wiInputManager_BindLua::GetPointer(lua_State* L)

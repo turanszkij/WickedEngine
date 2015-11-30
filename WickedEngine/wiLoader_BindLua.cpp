@@ -741,7 +741,7 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "SetAction(String name) armature is null!");
+		wiLua::SError(L, "ChangeAction(String name) armature is null!");
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
@@ -750,12 +750,12 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 		string armatureName = wiLua::SGetString(L, 1);
 		if (!armature->ChangeAction(armatureName))
 		{
-			wiLua::SError(L, "SetAction(String name) action not found!");
+			wiLua::SError(L, "ChangeAction(String name) action not found!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetAction(String name) not enough arguments!");
+		wiLua::SError(L, "ChangeAction(String name) not enough arguments!");
 	}
 	return 0;
 }
