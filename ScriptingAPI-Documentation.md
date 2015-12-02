@@ -60,29 +60,29 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 - backlog_clear()
 - backlog_post(string params,,,)
 - backlog_fontsize(float size)
-- backlog_isactive()
+- backlog_isactive() : boolean result
 - backlog_fontrowspacing(float spacing)
 
 ### Renderer
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
 You can use the Renderer with the following functions, all of which are in the global scope:
-- GetTransforms()
-- GetTransform(String name)
-- GetArmatures()
-- GetArmature(String name)
-- GetObjects()
-- GetObject(String name)
-- GetMeshes()
-- GetLights()
-- GetMaterials()
-- GetGameSpeed()
+- GetTransforms() : string result
+- GetTransform(String name) : Transform? result
+- GetArmatures() : string result
+- GetArmature(String name) : Armature? result
+- GetObjects() : string result
+- GetObject(String name) : Object? result
+- GetMeshes() : string result
+- GetLights() : string result
+- GetMaterials() : string result
+- GetGameSpeed() : float result
 - SetGameSpeed(float speed)
-- GetScreenWidth()
-- GetScreenHeight()
-- GetRenderWidth()
-- GetRenderHeight()
-- GetCamera()
+- GetScreenWidth() : float result
+- GetScreenHeight() : float result
+- GetRenderWidth() : float result
+- GetRenderHeight(): float result
+- GetCamera() : Transform? result
 - LoadModel(string directory, string name, opt string identifier, opt Matrix transform)
 - LoadWorldInfo(string directory, string name)
 - FinishLoading()
@@ -95,7 +95,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugBoxesEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)
-- Pick(Ray ray, opt PICKTYPE pickType)
+- Pick(Ray ray, opt PICKTYPE pickType) : Object? object, Vector position,normal
 - DrawLine(Vector origin,end, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - ClearWorld()
@@ -125,32 +125,32 @@ Gives you the ability to render text with a custom font.
 	- WIFALIGN_RIGHT
 	- WIFALIGN_TOP
 	- WIFALIGN_BOTTOM
-- GetText()
-- GetSize()
-- GetPos()
-- GetSpacing()
-- GetAlign()
+- GetText() : string result
+- GetSize() : float result
+- GetPos() : Vector result
+- GetSpacing() : Vector result
+- GetAlign() : WIFALIGN halign,valign
 - Destroy()
 
 ### Sprite
 Render images on the screen.
 - [constructor]Sprite(opt string texture, opt string maskTexture, opt string normalMapTexture)
 - SetEffects(ImageEffects effects)
-- GetEffects()
+- GetEffects() : ImageEffects result
 - SetAnim(SpriteAnim anim)
-- GetAnim()
+- GetAnim() : SpriteAnim result
 - Destroy()
 
 #### ImageEffects
 Specify Sprite properties, like position, size, etc.
 - [constructor]ImageEffects(opt float width, opt float height)
 - [constructor]ImageEffects(float posX, float posY, float width, opt float height)
-- GetPos()
-- GetSize()
-- GetOpacity()
-- GetFade()
-- GetRotation()
-- GetMipLevel()
+- GetPos() : Vector result
+- GetSize() : Vector result
+- GetOpacity() : float result
+- GetFade() : float result
+- GetRotation() : float result
+- GetMipLevel() : float result
 - SetPos(Vector pos)
 - SetSize(Vector size)
 - SetOpacity(float opacity)
@@ -187,27 +187,27 @@ Music is for playing sound files in the background, along with sound effects. In
 A four component floating point vector. Provides efficient calculations with SIMD support.
 - [outer]vector
 - [constructor]Vector(opt float x, opt float y, opt float z, opt float w)
-- GetX()
-- GetY()
-- GetZ()
-- GetW()
+- GetX() : float result
+- GetY() : float result
+- GetZ() : float result
+- GetW() : float result
 - SetX(float value)
 - SetY(float value)
 - SetZ(float value)
 - SetW(float value)
 - Transform(Matrix matrix)
-- Length()
-- Normalize()
-- QuaternionNormalize()
-- Add(Vector v1,v2)
-- Subtract(Vector v1,v2)
-- Multiply(Vector v1,v2)
-- Dot(Vector v1,v2)
-- Cross(Vector v1,v2)
-- Lerp(Vector v1,v2, float t)
-- QuaternionMultiply(Vector v1,v2)
-- QuaternionFromAxis(Vector v1,v2)
-- QuaternionSlerp(Vector v1,v2, float t)
+- Length() : float result
+- Normalize() : Vector result
+- QuaternionNormalize() : Vector result
+- Add(Vector v1,v2) : Vector result
+- Subtract(Vector v1,v2) : Vector result
+- Multiply(Vector v1,v2) : Vector result
+- Dot(Vector v1,v2) : Vector result
+- Cross(Vector v1,v2) : Vector result
+- Lerp(Vector v1,v2, float t) : Vector result
+- QuaternionMultiply(Vector v1,v2) : Vector result
+- QuaternionFromAxis(Vector v1,v2) : Vector result
+- QuaternionSlerp(Vector v1,v2, float t) : Vector result
 
 ### Matrix
 A four by four matrix, efficient calculations with SIMD support.
