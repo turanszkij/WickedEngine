@@ -12,6 +12,7 @@ Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {
 	lunamethod(wiFont_BindLua, SetSpacing),
 	lunamethod(wiFont_BindLua, SetAlign),
 
+	lunamethod(wiFont_BindLua, SetStyle),
 	lunamethod(wiFont_BindLua, SetText),
 	lunamethod(wiFont_BindLua, GetSize),
 	lunamethod(wiFont_BindLua, GetPos),
@@ -48,6 +49,21 @@ wiFont_BindLua::~wiFont_BindLua()
 }
 
 
+int wiFont_BindLua::SetStyle(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		string name = wiLua::SGetString(L, 1);
+		wiFont::addFontStyle(name);
+		font->style = wiFont::getFontStyleByName(name);
+	}
+	else
+	{
+		wiLua::SError(L, "SetStyle(string style) not enough arguments!");
+	}
+	return 0;
+}
 int wiFont_BindLua::SetText(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);

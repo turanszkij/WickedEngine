@@ -436,9 +436,14 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 	wiRenderer::Unlock();
 }
 void wiFont::wiFontStyle::CleanUp(){
-	if(texture) texture->Release(); texture=NULL;
+	SAFE_RELEASE(texture);
 }
 void wiFont::addFontStyle( const string& toAdd ){
+	for (auto& x : fontStyles)
+	{
+		if (!x.name.compare(toAdd))
+			return;
+	}
 	fontStyles.push_back(wiFontStyle(toAdd));
 }
 int wiFont::getFontStyleByName( const string& get ){

@@ -17,6 +17,7 @@ public:
 	wiFont_BindLua(lua_State* L);
 	~wiFont_BindLua();
 
+	int SetStyle(lua_State* L);
 	int SetText(lua_State* L);
 	int SetSize(lua_State* L);
 	int SetPos(lua_State* L);
