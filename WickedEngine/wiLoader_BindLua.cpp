@@ -1,6 +1,7 @@
 #include "wiLoader_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
+#include "wiEmittedParticle.h"
 
 namespace wiLoader_BindLua
 {
@@ -13,6 +14,7 @@ namespace wiLoader_BindLua
 		Armature_BindLua::Bind();
 		Ray_BindLua::Bind();
 		AABB_BindLua::Bind();
+		EmittedParticle_BindLua::Bind();
 	}
 }
 
@@ -500,6 +502,7 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Object_BindLua, GetTransparency),
 	lunamethod(Object_BindLua, SetColor),
 	lunamethod(Object_BindLua, GetColor),
+	lunamethod(Object_BindLua, GetEmitter),
 	lunamethod(Object_BindLua, IsValid),
 	{ NULL, NULL }
 };
@@ -555,17 +558,25 @@ int Object_BindLua::SetColor(lua_State *L)
 {
 	if (object == nullptr)
 	{
-		wiLua::SError(L, "SetColor(float r, float g, float b) object is null!");
+		wiLua::SError(L, "SetColor(Vector rgb) object is null!");
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 2)
 	{
-		object->color = wiLua::SGetFloat3(L, 1);
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			XMStoreFloat3(&object->color, vec->vector);
+		}
+		else
+		{
+			wiLua::SError(L, "SetColor(Vector rgb) argument is not a Vector!");
+		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetColor(float r, float g, float b) not enough arguments!");
+		wiLua::SError(L, "SetColor(Vector rgb) not enough arguments!");
 	}
 	return 0;
 }
@@ -576,8 +587,28 @@ int Object_BindLua::GetColor(lua_State *L)
 		wiLua::SError(L, "GetColor() object is null!");
 		return 0;
 	}
-	wiLua::SSetFloat3(L, object->color);
-	return 3;
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&object->color)));
+	return 1;
+}
+int Object_BindLua::GetEmitter(lua_State *L)
+{
+	if (object == nullptr)
+	{
+		wiLua::SError(L, "GetEmitter(opt int id = 0) object is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	int id = 0;
+	if (argc > 0)
+	{
+		id = wiLua::SGetInt(L, 1);
+	}
+	if (object->eParticleSystems.size() > id)
+	{
+		Luna<EmittedParticle_BindLua>::push(L, new EmittedParticle_BindLua(object->eParticleSystems[id]));
+	}
+	Luna<EmittedParticle_BindLua>::push(L, new EmittedParticle_BindLua(L));
+	return 1;
 }
 int Object_BindLua::IsValid(lua_State *L)
 {
@@ -967,5 +998,118 @@ void AABB_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<AABB_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+const char EmittedParticle_BindLua::className[] = "Emitter";
+
+Luna<EmittedParticle_BindLua>::FunctionType EmittedParticle_BindLua::methods[] = {
+	lunamethod(EmittedParticle_BindLua, GetName),
+	lunamethod(EmittedParticle_BindLua, SetName),
+	lunamethod(EmittedParticle_BindLua, GetMotionBlur),
+	lunamethod(EmittedParticle_BindLua, SetMotionBlur),
+	lunamethod(EmittedParticle_BindLua, Burst),
+	lunamethod(EmittedParticle_BindLua, IsValid),
+	{ NULL, NULL }
+};
+Luna<EmittedParticle_BindLua>::PropertyType EmittedParticle_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+EmittedParticle_BindLua::EmittedParticle_BindLua(wiEmittedParticle* ps) :ps(ps)
+{
+}
+EmittedParticle_BindLua::EmittedParticle_BindLua(lua_State *L)
+{
+	ps = nullptr;
+}
+EmittedParticle_BindLua::~EmittedParticle_BindLua()
+{
+}
+
+int EmittedParticle_BindLua::GetName(lua_State* L)
+{
+	if (ps == nullptr)
+	{
+		wiLua::SError(L, "GetName() particle system is null!");
+		return 0;
+	}
+	wiLua::SSetString(L, ps->name);
+	return 1;
+}
+int EmittedParticle_BindLua::SetName(lua_State* L)
+{
+	if (ps == nullptr)
+	{
+		wiLua::SError(L, "SetName(string name) particle system is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		ps->name = wiLua::SGetString(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetName(string name) not enough arguments!");
+	return 0;
+}
+int EmittedParticle_BindLua::GetMotionBlur(lua_State* L)
+{
+	if (ps == nullptr)
+	{
+		wiLua::SError(L, "GetMotionBlur() particle system is null!");
+		return 0;
+	}
+	wiLua::SSetFloat(L, ps->motionBlurAmount);
+	return 1;
+}
+int EmittedParticle_BindLua::SetMotionBlur(lua_State* L)
+{
+	if (ps == nullptr)
+	{
+		wiLua::SError(L, "SetMotionBlur(float amount) particle system is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		ps->motionBlurAmount = wiLua::SGetFloat(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetMotionBlur(float amount) not enough arguments!");
+	return 0;
+}
+int EmittedParticle_BindLua::Burst(lua_State* L)
+{
+	if (ps == nullptr)
+	{
+		wiLua::SError(L, "Burst(float num) particle system is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		ps->Burst(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "Burst(float num) not enough arguments!");
+	return 0;
+}
+int EmittedParticle_BindLua::IsValid(lua_State *L)
+{
+	wiLua::SSetBool(L, ps != nullptr);
+	return 1;
+}
+
+void EmittedParticle_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<EmittedParticle_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

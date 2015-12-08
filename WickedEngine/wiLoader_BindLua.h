@@ -95,6 +95,7 @@ public:
 	int GetTransparency(lua_State *L);
 	int SetColor(lua_State *L);
 	int GetColor(lua_State *L);
+	int GetEmitter(lua_State *L);
 	int IsValid(lua_State *L);
 
 	static void Bind();
@@ -166,6 +167,29 @@ public:
 	int Transform(lua_State* L);
 	int GetMin(lua_State* L);
 	int GetMax(lua_State* L);
+
+	static void Bind();
+};
+
+class EmittedParticle_BindLua
+{
+public:
+	wiEmittedParticle* ps;
+
+	static const char className[];
+	static Luna<EmittedParticle_BindLua>::FunctionType methods[];
+	static Luna<EmittedParticle_BindLua>::PropertyType properties[];
+
+	EmittedParticle_BindLua(wiEmittedParticle* ps);
+	EmittedParticle_BindLua(lua_State* L);
+	~EmittedParticle_BindLua();
+
+	int GetName(lua_State* L);
+	int SetName(lua_State* L);
+	int GetMotionBlur(lua_State* L);
+	int SetMotionBlur(lua_State* L);
+	int Burst(lua_State* L);
+	int IsValid(lua_State* L);
 
 	static void Bind();
 };

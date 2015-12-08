@@ -125,6 +125,44 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
+	int GetEmitters(lua_State* L)
+	{
+		stringstream ss("");
+		for (map<string, vector<wiEmittedParticle*> >::iterator it = wiRenderer::emitterSystems.begin(); it != wiRenderer::emitterSystems.end(); ++it)
+		{
+			ss << it->first << endl;
+		}
+		wiLua::SSetString(L, ss.str());
+		return 1;
+	}
+	int GetEmitter(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			string name = wiLua::SGetString(L, 1);
+			map<string, vector<wiEmittedParticle*> >::iterator it = wiRenderer::emitterSystems.find(name);
+			if (it != wiRenderer::emitterSystems.end())
+			{
+				int i = 0;
+				for (auto& x : it->second)
+				{
+					Luna<EmittedParticle_BindLua>::push(L, new EmittedParticle_BindLua(x));
+					i++;
+				}
+				return i;
+			}
+			else
+			{
+				wiLua::SError(L, "GetEmitter(string name) no emitter by that name!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "GetEmitter(string name) not enough arguments!");
+		}
+		return 0;
+	}
 	int GetMeshes(lua_State* L)
 	{
 		stringstream ss("");
@@ -471,6 +509,8 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetArmature", GetArmature);
 			wiLua::GetGlobal()->RegisterFunc("GetObjects", GetObjects);
 			wiLua::GetGlobal()->RegisterFunc("GetObject", GetObjectLua);
+			wiLua::GetGlobal()->RegisterFunc("GetEmitters", GetEmitters);
+			wiLua::GetGlobal()->RegisterFunc("GetEmitter", GetEmitter);
 			wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
 			wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
 			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);

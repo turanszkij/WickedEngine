@@ -15,8 +15,9 @@ private:
 		XMFLOAT3 pos;
 		XMFLOAT4 sizOpaMir;
 		//XMFLOAT3 col;
-		float rot,rotVel;
+		float rot;
 		XMFLOAT3 vel;
+		float rotVel;
 		float life;
 		float maxLife;
 		float sizBeginEnd[2];
@@ -35,15 +36,19 @@ private:
 			sizBeginEnd[0] = sizOpaMir.x;
 			sizBeginEnd[1] = sizOpaMir.x*scaleX;
 		}
+
+		ALIGN_16
 	};
 	deque<Point> points;
 
 	struct ConstantBuffer
 	{
-		XMMATRIX mView;
-		XMMATRIX mProjection;
-		XMVECTOR mCamPos;
-		XMFLOAT4 mAdd;
+		XMMATRIX	mView;
+		XMMATRIX	mProjection;
+		XMVECTOR	mCamPos;
+		XMFLOAT2	mAdd;
+		float		mMotionBlurAmount;
+		float		padding;
 
 		ALIGN_16
 	};
@@ -85,8 +90,6 @@ public:
 	wiEmittedParticle(){};
 	wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot);
-	void* operator new(size_t);
-	void operator delete(void*);
 	static void SetUpStatic();
 	static void CleanUpStatic();
 
@@ -114,5 +117,6 @@ public:
 	float size,random_factor,normal_factor;
 	float count,life,random_life;
 	float scaleX,scaleY,rotation;
+	float motionBlurAmount;
 };
 

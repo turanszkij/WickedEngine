@@ -26,6 +26,7 @@ The documentation completion is still pending....
 		5. Armature
 		6. Ray
 		7. AABB
+		8. Emitter
 	8. Renderable Components
 		1. Renderable2DComponent
 		2. Renderable3DComponent
@@ -73,6 +74,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetArmature(String name) : Armature? result
 - GetObjects() : string result
 - GetObject(String name) : Object? result
+- GetEmitters() : string result
+- GetEmitter(string name) : Emitter? result1,result2,...
 - GetMeshes() : string result
 - GetLights() : string result
 - GetMaterials() : string result
@@ -258,9 +261,9 @@ It inherits functions from Node.
 Can be tested againt the view frustum, AABBs, rays, space partitioning trees. 
 It inherits functions from Transform.
 - [constructor]Cullable()
-- Intersects(Cullable cullable)
-- Intersects(Ray cullable)
-- Intersects(Vector cullable)
+- Intersects(Cullable cullable) : boolean result
+- Intersects(Ray cullable) : boolean result
+- Intersects(Vector cullable) : boolean result
 - GetAABB() : AABB result
 - SetAABB(AABB aabb)
 
@@ -270,8 +273,8 @@ It inherits functions from Cullable.
 - [void-constructor]Object()
 - SetTransparency(float value)
 - GetTransparency() : float? result
-- SetColor(float r,g,b)
-- GetColor() : float? r,g,b
+- SetColor(Vector rgb)
+- GetColor() : Vector? rgb
 - IsValid() : boolean result
 
 #### Armature
@@ -304,6 +307,16 @@ Axis Aligned Bounding Box. Can be intersected with any shape, or ray.
 - Transform(Matrix mat)
 - GetMin() : Vector result
 - GetMax() : Vector result
+
+#### Emitter
+Emitter particlesystem.
+- [void-constructor] Emitter()
+- GetName() : string? name
+- SetName(string name)
+- GetMotionBlur() : float? amount
+- SetMotionBlur(float amount)
+- Burst(float amount)
+- IsValid() : bool value
 
 ### Renderable Components
 A RenderableComponent describes a scene wich can render itself.

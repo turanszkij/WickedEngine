@@ -66,6 +66,7 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 		,transform._31,transform._32,transform._33
 		);
 
+	motionBlurAmount = 0.0f;
 }
 long wiEmittedParticle::getCount(){return points.size();}
 
@@ -258,7 +259,7 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, ID3D1
 			cb.mCamPos = camera->GetEye();
 			cb.mAdd.x = additive;
 			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
-
+			cb.mMotionBlurAmount = motionBlurAmount;
 		
 			//context->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
 
@@ -331,18 +332,6 @@ void wiEmittedParticle::CleanUp()
 	//delete(this);
 }
 
-void* wiEmittedParticle::operator new(size_t size)
-{
-	void* result = _aligned_malloc(size,16);
-	return result;
-}
-void wiEmittedParticle::operator delete(void* p)
-{
-	if(p) _aligned_free(p);
-}
-
-
-
 
 
 void wiEmittedParticle::LoadShaders()
@@ -350,9 +339,10 @@ void wiEmittedParticle::LoadShaders()
 	D3D11_INPUT_ELEMENT_DESC layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		//{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "ROTATION", 0, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "VELOCITY", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
