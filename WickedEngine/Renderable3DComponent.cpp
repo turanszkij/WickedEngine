@@ -43,6 +43,7 @@ void Renderable3DComponent::setProperties()
 	setColorGradingEnabled(true);
 	setEmitterParticlesEnabled(true);
 	setHairParticlesEnabled(true);
+	setHairParticlesReflectionEnabled(false);
 	setVolumeLightsEnabled(true);
 	setLightShaftsEnabled(true);
 	setLensFlareEnabled(true);
@@ -212,7 +213,7 @@ void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context)
 		wiRenderer::UpdatePerViewCB(context, wiRenderer::getRefCamera(), wiRenderer::getCamera(), water);
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, context
 			, false, wiRenderer::SHADED_NONE
-			, nullptr, true, GRAPHICSTHREAD_REFLECTIONS);
+			, nullptr, getHairParticlesReflectionEnabled(), GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::DrawSky(context);
 	}
 }

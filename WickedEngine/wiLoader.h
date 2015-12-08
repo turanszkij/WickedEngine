@@ -839,7 +839,7 @@ struct Wind{
 	Wind():direction(XMFLOAT3(0,0,0)),time(0),randomness(5),waveSize(1){}
 };
 struct Camera:public Transform{
-	XMFLOAT4X4 View, Projection, OProjection;
+	XMFLOAT4X4 View, Projection;
 	XMFLOAT3 At, Up;
 	float width, height;
 	float zNearP, zFarP;
@@ -857,7 +857,7 @@ struct Camera:public Transform{
 	}
 	void SetUp(int newWidth, int newHeight, float newNear, float newFar)
 	{
-		XMMATRIX View, Projection, OProjection;
+		XMMATRIX View, Projection;
 		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
 
 		zNearP = newNear;
@@ -868,12 +868,10 @@ struct Camera:public Transform{
 
 
 		Projection = XMMatrixPerspectiveFovLH(XM_PI / 3.0f, (float)width / (float)height, zNearP, zFarP);
-		OProjection = XMMatrixOrthographicLH((float)width, (float)height, 0.1f, 5000.0f);
 
 
 		XMStoreFloat4x4(&this->View, View);
 		XMStoreFloat4x4(&this->Projection, Projection);
-		XMStoreFloat4x4(&this->OProjection, OProjection);
 		XMStoreFloat3(&this->At, At);
 		XMStoreFloat3(&this->Up, Up);
 
@@ -957,10 +955,6 @@ struct Camera:public Transform{
 	XMMATRIX GetProjection()
 	{
 		return XMLoadFloat4x4(&Projection);
-	}
-	XMMATRIX GetOProjection()
-	{
-		return XMLoadFloat4x4(&OProjection);
 	}
 	XMMATRIX GetViewProjection()
 	{

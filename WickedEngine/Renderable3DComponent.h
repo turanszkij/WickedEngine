@@ -32,6 +32,7 @@ private:
 	bool colorGradingEnabled;
 	bool emittedParticlesEnabled;
 	bool hairParticlesEnabled;
+	bool hairParticlesReflectionEnabled;
 	bool volumeLightsEnabled;
 	bool lightShaftsEnabled;
 	bool lensFlareEnabled;
@@ -70,69 +71,71 @@ protected:
 	virtual void RenderComposition2(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
 	virtual void RenderColorGradedComposition();
 public:
-	float getLightShaftQuality(){ return lightShaftQuality; }
-	float getBloomDownSample(){ return bloomDownSample; }
-	float getBloomStrength(){ return bloomStren; }
-	float getBloomThreshold(){ return bloomThreshold; }
-	float getBloomSaturation(){ return bloomSaturation; }
-	float getAlphaParticleDownSample(){ return particleAlphaDownSample; }
-	float getAdditiveParticleDownSample(){ return particleAdditiveDownSample; }
-	float getReflectionQuality(){ return reflectionQuality; }
-	float getSSAOQuality(){ return ssaoQuality; }
-	float getSSAOBlur(){ return ssaoBlur; }
-	float getDepthOfFieldFocus(){ return dofFocus; }
-	float getDepthOfFieldStrength(){ return dofStrength; }
+	inline float getLightShaftQuality(){ return lightShaftQuality; }
+	inline float getBloomDownSample(){ return bloomDownSample; }
+	inline float getBloomStrength(){ return bloomStren; }
+	inline float getBloomThreshold(){ return bloomThreshold; }
+	inline float getBloomSaturation(){ return bloomSaturation; }
+	inline float getAlphaParticleDownSample(){ return particleAlphaDownSample; }
+	inline float getAdditiveParticleDownSample(){ return particleAdditiveDownSample; }
+	inline float getReflectionQuality(){ return reflectionQuality; }
+	inline float getSSAOQuality(){ return ssaoQuality; }
+	inline float getSSAOBlur(){ return ssaoBlur; }
+	inline float getDepthOfFieldFocus(){ return dofFocus; }
+	inline float getDepthOfFieldStrength(){ return dofStrength; }
 
 	wiWaterPlane getWaterPlane(){ return waterPlane; }
 
-	bool getSSAOEnabled(){ return ssaoEnabled; }
-	bool getSSREnabled(){ return ssrEnabled; }
-	bool getShadowsEnabled(){ return shadowsEnabled; }
-	bool getReflectionsEnabled(){ return reflectionsEnabled; }
-	bool getFXAAEnabled(){ return fxaaEnabled; }
-	bool getBloomEnabled(){ return bloomEnabled; }
-	bool getColorGradingEnabled(){ return colorGradingEnabled; }
-	bool getEmittedParticlesEnabled(){ return emittedParticlesEnabled; }
-	bool getHairParticlesEnabled(){ return hairParticlesEnabled; }
-	bool getVolumeLightsEnabled(){ return volumeLightsEnabled; }
-	bool getLightShaftsEnabled(){ return lightShaftsEnabled; }
-	bool getLensFlareEnabled(){ return lensFlareEnabled; }
-	bool getMotionBlurEnabled(){ return motionBlurEnabled; }
-	bool getSSSEnabled(){ return sssEnabled; }
-	bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
+	inline bool getSSAOEnabled(){ return ssaoEnabled; }
+	inline bool getSSREnabled(){ return ssrEnabled; }
+	inline bool getShadowsEnabled(){ return shadowsEnabled; }
+	inline bool getReflectionsEnabled(){ return reflectionsEnabled; }
+	inline bool getFXAAEnabled(){ return fxaaEnabled; }
+	inline bool getBloomEnabled(){ return bloomEnabled; }
+	inline bool getColorGradingEnabled(){ return colorGradingEnabled; }
+	inline bool getEmittedParticlesEnabled(){ return emittedParticlesEnabled; }
+	inline bool getHairParticlesEnabled() { return hairParticlesEnabled; }
+	inline bool getHairParticlesReflectionEnabled() { return hairParticlesReflectionEnabled; }
+	inline bool getVolumeLightsEnabled(){ return volumeLightsEnabled; }
+	inline bool getLightShaftsEnabled(){ return lightShaftsEnabled; }
+	inline bool getLensFlareEnabled(){ return lensFlareEnabled; }
+	inline bool getMotionBlurEnabled(){ return motionBlurEnabled; }
+	inline bool getSSSEnabled(){ return sssEnabled; }
+	inline bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
 
-	unsigned short getThreadingCount(){ return (unsigned short)workerThreads.size(); }
+	inline unsigned int getThreadingCount(){ return (unsigned int)workerThreads.size(); }
 
-	void setLightShaftQuality(float value){ lightShaftQuality = value; }
-	void setBloomDownSample(float value){ bloomDownSample = value; }
-	void setBloomStrength(float value){ bloomStren = value; }
-	void setBloomThreshold(float value){ bloomThreshold = value; }
-	void setBloomSaturation(float value){ bloomSaturation = value; }
-	void setAlphaParticleDownSample(float value){ particleAlphaDownSample = value; }
-	void setAdditiveParticleDownSample(float value){ particleAdditiveDownSample = value; }
-	void setReflectionQuality(float value){ reflectionQuality = value; }
-	void setSSAOQuality(float value){ ssaoQuality = value; }
-	void setSSAOBlur(float value){ ssaoBlur = value; }
-	void setDepthOfFieldFocus(float value){ dofFocus = value; }
-	void setDepthOfFieldStrength(float value){ dofStrength = value; }
+	inline void setLightShaftQuality(float value){ lightShaftQuality = value; }
+	inline void setBloomDownSample(float value){ bloomDownSample = value; }
+	inline void setBloomStrength(float value){ bloomStren = value; }
+	inline void setBloomThreshold(float value){ bloomThreshold = value; }
+	inline void setBloomSaturation(float value){ bloomSaturation = value; }
+	inline void setAlphaParticleDownSample(float value){ particleAlphaDownSample = value; }
+	inline void setAdditiveParticleDownSample(float value){ particleAdditiveDownSample = value; }
+	inline void setReflectionQuality(float value){ reflectionQuality = value; }
+	inline void setSSAOQuality(float value){ ssaoQuality = value; }
+	inline void setSSAOBlur(float value){ ssaoBlur = value; }
+	inline void setDepthOfFieldFocus(float value){ dofFocus = value; }
+	inline void setDepthOfFieldStrength(float value){ dofStrength = value; }
 
-	void setWaterPlane(const wiWaterPlane& value){ waterPlane = value; }
+	inline void setWaterPlane(const wiWaterPlane& value){ waterPlane = value; }
 
-	void setSSAOEnabled(bool value){ ssaoEnabled = value; }
-	void setSSREnabled(bool value){ ssrEnabled = value; }
-	void setShadowsEnabled(bool value){ shadowsEnabled = value; }
-	void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
-	void setFXAAEnabled(bool value){ fxaaEnabled = value; }
-	void setBloomEnabled(bool value){ bloomEnabled = value; }
-	void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
-	void setEmitterParticlesEnabled(bool value){ emittedParticlesEnabled = value; }
-	void setHairParticlesEnabled(bool value){ hairParticlesEnabled = value; }
-	void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
-	void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
-	void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
-	void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
-	void setSSSEnabled(bool value){ sssEnabled = value; }
-	void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
+	inline void setSSAOEnabled(bool value){ ssaoEnabled = value; }
+	inline void setSSREnabled(bool value){ ssrEnabled = value; }
+	inline void setShadowsEnabled(bool value){ shadowsEnabled = value; }
+	inline void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
+	inline void setFXAAEnabled(bool value){ fxaaEnabled = value; }
+	inline void setBloomEnabled(bool value){ bloomEnabled = value; }
+	inline void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
+	inline void setEmitterParticlesEnabled(bool value){ emittedParticlesEnabled = value; }
+	inline void setHairParticlesEnabled(bool value) { hairParticlesEnabled = value; }
+	inline void setHairParticlesReflectionEnabled(bool value) { hairParticlesReflectionEnabled = value; }
+	inline void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
+	inline void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }
+	inline void setLensFlareEnabled(bool value){ lensFlareEnabled = value; }
+	inline void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
+	inline void setSSSEnabled(bool value){ sssEnabled = value; }
+	inline void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

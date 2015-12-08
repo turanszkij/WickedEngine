@@ -38,6 +38,7 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, SetColorGradingEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetEmitterParticlesEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesReflectionEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetVolumeLightsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLightShaftsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),
@@ -185,6 +186,19 @@ int Renderable3DComponent_BindLua::SetHairParticlesEnabled(lua_State* L)
 		((Renderable3DComponent*)component)->setHairParticlesEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetHairParticlesEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetHairParticlesReflectionEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetHairParticlesReflectionEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+		((Renderable3DComponent*)component)->setHairParticlesReflectionEnabled(wiLua::SGetBool(L, 1));
+	else
+		wiLua::SError(L, "SetHairParticlesReflectionEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int Renderable3DComponent_BindLua::SetVolumeLightsEnabled(lua_State* L)

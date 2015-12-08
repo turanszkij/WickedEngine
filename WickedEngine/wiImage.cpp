@@ -318,10 +318,10 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			static thread_local ConstantBuffer* cb = new ConstantBuffer;
 			if(effects.typeFlag==SCREEN){
-				(*cb).mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetOProjection() );
-				(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::RENDERWIDTH / 2 - effects.siz.x / 2, -wiRenderer::RENDERHEIGHT / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
-					* XMMatrixTranslation(-wiRenderer::RENDERWIDTH / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::RENDERHEIGHT / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
-				(*cb).mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
+				(*cb).mViewProjection = XMMatrixTranspose(XMMatrixOrthographicLH((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 100));
+				(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::GetScreenWidth() / 2 - effects.siz.x / 2, -wiRenderer::GetScreenHeight() / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
+					* XMMatrixTranslation(-wiRenderer::GetScreenWidth() / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::GetScreenHeight() / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
+				(*cb).mDimensions = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), effects.siz.x, effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
 				(*cb).mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection() );
@@ -454,7 +454,7 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 		if(effects.extractNormalMap==true)
 			normalmapmode=2;
 		(*pscb).mMaskFadOpaDis = XMFLOAT4((effects.maskMap ? 1.f : 0.f), effects.fade, effects.opacity, (float)normalmapmode);
-		(*pscb).mDimension = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
+		(*pscb).mDimension = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), effects.siz.x, effects.siz.y);
 
 		wiRenderer::UpdateBuffer(PSCb,pscb,context);
 		//PSConstantBuffer* dataPtr2;
@@ -478,11 +478,11 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 		static thread_local BlurBuffer* cb = new BlurBuffer;
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
-			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERWIDTH;
+			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetRenderWidth();
 		}
 		else{
 			wiRenderer::BindPS(blurVPS,context);
-			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERHEIGHT;
+			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetRenderHeight();
 		}
 
 		float weight0 = 1.0f;

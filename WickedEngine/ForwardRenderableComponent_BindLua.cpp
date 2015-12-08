@@ -37,6 +37,7 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(Renderable3DComponent_BindLua, SetColorGradingEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetEmitterParticlesEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesReflectionEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetVolumeLightsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLightShaftsEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetLensFlareEnabled),

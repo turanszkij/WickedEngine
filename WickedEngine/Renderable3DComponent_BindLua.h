@@ -24,6 +24,7 @@ public:
 	int SetColorGradingEnabled(lua_State* L);
 	int SetEmitterParticlesEnabled(lua_State* L);
 	int SetHairParticlesEnabled(lua_State* L);
+	int SetHairParticlesReflectionEnabled(lua_State* L);
 	int SetVolumeLightsEnabled(lua_State* L);
 	int SetLightShaftsEnabled(lua_State* L);
 	int SetLensFlareEnabled(lua_State* L);
