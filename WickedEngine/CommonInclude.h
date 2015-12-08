@@ -42,6 +42,8 @@ using namespace std;
 #define SAFE_RELEASE(a) if(a!=nullptr){a->Release();a=nullptr;}
 #define SAFE_DELETE(a) if(a!=nullptr){delete a;a=nullptr;}
 #define SAFE_DELETE_ARRAY(a) if(a!=nullptr){delete[]a;a=nullptr;}
+#define GFX_STRUCT struct alignas(16)
+#define GFX_CLASS class alignas(16)
 
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

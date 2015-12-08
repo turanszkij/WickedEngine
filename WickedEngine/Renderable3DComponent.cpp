@@ -212,7 +212,7 @@ void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context)
 		wiRenderer::UpdatePerViewCB(context, wiRenderer::getRefCamera(), wiRenderer::getCamera(), water);
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, context
 			, false, wiRenderer::SHADED_NONE
-			, nullptr, false, GRAPHICSTHREAD_REFLECTIONS);
+			, nullptr, true, GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::DrawSky(context);
 	}
 }

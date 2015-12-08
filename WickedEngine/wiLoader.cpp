@@ -8,6 +8,9 @@
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 
+thread_local vector<Instance>		Mesh::instances;
+ID3D11Buffer* Mesh::meshInstanceBuffer=nullptr;
+
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
 						, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier){
@@ -303,7 +306,6 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 
 		Optimize();
 
-		usedBy.resize(1);
 		CreateBuffers();
 	}
 }
@@ -314,23 +316,19 @@ void Mesh::Optimize()
 void Mesh::CreateBuffers(){
 	if(!buffersComplete){
 
-		usedBy.resize(1);
-
-		for(int i=0;i<GRAPHICSTHREAD_COUNT;++i){
-			instances[i].clear();
-			instances[i].resize(usedBy.size());
-		}
-
-		if(meshInstanceBuffer!=nullptr)
-			return;
+		//if(meshInstanceBuffer!=nullptr)
+		//	return;
 
 		D3D11_BUFFER_DESC bd;
-		ZeroMemory( &bd, sizeof(bd) );
-		bd.Usage = D3D11_USAGE_DYNAMIC;
-		bd.ByteWidth = sizeof( Instance )*usedBy.size();
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &meshInstanceBuffer );
+		if (meshInstanceBuffer == nullptr)
+		{
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = D3D11_USAGE_DYNAMIC;
+			bd.ByteWidth = sizeof(Instance) * 2;
+			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			wiRenderer::graphicsDevice->CreateBuffer(&bd, 0, &meshInstanceBuffer);
+		}
 
 		//bool armatureDeformedMesh=false;
 		//for(int u : usedBy){
@@ -432,25 +430,17 @@ void Mesh::CreateVertexArrays()
 		}
 	}
 }
-void Mesh::AddInstance(int count){
-	usedBy.resize(usedBy.size()+count);
-	for(int i=0;i<GRAPHICSTHREAD_COUNT;++i){
-		instances[i].clear();
-		instances[i].resize(usedBy.size());
-	}
-	wiRenderer::ResizeBuffer<Instance>(meshInstanceBuffer,usedBy.size()*2);
-}
-void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD thread)
+void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
 {
-	if (numerator >= (int)instances[thread].size())
+	if (numerator >= (int)instances.size())
 	{
-		instances[thread].resize(instances[thread].size() * 2);
+		instances.resize( (instances.size() + 1) * 2);
 	}
-	instances[thread][numerator] = instance;
+	instances[numerator] = instance;
 }
-void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD thread, wiRenderer::DeviceContext context)
+void Mesh::UpdateRenderableInstances(int count, wiRenderer::DeviceContext context)
 {
-	wiRenderer::UpdateBuffer(meshInstanceBuffer, instances[thread].data(), context, sizeof(Instance)*count);
+	wiRenderer::UpdateBuffer(meshInstanceBuffer, instances.data(), context, sizeof(Instance)*count);
 }
 
 void LoadWiArmatures(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures
@@ -806,13 +796,12 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 							}
 							else{
 								objects.back()->mesh=iter->second;
-								objects.back()->mesh->AddInstance(1);
 							}
 						}
 						else{
 							if(iter!=meshes.end()) {
 								objects.back()->mesh=iter->second;
-								objects.back()->mesh->usedBy.push_back(objects.size()-1);
+								//objects.back()->mesh->usedBy.push_back(objects.size()-1);
 							}
 						}
 					}

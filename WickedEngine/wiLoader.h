@@ -284,10 +284,10 @@ struct Mesh{
 	vector<unsigned int>	physicsindices;
 	vector<int>				physicalmapGP;
 
-	vector<Instance>		instances[GRAPHICSTHREAD_COUNT];
+	static thread_local vector<Instance>		instances;
 
 	ID3D11Buffer* meshVertBuff;
-	ID3D11Buffer* meshInstanceBuffer;
+	static ID3D11Buffer* meshInstanceBuffer;
 	ID3D11Buffer* meshIndexBuff;
 	ID3D11Buffer* boneBuffer;
 	ID3D11Buffer* sOutBuffer;
@@ -297,7 +297,7 @@ struct Mesh{
 	vector<Material*> materials;
 	bool renderable,doubleSided;
 	STENCILREF stencilRef;
-	vector<int> usedBy;
+	//vector<int> usedBy;
 
 	bool calculatedAO;
 
@@ -336,9 +336,6 @@ struct Mesh{
 		vertexGroups.clear();
 		goalPositions.clear();
 		goalNormals.clear();
-		for(int i=0;i<5;++i){
-			instances[i].clear();
-		}
 	}
 	void LoadFromFile(const string& newName, const string& fname
 		, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier="");
@@ -346,9 +343,8 @@ struct Mesh{
 	void Optimize();
 	void CreateBuffers();
 	void CreateVertexArrays();
-	void AddInstance(int count);
-	void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD thread);
-	void UpdateRenderableInstances(int count, GRAPHICSTHREAD thread, ID3D11DeviceContext* context);
+	static void AddRenderableInstance(const Instance& instance, int numerator);
+	static void UpdateRenderableInstances(int count, ID3D11DeviceContext* context);
 	void init(){
 		parent="";
 		vertices.resize(0);
@@ -364,7 +360,7 @@ struct Mesh{
 		renderable=false;
 		doubleSided=false;
 		stencilRef = STENCILREF::STENCILREF_DEFAULT;
-		usedBy.resize(0);
+		//usedBy.resize(0);
 		aabb=AABB();
 		trailInfo=RibbonTrail();
 		armatureIndex=0;

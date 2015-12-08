@@ -9,7 +9,7 @@ class wiImage
 private:
 	static mutex MUTEX;
 protected:
-	struct ConstantBuffer
+	GFX_STRUCT ConstantBuffer
 	{
 		XMMATRIX mViewProjection;
 		XMMATRIX mTrans;
@@ -18,36 +18,48 @@ protected:
 		XMFLOAT4 mDrawRec;
 		XMFLOAT4 mBlurOpaPiv;
 		XMFLOAT4 mTexOffset;
+
+		ALIGN_16
 	};
-	struct PSConstantBuffer
+	GFX_STRUCT PSConstantBuffer
 	{
 		XMFLOAT4 mMaskFadOpaDis;
 		XMFLOAT4 mDimension;
 		PSConstantBuffer(){mMaskFadOpaDis=mDimension=XMFLOAT4(0,0,0,0);}
+
+		ALIGN_16
 	};
-	struct ProcessBuffer
+	GFX_STRUCT ProcessBuffer
 	{
 		XMFLOAT4 mPostProcess;
 		XMFLOAT4 mBloom;
 		ProcessBuffer(){mPostProcess=mBloom=XMFLOAT4(0,0,0,0);}
+
+		ALIGN_16
 	};
-	struct LightShaftBuffer
+	GFX_STRUCT LightShaftBuffer
 	{
 		XMFLOAT4 mProperties;
 		XMFLOAT2 mLightShaft; XMFLOAT2 mPadding;
 		LightShaftBuffer(){mProperties=XMFLOAT4(0,0,0,0);mLightShaft=XMFLOAT2(0,0);}
+
+		ALIGN_16
 	};
-	struct DeferredBuffer
+	GFX_STRUCT DeferredBuffer
 	{
 		XMFLOAT3 mAmbient; float pad;
 		XMFLOAT3 mHorizon; float pad1;
 		XMMATRIX mViewProjInv;
 		XMFLOAT3 mFogSEH; float pad2;
+
+		ALIGN_16
 	};
-	struct BlurBuffer
+	GFX_STRUCT BlurBuffer
 	{
 		XMVECTOR mWeight;
 		XMFLOAT4 mWeightTexelStrenMip;
+
+		ALIGN_16
 	};
 	
 	static ID3D11BlendState*		blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg;

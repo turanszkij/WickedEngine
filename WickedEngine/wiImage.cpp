@@ -316,15 +316,15 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 
 	if(!effects.blur){
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
-			ConstantBuffer cb;
+			static thread_local ConstantBuffer* cb = new ConstantBuffer;
 			if(effects.typeFlag==SCREEN){
-				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetOProjection() );
-				cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::RENDERWIDTH / 2 - effects.siz.x / 2, -wiRenderer::RENDERHEIGHT / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
+				(*cb).mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetOProjection() );
+				(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::RENDERWIDTH / 2 - effects.siz.x / 2, -wiRenderer::RENDERHEIGHT / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(-wiRenderer::RENDERWIDTH / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::RENDERHEIGHT / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
-				cb.mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
+				(*cb).mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
-				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection() );
+				(*cb).mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection() );
 				XMMATRIX faceRot = XMMatrixIdentity();
 				if(effects.lookAt.w){
 					XMVECTOR vvv = (effects.lookAt.x==1 && !effects.lookAt.y && !effects.lookAt.z)?XMVectorSet(0,1,0,0):XMVectorSet(1,0,0,0);
@@ -339,22 +339,22 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 				}
 				else
 					faceRot=XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
-				cb.mTrans = XMMatrixTranspose(
+				(*cb).mTrans = XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x,effects.scale.y,1)
 					*XMMatrixRotationZ(effects.rotation)
 					*faceRot
 					//*XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&effects.pos)-wiRenderer::getCamera()->Eye,XMVectorSet(0,1,0,0)))
 					*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
 					);
-				cb.mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
+				(*cb).mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
 			}
 	
-			cb.mOffsetMirFade = XMFLOAT4(effects.offset.x,effects.offset.y,effects.mirror,effects.fade);
-			cb.mDrawRec = effects.drawRec;
-			cb.mBlurOpaPiv = XMFLOAT4(effects.blurDir, effects.blur, effects.opacity, (float)effects.pivotFlag);
-			cb.mTexOffset = XMFLOAT4(effects.texOffset.x, effects.texOffset.y, effects.mipLevel, 0);
+			(*cb).mOffsetMirFade = XMFLOAT4(effects.offset.x,effects.offset.y,effects.mirror,effects.fade);
+			(*cb).mDrawRec = effects.drawRec;
+			(*cb).mBlurOpaPiv = XMFLOAT4(effects.blurDir, effects.blur, effects.opacity, (float)effects.pivotFlag);
+			(*cb).mTexOffset = XMFLOAT4(effects.texOffset.x, effects.texOffset.y, effects.mipLevel, 0);
 
-			wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
+			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 	
 			//context->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
 
@@ -407,11 +407,11 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 				wiRenderer::BindPS(bloomSeparatePS,context);
 			else wiHelper::messageBox("Postprocess branch not implemented!");
 			
-			ProcessBuffer prcb;
-			prcb.mPostProcess=XMFLOAT4(effects.process.motionBlur,effects.process.outline,effects.process.dofStrength,effects.process.ssss.x);
-			prcb.mBloom=XMFLOAT4(effects.bloom.separate,effects.bloom.threshold,effects.bloom.saturation,effects.process.ssss.y);
+			static thread_local ProcessBuffer* prcb = new ProcessBuffer;
+			(*prcb).mPostProcess=XMFLOAT4(effects.process.motionBlur,effects.process.outline,effects.process.dofStrength,effects.process.ssss.x);
+			(*prcb).mBloom=XMFLOAT4(effects.bloom.separate,effects.bloom.threshold,effects.bloom.saturation,effects.process.ssss.y);
 
-			wiRenderer::UpdateBuffer(processCb,&prcb,context);
+			wiRenderer::UpdateBuffer(processCb,prcb,context);
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			//ProcessBuffer* dataPtr2;
 			//context->Map(processCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
@@ -429,11 +429,11 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 			wiRenderer::BindVS(screenVS,context);
 			wiRenderer::BindPS(shaftPS,context);
 			
-			LightShaftBuffer scb;
-			scb.mProperties=XMFLOAT4(0.65f,0.25f,0.945f,0.2f); //Density|Weight|Decay|Exposure
-			scb.mLightShaft=effects.sunPos;
+			static thread_local LightShaftBuffer* scb = new LightShaftBuffer;
+			(*scb).mProperties=XMFLOAT4(0.65f,0.25f,0.945f,0.2f); //Density|Weight|Decay|Exposure
+			(*scb).mLightShaft=effects.sunPos;
 
-			wiRenderer::UpdateBuffer(shaftCb,&scb,context);
+			wiRenderer::UpdateBuffer(shaftCb,scb,context);
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			//LightShaftBuffer* dataPtr2;
 			//context->Map(shaftCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
@@ -447,16 +447,16 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 
 		
 		//D3D11_MAPPED_SUBRESOURCE mappedResource;
-		PSConstantBuffer pscb;
+		static thread_local PSConstantBuffer* pscb = new PSConstantBuffer;
 		int normalmapmode=0;
 		if(effects.normalMap && effects.refractionMap)
 			normalmapmode=1;
 		if(effects.extractNormalMap==true)
 			normalmapmode=2;
-		pscb.mMaskFadOpaDis = XMFLOAT4((effects.maskMap ? 1.f : 0.f), effects.fade, effects.opacity, (float)normalmapmode);
-		pscb.mDimension = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
+		(*pscb).mMaskFadOpaDis = XMFLOAT4((effects.maskMap ? 1.f : 0.f), effects.fade, effects.opacity, (float)normalmapmode);
+		(*pscb).mDimension = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, effects.siz.x, effects.siz.y);
 
-		wiRenderer::UpdateBuffer(PSCb,&pscb,context);
+		wiRenderer::UpdateBuffer(PSCb,pscb,context);
 		//PSConstantBuffer* dataPtr2;
 		//context->Map(PSCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
 		//dataPtr2 = (PSConstantBuffer*)mappedResource.pData;
@@ -475,14 +475,14 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 	else{ //BLUR
 		wiRenderer::BindVS(screenVS,context);
 		
-		BlurBuffer cb;
+		static thread_local BlurBuffer* cb = new BlurBuffer;
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
-			cb.mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERWIDTH;
+			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERWIDTH;
 		}
 		else{
 			wiRenderer::BindPS(blurVPS,context);
-			cb.mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERHEIGHT;
+			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::RENDERHEIGHT;
 		}
 
 		float weight0 = 1.0f;
@@ -491,12 +491,12 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 		float weight3 = 0.18f;
 		float weight4 = 0.1f;
 		float normalization = (weight0 + 2.0f * (weight1 + weight2 + weight3 + weight4));
-		cb.mWeight=XMVectorSet(weight0,weight1,weight2,weight3) / normalization;
-		cb.mWeightTexelStrenMip.x = weight4 / normalization;
-		cb.mWeightTexelStrenMip.z = effects.blur;
-		cb.mWeightTexelStrenMip.w = effects.mipLevel;
+		(*cb).mWeight=XMVectorSet(weight0,weight1,weight2,weight3) / normalization;
+		(*cb).mWeightTexelStrenMip.x = weight4 / normalization;
+		(*cb).mWeightTexelStrenMip.z = effects.blur;
+		(*cb).mWeightTexelStrenMip.w = effects.mipLevel;
 
-		wiRenderer::UpdateBuffer(blurCb,&cb,context);
+		wiRenderer::UpdateBuffer(blurCb,cb,context);
 
 		wiRenderer::BindConstantBufferPS(blurCb,0,context);
 	}
@@ -597,16 +597,16 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 
 	wiRenderer::BindBlendState(blendStateNoBlend,context);
 
-	DeferredBuffer cb;
+	static thread_local DeferredBuffer* cb = new DeferredBuffer;
 	//cb.mSun=XMVector3Normalize(wiRenderer::GetSunPosition());
 	//cb.mEye=wiRenderer::getCamera()->Eye;
-	cb.mAmbient=wiRenderer::worldInfo.ambient;
+	(*cb).mAmbient=wiRenderer::worldInfo.ambient;
 	//cb.mBiasResSoftshadow=shadowProps;
-	cb.mHorizon=wiRenderer::worldInfo.horizon;
-	cb.mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::getCamera()->GetView()*wiRenderer::getCamera()->GetProjection()) );
-	cb.mFogSEH=wiRenderer::worldInfo.fogSEH;
+	(*cb).mHorizon=wiRenderer::worldInfo.horizon;
+	(*cb).mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::getCamera()->GetView()*wiRenderer::getCamera()->GetProjection()) );
+	(*cb).mFogSEH=wiRenderer::worldInfo.fogSEH;
 
-	wiRenderer::UpdateBuffer(deferredCb,&cb,context);
+	wiRenderer::UpdateBuffer(deferredCb,cb,context);
 
 	/*cb.mShM[0] = shMs[0];
 	cb.mShM[1] = shMs[1];

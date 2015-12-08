@@ -69,6 +69,8 @@ int wiFont_BindLua::SetText(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 		font->SetText(wiLua::SGetString(L, 1));
+	else
+		font->SetText("");
 	return 0;
 }
 int wiFont_BindLua::SetSize(lua_State* L)

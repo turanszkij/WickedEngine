@@ -143,13 +143,13 @@ public:
 	static void SetSpotLightShadowProps(int count, int resolution);
 
 protected:
-	struct ConstantBuffer
+	GFX_STRUCT ConstantBuffer
 	{
 		XMVECTOR mDisplace;
 
 		ALIGN_16
 	};
-	struct StaticCB
+	GFX_STRUCT StaticCB
 	{
 		XMMATRIX mViewProjection;
 		XMMATRIX mRefViewProjection;
@@ -164,7 +164,7 @@ protected:
 
 		ALIGN_16
 	};
-	struct PixelCB
+	GFX_STRUCT PixelCB
 	{
 		//XMFLOAT4A mFx;
 		XMFLOAT3 mHorizon; float pad;
@@ -175,13 +175,13 @@ protected:
 
 		ALIGN_16
 	};
-	struct FxCB{
+	GFX_STRUCT FxCB{
 		XMFLOAT4 mFx;
 		XMFLOAT4 colorMask;
 
 		ALIGN_16
 	};
-	struct MaterialCB
+	GFX_STRUCT MaterialCB
 	{
 		XMFLOAT4 difColor;
 		UINT hasRef,hasNor,hasTex,hasSpe;
@@ -202,7 +202,7 @@ protected:
 
 		ALIGN_16
 	};
-	struct ForShadowMapCB
+	GFX_STRUCT ForShadowMapCB
 	{
 		XMMATRIX mViewProjection;
 		XMFLOAT3 mWind; float time;
@@ -211,19 +211,19 @@ protected:
 
 		ALIGN_16
 	};
-	struct CubeShadowCb{
+	GFX_STRUCT CubeShadowCb{
 		XMMATRIX mViewProjection[6];
 
 		ALIGN_16
 	};
-	struct TessBuffer
+	GFX_STRUCT TessBuffer
 	{
 		XMVECTOR  g_f4Eye;
 		XMFLOAT4A g_f4TessFactors;
 
 		ALIGN_16
 	};
-	struct dLightBuffer
+	GFX_STRUCT dLightBuffer
 	{
 		XMVECTOR direction;
 		XMFLOAT4 col;
@@ -232,7 +232,7 @@ protected:
 
 		ALIGN_16
 	};
-	struct pLightBuffer
+	GFX_STRUCT pLightBuffer
 	{
 		XMFLOAT3 pos; float pad;
 		XMFLOAT4 col;
@@ -240,7 +240,7 @@ protected:
 
 		ALIGN_16
 	};
-	struct sLightBuffer
+	GFX_STRUCT sLightBuffer
 	{
 		XMMATRIX world;
 		XMVECTOR direction;
@@ -251,7 +251,7 @@ protected:
 
 		ALIGN_16
 	};
-	struct vLightBuffer
+	GFX_STRUCT vLightBuffer
 	{
 		XMMATRIX world;
 		XMFLOAT4 col;
@@ -259,18 +259,18 @@ protected:
 
 		ALIGN_16
 	};
-	struct LightStaticCB{
+	GFX_STRUCT LightStaticCB{
 		XMMATRIX mProjInv;
 
 		ALIGN_16
 	};
-	struct LineBuffer{
+	GFX_STRUCT LineBuffer{
 		XMMATRIX mWorldViewProjection;
 		XMFLOAT4 color;
 
 		ALIGN_16
 	};
-	struct SkyBuffer
+	GFX_STRUCT SkyBuffer
 	{
 		XMMATRIX mV;
 		XMMATRIX mP;
@@ -279,13 +279,13 @@ protected:
 
 		ALIGN_16
 	};
-	struct DecalCBVS
+	GFX_STRUCT DecalCBVS
 	{
 		XMMATRIX mWVP;
 
 		ALIGN_16
 	};
-	struct DecalCBPS
+	GFX_STRUCT DecalCBPS
 	{
 		XMMATRIX mDecalVP;
 		int hasTexNor;
@@ -295,7 +295,7 @@ protected:
 
 		ALIGN_16
 	};
-	struct ViewPropCB
+	GFX_STRUCT ViewPropCB
 	{
 		XMMATRIX matView;
 		XMMATRIX matProj;

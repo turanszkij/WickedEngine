@@ -36,12 +36,10 @@ private:
 			sizBeginEnd[0] = sizOpaMir.x;
 			sizBeginEnd[1] = sizOpaMir.x*scaleX;
 		}
-
-		ALIGN_16
 	};
 	deque<Point> points;
 
-	struct ConstantBuffer
+	GFX_STRUCT ConstantBuffer
 	{
 		XMMATRIX	mView;
 		XMMATRIX	mProjection;

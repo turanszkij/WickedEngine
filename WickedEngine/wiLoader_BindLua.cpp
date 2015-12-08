@@ -603,7 +603,7 @@ int Object_BindLua::GetEmitter(lua_State *L)
 	{
 		id = wiLua::SGetInt(L, 1);
 	}
-	if (object->eParticleSystems.size() > id)
+	if ((int)object->eParticleSystems.size() > id)
 	{
 		Luna<EmittedParticle_BindLua>::push(L, new EmittedParticle_BindLua(object->eParticleSystems[id]));
 	}

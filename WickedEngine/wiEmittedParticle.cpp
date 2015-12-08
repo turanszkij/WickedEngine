@@ -253,17 +253,17 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, ID3D1
 		
 			wiRenderer::BindTexturePS(depth,1,context);
 
-			ConstantBuffer cb;
-			cb.mView = XMMatrixTranspose(camera->GetView());
-			cb.mProjection = XMMatrixTranspose( camera->GetProjection() );
-			cb.mCamPos = camera->GetEye();
-			cb.mAdd.x = additive;
-			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
-			cb.mMotionBlurAmount = motionBlurAmount;
+			static thread_local ConstantBuffer* cb = new ConstantBuffer;
+			(*cb).mView = XMMatrixTranspose(camera->GetView());
+			(*cb).mProjection = XMMatrixTranspose( camera->GetProjection() );
+			(*cb).mCamPos = camera->GetEye();
+			(*cb).mAdd.x = additive;
+			(*cb).mAdd.y = (FLAG==DRAW_DARK?true:false);
+			(*cb).mMotionBlurAmount = motionBlurAmount;
 		
 			//context->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
 
-			wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
+			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			//ConstantBuffer* dataPtr;
 			//context->Map(constantBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);

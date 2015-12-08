@@ -330,12 +330,12 @@ void wiFont::Draw(wiRenderer::DeviceContext context){
 		wiRenderer::BindPS(pixelShader,context);
 
 
-		ConstantBuffer cb = ConstantBuffer();
-		cb.mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetScreenWidth(),(float)wiRenderer::GetScreenHeight(),0,100) );
-		cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
-		cb.mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
+		static thread_local ConstantBuffer* cb = new ConstantBuffer;
+		(*cb).mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetScreenWidth(),(float)wiRenderer::GetScreenHeight(),0,100) );
+		(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
+		(*cb).mDimensions = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
 		
-		wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
+		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 
 		wiRenderer::BindConstantBufferVS(constantBuffer,0,context);
 

@@ -9,11 +9,13 @@ class wiHairParticle :
 	public wiParticle
 {
 public:
-	struct Point
+	GFX_STRUCT Point
 	{
 		XMFLOAT4 posRand;
 		XMFLOAT4 normalLen;
 		XMFLOAT4 tangent;
+
+		ALIGN_16
 	};
 	struct Patch
 	{
@@ -29,7 +31,7 @@ private:
 	int count;
 	string name,densityG,lenG;
 	Material* material;
-	struct CBGS
+	GFX_STRUCT CBGS
 	{
 		XMMATRIX mView;
 		XMMATRIX mProj;

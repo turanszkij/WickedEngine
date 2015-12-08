@@ -312,7 +312,7 @@ void wiHairParticle::SetUpPatches()
 
 	for (unsigned int i = 0; i<mesh->indices.size() - 3; i += 3){
 
-		int vi[]={mesh->indices[i],mesh->indices[i+1],mesh->indices[i+2]};
+		unsigned int vi[]={mesh->indices[i],mesh->indices[i+1],mesh->indices[i+2]};
 		float denMod[]={1,1,1},lenMod[]={1,1,1};
 		if(dVG>=0){
 			auto found = mesh->vertexGroups[dVG].vertices.find(vi[0]);
@@ -453,7 +453,7 @@ void wiHairParticle::SetUpPatches()
 void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 {
 	
-	Frustum frustum = Frustum();
+	static thread_local Frustum frustum = Frustum();
 	frustum.ConstructFrustum((float)LOD[2], camera->Projection, camera->View);
 
 		
@@ -481,18 +481,18 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 			wiRenderer::BindRasterizerState(ncrs,context);
 
 
-		CBGS gcb;
-		gcb.mView = XMMatrixTranspose(camera->GetView());
-		gcb.mProj = XMMatrixTranspose(camera->GetProjection());
-		gcb.mPrevViewProjection = XMMatrixTranspose(wiRenderer::prevFrameCam->GetViewProjection());
-		gcb.colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,wiRenderer::wind.time);
-		gcb.eye=camera->translation;
-		gcb.drawdistance = (float)LOD[2];
-		gcb.wind=wiRenderer::wind.direction;
-		gcb.windRandomness=wiRenderer::wind.randomness;
-		gcb.windWaveSize=wiRenderer::wind.waveSize;
+		static thread_local CBGS* gcb = new CBGS;
+		(*gcb).mView = XMMatrixTranspose(camera->GetView());
+		(*gcb).mProj = XMMatrixTranspose(camera->GetProjection());
+		(*gcb).mPrevViewProjection = XMMatrixTranspose(wiRenderer::prevFrameCam->GetViewProjection());
+		(*gcb).colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,wiRenderer::wind.time);
+		(*gcb).eye=camera->translation;
+		(*gcb).drawdistance = (float)LOD[2];
+		(*gcb).wind=wiRenderer::wind.direction;
+		(*gcb).windRandomness=wiRenderer::wind.randomness;
+		(*gcb).windWaveSize=wiRenderer::wind.waveSize;
 		
-		wiRenderer::UpdateBuffer(cbgs,&gcb,context);
+		wiRenderer::UpdateBuffer(cbgs,gcb,context);
 
 		wiRenderer::BindDepthStencilState(dss,STENCILREF_DEFAULT,context);
 		wiRenderer::BindConstantBufferGS(cbgs,0,context);

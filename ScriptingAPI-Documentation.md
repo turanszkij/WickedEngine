@@ -112,7 +112,7 @@ getprops(YourObject) on them (where YourObject is the object which is to be insp
 - Tags:
 	- [constructor]				: The method is a constructor for the same type of object.
 	- [void-constructor]		: The method is a constructor for the same type of object, but the object it creates is empty, so cannot be used.
-	- [outer]					: The method is in the global scope, so not a method of any objects.
+	- [outer]					: The method or value is in the global scope, so not a method of any objects.
 
 ### Font
 Gives you the ability to render text with a custom font.
@@ -123,12 +123,12 @@ Gives you the ability to render text with a custom font.
 - SetPos(Vector pos)
 - SetSpacing(Vector spacing)
 - SetAlign(WIFALIGN Halign, opt WIFALIGN Valign)
-	- WIFALIGN_LEFT
-	- WIFALIGN_CENTER
-	- WIFALIGN_MID
-	- WIFALIGN_RIGHT
-	- WIFALIGN_TOP
-	- WIFALIGN_BOTTOM
+	- [outer]WIFALIGN_LEFT : int
+	- [outer]WIFALIGN_CENTER : int
+	- [outer]WIFALIGN_MID : int
+	- [outer]WIFALIGN_RIGHT : int
+	- [outer]WIFALIGN_TOP : int
+	- [outer]WIFALIGN_BOTTOM : int
 - GetText() : string result
 - GetSize() : float result
 - GetPos() : Vector result

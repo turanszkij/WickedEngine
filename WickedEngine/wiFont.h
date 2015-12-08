@@ -34,13 +34,15 @@ public:
 class wiFont
 {
 protected:
-	struct Vertex
+	GFX_STRUCT Vertex
 	{
 		XMFLOAT2 Pos;
 		XMFLOAT2 Tex;
+
+		ALIGN_16
 	};
-	static std::vector<Vertex> vertexList;
-	struct ConstantBuffer
+	static vector<Vertex> vertexList;
+	GFX_STRUCT ConstantBuffer
 	{
 		XMMATRIX mProjection;
 		XMMATRIX mTrans;
