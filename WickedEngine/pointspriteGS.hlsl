@@ -58,45 +58,45 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 
 	p1.pos.w=1;
     p1.pos.xyz = p[0].pos.xyz+rightVector.xyz*(-quadLength)+upVector.xyz*(quadLength);
+	// extrude along velocity (blur)
+	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(0.0f, 0.0f);
     p1.pos = mul(p1.pos, xProjection);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
-	// extrude along velocity (blur)
-	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
 	p1.pp = p1.pos;
     triStream.Append(p1);
 	
 	p1.pos.w=1;
     p1.pos.xyz = p[0].pos.xyz+rightVector.xyz*(-quadLength)+upVector.xyz*(-quadLength);
+	// extrude along velocity (blur)
+	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(0.0f, 1.0f);
     p1.pos = mul(p1.pos, xProjection);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
-	// extrude along velocity (blur)
-	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
 	p1.pp = p1.pos;
     triStream.Append(p1);
 	
 	p1.pos.w=1;
     p1.pos.xyz = p[0].pos.xyz +rightVector.xyz*(quadLength)+upVector.xyz*(quadLength);
+	// extrude along velocity (blur)
+	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(1.0f, 0.0f);
     p1.pos = mul(p1.pos, xProjection);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
-	// extrude along velocity (blur)
-	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
 	p1.pp = p1.pos;
     triStream.Append(p1);
 	
 	p1.pos.w=1;
     p1.pos.xyz = p[0].pos.xyz +rightVector.xyz*(quadLength)+upVector.xyz*(-quadLength);
+	// extrude along velocity (blur)
+	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(1.0f, 1.0f);
     p1.pos = mul(p1.pos, xProjection);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
-	// extrude along velocity (blur)
-	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
 	p1.pp = p1.pos;
     triStream.Append(p1);
 }
