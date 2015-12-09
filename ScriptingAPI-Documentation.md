@@ -37,6 +37,7 @@ The documentation completion is still pending....
 		1. Server
 		2. Client
 	10. Input Handling
+	11. ResourceManager
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -321,23 +322,71 @@ Emitter particlesystem.
 
 ### Renderable Components
 A RenderableComponent describes a scene wich can render itself.
+- [constructor]RenderableComponent()
+- GetContent() : Resource result
+- Initialize()
+- Load()
+- Unload()
+- Start()
+- Stop()
+- Update()
+- Render()
+- Compose()
+
 
 #### Renderable2DComponent
 It can hold Sprites and Fonts and can sort them by layers, update and render them.
+- [constructor]Renderable2DComponent()
+- AddSprite(Sprite sprite, opt string layer)
+- AddFont(Font font, opt string layer)
+- RemoveFont(Font font)
+- ClearSprites()
+- ClearFonts()
+- GetSpriteOrder(Sprite sprite) : int? result
+- GetFontOrder(Font font) : int? result
+- AddLayer(string name)
+- GetLayers() : string? result
+- SetLayerOrder(string name, int order)
+- SetSpriteOrder(Sprite sprite, int order)
+- SetFontOrder(Font font, int order)
 
 #### Renderable3DComponent
 A 3D scene can either be rendered by a Forward or Deferred render path.
+- [void-constructor]Renderable3DComponent()
+- SetSSAOEnabled(bool value)
+- SetSSREnabled(bool value)
+- SetShadowsEnabled(bool value)
+- SetReflectionsEnabled(bool value)
+- SetFXAAEnabled(bool value)
+- SetBloomEnabled(bool value)
+- SetColorGradingEnabled(bool value)
+- SetEmitterParticlesEnabled(bool value)
+- SetHairParticlesEnabled(bool value)
+- SetHairParticlesReflectionEnabled(bool value)
+- SetVolumeLightsEnabled(bool value)
+- SetLightShaftsEnabled(bool value)
+- SetLensFlareEnabled(bool value)
+- SetMotionBlurEnabled(bool value)
+- SetSSSEnabled(bool value)
+- SetDepthOfFieldEnabled(bool value)
+- SetDepthOfFieldFocus(float value)
+- SetDepthOfFieldStrength(float value)
+- SetPreferredThreadingCount(int value)
 
 ##### ForwardRenderableComponent
 It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
+- [constructor]ForwardRenderableComponent()
 
 ##### DeferredRenderableComponent
 It renders the scene contained by the Renderer in a deferred render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
+- [constructor]DeferredRenderableComponent()
 
 #### LoadingScreenComponent
 It is a Renderable2DComponent but one that internally manages resource loading and can display information about the process.
+- [constructor]LoadingScreenComponent()
+- AddLoadingComponent(RenderableComponent component)
 
 ### Network
 Here are the network communication features.
@@ -376,3 +425,11 @@ These provide functions to check the state of the input devices.
 - [outer]VK_LBUTTON : int
 - [outer]VK_MBUTTON : int
 - [outer]VK_RBUTTON : int
+
+### ResourceManager
+Stores and manages resources such as textures, sounds and shaders.
+- [void-constructor]Resource()
+- Get(string name)
+- Add(string name)
+- Del(string name)
+- List() : string result
