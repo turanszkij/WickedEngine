@@ -15,10 +15,12 @@ private:
 	static ID3D11DepthStencilState* depthStencilState;
 	static ID3D11BlendState* blendState;
 
-	struct ConstantBuffer
+	GFX_STRUCT ConstantBuffer
 	{
 		XMVECTOR mSunPos;
 		XMFLOAT4 mScreen;
+
+		ALIGN_16
 	};
 
 	static void LoadShaders();

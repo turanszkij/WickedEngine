@@ -797,6 +797,9 @@
     <ClCompile Include="wiNetwork_BindLua.cpp">
       <Filter>Lua Bindings</Filter>
     </ClCompile>
+    <ClCompile Include="wiFadeManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1770,6 +1773,9 @@
     </ClInclude>
     <ClInclude Include="wiNetwork_BindLua.h">
       <Filter>Lua Bindings</Filter>
+    </ClInclude>
+    <ClInclude Include="wiFadeManager.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -46,11 +46,11 @@ void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* 
 		wiRenderer::BindVS(vertexShader,context);
 		wiRenderer::BindGS(geometryShader,context);
 
-		ConstantBuffer cb;
-		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 1, 1);
-		cb.mScreen = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
+		static thread_local ConstantBuffer* cb = new ConstantBuffer;
+		(*cb).mSunPos = lightPos / XMVectorSet((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 1, 1);
+		(*cb).mScreen = XMFLOAT4((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT, 0, 0);
 
-		wiRenderer::UpdateBuffer(constantBuffer,&cb,context);
+		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 
 	
 		//context->RSSetState(rasterizerState);

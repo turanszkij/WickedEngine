@@ -2,8 +2,11 @@
 #include "CommonInclude.h"
 #include "wiResourceManager.h"
 #include "wiCVars.h"
+#include "wiColor.h"
+#include "wiFadeManager.h"
 
 class RenderableComponent;
+
 
 class MainComponent
 {
@@ -13,6 +16,10 @@ private:
 	int targetFrameRate;
 	double targetFrameRateInv;
 	int applicationControlLostThreshold;
+
+	wiFadeManager fadeManager;
+	RenderableComponent* fadeToComponent;
+	void onActivateComponent();
 public:
 	MainComponent();
 	~MainComponent();
@@ -22,7 +29,7 @@ public:
 
 	void run();
 
-	void activateComponent(RenderableComponent* component);
+	void activateComponent(RenderableComponent* component, int fadeFrames = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
 	RenderableComponent* getActiveComponent(){ return activeComponent; }
 
 	wiCVars Props;

@@ -57,7 +57,8 @@ public:
 		Anim(){
 			repeatable=false;
 			vel=XMFLOAT3(0,0,0);
-			rot=scaleX=scaleY=opa=fad=0;
+			rot=scaleX=scaleY=fad=0;
+			opa = 1;
 			movingTexAnim=MovingTexData();
 			drawRecAnim=DrawRecData();
 		}

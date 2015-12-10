@@ -22,7 +22,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 		float2 distortionCo;
 			distortionCo.x = PSIn.dis.x/PSIn.dis.w/2.0f + 0.5f;
 			distortionCo.y = -PSIn.dis.y/PSIn.dis.w/2.0f + 0.5f;
-			float2 distort = normalize(float3(xNormalMap.SampleLevel(Sampler, PSIn.tex, PSIn.mip).rg, 1))*0.04f*(1 - xMaskFadOpaDis.z);
+			float2 distort = normalize(float3(xNormalMap.SampleLevel(Sampler, PSIn.tex, PSIn.mip).rg, 1))*0.04f*xMaskFadOpaDis.z;
 		PSIn.tex.xy=distortionCo+distort;
 	}
 
@@ -34,7 +34,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 	
 
 	color.rgb*=1-xMaskFadOpaDis.y;
-	color.a-=xMaskFadOpaDis.z;
+	color.a*=xMaskFadOpaDis.z;
 	color.a=saturate(color.a);
 
 

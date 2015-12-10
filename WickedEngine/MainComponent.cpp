@@ -23,6 +23,9 @@ MainComponent::MainComponent()
 
 	infoDisplay = InfoDisplayer(); 
 	colorGradingPaletteDisplayEnabled = false;
+
+	fadeManager.Clear();
+	fadeToComponent = nullptr;
 }
 
 
@@ -36,17 +39,39 @@ void MainComponent::Initialize()
 	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
 }
 
-void MainComponent::activateComponent(RenderableComponent* component)
+void MainComponent::onActivateComponent()
+{
+	if (fadeToComponent == nullptr)
+	{
+		return;
+	}
+	activeComponent->Stop();
+	fadeToComponent->Start();
+	activeComponent = fadeToComponent;
+	fadeToComponent = nullptr;
+}
+void MainComponent::activateComponent(RenderableComponent* component, int fadeFrames, const wiColor& fadeColor)
 {
 	if (component == nullptr)
 	{
 		return;
 	}
 
-	activeComponent->Stop();
-	component->Start();
+	fadeToComponent = component;
 
-	activeComponent = component;
+	if (fadeFrames > 0)
+	{
+		// Fade
+		fadeManager.Clear();
+		fadeManager.Start(fadeFrames, fadeColor, bind(&MainComponent::onActivateComponent, this));
+	}
+	else
+	{
+		// No fade
+		fadeManager.Clear();
+
+		onActivateComponent();
+	}
 }
 
 void MainComponent::run()
@@ -99,6 +124,9 @@ void MainComponent::Update()
 	wiLua::GetGlobal()->Update();
 
 	getActiveComponent()->Update();
+
+
+	fadeManager.Update();
 }
 
 void MainComponent::Render()
@@ -111,6 +139,16 @@ void MainComponent::Render()
 void MainComponent::Compose()
 {
 	getActiveComponent()->Compose();
+
+	if (fadeManager.IsActive())
+	{
+		// display fade rect
+		static wiImageEffects fx;
+		fx.siz.x = (float)wiRenderer::GetScreenWidth();
+		fx.siz.y = (float)wiRenderer::GetScreenHeight();
+		fx.opacity = fadeManager.opacity;
+		wiImage::Draw(wiTextureHelper::getInstance()->getColor(fadeManager.color), fx);
+	}
 
 	// Draw the information display
 	if (infoDisplay.active)

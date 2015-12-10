@@ -15,7 +15,9 @@ public:
 	static void Start();
 	static double TotalTime(); 
 
-	void record(); //start recording
-	double elapsed(); //elapsed time since record()
+	//start recording
+	void record();
+	//elapsed time since record()
+	double elapsed();
 };
 

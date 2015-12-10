@@ -27,17 +27,18 @@ The documentation completion is still pending....
 		6. Ray
 		7. AABB
 		8. Emitter
-	8. Renderable Components
+	8. MainComponent
+	9. RenderableComponent
 		1. Renderable2DComponent
 		2. Renderable3DComponent
 			1. ForwardRenderableComponent
 			2. DeferredRenderableComponent
 		4. LoadingScreenComponent
-	9. Network
+	10. Network
 		1. Server
 		2. Client
-	10. Input Handling
-	11. ResourceManager
+	11. Input Handling
+	12. ResourceManager
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -320,7 +321,21 @@ Emitter particlesystem.
 - Burst(float amount)
 - IsValid() : bool value
 
-### Renderable Components
+### MainComponent
+The main component which holds information and manages the running of the current program.
+- [outer]main : MainComponent
+- [void-constructor]MainComponent()
+- GetContent() : Resource? result
+- GetActiveComponent() : RenderableComponent? result
+- SetActiveComponent(RenderableComponent component, opt int fadeFrames,fadeColorR,fadeColorG)
+- SetFrameSkip(bool enabled)
+- SetInfoDisplay(bool active)
+- SetWatermarkDisplay(bool active)
+- SetFPSDisplay(bool active)
+- SetCPUDisplay(bool active)
+- SetColorGradePaletteDisplay(bool active)
+
+### RenderableComponent
 A RenderableComponent describes a scene wich can render itself.
 - [constructor]RenderableComponent()
 - GetContent() : Resource result
@@ -351,7 +366,8 @@ It can hold Sprites and Fonts and can sort them by layers, update and render the
 - SetFontOrder(Font font, int order)
 
 #### Renderable3DComponent
-A 3D scene can either be rendered by a Forward or Deferred render path.
+A 3D scene can either be rendered by a Forward or Deferred render path. 
+It inherits functions from Renderable2DComponent, so it can render a 2D overlay.
 - [void-constructor]Renderable3DComponent()
 - SetSSAOEnabled(bool value)
 - SetSSREnabled(bool value)
@@ -376,26 +392,32 @@ A 3D scene can either be rendered by a Forward or Deferred render path.
 ##### ForwardRenderableComponent
 It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
+It inherits functions from Renderable3DComponent.
 - [constructor]ForwardRenderableComponent()
 
 ##### DeferredRenderableComponent
 It renders the scene contained by the Renderer in a deferred render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
+It inherits functions from Renderable3DComponent.
 - [constructor]DeferredRenderableComponent()
 
 #### LoadingScreenComponent
 It is a Renderable2DComponent but one that internally manages resource loading and can display information about the process.
+It inherits functions from Renderable2DComponent.
 - [constructor]LoadingScreenComponent()
 - AddLoadingComponent(RenderableComponent component)
 
 ### Network
 Here are the network communication features.
+- TODO
 
 #### Server
 A TCP host to which clients can connect and communicate with each other or the server.
+- TODO
 
 #### Client
 A TCP client which provides features to communicate with other clients over the internet or local area network connection.
+- TODO
 
 ### Input Handling
 These provide functions to check the state of the input devices.
@@ -428,6 +450,7 @@ These provide functions to check the state of the input devices.
 
 ### ResourceManager
 Stores and manages resources such as textures, sounds and shaders.
+- [outer]globalResources : Resource
 - [void-constructor]Resource()
 - Get(string name)
 - Add(string name)

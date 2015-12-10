@@ -118,51 +118,70 @@ int MainComponent_BindLua::SetActiveComponent(lua_State *L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
+		int fadeFrames = 0;
+		wiColor fadeColor = wiColor(0, 0, 0, 255);
+		if (argc > 1)
+		{
+			fadeFrames = wiLua::SGetInt(L, 2);
+			if (argc > 2)
+			{
+				fadeColor.r = wiLua::SGetInt(L, 3);
+				if (argc > 3)
+				{
+					fadeColor.g = wiLua::SGetInt(L, 4);
+					if (argc > 4)
+					{
+						fadeColor.b = wiLua::SGetInt(L, 5);
+					}
+				}
+			}
+		}
+
 		ForwardRenderableComponent_BindLua* compFwd3D = Luna<ForwardRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compFwd3D != nullptr)
 		{
-			component->activateComponent(compFwd3D->component);
+			component->activateComponent(compFwd3D->component, fadeFrames, fadeColor);
 			return 0;
 		}
 
 		DeferredRenderableComponent_BindLua* compDef3D = Luna<DeferredRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compDef3D != nullptr)
 		{
-			component->activateComponent(compDef3D->component);
+			component->activateComponent(compDef3D->component, fadeFrames, fadeColor);
 			return 0;
 		}
 
 		Renderable3DComponent_BindLua* comp3D = Luna<Renderable3DComponent_BindLua>::lightcheck(L, 1);
 		if (comp3D != nullptr)
 		{
-			component->activateComponent(comp3D->component);
+			component->activateComponent(comp3D->component, fadeFrames, fadeColor);
 			return 0;
 		}
 
 		LoadingScreenComponent_BindLua* compLoad = Luna<LoadingScreenComponent_BindLua>::lightcheck(L, 1);
 		if (compLoad != nullptr)
 		{
-			component->activateComponent(compLoad->component);
+			component->activateComponent(compLoad->component, fadeFrames, fadeColor);
 			return 0;
 		}
 
 		Renderable2DComponent_BindLua* comp2D = Luna<Renderable2DComponent_BindLua>::lightcheck(L, 1);
 		if (comp2D != nullptr)
 		{
-			component->activateComponent(comp2D->component);
+			component->activateComponent(comp2D->component, fadeFrames, fadeColor);
 			return 0;
 		}
 
 		RenderableComponent_BindLua* comp = Luna<RenderableComponent_BindLua>::lightcheck(L, 1);
 		if (comp != nullptr)
 		{
-			component->activateComponent(comp->component);
+			component->activateComponent(comp->component, fadeFrames, fadeColor);
 			return 0;
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetActiveComponent(RenderableComponent component) not enought arguments!");
+		wiLua::SError(L, "SetActiveComponent(RenderableComponent component, opt int fadeFrames,fadeColorR,fadeColorG) not enought arguments!");
 		return 0;
 	}
 	return 0;

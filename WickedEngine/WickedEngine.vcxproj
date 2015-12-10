@@ -450,6 +450,7 @@
     <ClCompile Include="wiDepthTarget.cpp" />
     <ClCompile Include="wiDirectInput.cpp" />
     <ClCompile Include="wiEmittedParticle.cpp" />
+    <ClCompile Include="wiFadeManager.cpp" />
     <ClCompile Include="wiFont.cpp" />
     <ClCompile Include="ForwardRenderableComponent.cpp" />
     <ClCompile Include="wiFont_BindLua.cpp" />
@@ -510,6 +511,7 @@
     <ClInclude Include="Texture_BindLua.h" />
     <ClInclude Include="Vector_BindLua.h" />
     <ClInclude Include="wiBackLog_BindLua.h" />
+    <ClInclude Include="wiFadeManager.h" />
     <ClInclude Include="wiFont_BindLua.h" />
     <ClInclude Include="wiImageEffects_BindLua.h" />
     <ClInclude Include="wiInputManager_BindLua.h" />

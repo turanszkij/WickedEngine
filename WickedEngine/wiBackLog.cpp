@@ -66,7 +66,7 @@ void wiBackLog::Draw(){
 		//wiImage::BatchBegin();
 		wiImageEffects fx = wiImageEffects((float)wiRenderer::RENDERWIDTH, (float)wiRenderer::RENDERHEIGHT);
 		fx.pos=XMFLOAT3(0,pos,0);
-		fx.opacity = wiMath::Lerp(0, 1, pos / wiRenderer::RENDERHEIGHT);
+		fx.opacity = wiMath::Lerp(1, 0, pos / wiRenderer::RENDERHEIGHT);
 		wiImage::Draw(backgroundTex, fx);
 		font.SetText(getText());
 		font.props.posY = pos - wiRenderer::RENDERHEIGHT + 75 + scroll;

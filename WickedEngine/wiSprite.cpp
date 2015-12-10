@@ -60,7 +60,7 @@ void wiSprite::CleanUp(){
 }
 
 void wiSprite::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* context){
-	if(effects.opacity<1 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE) ){
+	if(effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE) ){
 		effects.setRefractionMap(refracRes);
 		wiImage::Draw(texturePointer,effects,context);
 	}
@@ -69,7 +69,7 @@ void wiSprite::Draw(){
 	wiSprite::Draw(NULL,wiRenderer::getImmediateContext());
 }
 void wiSprite::DrawNormal(ID3D11DeviceContext* context){
-	if(normalPointer && effects.opacity<1 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){
+	if(normalPointer && effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){
 		//effects.setRefractionMap(refracRes);
 
 		wiImageEffects effectsMod(effects);

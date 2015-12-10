@@ -105,7 +105,8 @@ public:
 		sunPos = XMFLOAT2(0, 0);
 		lookAt = XMFLOAT4(0, 0, 0, 0);
 		mirror = 1.0f;
-		blur = blurDir = fade = opacity = rotation = 0.0f;
+		blur = blurDir = fade = rotation = 0.0f;
+		opacity = 1.0f;
 		extractNormalMap = false;
 		mipLevel = 0.f;
 		stencilRef = 0;
