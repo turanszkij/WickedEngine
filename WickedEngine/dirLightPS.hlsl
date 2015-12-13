@@ -35,7 +35,7 @@ float4 main( VertexToPixel PSIn ) : SV_TARGET
 			color.rgb *= (lighting);
 
 			//SPECULAR
-			applySpecular(color, lightColor*lighting, normal, eyevector, lightDir, 1, specular_power, specular, toonshaded);
+			applySpecular(color, lightColor*lighting, normal, eyevector, lightDir.xyz, 1, specular_power, specular, toonshaded);
 			//else 
 			//	color.a=0;
 		}

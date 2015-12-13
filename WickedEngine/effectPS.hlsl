@@ -41,7 +41,7 @@ PixelOutputType main(PixelInputType PSIn)
 		float4 nortex = xTextureNor.Sample(texSampler,PSIn.tex+movingTex);
 		if(nortex.a>0){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex.xy);
-			bumpColor = 2.0f * nortex - 1.0f;
+			bumpColor = 2.0f * nortex.rgb - 1.0f;
 			//bumpColor.g*=-1;
 			normal = normalize(mul(bumpColor, tangentFrame));
 		}
@@ -75,9 +75,9 @@ PixelOutputType main(PixelInputType PSIn)
 			RefTex.y = -PSIn.ReflectionMapSamplingPos.y/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 		float colorMat = 0;
 		colorMat = xTextureMat.SampleLevel(texSampler,PSIn.tex,0);
-		normal = normalize( lerp(normal,PSIn.nor,pow(colorMat.x,0.02f)) );
+		normal = normalize( lerp(normal,PSIn.nor,pow(abs(colorMat.x),0.02f)) );
 		float4 colorReflection = xTextureRef.SampleLevel(mapSampler,RefTex+normal.xz,0);
-		baseColor.rgb=lerp(baseColor,colorReflection,colorMat);
+		baseColor.rgb=lerp(baseColor.rgb,colorReflection.rgb,colorMat);
 	}
 		
 

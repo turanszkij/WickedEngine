@@ -115,7 +115,7 @@ float4 main(VertextoPixel input) : SV_Target
 	float2 vCoordsEdgeFact = float2(1, 1) - pow(saturate(abs(vCoords.xy - float2(0.5f, 0.5f)) * 2), 0.5f);
 	float fScreenEdgeFactor = saturate(min(vCoordsEdgeFact.x, vCoordsEdgeFact.y));
 
-	if (!bInsideScreen(vCoords))
+	if (!bInsideScreen(vCoords.xy))
 		fScreenEdgeFactor = 0;
 
 

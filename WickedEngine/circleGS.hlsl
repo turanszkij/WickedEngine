@@ -29,7 +29,7 @@ void main(
 	GSOutput element;
 	element.col=color;
 
-	for(uint i=0;i<=RES;++i)
+	for(int i=0;i<=RES;++i)
 	{
 		float alpha = (float)i/(float)RES*2*3.14159265359;
 		element.pos = input[0]+float4(sin(alpha),cos(alpha),0,0);

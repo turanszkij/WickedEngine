@@ -35,9 +35,7 @@ PixelOutputType main(VertexToPixel PSIn)
 	float2 screenPos;
 		screenPos.x = PSIn.pos2D.x/PSIn.pos2D.w/2.0f + 0.5f;
 		screenPos.y = -PSIn.pos2D.y/PSIn.pos2D.w/2.0f + 0.5f;
-	float2 depthMapSize;
-	xSceneDepthMap.GetDimensions(depthMapSize.x,depthMapSize.y);
-	float depth = xSceneDepthMap.Load(int4(screenPos*depthMapSize,0,0)).r;
+	float depth = xSceneDepthMap.Load(int3(PSIn.pos.xy,0)).r;
 	float3 pos3D = getPosition(screenPos,depth);
 
 	float4 projPos;
@@ -57,7 +55,7 @@ PixelOutputType main(VertexToPixel PSIn)
 		float3 eyevector = normalize( eye - pos3D );
 		if(nortex.a>0){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -projTex.xy);
-			float3 bumpColor = 2.0f * nortex - 1.0f;
+			float3 bumpColor = 2.0f * nortex.rgb - 1.0f;
 			//bumpColor.g*=-1;
 			normal = normalize(mul(bumpColor, tangentFrame));
 		}

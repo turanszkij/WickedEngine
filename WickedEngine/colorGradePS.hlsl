@@ -19,10 +19,9 @@ float4 sampleAs3DTexture(float3 uv, float width) {
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	float2 dim;
-	xTexture.GetDimensions(dim.x,dim.y);
-	float4 color = xTexture.Load(int4(dim*PSIn.tex,0,0));
+	float4 color = xTexture.Load(int3(PSIn.pos.xy,0));
 	
+	float2 dim;
 	xMaskTex.GetDimensions(dim.x,dim.y);
-	return sampleAs3DTexture(color,dim.y);
+	return sampleAs3DTexture(color.rgb,dim.y);
 }

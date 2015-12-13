@@ -23,7 +23,7 @@ VertexToPixel main(uint vID : SV_VertexID)
 	Out.pos = mul(pos,xViewProjection);
 	Out.col=lerp(
 		float4(lightColor.rgb,1),float4(0,0,0,0),
-		distance(pos,float3( lightWorld._41,lightWorld._42,lightWorld._43 ))/(lightEnerdis.w)
+		distance(pos.xyz,float3( lightWorld._41,lightWorld._42,lightWorld._43 ))/(lightEnerdis.w)
 		);
 
 	return Out;

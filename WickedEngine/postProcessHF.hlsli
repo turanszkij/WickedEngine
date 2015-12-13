@@ -33,29 +33,29 @@ float loadDepth(float2 texCoord)
 {
 	float2 dim;
 	xSceneDepthMap.GetDimensions(dim.x, dim.y);
-	return xSceneDepthMap.Load(int4(dim*texCoord, 0, 0)).r;
+	return xSceneDepthMap.Load(int3(dim*texCoord, 0)).r;
 }
 float4 loadNormal(float2 texCoord)
 {
 	float2 dim;
 	xNormalMap.GetDimensions(dim.x, dim.y);
-	return xNormalMap.Load(int4(dim*texCoord, 0, 0));
+	return xNormalMap.Load(int3(dim*texCoord, 0));
 }
 float4 loadVelocity(float2 texCoord)
 {
 	float2 dim;
 	xSceneVelocityMap.GetDimensions(dim.x, dim.y);
-	return xSceneVelocityMap.Load(int4(dim*texCoord, 0, 0));
+	return xSceneVelocityMap.Load(int3(dim*texCoord, 0));
 }
 float4 loadMask(float2 texCoord)
 {
 	float2 dim;
 	xMaskTex.GetDimensions(dim.x, dim.y);
-	return xMaskTex.Load(int4(dim*texCoord, 0, 0));
+	return xMaskTex.Load(int3(dim*texCoord, 0));
 }
 float4 loadScene(float2 texCoord)
 {
 	float2 dim;
 	xTexture.GetDimensions(dim.x, dim.y);
-	return xTexture.Load(int4(dim*texCoord, 0, 0));
+	return xTexture.Load(int3(dim*texCoord, 0));
 }

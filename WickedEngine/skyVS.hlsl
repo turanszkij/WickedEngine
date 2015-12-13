@@ -17,9 +17,9 @@ struct VSOut{
 VSOut main(uint vid : SV_VERTEXID)
 {
 	VSOut Out = (VSOut)0;
-	Out.pos=Out.pos2D=mul(mul(float4(ICOSPHERE[vid],1),(float3x3)xV),xP);
+	Out.pos = Out.pos2D = mul(float4(mul(ICOSPHERE[vid], (float3x3)xV), 0), xP);
 	Out.nor=ICOSPHERE[vid];
-	Out.pos2DPrev = mul(mul(float4(ICOSPHERE[vid], 1), (float3x3)xPrevView), xPrevProjection);
+	Out.pos2DPrev = mul(float4(mul(ICOSPHERE[vid], (float3x3)xPrevView), 0), xPrevProjection);
 	return Out;
 }
 

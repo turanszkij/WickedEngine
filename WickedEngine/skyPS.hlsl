@@ -30,10 +30,10 @@ PSOut main(VSOut PSIn)
 	float3 col = 0;
 	[branch]if(xFx.x==0){
 		col = /*lerp( xHorizon.rgb,*/ enviroTex.SampleLevel( texSampler,nor,0 ).rgb/*, saturate(nor.y/0.3f) )*/;
-		sun = clamp(pow(dot(xSun,nor),256)*xSunColor.rgb, 0, inf);
+		sun = clamp(pow(abs(dot(xSun.xyz,nor)),256)*xSunColor.rgb, 0, inf);
 	}
 	else{
-		sun = clamp(pow(dot(xSun,nor),64)*xSunColor.rgb, 0, inf);
+		sun = clamp(pow(abs(dot(xSun.xyz,nor)),64)*xSunColor.rgb, 0, inf);
 	}
 	//return float4( col+sun ,1);
 

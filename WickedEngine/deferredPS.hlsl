@@ -21,12 +21,12 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 	float  depth = xSceneDepthMap.Load(int3(PSIn.pos.xy, 0)).r;
 
 	[branch]if(depth<zFarP){
-		color=pow(color,GAMMA);
+		color=pow(abs(color),GAMMA);
 		float4 lighting = xLightMap.SampleLevel(Sampler,PSIn.tex,0);
-		color.rgb *= lighting.rgb + xAmbient * xAOMap.SampleLevel(Sampler, PSIn.tex, 0).r;
-		color=pow(color,INV_GAMMA);
+		color.rgb *= lighting.rgb + xAmbient.rgb * xAOMap.SampleLevel(Sampler, PSIn.tex.xy, 0).r;
+		color=pow(abs(color),INV_GAMMA);
 
-		float fog = getFog((depth),xFogSEH);
+		float fog = getFog((depth),xFogSEH.xyz);
 		color.rgb = applyFog(color.rgb,xHorizon.rgb,fog);
 	}
 

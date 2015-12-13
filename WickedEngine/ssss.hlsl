@@ -29,7 +29,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 		clip(colorM.a?1:-1);
 	float2 depthMapSize;
 	xSceneDepthMap.GetDimensions(depthMapSize.x,depthMapSize.y);
-	float  depthM  = ( xSceneDepthMap.Load(int4(depthMapSize*PSIn.tex.xy,0,0)).r );
+	float  depthM  = xSceneDepthMap.Load(int3(depthMapSize.xy*PSIn.tex.xy,0)).r;
 
     // Accumulate center sample, multiplying it with its gaussian weight:
     float4 colorBlurred = colorM;

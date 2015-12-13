@@ -25,6 +25,7 @@ void main(
 	//uint lod = input[0].pos.w;
 	//color=float3(0,0,0.8);
 
+	[unroll]
 	for(uint i=0;i<1;++i){
 		float4 mod = pos + float4(cross(MOD[i], normal), 0);
 #ifdef GRASS_FADE_DITHER

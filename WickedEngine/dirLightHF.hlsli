@@ -59,20 +59,20 @@ inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color, in 
 		ShTex[1] = ShPos[1].xyz*float3(1,-1,1)/ShPos[1].w/2.0f +0.5f;
 		ShTex[2] = ShPos[2].xyz*float3(1,-1,1)/ShPos[2].w/2.0f +0.5f;
 	const float shadows[3]={
-		shadowCascade(ShPos[0],ShTex[0],xTextureSh[0]),
-		shadowCascade(ShPos[1],ShTex[1],xTextureSh[1]),
-		shadowCascade(ShPos[2],ShTex[2],xTextureSh[2])
+		shadowCascade(ShPos[0],ShTex[0].xy,xTextureSh[0]),
+		shadowCascade(ShPos[1],ShTex[1].xy,xTextureSh[1]),
+		shadowCascade(ShPos[2],ShTex[2].xy,xTextureSh[2])
 	};
 	[branch]if((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
 	{
 		//color.r+=0.5f;
-		const float2 lerpVal = abs( ShTex[2]*2-1 );
+		const float2 lerpVal = abs( ShTex[2].xy*2-1 );
 		difLight *= lerp( shadows[2],shadows[1], pow( max(lerpVal.x,lerpVal.y),4 ) );
 	}
 	else [branch]if((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
 	{ 
 		//color.g+=0.5f;
-		const float2 lerpVal = abs( ShTex[1]*2-1 );
+		const float2 lerpVal = abs( ShTex[1].xy*2-1 );
 		difLight *= lerp( shadows[1],shadows[0], pow( max(lerpVal.x,lerpVal.y),4 ) );
 	}
 	else [branch]if((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))

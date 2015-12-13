@@ -2105,7 +2105,7 @@ void wiRenderer::UpdateImages(){
 void wiRenderer::ManageImages(){
 		while(	
 				!images.empty() && 
-				(images.front()->effects.opacity==1 || images.front()->effects.fade==1)
+				(images.front()->effects.opacity <= 0 + FLT_EPSILON || images.front()->effects.fade==1)
 			)
 			images.pop_front();
 }
@@ -2127,7 +2127,7 @@ void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const 
 void wiRenderer::ManageWaterRipples(){
 	while(	
 		!waterRipples.empty() && 
-			(waterRipples.front()->effects.opacity==1 || waterRipples.front()->effects.fade==1)
+			(waterRipples.front()->effects.opacity <= 0 + FLT_EPSILON || waterRipples.front()->effects.fade==1)
 		)
 		waterRipples.pop_front();
 }

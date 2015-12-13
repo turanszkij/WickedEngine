@@ -25,5 +25,5 @@ float main(VertextoPixel PSIn) : SV_DEPTH
 {
 	[branch]if(hasRefNorTexSpe.z)
 		clip( xTextureTex.Sample(texSampler,PSIn.tex).a<0.1?-1:1 );
-	return distance(PSIn.pos3D,lightPos)/lightEnerdis.y;
+	return distance(PSIn.pos3D.xyz,lightPos.xyz)/lightEnerdis.y;
 }

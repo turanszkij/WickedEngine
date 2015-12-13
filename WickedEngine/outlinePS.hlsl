@@ -74,14 +74,14 @@ inline float edgeValueDepth(float2 texCo, float2 texDim, float Thickness, float 
 inline float edgeValueNormal(float2 texCo, float2 texDim, float Thickness, float Threshold)
 {
 	float2 screen = float2(texDim.x,texDim.y)/Thickness;
-	float3 baseNor = xNormalMap.Sample(Sampler,texCo);
+	float3 baseNor = xNormalMap.Sample(Sampler,texCo).rgb;
 	float4 sum = float4(0,0,0,0);
-	sum.x = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(-1,-1)/screen)));
+	sum.x = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(-1,-1)/screen).xyz));
 	if(sum.x){
-	sum.y = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(1,-1)/screen)));
-	sum.z = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(-1,1)/screen)));
-	sum.w = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(1,1)/screen)));
-	return step(Threshold,sum);
+		sum.y = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(1,-1)/screen).xyz));
+		sum.z = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(-1,1)/screen).xyz));
+		sum.w = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(1,1)/screen).xyz));
+		return step(Threshold.xxxx,sum).x;
 	}
 	return 1;
 }

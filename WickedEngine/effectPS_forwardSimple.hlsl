@@ -31,14 +31,14 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 		float3 normal = normalize(PSIn.nor);
 		float3 eyevector = normalize(PSIn.cam - PSIn.pos3D);
 
-		baseColor = pow(baseColor, GAMMA);
+		baseColor = pow(abs(baseColor), GAMMA);
 		//NORMALMAP
 		float3 bumpColor = 0;
 		if (hasNor){
 			float4 nortex = xTextureNor.Sample(texSampler, PSIn.tex + movingTex);
 				if (nortex.a>0){
 					float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex.xy);
-						bumpColor = 2.0f * nortex - 1.0f;
+						bumpColor = 2.0f * nortex.rgb - 1.0f;
 					//bumpColor.g*=-1;
 					normal = normalize(mul(bumpColor, tangentFrame));
 				}
@@ -59,15 +59,15 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 			baseColor = lerp(baseColor, envCol, metallic*spec);
 		}
 
-		float light = saturate( dot(xSun,normalize(PSIn.nor)) );
-		light=clamp(light,xAmbient,1);
-		baseColor.rgb *= light*xSunColor;
+		float3 light = saturate( dot(xSun.xyz,normalize(PSIn.nor)) );
+		light=clamp(light,xAmbient.rgb,1);
+		baseColor.rgb *= light*xSunColor.rgb;
 
-		applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.a, 0);
+		applySpecular(baseColor, xSunColor, normal, eyevector, xSun.xyz, 1, specular_power, spec.a, 0);
 
-		baseColor = pow(baseColor*(1 + emit), INV_GAMMA);
+		baseColor = pow(abs(baseColor*(1 + emit)), INV_GAMMA);
 
-		baseColor.rgb = applyFog(baseColor.rgb, xHorizon, getFog(getLinearDepth(depth / PSIn.pos2D.w), xFogSEH));
+		baseColor.rgb = applyFog(baseColor.rgb, xHorizon.xyz, getFog(getLinearDepth(depth / PSIn.pos2D.w), xFogSEH.xyz));
 	}
 
 	return baseColor;

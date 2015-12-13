@@ -48,13 +48,13 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		float2 RefTex;
 			RefTex.x = PSIn.ReflectionMapSamplingPos.x/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 			RefTex.y = -PSIn.ReflectionMapSamplingPos.y/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
-		float3 reflectiveColor = xTextureRef.SampleLevel(mapSampler,RefTex+bumpColor,0).rgb;
+		float3 reflectiveColor = xTextureRef.SampleLevel(mapSampler,RefTex+bumpColor.rg,0).rgb;
 	
 		//REFRACTION 
-		float2 perturbatedRefrTexCoords = screenPos + bumpColor;
+		float2 perturbatedRefrTexCoords = screenPos.xy + bumpColor.rg;
 		float depth = PSIn.pos2D.z;
 		float refDepth = (xDepthMap.Sample(mapSampler, screenPos));
-		float3 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0));
+		float3 refractiveColor = xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0).rgb;
 		float eyeDot = dot(normal, eyevector);
 		float mod = saturate(0.05*(refDepth-depth));
 		float3 dullColor = lerp(refractiveColor,diffuseColor.rgb, saturate(eyeDot));
@@ -67,14 +67,14 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		//DULL COLOR
 		baseColor.rgb = lerp(baseColor.rgb, diffuseColor.rgb, 0.16);
 
-		baseColor.rgb=pow(baseColor.rgb,GAMMA);
+		baseColor.rgb=pow(abs(baseColor.rgb),GAMMA);
 		
 		
 		//SOFT EDGE
 		float fade = saturate(0.3* abs(refDepth-depth));
 		baseColor.a*=fade;
 		
-		baseColor.rgb*= clamp( saturate( abs(dot(xSun,PSIn.nor)) *xSunColor.rgb ),xAmbient,1 );
+		baseColor.rgb*= clamp( saturate( abs(dot(xSun.xyz,PSIn.nor)) *xSunColor.rgb ),xAmbient.rgb,1 );
 
 		//SPECULAR
 		if(hasSpe && xSun.w){
@@ -84,12 +84,12 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		float specR = dot(normalize(reflectionVector), eyevector);
 		specR = pow(abs(specR), specular_power)*spec.w;
 		baseColor.rgb += saturate(xSunColor.rgb) * specR;*/
-		applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.w, toonshaded);
+		applySpecular(baseColor, xSunColor, normal, eyevector, xSun.xyz, 1, specular_power, spec.w, toonshaded);
 		
 
-		baseColor.rgb = pow(baseColor.rgb*(1 + emit), INV_GAMMA) + emit;
+		baseColor.rgb = pow(abs(baseColor.rgb*(1 + emit)), INV_GAMMA) + emit;
 
-		baseColor.rgb = applyFog(baseColor.rgb,xHorizon,getFog(getLinearDepth(depth/PSIn.pos2D.w),xFogSEH));
+		baseColor.rgb = applyFog(baseColor.rgb,xHorizon.xyz,getFog(getLinearDepth(depth/PSIn.pos2D.w),xFogSEH.xyz));
 		
 		//Out.col = saturate(baseColor);
 		//Out.nor = float4((normal),1);

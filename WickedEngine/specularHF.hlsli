@@ -14,13 +14,13 @@ inline void applySpecular(inout float4 color, in float4 lightColor, in float3 no
 
 
 		float3 reflectionVector = normalize(lightDir.xyz + eyevector.xyz);
-		float spec = saturate( dot((reflectionVector), normal) );
+		float spec = saturate( dot(reflectionVector, normal) );
 		spec = pow(spec, specular_power)*intensity;
 
 		if(toonshaded) toon(spec);
 
 		color.rgb += (lightColor.rgb * spec);
-		color.rgb*=pow(1+spec,GAMMA);
+		color.rgb*=pow(abs(1+spec),GAMMA);
 
 
 		//float3 h = normalize(lightDir.xyz + eyevector.xyz); // Half-vector.

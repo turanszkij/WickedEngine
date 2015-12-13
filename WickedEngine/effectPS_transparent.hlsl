@@ -35,7 +35,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 			float4 nortex = xTextureNor.Sample(texSampler,PSIn.tex+movingTex);
 			if(nortex.a>0){
 				float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex.xy);
-				bumpColor = 2.0f * nortex - 1.0f;
+				bumpColor = 2.0f * nortex.rgb - 1.0f;
 				//bumpColor.g*=-1;
 				normal = normalize(mul(bumpColor, tangentFrame));
 			}
@@ -58,11 +58,11 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		
 	
 		//REFRACTION 
-		float2 perturbatedRefrTexCoords = screenPos + bumpColor * refractionIndex;   
+		float2 perturbatedRefrTexCoords = screenPos.xy + bumpColor.rg * refractionIndex;   
 		float4 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0));
 		baseColor.rgb=lerp(refractiveColor.rgb,baseColor.rgb,baseColor.a);
 		
-		baseColor.rgb=pow(baseColor.rgb,GAMMA);
+		baseColor.rgb=pow(abs(baseColor.rgb),GAMMA);
 		baseColor.a=1;
 		
 		float depth = PSIn.pos2D.z;
@@ -77,13 +77,13 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		specR = pow(saturate(-specR), specular_power)*spec.w;
 		baseColor.rgb += saturate(xSunColor.rgb * specR);*/
 		[branch]if(!shadeless.x){
-			baseColor.rgb*=clamp( saturate( abs(dot(xSun,PSIn.nor)) *xSunColor.rgb ),xAmbient,1 );
-			applySpecular(baseColor, xSunColor, normal, eyevector, xSun, 1, specular_power, spec.w, toonshaded);
+			baseColor.rgb*=clamp( saturate( abs(dot(xSun.xyz,PSIn.nor)) * xSunColor.rgb ),xAmbient.rgb,1 );
+			applySpecular(baseColor, xSunColor, normal, eyevector, xSun.xyz, 1, specular_power, spec.w, toonshaded);
 		}
 		
-		baseColor.rgb = pow(baseColor.rgb*(1 + emit), INV_GAMMA);
+		baseColor.rgb = pow(abs(baseColor.rgb*(1 + emit)), INV_GAMMA);
 
-		baseColor.rgb = applyFog(baseColor.rgb,xHorizon,getFog(getLinearDepth(depth/PSIn.pos2D.w),xFogSEH));
+		baseColor.rgb = applyFog(baseColor.rgb,xHorizon.xyz,getFog(getLinearDepth(depth/PSIn.pos2D.w),xFogSEH.xyz));
 		
 		//Out.col = saturate(baseColor);
 		//Out.nor = float4((normal),1);

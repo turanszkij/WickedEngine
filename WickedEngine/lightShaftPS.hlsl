@@ -37,7 +37,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 		
 		for( int i=0; i<NUM_SAMPLES; i++){
 			PSIn.tex.xy-=deltaTexCoord;
-			float3 sample = xTexture.SampleLevel(Sampler,PSIn.tex,0);
+			float3 sample = xTexture.SampleLevel(Sampler,PSIn.tex.xy,0).rgb;
 			sample *= illuminationDecay*xProperties.y;
 			color.xyz+=sample;
 			illuminationDecay *= xProperties.z;
