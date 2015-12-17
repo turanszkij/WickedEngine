@@ -46,6 +46,7 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
     float4 rightVector		= float4(rightAxis.xyz, 1.0f);
     float4 upVector         = float4(upAxis.xyz, 1.0f);
 	p[0].pos				= mul(p[0].pos, xView);
+	p[0].vel				= mul(p[0].vel, xView);
 
 
 	float quadLength = p[0].inSizOpMir.x*0.5f;
