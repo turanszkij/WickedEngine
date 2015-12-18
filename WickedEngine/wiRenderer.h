@@ -39,7 +39,7 @@ class  wiWaterPlane;
 
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string, Material*> MaterialCollection;
-typedef set<Cullable*> CulledList;
+typedef unordered_set<Cullable*> CulledList;
 
 class wiRenderer
 {
@@ -1131,8 +1131,9 @@ public:
 	{
 		Object* object;
 		XMFLOAT3 position,normal;
+		float distance;
 
-		Picked():object(nullptr){}
+		Picked():object(nullptr),distance(0){}
 	};
 	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);
 	static Picked Pick(RAY& ray, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);

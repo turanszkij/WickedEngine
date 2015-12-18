@@ -10,9 +10,9 @@ class Frustum;
 //    }
 //};
 //typedef set<Cullable*,cullable_comparator> CulledList;
-typedef set<Cullable*> CulledList;
+typedef unordered_set<Cullable*> CulledList;
 
-typedef set<Object*> CulledObjectList;
+typedef unordered_set<Object*> CulledObjectList;
 typedef unordered_map<Mesh*,CulledObjectList> CulledCollection;
 
 

@@ -208,11 +208,11 @@ void wiLua::SetDeltaTime(double dt)
 }
 void wiLua::Update()
 {
-	Signal("game_update_tick");
+	Signal("wickedengine_update_tick");
 }
 void wiLua::Render()
 {
-	Signal("game_render_tick");
+	Signal("wickedengine_render_tick");
 }
 
 void wiLua::Signal(const string& name)

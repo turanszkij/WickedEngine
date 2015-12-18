@@ -4176,11 +4176,9 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType)
 
 		if (!pickPoints.empty()){
 			Picked min = pickPoints.front();
-			float mini = wiMath::DistanceSquared(min.position, ray.origin);
 			for (unsigned int i = 1; i<pickPoints.size(); ++i){
-				if (float nm = wiMath::DistanceSquared(pickPoints[i].position, ray.origin)<mini){
+				if (pickPoints[i].distance < min.distance) {
 					min = pickPoints[i];
-					mini = nm;
 				}
 			}
 			return min;
@@ -4238,6 +4236,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 					picked.object = object;
 					XMStoreFloat3(&picked.position, pos);
 					XMStoreFloat3(&picked.normal, nor);
+					picked.distance = distance;
 					points.push_back(picked);
 				}
 			}
