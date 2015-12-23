@@ -130,7 +130,7 @@ namespace wiRenderer_BindLua
 		stringstream ss("");
 		for (map<string, vector<wiEmittedParticle*> >::iterator it = wiRenderer::emitterSystems.begin(); it != wiRenderer::emitterSystems.end(); ++it)
 		{
-			ss << it->first << endl;
+			ss << it->first << "(" << it->second.size() << ")" << endl;
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
@@ -429,7 +429,8 @@ namespace wiRenderer_BindLua
 				Luna<Object_BindLua>::push(L, new Object_BindLua(pick.object));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
-				return 3;
+				wiLua::SSetFloat(L, pick.distance);
+				return 4;
 			}
 		}
 		return 0;

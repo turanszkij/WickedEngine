@@ -4,10 +4,11 @@ The documentation completion is still pending....
 
 ## Contents
 1. Introduction and usage
-2. Engine manipulation
+2. Common Tools
+3. Engine manipulation
 	1. BackLog (Console)
 	2. Renderer
-3. Utility Tools
+4. Utility Tools
 	1. Font
 	2. Sprite
 		1. ImageEffects
@@ -52,6 +53,22 @@ In the startup file, you can specify any startup logic, for example loading cont
 
 The setting up and usage of the BackLog is the responsibility of the target application, but the recommended way to set it up
 is included in all of the demo projects. It is mapped to te HOME button by default.
+
+## Common Tools
+This section describes the common tools for scripting which are not necessarily engine features.
+- signal(string name)
+- waitSignal(string name)
+- runProcess(function func)
+- waitSeconds(float seconds)
+- getprops(table object)
+- len(table object)
+- backlog_post_list(table list)
+- update()
+- render()
+- math.lerp(float a,b,t)
+- math.clamp(float x,min,max)
+- math.saturate(float x)
+- math.round(float x)
 
 ## Engine manipulation
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
@@ -100,7 +117,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugBoxesEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)
-- Pick(Ray ray, opt PICKTYPE pickType) : Object? object, Vector position,normal
+- Pick(Ray ray, opt PICKTYPE pickType) : Object? object, Vector position,normal, float distance
 - DrawLine(Vector origin,end, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - ClearWorld()
