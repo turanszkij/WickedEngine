@@ -7,7 +7,10 @@
 #include "wiInputManager.h"
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
-#include "WickedEngine.h"
+#include "wiVersion.h"
+#include "wiImageEffects.h"
+#include "wiTextureHelper.h"
+#include "wiFrameRate.h"
 
 MainComponent::MainComponent()
 {
@@ -156,7 +159,7 @@ void MainComponent::Compose()
 		stringstream ss("");
 		if (infoDisplay.watermark)
 		{
-			ss << string("Wicked Engine ") + string(WICKED_ENGINE_VERSION) << endl;
+			ss << string("Wicked Engine ") + wiVersion::GetVersionString() << endl;
 		}
 		if (infoDisplay.fpsinfo)
 		{

@@ -1,8 +1,9 @@
-#ifndef WICKED_ENGINE_VERSION
-#define WICKED_ENGINE_VERSION "0.9"
+#ifndef WICKED_ENGINE
+#define WICKED_ENGINE
 
 #include "CommonInclude.h"
 
+#include "wiVersion.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiBackLog.h"
@@ -67,4 +68,4 @@
 #pragma comment(lib,"pdh.lib")
 
 
-#endif
+#endif // WICKED_ENGINE

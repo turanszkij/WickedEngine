@@ -800,6 +800,9 @@
     <ClCompile Include="wiFadeManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wiVersion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1775,6 +1778,9 @@
       <Filter>Lua Bindings</Filter>
     </ClInclude>
     <ClInclude Include="wiFadeManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiVersion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

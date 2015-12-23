@@ -1,0 +1,36 @@
+#include "wiVersion.h"
+
+namespace wiVersion
+{
+	// major features
+	const int major = 0;
+	// minor features, major bug fixes
+	const int minor = 1;
+	// minor bug fixes
+	const int revision = 0;
+
+
+	long GetVersion()
+	{
+		return major * 10000 + minor * 1000 + revision;
+	}
+	int GetMajor()
+	{
+		return major;
+	}
+	int GetMinor()
+	{
+		return minor;
+	}
+	int GetRevision()
+	{
+		return revision;
+	}
+	string GetVersionString()
+	{
+		stringstream ss("");
+		ss << GetMajor() << "." << GetMinor() << "." << GetRevision();
+		return ss.str();
+	}
+
+}
