@@ -27,10 +27,10 @@ Set the following dependencies to this library in Visual Studio this way in the 
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
-		./WickedEngine
-		./WickedEngine/BULLET
+- ./WickedEngine
+- ./WickedEngine/BULLET
 3. Linker -> General -> Additional Library Directories:
-		Directory of your built .lib file (Debug or Release directory in the solution by default)
+- Directory of your built .lib file (Debug or Release directory in the solution by default)
 
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries.
