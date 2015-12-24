@@ -52,9 +52,11 @@ Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole pr
 - ./WickedEngine.sln 					- Visual Studio Solution; 
 - ./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project; 
 - ./WickedEngine/BULLET/					- Bullet 2.82 Source files; 
+- ./WickedEngine/LUA/					- Lua 5.3.1 Source files; 
 - ./WickedEngine/shaders/					- Binary shaders output; 
 - ./WickedEngine/ 						- C++ and shader source files; 
-- ./io_export_wicked_wi_bin.py 			- Blender 2.72 script to export scene; 
+- ./WickedEngine/Utility 					- C++ source files for utility helpers;
+- ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene; 
 
 ### Scripting API:
 
