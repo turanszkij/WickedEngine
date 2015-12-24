@@ -10,7 +10,7 @@ From now on you can easily set up a game project by using the component template
 
 ### Requirements:
 
-- Visual Studio 2015+ (earlier versions may be compatible)
+- Visual Studio 2015+
 - Windows SDK
 - DirectX11 SDK (included in Windows SDK)(legacy SDK not supported)
 - DirectX11 June 2010 Redist (Only if you want to support Windows 7 because it uses Xaudio 2.7!)
@@ -27,10 +27,10 @@ Set the following dependencies to this library in Visual Studio this way in the 
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
-		./WickedEngine
-		./WickedEngine/BULLET
+	- ./WickedEngine
+	- ./WickedEngine/BULLET
 3. Linker -> General -> Additional Library Directories:
-		Directory of your built .lib file (Debug or Release directory in the solution by default)
+	- Directory of your built .lib file (Debug or Release directory in the solution by default)
 
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries.
@@ -52,9 +52,11 @@ Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole pr
 - ./WickedEngine.sln 					- Visual Studio Solution; 
 - ./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project; 
 - ./WickedEngine/BULLET/					- Bullet 2.82 Source files; 
+- ./WickedEngine/LUA/					- Lua 5.3.1 Source files; 
 - ./WickedEngine/shaders/					- Binary shaders output; 
 - ./WickedEngine/ 						- C++ and shader source files; 
-- ./io_export_wicked_wi_bin.py 			- Blender 2.72 script to export scene; 
+- ./WickedEngine/Utility 					- C++ source files for utility helpers;
+- ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene; 
 
 ### Scripting API:
 
