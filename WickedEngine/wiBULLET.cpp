@@ -1,6 +1,16 @@
 #include "wiBULLET.h"
 #include "wiLoader.h"
 
+
+
+#include "LinearMath/btHashMap.h"
+#include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
+#include "BulletSoftBody/btSoftBodyHelpers.h"
+
+#include "BulletSoftBody/btSoftBodySolvers.h"
+#include "BulletSoftBody/btDefaultSoftBodySolver.h"
+#include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
+
 int PHYSICS::softBodyIterationCount=5;
 bool PHYSICS::rigidBodyPhysicsEnabled = true, PHYSICS::softBodyPhysicsEnabled = true;
 bool wiBULLET::grab=false;

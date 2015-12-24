@@ -1,14 +1,16 @@
 #pragma once
 #include "wiPHYSICS.h"
-#include "btBulletDynamicsCommon.h"
 
-#include "LinearMath/btHashMap.h"
-#include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
-#include "BulletSoftBody/btSoftBodyHelpers.h"
+#include "BULLET/btBulletDynamicsCommon.h"
 
-#include "BulletSoftBody/btSoftBodySolvers.h"
-#include "BulletSoftBody/btDefaultSoftBodySolver.h"
-#include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
+class btCollisionConfiguration;
+class btCollisionDispatcher;
+class btBroadphaseInterface;
+class btSequentialImpulseConstraintSolver;
+class btDynamicsWorld;
+class btCollisionShape;
+class btSoftBodySolver;
+class btSoftBodySolverOutput;
 
 struct RAY;
 
