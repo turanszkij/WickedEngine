@@ -344,7 +344,7 @@ The main component which holds information and manages the running of the curren
 - [void-constructor]MainComponent()
 - GetContent() : Resource? result
 - GetActiveComponent() : RenderableComponent? result
-- SetActiveComponent(RenderableComponent component, opt int fadeFrames,fadeColorR,fadeColorG)
+- SetActiveComponent(RenderableComponent component, opt int fadeFrames,fadeColorR,fadeColorG,fadeColorB)
 - SetFrameSkip(bool enabled)
 - SetInfoDisplay(bool active)
 - SetWatermarkDisplay(bool active)

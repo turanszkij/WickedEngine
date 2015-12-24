@@ -18,6 +18,8 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
 	lunamethod(MainComponent_BindLua, SetFPSDisplay),
 	lunamethod(MainComponent_BindLua, SetCPUDisplay),
+	lunamethod(MainComponent_BindLua, SetResolutionDisplay),
+	lunamethod(MainComponent_BindLua, SetRenderResolutionDisplay),
 	lunamethod(MainComponent_BindLua, SetColorGradePaletteDisplay),
 	{ NULL, NULL }
 };
@@ -181,7 +183,7 @@ int MainComponent_BindLua::SetActiveComponent(lua_State *L)
 	}
 	else
 	{
-		wiLua::SError(L, "SetActiveComponent(RenderableComponent component, opt int fadeFrames,fadeColorR,fadeColorG) not enought arguments!");
+		wiLua::SError(L, "SetActiveComponent(RenderableComponent component, opt int fadeFrames,fadeColorR,fadeColorG,fadeColorB) not enought arguments!");
 		return 0;
 	}
 	return 0;
@@ -265,6 +267,38 @@ int MainComponent_BindLua::SetCPUDisplay(lua_State *L)
 	}
 	else
 		wiLua::SError(L, "SetCPUDisplay(bool active) not enough arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetResolutionDisplay(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetResolutionDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.resolution = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetResolutionDisplay(bool active) not enough arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetRenderResolutionDisplay(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetRenderResolutionDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.renderResolution = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetRenderResolutionDisplay(bool active) not enough arguments!");
 	return 0;
 }
 int MainComponent_BindLua::SetColorGradePaletteDisplay(lua_State* L)

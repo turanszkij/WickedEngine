@@ -161,6 +161,14 @@ void MainComponent::Compose()
 		{
 			ss << string("Wicked Engine ") + wiVersion::GetVersionString() << endl;
 		}
+		if (infoDisplay.resolution)
+		{
+			ss << "Resolution: " << wiRenderer::GetScreenWidth() << " x " << wiRenderer::GetScreenHeight() << endl;
+		}
+		if (infoDisplay.renderResolution)
+		{
+			ss << "Render Res: " << wiRenderer::GetRenderWidth() << " x " << wiRenderer::GetRenderHeight() << endl;
+		}
 		if (infoDisplay.fpsinfo)
 		{
 			ss.precision(2);

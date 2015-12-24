@@ -24,6 +24,8 @@ public:
 	int SetWatermarkDisplay(lua_State *L);
 	int SetFPSDisplay(lua_State *L);
 	int SetCPUDisplay(lua_State *L);
+	int SetResolutionDisplay(lua_State *L);
+	int SetRenderResolutionDisplay(lua_State *L);
 	int SetColorGradePaletteDisplay(lua_State* L);
 
 	static void Bind();
