@@ -10,7 +10,7 @@ namespace wiVersion
 	int GetMajor();
 	// minor features, major bug fixes
 	int GetMinor();
-	// minor bug fixes
+	// minor bug fixes, alterations
 	int GetRevision();
 	string GetVersionString();
 }

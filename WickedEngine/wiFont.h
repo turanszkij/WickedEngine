@@ -77,7 +77,7 @@ protected:
 			int code;
 			int offX,offY,width;
 		};
-		LookUp lookup[127];
+		LookUp lookup[128];
 		int texWidth,texHeight,charSize,recSize;
 
 		wiFontStyle(){}

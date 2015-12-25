@@ -9,5 +9,11 @@ protected:
 public:
 	wiThreadSafeManager();
 	~wiThreadSafeManager();
+
+	void LOCK();
+	void UNLOCK();
+
+	static void LOCK_STATIC();
+	static void UNLOCK_STATIC();
 };
 

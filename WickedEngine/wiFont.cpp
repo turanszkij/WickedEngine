@@ -239,7 +239,7 @@ void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, ID3D11
 		else if (text[i / 4] == '\t'){
 			pos += (short)((fontStyles[style].recSize + props.size + props.spacingX) * 5);
 		}
-		else if(fontStyles[style].lookup[text[i/4]].code==text[i/4]){
+		else if(text[i / 4] < ARRAYSIZE(fontStyles[style].lookup) && fontStyles[style].lookup[text[i/4]].code==text[i/4]){
 			leftX += fontStyles[style].lookup[text[i / 4]].offX*(float)fontStyles[style].charSize;
 			rightX += fontStyles[style].lookup[text[i / 4]].offX*(float)fontStyles[style].charSize;
 			upperY += fontStyles[style].lookup[text[i / 4]].offY*(float)fontStyles[style].charSize;

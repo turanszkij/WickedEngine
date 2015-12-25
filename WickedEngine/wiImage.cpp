@@ -6,7 +6,6 @@
 #include "wiHelper.h"
 
 #pragma region STATICS
-mutex wiImage::MUTEX;
 ID3D11BlendState*		wiImage::blendState, *wiImage::blendStateAdd, *wiImage::blendStateNoBlend, *wiImage::blendStateAvg;
 ID3D11Buffer*           wiImage::constantBuffer,*wiImage::PSCb,*wiImage::blurCb,*wiImage::processCb,*wiImage::shaftCb,*wiImage::deferredCb;
 

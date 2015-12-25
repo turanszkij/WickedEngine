@@ -422,7 +422,8 @@ It inherits functions from Renderable3DComponent.
 It is a Renderable2DComponent but one that internally manages resource loading and can display information about the process.
 It inherits functions from Renderable2DComponent.
 - [constructor]LoadingScreenComponent()
-- AddLoadingComponent(RenderableComponent component)
+- AddLoadingTask(string taskScript)
+- OnFinished(string taskScript)
 
 ### Network
 Here are the network communication features.

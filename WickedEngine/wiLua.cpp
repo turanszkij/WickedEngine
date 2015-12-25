@@ -45,7 +45,9 @@ wiLua* wiLua::GetGlobal()
 {
 	if (globalLua == nullptr)
 	{
+		LOCK_STATIC();
 		globalLua = new wiLua();
+		UNLOCK_STATIC();
 
 		MainComponent_BindLua::Bind();
 		RenderableComponent_BindLua::Bind();
@@ -87,22 +89,28 @@ bool wiLua::Failed()
 string wiLua::GetErrorMsg()
 {
 	if (Failed()) {
+		LOCK();
 		string retVal =  lua_tostring(m_luaState, -1);
+		UNLOCK();
 		return retVal;
 	}
 	return string("");
 }
 string wiLua::PopErrorMsg()
 {
+	LOCK();
 	string retVal = lua_tostring(m_luaState, -1);
 	lua_pop(m_luaState, 1); // remove error message
+	UNLOCK();
 	return retVal;
 }
 void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
 {
 	if (Failed())
 	{
+		LOCK();
 		const char* str = lua_tostring(m_luaState, -1);
+		UNLOCK();
 		if (str == nullptr)
 			return;
 		stringstream ss("");
@@ -116,12 +124,16 @@ void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
 			ss << endl;
 			OutputDebugStringA(ss.str().c_str());
 		}
+		LOCK();
 		lua_pop(m_luaState, 1); // remove error message
+		UNLOCK();
 	}
 }
 bool wiLua::RunFile(const string& filename)
 {
+	LOCK();
 	m_status = luaL_loadfile(m_luaState, filename.c_str());
+	UNLOCK();
 	
 	if (Success()) {
 		return RunScript();
@@ -132,7 +144,9 @@ bool wiLua::RunFile(const string& filename)
 }
 bool wiLua::RunText(const string& script)
 {
+	LOCK();
 	m_status = luaL_loadstring(m_luaState, script.c_str());
+	UNLOCK();
 	if (Success())
 	{
 		return RunScript();
@@ -143,7 +157,9 @@ bool wiLua::RunText(const string& script)
 }
 bool wiLua::RunScript()
 {
+	LOCK();
 	m_status = lua_pcall(m_luaState, 0, LUA_MULTRET, 0);
+	UNLOCK();
 	if (Failed())
 	{
 		PostErrorMsg();
@@ -153,7 +169,9 @@ bool wiLua::RunScript()
 }
 bool wiLua::RegisterFunc(const string& name, lua_CFunction function)
 {
+	LOCK();
 	lua_register(m_luaState, name.c_str(), function);
+	UNLOCK();
 
 	PostErrorMsg();
 
@@ -161,6 +179,7 @@ bool wiLua::RegisterFunc(const string& name, lua_CFunction function)
 }
 void wiLua::RegisterLibrary(const string& tableName, const luaL_Reg* functions)
 {
+	LOCK();
 	if (luaL_newmetatable(m_luaState, tableName.c_str()) != 0)
 	{
 		//table is not yet present
@@ -168,11 +187,13 @@ void wiLua::RegisterLibrary(const string& tableName, const luaL_Reg* functions)
 		lua_setfield(m_luaState, -2, "__index"); // Object.__index = Object
 		AddFuncArray(functions);
 	}
+	UNLOCK();
 }
 bool wiLua::RegisterObject(const string& tableName, const string& name, void* object)
 {
 	RegisterLibrary(tableName, nullptr);
 
+	LOCK();
 	// does this call need to be checked? eg. userData == nullptr?
 	void **userData = static_cast<void**>(lua_newuserdata(m_luaState, sizeof(void*)));
 	*(userData) = object;
@@ -180,31 +201,42 @@ bool wiLua::RegisterObject(const string& tableName, const string& name, void* ob
 	luaL_setmetatable(m_luaState, tableName.c_str());
 	lua_setglobal(m_luaState, name.c_str());
 
+	UNLOCK();
 	return true;
 }
 void wiLua::AddFunc(const string& name, lua_CFunction function)
 {
+	LOCK();
+
 	lua_pushcfunction(m_luaState, function);
 	lua_setfield(m_luaState, -2, name.c_str());
+
+	UNLOCK();
 }
 void wiLua::AddFuncArray(const luaL_Reg* functions)
 {
 	if (functions != nullptr)
 	{
+		LOCK();
 		luaL_setfuncs(m_luaState, functions, 0);
+		UNLOCK();
 	}
 }
 void wiLua::AddInt(const string& name, int data)
 {
+	LOCK();
 	lua_pushinteger(m_luaState, data);
 	lua_setfield(m_luaState, -2, name.c_str());
+	UNLOCK();
 }
 
 void wiLua::SetDeltaTime(double dt)
 {
+	LOCK();
 	lua_getglobal(m_luaState, "wakeUpWaitingThreads");
 	SSetDouble(m_luaState, dt);
 	lua_call(m_luaState, 1, 0);
+	UNLOCK();
 }
 void wiLua::Update()
 {
@@ -217,9 +249,11 @@ void wiLua::Render()
 
 void wiLua::Signal(const string& name)
 {
+	LOCK();
 	lua_getglobal(m_luaState, "signal");
 	SSetString(m_luaState, name.c_str());
 	lua_call(m_luaState, 1, 0);
+	UNLOCK();
 }
 
 int wiLua::DebugOut(lua_State* L)
@@ -230,7 +264,10 @@ int wiLua::DebugOut(lua_State* L)
 
 	for (int i = 1; i <= argc; i++)
 	{
+		static mutex sm;
+		sm.lock();
 		const char* str = lua_tostring(L, i);
+		sm.unlock();
 		if (str != nullptr)
 		{
 			ss << str;

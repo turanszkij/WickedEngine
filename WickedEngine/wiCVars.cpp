@@ -14,10 +14,10 @@ wiCVars* wiCVars::GetGlobal()
 {
 	if (globalVars == nullptr)
 	{
-		STATICMUTEX.lock();
+		LOCK_STATIC();
 		if (globalVars == nullptr)
 			globalVars = new wiCVars();
-		STATICMUTEX.unlock();
+		UNLOCK_STATIC();
 	}
 	return globalVars;
 }
@@ -35,11 +35,11 @@ bool wiCVars::set(const string& name, const string& value)
 	if (!get(name).isValid())
 		return false;
 
-	MUTEX.lock();
+	LOCK();
 	container::iterator it = variables.find(name);
 	if (it != variables.end())
 		variables[name].data = value;
-	MUTEX.unlock();
+	UNLOCK();
 
 	return true;
 }
@@ -47,24 +47,24 @@ bool wiCVars::add(const string& name, const string& value, Data_Type newType)
 {
 	if(get(name).isValid())
 		return false;
-	MUTEX.lock();
+	LOCK();
 	variables.insert< pair<string,Variable> >( pair<string,Variable>(name,Variable(value,newType)) );
-	MUTEX.unlock();
+	UNLOCK();
 	return true;
 } 
 bool wiCVars::del(const string& name)
 {
 	if (!get(name).isValid())
 		return false;
-	MUTEX.lock();
+	LOCK();
 	variables.erase(name);
-	MUTEX.unlock();
+	UNLOCK();
 	return true;
 }
 bool wiCVars::CleanUp()
 {
-	MUTEX.lock();
+	LOCK();
 	variables.clear();
-	MUTEX.unlock();
+	UNLOCK();
 	return true;
 }

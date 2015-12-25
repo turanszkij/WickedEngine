@@ -7,7 +7,7 @@ enum BLENDMODE;
 class wiImage
 {
 private:
-	static mutex MUTEX;
+	//static mutex MUTEX;
 protected:
 	GFX_STRUCT ConstantBuffer
 	{

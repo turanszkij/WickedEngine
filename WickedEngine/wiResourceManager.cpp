@@ -20,12 +20,12 @@ wiResourceManager* wiResourceManager::GetGlobal()
 {
 	if (globalResources == nullptr)
 	{
-		STATICMUTEX.lock();
+		LOCK_STATIC();
 		if (globalResources == nullptr)
 		{
 			globalResources = new wiResourceManager();
 		}
-		STATICMUTEX.unlock();
+		UNLOCK_STATIC();
 	}
 	return globalResources;
 }
@@ -72,7 +72,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 #pragma endregion
 		void* success = nullptr;
 
-		MUTEX.lock();
+		LOCK();
 
 		switch(type){
 		case Data_Type::IMAGE:
@@ -223,7 +223,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 		if(success)
 			resources.insert( pair<string,Resource*>(name,new Resource(success,type)) );
 
-		MUTEX.unlock();
+		UNLOCK();
 
 		return success;
 	}
@@ -235,7 +235,7 @@ bool wiResourceManager::del(const string& name)
 	const Resource* res = get(name);
 
 	if(res){
-		MUTEX.lock();
+		LOCK();
 		bool success = true;
 
 		if(res->data)
@@ -261,7 +261,7 @@ bool wiResourceManager::del(const string& name)
 
 		resources.erase(name);
 
-		MUTEX.unlock();
+		UNLOCK();
 
 		return success;
 	}
@@ -271,8 +271,8 @@ bool wiResourceManager::del(const string& name)
 bool wiResourceManager::CleanUp()
 {
 	// TODO
-	MUTEX.lock();
+	LOCK();
 	resources.clear();
-	MUTEX.unlock();
+	UNLOCK();
 	return true;
 }

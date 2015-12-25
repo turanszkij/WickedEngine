@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiThreadSafeManager.h"
 
 extern "C"
 {
@@ -10,7 +11,7 @@ extern "C"
 
 typedef int(*lua_CFunction) (lua_State *L);
 
-class wiLua
+class wiLua : public wiThreadSafeManager
 {
 private:
 	lua_State *m_luaState;

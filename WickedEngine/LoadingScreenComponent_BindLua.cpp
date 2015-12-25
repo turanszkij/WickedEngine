@@ -26,7 +26,8 @@ Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLu
 	lunamethod(LoadingScreenComponent_BindLua, Render),
 	lunamethod(LoadingScreenComponent_BindLua, Compose),
 
-	lunamethod(LoadingScreenComponent_BindLua, AddLoadingComponent),
+	lunamethod(LoadingScreenComponent_BindLua, AddLoadingTask),
+	lunamethod(LoadingScreenComponent_BindLua, OnFinished),
 	{ NULL, NULL }
 };
 Luna<LoadingScreenComponent_BindLua>::PropertyType LoadingScreenComponent_BindLua::properties[] = {
@@ -47,22 +48,40 @@ LoadingScreenComponent_BindLua::~LoadingScreenComponent_BindLua()
 {
 }
 
-//TODO
-int LoadingScreenComponent_BindLua::AddLoadingComponent(lua_State* L)
+int LoadingScreenComponent_BindLua::AddLoadingTask(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		RenderableComponent_BindLua* comp = Luna<RenderableComponent_BindLua>::lightcheck(L, 1);
-		if (comp != nullptr)
+		string task = wiLua::SGetString(L, 1);
+		LoadingScreenComponent* loading = dynamic_cast<LoadingScreenComponent*>(component);
+		if (loading != nullptr)
 		{
-			loadingScreen->addLoadingComponent(comp->component);
+			loading->addLoadingFunction(bind(&wiLua::RunText,wiLua::GetGlobal(),task));
 		}
 		else
-			wiLua::SError(L, "AddLoadingComponent(RenderableComponent component) argument is not a RenderableComponent!");
+			wiLua::SError(L, "AddLoader(string taskScript) component is not a LoadingScreenComponent!");
 	}
 	else
-		wiLua::SError(L, "AddLoadingComponent(RenderableComponent component) not enough arguments!");
+		wiLua::SError(L, "AddLoader(string taskScript) not enough arguments!");
+	return 0;
+}
+int LoadingScreenComponent_BindLua::OnFinished(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		string task = wiLua::SGetString(L, 1);
+		LoadingScreenComponent* loading = dynamic_cast<LoadingScreenComponent*>(component);
+		if (loading != nullptr)
+		{
+			loading->onFinished(bind(&wiLua::RunText, wiLua::GetGlobal(), task));
+		}
+		else
+			wiLua::SError(L, "OnFinished(string taskScript) component is not a LoadingScreenComponent!");
+	}
+	else
+		wiLua::SError(L, "OnFinished(string taskScript) not enough arguments!");
 	return 0;
 }
 
