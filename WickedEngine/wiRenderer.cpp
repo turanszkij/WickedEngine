@@ -2438,7 +2438,7 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 	//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 
 	BindRasterizerState(wireRender?nonCullWireRS:nonCullRS,context);
-	BindDepthStencilState(depthReadStencilState,STENCILREF_EMPTY,context);
+	BindDepthStencilState(depthStencilState,STENCILREF_EMPTY,context);
 	BindBlendState(blendState,context);
 
 	//context->VSSetShader( trailVS, NULL, 0 );
