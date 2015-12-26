@@ -495,6 +495,28 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
+	int PutDecal(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Decal_BindLua* decal = Luna<Decal_BindLua>::lightcheck(L, 1);
+			if (decal != nullptr)
+			{
+				wiRenderer::decals.push_back(decal->decal);
+			}
+			else
+			{
+				wiLua::SError(L, "PutDecal(Decal decal) argument is not a Decal!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "PutDecal(Decal decal) not enough arguments!");
+		}
+		return 0;
+	}
+
 
 	int ClearWorld(lua_State* L)
 	{
@@ -550,6 +572,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
 			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
+			wiLua::GetGlobal()->RegisterFunc("PutDecal", PutDecal);
 			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0");
 			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 1");
 			wiLua::GetGlobal()->RunText("PICK_WATER = 2");

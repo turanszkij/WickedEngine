@@ -327,7 +327,7 @@ int Vector_BindLua::QuaternionFromRollPitchYaw(lua_State* L)
 			return 1;
 		}
 	}
-	wiLua::SError(L, "QuaternionFromAxis(Vector v1,v2) not enough arguments!");
+	wiLua::SError(L, "QuaternionFromRollPitchYaw(Vector rotXYZ) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Slerp(lua_State* L)

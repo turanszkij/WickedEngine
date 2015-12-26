@@ -133,6 +133,29 @@ public:
 	static void Bind();
 };
 
+class Decal_BindLua : public Cullable_BindLua, public Transform_BindLua
+{
+public:
+	Decal* decal;
+
+	static const char className[];
+	static Luna<Decal_BindLua>::FunctionType methods[];
+	static Luna<Decal_BindLua>::PropertyType properties[];
+
+	Decal_BindLua(Decal* decal);
+	Decal_BindLua(lua_State* L);
+	~Decal_BindLua();
+
+	int SetTexture(lua_State* L);
+	int SetNormal(lua_State* L);
+	int SetLife(lua_State* L);
+	int GetLife(lua_State* L);
+	int SetFadeStart(lua_State* L);
+	int GetFadeStart(lua_State* L);
+
+	static void Bind();
+};
+
 class Ray_BindLua
 {
 public:

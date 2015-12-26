@@ -16,6 +16,7 @@ namespace wiLoader_BindLua
 		Ray_BindLua::Bind();
 		AABB_BindLua::Bind();
 		EmittedParticle_BindLua::Bind();
+		Decal_BindLua::Bind();
 	}
 }
 
@@ -523,6 +524,7 @@ Object_BindLua::Object_BindLua(Object* object)
 Object_BindLua::Object_BindLua(lua_State *L)
 {
 	Transform_BindLua();
+	Cullable_BindLua();
 	object = nullptr;
 }
 Object_BindLua::~Object_BindLua()
@@ -908,6 +910,185 @@ void Armature_BindLua::Bind()
 	}
 }
 
+
+
+
+const char Decal_BindLua::className[] = "Decal";
+
+Luna<Decal_BindLua>::FunctionType Decal_BindLua::methods[] = {
+	lunamethod(Node_BindLua, GetName),
+	lunamethod(Node_BindLua, SetName),
+
+	lunamethod(Cullable_BindLua, Intersects),
+	lunamethod(Cullable_BindLua, GetAABB),
+	lunamethod(Cullable_BindLua, SetAABB),
+
+	lunamethod(Transform_BindLua, AttachTo),
+	lunamethod(Transform_BindLua, Detach),
+	lunamethod(Transform_BindLua, DetachChild),
+	lunamethod(Transform_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, Scale),
+	lunamethod(Transform_BindLua, Rotate),
+	lunamethod(Transform_BindLua, Translate),
+	lunamethod(Transform_BindLua, MatrixTransform),
+	lunamethod(Transform_BindLua, GetMatrix),
+	lunamethod(Transform_BindLua, ClearTransform),
+	lunamethod(Transform_BindLua, SetTransform),
+	lunamethod(Transform_BindLua, GetPosition),
+	lunamethod(Transform_BindLua, GetRotation),
+	lunamethod(Transform_BindLua, GetScale),
+
+	lunamethod(Decal_BindLua, SetTexture),
+	lunamethod(Decal_BindLua, SetNormal),
+	lunamethod(Decal_BindLua, SetLife),
+	lunamethod(Decal_BindLua, GetLife),
+	lunamethod(Decal_BindLua, SetFadeStart),
+	lunamethod(Decal_BindLua, GetFadeStart),
+	{ NULL, NULL }
+};
+Luna<Decal_BindLua>::PropertyType Decal_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+Decal_BindLua::Decal_BindLua(Decal* decal)
+{
+	node = decal;
+	transform = decal;
+	cullable = decal;
+	this->decal = decal;
+}
+Decal_BindLua::Decal_BindLua(lua_State *L)
+{
+	Transform_BindLua();
+	Cullable_BindLua();
+	XMFLOAT3 tra = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 sca = XMFLOAT3(1, 1, 1);
+	XMFLOAT4 rot = XMFLOAT4(0, 0, 0, 1);
+	string tex = "";
+	string nor = "";
+
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		{
+			Vector_BindLua* t = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (t != nullptr)
+			{
+				XMStoreFloat3(&tra, t->vector);
+			}
+		}
+
+		if (argc > 1)
+		{
+			{
+				Vector_BindLua* t = Luna<Vector_BindLua>::lightcheck(L, 2);
+				if (t != nullptr)
+				{
+					XMStoreFloat3(&sca, t->vector);
+				}
+			}
+
+			if (argc > 2)
+			{
+				{
+					Vector_BindLua* t = Luna<Vector_BindLua>::lightcheck(L, 3);
+					if (t != nullptr)
+					{
+						XMStoreFloat4(&rot, t->vector);
+					}
+				}
+
+				if (argc > 3)
+				{
+					tex = wiLua::SGetString(L, 4);
+
+					if (argc > 4)
+					{
+						nor = wiLua::SGetString(L, 5);
+					}
+				}
+			}
+		}
+	}
+
+	decal = new Decal(tra,sca,rot,tex,nor);
+}
+Decal_BindLua::~Decal_BindLua()
+{
+}
+
+int Decal_BindLua::SetTexture(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		decal->addTexture(wiLua::SGetString(L, 1));
+	}
+	else
+	{
+		wiLua::SError(L, "SetTexture(string textureName) not enough arguments!");
+	}
+	return 0;
+}
+int Decal_BindLua::SetNormal(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		decal->addNormal(wiLua::SGetString(L, 1));
+	}
+	else
+	{
+		wiLua::SError(L, "SetNormal(string textureName) not enough arguments!");
+	}
+	return 0;
+}
+int Decal_BindLua::SetLife(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		decal->life = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetLife(float value) not enough arguments!");
+	}
+	return 0;
+}
+int Decal_BindLua::GetLife(lua_State *L)
+{
+	wiLua::SSetFloat(L, decal->life);
+	return 1;
+}
+int Decal_BindLua::SetFadeStart(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		decal->fadeStart = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetLife(float value) not enough arguments!");
+	}
+	return 0;
+}
+int Decal_BindLua::GetFadeStart(lua_State *L)
+{
+	wiLua::SSetFloat(L, decal->fadeStart);
+	return 1;
+}
+
+void Decal_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Decal_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
 
 
 

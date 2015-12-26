@@ -28,6 +28,7 @@ The documentation completion is still pending....
 		6. Ray
 		7. AABB
 		8. Emitter
+		9. Decal
 	8. MainComponent
 	9. RenderableComponent
 		1. Renderable2DComponent
@@ -121,6 +122,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - Pick(Ray ray, opt PICKTYPE pickType) : Object? object, Vector position,normal, float distance
 - DrawLine(Vector origin,end, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
+- PutDecal(Decal decal)
 - ClearWorld()
 - ReloadShaders()
 
@@ -230,7 +232,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Cross(Vector v1,v2) : Vector result
 - Lerp(Vector v1,v2, float t) : Vector result
 - QuaternionMultiply(Vector v1,v2) : Vector result
-- QuaternionFromAxis(Vector v1,v2) : Vector result
+- QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector result
 - QuaternionSlerp(Vector v1,v2, float t) : Vector result
 
 ### Matrix
@@ -333,13 +335,23 @@ Axis Aligned Bounding Box. Can be intersected with any shape, or ray.
 
 #### Emitter
 Emitter particlesystem.
-- [void-constructor] Emitter()
+- [void-constructor]Emitter()
 - GetName() : string? name
 - SetName(string name)
 - GetMotionBlur() : float? amount
 - SetMotionBlur(float amount)
 - Burst(float amount)
 - IsValid() : bool value
+
+#### Decal
+Decal; a texture sticker placeable onto any surface. It is a Transform and a Cullable.
+- [constructor]Decal(opt Vector tra=Vector(0,0,0), sca=Vector(1,1,1), rotQuaternion=Vector(0,0,0,1), opt string tex="", nor="")
+- SetTexture(string tex)
+- SetNormal(string tex)
+- SetLife(float life)
+- GetLife() : float result
+- SetFadeStart(float start)
+- GetFadeStart() : float result
 
 ### MainComponent
 The main component which holds information and manages the running of the current program.
