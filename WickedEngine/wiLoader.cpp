@@ -530,23 +530,9 @@ void LoadWiArmatures(const string& directory, const string& name, const string& 
 	file.close();
 
 
+
 	//CREATE FAMILY
 	for(Armature* armature : armatures){
-		//for(int i=0;i<armature->boneCollection.size();i++){
-		//	string parent = armature->boneCollection[i]->parentName;
-		//	if(parent.length()>0){
-		//		for(int j=0;j<armature->boneCollection.size();j++)
-		//			if(!armature->boneCollection[j].name.compare(parent)){
-		//				armature->boneCollection[i].parentI=j;
-		//				armature->boneCollection[j].children.push_back(armature->boneCollection[i].name);
-		//				armature->boneCollection[j].childrenI.push_back(i);
-		//			}
-		//	}
-		//	else{
-		//		armature->rootbones.push_back(i);
-		//	}
-		//}
-
 		for(Bone* i : armature->boneCollection){
 			if(i->parentName.length()>0){
 				for(Bone* j : armature->boneCollection){

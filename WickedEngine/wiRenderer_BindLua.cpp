@@ -385,6 +385,15 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
+	int SetDebugBonesEnabled(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::SetToDrawDebugBoneLines(wiLua::SGetBool(L, 1));
+		}
+		return 0;
+	}
 	int SetVSyncEnabled(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -534,6 +543,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetPointLightShadowProps", SetPointLightShadowProps);
 			wiLua::GetGlobal()->RegisterFunc("SetSpotLightShadowProps", SetSpotLightShadowProps);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
+			wiLua::GetGlobal()->RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetPhysicsParams", SetPhysicsParams);
 

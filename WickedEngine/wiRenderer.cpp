@@ -1691,17 +1691,30 @@ Light* wiRenderer::getLightByName(const string& name)
 }
 
 void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat){
-	float cf = armature->currentFrame;
-	float prevActionResolveFrame = armature->prevActionResolveFrame;
-	int maxCf = 0;
-	int activeAction = armature->activeAction;
-	int prevAction = armature->prevAction;
-	Bone* parent = (Bone*)bone->parent;
-	
 
-	XMVECTOR& finalTrans = InterPolateKeyFrames(cf,maxCf,bone->actionFrames[activeAction].keyframesPos,POSITIONKEYFRAMETYPE);
-	XMVECTOR& finalRotat = InterPolateKeyFrames(cf,maxCf,bone->actionFrames[activeAction].keyframesRot,ROTATIONKEYFRAMETYPE);
-	XMVECTOR& finalScala = InterPolateKeyFrames(cf,maxCf,bone->actionFrames[activeAction].keyframesSca,SCALARKEYFRAMETYPE);
+	float cf = armature->currentFrame, cfPrev = armature->currentFramePrevAction;
+	int activeAction = armature->activeAction, prevAction = armature->prevAction;
+	int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
+	Bone* parent = (Bone*)bone->parent;
+
+#if 1
+	XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
+	XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+	XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
+
+	XMVECTOR& currTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
+	XMVECTOR& currRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+	XMVECTOR& currScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
+
+	float blendFact = armature->blendFact;
+	XMVECTOR& finalTrans = XMVectorLerp(prevTrans, currTrans, blendFact);
+	XMVECTOR& finalRotat = XMQuaternionSlerp(prevRotat, currRotat, blendFact);
+	XMVECTOR& finalScala = XMVectorLerp(prevScala, currScala, blendFact);
+#else
+	XMVECTOR& finalTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
+	XMVECTOR& finalRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+	XMVECTOR& finalScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
+#endif
 							
 	bone->worldPrev = bone->world;
 	bone->translationPrev = bone->translation;
@@ -1737,7 +1750,7 @@ void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XM
 	}
 
 }
-XMVECTOR wiRenderer::InterPolateKeyFrames(float cf, const int& maxCf, const vector<KeyFrame>& keyframeList, KeyFrameType type)
+XMVECTOR wiRenderer::InterPolateKeyFrames(float cf, const int maxCf, const vector<KeyFrame>& keyframeList, KeyFrameType type)
 {
 	XMVECTOR result = XMVectorSet(0,0,0,0);
 	
@@ -1908,17 +1921,16 @@ void wiRenderer::Update(float amount)
 	{
 		for(Armature* armature : armatures){
 			if(armature->actions.size()){
-				//XMMATRIX world = XMMatrixScalingFromVector(XMLoadFloat3(&armature->scale))*XMMatrixRotationQuaternion(XMLoadFloat4(&armature->rotation))*XMMatrixTranslationFromVector(XMLoadFloat3(&armature->translation));
-				//XMStoreFloat4x4( &armature->world,world );
 				XMMATRIX world = armature->getTransform();
 
+				// current action
 				float cf = armature->currentFrame;
-				float prevActionResolveFrame = armature->prevActionResolveFrame;
 				int maxCf = 0;
 				int activeAction = armature->activeAction;
 				int prevAction = armature->prevAction;
+				float frameInc = (armature->playing ? amount : 0.f);
 				
-				cf = armature->currentFrame += (armature->playing ? amount : 0.f);
+				cf = armature->currentFrame += frameInc;
 				maxCf = armature->actions[activeAction].frameCount;
 				if ((int)cf > maxCf)
 				{
@@ -1926,11 +1938,27 @@ void wiRenderer::Update(float amount)
 					cf = armature->currentFrame;
 				}
 
+
+				// prev action
+				float cfPrevAction = armature->currentFramePrevAction;
+				int maxCfPrevAction = armature->actions[prevAction].frameCount;
+				cfPrevAction = armature->currentFramePrevAction += frameInc;
+				if ((int)cfPrevAction > maxCfPrevAction)
 				{
-					for (unsigned int j = 0; j<armature->rootbones.size(); ++j){
-						RecursiveBoneTransform(armature,armature->rootbones[j],world);
-					}
+					armature->ResetActionPrev();
+					cfPrevAction = armature->currentFramePrevAction;
 				}
+
+				// blending
+				armature->blendCurrentFrame += frameInc;
+				armature->blendFact = wiMath::Clamp(armature->blendCurrentFrame / armature->blendFrames, 0, 1);
+
+
+				// calculate frame
+				for (unsigned int j = 0; j<armature->rootbones.size(); ++j) {
+					RecursiveBoneTransform(armature, armature->rootbones[j], world);
+				}
+
 			}
 		}
 

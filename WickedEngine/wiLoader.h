@@ -596,26 +596,10 @@ struct Bone : public Transform
 		childrenI.resize(0);
 		actionFrames.resize(0);
 		length=1.0f;
-		//XMStoreFloat4x4( &world,XMMatrixIdentity() );
-		//XMStoreFloat4x4( &worldPrev,XMMatrixIdentity() );
-		//XMStoreFloat4x4( &recursivePose,XMMatrixIdentity() );
-		//XMStoreFloat4x4( &recursiveRest,XMMatrixIdentity() );
-		//XMStoreFloat4x4( &recursiveRestInv,XMMatrixIdentity() );
 		boneRelativity=new XMFLOAT4X4();
 		boneRelativityPrev=new XMFLOAT4X4();
 		connected = false;
 	}
-	//XMFLOAT3 getTailPos(const XMMATRIX& world){
-	//	XMFLOAT3 pos = XMFLOAT3( 0,0,length );
-	//	XMVECTOR _pos = XMLoadFloat3( &pos );
-	//	XMVECTOR restedPos = XMVector3Transform( _pos,XMMatrixInverse( 0,XMMatrixTranspose(XMLoadFloat4x4(&rest) )) );
-	//	XMVECTOR posedPos = XMVector3Transform( restedPos,XMMatrixTranspose(XMLoadFloat4x4(&poseFrame)) );
-	//	XMVECTOR worldPos = XMVector3Transform( posedPos,world );
-	//	XMFLOAT3 finalPos;
-	//	XMStoreFloat3( &finalPos, worldPos );
-
-	//	return finalPos;
-	//}
 	void CleanUp(){
 		childrenN.clear();
 		childrenI.clear();
@@ -635,10 +619,20 @@ public:
 	vector<Bone*> rootbones;
 
 	int activeAction, prevAction;
-	float currentFrame, prevActionResolveFrame;
+	float currentFrame;
 	vector<Action> actions;
 	
 	bool playing;
+
+	
+	// for the calculation of the blendFact
+	float blendCurrentFrame;
+	// how many frames should the blend finish in
+	float blendFrames;
+	// [0,1] 0: prev; 1: current
+	float blendFact;
+	// animate prev action and blend with current bone set
+	float currentFramePrevAction;
 
 	Armature(){}
 	Armature(string newName,string identifier):Transform(){
@@ -650,28 +644,39 @@ public:
 		rootbones.resize(0);
 		activeAction=prevAction=0;
 		currentFrame=0;
-		prevActionResolveFrame=0;
 		actions.resize(0);
 		XMStoreFloat4x4(&world,XMMatrixIdentity());
 		playing = true;
+		blendCurrentFrame = 0.0f;
+		blendFrames = 0.0f;
+		blendFact = 0.0f;
+		currentFramePrevAction = 0.0f;
 	}
 	void CleanUp(){
 		actions.clear();
-		for(Bone* b:boneCollection)
+		for (Bone* b : boneCollection)
+		{
 			b->CleanUp();
+			delete b;
+		}
 		boneCollection.clear();
 		rootbones.clear();
 	}
 
-	bool ChangeAction(const string& actionName)
+	bool ChangeAction(const string& actionName, float blendFrames = 0.0f)
 	{
 		int i = 0;
 		for (Action& x : actions)
 		{
 			if (!x.name.compare(actionName))
 			{
+				currentFramePrevAction = currentFrame;
+				ResetAction();
 				prevAction = activeAction;
 				activeAction = i;
+				this->blendFrames = blendFrames;
+				blendFact = 0.0f;
+				blendCurrentFrame = 0.0f;
 				return true;
 			}
 			i++;
@@ -681,6 +686,10 @@ public:
 	void ResetAction()
 	{
 		currentFrame = 1;
+	}
+	void ResetActionPrev()
+	{
+		currentFramePrevAction = 1;
 	}
 	void PauseAction()
 	{
@@ -1000,7 +1009,7 @@ static const int RESOLUTION = 36;
 
 
 
-
+// Create rest positions for bone tree
 void RecursiveRest(Armature* armature, Bone* bone);
 
 void LoadWiArmatures(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures

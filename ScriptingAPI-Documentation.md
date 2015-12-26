@@ -115,6 +115,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetPointLightShadowProps(int shadowMapCount, int resolution)
 - SetSpotLightShadowProps(int shadowMapCount, int resolution)
 - SetDebugBoxesEnabled(bool enabled)
+- SetDebugBonesEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)
 - Pick(Ray ray, opt PICKTYPE pickType) : Object? object, Vector position,normal, float distance
@@ -308,7 +309,7 @@ It inherits functions from Transform.
 - GetFrame() : float? result
 - GetFrameCount() : float? result
 - IsValid() : boolean result
-- ChangeAction(String name)
+- ChangeAction(String name, opt float blendFrames)
 - StopAction()
 - PauseAction()
 - PlayAction()

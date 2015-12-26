@@ -772,21 +772,26 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "ChangeAction(String name) armature is null!");
+		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0) armature is null!");
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		string armatureName = wiLua::SGetString(L, 1);
-		if (!armature->ChangeAction(armatureName))
+		float blendFrames = 0.0f;
+		if (argc > 1)
 		{
-			wiLua::SError(L, "ChangeAction(String name) action not found!");
+			blendFrames = wiLua::SGetFloat(L, 2);
+		}
+		if (!armature->ChangeAction(armatureName,blendFrames))
+		{
+			wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0) action not found!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "ChangeAction(String name) not enough arguments!");
+		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0) not enough arguments!");
 	}
 	return 0;
 }
