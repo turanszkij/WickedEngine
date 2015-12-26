@@ -185,9 +185,13 @@ void wiLua::RegisterLibrary(const string& tableName, const luaL_Reg* functions)
 		//table is not yet present
 		lua_pushvalue(m_luaState, -1);
 		lua_setfield(m_luaState, -2, "__index"); // Object.__index = Object
+		UNLOCK();
 		AddFuncArray(functions);
 	}
-	UNLOCK();
+	else
+	{
+		UNLOCK();
+	}
 }
 bool wiLua::RegisterObject(const string& tableName, const string& name, void* object)
 {
