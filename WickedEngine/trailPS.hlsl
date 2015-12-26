@@ -13,11 +13,14 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 {
 	float4 color = float4(PSIn.col.rgb,1);
 
-		float2 distortionCo;
-			distortionCo.x = PSIn.dis.x/PSIn.dis.w/2.0f + 0.5f;
-			distortionCo.y = -PSIn.dis.y/PSIn.dis.w/2.0f + 0.5f;
-		float2 distort = (float2(0.5f,0.5f)-xDistortionTexture.Sample(xSampler,PSIn.tex).rg)*0.3f*PSIn.col.a;
-		color.rgb += xRefracTexture.Sample(xSampler,distortionCo+distort).rgb;
+	float2 distortTexDim;
+	xDistortionTexture.GetDimensions(distortTexDim.x, distortTexDim.y);
 
-	return color;
+	float2 distortionCo;
+		distortionCo.x = PSIn.dis.x/PSIn.dis.w/2.0f + 0.5f;
+		distortionCo.y = -PSIn.dis.y/PSIn.dis.w/2.0f + 0.5f;
+	float2 distort = saturate( (xDistortionTexture.Sample(xSampler,PSIn.tex/float2(distortTexDim.x,1)).rg - float2(0.5f, 0.5f))*0.3f*PSIn.col.a );
+	color.rgb += xRefracTexture.SampleLevel(xSampler,distortionCo+distort,0).rgb;
+
+	return float4(color.rgb,1);
 }

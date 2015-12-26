@@ -91,6 +91,8 @@ public:
 	Object_BindLua(lua_State *L);
 	~Object_BindLua();
 
+	int EmitTrail(lua_State *L);
+	int SetTrailDistortTex(lua_State *L);
 	int SetTransparency(lua_State *L);
 	int GetTransparency(lua_State *L);
 	int SetColor(lua_State *L);

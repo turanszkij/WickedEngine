@@ -2,6 +2,7 @@
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiEmittedParticle.h"
+#include "Texture_BindLua.h"
 
 namespace wiLoader_BindLua
 {
@@ -498,6 +499,8 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Transform_BindLua, GetRotation),
 	lunamethod(Transform_BindLua, GetScale),
 
+	lunamethod(Object_BindLua, EmitTrail),
+	lunamethod(Object_BindLua, SetTrailDistortTex),
 	lunamethod(Object_BindLua, SetTransparency),
 	lunamethod(Object_BindLua, GetTransparency),
 	lunamethod(Object_BindLua, SetColor),
@@ -526,6 +529,65 @@ Object_BindLua::~Object_BindLua()
 {
 }
 
+int Object_BindLua::EmitTrail(lua_State *L)
+{
+	if (object == nullptr)
+	{
+		wiLua::SError(L, "EmitTrail(Vector color, opt float fadeSpeed) object is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (color != nullptr)
+		{
+			XMFLOAT3 col;
+			XMStoreFloat3(&col, color->vector);
+			float fadeSpeed = 0.06f;
+			if (argc > 1)
+			{
+				fadeSpeed = wiLua::SGetFloat(L, 2);
+			}
+			object->EmitTrail(col, fadeSpeed);
+		}
+		else
+		{
+			wiLua::SError(L, "EmitTrail(Vector color, opt float fadeSpeed) argument is not a Vector!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "EmitTrail(Vector color, opt float fadeSpeed) not enough arguments!");
+	}
+	return 0;
+}
+int Object_BindLua::SetTrailDistortTex(lua_State *L)
+{
+	if (object == nullptr)
+	{
+		wiLua::SError(L, "SetTrailDistortTex(Texture tex) object is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
+		if (tex != nullptr)
+		{
+			object->trailDistortTex = tex->texture;
+		}
+		else
+		{
+			wiLua::SError(L, "SetTrailDistortTex(Texture tex) argument is not a Texture!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetTrailDistortTex(Texture tex) not enough arguments!");
+	}
+	return 0;
+}
 int Object_BindLua::SetTransparency(lua_State *L)
 {
 	if (object == nullptr)

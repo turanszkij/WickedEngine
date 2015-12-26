@@ -292,6 +292,8 @@ It inherits functions from Transform.
 It is a renderable entity (optionally), which contains a Mesh.
 It inherits functions from Cullable.
 - [void-constructor]Object()
+- EmitTrail(Vector color, opt float fadeSpeed=0.06)
+- SetTrailDistortTex(Texture tex)
 - SetTransparency(float value)
 - GetTransparency() : float? result
 - SetColor(Vector rgb)

@@ -188,15 +188,15 @@ struct RibbonVertex
 	XMFLOAT3 pos;
 	XMFLOAT2 tex;
 	XMFLOAT4 col;
-	float inc;
+	float fade;
 	//XMFLOAT3 vel;
 
-	RibbonVertex(){pos=/*vel=*/XMFLOAT3(0,0,0);tex=XMFLOAT2(0,0);col=XMFLOAT4(0,0,0,0);inc=1;}
-	RibbonVertex(const XMFLOAT3& newPos, const XMFLOAT2& newTex, const XMFLOAT4& newCol){
+	RibbonVertex(){pos=/*vel=*/XMFLOAT3(0,0,0);tex=XMFLOAT2(0,0);col=XMFLOAT4(0,0,0,0);fade=0.06f;}
+	RibbonVertex(const XMFLOAT3& newPos, const XMFLOAT2& newTex, const XMFLOAT4& newCol, float newFade){
 		pos=newPos;
 		tex=newTex;
 		col=newCol;
-		inc=1;
+		fade=newFade;
 		//vel=XMFLOAT3(0,0,0);
 	}
 };
@@ -498,9 +498,9 @@ struct Object : public Streamable, public Transform
 	
 	
 	//RIBBON TRAIL
-#define MAX_RIBBONTRAILS 10000
 	deque<RibbonVertex> trail;
 	ID3D11Buffer* trailBuff;
+	ID3D11ShaderResourceView* trailDistortTex;
 
 	int physicsObjectI;
 
@@ -528,12 +528,15 @@ struct Object : public Streamable, public Transform
 		physicsObjectI=-1;
 		transparency = 0.0f;
 		color = XMFLOAT3(1, 1, 1);
+		trailDistortTex = nullptr;
 	}
 
 	void CleanUp(){
 		trail.clear();
 		if(trailBuff) {trailBuff->Release(); trailBuff=NULL;}
 	}
+	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
+	void FadeTrail();
 };
 struct KeyFrame
 {

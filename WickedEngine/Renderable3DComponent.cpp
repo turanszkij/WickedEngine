@@ -261,6 +261,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	rtTransparent.Activate(context, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
 			, context);
+		wiRenderer::DrawTrails(context, shadedSceneRT.shaderResource.front());
 	}
 
 }

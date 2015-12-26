@@ -411,9 +411,6 @@ void wiRenderer::SetUpStaticComponents()
 
 	wireRender=false;
 	debugSpheres=false;
-	
-	
-
 
 	wiRenderer::SetUpStates();
 	wiRenderer::LoadBuffers();
@@ -1951,8 +1948,10 @@ void wiRenderer::Update(float amount)
 
 				// blending
 				armature->blendCurrentFrame += frameInc;
-				armature->blendFact = wiMath::Clamp(armature->blendCurrentFrame / armature->blendFrames, 0, 1);
-
+				if (abs(armature->blendFrames) > 0)
+					armature->blendFact = wiMath::Clamp(armature->blendCurrentFrame / armature->blendFrames, 0, 1);
+				else
+					armature->blendFact = 0;
 
 				// calculate frame
 				for (unsigned int j = 0; j<armature->rootbones.size(); ++j) {
@@ -2078,6 +2077,8 @@ void wiRenderer::UpdateObjects(){
 		}
 		else if(everyObject[i]->mesh->renderable)
 			everyObject[i]->bounds.createFromHalfWidth(everyObject[i]->translation,everyObject[i]->scale);
+
+		everyObject[i]->FadeTrail();
 	}
 }
 void wiRenderer::UpdateSoftBodyPinning(){
@@ -2446,14 +2447,22 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 	BindVS(trailVS,context);
 	
 	BindTexturePS(refracRes,0,context);
-	BindTexturePS(trailDistortTex,1,context);
+	//BindTexturePS(trailDistortTex,1,context);
 	//context->PSSetSamplers( 0,1,&mirSampler );
 	BindSamplerPS(mirSampler,0,context);
 
 	for (unsigned int i = 0; i<everyObject.size(); i++){
 		if(everyObject[i]->trailBuff && everyObject[i]->trail.size()>=4){
 			
-			
+			if (everyObject[i]->trailDistortTex != nullptr)
+			{
+				BindTexturePS(everyObject[i]->trailDistortTex, 1, context);
+			}
+			else
+			{
+				BindTexturePS(trailDistortTex, 1, context);
+			}
+
 			//context->VSSetConstantBuffers( 0, 1, &trailCB );
 			BindConstantBufferVS(trailCB,0,context);
 
@@ -2488,10 +2497,12 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 					trails.push_back(RibbonVertex(xpoint0
 						,wiMath::Lerp(everyObject[i]->trail[k].tex,everyObject[i]->trail[k+2].tex,r)
 						,wiMath::Lerp(everyObject[i]->trail[k].col,everyObject[i]->trail[k+2].col,r)
+						,1
 						));
 					trails.push_back(RibbonVertex(xpoint1
 						,wiMath::Lerp(everyObject[i]->trail[k+1].tex,everyObject[i]->trail[k+3].tex,r)
 						,wiMath::Lerp(everyObject[i]->trail[k+1].col,everyObject[i]->trail[k+3].col,r)
+						, 1
 						));
 				}
 			}
