@@ -144,7 +144,6 @@ void wiFont::LoadShaders()
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
 	}
-	delete vsinfo;
 
 
 	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));

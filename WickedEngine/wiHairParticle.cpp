@@ -81,7 +81,6 @@ void wiHairParticle::LoadShaders()
 		vs = vsinfo->vertexShader;
 		il = vsinfo->vertexLayout;
 	}
-	delete vsinfo;
 
 
 

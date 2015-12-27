@@ -130,18 +130,22 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 			BYTE* buffer;
 			size_t bufferSize;
 			if (wiHelper::readByteData(name, &buffer, bufferSize)){
-				wiRenderer::VertexShader shader = nullptr;
-				wiRenderer::graphicsDevice->CreateVertexShader(buffer, bufferSize, NULL, &shader);
+				wiRenderer::VertexShaderInfo* vertexShaderInfo = new wiRenderer::VertexShaderInfo;
+				wiRenderer::graphicsDevice->CreateVertexShader(buffer, bufferSize, NULL, &vertexShaderInfo->vertexShader);
 				if (vertexLayoutDesc != nullptr && elementCount > 0){
-					wiRenderer::VertexShaderInfo* vertexShaderInfo = new wiRenderer::VertexShaderInfo();
-					vertexShaderInfo->vertexShader = shader;
 					wiRenderer::graphicsDevice->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, &vertexShaderInfo->vertexLayout);
-					if (vertexShaderInfo->vertexShader != nullptr && vertexShaderInfo->vertexLayout != nullptr){
+					if (vertexShaderInfo->vertexLayout == nullptr)
+					{
+						success = nullptr;
+					}
+					else
+					{
 						success = vertexShaderInfo;
 					}
 				}
-				else{
-					success = shader;
+				else
+				{
+					success = (vertexShaderInfo->vertexShader == nullptr ? nullptr : vertexShaderInfo);
 				}
 				delete[] buffer;
 			}
@@ -237,7 +241,11 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 
 bool wiResourceManager::del(const string& name)
 {
-	const Resource* res = get(name);
+	Resource* res = nullptr;
+	container::iterator it = resources.find(name);
+	if (it != resources.end())
+		res = it->second;
+	else return false;
 
 	if(res){
 		LOCK();
@@ -247,13 +255,30 @@ bool wiResourceManager::del(const string& name)
 			switch(res->type){
 			case Data_Type::IMAGE:
 			case Data_Type::IMAGE_STAGING:
+				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::TextureView&>(res->data));
+				break;
 			case Data_Type::VERTEXSHADER:
+				{
+					wiRenderer::VertexShaderInfo* vsinfo = (wiRenderer::VertexShaderInfo*)res->data;
+					wiRenderer::SafeRelease(vsinfo->vertexLayout);
+					wiRenderer::SafeRelease(vsinfo->vertexShader);
+					delete vsinfo;
+				}
+				break;
 			case Data_Type::PIXELSHADER:
+				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::PixelShader&>(res->data));
+				break;
 			case Data_Type::GEOMETRYSHADER:
+				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::GeometryShader&>(res->data));
+				break;
 			case Data_Type::HULLSHADER:
+				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::HullShader&>(res->data));
+				break;
 			case Data_Type::DOMAINSHADER:
+				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::DomainShader&>(res->data));
+				break;
 			case Data_Type::COMPUTESHADER:
-				wiRenderer::SafeRelease(((wiRenderer::APIInterface&)res->data));
+				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::ComputeShader&>(res->data));
 				break;
 			case Data_Type::SOUND:
 			case Data_Type::MUSIC:
@@ -264,6 +289,7 @@ bool wiResourceManager::del(const string& name)
 				break;
 			};
 
+		delete res;
 		resources.erase(name);
 
 		UNLOCK();
@@ -275,7 +301,15 @@ bool wiResourceManager::del(const string& name)
 
 bool wiResourceManager::CleanUp()
 {
-	// TODO
+	vector<string>resNames(0);
+	for (auto& x : resources)
+	{
+		resNames.push_back(x.first);
+	}
+	for (auto& x : resNames)
+	{
+		del(x);
+	}
 	LOCK();
 	resources.clear();
 	UNLOCK();

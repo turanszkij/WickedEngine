@@ -65,6 +65,7 @@ public:
 	typedef ID3D11GeometryShader*		GeometryShader;
 	typedef ID3D11HullShader*			HullShader;
 	typedef ID3D11DomainShader*			DomainShader;
+	typedef ID3D11ComputeShader*		ComputeShader;
 	typedef ID3D11InputLayout*			VertexLayout;
 	typedef D3D11_INPUT_ELEMENT_DESC    VertexLayoutDesc;
 	typedef ID3D11BlendState*			BlendState;

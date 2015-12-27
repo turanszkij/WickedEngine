@@ -350,7 +350,6 @@ void wiEmittedParticle::LoadShaders()
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
 	}
-	delete vsinfo;
 
 
 	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS.cso", wiResourceManager::PIXELSHADER));

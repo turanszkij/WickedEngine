@@ -105,7 +105,6 @@ void wiLensFlare::LoadShaders(){
 		vertexShader = vsinfo->vertexShader;
 		inputLayout = vsinfo->vertexLayout;
 	}
-	delete vsinfo;
 
 
 	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
