@@ -142,6 +142,18 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("VK_RETURN		= 0x0D");
 		wiLua::GetGlobal()->RunText("VK_RSHIFT		= 0xA1");
 		wiLua::GetGlobal()->RunText("VK_LSHIFT		= 0xA0");
+		wiLua::GetGlobal()->RunText("VK_F1			= 0x70");
+		wiLua::GetGlobal()->RunText("VK_F2			= 0x71");
+		wiLua::GetGlobal()->RunText("VK_F3			= 0x72");
+		wiLua::GetGlobal()->RunText("VK_F4			= 0x73");
+		wiLua::GetGlobal()->RunText("VK_F5			= 0x74");
+		wiLua::GetGlobal()->RunText("VK_F6			= 0x75");
+		wiLua::GetGlobal()->RunText("VK_F7			= 0x76");
+		wiLua::GetGlobal()->RunText("VK_F8			= 0x77");
+		wiLua::GetGlobal()->RunText("VK_F9			= 0x78");
+		wiLua::GetGlobal()->RunText("VK_F10			= 0x79");
+		wiLua::GetGlobal()->RunText("VK_F11			= 0x7A");
+		wiLua::GetGlobal()->RunText("VK_F12			= 0x7B");
 
 		//Mouse
 		wiLua::GetGlobal()->RunText("VK_LBUTTON		= 0x01");

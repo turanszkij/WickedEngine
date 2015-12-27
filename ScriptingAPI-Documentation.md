@@ -382,7 +382,6 @@ A RenderableComponent describes a scene wich can render itself.
 - OnStart(string task)
 - OnStop(string task)
 
-
 #### Renderable2DComponent
 It can hold Sprites and Fonts and can sort them by layers, update and render them.
 - [constructor]Renderable2DComponent()
@@ -476,6 +475,18 @@ These provide functions to check the state of the input devices.
 - [outer]VK_RETURN : int
 - [outer]VK_RSHIFT : int
 - [outer]VK_LSHIFT : int
+- [outer]VK_F1 : int
+- [outer]VK_F2 : int
+- [outer]VK_F3 : int
+- [outer]VK_F4 : int
+- [outer]VK_F5 : int
+- [outer]VK_F6 : int
+- [outer]VK_F7 : int
+- [outer]VK_F8 : int
+- [outer]VK_F9 : int
+- [outer]VK_F10 : int
+- [outer]VK_F11 : int
+- [outer]VK_F12 : int
 - You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
 
 #### Mouse Key Codes
