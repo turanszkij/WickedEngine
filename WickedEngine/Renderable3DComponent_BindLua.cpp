@@ -28,6 +28,8 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, Update),
 	lunamethod(Renderable3DComponent_BindLua, Render),
 	lunamethod(Renderable3DComponent_BindLua, Compose),
+	lunamethod(RenderableComponent_BindLua, OnStart),
+	lunamethod(RenderableComponent_BindLua, OnStop),
 
 	lunamethod(Renderable3DComponent_BindLua, SetSSAOEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSSREnabled),

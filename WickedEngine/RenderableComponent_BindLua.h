@@ -26,6 +26,9 @@ public:
 	virtual int Render(lua_State* L);
 	virtual int Compose(lua_State* L);
 
+	virtual int OnStart(lua_State* L);
+	virtual int OnStop(lua_State* L);
+
 	static void Bind();
 };
 

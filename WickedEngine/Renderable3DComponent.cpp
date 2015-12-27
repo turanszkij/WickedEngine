@@ -169,7 +169,7 @@ void Renderable3DComponent::Load()
 
 void Renderable3DComponent::Start()
 {
-	RenderableComponent::Start();
+	Renderable2DComponent::Start();
 }
 
 void Renderable3DComponent::Update(){

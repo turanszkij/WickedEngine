@@ -27,6 +27,8 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(DeferredRenderableComponent_BindLua, Update),
 	lunamethod(DeferredRenderableComponent_BindLua, Render),
 	lunamethod(DeferredRenderableComponent_BindLua, Compose),
+	lunamethod(RenderableComponent_BindLua, OnStart),
+	lunamethod(RenderableComponent_BindLua, OnStop),
 
 	lunamethod(Renderable3DComponent_BindLua, SetSSAOEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSSREnabled),

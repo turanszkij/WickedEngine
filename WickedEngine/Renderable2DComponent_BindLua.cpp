@@ -28,6 +28,8 @@ Luna<Renderable2DComponent_BindLua>::FunctionType Renderable2DComponent_BindLua:
 	lunamethod(Renderable2DComponent_BindLua, Update),
 	lunamethod(Renderable2DComponent_BindLua, Render),
 	lunamethod(Renderable2DComponent_BindLua, Compose),
+	lunamethod(RenderableComponent_BindLua, OnStart),
+	lunamethod(RenderableComponent_BindLua, OnStop),
 	{ NULL, NULL }
 };
 Luna<Renderable2DComponent_BindLua>::PropertyType Renderable2DComponent_BindLua::properties[] = {

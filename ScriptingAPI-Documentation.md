@@ -379,6 +379,8 @@ A RenderableComponent describes a scene wich can render itself.
 - Update()
 - Render()
 - Compose()
+- OnStart(string task)
+- OnStop(string task)
 
 
 #### Renderable2DComponent

@@ -289,6 +289,7 @@
     <ClCompile Include="Renderable2DComponent.cpp" />
     <ClCompile Include="Renderable2DComponent_BindLua.cpp" />
     <ClCompile Include="Renderable3DComponent_BindLua.cpp" />
+    <ClCompile Include="RenderableComponent.cpp" />
     <ClCompile Include="RenderableComponent_BindLua.cpp" />
     <ClCompile Include="SpriteAnim_BindLua.cpp" />
     <ClCompile Include="Texture_BindLua.cpp" />

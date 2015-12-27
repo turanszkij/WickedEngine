@@ -25,6 +25,8 @@ Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLu
 	lunamethod(LoadingScreenComponent_BindLua, Update),
 	lunamethod(LoadingScreenComponent_BindLua, Render),
 	lunamethod(LoadingScreenComponent_BindLua, Compose),
+	lunamethod(RenderableComponent_BindLua, OnStart),
+	lunamethod(RenderableComponent_BindLua, OnStop),
 
 	lunamethod(LoadingScreenComponent_BindLua, AddLoadingTask),
 	lunamethod(LoadingScreenComponent_BindLua, OnFinished),

@@ -11,6 +11,9 @@ public:
 	wiCVars Params;
 	wiResourceManager Content;
 
+	function<void()> onStart;
+	function<void()> onStop;
+
 	RenderableComponent(){}
 	~RenderableComponent(){}
 
@@ -21,9 +24,9 @@ public:
 	//delete resources
 	virtual void Unload(){};
 	//start component, load temporary resources
-	virtual void Start(){};
+	virtual void Start();
 	//unload temporary resources
-	virtual void Stop(){};
+	virtual void Stop();
 	//update logic
 	virtual void Update(){};
 	//Render to layers, rendertargets, etc

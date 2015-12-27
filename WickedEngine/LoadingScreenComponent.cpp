@@ -98,5 +98,7 @@ void LoadingScreenComponent::Start()
 {
 	worker = thread(&LoadingScreenComponent::doLoadingTasks, this);
 	thread(&LoadingScreenComponent::waitForFinish, this).detach();
+
+	Renderable2DComponent::Start();
 }
 

@@ -48,7 +48,7 @@ void Renderable2DComponent::Unload()
 }
 void Renderable2DComponent::Start()
 {
-
+	RenderableComponent::Start();
 }
 void Renderable2DComponent::Update()
 {

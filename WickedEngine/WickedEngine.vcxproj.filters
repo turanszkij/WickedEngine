@@ -803,6 +803,9 @@
     <ClCompile Include="wiVersion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RenderableComponent.cpp">
+      <Filter>ComponentTemplates</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">

@@ -27,6 +27,8 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(ForwardRenderableComponent_BindLua, Update),
 	lunamethod(ForwardRenderableComponent_BindLua, Render),
 	lunamethod(ForwardRenderableComponent_BindLua, Compose),
+	lunamethod(RenderableComponent_BindLua, OnStart),
+	lunamethod(RenderableComponent_BindLua, OnStop),
 
 	lunamethod(Renderable3DComponent_BindLua, SetSSAOEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSSREnabled),

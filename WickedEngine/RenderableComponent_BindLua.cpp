@@ -13,6 +13,8 @@ Luna<RenderableComponent_BindLua>::FunctionType RenderableComponent_BindLua::met
 	lunamethod(RenderableComponent_BindLua, Update),
 	lunamethod(RenderableComponent_BindLua, Render),
 	lunamethod(RenderableComponent_BindLua, Compose),
+	lunamethod(RenderableComponent_BindLua, OnStart),
+	lunamethod(RenderableComponent_BindLua, OnStop),
 	{ NULL, NULL }
 };
 Luna<RenderableComponent_BindLua>::PropertyType RenderableComponent_BindLua::properties[] = {
@@ -129,6 +131,32 @@ int RenderableComponent_BindLua::Compose(lua_State* L)
 		return 0;
 	}
 	component->Compose();
+	return 0;
+}
+
+
+int RenderableComponent_BindLua::OnStart(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		string task = wiLua::SGetString(L, 1);
+		component->onStart = bind(&wiLua::RunText, wiLua::GetGlobal(), task);
+	}
+	else
+		wiLua::SError(L, "OnStart(string taskScript) not enough arguments!");
+	return 0;
+}
+int RenderableComponent_BindLua::OnStop(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		string task = wiLua::SGetString(L, 1);
+		component->onStop = bind(&wiLua::RunText, wiLua::GetGlobal(), task);
+	}
+	else
+		wiLua::SError(L, "OnStop(string taskScript) not enough arguments!");
 	return 0;
 }
 
