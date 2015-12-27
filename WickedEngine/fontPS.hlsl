@@ -9,9 +9,5 @@ struct VertextoPixel
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	float4 color;
-
-	color = xTexture.Sample(Sampler,PSIn.tex);
-
-	return color;
+	return xTexture.Sample(Sampler, PSIn.tex);
 }
