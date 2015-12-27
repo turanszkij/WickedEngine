@@ -344,7 +344,7 @@ Emitter particlesystem.
 - IsValid() : bool value
 
 #### Decal
-Decal; a texture sticker placeable onto any surface. It is a Transform and a Cullable.
+Decal is a texture sticker placeable onto any surface. It is a Transform and a Cullable.
 - [constructor]Decal(opt Vector tra=Vector(0,0,0), sca=Vector(1,1,1), rotQuaternion=Vector(0,0,0,1), opt string tex="", nor="")
 - SetTexture(string tex)
 - SetNormal(string tex)

@@ -244,20 +244,32 @@ void wiLua::SetDeltaTime(double dt)
 }
 void wiLua::Update()
 {
-	Signal("wickedengine_update_tick");
+	TrySignal("wickedengine_update_tick");
 }
 void wiLua::Render()
 {
-	Signal("wickedengine_render_tick");
+	TrySignal("wickedengine_render_tick");
 }
 
+inline void SignalHelper(lua_State* L, const string& name)
+{
+	lua_getglobal(L, "signal");
+	wiLua::SSetString(L, name.c_str());
+	lua_call(L, 1, 0);
+}
 void wiLua::Signal(const string& name)
 {
 	LOCK();
-	lua_getglobal(m_luaState, "signal");
-	SSetString(m_luaState, name.c_str());
-	lua_call(m_luaState, 1, 0);
+	SignalHelper(m_luaState, name);
 	UNLOCK();
+}
+bool wiLua::TrySignal(const string& name)
+{
+	if (!TRY_LOCK())
+		return false;
+	SignalHelper(m_luaState, name);
+	UNLOCK();
+	return true;
 }
 
 int wiLua::DebugOut(lua_State* L)

@@ -28,7 +28,6 @@ MainComponent::MainComponent()
 	colorGradingPaletteDisplayEnabled = false;
 
 	fadeManager.Clear();
-	fadeToComponent = nullptr;
 }
 
 
@@ -42,17 +41,6 @@ void MainComponent::Initialize()
 	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
 }
 
-void MainComponent::onActivateComponent()
-{
-	if (fadeToComponent == nullptr)
-	{
-		return;
-	}
-	activeComponent->Stop();
-	fadeToComponent->Start();
-	activeComponent = fadeToComponent;
-	fadeToComponent = nullptr;
-}
 void MainComponent::activateComponent(RenderableComponent* component, int fadeFrames, const wiColor& fadeColor)
 {
 	if (component == nullptr)
@@ -60,20 +48,26 @@ void MainComponent::activateComponent(RenderableComponent* component, int fadeFr
 		return;
 	}
 
-	fadeToComponent = component;
-
 	if (fadeFrames > 0)
 	{
 		// Fade
 		fadeManager.Clear();
-		fadeManager.Start(fadeFrames, fadeColor, bind(&MainComponent::onActivateComponent, this));
+		fadeManager.Start(fadeFrames, fadeColor, [this,component]() {
+			if (component == nullptr)
+				return;
+			activeComponent->Stop();
+			component->Start();
+			activeComponent = component;
+		});
 	}
 	else
 	{
 		// No fade
 		fadeManager.Clear();
 
-		onActivateComponent();
+		activeComponent->Stop();
+		component->Start();
+		activeComponent = component;
 	}
 }
 

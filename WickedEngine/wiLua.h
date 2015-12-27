@@ -67,6 +67,8 @@ public:
 
 	//send a signal to lua
 	void Signal(const string& name);
+	//try sending a signal to lua, which can fail because of thread conflicts
+	bool TrySignal(const string& name);
 
 	//Static function wrappers from here on
 

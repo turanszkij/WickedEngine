@@ -16,6 +16,10 @@ void wiThreadSafeManager::LOCK()
 {
 	MUTEX.lock();
 }
+bool wiThreadSafeManager::TRY_LOCK()
+{
+	return MUTEX.try_lock();
+}
 void wiThreadSafeManager::UNLOCK()
 {
 	MUTEX.unlock();

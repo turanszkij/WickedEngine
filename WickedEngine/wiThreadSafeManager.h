@@ -11,6 +11,7 @@ public:
 	~wiThreadSafeManager();
 
 	void LOCK();
+	bool TRY_LOCK();
 	void UNLOCK();
 
 	static void LOCK_STATIC();

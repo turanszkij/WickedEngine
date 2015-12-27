@@ -18,8 +18,6 @@ private:
 	int applicationControlLostThreshold;
 
 	wiFadeManager fadeManager;
-	RenderableComponent* fadeToComponent;
-	void onActivateComponent();
 public:
 	MainComponent();
 	~MainComponent();
