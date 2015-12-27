@@ -40,6 +40,7 @@ public:
 	wiResourceManager();
 	~wiResourceManager();
 	static wiResourceManager* GetGlobal();
+	static wiResourceManager* GetShaderManager();
 
 	const Resource* get(const string& name);
 	//specify datatype for shaders

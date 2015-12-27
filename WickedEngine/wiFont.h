@@ -63,7 +63,9 @@ protected:
 	
 	static void SetUpStates();
 	static void SetUpCB();
+public:
 	static void LoadShaders();
+private:
 	static void LoadVertexBuffer();
 	static void LoadIndices();
 

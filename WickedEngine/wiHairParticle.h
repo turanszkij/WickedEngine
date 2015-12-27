@@ -56,6 +56,10 @@ private:
 	static ID3D11BlendState* bs;
 	static int LOD[3];
 public:
+	static void LoadShaders();
+private:
+
+public:
 	wiHairParticle();
 	wiHairParticle(const string& newName, float newLen, int newCount
 		, const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup);

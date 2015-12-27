@@ -361,6 +361,7 @@ protected:
 	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
 	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int frameCount,const std::vector<KeyFrame>& keyframes, KeyFrameType type);
 public:
+	static string SHADERPATH;
 
 	wiRenderer();
 	void CleanUp();
@@ -406,7 +407,7 @@ public:
 	static Object* getObjectByName(const string& name);
 	static Light* getLightByName(const string& name);
 
-	static void ReloadShaders();
+	static void ReloadShaders(const string& path = "");
 
 	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 	static Vertex TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat = XMMatrixIdentity());

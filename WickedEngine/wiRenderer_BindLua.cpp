@@ -525,6 +525,10 @@ namespace wiRenderer_BindLua
 	}
 	int ReloadShaders(lua_State* L)
 	{
+		if (wiLua::SGetArgCount(L) > 0)
+		{
+			wiRenderer::ReloadShaders(wiLua::SGetString(L, 1));
+		}
 		wiRenderer::ReloadShaders();
 		return 0;
 	}

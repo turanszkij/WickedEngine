@@ -23,7 +23,9 @@ private:
 		ALIGN_16
 	};
 
+public:
 	static void LoadShaders();
+private:
 	static void SetUpStates();
 	static void SetUpCB();
 public:

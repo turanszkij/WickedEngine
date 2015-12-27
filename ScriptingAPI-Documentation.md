@@ -124,7 +124,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
 - ClearWorld()
-- ReloadShaders()
+- ReloadShaders(opt string path)
 
 ## Utility Tools
 The scripting API provides certain engine features to be used in development.

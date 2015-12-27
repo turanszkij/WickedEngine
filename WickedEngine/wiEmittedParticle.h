@@ -61,7 +61,9 @@ private:
 	static ID3D11RasterizerState*		rasterizerState,*wireFrameRS;
 	static ID3D11DepthStencilState*	depthStencilState;
 
+public:
 	static void LoadShaders();
+private:
 	static void SetUpCB();
 	static void SetUpStates();
 	void LoadVertexBuffer();

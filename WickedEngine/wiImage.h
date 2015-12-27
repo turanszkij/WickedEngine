@@ -74,7 +74,9 @@ protected:
 	static ID3D11RasterizerState*		rasterizerState;
 	static ID3D11DepthStencilState*	depthStencilStateGreater,*depthStencilStateLess,*depthNoStencilState;
 
+public:
 	static void LoadShaders();
+private:
 	static void LoadBuffers();
 	static void SetUpStates();
 

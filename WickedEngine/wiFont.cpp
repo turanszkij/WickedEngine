@@ -139,7 +139,7 @@ void wiFont::LoadShaders()
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetGlobal()->add("shaders/fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
@@ -147,7 +147,7 @@ void wiFont::LoadShaders()
 	delete vsinfo;
 
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetGlobal()->add("shaders/fontPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
 
 

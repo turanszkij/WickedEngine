@@ -29,6 +29,11 @@ wiResourceManager* wiResourceManager::GetGlobal()
 	}
 	return globalResources;
 }
+wiResourceManager* wiResourceManager::GetShaderManager()
+{
+	static wiResourceManager* shaderManager = new wiResourceManager;
+	return shaderManager;
+}
 
 void wiResourceManager::SetUp()
 {
