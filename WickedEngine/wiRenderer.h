@@ -373,7 +373,7 @@ public:
 	static void UpdateRenderInfo(ID3D11DeviceContext* context);
 	static void UpdateObjects();
 	static void UpdateSoftBodyPinning();
-	static void UpdateSkinnedVB();
+	static void UpdateSkinnedVB(ID3D11DeviceContext* context);
 	static void UpdateSPTree(wiSPTree*& tree);
 	static void UpdateImages();
 	static void ManageImages();

@@ -63,6 +63,7 @@ void DeferredRenderableComponent::Render(){
 	}
 	else
 	{
+		RenderFrameSetUp();
 		RenderShadows();
 		RenderReflections();
 		RenderScene();
@@ -270,6 +271,7 @@ void DeferredRenderableComponent::setPreferredThreadingCount(unsigned short valu
 	case 2:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			RenderFrameSetUp(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
 			RenderReflections(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
 			wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
 		}));
@@ -288,6 +290,7 @@ void DeferredRenderableComponent::setPreferredThreadingCount(unsigned short valu
 	case 3:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			RenderFrameSetUp(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
 			RenderReflections(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
 			wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS); 
 		}));
@@ -311,6 +314,7 @@ void DeferredRenderableComponent::setPreferredThreadingCount(unsigned short valu
 	default:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			RenderFrameSetUp(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
 			RenderReflections(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
 			wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS); 
 		}));

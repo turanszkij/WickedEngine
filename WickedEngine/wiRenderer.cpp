@@ -2121,7 +2121,7 @@ void wiRenderer::UpdateSoftBodyPinning(){
 		}
 	}
 }
-void wiRenderer::UpdateSkinnedVB(){
+void wiRenderer::UpdateSkinnedVB(ID3D11DeviceContext* context){
 	wiRenderer::graphicsMutex.lock();
 	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
 		Mesh* m = iter->second;
@@ -2131,7 +2131,7 @@ void wiRenderer::UpdateSkinnedVB(){
 		if(m->softBody || m->hasArmature())
 #endif
 		{
-			UpdateBuffer(m->meshVertBuff,m->skinnedVertices.data(),wiRenderer::getImmediateContext(),sizeof(Vertex)*m->skinnedVertices.size());
+			UpdateBuffer(m->meshVertBuff,m->skinnedVertices.data(),context,sizeof(Vertex)*m->skinnedVertices.size());
 			//D3D11_MAPPED_SUBRESOURCE mappedResource;
 			//void* dataPtr;
 			//wiRenderer::getImmediateContext()->Map(m->meshVertBuff,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);

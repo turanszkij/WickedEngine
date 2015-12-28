@@ -9,6 +9,7 @@
 
 Renderable3DComponent::Renderable3DComponent()
 {
+	_needToUpdateRenderData.store(true);
 }
 Renderable3DComponent::~Renderable3DComponent()
 {
@@ -178,9 +179,9 @@ void Renderable3DComponent::Update(){
 	wiRenderer::Update();
 	wiRenderer::UpdateLights();
 	wiRenderer::SychronizeWithPhysicsEngine();
-	wiRenderer::UpdateRenderInfo(wiRenderer::getImmediateContext());
-	wiRenderer::UpdateSkinnedVB();
 	wiRenderer::UpdateImages();
+
+	_needToUpdateRenderData.store(true);
 }
 
 void Renderable3DComponent::Compose(){
@@ -191,6 +192,17 @@ void Renderable3DComponent::Compose(){
 	Renderable2DComponent::Compose();
 }
 
+void Renderable3DComponent::RenderFrameSetUp(wiRenderer::DeviceContext context) {
+	if (!_needToUpdateRenderData.load())
+	{
+		return;
+	}
+
+	wiRenderer::UpdateRenderInfo(context);
+	wiRenderer::UpdateSkinnedVB(context);
+
+	_needToUpdateRenderData.store(false);
+}
 void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context){
 	if (!getReflectionsEnabled() || getReflectionQuality() < 0.01f)
 	{

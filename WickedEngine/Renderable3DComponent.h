@@ -3,11 +3,14 @@
 #include "wiTaskThread.h"
 #include "wiRenderer.h"
 #include "wiWaterPlane.h"
+#include <atomic>
 
 class Renderable3DComponent :
 	public Renderable2DComponent
 {
 private:
+	atomic_bool  _needToUpdateRenderData;
+
 	float lightShaftQuality;
 	float bloomDownSample;
 	float bloomStren;
@@ -61,6 +64,7 @@ protected:
 
 	vector<wiTaskThread*> workerThreads;
 
+	virtual void RenderFrameSetUp(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
 	virtual void RenderReflections(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
 	virtual void RenderShadows(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext());
 	virtual void RenderScene(wiRenderer::DeviceContext context = wiRenderer::getImmediateContext()) = 0;
