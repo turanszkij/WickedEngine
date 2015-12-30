@@ -12,6 +12,7 @@ struct PixelInputType
 	float  ao						: AMBIENT_OCCLUSION;
 	float  dither					: DITHER;
 	float3 instanceColor			: INSTANCECOLOR;
+	float3 nor2D					: NORMAL2D;
 };
 
 cbuffer matBuffer:register(b2){

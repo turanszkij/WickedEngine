@@ -430,11 +430,20 @@ namespace wiRenderer_BindLua
 			if (ray != nullptr)
 			{
 				wiRenderer::PICKTYPE pickType = wiRenderer::PICKTYPE::PICK_OPAQUE;
+				string layer = "", layerDisable = "";
 				if (argc > 1)
 				{
 					pickType = (wiRenderer::PICKTYPE)wiLua::SGetInt(L, 2);
+					if (argc > 2)
+					{
+						layer = wiLua::SGetString(L, 3);
+						if (argc > 3)
+						{
+							layerDisable = wiLua::SGetString(L, 4);
+						}
+					}
 				}
-				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, pickType);
+				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, pickType, layer, layerDisable);
 				Luna<Object_BindLua>::push(L, new Object_BindLua(pick.object));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));

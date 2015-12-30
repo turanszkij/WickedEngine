@@ -85,7 +85,10 @@ function wakeUpWaitingThreads(deltaTime)
     -- Now wake them all up.
     for _, co in ipairs(threadsToWake) do
         WAITING_ON_TIME[co] = nil -- Setting a field to nil removes it from the table
-        coroutine.resume(co)
+        local success, errorMsg = coroutine.resume(co)
+		if not success then
+			error("[Lua Error] "..errorMsg)
+		end
     end
 end
 
@@ -125,7 +128,10 @@ function signal(signalName)
 
     WAITING_ON_SIGNAL[signalName] = nil
     for _, co in ipairs(threads) do
-        coroutine.resume(co)
+        local success, errorMsg = coroutine.resume(co)
+		if not success then
+			error("[Lua Error] "..errorMsg)
+		end
     end
 end 
 

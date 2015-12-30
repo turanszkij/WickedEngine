@@ -56,6 +56,7 @@ PixelInputType main(Input input)
 		Out.cam = xCamPos.xyz;
 		Out.tex = input.tex.xy;
 		Out.nor = normalize(normal);
+		Out.nor2D = mul(Out.nor.xyz, (float3x3)xViewProjection);
 
 
 		Out.ReflectionMapSamplingPos = mul(pos, xRefViewProjection );

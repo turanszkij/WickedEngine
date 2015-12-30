@@ -58,7 +58,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		
 	
 		//REFRACTION 
-		float2 perturbatedRefrTexCoords = screenPos.xy + bumpColor.rg * refractionIndex;   
+		float2 perturbatedRefrTexCoords = screenPos.xy + (normalize(PSIn.nor2D).rg + bumpColor.rg) * refractionIndex;
 		float4 refractiveColor = (xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0));
 		baseColor.rgb=lerp(refractiveColor.rgb,baseColor.rgb,baseColor.a);
 		

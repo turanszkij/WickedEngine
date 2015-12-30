@@ -119,7 +119,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugBonesEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)
-- Pick(Ray ray, opt PICKTYPE pickType) : Object? object, Vector position,normal, float distance
+- Pick(Ray ray, opt PICKTYPE pickType, opt string id="", opt string disableID="") : Object? object, Vector position,normal, float distance
 - DrawLine(Vector origin,end, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)

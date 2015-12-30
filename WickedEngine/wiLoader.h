@@ -388,6 +388,17 @@ struct Node
 	Node(){
 		name="";
 	}
+
+
+	string GetID()
+	{
+		auto x = name.find_last_of('_');
+		if (x != string::npos)
+		{
+			return name.substr(x + 1);
+		}
+		return "";
+	}
 };
 struct Load_Debug_Properties
 {

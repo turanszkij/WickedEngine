@@ -1137,10 +1137,17 @@ public:
 
 		Picked():object(nullptr),distance(0){}
 	};
-	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);
-	static Picked Pick(RAY& ray, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE);
+
+	// Pick closest object in the world
+	// layer : concatenated string of layers to check against, empty string : all layers will be checked
+	// layerDsiable : concatenated string of layers to NOT check against
+	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE, const string& layer = "", 
+		const string& layerDisable = "");
+	static Picked Pick(RAY& ray, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE, const string& layer = "",
+		const string& layerDisable = "");
 	static RAY getPickRay(long cursorX, long cursorY);
-	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points, bool dynamicObjects = true);
+	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
+		bool dynamicObjects = true, const string& layer = "", const string& layerDisable = "");
 	static void CalculateVertexAO(Object* object);
 
 	static PHYSICS* physicsEngine;

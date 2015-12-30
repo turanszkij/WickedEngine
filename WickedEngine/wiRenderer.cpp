@@ -4206,7 +4206,8 @@ void wiRenderer::UpdateLights()
 	}
 }
 
-wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType)
+wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType, const string& layer,
+	const string& layerDisable)
 {
 	CulledCollection culledwiRenderer;
 	CulledList culledObjects;
@@ -4231,7 +4232,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType)
 
 		vector<Picked> pickPoints;
 
-		RayIntersectMeshes(ray, culledObjects, pickPoints);
+		RayIntersectMeshes(ray, culledObjects, pickPoints, true, layer, layerDisable);
 
 		if (!pickPoints.empty()){
 			Picked min = pickPoints.front();
@@ -4247,11 +4248,12 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType)
 
 	return Picked();
 }
-wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickType)
+wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickType, const string& layer,
+	const string& layerDisable)
 {
 	RAY ray = getPickRay(cursorX, cursorY);
 
-	return Pick(ray, pickType);
+	return Pick(ray, pickType, layer, layerDisable);
 }
 
 RAY wiRenderer::getPickRay(long cursorX, long cursorY){
@@ -4263,8 +4265,20 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 	return RAY(lineStart,rayDirection);
 }
 
-void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points, bool dynamicObjects)
+void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points, 
+	bool dynamicObjects, const string& layer, const string& layerDisable)
 {
+	bool checkLayers = false;
+	if (layer.length() > 0)
+	{
+		checkLayers = true;
+	}
+	bool dontcheckLayers = false;
+	if (layerDisable.length() > 0)
+	{
+		dontcheckLayers = true;
+	}
+
 	if (!culledObjects.empty())
 	{
 		XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
@@ -4275,6 +4289,21 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			if (!dynamicObjects && object->isDynamic())
 			{
 				continue;
+			}
+
+			// layer support
+			if (checkLayers || dontcheckLayers)
+			{
+				string id = object->GetID();
+
+				if (checkLayers && layer.find(id) == string::npos)
+				{
+					continue;
+				}
+				if (dontcheckLayers && layerDisable.find(id) != string::npos)
+				{
+					continue;
+				}
 			}
 
 			Mesh* mesh = object->mesh;
