@@ -1140,7 +1140,7 @@ public:
 
 	// Pick closest object in the world
 	// layer : concatenated string of layers to check against, empty string : all layers will be checked
-	// layerDsiable : concatenated string of layers to NOT check against
+	// layerDisable : concatenated string of layers to NOT check against
 	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE, const string& layer = "", 
 		const string& layerDisable = "");
 	static Picked Pick(RAY& ray, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE, const string& layer = "",

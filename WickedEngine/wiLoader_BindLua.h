@@ -129,6 +129,10 @@ public:
 	int PauseAction(lua_State* L);
 	int PlayAction(lua_State* L);
 	int ResetAction(lua_State* L);
+	int AddAnimLayer(lua_State* L);
+	int DeleteAnimLayer(lua_State* L);
+	int SetAnimLayerWeight(lua_State* L);
+	int SetAnimLayerLooped(lua_State* L);
 
 	static void Bind();
 };

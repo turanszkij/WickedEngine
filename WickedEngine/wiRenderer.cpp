@@ -1707,31 +1707,52 @@ Light* wiRenderer::getLightByName(const string& name)
 	return nullptr;
 }
 
-void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat){
-
-	float cf = armature->currentFrame, cfPrev = armature->currentFramePrevAction;
-	int activeAction = armature->activeAction, prevAction = armature->prevAction;
-	int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
+void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat)
+{
 	Bone* parent = (Bone*)bone->parent;
 
-#if 1
-	XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
-	XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-	XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
+	// TRANSITION BLENDING + ADDITIVE BLENDING
+	XMVECTOR& finalTrans = XMVectorSet(0, 0, 0, 0);
+	XMVECTOR& finalRotat = XMQuaternionIdentity();
+	XMVECTOR& finalScala = XMVectorSet(1, 1, 1, 0);
 
-	XMVECTOR& currTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
-	XMVECTOR& currRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-	XMVECTOR& currScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
+	for (auto& x : armature->animationLayers)
+	{
+		AnimationLayer& anim = *x;
 
-	float blendFact = armature->blendFact;
-	XMVECTOR& finalTrans = XMVectorLerp(prevTrans, currTrans, blendFact);
-	XMVECTOR& finalRotat = XMQuaternionSlerp(prevRotat, currRotat, blendFact);
-	XMVECTOR& finalScala = XMVectorLerp(prevScala, currScala, blendFact);
-#else
-	XMVECTOR& finalTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
-	XMVECTOR& finalRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-	XMVECTOR& finalScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
-#endif
+		float cf = anim.currentFrame, cfPrev = anim.currentFramePrevAction;
+		int activeAction = anim.activeAction, prevAction = anim.prevAction;
+		int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
+
+		// ANIMATION BLENDING IS USED ONLY FOR TRANSITIONS
+		XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
+
+		XMVECTOR& currTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR& currRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR& currScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
+
+		float blendFact = anim.blendFact;
+
+		switch (anim.type)
+		{
+		case AnimationLayer::ANIMLAYER_TYPE_PRIMARY:
+			finalTrans = XMVectorLerp(prevTrans, currTrans, blendFact);
+			finalRotat = XMQuaternionSlerp(prevRotat, currRotat, blendFact);
+			finalScala = XMVectorLerp(prevScala, currScala, blendFact);
+			break;
+		case AnimationLayer::ANIMLAYER_TYPE_ADDITIVE:
+			finalTrans = XMVectorLerp(finalTrans, XMVectorAdd(finalTrans, XMVectorLerp(prevTrans, currTrans, blendFact)), anim.weight);
+			finalRotat = XMQuaternionSlerp(finalRotat, XMQuaternionMultiply(finalRotat, XMQuaternionSlerp(prevRotat, currRotat, blendFact)), anim.weight); // normalize?
+			finalScala = XMVectorLerp(finalScala, XMVectorMultiply(finalScala, XMVectorLerp(prevScala, currScala, blendFact)), anim.weight);
+			break;
+		default:
+			break;
+		}
+	}
+	XMVectorSetW(finalTrans, 1);
+	XMVectorSetW(finalScala, 1);
 							
 	bone->worldPrev = bone->world;
 	bone->translationPrev = bone->translation;
@@ -1940,38 +1961,57 @@ void wiRenderer::Update(float amount)
 			if(armature->actions.size()){
 				XMMATRIX world = armature->getTransform();
 
-				// current action
-				float cf = armature->currentFrame;
-				int maxCf = 0;
-				int activeAction = armature->activeAction;
-				int prevAction = armature->prevAction;
-				float frameInc = (armature->playing ? amount : 0.f);
-				
-				cf = armature->currentFrame += frameInc;
-				maxCf = armature->actions[activeAction].frameCount;
-				if ((int)cf > maxCf)
+				for (auto& x : armature->animationLayers)
 				{
-					armature->ResetAction();
-					cf = armature->currentFrame;
+					AnimationLayer& anim = *x;
+
+					// current action
+					float cf = anim.currentFrame;
+					int maxCf = 0;
+					int activeAction = anim.activeAction;
+					int prevAction = anim.prevAction;
+					float frameInc = (anim.playing ? amount : 0.f);
+
+					cf = anim.currentFrame += frameInc;
+					maxCf = armature->actions[activeAction].frameCount;
+					if ((int)cf > maxCf)
+					{
+						if (anim.looped)
+						{
+							anim.ResetAction();
+							cf = anim.currentFrame;
+						}
+						else
+						{
+							anim.currentFrame = cf = (float)maxCf;
+						}
+					}
+
+
+					// prev action
+					float cfPrevAction = anim.currentFramePrevAction;
+					int maxCfPrevAction = armature->actions[prevAction].frameCount;
+					cfPrevAction = anim.currentFramePrevAction += frameInc;
+					if ((int)cfPrevAction > maxCfPrevAction)
+					{
+						if (anim.looped)
+						{
+							anim.ResetActionPrev();
+							cfPrevAction = anim.currentFramePrevAction;
+						}
+						else
+						{
+							anim.currentFramePrevAction = cfPrevAction = (float)maxCfPrevAction;
+						}
+					}
+
+					// blending
+					anim.blendCurrentFrame += frameInc;
+					if (abs(anim.blendFrames) > 0)
+						anim.blendFact = wiMath::Clamp(anim.blendCurrentFrame / anim.blendFrames, 0, 1);
+					else
+						anim.blendFact = 0;
 				}
-
-
-				// prev action
-				float cfPrevAction = armature->currentFramePrevAction;
-				int maxCfPrevAction = armature->actions[prevAction].frameCount;
-				cfPrevAction = armature->currentFramePrevAction += frameInc;
-				if ((int)cfPrevAction > maxCfPrevAction)
-				{
-					armature->ResetActionPrev();
-					cfPrevAction = armature->currentFramePrevAction;
-				}
-
-				// blending
-				armature->blendCurrentFrame += frameInc;
-				if (abs(armature->blendFrames) > 0)
-					armature->blendFact = wiMath::Clamp(armature->blendCurrentFrame / armature->blendFrames, 0, 1);
-				else
-					armature->blendFact = 0;
 
 				// calculate frame
 				for (unsigned int j = 0; j<armature->rootbones.size(); ++j) {

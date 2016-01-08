@@ -725,6 +725,10 @@ Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Armature_BindLua, PauseAction),
 	lunamethod(Armature_BindLua, PlayAction),
 	lunamethod(Armature_BindLua, ResetAction),
+	lunamethod(Armature_BindLua, AddAnimLayer),
+	lunamethod(Armature_BindLua, DeleteAnimLayer),
+	lunamethod(Armature_BindLua, SetAnimLayerWeight),
+	lunamethod(Armature_BindLua, SetAnimLayerLooped),
 	lunamethod(Armature_BindLua, IsValid),
 	{ NULL, NULL }
 };
@@ -751,10 +755,17 @@ int Armature_BindLua::GetAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "GetAction() armature is null!");
+		wiLua::SError(L, "GetAction(opt string animLayer) armature is null!");
 		return 0;
 	}
-	wiLua::SSetString(L, armature->actions[armature->activeAction].name);
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		wiLua::SSetString(L, armature->actions[armature->GetAnimLayer(wiLua::SGetString(L,1))->activeAction].name);
+	}
+	else
+	{
+		wiLua::SSetString(L, armature->actions[armature->GetPrimaryAnimation()->activeAction].name);
+	}
 	return 1;
 }
 int Armature_BindLua::GetActions(lua_State *L)
@@ -810,20 +821,34 @@ int Armature_BindLua::GetFrame(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "GetFrame() armature is null!");
+		wiLua::SError(L, "GetFrame(opt string animLayer) armature is null!");
 		return 0;
 	}
-	wiLua::SSetFloat(L, armature->currentFrame);
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		wiLua::SSetFloat(L, armature->GetAnimLayer(wiLua::SGetString(L,1))->currentFrame);
+	}
+	else
+	{
+		wiLua::SSetFloat(L, armature->GetPrimaryAnimation()->currentFrame);
+	}
 	return 1;
 }
 int Armature_BindLua::GetFrameCount(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "GetFrameCount() armature is null!");
+		wiLua::SError(L, "GetFrameCount(opt string animLayer) armature is null!");
 		return 0;
 	}
-	wiLua::SSetFloat(L, (float)armature->actions[armature->activeAction].frameCount);
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		wiLua::SSetFloat(L, (float)armature->actions[armature->GetAnimLayer(wiLua::SGetString(L,1))->activeAction].frameCount);
+	}
+	else
+	{
+		wiLua::SSetFloat(L, (float)armature->actions[armature->GetPrimaryAnimation()->activeAction].frameCount);
+	}
 	return 1;
 }
 int Armature_BindLua::IsValid(lua_State *L)
@@ -836,7 +861,7 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0) armature is null!");
+		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) armature is null!");
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
@@ -847,15 +872,26 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 		if (argc > 1)
 		{
 			blendFrames = wiLua::SGetFloat(L, 2);
+			if (argc > 2)
+			{
+				if (!armature->ChangeAction(armatureName, blendFrames, wiLua::SGetString(L,3)))
+				{
+					wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) action not found!");
+				}
+				else
+				{
+					return 0;
+				}
+			}
 		}
 		if (!armature->ChangeAction(armatureName,blendFrames))
 		{
-			wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0) action not found!");
+			wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) action not found!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0) not enough arguments!");
+		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) not enough arguments!");
 	}
 	return 0;
 }
@@ -863,40 +899,152 @@ int Armature_BindLua::StopAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "StopAction() armature is null!");
+		wiLua::SError(L, "StopAction(opt string animLayer) armature is null!");
 		return 0;
 	}
-	armature->StopAction();
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		armature->GetAnimLayer(wiLua::SGetString(L,1))->StopAction();
+	}
+	else
+	{
+		armature->GetPrimaryAnimation()->StopAction();
+	}
 	return 0;
 }
 int Armature_BindLua::PauseAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "PauseAction() armature is null!");
+		wiLua::SError(L, "PauseAction(opt string animLayer) armature is null!");
 		return 0;
 	}
-	armature->PauseAction();
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		armature->GetAnimLayer(wiLua::SGetString(L,1))->PauseAction();
+	}
+	else
+	{
+		armature->GetPrimaryAnimation()->PauseAction();
+	}
 	return 0;
 }
 int Armature_BindLua::PlayAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "PlayAction() armature is null!");
+		wiLua::SError(L, "PlayAction(opt string animLayer) armature is null!");
 		return 0;
 	}
-	armature->PlayAction();
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		armature->GetAnimLayer(wiLua::SGetString(L, 1))->PlayAction();
+	}
+	else
+	{
+		armature->GetPrimaryAnimation()->PlayAction();
+	}
 	return 0;
 }
 int Armature_BindLua::ResetAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "ResetAction() armature is null!");
+		wiLua::SError(L, "ResetAction(opt string animLayer) armature is null!");
 		return 0;
 	}
-	armature->ResetAction();
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		armature->GetAnimLayer(wiLua::SGetString(L, 1))->ResetAction();
+	}
+	else
+	{
+		armature->GetPrimaryAnimation()->ResetAction();
+	}
+	return 0;
+}
+int Armature_BindLua::AddAnimLayer(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "AddAnimLayer(string animLayer) armature is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		armature->AddAnimLayer(wiLua::SGetString(L, 1));
+	}
+	else
+	{
+		wiLua::SError(L, "AddAnimLayer(string animLayer) not enough arguments!");
+	}
+	return 0;
+}
+int Armature_BindLua::DeleteAnimLayer(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "DeleteAnimLayer(string animLayer) armature is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		armature->DeleteAnimLayer(wiLua::SGetString(L, 1));
+	}
+	else
+	{
+		wiLua::SError(L, "DeleteAnimLayer(string animLayer) not enough arguments!");
+	}
+	return 0;
+}
+int Armature_BindLua::SetAnimLayerWeight(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "SetAnimLayerWeight(float weight, opt string animLayer) armature is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		if (argc > 1)
+		{
+			armature->GetAnimLayer(wiLua::SGetString(L, 2))->weight = wiLua::SGetFloat(L, 1);
+		}
+		else
+		{
+			armature->GetPrimaryAnimation()->weight = wiLua::SGetFloat(L, 1);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetAnimLayerWeight(float weight, opt string animLayer) not enough arguments!");
+	}
+	return 0;
+}
+int Armature_BindLua::SetAnimLayerLooped(lua_State* L)
+{
+	if (armature == nullptr)
+	{
+		wiLua::SError(L, "SetAnimLayerLooped(bool looped, opt string animLayer) armature is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		if (argc > 1)
+		{
+			armature->GetAnimLayer(wiLua::SGetString(L, 2))->looped = wiLua::SGetBool(L, 1);
+		}
+		else
+		{
+			armature->GetPrimaryAnimation()->looped = wiLua::SGetBool(L, 1);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetAnimLayerLooped(bool looped, opt string animLayer) not enough arguments!");
+	}
 	return 0;
 }
 

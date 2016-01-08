@@ -306,18 +306,22 @@ It inherits functions from Cullable.
 It animates meshes.
 It inherits functions from Transform.
 - [void-constructor]Armature()
-- GetAction() : string? result
+- GetAction(opt string animLayer = "") : string? result
 - GetActions() : string? result
 - GetBones() : string? result
 - GetBone(String name) : Transform? result
-- GetFrame() : float? result
-- GetFrameCount() : float? result
+- GetFrame(opt string animLayer = "") : float? result
+- GetFrameCount(opt string animLayer = "") : float? result
 - IsValid() : boolean result
-- ChangeAction(String name, opt float blendFrames)
-- StopAction()
-- PauseAction()
-- PlayAction()
-- ResetAction()
+- ChangeAction(String name, opt float blendFrames = 0, opt string animLayer = "")
+- StopAction(opt string animLayer = "")
+- PauseAction(opt string animLayer = "")
+- PlayAction(opt string animLayer = "")
+- ResetAction(opt string animLayer = "")
+- AddAnimLayer(string animLayer)
+- DeleteAnimLayer(string animLayer)
+- SetAnimLayerWeight(float weight, opt string animLayer="")
+- SetAnimLayerLooped(float weight, opt string animLayer="")
 
 #### Ray
 Can intersect with AABBs, Cullables.

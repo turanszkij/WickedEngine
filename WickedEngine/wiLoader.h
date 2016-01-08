@@ -625,20 +625,15 @@ struct Bone : public Transform
 
 	XMMATRIX getTransform(int getTranslation = 1, int getRotation = 1, int getScale = 1);
 };
-struct Armature : public Transform
+struct AnimationLayer
 {
-public:
-	string unidentified_name;
-	vector<Bone*> boneCollection;
-	vector<Bone*> rootbones;
+	string name;
 
 	int activeAction, prevAction;
 	float currentFrame;
-	vector<Action> actions;
-	
+
 	bool playing;
 
-	
 	// for the calculation of the blendFact
 	float blendCurrentFrame;
 	// how many frames should the blend finish in
@@ -647,55 +642,46 @@ public:
 	float blendFact;
 	// animate prev action and blend with current bone set
 	float currentFramePrevAction;
+	// How much the layer will contribute
+	float weight;
 
-	Armature(){}
-	Armature(string newName,string identifier):Transform(){
-		unidentified_name=newName;
-		stringstream ss("");
-		ss<<newName<<identifier;
-		name=ss.str();
-		boneCollection.resize(0);
-		rootbones.resize(0);
-		activeAction=prevAction=0;
-		currentFrame=0;
-		actions.resize(0);
-		XMStoreFloat4x4(&world,XMMatrixIdentity());
+	enum ANIMATIONLAYER_TYPE
+	{
+		ANIMLAYER_TYPE_PRIMARY,
+		ANIMLAYER_TYPE_ADDITIVE,
+	}type;
+
+	bool looped;
+
+	AnimationLayer()
+	{
+		name = "";
+
+		activeAction = prevAction = 0;
+		ResetAction();
+		ResetActionPrev();
+
 		playing = true;
 		blendCurrentFrame = 0.0f;
 		blendFrames = 0.0f;
 		blendFact = 0.0f;
 		currentFramePrevAction = 0.0f;
-	}
-	void CleanUp(){
-		actions.clear();
-		for (Bone* b : boneCollection)
-		{
-			b->CleanUp();
-			delete b;
-		}
-		boneCollection.clear();
-		rootbones.clear();
+		weight = 1.0f;
+		type = ANIMLAYER_TYPE_ADDITIVE;
+
+		looped = true;
 	}
 
-	bool ChangeAction(const string& actionName, float blendFrames = 0.0f)
+	void ChangeAction(int actionIndex, float blendFrames = 0.0f, float weight = 1.0f)
 	{
-		int i = 0;
-		for (Action& x : actions)
-		{
-			if (!x.name.compare(actionName))
-			{
-				currentFramePrevAction = currentFrame;
-				ResetAction();
-				prevAction = activeAction;
-				activeAction = i;
-				this->blendFrames = blendFrames;
-				blendFact = 0.0f;
-				blendCurrentFrame = 0.0f;
-				return true;
-			}
-			i++;
-		}
-		return false;
+		currentFramePrevAction = currentFrame;
+		ResetAction();
+		prevAction = activeAction;
+		activeAction = actionIndex;
+		this->blendFrames = blendFrames;
+		blendFact = 0.0f;
+		blendCurrentFrame = 0.0f;
+		this->weight = weight;
 	}
 	void ResetAction()
 	{
@@ -717,6 +703,112 @@ public:
 	void PlayAction()
 	{
 		playing = true;
+	}
+};
+struct Armature : public Transform
+{
+public:
+	string unidentified_name;
+	vector<Bone*> boneCollection;
+	vector<Bone*> rootbones;
+
+	list<AnimationLayer*> animationLayers;
+	vector<Action> actions;
+	
+
+	Armature() = delete;
+	Armature(string newName,string identifier):Transform(){
+		unidentified_name=newName;
+		stringstream ss("");
+		ss<<newName<<identifier;
+		name=ss.str();
+		boneCollection.resize(0);
+		rootbones.resize(0);
+		actions.resize(0);
+		XMStoreFloat4x4(&world,XMMatrixIdentity());
+		animationLayers.clear();
+		animationLayers.push_back(new AnimationLayer());
+		animationLayers.back()->type = AnimationLayer::ANIMLAYER_TYPE_PRIMARY;
+	}
+	void CleanUp(){
+		actions.clear();
+		for (Bone* b : boneCollection)
+		{
+			b->CleanUp();
+			delete b;
+		}
+		boneCollection.clear();
+		rootbones.clear();
+		for (auto& x : animationLayers)
+		{
+			delete x;
+		}
+		animationLayers.clear();
+	}
+
+	inline AnimationLayer* GetPrimaryAnimation() { 
+		return *animationLayers.begin(); 
+	}
+
+	bool ChangeAction(const string& actionName, float blendFrames = 0.0f, const string& animLayer = "")
+	{
+		AnimationLayer* anim = GetPrimaryAnimation();
+		if (animLayer.length() > 0)
+		{
+			anim = GetAnimLayer(animLayer);
+		}
+
+		int i = 0;
+		for (Action& x : actions)
+		{
+			if (!x.name.compare(actionName))
+			{
+				anim->ChangeAction(i, blendFrames);
+				return true;
+			}
+			i++;
+		}
+		return false;
+	}
+	AnimationLayer* GetAnimLayer(const string& name)
+	{
+		for (auto& x : animationLayers)
+		{
+			if (!x->name.compare(name))
+			{
+				return x;
+			}
+		}
+		animationLayers.push_back(new AnimationLayer);
+		animationLayers.back()->name = name;
+		return animationLayers.back();
+	}
+	void AddAnimLayer(const string& name)
+	{
+		for (auto& x : animationLayers)
+		{
+			if (!x->name.compare(name))
+			{
+				return;
+			}
+		}
+		animationLayers.push_back(new AnimationLayer);
+		animationLayers.back()->name = name;
+	}
+	void DeleteAnimLayer(const string& name)
+	{
+		auto i = animationLayers.begin();
+		while (i != animationLayers.end())
+		{
+			if ((*i)->type != AnimationLayer::ANIMLAYER_TYPE_PRIMARY && !(*i)->name.compare(name))
+			{
+				animationLayers.erase(i++);
+			}
+			else
+			{
+				++i;
+			}
+		}
 	}
 };
 struct SHCAM{	
