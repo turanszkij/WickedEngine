@@ -94,14 +94,6 @@ namespace wiRenderer_BindLua
 		{
 			ss << x->name << endl;
 		}
-		for (auto& x : wiRenderer::objects_trans)
-		{
-			ss << x->name << endl;
-		}
-		for (auto& x : wiRenderer::objects_water)
-		{
-			ss << x->name << endl;
-		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
@@ -219,16 +211,6 @@ namespace wiRenderer_BindLua
 	int GetScreenHeight(lua_State* L)
 	{
 		wiLua::SSetInt(L, wiRenderer::SCREENHEIGHT);
-		return 1;
-	}
-	int GetRenderWidth(lua_State* L)
-	{
-		wiLua::SSetInt(L, wiRenderer::RENDERWIDTH);
-		return 1;
-	}
-	int GetRenderHeight(lua_State* L)
-	{
-		wiLua::SSetInt(L, wiRenderer::RENDERHEIGHT);
 		return 1;
 	}
 	int GetCamera(lua_State* L)
@@ -444,11 +426,11 @@ namespace wiRenderer_BindLua
 			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 			if (ray != nullptr)
 			{
-				wiRenderer::PICKTYPE pickType = wiRenderer::PICKTYPE::PICK_OPAQUE;
+				int pickType = PICKTYPE::PICK_OPAQUE;
 				string layer = "", layerDisable = "";
 				if (argc > 1)
 				{
-					pickType = (wiRenderer::PICKTYPE)wiLua::SGetInt(L, 2);
+					pickType = wiLua::SGetInt(L, 2);
 					if (argc > 2)
 					{
 						layer = wiLua::SGetString(L, 3);
@@ -578,8 +560,6 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
-			wiLua::GetGlobal()->RegisterFunc("GetRenderWidth", GetRenderWidth);
-			wiLua::GetGlobal()->RegisterFunc("GetRenderHeight", GetRenderHeight);
 			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
 
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
@@ -602,9 +582,10 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
 			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
 			wiLua::GetGlobal()->RegisterFunc("PutDecal", PutDecal);
-			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0");
-			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 1");
-			wiLua::GetGlobal()->RunText("PICK_WATER = 2");
+			wiLua::GetGlobal()->RunText("PICK_VOID = 0x0000000");
+			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0x0000001");
+			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 0x0000010");
+			wiLua::GetGlobal()->RunText("PICK_WATER = 0x0000100");
 
 			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
 			wiLua::GetGlobal()->RegisterFunc("ReloadShaders", ReloadShaders);

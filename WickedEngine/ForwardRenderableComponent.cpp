@@ -75,7 +75,7 @@ void ForwardRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
 		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera(), wiRenderer::getRefCamera());
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, 0, context
-			, false, wiRenderer::SHADED_FORWARD_SIMPLE
+			, false, SHADERTYPE_FORWARD_SIMPLE
 			, nullptr, true, GRAPHICSTHREAD_SCENE);
 		wiRenderer::DrawSky(context);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), context);

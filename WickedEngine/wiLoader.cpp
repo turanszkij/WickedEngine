@@ -316,9 +316,6 @@ void Mesh::Optimize()
 void Mesh::CreateBuffers(){
 	if(!buffersComplete){
 
-		//if(meshInstanceBuffer!=nullptr)
-		//	return;
-
 		D3D11_BUFFER_DESC bd;
 		if (meshInstanceBuffer == nullptr)
 		{
@@ -329,14 +326,6 @@ void Mesh::CreateBuffers(){
 			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 			wiRenderer::graphicsDevice->CreateBuffer(&bd, 0, &meshInstanceBuffer);
 		}
-
-		//bool armatureDeformedMesh=false;
-		//for(int u : usedBy){
-		//	if(objects[u]->armatureDeform)
-		//		armatureDeformedMesh=true;
-		//}
-		//if(!armatureDeformedMesh)
-		//	armature=nullptr;
 
 
 		if(goalVG>=0){
@@ -401,9 +390,9 @@ void Mesh::CreateBuffers(){
 			//PHYSICALMAPPING
 			for (unsigned int i = 0; i<vertices.size(); ++i){
 				for (unsigned int j = 0; j<physicsverts.size(); ++j){
-					if(		fabs( vertices[i].pos.x-physicsverts[j].x ) < DBL_EPSILON
-						&&	fabs( vertices[i].pos.y-physicsverts[j].y ) < DBL_EPSILON
-						&&	fabs( vertices[i].pos.z-physicsverts[j].z ) < DBL_EPSILON
+					if(		fabs( vertices[i].pos.x-physicsverts[j].x ) < FLT_EPSILON
+						&&	fabs( vertices[i].pos.y-physicsverts[j].y ) < FLT_EPSILON
+						&&	fabs( vertices[i].pos.z-physicsverts[j].z ) < FLT_EPSILON
 						)
 					{
 						physicalmapGP.push_back(j);
@@ -736,11 +725,10 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 		materials.insert(pair<string,Material*>(currentMat->name,currentMat));
 
 }
-void LoadWiObjects(const string& directory, const string& name, const string& identifier, vector<Object*>& objects_norm
-				   , vector<Object*>& objects_trans, vector<Object*>& objects_water, vector<Armature*>& armatures
+void LoadWiObjects(const string& directory, const string& name, const string& identifier, vector<Object*>& objects
+					, vector<Armature*>& armatures
 				   , MeshCollection& meshes, map<string,Transform*>& transforms, const MaterialCollection& materials)
 {
-	vector<Object*> objects(0);
 	int objectI=objects.size()-1;
 	
 	stringstream filename("");
@@ -861,8 +849,8 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 						file>>systemName>>visibleEmitter>>materialName>>size>>randfac>>norfac>>count>>life>>randlife;
 						file>>scaleX>>scaleY>>rot;
 						
-						if(visibleEmitter) objects.back()->particleEmitter=Object::EMITTER_VISIBLE;
-						else if(objects.back()->particleEmitter==Object::NO_EMITTER) objects.back()->particleEmitter=Object::EMITTER_INVISIBLE;
+						if(visibleEmitter) objects.back()->emitterType=Object::EMITTER_VISIBLE;
+						else if(objects.back()->emitterType ==Object::NO_EMITTER) objects.back()->emitterType =Object::EMITTER_INVISIBLE;
 
 						if(wiRenderer::EMITTERSENABLED){
 							stringstream identified_materialName("");
@@ -919,41 +907,6 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 					bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 					wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
 			}
-		
-			/*string parent = objects[i]->parent;
-			bool childofArmature=true;
-			if(parent.length()){
-				for(int j=0;j<objects.size();j++)
-					if(objects[j]->name == parent){
-						objects[j]->children.push_back(objects[i]->name);
-						objects[j]->childrenI.push_back(i);
-						childofArmature=false;
-					}
-			}*/
-
-			bool default_mesh = false;
-			bool water_mesh = false;
-			bool transparent_mesh = false;
-
-			//if(objects[i]->mesh->renderable)
-				for(Material* mat : objects[i]->mesh->materials){
-					if(!mat->water && !mat->isSky && !mat->IsTransparent())
-						default_mesh=true;
-					if(mat->water && !mat->isSky)
-						water_mesh=true;
-					if(!mat->water && !mat->isSky && mat->IsTransparent())
-						transparent_mesh=true;
-				}
-		
-			if(default_mesh)
-				objects_norm.push_back(objects[i]);
-			if(water_mesh)
-				objects_water.push_back(objects[i]);
-			if(transparent_mesh)
-				objects_trans.push_back(objects[i]);
-
-			if(!default_mesh && !water_mesh && !transparent_mesh)
-				objects_norm.push_back(objects[i]);
 		}
 	}
 
@@ -964,118 +917,6 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 		iMesh->CreateBuffers();
 	}
 
-	//for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
-	//	Mesh* iMesh = iter->second;
-
-	//	if(iMesh->buffersComplete)
-	//		continue;
-	//	
-	//	for(int i=0;i<5;++i){
-	//		iMesh->instances[i].clear();
-	//		iMesh->instances[i].resize(iMesh->usedBy.size());
-	//	}
-
-	//	if(iMesh->meshInstanceBuffer!=nullptr)
-	//		continue;
-
-	//	D3D11_BUFFER_DESC bd;
-	//	ZeroMemory( &bd, sizeof(bd) );
-	//	bd.Usage = D3D11_USAGE_DYNAMIC;
-	//	bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
-	//	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	//	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	//	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
-
-	//	bool armatureDeformedMesh=false;
-	//	for(int u : iMesh->usedBy){
-	//		if(objects[u]->armatureDeform)
-	//			armatureDeformedMesh=true;
-	//	}
-	//	if(!armatureDeformedMesh)
-	//		iMesh->armature=nullptr;
-
-
-	//	if(iMesh->goalVG>=0){
-	//		iMesh->goalPositions.resize(iMesh->vertexGroups[iMesh->goalVG].vertices.size());
-	//		iMesh->goalNormals.resize(iMesh->vertexGroups[iMesh->goalVG].vertices.size());
-	//	}
-	//	iMesh->skinnedVertices.resize(iMesh->vertices.size());
-	//	for(int i=0;i<iMesh->vertices.size();++i){
-	//		iMesh->skinnedVertices[i].pos=iMesh->vertices[i].pos;
-	//		iMesh->skinnedVertices[i].nor=iMesh->vertices[i].nor;
-	//		iMesh->skinnedVertices[i].tex=iMesh->vertices[i].tex;
-	//	}
-
-
-	//		ZeroMemory( &bd, sizeof(bd) );
-	//#ifdef USE_GPU_SKINNING
-	//		bd.Usage = (iMesh->softBody?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
-	//		bd.CPUAccessFlags = (iMesh->softBody?D3D11_CPU_ACCESS_WRITE:0);
-	//		if(iMesh->hasArmature() && !iMesh->softBody)
-	//			bd.ByteWidth = sizeof( SkinnedVertex ) * iMesh->vertices.size();
-	//		else
-	//			bd.ByteWidth = sizeof( Vertex ) * iMesh->vertices.size();
-	//#else
-	//		bd.Usage = ((iMesh->softBody || iMesh->hasArmature())?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
-	//		bd.CPUAccessFlags = ((iMesh->softBody || iMesh->hasArmature())?D3D11_CPU_ACCESS_WRITE:0);
-	//		bd.ByteWidth = sizeof( Vertex ) * iMesh->vertices.size();
-	//#endif
-	//		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	//		D3D11_SUBRESOURCE_DATA InitData;
-	//		ZeroMemory( &InitData, sizeof(InitData) );
-	//		if(iMesh->hasArmature() && !iMesh->softBody)
-	//			InitData.pSysMem = iMesh->vertices.data();
-	//		else
-	//			InitData.pSysMem = iMesh->skinnedVertices.data();
-	//		wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshVertBuff );
-	//	
-	//		
-	//		ZeroMemory( &bd, sizeof(bd) );
-	//		bd.Usage = D3D11_USAGE_IMMUTABLE;
-	//		bd.ByteWidth = sizeof( unsigned int ) * iMesh->indices.size();
-	//		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	//		bd.CPUAccessFlags = 0;
-	//		ZeroMemory( &InitData, sizeof(InitData) );
-	//		InitData.pSysMem = iMesh->indices.data();
-	//		wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &iMesh->meshIndexBuff );
-	//		
-	//	if(iMesh->renderable)
-	//	{
-	//	
-	//		ZeroMemory( &bd, sizeof(bd) );
-	//		bd.Usage = D3D11_USAGE_DYNAMIC;
-	//		bd.ByteWidth = sizeof(BoneShaderBuffer);
-	//		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	//		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	//		wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->boneBuffer );
-
-	//		if(iMesh->hasArmature() && !iMesh->softBody){
-	//			ZeroMemory( &bd, sizeof(bd) );
-	//			bd.Usage = D3D11_USAGE_DEFAULT;
-	//			bd.ByteWidth = sizeof(Vertex) * iMesh->vertices.size();
-	//			bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
-	//			bd.CPUAccessFlags = 0;
-	//			bd.StructureByteStride=0;
-	//			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &iMesh->sOutBuffer );
-	//		}
-
-	//		//PHYSICALMAPPING
-	//		for(int i=0;i<iMesh->vertices.size();++i){
-	//			for(int j=0;j<iMesh->physicsverts.size();++j){
-	//				if(		fabs( iMesh->vertices[i].pos.x-iMesh->physicsverts[j].x ) < DBL_EPSILON
-	//					&&	fabs( iMesh->vertices[i].pos.y-iMesh->physicsverts[j].y ) < DBL_EPSILON
-	//					&&	fabs( iMesh->vertices[i].pos.z-iMesh->physicsverts[j].z ) < DBL_EPSILON
-	//					)
-	//				{
-	//					iMesh->physicalmapGP.push_back(j);
-	//					break;
-	//				}
-	//			}
-	//		}
-
-	//	}
-	//}
-	objects.clear();
 }
 void LoadWiMeshes(const string& directory, const string& name, const string& identifier, MeshCollection& meshes, const vector<Armature*>& armatures, const MaterialCollection& materials)
 {
@@ -1803,28 +1644,25 @@ void LoadWiDecals(const string&directory, const string& name, const string& text
 void LoadFromDisk(const string& dir, const string& name, const string& identifier
 				  , vector<Armature*>& armatures
 				  , MaterialCollection& materials
-				  , vector<Object*>& objects_norm, vector<Object*>& objects_trans, vector<Object*>& objects_water
+				  , vector<Object*>& objects
 				  , MeshCollection& meshes
 				  , vector<Light*>& lights
 				  , vector<HitSphere*>& spheres
 				  , WorldInfo& worldInfo, Wind& wind
 				  , vector<Camera>& cameras
-				  , vector<Armature*>& l_armatures
-				  , vector<Object*>& l_objects
 				  , map<string,Transform*>& transforms
 				  , list<Decal*>& decals
 				  )
 {
 	MaterialCollection		l_materials;
-	vector<Object*>			l_objects_norm;
-	vector<Object*>			l_objects_trans;
-	vector<Object*>			l_objects_water;
+	vector<Armature*>		l_armatures;
+	vector<Object*>			l_objects;
 	MeshCollection			l_meshes;
 	vector<Light*>			l_lights;
 	vector<HitSphere*>		l_spheres;
 	WorldInfo				l_worldInfo = worldInfo;
 	Wind					l_wind = wind;
-	vector<Camera>	l_cameras;
+	vector<Camera>			l_cameras;
 	map<string,Transform*>  l_transforms;
 	list<Decal*>			l_decals;
 
@@ -1847,7 +1685,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 	LoadWiArmatures(directory.str(), armatureFilePath.str(),identifier,l_armatures,l_transforms);
 	LoadWiMaterialLibrary(directory.str(), materialLibFilePath.str(),identifier, "textures/", l_materials);
 	LoadWiMeshes(directory.str(), meshesFilePath.str(),identifier,meshes,l_armatures,l_materials);
-	LoadWiObjects(directory.str(), objectsFilePath.str(),identifier,l_objects_norm,l_objects_trans,l_objects_water,l_armatures,meshes,l_transforms,l_materials);
+	LoadWiObjects(directory.str(), objectsFilePath.str(),identifier,l_objects,l_armatures,meshes,l_transforms,l_materials);
 	LoadWiActions(directory.str(), actionsFilePath.str(),identifier,l_armatures);
 	LoadWiLights(directory.str(), lightsFilePath.str(),identifier, l_lights, l_armatures,l_transforms);
 	LoadWiHitSpheres(directory.str(), hitSpheresFilePath.str(),identifier,spheres,l_armatures,l_transforms);
@@ -1858,9 +1696,7 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 	wiRenderer::graphicsMutex.lock();
 	{
 		armatures.insert(armatures.end(),l_armatures.begin(),l_armatures.end());
-		objects_norm.insert(objects_norm.end(),l_objects_norm.begin(),l_objects_norm.end());
-		objects_trans.insert(objects_trans.end(),l_objects_trans.begin(),l_objects_trans.end());
-		objects_water.insert(objects_water.end(),l_objects_water.begin(),l_objects_water.end());
+		objects.insert(objects.end(),l_objects.begin(),l_objects.end());
 		lights.insert(lights.end(),l_lights.begin(),l_lights.end());
 		spheres.insert(spheres.end(),l_spheres.begin(),l_spheres.end());
 		cameras.insert(cameras.end(),l_cameras.begin(),l_cameras.end());
@@ -1870,10 +1706,6 @@ void LoadFromDisk(const string& dir, const string& name, const string& identifie
 
 		worldInfo=l_worldInfo;
 		wind=l_wind;
-		
-		l_objects.insert(l_objects.end(),l_objects_norm.begin(),l_objects_norm.end());
-		l_objects.insert(l_objects.end(),l_objects_trans.begin(),l_objects_trans.end());
-		l_objects.insert(l_objects.end(),l_objects_water.begin(),l_objects_water.end());
 
 		transforms.insert(l_transforms.begin(),l_transforms.end());
 

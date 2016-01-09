@@ -50,7 +50,6 @@ protected:
 		, rtMotionBlur
 		, rtVolumeLight
 		, rtTransparent
-		, rtWater
 		, rtWaterRipple
 		, rtLinearDepth
 		, rtParticle

@@ -1600,9 +1600,6 @@
     <ClInclude Include="wiWaterPlane.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wiGraphicsThreads.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="wiStencilRef.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1784,6 +1781,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="wiVersion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wiEnums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

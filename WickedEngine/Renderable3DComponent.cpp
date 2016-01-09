@@ -77,10 +77,6 @@ void Renderable3DComponent::Initialize()
 		(UINT)(wiRenderer::GetScreenWidth()*getAdditiveParticleDownSample()), (UINT)(wiRenderer::GetScreenHeight()*getAdditiveParticleDownSample())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
-	rtWater.Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
-		);
 	rtWaterRipple.Initialize(
 		wiRenderer::GetScreenWidth()
 		, wiRenderer::GetScreenHeight()
@@ -224,7 +220,7 @@ void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context)
 
 		wiRenderer::UpdatePerViewCB(context, wiRenderer::getRefCamera(), wiRenderer::getCamera(), water);
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, context
-			, false, wiRenderer::SHADED_NONE
+			, false, SHADERTYPE_NONE
 			, nullptr, getHairParticlesReflectionEnabled(), GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::DrawSky(context);
 	}
@@ -244,7 +240,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	{
 		rtLensFlare.Activate(context);
 		if (!wiRenderer::GetRasterizer())
-			wiRenderer::DrawLensFlares(context, mainRT.depth->shaderResource, wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight());
+			wiRenderer::DrawLensFlares(context, mainRT.depth->shaderResource);
 	}
 
 	if (getVolumeLightsEnabled())
@@ -265,13 +261,10 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	rtWaterRipple.Activate(context, 0, 0, 0, 0); {
 		wiRenderer::DrawWaterRipples(context);
 	}
-	rtWater.Activate(context, mainRT.depth); {
-		wiRenderer::DrawWorldWater(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
-			, rtWaterRipple.shaderResource.back(), context);
-	}
 
 	rtTransparent.Activate(context, mainRT.depth); {
-		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front(), rtLinearDepth.shaderResource.back()
+		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front()
+			, rtWaterRipple.shaderResource.back(), rtLinearDepth.shaderResource.back()
 			, context);
 		wiRenderer::DrawTrails(context, shadedSceneRT.shaderResource.front());
 	}
@@ -346,7 +339,6 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wi
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	wiImage::Draw(shadedSceneRT.shaderResource.front(), fx, context);
 	fx.blendFlag = BLENDMODE_ALPHA;
-	wiImage::Draw(rtWater.shaderResource.back(), fx, context);
 	wiImage::Draw(rtTransparent.shaderResource.back(), fx, context);
 	if (getEmittedParticlesEnabled()){
 		wiImage::Draw(rtParticle.shaderResource.back(), fx, context);

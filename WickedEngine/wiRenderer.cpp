@@ -17,7 +17,7 @@
 #include "wiLines.h"
 #include "wiCube.h"
 #include "wiWaterPlane.h"
-#include "wiGraphicsThreads.h"
+#include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
 
@@ -38,7 +38,7 @@ wiRenderer::Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ss
 
 map<wiRenderer::DeviceContext,long> wiRenderer::drawCalls;
 
-int wiRenderer::RENDERWIDTH=1280,wiRenderer::RENDERHEIGHT=720,wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
+int wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
@@ -86,14 +86,9 @@ deque<wiSprite*> wiRenderer::images;
 deque<wiSprite*> wiRenderer::waterRipples;
 
 wiSPTree* wiRenderer::spTree;
-wiSPTree* wiRenderer::spTree_trans;
-wiSPTree* wiRenderer::spTree_water;
 wiSPTree* wiRenderer::spTree_lights;
 
-vector<Object*>		wiRenderer::everyObject;
 vector<Object*>		wiRenderer::objects;
-vector<Object*>		wiRenderer::objects_trans;
-vector<Object*>		wiRenderer::objects_water;	
 MeshCollection		wiRenderer::meshes;
 MaterialCollection	wiRenderer::materials;
 vector<Armature*>	wiRenderer::armatures;
@@ -637,31 +632,6 @@ void wiRenderer::CleanUpStaticTemp(){
 		objects[i]->hParticleSystems.clear();
 	}
 	objects.clear();
-	
-	for(unsigned int i=0;i<objects_trans.size();i++){
-		objects_trans[i]->CleanUp();
-		for (unsigned int j = 0; j<objects_trans[i]->eParticleSystems.size(); ++j)
-			objects_trans[i]->eParticleSystems[j]->CleanUp();
-		objects_trans[i]->eParticleSystems.clear();
-
-		for (unsigned int j = 0; j<objects_trans[i]->hParticleSystems.size(); ++j)
-			objects_trans[i]->hParticleSystems[j]->CleanUp();
-		objects_trans[i]->hParticleSystems.clear();
-	}
-	objects_trans.clear();
-	
-	for (unsigned int i = 0; i<objects_water.size(); i++){
-		objects_water[i]->CleanUp();
-		for (unsigned int j = 0; j<objects_water[i]->eParticleSystems.size(); ++j)
-			objects_water[i]->eParticleSystems[j]->CleanUp();
-		objects_water[i]->eParticleSystems.clear();
-
-		for (unsigned int j = 0; j<objects_water[i]->hParticleSystems.size(); ++j)
-			objects_water[i]->hParticleSystems[j]->CleanUp();
-		objects_water[i]->hParticleSystems.clear();
-	}
-	objects_water.clear();
-	everyObject.clear();
 
 	for(MaterialCollection::iterator iter=materials.begin(); iter!=materials.end();++iter)
 		iter->second->CleanUp();
@@ -680,14 +650,6 @@ void wiRenderer::CleanUpStaticTemp(){
 	if(spTree) 
 		spTree->CleanUp();
 	spTree = nullptr;
-	
-	if(spTree_trans) 
-		spTree_trans->CleanUp();
-	spTree_trans = nullptr;
-	
-	if(spTree_water) 
-		spTree_water->CleanUp();
-	spTree_water = nullptr;
 
 	
 	if(spTree_lights)
@@ -812,8 +774,6 @@ void wiRenderer::UpdateCubes(){
 		}*/
 		cubes.clear();
 		if(spTree) iterateSPTree(spTree->root,cubes,XMFLOAT4A(1,1,0,1));
-		if(spTree_trans) iterateSPTree(spTree_trans->root,cubes,XMFLOAT4A(0,1,1,1));
-		if(spTree_water) iterateSPTree(spTree_water->root,cubes,XMFLOAT4A(0,0,1,1));
 		if(spTree_lights) iterateSPTree(spTree_lights->root,cubes,XMFLOAT4A(1,1,1,1));
 	}
 	if(debugBoxes){
@@ -1678,20 +1638,6 @@ Object* wiRenderer::getObjectByName(const string& name)
 			return x;
 		}
 	}
-	for (auto& x : objects_trans)
-	{
-		if (!x->name.compare(name))
-		{
-			return x;
-		}
-	}
-	for (auto& x : objects_water)
-	{
-		if (!x->name.compare(name))
-		{
-			return x;
-		}
-	}
 
 	return nullptr;
 }
@@ -2098,8 +2044,6 @@ void wiRenderer::UpdateRenderInfo(ID3D11DeviceContext* context)
 
 
 		UpdateSPTree(spTree);
-		UpdateSPTree(spTree_trans);
-		UpdateSPTree(spTree_water);
 	}
 	
 	UpdateBoneLines();
@@ -2108,37 +2052,37 @@ void wiRenderer::UpdateRenderInfo(ID3D11DeviceContext* context)
 	wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
 }
 void wiRenderer::UpdateObjects(){
-	for (unsigned int i = 0; i<everyObject.size(); i++){
+	for (Object* o : objects){
 
-		XMMATRIX world = everyObject[i]->getTransform();
+		XMMATRIX world = o->getTransform();
 		
-		if(everyObject[i]->mesh->isBillboarded){
+		if(o->mesh->isBillboarded){
 			XMMATRIX bbMat = XMMatrixIdentity();
-			if(everyObject[i]->mesh->billboardAxis.x || everyObject[i]->mesh->billboardAxis.y || everyObject[i]->mesh->billboardAxis.z){
+			if(o->mesh->billboardAxis.x || o->mesh->billboardAxis.y || o->mesh->billboardAxis.z){
 				float angle = 0;
-				angle = (float)atan2(everyObject[i]->translation.x - wiRenderer::getCamera()->translation.x, everyObject[i]->translation.z - wiRenderer::getCamera()->translation.z) * (180.0f / XM_PI);
-				bbMat = XMMatrixRotationAxis(XMLoadFloat3(&everyObject[i]->mesh->billboardAxis), angle * 0.0174532925f );
+				angle = (float)atan2(o->translation.x - wiRenderer::getCamera()->translation.x, o->translation.z - wiRenderer::getCamera()->translation.z) * (180.0f / XM_PI);
+				bbMat = XMMatrixRotationAxis(XMLoadFloat3(&o->mesh->billboardAxis), angle * 0.0174532925f );
 			}
 			else
-				bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMVectorSubtract(XMLoadFloat3(&everyObject[i]->translation),wiRenderer::getCamera()->GetEye()),XMVectorSet(0,1,0,0)));
+				bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMVectorSubtract(XMLoadFloat3(&o->translation),wiRenderer::getCamera()->GetEye()),XMVectorSet(0,1,0,0)));
 					
-			XMMATRIX w = XMMatrixScalingFromVector(XMLoadFloat3(&everyObject[i]->scale)) * 
+			XMMATRIX w = XMMatrixScalingFromVector(XMLoadFloat3(&o->scale)) * 
 						bbMat * 
-						XMMatrixRotationQuaternion(XMLoadFloat4(&everyObject[i]->rotation)) *
-						XMMatrixTranslationFromVector(XMLoadFloat3(&everyObject[i]->translation)
+						XMMatrixRotationQuaternion(XMLoadFloat4(&o->rotation)) *
+						XMMatrixTranslationFromVector(XMLoadFloat3(&o->translation)
 					);
-			XMStoreFloat4x4(&everyObject[i]->world,w);
+			XMStoreFloat4x4(&o->world,w);
 		}
 
-		if(everyObject[i]->mesh->softBody)
-			everyObject[i]->bounds=everyObject[i]->mesh->aabb;
-		else if(!everyObject[i]->mesh->isBillboarded && everyObject[i]->mesh->renderable){
-			everyObject[i]->bounds=everyObject[i]->mesh->aabb.get(world);
+		if(o->mesh->softBody)
+			o->bounds=o->mesh->aabb;
+		else if(!o->mesh->isBillboarded && o->mesh->renderable){
+			o->bounds=o->mesh->aabb.get(world);
 		}
-		else if(everyObject[i]->mesh->renderable)
-			everyObject[i]->bounds.createFromHalfWidth(everyObject[i]->translation,everyObject[i]->scale);
+		else if(o->mesh->renderable)
+			o->bounds.createFromHalfWidth(o->translation,o->scale);
 
-		everyObject[i]->FadeTrail();
+		o->FadeTrail();
 	}
 }
 void wiRenderer::UpdateSoftBodyPinning(){
@@ -2511,12 +2455,13 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 	//context->PSSetSamplers( 0,1,&mirSampler );
 	BindSamplerPS(mirSampler,0,context);
 
-	for (unsigned int i = 0; i<everyObject.size(); i++){
-		if(everyObject[i]->trailBuff && everyObject[i]->trail.size()>=4){
+	for (Object* o : objects)
+	{
+		if(o->trailBuff && o->trail.size()>=4){
 			
-			if (everyObject[i]->trailDistortTex != nullptr)
+			if (o->trailDistortTex != nullptr)
 			{
-				BindTexturePS(everyObject[i]->trailDistortTex, 1, context);
+				BindTexturePS(o->trailDistortTex, 1, context);
 			}
 			else
 			{
@@ -2527,10 +2472,8 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 			BindConstantBufferVS(trailCB,0,context);
 
 			vector<RibbonVertex> trails;
-			//for(int k=0;k<everyObject[i]->trail.size();++k)
-			//	trails.push_back(everyObject[i]->trail[k]);
 
-			int bounds = everyObject[i]->trail.size();
+			int bounds = o->trail.size();
 			int req = bounds-3;
 			for(int k=0;k<req;k+=2)
 			{
@@ -2538,51 +2481,38 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 				for(float r=0.0f;r<=1.0f;r+=1.0f/trailres)
 				{
 					XMVECTOR point0 = XMVectorCatmullRom(
-						XMLoadFloat3( &everyObject[i]->trail[k?(k-2):0].pos )
-						,XMLoadFloat3( &everyObject[i]->trail[k].pos )
-						,XMLoadFloat3( &everyObject[i]->trail[k+2].pos )
-						,XMLoadFloat3( &everyObject[i]->trail[k+6<bounds?(k+6):(bounds-2)].pos )
+						XMLoadFloat3( &o->trail[k?(k-2):0].pos )
+						,XMLoadFloat3( &o->trail[k].pos )
+						,XMLoadFloat3( &o->trail[k+2].pos )
+						,XMLoadFloat3( &o->trail[k+6<bounds?(k+6):(bounds-2)].pos )
 						,r
 					),
 					point1 = XMVectorCatmullRom(
-						XMLoadFloat3( &everyObject[i]->trail[k?(k-1):1].pos )
-						,XMLoadFloat3( &everyObject[i]->trail[k+1].pos )
-						,XMLoadFloat3( &everyObject[i]->trail[k+3].pos )
-						,XMLoadFloat3( &everyObject[i]->trail[k+5<bounds?(k+5):(bounds-1)].pos )
+						XMLoadFloat3( &o->trail[k?(k-1):1].pos )
+						,XMLoadFloat3( &o->trail[k+1].pos )
+						,XMLoadFloat3( &o->trail[k+3].pos )
+						,XMLoadFloat3( &o->trail[k+5<bounds?(k+5):(bounds-1)].pos )
 						,r
 					);
 					XMFLOAT3 xpoint0,xpoint1;
 					XMStoreFloat3(&xpoint0,point0);
 					XMStoreFloat3(&xpoint1,point1);
 					trails.push_back(RibbonVertex(xpoint0
-						,wiMath::Lerp(everyObject[i]->trail[k].tex,everyObject[i]->trail[k+2].tex,r)
-						,wiMath::Lerp(everyObject[i]->trail[k].col,everyObject[i]->trail[k+2].col,r)
+						,wiMath::Lerp(o->trail[k].tex,o->trail[k+2].tex,r)
+						,wiMath::Lerp(o->trail[k].col,o->trail[k+2].col,r)
 						,1
 						));
 					trails.push_back(RibbonVertex(xpoint1
-						,wiMath::Lerp(everyObject[i]->trail[k+1].tex,everyObject[i]->trail[k+3].tex,r)
-						,wiMath::Lerp(everyObject[i]->trail[k+1].col,everyObject[i]->trail[k+3].col,r)
+						,wiMath::Lerp(o->trail[k+1].tex,o->trail[k+3].tex,r)
+						,wiMath::Lerp(o->trail[k+1].col,o->trail[k+3].col,r)
 						, 1
 						));
 				}
 			}
 			if(!trails.empty()){
-				UpdateBuffer(everyObject[i]->trailBuff,trails.data(),context,sizeof(RibbonVertex)*trails.size());
-				//D3D11_MAPPED_SUBRESOURCE mappedResource2;
-				//RibbonVertex* dataPtrV;
-				//context->Map(everyObject[i]->trailBuff,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource2);
-				//dataPtrV = (RibbonVertex*)mappedResource2.pData;
-				//memcpy(dataPtrV,trails.data(),sizeof(RibbonVertex)*trails.size());
-				//context->Unmap(everyObject[i]->trailBuff,0);
-			
-				//UINT stride = sizeof( RibbonVertex );
-				//UINT offset = 0;
-				//context->IASetVertexBuffers( 0, 1, &everyObject[i]->trailBuff, &stride, &offset );
-			
+				UpdateBuffer(o->trailBuff,trails.data(),context,sizeof(RibbonVertex)*trails.size());
 
-
-				//context->Draw(trails.size(),0);
-				BindVertexBuffer(everyObject[i]->trailBuff,0,sizeof(RibbonVertex),context);
+				BindVertexBuffer(o->trailBuff,0,sizeof(RibbonVertex),context);
 				Draw(trails.size(),context);
 
 				trails.clear();
@@ -2840,7 +2770,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context)
 }
 
 
-void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth, const int& RENDERWIDTH, const int& RENDERHEIGHT){
+void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth){
 	
 		
 	CulledList culledObjects;
@@ -2866,9 +2796,9 @@ void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResour
 							)*100000;
 			}
 			
-			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)RENDERWIDTH,(float)RENDERHEIGHT,0.1f,1.0f,wiRenderer::getCamera()->GetProjection(),wiRenderer::getCamera()->GetView(),XMMatrixIdentity());
+			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,GetScreenWidth(),GetScreenHeight(),0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
 
-			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,wiRenderer::getCamera()->GetEye()),wiRenderer::getCamera()->GetAt() ))>0 )
+			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
 				wiLensFlare::Draw(depth,context,flarePos,l->lensFlareRimTextures);
 
 		}
@@ -2998,7 +2928,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 										int k = 0;
 										for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-											if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE) {
+											if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 												if (mesh->softBody || (*viter)->armatureDeform)
 													Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
 												else
@@ -3009,7 +2939,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 										if (k < 1)
 											continue;
 
-										mesh->UpdateRenderableInstances(visibleInstances.size(), context);
+										Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
 
 
 										BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
@@ -3103,7 +3033,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 									int k = 0;
 									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-										if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE) {
+										if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 											if (mesh->softBody || (*viter)->armatureDeform)
 												Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
 											else
@@ -3114,7 +3044,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 									if (k < 1)
 										continue;
 
-									mesh->UpdateRenderableInstances(visibleInstances.size(), context);
+									Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
 
 
 									BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
@@ -3209,7 +3139,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 							int k = 0;
 							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-								if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE) {
+								if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 									if (mesh->softBody || (*viter)->armatureDeform)
 										Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
 									else
@@ -3220,7 +3150,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 							if (k < 1)
 								continue;
 
-							mesh->UpdateRenderableInstances(visibleInstances.size(), context);
+							Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
 
 
 							BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
@@ -3334,7 +3264,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 	//								if (k<1)
 	//									continue;
 
-	//								mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+	//								Mesh::UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
 
 
 	//								BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
@@ -3453,7 +3383,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 	//							if (k<1)
 	//								continue;
 
-	//							mesh->UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
+	//							Mesh::UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
 
 
 	//							BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
@@ -3541,18 +3471,19 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 }
 
 void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11DeviceContext* context
-				  , bool BlackOut, SHADED_TYPE shaded
+				  , bool BlackOut, SHADERTYPE shaded
 				  , ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread)
 {
-	
-	if(objects.empty())
+	if (objects.empty())
+	{
 		return;
+	}
 
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
+	culledObjects.reserve(objects.size());
 	if(spTree)
 		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
-		//wiSPTree::getAll(spTree->root,culledObjects);
 
 	if(!culledObjects.empty())
 	{	
@@ -3590,11 +3521,11 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 		else
 			if (BlackOut)
 				BindPS(blackoutPS, context);
-			else if (shaded == SHADED_NONE)
+			else if (shaded == SHADERTYPE_NONE)
 				BindPS(textureonlyPS, context);
-			else if (shaded == SHADED_DEFERRED)
+			else if (shaded == SHADERTYPE_DEFERRED)
 				BindPS(pixelShader, context);
-			else if (shaded == SHADED_FORWARD_SIMPLE)
+			else if (shaded == SHADERTYPE_FORWARD_SIMPLE)
 				BindPS(fowardSimplePS, context);
 			else
 				return;
@@ -3652,7 +3583,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 
 			int k=0;
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
-				if((*viter)->particleEmitter!=Object::wiParticleEmitter::EMITTER_INVISIBLE){
+				if((*viter)->emitterType !=Object::EmitterType::EMITTER_INVISIBLE){
 					if (mesh->softBody || (*viter)->armatureDeform)
 						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k);
 					else 
@@ -3663,7 +3594,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 			if(k<1)
 				continue;
 
-			mesh->UpdateRenderableInstances(visibleInstances.size(), context);
+			Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
 				
 				
 			BindIndexBuffer(mesh->meshIndexBuff,context);
@@ -3712,116 +3643,20 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 	}
 
 }
-void wiRenderer::DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* nor, ID3D11DeviceContext* context){
-			
-	if(objects_water.empty())
-		return;
 
-
-	CulledCollection culledRenderer;
-	CulledList culledObjects;
-	if(spTree_water)
-		wiSPTree::getVisible(spTree_water->root, camera->frustum,culledObjects);
-
-	if(!culledObjects.empty())
+void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
+	, ID3D11ShaderResourceView* waterRippleNormals, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context)
+{
+	if (objects.empty())
 	{
-		for(Cullable* object : culledObjects)
-			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
-
-
-		BindPrimitiveTopology(TRIANGLELIST,context);
-		BindVertexLayout(vertexLayout,context);
-		BindPS(wireRender?simplestPS:waterPS,context);
-		BindVS(vertexShader10,context);
-
-		BindSamplerPS(texSampler,0,context);
-		BindSamplerPS(mapSampler,1,context);
-	
-		if(!wireRender) BindTexturePS(enviroMap,0,context);
-		if(!wireRender) BindTexturePS(refRes,1,context);
-		if(!wireRender) BindTexturePS(refracRes,2,context);
-		if(!wireRender) BindTexturePS(depth,7,context);
-		if(!wireRender) BindTexturePS(nor,8,context);
-
-		
-		BindConstantBufferVS(staticCb,0,context);
-		BindConstantBufferPS(pixelCB,0,context);
-		BindConstantBufferPS(fxCb,1,context);
-		BindConstantBufferVS(constantBuffer,3,context);
-		BindConstantBufferVS(matCb,2,context);
-		BindConstantBufferPS(matCb,2,context);
-
-	
-		BindBlendState(blendState,context);
-		BindDepthStencilState(depthReadStencilState,STENCILREF_EMPTY,context);
-		BindRasterizerState(wireRender?wireRS:nonCullRS,context);
-	
-
-		
-		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
-			Mesh* mesh = iter->first;
-			CulledObjectList& visibleInstances = iter->second;
-
-
-			int matsiz = mesh->materialIndices.size();
-
-				
-			int k = 0;
-			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
-				if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
-					if (mesh->softBody || (*viter)->armatureDeform)
-						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity()), k);
-					else
-						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world))), k);
-					++k;
-				}
-			}
-			if (k<1)
-				continue;
-
-			mesh->UpdateRenderableInstances(visibleInstances.size(), context);
-				
-			BindIndexBuffer(mesh->meshIndexBuff,context);
-			BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
-			BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
-
-			int m=0;
-			for(Material* iMat : mesh->materials){
-
-				if(iMat->water){
-
-
-				static thread_local MaterialCB* mcb = new MaterialCB;
-				(*mcb).Create(*iMat, m);
-
-				UpdateBuffer(matCb, mcb, context);
-
-				if(!wireRender) BindTexturePS(iMat->texture,3,context);
-				if(!wireRender) BindTexturePS(iMat->refMap,4,context);
-				if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
-				if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
-
-				DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
-				}
-				m++;
-			}
-		}
-
+		return;
 	}
 
-}
-void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context){
-
-	if(objects_trans.empty())
-		return;
-
-
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
-	if(spTree_trans)
-		wiSPTree::getVisible(spTree_trans->root, camera->frustum,culledObjects);
+	culledObjects.reserve(objects.size());
+	if (spTree)
+		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
 
 	if(!culledObjects.empty())
 	{
@@ -3830,7 +3665,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 
 		BindPrimitiveTopology(TRIANGLELIST,context);
 		BindVertexLayout(vertexLayout,context);
-		BindPS(wireRender?simplestPS:transparentPS,context);
 		BindVS(vertexShader10,context);
 
 		BindSamplerPS(texSampler,0,context);
@@ -3840,6 +3674,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 		if(!wireRender) BindTexturePS(refRes,1,context);
 		if(!wireRender) BindTexturePS(refracRes,2,context);
 		if(!wireRender) BindTexturePS(depth,7,context);
+		if(!wireRender) BindTexturePS(waterRippleNormals, 8, context);
 
 
 		BindConstantBufferVS(staticCb,0,context);
@@ -3850,20 +3685,30 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 		BindConstantBufferPS(matCb,2,context);
 
 		BindBlendState(blendState,context);
-		BindDepthStencilState(depthStencilState,STENCILREF_TRANSPARENT,context);
-		BindRasterizerState(wireRender?wireRS:rasterizerState,context);
 	
+		RENDERTYPE lastRenderType = RENDERTYPE_VOID;
 
 		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
 			CulledObjectList& visibleInstances = iter->second;
 
+			bool isValid = false;
+			for (Material* iMat : mesh->materials)
+			{
+				if (iMat->IsTransparent() || iMat->IsWater())
+				{
+					isValid = true;
+					break;
+				}
+			}
+			if (!isValid)
+				continue;
 
-
-			if(!mesh->doubleSided)
-				context->RSSetState(wireRender?wireRS:rasterizerState);
+			if (!mesh->doubleSided)
+				BindRasterizerState(wireRender ? wireRS : rasterizerState, context);
 			else
-				context->RSSetState(wireRender?wireRS:nonCullRS);
+				BindRasterizerState(wireRender ? wireRS : nonCullRS, context);
+
 
 			int matsiz = mesh->materialIndices.size();
 
@@ -3871,7 +3716,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 			
 			int k = 0;
 			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
-				if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
+				if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE){
 					if (mesh->softBody || (*viter)->armatureDeform)
 						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k);
 					else
@@ -3882,7 +3727,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 			if (k<1)
 				continue;
 
-			mesh->UpdateRenderableInstances(visibleInstances.size(), context);
+			Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
 
 				
 			BindIndexBuffer(mesh->meshIndexBuff,context);
@@ -3892,21 +3737,38 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 
 			int m=0;
 			for(Material* iMat : mesh->materials){
+				if (iMat->isSky)
+					continue;
 
-				if(iMat->IsTransparent() && iMat->alpha>0 && !iMat->water && !iMat->isSky){
+				if(iMat->IsTransparent() || iMat->IsWater())
+				{
+					static thread_local MaterialCB* mcb = new MaterialCB;
+					(*mcb).Create(*iMat, m);
 
+					UpdateBuffer(matCb, mcb, context);
 
-				static thread_local MaterialCB* mcb = new MaterialCB;
-				(*mcb).Create(*iMat, m);
+					if(!wireRender) BindTexturePS(iMat->texture,3,context);
+					if(!wireRender) BindTexturePS(iMat->refMap,4,context);
+					if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
+					if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
 
-				UpdateBuffer(matCb, mcb, context);
+					if (iMat->IsTransparent() && lastRenderType != RENDERTYPE_TRANSPARENT)
+					{
+						lastRenderType = RENDERTYPE_TRANSPARENT;
 
-				if(!wireRender) BindTexturePS(iMat->texture,3,context);
-				if(!wireRender) BindTexturePS(iMat->refMap,4,context);
-				if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
-				if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
+						BindDepthStencilState(depthStencilState, STENCILREF_TRANSPARENT, context);
+						BindPS(wireRender ? simplestPS : transparentPS, context);
+					}
+					if (iMat->IsWater() && lastRenderType != RENDERTYPE_WATER)
+					{
+						lastRenderType = RENDERTYPE_WATER;
+
+						BindDepthStencilState(depthReadStencilState, STENCILREF_EMPTY, context);
+						BindPS(wireRender ? simplestPS : waterPS, context); 
+						BindRasterizerState(wireRender ? wireRS : nonCullRS, context);
+					}
 					
-				DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
+					DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
 				}
 				m++;
 			}
@@ -4061,14 +3923,9 @@ void wiRenderer::UpdatePerEffectCB(ID3D11DeviceContext* context, const XMFLOAT4&
 }
 
 void wiRenderer::FinishLoading(){
-	everyObject.reserve(objects.size() + objects_trans.size() + objects_water.size());
-	everyObject.insert(everyObject.end(), objects.begin(), objects.end());
-	everyObject.insert(everyObject.end(), objects_trans.begin(), objects_trans.end());
-	everyObject.insert(everyObject.end(), objects_water.begin(), objects_water.end());
-
 	physicsEngine->FirstRunWorld();
 	physicsEngine->addWind(wind.direction);
-	for (Object* o : everyObject){
+	for (Object* o : objects){
 		for (wiEmittedParticle* e : o->eParticleSystems){
 			emitterSystems[e->name].push_back(e);
 			if (e->light != nullptr)
@@ -4085,8 +3942,6 @@ void wiRenderer::FinishLoading(){
 	UpdateRenderInfo(nullptr);
 	UpdateLights();
 	GenerateSPTree(spTree,vector<Cullable*>(objects.begin(),objects.end()),SPTREE_GENERATE_OCTREE);
-	GenerateSPTree(spTree_trans,vector<Cullable*>(objects_trans.begin(),objects_trans.end()),SPTREE_GENERATE_OCTREE);
-	GenerateSPTree(spTree_water,vector<Cullable*>(objects_water.begin(),objects_water.end()),SPTREE_GENERATE_OCTREE);
 	GenerateSPTree(spTree_lights,vector<Cullable*>(lights.begin(),lights.end()),SPTREE_GENERATE_OCTREE);
 	SetUpCubes();
 	SetUpBoneLines();
@@ -4129,10 +3984,10 @@ void wiRenderer::SetUpLights()
 			float lerp1 = 0.12f;
 			float lerp2 = 0.016f;
 			XMVECTOR a0,a,b0,b;
-			a0 = XMVector3Unproject(XMVectorSet(0, (float)RENDERHEIGHT, 0, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			a = XMVector3Unproject(XMVectorSet(0, (float)RENDERHEIGHT, 1, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			b0 = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH, (float)RENDERHEIGHT, 0, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			b = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH, (float)RENDERHEIGHT, 1, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+			a0 = XMVector3Unproject(XMVectorSet(0, (float)GetScreenHeight(), 0, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+			a = XMVector3Unproject(XMVectorSet(0, (float)GetScreenHeight(), 1, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+			b0 = XMVector3Unproject(XMVectorSet((float)GetScreenWidth(), (float)GetScreenHeight(), 0, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+			b = XMVector3Unproject(XMVectorSet((float)GetScreenWidth(), (float)GetScreenHeight(), 1, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 			float size=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp),XMVectorLerp(a0,a,lerp))));
 			float size1=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp1),XMVectorLerp(a0,a,lerp1))));
 			float size2=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp2),XMVectorLerp(a0,a,lerp2))));
@@ -4184,8 +4039,8 @@ void wiRenderer::UpdateLights()
 			float lerp1 = 0.12f;//second slice distance from cam (percentage)
 			float lerp2 = 0.016f;//first slice distance from cam (percentage)
 			XMVECTOR c,d,e,e1,e2;
-			c = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH / 2, (float)RENDERHEIGHT / 2, 1, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			d = XMVector3Unproject(XMVectorSet((float)RENDERWIDTH / 2, (float)RENDERHEIGHT / 2, 0, 1), 0, 0, (float)RENDERWIDTH, (float)RENDERHEIGHT, 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+			c = XMVector3Unproject(XMVectorSet((float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, getCamera()->GetProjection(), getCamera()->GetView(), XMMatrixIdentity());
+			d = XMVector3Unproject(XMVectorSet((float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, getCamera()->GetProjection(), getCamera()->GetView(), XMMatrixIdentity());
 
 			if (!l->shadowCam.empty()) {
 
@@ -4210,7 +4065,7 @@ void wiRenderer::UpdateLights()
 				}
 			}
 			
-			l->bounds.createFromHalfWidth(wiRenderer::getCamera()->translation,XMFLOAT3(10000,10000,10000));
+			l->bounds.createFromHalfWidth(getCamera()->translation,XMFLOAT3(10000,10000,10000));
 		}
 		else if(l->type==Light::SPOT){
 			if(!l->shadowCam.empty()){
@@ -4246,33 +4101,19 @@ void wiRenderer::UpdateLights()
 	}
 }
 
-wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType, const string& layer,
+wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 	const string& layerDisable)
 {
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
-	wiSPTree* searchTree = nullptr;
-	switch (pickType)
-	{
-	case wiRenderer::PICK_OPAQUE:
-		searchTree = spTree;
-		break;
-	case wiRenderer::PICK_TRANSPARENT:
-		searchTree = spTree_trans;
-		break;
-	case wiRenderer::PICK_WATER:
-		searchTree = spTree_water;
-		break;
-	default:
-		break;
-	}
+	wiSPTree* searchTree = spTree;
 	if (searchTree)
 	{
 		wiSPTree::getVisible(searchTree->root, ray, culledObjects);
 
 		vector<Picked> pickPoints;
 
-		RayIntersectMeshes(ray, culledObjects, pickPoints, true, layer, layerDisable);
+		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable);
 
 		if (!pickPoints.empty()){
 			Picked min = pickPoints.front();
@@ -4288,7 +4129,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType, const string& l
 
 	return Picked();
 }
-wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, PICKTYPE pickType, const string& layer,
+wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, const string& layer,
 	const string& layerDisable)
 {
 	RAY ray = getPickRay(cursorX, cursorY);
@@ -4305,9 +4146,14 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 	return RAY(lineStart,rayDirection);
 }
 
-void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points, 
-	bool dynamicObjects, const string& layer, const string& layerDisable)
+void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
+	int pickType, bool dynamicObjects, const string& layer, const string& layerDisable)
 {
+	if (culledObjects.empty())
+	{
+		return;
+	}
+
 	bool checkLayers = false;
 	if (layer.length() > 0)
 	{
@@ -4319,57 +4165,59 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		dontcheckLayers = true;
 	}
 
-	if (!culledObjects.empty())
-	{
-		XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
-		XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
+	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
+	XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
 
-		for (Cullable* culled : culledObjects){
-			Object* object = (Object*)culled;
-			if (!dynamicObjects && object->isDynamic())
+	for (Cullable* culled : culledObjects){
+		Object* object = (Object*)culled;
+
+		if (!(pickType & object->GetRenderTypes()))
+		{
+			continue;
+		}
+		if (!dynamicObjects && object->isDynamic())
+		{
+			continue;
+		}
+
+		// layer support
+		if (checkLayers || dontcheckLayers)
+		{
+			string id = object->GetID();
+
+			if (checkLayers && layer.find(id) == string::npos)
 			{
 				continue;
 			}
-
-			// layer support
-			if (checkLayers || dontcheckLayers)
+			if (dontcheckLayers && layerDisable.find(id) != string::npos)
 			{
-				string id = object->GetID();
-
-				if (checkLayers && layer.find(id) == string::npos)
-				{
-					continue;
-				}
-				if (dontcheckLayers && layerDisable.find(id) != string::npos)
-				{
-					continue;
-				}
+				continue;
 			}
-
-			Mesh* mesh = object->mesh;
-			XMMATRIX& objectMat = XMLoadFloat4x4(&object->world);
-
-			for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
-				int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-				Vertex& v0 = mesh->skinnedVertices[i0], v1 = mesh->skinnedVertices[i1], v2 = mesh->skinnedVertices[i2];
-				XMVECTOR& V0 =
-					XMVector4Transform(XMLoadFloat4(&v0.pos), objectMat)
-					, V1 = XMVector4Transform(XMLoadFloat4(&v1.pos), objectMat)
-					, V2 = XMVector4Transform(XMLoadFloat4(&v2.pos), objectMat);
-				float distance = 0;
-				if (TriangleTests::Intersects(rayOrigin, rayDirection, V0, V1, V2, distance)){
-					XMVECTOR& pos = XMVectorAdd(rayOrigin, rayDirection*distance);
-					XMVECTOR& nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0)));
-					Picked picked = Picked();
-					picked.object = object;
-					XMStoreFloat3(&picked.position, pos);
-					XMStoreFloat3(&picked.normal, nor);
-					picked.distance = distance;
-					points.push_back(picked);
-				}
-			}
-
 		}
+
+		Mesh* mesh = object->mesh;
+		XMMATRIX& objectMat = XMLoadFloat4x4(&object->world);
+
+		for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
+			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
+			Vertex& v0 = mesh->skinnedVertices[i0], v1 = mesh->skinnedVertices[i1], v2 = mesh->skinnedVertices[i2];
+			XMVECTOR& V0 =
+				XMVector4Transform(XMLoadFloat4(&v0.pos), objectMat)
+				, V1 = XMVector4Transform(XMLoadFloat4(&v1.pos), objectMat)
+				, V2 = XMVector4Transform(XMLoadFloat4(&v2.pos), objectMat);
+			float distance = 0;
+			if (TriangleTests::Intersects(rayOrigin, rayDirection, V0, V1, V2, distance)){
+				XMVECTOR& pos = XMVectorAdd(rayOrigin, rayDirection*distance);
+				XMVECTOR& nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0)));
+				Picked picked = Picked();
+				picked.object = object;
+				XMStoreFloat3(&picked.position, pos);
+				XMStoreFloat3(&picked.normal, nor);
+				picked.distance = distance;
+				points.push_back(picked);
+			}
+		}
+
 	}
 }
 
@@ -4417,7 +4265,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 
 			vector<Picked> points;
 
-			RayIntersectMeshes(ray, culledObjects, points, false);
+			RayIntersectMeshes(ray, culledObjects, points, PICK_OPAQUE, false);
 
 
 			if (!points.empty()){
@@ -4443,17 +4291,18 @@ void wiRenderer::CalculateVertexAO(Object* object)
 	mesh->calculatedAO = true;
 }
 
-void wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX& transform, const string& ident, PHYSICS* physicsEngine){
+void wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX& transform, const string& ident, PHYSICS* physicsEngine)
+{
 	static int unique_identifier = 0;
 
-	vector<Object*> newObjects(0),newObjects_trans(0),newObjects_water(0);
+	vector<Object*> newObjects(0);
 	vector<Light*> newLights(0);
 	stringstream idss("");
-	idss<<"_"/*<<unique_identifier<<"_"*/<<ident;
+	idss<<"_"<<ident;
 
-	LoadFromDisk(dir,name,idss.str(),armatures,materials,newObjects,newObjects_trans,newObjects_water
+	LoadFromDisk(dir,name,idss.str(),armatures,materials,newObjects
 		,meshes,newLights,vector<HitSphere*>(),worldInfo,wind,vector<Camera>()
-		,vector<Armature*>(),everyObject,transforms,decals);
+		,transforms,decals);
 
 
 	for(Object* o:newObjects){
@@ -4464,46 +4313,17 @@ void wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX
 			physicsEngine->registerObject(o);
 		}
 	}
-	for(Object* o:newObjects_trans){
-		o->transform(transform);
-		o->bounds=o->bounds.get(transform);
-		o->getTransform();
-		if(physicsEngine!=nullptr){
-			physicsEngine->registerObject(o);
-		}
-	}
-	for(Object* o:newObjects_water){
-		o->transform(transform);
-		o->bounds=o->bounds.get(transform);
-		o->getTransform();
-		if(physicsEngine!=nullptr){
-			physicsEngine->registerObject(o);
-		}
-	}
-	//for(Light* l:newLights){
-	//	l->transform(transform);
-	//	l->bounds=l->bounds.get(transform);
-	//	l->getTransform();
-	//}
 	
 	graphicsMutex.lock();
 
 	if(spTree){
 		spTree->AddObjects(spTree->root,vector<Cullable*>(newObjects.begin(),newObjects.end()));
 	}
-	if(spTree_trans){
-		spTree_trans->AddObjects(spTree_trans->root,vector<Cullable*>(newObjects_trans.begin(),newObjects_trans.end()));
-	}
-	if(spTree_water){
-		spTree_water->AddObjects(spTree_water->root,vector<Cullable*>(newObjects_water.begin(),newObjects_water.end()));
-	}
 	if(spTree_lights){
 		spTree_lights->AddObjects(spTree_lights->root,vector<Cullable*>(newLights.begin(),newLights.end()));
 	}
 	
 	objects.insert(objects.end(),newObjects.begin(),newObjects.end());
-	objects_trans.insert(objects_trans.end(),newObjects_trans.begin(),newObjects_trans.end());
-	objects_water.insert(objects_water.end(),newObjects_water.begin(),newObjects_water.end());
 
 	UpdateLights();
 	lights.insert(lights.end(),newLights.begin(),newLights.end());
@@ -4523,7 +4343,7 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 	if (physicsEngine && GetGameSpeed()){
 
 		UpdateSoftBodyPinning();
-		for (Object* object : everyObject){
+		for (Object* object : objects){
 			int pI = object->physicsObjectI;
 			if (pI >= 0){
 				if (object->mesh->softBody){
@@ -4545,7 +4365,7 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 
 		physicsEngine->Update();
 
-		for (Object* object : everyObject){
+		for (Object* object : objects){
 			int pI = object->physicsObjectI;
 			if (pI >= 0 && !object->kinematic){
 				PHYSICS::Transform* transform(physicsEngine->getObject(pI));

@@ -159,10 +159,6 @@ void MainComponent::Compose()
 		{
 			ss << "Resolution: " << wiRenderer::GetScreenWidth() << " x " << wiRenderer::GetScreenHeight() << endl;
 		}
-		if (infoDisplay.renderResolution)
-		{
-			ss << "Render Res: " << wiRenderer::GetRenderWidth() << " x " << wiRenderer::GetRenderHeight() << endl;
-		}
 		if (infoDisplay.fpsinfo)
 		{
 			ss.precision(2);

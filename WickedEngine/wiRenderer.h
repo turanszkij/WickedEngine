@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiGraphicsThreads.h"
+#include "wiEnums.h"
 
 struct Transform;
 struct Vertex;
@@ -127,18 +127,14 @@ public:
 		,ssClampAni,ssWrapAni,ssMirrorAni,ssComp;
 
 	
-	static int RENDERWIDTH,RENDERHEIGHT,SCREENWIDTH,SCREENHEIGHT;
+	static int SCREENWIDTH,SCREENHEIGHT;
 	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 
 	static int GetScreenWidth(){ return SCREENWIDTH; }
 	static int GetScreenHeight(){ return SCREENHEIGHT; }
-	static int GetRenderWidth(){ return RENDERWIDTH; }
-	static int GetRenderHeight(){ return RENDERHEIGHT; }
 	static int SetScreenWidth(int value){ SCREENWIDTH = value; }
 	static int SetScreenHeight(int value){ SCREENHEIGHT = value; }
-	static int SetRenderWidth(int value){ RENDERWIDTH = value; }
-	static int SetRenderHeight(int value){ RENDERHEIGHT = value; }
 	static void SetDirectionalLightShadowProps(int resolution, int softShadowQuality);
 	static void SetPointLightShadowProps(int shadowMapCount, int resolution);
 	static void SetSpotLightShadowProps(int count, int resolution);
@@ -1036,23 +1032,15 @@ public:
 	static void UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
 	static void UpdatePerEffectCB(ID3D11DeviceContext* context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
 
-	enum SHADED_TYPE
-	{
-		SHADED_NONE=0,
-		SHADED_DEFERRED=1,
-		SHADED_FORWARD_SIMPLE=2
-	};
 	
 	static void DrawSky(ID3D11DeviceContext* context);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11DeviceContext* context
-		, bool BlackOut, SHADED_TYPE shaded, ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread);
+		, bool BlackOut, SHADERTYPE shaded, ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread);
 	static void DrawForSO(ID3D11DeviceContext* context);
 	static void ClearShadowMaps(ID3D11DeviceContext* context);
 	static void DrawForShadowMap(ID3D11DeviceContext* context);
-	static void DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* nor, ID3D11DeviceContext* context);
 	static void DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context);
+		, ID3D11ShaderResourceView* waterRippleNormals, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context);
 	void DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context);
 	static void DrawDebugBoneLines(Camera* camera, ID3D11DeviceContext* context);
 	static void DrawDebugLines(Camera* camera, ID3D11DeviceContext* context);
@@ -1068,7 +1056,7 @@ public:
 		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* normal, ID3D11ShaderResourceView* material
 		, unsigned int stencilRef = 2);
 	static void DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context);
-	static void DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth, const int& RENDERWIDTH, const int& RENDERHEIGHT);
+	static void DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth);
 	static void DrawDecals(Camera* camera, DeviceContext context, TextureView depth);
 	
 	static XMVECTOR GetSunPosition();
@@ -1078,18 +1066,12 @@ public:
 	static void resetVertexCount(){vertexCount=0;}
 	static int getVisibleObjectCount(){return visibleCount;}
 	static void resetVisibleObjectCount(){visibleCount=0;}
-	static void setRenderResolution(int w, int h){RENDERWIDTH=w;RENDERHEIGHT=h;};
 
 	static void FinishLoading();
 	static wiSPTree* spTree;
-	static wiSPTree* spTree_trans;
-	static wiSPTree* spTree_water;
 	static wiSPTree* spTree_lights;
 	
-	static vector<Object*> everyObject;
-	static vector<Object*> objects;
-	static vector<Object*> objects_trans;
-	static vector<Object*> objects_water;	
+	static vector<Object*> objects;	
 	static MeshCollection meshes;
 	static MaterialCollection materials;
 	static vector<Armature*> armatures;
@@ -1122,13 +1104,6 @@ public:
 	string DIRECTORY;
 
 
-	// Do not alter order because it is bound to lua manually
-	enum PICKTYPE
-	{
-		PICK_OPAQUE,
-		PICK_TRANSPARENT,
-		PICK_WATER,
-	};
 	struct Picked
 	{
 		Object* object;
@@ -1139,15 +1114,14 @@ public:
 	};
 
 	// Pick closest object in the world
+	// pickType: PICKTYPE enum values ocncatenated with | operator
 	// layer : concatenated string of layers to check against, empty string : all layers will be checked
 	// layerDisable : concatenated string of layers to NOT check against
-	static Picked Pick(long cursorX, long cursorY, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE, const string& layer = "", 
-		const string& layerDisable = "");
-	static Picked Pick(RAY& ray, PICKTYPE pickType = PICKTYPE::PICK_OPAQUE, const string& layer = "",
-		const string& layerDisable = "");
+	static Picked Pick(long cursorX, long cursorY, int pickType = PICK_OPAQUE, const string& layer = "", const string& layerDisable = "");
+	static Picked Pick(RAY& ray, int pickType = PICK_OPAQUE, const string& layer = "", const string& layerDisable = "");
 	static RAY getPickRay(long cursorX, long cursorY);
 	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
-		bool dynamicObjects = true, const string& layer = "", const string& layerDisable = "");
+		int pickType = PICK_OPAQUE, bool dynamicObjects = true, const string& layer = "", const string& layerDisable = "");
 	static void CalculateVertexAO(Object* object);
 
 	static PHYSICS* physicsEngine;

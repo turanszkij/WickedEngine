@@ -477,11 +477,11 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 		static thread_local BlurBuffer* cb = new BlurBuffer;
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
-			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetRenderWidth();
+			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetScreenWidth();
 		}
 		else{
 			wiRenderer::BindPS(blurVPS,context);
-			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetRenderHeight();
+			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetScreenHeight();
 		}
 
 		float weight0 = 1.0f;

@@ -19,7 +19,6 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, SetFPSDisplay),
 	lunamethod(MainComponent_BindLua, SetCPUDisplay),
 	lunamethod(MainComponent_BindLua, SetResolutionDisplay),
-	lunamethod(MainComponent_BindLua, SetRenderResolutionDisplay),
 	lunamethod(MainComponent_BindLua, SetColorGradePaletteDisplay),
 	{ NULL, NULL }
 };
@@ -283,22 +282,6 @@ int MainComponent_BindLua::SetResolutionDisplay(lua_State *L)
 	}
 	else
 		wiLua::SError(L, "SetResolutionDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetRenderResolutionDisplay(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetRenderResolutionDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.renderResolution = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetRenderResolutionDisplay(bool active) not enough arguments!");
 	return 0;
 }
 int MainComponent_BindLua::SetColorGradePaletteDisplay(lua_State* L)

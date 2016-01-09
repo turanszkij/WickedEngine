@@ -772,7 +772,7 @@
     <ClInclude Include="ForwardRenderableComponent.h" />
     <ClInclude Include="RenderableComponent.h" />
     <ClInclude Include="Renderable3DComponent.h" />
-    <ClInclude Include="wiGraphicsThreads.h" />
+    <ClInclude Include="wiEnums.h" />
     <ClInclude Include="wiInitializer.h" />
     <ClInclude Include="wiLua.h" />
     <ClInclude Include="wiResourceManager_BindLua.h" />

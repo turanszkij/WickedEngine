@@ -66,12 +66,12 @@ public:
 		// display cpu utilization
 		bool cpuinfo;
 		// display resolution info
-		bool resolution, renderResolution;
+		bool resolution;
 		// text size
 		float size;
 
 		InfoDisplayer() :active(false), watermark(true), fpsinfo(true), cpuinfo(true), 
-			resolution(false), renderResolution(false), size(-7.f)
+			resolution(false), size(-7.f)
 		{}
 	};
 	// display all-time engine information text

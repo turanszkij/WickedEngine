@@ -4,7 +4,7 @@
 #include "wiImageEffects.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
-#include "wiGraphicsThreads.h"
+#include "wiEnums.h"
 #include "wiStencilRef.h"
 #include "wiMath.h"
 #include "wiFrustum.h"
@@ -183,6 +183,15 @@ struct Material
 	void CleanUp();
 
 	bool IsTransparent() { return alpha < 1.0f; }
+	bool IsWater() { return water; }
+	RENDERTYPE GetRenderType()
+	{
+		if (IsWater())
+			return RENDERTYPE_WATER;
+		if (IsTransparent())
+			return RENDERTYPE_TRANSPARENT;
+		return RENDERTYPE_OPAQUE;
+	}
 };
 struct RibbonVertex
 {
@@ -489,12 +498,12 @@ struct Object : public Streamable, public Transform
 	bool armatureDeform;
 
 	//PARTICLE
-	enum wiParticleEmitter{
+	enum EmitterType{
 		NO_EMITTER,
 		EMITTER_VISIBLE,
 		EMITTER_INVISIBLE,
 	};
-	wiParticleEmitter particleEmitter;
+	EmitterType emitterType;
 	vector< wiEmittedParticle* > eParticleSystems;
 	vector< wiHairParticle* > hParticleSystems;
 
@@ -529,7 +538,7 @@ struct Object : public Streamable, public Transform
 		XMStoreFloat4x4( &worldPrev,XMMatrixIdentity() );
 		trail.resize(0);
 		trailBuff=NULL;
-		particleEmitter = NO_EMITTER;
+		emitterType = NO_EMITTER;
 		eParticleSystems.resize(0);
 		hParticleSystems.resize(0);
 		mesh=nullptr;
@@ -549,6 +558,15 @@ struct Object : public Streamable, public Transform
 	}
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
+	int GetRenderTypes()
+	{
+		int retVal = RENDERTYPE::RENDERTYPE_VOID;
+		for (Material* mat : mesh->materials)
+		{
+			retVal |= mat->GetRenderType();
+		}
+		return retVal;
+	}
 };
 struct KeyFrame
 {
@@ -1122,8 +1140,8 @@ void RecursiveRest(Armature* armature, Bone* bone);
 void LoadWiArmatures(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures
 					 , map<string,Transform*>& transforms);
 void LoadWiMaterialLibrary(const string& directory, const string& filename, const string& identifier, const string& texturesDir, MaterialCollection& materials);
-void LoadWiObjects(const string& directory, const string& filename, const string& identifier, vector<Object*>& objects_norm
-				   , vector<Object*>& objects_trans, vector<Object*>& objects_water, vector<Armature*>& armatures, MeshCollection& meshes
+void LoadWiObjects(const string& directory, const string& filename, const string& identifier, vector<Object*>& objects
+				   , vector<Armature*>& armatures, MeshCollection& meshes
 				   , map<string,Transform*>& transforms, const MaterialCollection& materials);
 void LoadWiMeshes(const string& directory, const string& filename, const string& identifier, MeshCollection& meshes, const vector<Armature*>& armatures, const MaterialCollection& materials);
 void LoadWiActions(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures);
@@ -1140,14 +1158,12 @@ void LoadWiDecals(const string&directory, const string& name, const string& text
 void LoadFromDisk(const string& dir, const string& name, const string& identifier
 				  , vector<Armature*>& armatures
 				  , MaterialCollection& materials
-				  , vector<Object*>& objects_norm, vector<Object*>& objects_trans, vector<Object*>& objects_water
+				  , vector<Object*>& objects
 				  , MeshCollection& meshes
 				  , vector<Light*>& lights
 				  , vector<HitSphere*>& spheres
 				  , WorldInfo& worldInfo, Wind& wind
 				  , vector<Camera>& cameras
-				  , vector<Armature*>& l_armatures
-				  , vector<Object*>& l_objects
 				  , map<string,Transform*>& transforms
 				  , list<Decal*>& decals
 				  );

@@ -90,7 +90,7 @@ void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
 		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
 
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), wiRenderer::DX11, tessellationQuality, context, false
-			, wiRenderer::SHADED_DEFERRED, rtReflection.shaderResource.front(), true, GRAPHICSTHREAD_SCENE);
+			, SHADERTYPE_DEFERRED, rtReflection.shaderResource.front(), true, GRAPHICSTHREAD_SCENE);
 
 		wiRenderer::DrawSky(context);
 
