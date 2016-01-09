@@ -677,7 +677,6 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						currentMat->hasSpecularMap=true;
 					break;
 				case 'a':
-					currentMat->transparent=true;
 					file>>currentMat->alpha;
 					break;
 				case 'h':
@@ -888,7 +887,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 						if(wiRenderer::HAIRPARTICLEENABLED){
 							stringstream identified_materialName("");
 							identified_materialName<<mat<<identifier;
-							objects.back()->hwiParticleSystems.push_back(new wiHairParticle(name,len,count,identified_materialName.str(),objects.back(),densityG,lenG) );
+							objects.back()->hParticleSystems.push_back(new wiHairParticle(name,len,count,identified_materialName.str(),objects.back(),densityG,lenG) );
 						}
 					}
 					break;
@@ -938,11 +937,11 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 
 			//if(objects[i]->mesh->renderable)
 				for(Material* mat : objects[i]->mesh->materials){
-					if(!mat->water && !mat->isSky && !mat->transparent)
+					if(!mat->water && !mat->isSky && !mat->IsTransparent())
 						default_mesh=true;
 					if(mat->water && !mat->isSky)
 						water_mesh=true;
-					if(!mat->water && !mat->isSky && mat->transparent)
+					if(!mat->water && !mat->isSky && mat->IsTransparent())
 						transparent_mesh=true;
 				}
 		

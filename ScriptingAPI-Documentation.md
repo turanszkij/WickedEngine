@@ -357,6 +357,11 @@ Decal is a texture sticker placeable onto any surface. It is a Transform and a C
 - SetFadeStart(float start)
 - GetFadeStart() : float result
 
+#### Material
+- [constructor]Material(opt string name="")
+- GetName() : string name
+- SetName(string value)
+
 ### MainComponent
 The main component which holds information and manages the running of the current program.
 - [outer]main : MainComponent

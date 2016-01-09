@@ -632,9 +632,9 @@ void wiRenderer::CleanUpStaticTemp(){
 			objects[i]->eParticleSystems[j]->CleanUp();
 		objects[i]->eParticleSystems.clear();
 
-		for(unsigned int j=0;j<objects[i]->hwiParticleSystems.size();++j)
-			objects[i]->hwiParticleSystems[j]->CleanUp();
-		objects[i]->hwiParticleSystems.clear();
+		for(unsigned int j=0;j<objects[i]->hParticleSystems.size();++j)
+			objects[i]->hParticleSystems[j]->CleanUp();
+		objects[i]->hParticleSystems.clear();
 	}
 	objects.clear();
 	
@@ -644,9 +644,9 @@ void wiRenderer::CleanUpStaticTemp(){
 			objects_trans[i]->eParticleSystems[j]->CleanUp();
 		objects_trans[i]->eParticleSystems.clear();
 
-		for (unsigned int j = 0; j<objects_trans[i]->hwiParticleSystems.size(); ++j)
-			objects_trans[i]->hwiParticleSystems[j]->CleanUp();
-		objects_trans[i]->hwiParticleSystems.clear();
+		for (unsigned int j = 0; j<objects_trans[i]->hParticleSystems.size(); ++j)
+			objects_trans[i]->hParticleSystems[j]->CleanUp();
+		objects_trans[i]->hParticleSystems.clear();
 	}
 	objects_trans.clear();
 	
@@ -656,9 +656,9 @@ void wiRenderer::CleanUpStaticTemp(){
 			objects_water[i]->eParticleSystems[j]->CleanUp();
 		objects_water[i]->eParticleSystems.clear();
 
-		for (unsigned int j = 0; j<objects_water[i]->hwiParticleSystems.size(); ++j)
-			objects_water[i]->hwiParticleSystems[j]->CleanUp();
-		objects_water[i]->hwiParticleSystems.clear();
+		for (unsigned int j = 0; j<objects_water[i]->hParticleSystems.size(); ++j)
+			objects_water[i]->hParticleSystems[j]->CleanUp();
+		objects_water[i]->hParticleSystems.clear();
 	}
 	objects_water.clear();
 	everyObject.clear();
@@ -775,7 +775,7 @@ void iterateSPTree(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col)
 		for(Cullable* object:n->objects){
 			cubes.push_back(Cube(object->bounds.getCenter(),object->bounds.getHalfWidth(),XMFLOAT4A(1,0,0,1)));
 			//Object* o = (Object*)object;
-			//for(wiHairParticle& hps : o->hwiParticleSystems)
+			//for(wiHairParticle& hps : o->hParticleSystems)
 			//	iterateSPTree2(hps.spTree->root,cubes,XMFLOAT4A(0,1,0,1));
 		}
 	}
@@ -2954,7 +2954,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 					for (int index = 0; index < 3; ++index)
 					{
 						CulledList culledObjects;
-						CulledCollection culledwiRenderer;
+						CulledCollection culledRenderer;
 
 						l->shadowMaps_dirLight[index].Activate(context);
 
@@ -2972,10 +2972,10 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 							if (!culledObjects.empty()) {
 
 								for (Cullable* object : culledObjects) {
-									culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+									culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 								}
 
-								for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+								for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 									Mesh* mesh = iter->first;
 									CulledObjectList& visibleInstances = iter->second;
 
@@ -3060,7 +3060,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 					l->shadowMap_index = i;
 
 					CulledList culledObjects;
-					CulledCollection culledwiRenderer;
+					CulledCollection culledRenderer;
 
 					Light::shadowMaps_spotLight[i].Set(context);
 					static thread_local Frustum frustum = Frustum();
@@ -3077,10 +3077,10 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 						if (!culledObjects.empty()) {
 
 							for (Cullable* object : culledObjects) {
-								culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+								culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 							}
 
-							for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+							for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 								Mesh* mesh = iter->first;
 								CulledObjectList& visibleInstances = iter->second;
 
@@ -3186,15 +3186,15 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 					UpdateBuffer(cubeShCb, &cb, context);
 
 					CulledList culledObjects;
-					CulledCollection culledwiRenderer;
+					CulledCollection culledRenderer;
 
 					if (spTree)
 						wiSPTree::getVisible(spTree->root, l->bounds, culledObjects);
 
 					for (Cullable* object : culledObjects)
-						culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+						culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 
-					for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+					for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 						Mesh* mesh = iter->first;
 						CulledObjectList& visibleInstances = iter->second;
 
@@ -3269,7 +3269,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 	//				{
 	//					//l->shadowMap[index].Set(context);
 
-	//					CulledCollection culledwiRenderer;
+	//					CulledCollection culledRenderer;
 	//					CulledList culledObjects;
 
 	//					if (l->type == Light::DIRECTIONAL){
@@ -3297,10 +3297,10 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 	//					if (!culledObjects.empty()){
 
 	//						for (Cullable* object : culledObjects){
-	//							culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+	//							culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 	//						}
 
-	//						for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+	//						for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 	//							Mesh* mesh = iter->first;
 	//							CulledObjectList& visibleInstances = iter->second;
 
@@ -3418,16 +3418,16 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 
 	//					UpdateBuffer(cubeShCb, &cb, context);
 
-	//					CulledCollection culledwiRenderer;
+	//					CulledCollection culledRenderer;
 	//					CulledList culledObjects;
 
 	//					if (spTree)
 	//						wiSPTree::getVisible(spTree->root, l->bounds, culledObjects);
 
 	//					for (Cullable* object : culledObjects)
-	//						culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+	//						culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 
-	//					for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+	//					for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 	//						Mesh* mesh = iter->first;
 	//						CulledObjectList& visibleInstances = iter->second;
 
@@ -3548,7 +3548,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 	if(objects.empty())
 		return;
 
-	CulledCollection culledwiRenderer;
+	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	if(spTree)
 		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
@@ -3558,9 +3558,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 	{	
 
 		for(Cullable* object : culledObjects){
-			culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 			if(grass){
-				for(wiHairParticle* hair : ((Object*)object)->hwiParticleSystems){
+				for(wiHairParticle* hair : ((Object*)object)->hParticleSystems){
 					hair->Draw(camera,context);
 				}
 			}
@@ -3628,7 +3628,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 		}
 
 
-		for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
 			CulledObjectList& visibleInstances = iter->second;
 
@@ -3673,7 +3673,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 			int m=0;
 			for(Material* iMat : mesh->materials){
 
-				if(!iMat->transparent && !iMat->isSky && !iMat->water){
+				if(!iMat->IsTransparent() && !iMat->isSky && !iMat->water){
 					
 					if(iMat->shadeless)
 						BindDepthStencilState(depthStencilState,STENCILREF_SHADELESS,context);
@@ -3719,7 +3719,7 @@ void wiRenderer::DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refrac
 		return;
 
 
-	CulledCollection culledwiRenderer;
+	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	if(spTree_water)
 		wiSPTree::getVisible(spTree_water->root, camera->frustum,culledObjects);
@@ -3727,7 +3727,7 @@ void wiRenderer::DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refrac
 	if(!culledObjects.empty())
 	{
 		for(Cullable* object : culledObjects)
-			culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 
 
 		BindPrimitiveTopology(TRIANGLELIST,context);
@@ -3759,7 +3759,7 @@ void wiRenderer::DrawWorldWater(Camera* camera, ID3D11ShaderResourceView* refrac
 	
 
 		
-		for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
 			CulledObjectList& visibleInstances = iter->second;
 
@@ -3818,7 +3818,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 		return;
 
 
-	CulledCollection culledwiRenderer;
+	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	if(spTree_trans)
 		wiSPTree::getVisible(spTree_trans->root, camera->frustum,culledObjects);
@@ -3826,7 +3826,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 	if(!culledObjects.empty())
 	{
 		for(Cullable* object : culledObjects)
-			culledwiRenderer[((Object*)object)->mesh].insert((Object*)object);
+			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 
 		BindPrimitiveTopology(TRIANGLELIST,context);
 		BindVertexLayout(vertexLayout,context);
@@ -3854,7 +3854,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 		BindRasterizerState(wireRender?wireRS:rasterizerState,context);
 	
 
-		for (CulledCollection::iterator iter = culledwiRenderer.begin(); iter != culledwiRenderer.end(); ++iter) {
+		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
 			CulledObjectList& visibleInstances = iter->second;
 
@@ -3893,7 +3893,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 			int m=0;
 			for(Material* iMat : mesh->materials){
 
-				if(iMat->transparent && iMat->alpha>0 && !iMat->water && !iMat->isSky){
+				if(iMat->IsTransparent() && iMat->alpha>0 && !iMat->water && !iMat->isSky){
 
 
 				static thread_local MaterialCB* mcb = new MaterialCB;
@@ -4249,7 +4249,7 @@ void wiRenderer::UpdateLights()
 wiRenderer::Picked wiRenderer::Pick(RAY& ray, PICKTYPE pickType, const string& layer,
 	const string& layerDisable)
 {
-	CulledCollection culledwiRenderer;
+	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	wiSPTree* searchTree = nullptr;
 	switch (pickType)
@@ -4384,7 +4384,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 
 	XMMATRIX& objectMat = object->getTransform();
 
-	CulledCollection culledwiRenderer;
+	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	wiSPTree* searchTree = spTree;
 

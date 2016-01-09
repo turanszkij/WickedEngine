@@ -17,6 +17,7 @@ namespace wiLoader_BindLua
 		AABB_BindLua::Bind();
 		EmittedParticle_BindLua::Bind();
 		Decal_BindLua::Bind();
+		Material_BindLua::Bind();
 	}
 }
 
@@ -1507,5 +1508,124 @@ void EmittedParticle_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<EmittedParticle_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+const char Material_BindLua::className[] = "Emitter";
+
+Luna<Material_BindLua>::FunctionType Material_BindLua::methods[] = {
+	lunamethod(Material_BindLua, GetName),
+	lunamethod(Material_BindLua, SetName),
+	lunamethod(Material_BindLua, GetColor),
+	lunamethod(Material_BindLua, SetColor),
+	lunamethod(Material_BindLua, GetAlpha),
+	lunamethod(Material_BindLua, SetAlpha),
+	lunamethod(Material_BindLua, GetRefractionIndex),
+	lunamethod(Material_BindLua, SetRefractionIndex),
+	{ NULL, NULL }
+};
+Luna<Material_BindLua>::PropertyType Material_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+Material_BindLua::Material_BindLua(Material* material) :material(material)
+{
+}
+Material_BindLua::Material_BindLua(lua_State *L)
+{
+	material = new Material();
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		material->name = wiLua::SGetString(L, 1);
+	}
+}
+Material_BindLua::~Material_BindLua()
+{
+}
+
+int Material_BindLua::GetName(lua_State* L)
+{
+	wiLua::SSetString(L, material->name);
+	return 1;
+}
+int Material_BindLua::SetName(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		material->name = wiLua::SGetString(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetName(string name) not enough arguments!");
+	return 0;
+}
+int Material_BindLua::GetColor(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&material->diffuseColor)));
+	return 1;
+}
+int Material_BindLua::SetColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vec != nullptr)
+		{
+			XMStoreFloat3(&material->diffuseColor, vec->vector);
+		}
+		else
+		{
+			wiLua::SError(L, "SetColor(Vector color) argument is not a Vector!");
+		}
+	}
+	else
+		wiLua::SError(L, "SetColor(Vector color) not enough arguments!");
+	return 0;
+}
+int Material_BindLua::GetAlpha(lua_State* L)
+{
+	wiLua::SSetFloat(L, material->alpha);
+	return 1;
+}
+int Material_BindLua::SetAlpha(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		material->alpha = wiLua::SGetFloat(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetTransparency(float alpha) not enough arguments!");
+	return 0;
+}
+int Material_BindLua::GetRefractionIndex(lua_State* L)
+{
+	wiLua::SSetFloat(L, material->refraction_index);
+	return 1;
+}
+int Material_BindLua::SetRefractionIndex(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		material->refraction_index = wiLua::SGetFloat(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetRefractionIndex(float alpha) not enough arguments!");
+	return 0;
+}
+
+void Material_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Material_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

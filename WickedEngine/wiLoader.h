@@ -122,7 +122,6 @@ struct Material
 
 	bool subsurface_scattering;
 	bool toonshading;
-	bool transparent;
 	bool water,shadeless;
 	float alpha;
 	float refraction_index;
@@ -142,7 +141,7 @@ struct Material
 	Material(){}
 	Material(string newName){
 		name=newName;
-		diffuseColor = XMFLOAT3(0,0,0);
+		diffuseColor = XMFLOAT3(1,1,1);
 
 		hasRefMap=false;
 		refMapName="";
@@ -167,7 +166,7 @@ struct Material
 		specularMapName="";
 		specularMap=0;
 
-		subsurface_scattering=toonshading=transparent=water=false;
+		subsurface_scattering=toonshading=water=false;
 		alpha=1.0f;
 		refraction_index=0.0f;
 		enviroReflection=0.0f;
@@ -182,6 +181,8 @@ struct Material
 		cast_shadow=true;
 	}
 	void CleanUp();
+
+	bool IsTransparent() { return alpha < 1.0f; }
 };
 struct RibbonVertex
 {
@@ -495,7 +496,7 @@ struct Object : public Streamable, public Transform
 	};
 	wiParticleEmitter particleEmitter;
 	vector< wiEmittedParticle* > eParticleSystems;
-	vector< wiHairParticle* > hwiParticleSystems;
+	vector< wiHairParticle* > hParticleSystems;
 
 	float transparency;
 
@@ -530,7 +531,7 @@ struct Object : public Streamable, public Transform
 		trailBuff=NULL;
 		particleEmitter = NO_EMITTER;
 		eParticleSystems.resize(0);
-		hwiParticleSystems.resize(0);
+		hParticleSystems.resize(0);
 		mesh=nullptr;
 		rigidBody=kinematic=false;
 		collisionShape="";

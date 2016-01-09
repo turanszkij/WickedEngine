@@ -15,7 +15,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 	float4 baseColor = diffuseColor;
 	
 		[branch]if(hasTex){
-			baseColor = xTextureTex.Sample(texSampler, PSIn.tex+movingTex);
+			baseColor *= xTextureTex.Sample(texSampler, PSIn.tex+movingTex);
 			//baseColor*=baseColor.a;
 		}
 		baseColor.rgb *= PSIn.instanceColor;

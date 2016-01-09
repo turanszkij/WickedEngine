@@ -223,3 +223,28 @@ public:
 	static void Bind();
 };
 
+class Material_BindLua
+{
+public:
+	Material* material;
+
+	static const char className[];
+	static Luna<Material_BindLua>::FunctionType methods[];
+	static Luna<Material_BindLua>::PropertyType properties[];
+
+	Material_BindLua(Material* material);
+	Material_BindLua(lua_State* L);
+	~Material_BindLua();
+
+	int GetName(lua_State* L);
+	int SetName(lua_State* L);
+	int GetColor(lua_State* L);
+	int SetColor(lua_State* L);
+	int GetAlpha(lua_State* L);
+	int SetAlpha(lua_State* L);
+	int GetRefractionIndex(lua_State* L);
+	int SetRefractionIndex(lua_State* L);
+
+	static void Bind();
+};
+

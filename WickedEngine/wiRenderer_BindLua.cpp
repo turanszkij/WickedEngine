@@ -191,6 +191,21 @@ namespace wiRenderer_BindLua
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
+	int GetMaterial(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			string name = wiLua::SGetString(L, 1);
+			Material* mat = wiRenderer::getMaterialByName(name);
+			if (mat != nullptr)
+			{
+				Luna<Material_BindLua>::push(L, new Material_BindLua(mat));
+				return 1;
+			}
+		}
+		return 0;
+	}
 	int GetGameSpeed(lua_State* L)
 	{
 		wiLua::SSetFloat(L, wiRenderer::GetGameSpeed());
@@ -559,6 +574,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetMeshes", GetMeshes);
 			wiLua::GetGlobal()->RegisterFunc("GetLights", GetLights);
 			wiLua::GetGlobal()->RegisterFunc("GetMaterials", GetMaterials);
+			wiLua::GetGlobal()->RegisterFunc("GetMaterial", GetMaterial);
 			wiLua::GetGlobal()->RegisterFunc("GetGameSpeed", GetGameSpeed);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
