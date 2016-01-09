@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiGraphicsAPI.h"
 
 class wiImageEffects;
 enum BLENDMODE;
@@ -62,17 +63,17 @@ protected:
 		ALIGN_16
 	};
 	
-	static ID3D11BlendState*		blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg;
-	static ID3D11Buffer*           constantBuffer,*PSCb,*blurCb,*processCb,*shaftCb,*deferredCb;
+	static BlendState		blendState, blendStateAdd, blendStateNoBlend, blendStateAvg;
+	static BufferResource           constantBuffer,PSCb,blurCb,processCb,shaftCb,deferredCb;
 
-	static ID3D11VertexShader*     vertexShader,*screenVS;
-	static ID3D11PixelShader*      pixelShader,*blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS
-		,*fxaaPS,*ssaoPS,*ssssPS,*deferredPS,*linDepthPS,*colorGradePS,*ssrPS;
+	static VertexShader     vertexShader,screenVS;
+	static PixelShader      pixelShader,blurHPS,blurVPS,shaftPS,outlinePS,dofPS,motionBlurPS,bloomSeparatePS
+		,fxaaPS,ssaoPS,ssssPS,deferredPS,linDepthPS,colorGradePS,ssrPS;
 	
 
 	
-	static ID3D11RasterizerState*		rasterizerState;
-	static ID3D11DepthStencilState*	depthStencilStateGreater,*depthStencilStateLess,*depthNoStencilState;
+	static RasterizerState		rasterizerState;
+	static DepthStencilState	depthStencilStateGreater,depthStencilStateLess,depthNoStencilState;
 
 public:
 	static void LoadShaders();
@@ -83,20 +84,20 @@ private:
 public:
 	wiImage();
 	
-	static void Draw(ID3D11ShaderResourceView* texture, const wiImageEffects& effects);
-	static void Draw(ID3D11ShaderResourceView* texture, const wiImageEffects& effects,ID3D11DeviceContext* context);
+	static void Draw(TextureView texture, const wiImageEffects& effects);
+	static void Draw(TextureView texture, const wiImageEffects& effects,DeviceContext context);
 
-	static void DrawDeferred(ID3D11ShaderResourceView* texture
-		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* lightmap, ID3D11ShaderResourceView* normal
-		, ID3D11ShaderResourceView* ao, ID3D11DeviceContext* context, int stencilref = 0);
+	static void DrawDeferred(TextureView texture
+		, TextureView depth, TextureView lightmap, TextureView normal
+		, TextureView ao, DeviceContext context, int stencilref = 0);
 
 
 	//// DEPRECATED
 	//static void BatchBegin();
 	//// DEPRECATED
-	//static void BatchBegin(ID3D11DeviceContext* context);
+	//static void BatchBegin(DeviceContext context);
 	//// DEPRECATED
-	//static void BatchBegin(ID3D11DeviceContext* context, unsigned int stencilref, bool stencilOpLess=true);
+	//static void BatchBegin(DeviceContext context, unsigned int stencilref, bool stencilOpLess=true);
 
 	static void Load();
 	static void CleanUp();

@@ -501,6 +501,7 @@
   <ItemGroup>
     <ClInclude Include="DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="ForwardRenderableComponent_BindLua.h" />
+    <ClInclude Include="wiGraphicsAPI.h" />
     <ClInclude Include="LoadingScreenComponent_BindLua.h" />
     <ClInclude Include="MainComponent_BindLua.h" />
     <ClInclude Include="Matrix_BindLua.h" />

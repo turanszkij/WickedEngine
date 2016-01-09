@@ -188,7 +188,7 @@ void Renderable3DComponent::Compose(){
 	Renderable2DComponent::Compose();
 }
 
-void Renderable3DComponent::RenderFrameSetUp(wiRenderer::DeviceContext context) {
+void Renderable3DComponent::RenderFrameSetUp(DeviceContext context) {
 	if (!_needToUpdateRenderData.load())
 	{
 		return;
@@ -199,7 +199,7 @@ void Renderable3DComponent::RenderFrameSetUp(wiRenderer::DeviceContext context) 
 
 	_needToUpdateRenderData.store(false);
 }
-void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderReflections(DeviceContext context){
 	if (!getReflectionsEnabled() || getReflectionQuality() < 0.01f)
 	{
 		return;
@@ -225,7 +225,7 @@ void Renderable3DComponent::RenderReflections(wiRenderer::DeviceContext context)
 		wiRenderer::DrawSky(context);
 	}
 }
-void Renderable3DComponent::RenderShadows(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderShadows(DeviceContext context){
 	if (!getShadowsEnabled())
 	{
 		return;
@@ -234,7 +234,7 @@ void Renderable3DComponent::RenderShadows(wiRenderer::DeviceContext context){
 	wiRenderer::ClearShadowMaps(context);
 	wiRenderer::DrawForShadowMap(context);
 }
-void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context)
+void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, DeviceContext context)
 {
 	if (getLensFlareEnabled())
 	{
@@ -270,7 +270,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 
 }
-void Renderable3DComponent::RenderBloom(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderBloom(DeviceContext context){
 
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
@@ -305,7 +305,7 @@ void Renderable3DComponent::RenderBloom(wiRenderer::DeviceContext context){
 		wiImage::Draw(rtBloom[1].shaderResource.back(), fx, context);
 	}
 }
-void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceContext context){
 	if (!getLightShaftsEnabled())
 	{
 		return;
@@ -330,7 +330,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, wiRenderer
 		}
 	}
 }
-void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, DeviceContext context){
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 	//wiImage::BatchBegin(context);
 
@@ -358,7 +358,7 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, wi
 		wiImage::Draw(rtLensFlare.shaderResource.back(), fx, context);
 	}
 }
-void Renderable3DComponent::RenderComposition2(wiRenderer::DeviceContext context){
+void Renderable3DComponent::RenderComposition2(DeviceContext context){
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	//wiImage::BatchBegin(context);

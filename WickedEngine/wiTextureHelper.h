@@ -17,20 +17,20 @@ private:
 			HELPERTEXTURE_NORMALMAPDEFAULT,
 			HELPERTEXTURE_COUNT
 		};
-		wiRenderer::TextureView helperTextures[HELPERTEXTURE_COUNT];
+		TextureView helperTextures[HELPERTEXTURE_COUNT];
 
-		unordered_map<unsigned long, wiRenderer::TextureView> colorTextures;
+		unordered_map<unsigned long, TextureView> colorTextures;
 	public:
 		wiTextureHelperInstance();
 		~wiTextureHelperInstance();
 
-		wiRenderer::TextureView getRandom64x64();
-		wiRenderer::TextureView getColorGradeDefault();
-		wiRenderer::TextureView getNormalMapDefault();
+		TextureView getRandom64x64();
+		TextureView getColorGradeDefault();
+		TextureView getNormalMapDefault();
 
-		wiRenderer::TextureView getWhite();
-		wiRenderer::TextureView getBlack();
-		wiRenderer::TextureView getColor(const wiColor& color);
+		TextureView getWhite();
+		TextureView getBlack();
+		TextureView getColor(const wiColor& color);
 	};
 
 	static wiTextureHelperInstance* instance;
@@ -45,14 +45,14 @@ public:
 	}
 
 	template<typename T>
-	static HRESULT CreateTexture(wiRenderer::TextureView& texture, T* data, UINT width, UINT height, UINT channelCount, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
+	static HRESULT CreateTexture(TextureView& texture, T* data, UINT width, UINT height, UINT channelCount, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 	{
 		if (data == nullptr)
 		{
 			return E_FAIL;
 		}
 
-		D3D11_TEXTURE2D_DESC textureDesc;
+		Texture2DDesc textureDesc;
 		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = width;
 		textureDesc.Height = height;
@@ -77,7 +77,7 @@ public:
 		InitData.pSysMem = data;
 		InitData.SysMemPitch = static_cast<UINT>(width * channelCount);
 
-		ID3D11Texture2D* texture2D = nullptr;
+		Texture2D texture2D = nullptr;
 		HRESULT hr;
 		hr = wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, &InitData, &texture2D);
 		if (FAILED(hr))

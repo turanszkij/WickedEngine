@@ -66,7 +66,7 @@ void ForwardRenderableComponent::Render(){
 }
 
 
-void ForwardRenderableComponent::RenderScene(wiRenderer::DeviceContext context)
+void ForwardRenderableComponent::RenderScene(DeviceContext context)
 {
 	rtMain.Activate(context, 0, 0, 0, 1);
 	{

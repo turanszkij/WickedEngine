@@ -25,7 +25,7 @@ wiTextureHelper::wiTextureHelperInstance::~wiTextureHelperInstance()
 
 
 
-wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64()
+TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64()
 {
 	if (helperTextures[HELPERTEXTURE_RANDOM64X64] != nullptr)
 	{
@@ -53,7 +53,7 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64
 	return helperTextures[HELPERTEXTURE_RANDOM64X64];
 }
 
-wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeDefault()
+TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeDefault()
 {
 	if (helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT] != nullptr)
 	{
@@ -93,22 +93,22 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeD
 	return helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
 }
 
-wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getNormalMapDefault()
+TextureView wiTextureHelper::wiTextureHelperInstance::getNormalMapDefault()
 {
 	return getColor(wiColor(127, 127, 255, 255));
 }
 
-wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getWhite()
+TextureView wiTextureHelper::wiTextureHelperInstance::getWhite()
 {
 	return getColor(wiColor(255, 255, 255, 255));
 }
 
-wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getBlack()
+TextureView wiTextureHelper::wiTextureHelperInstance::getBlack()
 {
 	return getColor(wiColor(0, 0, 0, 255));
 }
 
-wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& color)
+TextureView wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& color)
 {
 	if (colorTextures.find(color.rgba) != colorTextures.end())
 	{
@@ -125,7 +125,7 @@ wiRenderer::TextureView wiTextureHelper::wiTextureHelperInstance::getColor(const
 		data[i + 3] = color.a;
 	}
 
-	wiRenderer::TextureView texture;
+	TextureView texture;
 	if (FAILED(CreateTexture(texture, data, 2, 2, 4)))
 	{
 		delete[] data;

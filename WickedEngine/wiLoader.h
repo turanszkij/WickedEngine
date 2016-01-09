@@ -100,25 +100,25 @@ struct Material
 
 	bool hasRefMap;
 	string refMapName;
-	ID3D11ShaderResourceView* refMap;
+	TextureView refMap;
 
 	bool hasTexture;
 	string textureName;
-	ID3D11ShaderResourceView* texture;
+	TextureView texture;
 	bool premultipliedTexture;
 	BLENDMODE blendFlag;
 		
 	bool hasNormalMap;
 	string normalMapName;
-	ID3D11ShaderResourceView* normalMap;
+	TextureView normalMap;
 
 	bool hasDisplacementMap;
 	string displacementMapName;
-	ID3D11ShaderResourceView* displacementMap;
+	TextureView displacementMap;
 
 	bool hasSpecularMap;
 	string specularMapName;
-	ID3D11ShaderResourceView* specularMap;
+	TextureView specularMap;
 
 	bool subsurface_scattering;
 	bool toonshading;
@@ -296,11 +296,11 @@ struct Mesh{
 
 	static thread_local vector<Instance>		instances;
 
-	ID3D11Buffer* meshVertBuff;
-	static ID3D11Buffer* meshInstanceBuffer;
-	ID3D11Buffer* meshIndexBuff;
-	ID3D11Buffer* boneBuffer;
-	ID3D11Buffer* sOutBuffer;
+	BufferResource meshVertBuff;
+	static BufferResource meshInstanceBuffer;
+	BufferResource meshIndexBuff;
+	BufferResource boneBuffer;
+	BufferResource sOutBuffer;
 
 	vector<string> materialNames;
 	vector<int> materialIndices;
@@ -354,7 +354,7 @@ struct Mesh{
 	void CreateBuffers();
 	void CreateVertexArrays();
 	static void AddRenderableInstance(const Instance& instance, int numerator);
-	static void UpdateRenderableInstances(int count, ID3D11DeviceContext* context);
+	static void UpdateRenderableInstances(int count, DeviceContext context);
 	void init(){
 		parent="";
 		vertices.resize(0);
@@ -520,8 +520,8 @@ struct Object : public Streamable, public Transform
 	
 	//RIBBON TRAIL
 	deque<RibbonVertex> trail;
-	ID3D11Buffer* trailBuff;
-	ID3D11ShaderResourceView* trailDistortTex;
+	BufferResource trailBuff;
+	TextureView trailDistortTex;
 
 	int physicsObjectI;
 
@@ -905,7 +905,7 @@ struct Light : public Cullable , public Transform
 	XMFLOAT4 enerDis;
 	bool noHalo;
 	bool shadow;
-	vector<ID3D11ShaderResourceView*> lensFlareRimTextures;
+	vector<TextureView> lensFlareRimTextures;
 	vector<string> lensFlareNames;
 
 	//vector<wiRenderTarget> shadowMap;
@@ -943,7 +943,7 @@ struct Light : public Cullable , public Transform
 struct Decal : public Cullable, public Transform
 {
 	string texName,norName;
-	ID3D11ShaderResourceView* texture,*normal;
+	TextureView texture,normal;
 	XMFLOAT4X4 view,projection;
 	XMFLOAT3 front;
 	float life,fadeStart;

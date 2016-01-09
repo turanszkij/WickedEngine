@@ -9,7 +9,7 @@
 #include "wiDepthTarget.h"
 
 thread_local vector<Instance>		Mesh::instances;
-ID3D11Buffer* Mesh::meshInstanceBuffer=nullptr;
+BufferResource Mesh::meshInstanceBuffer=nullptr;
 
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
@@ -427,7 +427,7 @@ void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
 	}
 	instances[numerator] = instance;
 }
-void Mesh::UpdateRenderableInstances(int count, wiRenderer::DeviceContext context)
+void Mesh::UpdateRenderableInstances(int count, DeviceContext context)
 {
 	wiRenderer::UpdateBuffer(meshInstanceBuffer, instances.data(), context, sizeof(Instance)*count);
 }
@@ -611,7 +611,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->refMapName=ss.str();
-						currentMat->refMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->refMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->refMap!=0)
 						currentMat->hasRefMap = true;
@@ -623,7 +623,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->normalMapName=ss.str();
-						currentMat->normalMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->normalMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->normalMap!=0)
 						currentMat->hasNormalMap = true;
@@ -635,7 +635,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->textureName=ss.str();
-						currentMat->texture = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->texture = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->texture!=0)
 						currentMat->hasTexture=true;
@@ -648,7 +648,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->displacementMapName=ss.str();
-						currentMat->displacementMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->displacementMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->displacementMap!=0)
 						currentMat->hasDisplacementMap=true;
@@ -660,7 +660,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->specularMapName=ss.str();
-						currentMat->specularMap = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->specularMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->specularMap!=0)
 						currentMat->hasSpecularMap=true;
@@ -1365,8 +1365,8 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					file>>t;
 					stringstream rim("");
 					rim<<directory<<"rims/"<<t;
-					wiRenderer::TextureView tex=nullptr;
-					if ((tex = (wiRenderer::TextureView)wiResourceManager::GetGlobal()->add(rim.str())) != nullptr){
+					TextureView tex=nullptr;
+					if ((tex = (TextureView)wiResourceManager::GetGlobal()->add(rim.str())) != nullptr){
 						lights.back()->lensFlareRimTextures.push_back(tex);
 						lights.back()->lensFlareNames.push_back(rim.str());
 					}
@@ -2146,13 +2146,13 @@ void Decal::Update(){
 void Decal::addTexture(const string& tex){
 	texName=tex;
 	if(!tex.empty()){
-		texture = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(tex);
+		texture = (TextureView)wiResourceManager::GetGlobal()->add(tex);
 	}
 }
 void Decal::addNormal(const string& nor){
 	norName=nor;
 	if(!nor.empty()){
-		normal = (ID3D11ShaderResourceView*)wiResourceManager::GetGlobal()->add(nor);
+		normal = (TextureView)wiResourceManager::GetGlobal()->add(nor);
 	}
 }
 void Decal::CleanUp(){

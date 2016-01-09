@@ -1,5 +1,6 @@
 #pragma once 
 #include "CommonInclude.h"
+#include "wiGraphicsAPI.h"
 #define MAX_TEXT 20000
 
 // Do not alter order because it is bound to lua manually
@@ -50,16 +51,16 @@ protected:
 		
 		ALIGN_16
 	};
-	static ID3D11Buffer*           vertexBuffer,*indexBuffer;
+	static BufferResource           vertexBuffer,indexBuffer;
 
-	static ID3D11InputLayout   *vertexLayout;
-	static ID3D11VertexShader  *vertexShader;
-	static ID3D11PixelShader   *pixelShader;
-	static ID3D11BlendState*		blendState;
-	static ID3D11Buffer*           constantBuffer;
-	static ID3D11SamplerState*			sampleState;
-	static ID3D11RasterizerState*		rasterizerState;
-	static ID3D11DepthStencilState*	depthStencilState;
+	static VertexLayout   vertexLayout;
+	static VertexShader  vertexShader;
+	static PixelShader   pixelShader;
+	static BlendState		blendState;
+	static BufferResource         constantBuffer;
+	static Sampler			sampleState;
+	static RasterizerState		rasterizerState;
+	static DepthStencilState	depthStencilState;
 	
 	static void SetUpStates();
 	static void SetUpCB();
@@ -89,7 +90,7 @@ private:
 	static vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(const wstring& text, wiFontProps props, int style, ID3D11DeviceContext* context = nullptr);
+	static void ModifyGeo(const wstring& text, wiFontProps props, int style, DeviceContext context = nullptr);
 
 public:
 	static void Initialize();
@@ -105,7 +106,7 @@ public:
 	~wiFont();
 
 	
-	void Draw(ID3D11DeviceContext* context = nullptr);
+	void Draw(DeviceContext context = nullptr);
 
 
 	int textWidth();

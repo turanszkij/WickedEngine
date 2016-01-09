@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-
+#include "wiGraphicsAPI.h"
 
 class Cube
 {
@@ -41,8 +41,8 @@ public:
 
 	Description desc;
 	
-	static ID3D11Buffer* vertexBuffer;
-	static ID3D11Buffer* indexBuffer;
+	static BufferResource vertexBuffer;
+	static BufferResource indexBuffer;
 	static void LoadStatic();
 	static void CleanUpStatic();
 

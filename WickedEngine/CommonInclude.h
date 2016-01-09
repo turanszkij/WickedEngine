@@ -2,10 +2,8 @@
 #define WICKEDENGINE_COMMONINCLUDE_H
 
 #include <SDKDDKVer.h>
-#include <d3d11_2.h>
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
-#include <DXGI1_2.h>
 #include <cstdlib>
 #include <ctime>
 #include <math.h>

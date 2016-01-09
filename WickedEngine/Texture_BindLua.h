@@ -6,13 +6,13 @@
 class Texture_BindLua
 {
 public:
-	wiRenderer::TextureView texture;
+	TextureView texture;
 
 	static const char className[];
 	static Luna<Texture_BindLua>::FunctionType methods[];
 	static Luna<Texture_BindLua>::PropertyType properties[];
 
-	Texture_BindLua(wiRenderer::TextureView texture = nullptr);
+	Texture_BindLua(TextureView texture = nullptr);
 	Texture_BindLua(lua_State *L);
 	~Texture_BindLua();
 

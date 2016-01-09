@@ -54,7 +54,7 @@ namespace wiHelper
 			ss << name;
 		wstringstream wss(L"");
 		wss << ss.str().c_str();
-		ID3D11Resource* res = nullptr;
+		APIResource res = nullptr;
 		wiRenderer::renderTargetView->GetResource(&res);
 		HRESULT h = SaveWICTextureToFile(wiRenderer::immediateContext, res, GUID_ContainerFormatPng, wss.str().c_str());
 		if (FAILED(h))

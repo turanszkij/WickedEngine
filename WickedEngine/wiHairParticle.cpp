@@ -6,15 +6,15 @@
 #include "wiFrustum.h"
 #include "wiRandom.h"
 
-ID3D11InputLayout* wiHairParticle::il;
-ID3D11VertexShader* wiHairParticle::vs;
-ID3D11PixelShader* wiHairParticle::ps,*wiHairParticle::qps;
-ID3D11GeometryShader* wiHairParticle::gs[],*wiHairParticle::qgs[];
-ID3D11Buffer* wiHairParticle::cbgs;
-ID3D11DepthStencilState* wiHairParticle::dss;
-ID3D11RasterizerState* wiHairParticle::rs,* wiHairParticle::ncrs;
-ID3D11SamplerState* wiHairParticle::ss;
-ID3D11BlendState* wiHairParticle::bs;
+VertexLayout wiHairParticle::il;
+VertexShader wiHairParticle::vs;
+PixelShader wiHairParticle::ps,wiHairParticle::qps;
+GeometryShader wiHairParticle::gs[],wiHairParticle::qgs[];
+BufferResource wiHairParticle::cbgs;
+DepthStencilState wiHairParticle::dss;
+RasterizerState wiHairParticle::rs, wiHairParticle::ncrs;
+Sampler wiHairParticle::ss;
+BlendState wiHairParticle::bs;
 int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
@@ -69,14 +69,14 @@ void wiHairParticle::CleanUpStatic(){
 void wiHairParticle::LoadShaders()
 {
 
-	D3D11_INPUT_ELEMENT_DESC layout[] =
+	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr) {
 		vs = vsinfo->vertexShader;
 		il = vsinfo->vertexLayout;
@@ -84,15 +84,15 @@ void wiHairParticle::LoadShaders()
 
 
 
-	ps = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS.cso", wiResourceManager::PIXELSHADER));
-	qps = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS.cso", wiResourceManager::PIXELSHADER));
+	ps = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS.cso", wiResourceManager::PIXELSHADER));
+	qps = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS.cso", wiResourceManager::PIXELSHADER));
 
-	gs[0] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL0GS.cso", wiResourceManager::GEOMETRYSHADER));
-	gs[1] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL1GS.cso", wiResourceManager::GEOMETRYSHADER));
-	gs[2] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL2GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[0] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL0GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[1] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL1GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[2] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL2GS.cso", wiResourceManager::GEOMETRYSHADER));
 
-	qgs[0] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLCloseGS.cso", wiResourceManager::GEOMETRYSHADER));
-	qgs[1] = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLDistGS.cso", wiResourceManager::GEOMETRYSHADER));
+	qgs[0] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLCloseGS.cso", wiResourceManager::GEOMETRYSHADER));
+	qgs[1] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLDistGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiHairParticle::SetUpStatic(){
@@ -109,7 +109,7 @@ void wiHairParticle::SetUpStatic(){
 
 
  //   // Define the input layout
- //   D3D11_INPUT_ELEMENT_DESC layout[] =
+ //   VertexLayoutDesc layout[] =
  //   {
 	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	//	{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -457,9 +457,9 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 
 	if(!culledPatches.empty())
 	{
-		ID3D11ShaderResourceView* texture = material->texture;
+		TextureView texture = material->texture;
 
-		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::POINTLIST,context);
+		wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,context);
 		wiRenderer::BindVertexLayout(il,context);
 		wiRenderer::BindPS(texture?qps:ps,context);
 		wiRenderer::BindVS(vs,context);

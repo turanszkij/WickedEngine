@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiThreadSafeManager.h"
+#include "wiGraphicsAPI.h"
 
 class wiSound;
 
@@ -45,7 +46,7 @@ public:
 	const Resource* get(const string& name);
 	//specify datatype for shaders
 	void* add(const string& name, Data_Type newType = Data_Type::DYNAMIC
-		, D3D11_INPUT_ELEMENT_DESC* vertexLayoutDesc = nullptr, UINT elementCount = 0, D3D11_SO_DECLARATION_ENTRY* streamOutDecl = nullptr);
+		, VertexLayoutDesc* vertexLayoutDesc = nullptr, UINT elementCount = 0, StreamOutDeclaration* streamOutDecl = nullptr);
 	bool del(const string& name);
 	bool CleanUp();
 };

@@ -5,15 +5,15 @@
 #include "wiLoader.h"
 
 
-ID3D11Buffer		*wiFont::vertexBuffer,*wiFont::indexBuffer;
-ID3D11InputLayout   *wiFont::vertexLayout;
-ID3D11VertexShader  *wiFont::vertexShader;
-ID3D11PixelShader   *wiFont::pixelShader;
-ID3D11BlendState*		wiFont::blendState;
-ID3D11Buffer*           wiFont::constantBuffer;
-ID3D11SamplerState*			wiFont::sampleState;
-ID3D11RasterizerState*		wiFont::rasterizerState;
-ID3D11DepthStencilState*	wiFont::depthStencilState;
+BufferResource		wiFont::vertexBuffer,wiFont::indexBuffer;
+VertexLayout   wiFont::vertexLayout;
+VertexShader  wiFont::vertexShader;
+PixelShader   wiFont::pixelShader;
+BlendState		wiFont::blendState;
+BufferResource           wiFont::constantBuffer;
+Sampler			wiFont::sampleState;
+RasterizerState		wiFont::rasterizerState;
+DepthStencilState	wiFont::depthStencilState;
 vector<wiFont::Vertex> wiFont::vertexList;
 vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
@@ -133,58 +133,21 @@ void wiFont::SetUpCB()
 void wiFont::LoadShaders()
 {
 
-	D3D11_INPUT_ELEMENT_DESC layout[] =
+	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
 	}
 
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
-
-
-
-
-
-
-
-
- //   ID3DBlob* pVSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/fontVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load fontVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	
-	
-
-
- //   // Define the input layout
- //   D3D11_INPUT_ELEMENT_DESC layout[] =
- //   {
-	//	{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
- //   };
-	//UINT numElements = ARRAYSIZE( layout );
-	//
- //   // Create the input layout
-	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
- //                                         pVSBlob->GetBufferSize(), &vertexLayout );
-	//pVSBlob->Release();
-
- //   
-
-	//
-	//ID3DBlob* pPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/fontPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load fontPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	//pPSBlob->Release();
 }
 void wiFont::SetUpStaticComponents()
 {
@@ -214,7 +177,7 @@ void wiFont::CleanUpStatic()
 }
 
 
-void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, ID3D11DeviceContext* context)
+void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, DeviceContext context)
 {
 	int line = 0, pos = 0;
 	vertexList.resize(text.length()*4);
@@ -300,7 +263,7 @@ void wiFont::LoadIndices()
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
 }
 
-void wiFont::Draw(wiRenderer::DeviceContext context){
+void wiFont::Draw(DeviceContext context){
 
 	wiFontProps newProps = props;
 
@@ -323,7 +286,7 @@ void wiFont::Draw(wiRenderer::DeviceContext context){
 		if (context == nullptr)
 			return;
 	
-		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLELIST,context);
+		wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,context);
 		wiRenderer::BindVertexLayout(vertexLayout,context);
 		wiRenderer::BindVS(vertexShader,context);
 		wiRenderer::BindPS(pixelShader,context);
@@ -416,7 +379,7 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 	ss1<<"fonts/"<<name<<".dds";
 	std::ifstream file(ss.str());
 	if(file.is_open()){
-		texture = (wiRenderer::TextureView)wiResourceManager::GetGlobal()->add(ss1.str());
+		texture = (TextureView)wiResourceManager::GetGlobal()->add(ss1.str());
 		file>>texWidth>>texHeight>>recSize>>charSize;
 		int i=0;
 		while(!file.eof()){

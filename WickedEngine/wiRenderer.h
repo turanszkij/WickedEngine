@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiEnums.h"
+#include "wiGraphicsAPI.h"
 
 struct Transform;
 struct Vertex;
@@ -41,55 +42,10 @@ typedef map<string,Mesh*> MeshCollection;
 typedef map<string, Material*> MaterialCollection;
 typedef unordered_set<Cullable*> CulledList;
 
+
 class wiRenderer
 {
 public:
-//#define API_CALL_STRICTNESS
-#ifndef WINSTORE_SUPPORT
-	typedef IDXGISwapChain*				SwapChain;
-#else
-	typedef IDXGISwapChain1*			SwapChain; 
-#endif
-	typedef IUnknown*					APIInterface;
-	typedef ID3D11DeviceContext*		DeviceContext;
-	typedef	ID3D11Device*				GraphicsDevice;
-	typedef	D3D11_VIEWPORT				ViewPort;
-	typedef ID3D11CommandList*			CommandList;
-	typedef ID3D11RenderTargetView*		RenderTargetView;
-	typedef ID3D11ShaderResourceView*	TextureView;
-	typedef ID3D11SamplerState*			Sampler;
-	typedef ID3D11Resource*				APIResource;
-	typedef ID3D11Buffer*				BufferResource;
-	typedef ID3D11VertexShader*			VertexShader;
-	typedef ID3D11PixelShader*			PixelShader;
-	typedef ID3D11GeometryShader*		GeometryShader;
-	typedef ID3D11HullShader*			HullShader;
-	typedef ID3D11DomainShader*			DomainShader;
-	typedef ID3D11ComputeShader*		ComputeShader;
-	typedef ID3D11InputLayout*			VertexLayout;
-	typedef D3D11_INPUT_ELEMENT_DESC    VertexLayoutDesc;
-	typedef ID3D11BlendState*			BlendState;
-	typedef ID3D11DepthStencilState*	DepthStencilState;
-	typedef ID3D11RasterizerState*		RasterizerState;
-
-
-	enum PRIMITIVETOPOLOGY{
-		TRIANGLELIST,
-		TRIANGLESTRIP,
-		POINTLIST,
-		LINELIST,
-		PATCHLIST,
-	};
-
-	struct VertexShaderInfo{
-		VertexShader vertexShader;
-		VertexLayout vertexLayout;
-
-		VertexShaderInfo(){
-			vertexShader = nullptr;
-			vertexLayout = VertexLayout();
-		}
-	};
 
 	static D3D_DRIVER_TYPE				driverType;
 	static D3D_FEATURE_LEVEL			featureLevel;
@@ -313,23 +269,23 @@ protected:
 
 
 	static bool						wireRender, debugSpheres, debugBoneLines, debugBoxes;
-	static ID3D11BlendState*		blendState, *blendStateTransparent, *blendStateAdd;
-	static ID3D11Buffer*			constantBuffer, *staticCb, *shCb, *pixelCB, *matCb, *lightCb[3], *tessBuf
-		, *lineBuffer, *trailCB, *lightStaticCb, *vLightCb,*cubeShCb,*fxCb,*skyCb,*decalCbVS,*decalCbPS,*viewPropCB;
-	static ID3D11VertexShader*		vertexShader10, *vertexShader,*shVS,*lineVS,*trailVS,*waterVS
-		,*lightVS[3],*vSpotLightVS,*vPointLightVS,*cubeShVS,*sOVS,*decalVS;
-	static ID3D11PixelShader*		pixelShader,*shPS,*linePS,*trailPS,*simplestPS,*blackoutPS,*textureonlyPS,*waterPS,*transparentPS
-		,*lightPS[3],*vLightPS,*cubeShPS,*decalPS,*fowardSimplePS;
-	static ID3D11GeometryShader* cubeShGS,*sOGS;
-	static ID3D11HullShader*		hullShader;
-	static ID3D11DomainShader*		domainShader;
-	static ID3D11InputLayout*       vertexLayout, *lineIL, *trailIL, *sOIL;
-	static ID3D11SamplerState*		texSampler, *mapSampler, *comparisonSampler, *mirSampler, *pointSampler;
-	static ID3D11RasterizerState*	rasterizerState,*rssh,*nonCullRSsh,*wireRS,*nonCullRS,*nonCullWireRS,*backFaceRS;
-	static ID3D11DepthStencilState* depthStencilState,*xRayStencilState,*depthReadStencilState,*stencilReadState,*stencilReadMatch;
-	static ID3D11PixelShader*		skyPS;
-	static ID3D11VertexShader*		skyVS;
-	static ID3D11SamplerState*		skySampler;
+	static BlendState		blendState, blendStateTransparent, blendStateAdd;
+	static BufferResource			constantBuffer, staticCb, shCb, pixelCB, matCb, lightCb[3], tessBuf
+		, lineBuffer, trailCB, lightStaticCb, vLightCb,cubeShCb,fxCb,skyCb,decalCbVS,decalCbPS,viewPropCB;
+	static VertexShader		vertexShader10, vertexShader,shVS,lineVS,trailVS,waterVS
+		,lightVS[3],vSpotLightVS,vPointLightVS,cubeShVS,sOVS,decalVS;
+	static PixelShader		pixelShader,shPS,linePS,trailPS,simplestPS,blackoutPS,textureonlyPS,waterPS,transparentPS
+		,lightPS[3],vLightPS,cubeShPS,decalPS,fowardSimplePS;
+	static GeometryShader cubeShGS,sOGS;
+	static HullShader		hullShader;
+	static DomainShader		domainShader;
+	static VertexLayout       vertexLayout, lineIL, trailIL, sOIL;
+	static Sampler		texSampler, mapSampler, comparisonSampler, mirSampler, pointSampler;
+	static RasterizerState	rasterizerState,rssh,nonCullRSsh,wireRS,nonCullRS,nonCullWireRS,backFaceRS;
+	static DepthStencilState depthStencilState,xRayStencilState,depthReadStencilState,stencilReadState,stencilReadMatch;
+	static PixelShader		skyPS;
+	static VertexShader		skyVS;
+	static Sampler		skySampler;
 	static TextureView noiseTex,trailDistortTex,enviroMap,colorGrading;
 	static void LoadBuffers();
 	static void LoadBasicShaders();
@@ -366,16 +322,16 @@ public:
 	static void CleanUpStatic();
 	
 	static void Update(float amount = GetGameSpeed());
-	static void UpdateRenderInfo(ID3D11DeviceContext* context);
+	static void UpdateRenderInfo(DeviceContext context);
 	static void UpdateObjects();
 	static void UpdateSoftBodyPinning();
-	static void UpdateSkinnedVB(ID3D11DeviceContext* context);
+	static void UpdateSkinnedVB(DeviceContext context);
 	static void UpdateSPTree(wiSPTree*& tree);
 	static void UpdateImages();
 	static void ManageImages();
 	static void PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane);
 	static void ManageWaterRipples();
-	static void DrawWaterRipples(ID3D11DeviceContext* context);
+	static void DrawWaterRipples(DeviceContext context);
 	static void SetGameSpeed(float value){GameSpeed=value; if(GameSpeed<0) GameSpeed=0;};
 	static float GetGameSpeed();
 	static void ChangeRasterizer(){wireRender=!wireRender;};
@@ -410,653 +366,305 @@ public:
 	static Vertex TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat = XMMatrixIdentity());
 	static XMFLOAT3 VertexVelocity(const Mesh* mesh, const int& vertexI);
 	
-private:
-	static vector<TextureView> textureSlotsPS;
-	static PixelShader boundPS;
 public:
-	inline static void BindTexturePS(TextureView texture, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && texture!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView t;
-			context->PSGetShaderResources(slot,1,&t);
-			if(t!=texture)
-		#endif
-				context->PSSetShaderResources(slot,1,&texture);
-		#ifdef API_CALL_STRICTNESS
-			if(t!=nullptr)
-				t->Release();
-		#endif
+	inline static void BindTexturePS(TextureView texture, int slot, DeviceContext context = immediateContext) {
+	if (context != nullptr && texture != nullptr) {
+		context->PSSetShaderResources(slot, 1, &texture);
+	}
+}
+	inline static void BindTexturesPS(TextureView textures[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && textures != nullptr) {
+			context->PSSetShaderResources(slot, num, textures);
 		}
 	}
-	inline static void BindTexturesPS(TextureView textures[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && textures!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView *t = new TextureView[num];
-			context->PSGetShaderResources(slot,num,t);
-			if(t[0]!=textures[0])
-		#endif
-				context->PSSetShaderResources(slot,num,textures);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(t[i]!=nullptr)
-					t[i]->Release();
-		#endif
+	inline static void BindTextureVS(TextureView texture, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && texture != nullptr) {
+			context->VSSetShaderResources(slot, 1, &texture);
 		}
 	}
-	inline static void BindTextureVS(TextureView texture, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && texture!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView t;
-			context->VSGetShaderResources(slot,1,&t);
-			if(t!=texture)
-		#endif
-				context->VSSetShaderResources(slot,1,&texture);
-		#ifdef API_CALL_STRICTNESS
-			if(t!=nullptr)
-				t->Release();
-		#endif
+	inline static void BindTexturesVS(TextureView textures[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && textures != nullptr) {
+			context->VSSetShaderResources(slot, num, textures);
 		}
 	}
-	inline static void BindTexturesVS(TextureView textures[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && textures!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView *t = new TextureView[num];
-			context->VSGetShaderResources(slot,num,t);
-			if(t[0]!=textures[0])
-		#endif
-				context->VSSetShaderResources(slot,num,textures);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(t[i]!=nullptr)
-					t[i]->Release();
-		#endif
+	inline static void BindTextureGS(TextureView texture, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && texture != nullptr) {
+			context->GSSetShaderResources(slot, 1, &texture);
 		}
 	}
-	inline static void BindTextureGS(TextureView texture, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && texture!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView t;
-			context->GSGetShaderResources(slot,1,&t);
-			if(t!=texture)
-		#endif
-				context->GSSetShaderResources(slot,1,&texture);
-		#ifdef API_CALL_STRICTNESS
-			if(t!=nullptr)
-				t->Release();
-		#endif
+	inline static void BindTexturesGS(TextureView textures[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && textures != nullptr) {
+			context->GSSetShaderResources(slot, num, textures);
 		}
 	}
-	inline static void BindTexturesGS(TextureView textures[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && textures!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView *t = new TextureView[num];
-			context->GSGetShaderResources(slot,num,t);
-			if(t[0]!=textures[0])
-		#endif
-				context->GSSetShaderResources(slot,num,textures);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(t[i]!=nullptr)
-					t[i]->Release();
-		#endif
+	inline static void BindTextureDS(TextureView texture, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && texture != nullptr) {
+			context->DSSetShaderResources(slot, 1, &texture);
 		}
 	}
-	inline static void BindTextureDS(TextureView texture, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && texture!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView t;
-			context->DSGetShaderResources(slot,1,&t);
-			if(t!=texture)
-		#endif
-				context->DSSetShaderResources(slot,1,&texture);
-		#ifdef API_CALL_STRICTNESS
-			if(t!=nullptr)
-				t->Release();
-		#endif
+	inline static void BindTexturesDS(TextureView textures[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && textures != nullptr) {
+			context->DSSetShaderResources(slot, num, textures);
 		}
 	}
-	inline static void BindTexturesDS(TextureView textures[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && textures!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView *t = new TextureView[num];
-			context->DSGetShaderResources(slot,num,t);
-			if(t[0]!=textures[0])
-		#endif
-				context->DSSetShaderResources(slot,num,textures);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(t[i]!=nullptr)
-					t[i]->Release();
-		#endif
+	inline static void BindTextureHS(TextureView texture, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && texture != nullptr) {
+			context->HSSetShaderResources(slot, 1, &texture);
 		}
 	}
-	inline static void BindTextureHS(TextureView texture, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && texture!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView t;
-			context->HSGetShaderResources(slot,1,&t);
-			if(t!=texture)
-		#endif
-				context->HSSetShaderResources(slot,1,&texture);
-		#ifdef API_CALL_STRICTNESS
-			if(t!=nullptr)
-				t->Release();
-		#endif
+	inline static void BindTexturesHS(TextureView textures[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && textures != nullptr) {
+			context->HSSetShaderResources(slot, num, textures);
 		}
 	}
-	inline static void BindTexturesHS(TextureView textures[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && textures!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			TextureView *t = new TextureView[num];
-			context->HSGetShaderResources(slot,num,t);
-			if(t[0]!=textures[0])
-		#endif
-				context->HSSetShaderResources(slot,num,textures);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(t[i]!=nullptr)
-					t[i]->Release();
-		#endif
+	inline static void BindSamplerPS(Sampler sampler, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && sampler != nullptr) {
+			context->PSSetSamplers(slot, 1, &sampler);
 		}
 	}
-	inline static void BindSamplerPS(Sampler sampler, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && sampler!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler s;
-			context->PSGetSamplers(slot,1,&s);
-			if(s!=sampler)
-		#endif
-				context->PSSetSamplers(slot,1,&sampler);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr)
-				s->Release();
-		#endif
+	inline static void BindSamplersPS(Sampler samplers[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && samplers != nullptr) {
+			context->PSSetSamplers(slot, num, samplers);
 		}
 	}
-	inline static void BindSamplersPS(Sampler samplers[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && samplers!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler *s = new Sampler[num];
-			context->PSGetSamplers(slot,num,s);
-			if(s[0]!=samplers[0])
-		#endif
-				context->PSSetSamplers(slot,num,samplers);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(s[i]!=nullptr)
-					s[i]->Release();
-		#endif
+	inline static void BindSamplerVS(Sampler sampler, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && sampler != nullptr) {
+			context->VSSetSamplers(slot, 1, &sampler);
 		}
 	}
-	inline static void BindSamplerVS(Sampler sampler, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && sampler!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler s;
-			context->VSGetSamplers(slot,1,&s);
-			if(s!=sampler)
-		#endif
-				context->VSSetSamplers(slot,1,&sampler);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr)
-				s->Release();
-		#endif
+	inline static void BindSamplersVS(Sampler samplers[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && samplers != nullptr) {
+			context->VSSetSamplers(slot, num, samplers);
 		}
 	}
-	inline static void BindSamplersVS(Sampler samplers[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && samplers!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler *s = new Sampler[num];
-			context->VSGetSamplers(slot,num,s);
-			if(s[0]!=samplers[0])
-		#endif
-				context->VSSetSamplers(slot,num,samplers);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(s[i]!=nullptr)
-					s[i]->Release();
-		#endif
+	inline static void BindSamplerGS(Sampler sampler, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && sampler != nullptr) {
+			context->GSSetSamplers(slot, 1, &sampler);
 		}
 	}
-	inline static void BindSamplerGS(Sampler sampler, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && sampler!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler s;
-			context->GSGetSamplers(slot,1,&s);
-			if(s!=sampler)
-		#endif
-				context->GSSetSamplers(slot,1,&sampler);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr)
-				s->Release();
-		#endif
+	inline static void BindSamplersGS(Sampler samplers[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && samplers != nullptr) {
+			context->GSSetSamplers(slot, num, samplers);
 		}
 	}
-	inline static void BindSamplersGS(Sampler samplers[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && samplers!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler *s = new Sampler[num];
-			context->GSGetSamplers(slot,num,s);
-			if(s[0]!=samplers[0])
-		#endif
-				context->GSSetSamplers(slot,num,samplers);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(s[i]!=nullptr)
-					s[i]->Release();
-		#endif
+	inline static void BindSamplerHS(Sampler sampler, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && sampler != nullptr) {
+			context->HSSetSamplers(slot, 1, &sampler);
 		}
 	}
-	inline static void BindSamplerHS(Sampler sampler, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && sampler!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler s;
-			context->HSGetSamplers(slot,1,&s);
-			if(s!=sampler)
-		#endif
-				context->HSSetSamplers(slot,1,&sampler);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr)
-				s->Release();
-		#endif
+	inline static void BindSamplersHS(Sampler samplers[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && samplers != nullptr) {
+			context->HSSetSamplers(slot, num, samplers);
 		}
 	}
-	inline static void BindSamplersHS(Sampler samplers[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && samplers!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler *s = new Sampler[num];
-			context->HSGetSamplers(slot,num,s);
-			if(s[0]!=samplers[0])
-		#endif
-				context->HSSetSamplers(slot,num,samplers);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(s[i]!=nullptr)
-					s[i]->Release();
-		#endif
+	inline static void BindSamplerDS(Sampler sampler, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr && sampler != nullptr) {
+			context->DSSetSamplers(slot, 1, &sampler);
 		}
 	}
-	inline static void BindSamplerDS(Sampler sampler, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr && sampler!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler s;
-			context->DSGetSamplers(slot,1,&s);
-			if(s!=sampler)
-		#endif
-				context->DSSetSamplers(slot,1,&sampler);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr)
-				s->Release();
-		#endif
+	inline static void BindSamplersDS(Sampler samplers[], int slot, int num, DeviceContext context = immediateContext) {
+		if (context != nullptr && samplers != nullptr) {
+			context->DSSetSamplers(slot, num, samplers);
 		}
 	}
-	inline static void BindSamplersDS(Sampler samplers[], int slot, int num, DeviceContext context=immediateContext){
-		if(context!=nullptr && samplers!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			Sampler *s = new Sampler[num];
-			context->DSGetSamplers(slot,num,s);
-			if(s[0]!=samplers[0])
-		#endif
-				context->DSSetSamplers(slot,num,samplers);
-		#ifdef API_CALL_STRICTNESS
-			for(int i=0;i<num;++i)
-				if(s[i]!=nullptr)
-					s[i]->Release();
-		#endif
+	inline static void BindConstantBufferPS(BufferResource buffer, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->PSSetConstantBuffers(slot, 1, &buffer);
 		}
 	}
-	inline static void BindConstantBufferPS(BufferResource buffer, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			BufferResource b;
-			context->PSGetConstantBuffers(slot,1,&b);
-			if(b!=buffer)
-		#endif
-				context->PSSetConstantBuffers(slot,1,&buffer);
-		#ifdef API_CALL_STRICTNESS
-			if(b!=nullptr)
-				b->Release();
-		#endif
+	inline static void BindConstantBufferVS(BufferResource buffer, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->VSSetConstantBuffers(slot, 1, &buffer);
+
 		}
 	}
-	inline static void BindConstantBufferVS(BufferResource buffer, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			BufferResource b;
-			context->VSGetConstantBuffers(slot,1,&b);
-			if(b!=buffer)
-		#endif
-				context->VSSetConstantBuffers(slot,1,&buffer);
-		#ifdef API_CALL_STRICTNESS
-			if(b!=nullptr)
-				b->Release();
-		#endif
+	inline static void BindConstantBufferGS(BufferResource buffer, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->GSSetConstantBuffers(slot, 1, &buffer);
 		}
 	}
-	inline static void BindConstantBufferGS(BufferResource buffer, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			BufferResource b;
-			context->GSGetConstantBuffers(slot,1,&b);
-			if(b!=buffer)
-		#endif
-				context->GSSetConstantBuffers(slot,1,&buffer);
-		#ifdef API_CALL_STRICTNESS
-			if(b!=nullptr)
-				b->Release();
-		#endif
+	inline static void BindConstantBufferDS(BufferResource buffer, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+
+			context->DSSetConstantBuffers(slot, 1, &buffer);
 		}
 	}
-	inline static void BindConstantBufferDS(BufferResource buffer, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			BufferResource b;
-			context->DSGetConstantBuffers(slot,1,&b);
-			if(b!=buffer)
-		#endif
-				context->DSSetConstantBuffers(slot,1,&buffer);
-		#ifdef API_CALL_STRICTNESS
-			if(b!=nullptr)
-				b->Release();
-		#endif
+	inline static void BindConstantBufferHS(BufferResource buffer, int slot, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->HSSetConstantBuffers(slot, 1, &buffer);
 		}
 	}
-	inline static void BindConstantBufferHS(BufferResource buffer, int slot, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			BufferResource b;
-			context->HSGetConstantBuffers(slot,1,&b);
-			if(b!=buffer)
-		#endif
-				context->HSSetConstantBuffers(slot,1,&buffer);
-		#ifdef API_CALL_STRICTNESS
-			if(b!=nullptr)
-				b->Release();
-		#endif
-		}
-	}
-	inline static void BindVertexBuffer(BufferResource vertexBuffer, int slot, UINT stride, DeviceContext context=immediateContext){
-		if(context!=nullptr){
+	inline static void BindVertexBuffer(BufferResource vertexBuffer, int slot, UINT stride, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
 			UINT offset = 0;
-			context->IASetVertexBuffers(slot,1,&vertexBuffer,&stride,&offset);
+			context->IASetVertexBuffers(slot, 1, &vertexBuffer, &stride, &offset);
 		}
 	}
-	inline static void BindIndexBuffer(BufferResource indexBuffer, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-			context->IASetIndexBuffer(indexBuffer,DXGI_FORMAT_R32_UINT,0);
+	inline static void BindIndexBuffer(BufferResource indexBuffer, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 		}
 	}
-	inline static void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-			D3D11_PRIMITIVE_TOPOLOGY topo = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			switch (type)
-			{
-			case wiRenderer::TRIANGLELIST:
-				topo=D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-				break;
-			case wiRenderer::TRIANGLESTRIP:
-				topo=D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-				break;
-			case wiRenderer::POINTLIST:
-				topo=D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-				break;
-			case wiRenderer::LINELIST:
-				topo=D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-				break;
-			case wiRenderer::PATCHLIST:
-				topo=D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-				break;
-			default:
-				break;
-			}
-		#ifdef API_CALL_STRICTNESS
-			D3D11_PRIMITIVE_TOPOLOGY p;
-			context->IAGetPrimitiveTopology(&p);
-			if(p!=topo)
-		#endif
-				context->IASetPrimitiveTopology(topo);
+	inline static void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)type);
 		}
 	}
-	inline static void BindVertexLayout(VertexLayout layout, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			VertexLayout v;
-			context->IAGetInputLayout(&v);
-			if(v!=layout)
-		#endif
-				context->IASetInputLayout(layout);
-		#ifdef API_CALL_STRICTNESS
-			if(v!=nullptr) v->Release();
-		#endif
+	inline static void BindVertexLayout(VertexLayout layout, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->IASetInputLayout(layout);
 		}
 	}
-	inline static void BindBlendState(BlendState state, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			BlendState b;
-			context->OMGetBlendState(&b,nullptr,nullptr);
-			if(b!=state){
-		#endif
-				static float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-				static UINT sampleMask   = 0xffffffff;
-				context->OMSetBlendState(state,blendFactor,sampleMask);
-		#ifdef API_CALL_STRICTNESS
-			}
-			if(b!=nullptr) b->Release();
-		#endif
+	inline static void BindBlendState(BlendState state, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			static float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			static UINT sampleMask = 0xffffffff;
+			context->OMSetBlendState(state, blendFactor, sampleMask);
 		}
 	}
-	inline static void BindBlendStateEx(BlendState state, const XMFLOAT4& blendFactor = XMFLOAT4(1,1,1,1), UINT sampleMask = 0xffffffff,
+	inline static void BindBlendStateEx(BlendState state, const XMFLOAT4& blendFactor = XMFLOAT4(1, 1, 1, 1), UINT sampleMask = 0xffffffff,
 		DeviceContext context = immediateContext) {
 		if (context != nullptr) {
-#ifdef API_CALL_STRICTNESS
-			BlendState b;
-			context->OMGetBlendState(&b, nullptr, nullptr);
-			if (b != state) {
-#endif
-				float fblendFactor[4] = { blendFactor.x, blendFactor.y, blendFactor.z, blendFactor.w };
-				context->OMSetBlendState(state, fblendFactor, sampleMask);
-#ifdef API_CALL_STRICTNESS
-		}
-			if (b != nullptr) b->Release();
-#endif
-	}
-	}
-	inline static void BindDepthStencilState(DepthStencilState state, UINT stencilRef, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			DepthStencilState b;
-			UINT s;
-			context->OMGetDepthStencilState(&b,&s);
-			if(b!=state || s!=stencilRef){
-		#endif
-				context->OMSetDepthStencilState(state,stencilRef);
-		#ifdef API_CALL_STRICTNESS
-			}
-			if(b!=nullptr) b->Release();
-		#endif
+			float fblendFactor[4] = { blendFactor.x, blendFactor.y, blendFactor.z, blendFactor.w };
 		}
 	}
-	inline static void BindRasterizerState(RasterizerState state, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			RasterizerState b;
-			context->RSGetState(&b);
-			if(b!=state){
-		#endif
-				context->RSSetState(state);
-		#ifdef API_CALL_STRICTNESS
-			}
-			if(b!=nullptr) b->Release();
-		#endif
+	inline static void BindDepthStencilState(DepthStencilState state, UINT stencilRef, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->OMSetDepthStencilState(state, stencilRef);
 		}
 	}
-	inline static void BindStreamOutTarget(BufferResource buffer, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-			UINT offsetSO[1] = {0};
-			context->SOSetTargets(1,&buffer,offsetSO);
+	inline static void BindRasterizerState(RasterizerState state, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->RSSetState(state);
 		}
 	}
-	inline static void BindPS(PixelShader shader, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			PixelShader s;
-			context->PSGetShader(&s,nullptr,0);
-			if(s!=shader)
-		#endif
-				context->PSSetShader(shader, nullptr, 0);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr) s->Release();
-		#endif
+	inline static void BindStreamOutTarget(BufferResource buffer, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			UINT offsetSO[1] = { 0 };
+			context->SOSetTargets(1, &buffer, offsetSO);
 		}
 	}
-	inline static void BindVS(VertexShader shader, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			VertexShader s;
-			context->VSGetShader(&s,nullptr,0);
-			if(s!=shader)
-		#endif
-				context->VSSetShader(shader, nullptr, 0);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr) s->Release();
-		#endif
+	inline static void BindPS(PixelShader shader, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->PSSetShader(shader, nullptr, 0);
 		}
 	}
-	inline static void BindGS(GeometryShader shader, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			GeometryShader s;
-			context->GSGetShader(&s,nullptr,0);
-			if(s!=shader)
-		#endif
-				context->GSSetShader(shader, nullptr, 0);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr) s->Release();
-		#endif
+	inline static void BindVS(VertexShader shader, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->VSSetShader(shader, nullptr, 0);
 		}
 	}
-	inline static void BindHS(HullShader shader, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			HullShader s;
-			context->HSGetShader(&s,nullptr,0);
-			if(s!=shader)
-		#endif
-				context->HSSetShader(shader, nullptr, 0);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr) s->Release();
-		#endif
+	inline static void BindGS(GeometryShader shader, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->GSSetShader(shader, nullptr, 0);
 		}
 	}
-	inline static void BindDS(DomainShader shader, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-		#ifdef API_CALL_STRICTNESS
-			DomainShader s;
-			context->DSGetShader(&s,nullptr,0);
-			if(s!=shader)
-		#endif
-				context->DSSetShader(shader, nullptr, 0);
-		#ifdef API_CALL_STRICTNESS
-			if(s!=nullptr) s->Release();
-		#endif
+	inline static void BindHS(HullShader shader, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->HSSetShader(shader, nullptr, 0);
 		}
 	}
-	inline static void Draw(int vertexCount, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-			context->Draw(vertexCount,0);
+	inline static void BindDS(DomainShader shader, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->DSSetShader(shader, nullptr, 0);
+		}
+	}
+	inline static void Draw(int vertexCount, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->Draw(vertexCount, 0);
 			++drawCalls[context];
 		}
 	}
-	inline static void DrawIndexed(int indexCount, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-			context->DrawIndexed(indexCount,0,0);
+	inline static void DrawIndexed(int indexCount, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->DrawIndexed(indexCount, 0, 0);
 			++drawCalls[context];
 		}
 	}
-	inline static void DrawIndexedInstanced(int indexCount, int instanceCount, DeviceContext context=immediateContext){
-		if(context!=nullptr){
-			context->DrawIndexedInstanced(indexCount,instanceCount,0,0,0);
+	inline static void DrawIndexedInstanced(int indexCount, int instanceCount, DeviceContext context = immediateContext) {
+		if (context != nullptr) {
+			context->DrawIndexedInstanced(indexCount, instanceCount, 0, 0, 0);
 			++drawCalls[context];
 		}
 	}
 	//<value>Comment: specify dataSize param if you are uploading multiple instances of data (eg. sizeof(Vertex)*vertices.count())
 	template<typename T>
-	inline static void ResizeBuffer(BufferResource& buffer, int dataCount){
-		if(buffer!=nullptr){
-			D3D11_BUFFER_DESC desc;
+	inline static void ResizeBuffer(BufferResource& buffer, int dataCount) {
+		if (buffer != nullptr) {
+			static thread_local D3D11_BUFFER_DESC desc;
 			buffer->GetDesc(&desc);
 			int dataSize = sizeof(T)*dataCount;
-			if((int)desc.ByteWidth<dataSize){
+			if ((int)desc.ByteWidth<dataSize) {
 				buffer->Release();
-				desc.ByteWidth=dataSize;
-				graphicsDevice->CreateBuffer( &desc, nullptr, &buffer );
+				desc.ByteWidth = dataSize;
+				graphicsDevice->CreateBuffer(&desc, nullptr, &buffer);
 			}
 		}
 	}
 	template<typename T>
-	inline static void UpdateBuffer(BufferResource& buffer, const T* data,DeviceContext context=immediateContext, int dataSize = -1)
+	inline static void UpdateBuffer(BufferResource& buffer, const T* data, DeviceContext context = immediateContext, int dataSize = -1)
 	{
-		if(buffer != nullptr && data!=nullptr && context != nullptr){
-			static D3D11_BUFFER_DESC desc;
+		if (buffer != nullptr && data != nullptr && context != nullptr) {
+			static thread_local D3D11_BUFFER_DESC desc;
 			buffer->GetDesc(&desc);
-			static HRESULT hr;
-			if (dataSize>(int)desc.ByteWidth){ //recreate the buffer if new datasize exceeds buffer size [SLOW][TEST!!!!]
+			HRESULT hr;
+			if (dataSize>(int)desc.ByteWidth) { //recreate the buffer if new datasize exceeds buffer size
 				buffer->Release();
 				desc.ByteWidth = dataSize * 2;
 				hr = graphicsDevice->CreateBuffer(&desc, nullptr, &buffer);
 			}
-			if(desc.Usage == D3D11_USAGE_DYNAMIC){
-				static D3D11_MAPPED_SUBRESOURCE mappedResource;
+			if (desc.Usage == D3D11_USAGE_DYNAMIC) {
+				static thread_local D3D11_MAPPED_SUBRESOURCE mappedResource;
 				void* dataPtr;
-				context->Map(buffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+				context->Map(buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 				dataPtr = (void*)mappedResource.pData;
-				memcpy(dataPtr,data,(dataSize>=0?dataSize:desc.ByteWidth));
-				context->Unmap(buffer,0);
+				memcpy(dataPtr, data, (dataSize >= 0 ? dataSize : desc.ByteWidth));
+				context->Unmap(buffer, 0);
 			}
-			else{
-				context->UpdateSubresource( buffer, 0, nullptr, data, 0, 0 );
+			else {
+				context->UpdateSubresource(buffer, 0, nullptr, data, 0, 0);
 			}
 		}
 	}
 	template<typename T>
-	inline static void SafeRelease(T& resource){
-		if(resource != nullptr){
-			resource->Release();
-			resource=nullptr;
-		}
-	}
+	inline static void SafeRelease(T& resource) {
+		   if (resource != nullptr) {
+			   resource->Release();
+			   resource = nullptr;
+		   }
+	   }
 
-	static void UpdatePerWorldCB(ID3D11DeviceContext* context);
-	static void UpdatePerFrameCB(ID3D11DeviceContext* context);
-	static void UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF);
-	static void UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
-	static void UpdatePerEffectCB(ID3D11DeviceContext* context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
+	static void UpdatePerWorldCB(DeviceContext context);
+	static void UpdatePerFrameCB(DeviceContext context);
+	static void UpdatePerRenderCB(DeviceContext context, int tessF);
+	static void UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
+	static void UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
 
 	
-	static void DrawSky(ID3D11DeviceContext* context);
-	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11DeviceContext* context
-		, bool BlackOut, SHADERTYPE shaded, ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread);
-	static void DrawForSO(ID3D11DeviceContext* context);
-	static void ClearShadowMaps(ID3D11DeviceContext* context);
-	static void DrawForShadowMap(ID3D11DeviceContext* context);
-	static void DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-		, ID3D11ShaderResourceView* waterRippleNormals, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context);
-	void DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context);
-	static void DrawDebugBoneLines(Camera* camera, ID3D11DeviceContext* context);
-	static void DrawDebugLines(Camera* camera, ID3D11DeviceContext* context);
-	static void DrawDebugBoxes(Camera* camera, ID3D11DeviceContext* context);
-	static void DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark = false);
-	static void DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark = false);
-	static void DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
-	static void DrawImagesAdd(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
+	static void DrawSky(DeviceContext context);
+	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
+		, bool BlackOut, SHADERTYPE shaded, TextureView refRes, bool grass, GRAPHICSTHREAD thread);
+	static void DrawForSO(DeviceContext context);
+	static void ClearShadowMaps(DeviceContext context);
+	static void DrawForShadowMap(DeviceContext context);
+	static void DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
+		, TextureView waterRippleNormals, TextureView depth, DeviceContext context);
+	void DrawDebugSpheres(Camera* camera, DeviceContext context);
+	static void DrawDebugBoneLines(Camera* camera, DeviceContext context);
+	static void DrawDebugLines(Camera* camera, DeviceContext context);
+	static void DrawDebugBoxes(Camera* camera, DeviceContext context);
+	static void DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark = false);
+	static void DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark = false);
+	static void DrawTrails(DeviceContext context, TextureView refracRes);
+	static void DrawImagesAdd(DeviceContext context, TextureView refracRes);
 	//alpha-opaque
-	static void DrawImages(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
-	static void DrawImagesNormals(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes);
-	static void DrawLights(Camera* camera, ID3D11DeviceContext* context
-		, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* normal, ID3D11ShaderResourceView* material
+	static void DrawImages(DeviceContext context, TextureView refracRes);
+	static void DrawImagesNormals(DeviceContext context, TextureView refracRes);
+	static void DrawLights(Camera* camera, DeviceContext context
+		, TextureView depth, TextureView normal, TextureView material
 		, unsigned int stencilRef = 2);
-	static void DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context);
-	static void DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth);
+	static void DrawVolumeLights(Camera* camera, DeviceContext context);
+	static void DrawLensFlares(DeviceContext context, TextureView depth);
 	static void DrawDecals(Camera* camera, DeviceContext context, TextureView depth);
 	
 	static XMVECTOR GetSunPosition();

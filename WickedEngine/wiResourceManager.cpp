@@ -55,7 +55,7 @@ const wiResourceManager::Resource* wiResourceManager::get(const string& name)
 }
 
 void* wiResourceManager::add(const string& name, Data_Type newType
-	, wiRenderer::VertexLayoutDesc* vertexLayoutDesc, UINT elementCount, D3D11_SO_DECLARATION_ENTRY* streamOutDecl)
+	, VertexLayoutDesc* vertexLayoutDesc, UINT elementCount, StreamOutDeclaration* streamOutDecl)
 {
 	if (types.empty())
 		SetUp();
@@ -82,7 +82,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 		switch(type){
 		case Data_Type::IMAGE:
 		{
-			wiRenderer::TextureView image=nullptr;
+			TextureView image=nullptr;
 			if(
 					!ext.compare("jpg")
 				|| !ext.compare("JPG")
@@ -104,7 +104,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 		break;
 		case Data_Type::IMAGE_STAGING:
 		{
-			wiRenderer::APIResource image=nullptr;
+			APIResource image=nullptr;
 			if(!ext.compare("dds")){
 				CreateDDSTextureFromFileEx(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),0
 					,D3D11_USAGE_STAGING,0,D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE,0,false
@@ -130,7 +130,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 			BYTE* buffer;
 			size_t bufferSize;
 			if (wiHelper::readByteData(name, &buffer, bufferSize)){
-				wiRenderer::VertexShaderInfo* vertexShaderInfo = new wiRenderer::VertexShaderInfo;
+				VertexShaderInfo* vertexShaderInfo = new VertexShaderInfo;
 				wiRenderer::graphicsDevice->CreateVertexShader(buffer, bufferSize, NULL, &vertexShaderInfo->vertexShader);
 				if (vertexLayoutDesc != nullptr && elementCount > 0){
 					wiRenderer::graphicsDevice->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, &vertexShaderInfo->vertexLayout);
@@ -159,7 +159,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 			BYTE* buffer;
 			size_t bufferSize;
 			if (wiHelper::readByteData(name, &buffer, bufferSize)){
-				wiRenderer::PixelShader shader = nullptr;
+				PixelShader shader = nullptr;
 				wiRenderer::graphicsDevice->CreatePixelShader(buffer, bufferSize, nullptr, &shader);
 				delete[] buffer;
 				success = shader;
@@ -174,7 +174,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 			BYTE* buffer;
 			size_t bufferSize;
 			if (wiHelper::readByteData(name, &buffer, bufferSize)){
-				wiRenderer::GeometryShader shader = nullptr;
+				GeometryShader shader = nullptr;
 				wiRenderer::graphicsDevice->CreateGeometryShader(buffer, bufferSize, nullptr, &shader);
 				if (streamOutDecl != nullptr && elementCount > 0){
 					wiRenderer::graphicsDevice->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
@@ -193,7 +193,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 			BYTE* buffer;
 			size_t bufferSize;
 			if (wiHelper::readByteData(name, &buffer, bufferSize)){
-				wiRenderer::HullShader shader = nullptr;
+				HullShader shader = nullptr;
 				wiRenderer::graphicsDevice->CreateHullShader(buffer, bufferSize, nullptr, &shader);
 				delete[] buffer;
 				success = shader;
@@ -208,7 +208,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 			BYTE* buffer;
 			size_t bufferSize;
 			if (wiHelper::readByteData(name, &buffer, bufferSize)){
-				wiRenderer::DomainShader shader = nullptr;
+				DomainShader shader = nullptr;
 				wiRenderer::graphicsDevice->CreateDomainShader(buffer, bufferSize, nullptr, &shader);
 				delete[] buffer;
 				success = shader;
@@ -255,30 +255,30 @@ bool wiResourceManager::del(const string& name)
 			switch(res->type){
 			case Data_Type::IMAGE:
 			case Data_Type::IMAGE_STAGING:
-				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::TextureView&>(res->data));
+				wiRenderer::SafeRelease(reinterpret_cast<TextureView&>(res->data));
 				break;
 			case Data_Type::VERTEXSHADER:
 				{
-					wiRenderer::VertexShaderInfo* vsinfo = (wiRenderer::VertexShaderInfo*)res->data;
+					VertexShaderInfo* vsinfo = (VertexShaderInfo*)res->data;
 					wiRenderer::SafeRelease(vsinfo->vertexLayout);
 					wiRenderer::SafeRelease(vsinfo->vertexShader);
 					delete vsinfo;
 				}
 				break;
 			case Data_Type::PIXELSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::PixelShader&>(res->data));
+				wiRenderer::SafeRelease(reinterpret_cast<PixelShader&>(res->data));
 				break;
 			case Data_Type::GEOMETRYSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::GeometryShader&>(res->data));
+				wiRenderer::SafeRelease(reinterpret_cast<GeometryShader&>(res->data));
 				break;
 			case Data_Type::HULLSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::HullShader&>(res->data));
+				wiRenderer::SafeRelease(reinterpret_cast<HullShader&>(res->data));
 				break;
 			case Data_Type::DOMAINSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::DomainShader&>(res->data));
+				wiRenderer::SafeRelease(reinterpret_cast<DomainShader&>(res->data));
 				break;
 			case Data_Type::COMPUTESHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<wiRenderer::ComputeShader&>(res->data));
+				wiRenderer::SafeRelease(reinterpret_cast<ComputeShader&>(res->data));
 				break;
 			case Data_Type::SOUND:
 			case Data_Type::MUSIC:

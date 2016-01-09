@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiGraphicsAPI.h"
 
 enum BLENDMODE{
 	BLENDMODE_OPAQUE,
@@ -88,12 +89,12 @@ public:
 	};
 	Processing process;
 	bool deferred;
-	ID3D11ShaderResourceView *normalMap, *depthMap, *velocityMap, *refractionMap, *maskMap;
-	void setMaskMap(ID3D11ShaderResourceView*view) { maskMap = view; }
-	void setRefractionMap(ID3D11ShaderResourceView*view) { refractionMap = view; }
-	void setVelocityMap(ID3D11ShaderResourceView*view) { velocityMap = view; }
-	void setDepthMap(ID3D11ShaderResourceView*view) { depthMap = view; }
-	void setNormalMap(ID3D11ShaderResourceView*view) { normalMap = view; }
+	TextureView normalMap, depthMap, velocityMap, refractionMap, maskMap;
+	void setMaskMap(TextureView view) { maskMap = view; }
+	void setRefractionMap(TextureView view) { refractionMap = view; }
+	void setVelocityMap(TextureView view) { velocityMap = view; }
+	void setDepthMap(TextureView view) { depthMap = view; }
+	void setNormalMap(TextureView view) { normalMap = view; }
 
 	void init() {
 		pos = XMFLOAT3(0, 0, 0);

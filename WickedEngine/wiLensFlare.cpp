@@ -3,15 +3,15 @@
 #include "wiResourceManager.h"
 
 
-ID3D11Buffer* wiLensFlare::constantBuffer;
-ID3D11PixelShader* wiLensFlare::pixelShader;
-ID3D11GeometryShader* wiLensFlare::geometryShader;
-ID3D11VertexShader* wiLensFlare::vertexShader;
-ID3D11InputLayout* wiLensFlare::inputLayout;
-ID3D11SamplerState* wiLensFlare::samplerState;
-ID3D11RasterizerState* wiLensFlare::rasterizerState;
-ID3D11DepthStencilState* wiLensFlare::depthStencilState;
-ID3D11BlendState* wiLensFlare::blendState;
+BufferResource wiLensFlare::constantBuffer;
+PixelShader wiLensFlare::pixelShader;
+GeometryShader wiLensFlare::geometryShader;
+VertexShader wiLensFlare::vertexShader;
+VertexLayout wiLensFlare::inputLayout;
+Sampler wiLensFlare::samplerState;
+RasterizerState wiLensFlare::rasterizerState;
+DepthStencilState wiLensFlare::depthStencilState;
+BlendState wiLensFlare::blendState;
 
 void wiLensFlare::Initialize(){
 	LoadShaders();
@@ -31,17 +31,13 @@ void wiLensFlare::CleanUp(){
 	if(blendState) blendState->Release(); blendState = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
 }
-void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* context, const XMVECTOR& lightPos
-					 , vector<wiRenderer::TextureView>& rims){
+void wiLensFlare::Draw(TextureView depthMap, DeviceContext context, const XMVECTOR& lightPos
+					 , vector<TextureView>& rims){
 
 	if(!rims.empty()){
 
-		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_POINTLIST );
-		wiRenderer::BindPrimitiveTopology(wiRenderer::POINTLIST,context);
+		wiRenderer::BindPrimitiveTopology(POINTLIST,context);
 		wiRenderer::BindVertexLayout(inputLayout,context);
-		//context->IASetInputLayout( inputLayout );
-		//context->VSSetShader( vertexShader, NULL, 0 );
-		//context->GSSetShader( geometryShader, NULL, 0 );
 		wiRenderer::BindPS(pixelShader,context);
 		wiRenderer::BindVS(vertexShader,context);
 		wiRenderer::BindGS(geometryShader,context);
@@ -53,13 +49,6 @@ void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* 
 		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 
 	
-		//context->RSSetState(rasterizerState);
-		//context->OMSetDepthStencilState(depthStencilState, 1);
-		//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		//UINT sampleMask   = 0xffffffff;
-		//context->OMSetBlendState(blendState, blendFactor, sampleMask);
-	
-		//context->GSSetConstantBuffers( 0, 1, &constantBuffer );
 		wiRenderer::BindRasterizerState(rasterizerState,context);
 		wiRenderer::BindDepthStencilState(depthStencilState,1,context);
 		wiRenderer::BindBlendState(blendState,context);
@@ -73,7 +62,7 @@ void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* 
 		wiRenderer::BindSamplerGS(samplerState,0,context);
 
 		int i=0;
-		for(wiRenderer::TextureView x : rims){
+		for(TextureView x : rims){
 			if(x!=nullptr){
 				wiRenderer::BindTexturePS(x,i+1,context);
 				wiRenderer::BindTextureGS(x,i+1,context);
@@ -95,57 +84,22 @@ void wiLensFlare::Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* 
 
 void wiLensFlare::LoadShaders(){
 
-	D3D11_INPUT_ELEMENT_DESC layout[] =
+	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		inputLayout = vsinfo->vertexLayout;
 	}
 
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
-
-
-
-
-	//ID3DBlob* pVSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load lensFlareVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-
- //   // Define the input layout
- //   D3D11_INPUT_ELEMENT_DESC layout[] =
- //   {
-	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
- //   };
-	//UINT numElements = ARRAYSIZE( layout );
-	//
- //   // Create the input layout
-	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
-	//	pVSBlob->GetBufferSize(), &inputLayout );
-
-	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
- //   
-
-	//ID3DBlob* pPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlarePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load lensFlarePS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-
-
-	//ID3DBlob* pGSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/lensFlareGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load lensFlareGS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
-	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 }
 void wiLensFlare::SetUpCB()
 {

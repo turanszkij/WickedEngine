@@ -21,7 +21,7 @@ public:
 	{
 		vector<Point> p;
 		XMFLOAT3 min, max;
-		//ID3D11Buffer* vb;
+		//BufferResource vb;
 		Patch();
 		void add(const Point&);
 		void CleanUp();
@@ -45,15 +45,15 @@ private:
 
 		ALIGN_16
 	};
-	static ID3D11InputLayout* il;
-	static ID3D11VertexShader* vs;
-	static ID3D11PixelShader* ps,*qps;
-	static ID3D11GeometryShader* gs[3],*qgs[2];
-	static ID3D11Buffer* cbgs;
-	static ID3D11DepthStencilState* dss;
-	static ID3D11RasterizerState* rs,*ncrs;
-	static ID3D11SamplerState* ss;
-	static ID3D11BlendState* bs;
+	static VertexLayout il;
+	static VertexShader vs;
+	static PixelShader ps, qps;
+	static GeometryShader gs[3],qgs[2];
+	static BufferResource cbgs;
+	static DepthStencilState dss;
+	static RasterizerState rs,ncrs;
+	static Sampler ss;
+	static BlendState bs;
 	static int LOD[3];
 public:
 	static void LoadShaders();

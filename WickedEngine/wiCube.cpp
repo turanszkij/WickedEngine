@@ -1,8 +1,8 @@
 #include "wiCube.h"
 #include "wiRenderer.h"
 
-ID3D11Buffer* Cube::vertexBuffer;
-ID3D11Buffer* Cube::indexBuffer;
+BufferResource Cube::vertexBuffer;
+BufferResource Cube::indexBuffer;
 
 Cube::Cube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4& color)
 {

@@ -45,9 +45,9 @@ public:
 
 	static bool isActive(){return state==IDLE;}
 
-	static void setBackground(ID3D11ShaderResourceView* texture);
+	static void setBackground(TextureView texture);
 
-	static ID3D11ShaderResourceView* backgroundTex;
+	static TextureView backgroundTex;
 	static wiFont font;
 };
 

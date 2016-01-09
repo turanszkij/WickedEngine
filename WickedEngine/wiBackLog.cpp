@@ -15,7 +15,7 @@ float wiBackLog::pos;
 int wiBackLog::scroll;
 stringstream wiBackLog::inputArea;
 int wiBackLog::historyPos=0;
-ID3D11ShaderResourceView* wiBackLog::backgroundTex = nullptr;
+TextureView wiBackLog::backgroundTex = nullptr;
 wiFont wiBackLog::font;
 
 void wiBackLog::Initialize(){
@@ -144,7 +144,7 @@ void wiBackLog::historyNext(){
 	}
 }
 
-void wiBackLog::setBackground(ID3D11ShaderResourceView* texture)
+void wiBackLog::setBackground(TextureView texture)
 {
 	backgroundTex = texture;
 }

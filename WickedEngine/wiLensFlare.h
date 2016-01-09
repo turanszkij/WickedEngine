@@ -1,19 +1,20 @@
 #ifndef LENSFLARE
 #define LENSFLARE
 #include "CommonInclude.h"
+#include "wiGraphicsAPI.h"
 
 class wiLensFlare
 {
 private:
-	static ID3D11Buffer* constantBuffer;
-	static ID3D11PixelShader* pixelShader;
-	static ID3D11GeometryShader* geometryShader;
-	static ID3D11VertexShader* vertexShader;
-	static ID3D11InputLayout* inputLayout;
-	static ID3D11SamplerState* samplerState;
-	static ID3D11RasterizerState* rasterizerState;
-	static ID3D11DepthStencilState* depthStencilState;
-	static ID3D11BlendState* blendState;
+	static BufferResource constantBuffer;
+	static PixelShader pixelShader;
+	static GeometryShader geometryShader;
+	static VertexShader vertexShader;
+	static VertexLayout inputLayout;
+	static Sampler samplerState;
+	static RasterizerState rasterizerState;
+	static DepthStencilState depthStencilState;
+	static BlendState blendState;
 
 	GFX_STRUCT ConstantBuffer
 	{
@@ -31,8 +32,8 @@ private:
 public:
 	static void Initialize();
 	static void CleanUp();
-	static void Draw(ID3D11ShaderResourceView* depthMap, ID3D11DeviceContext* context, const XMVECTOR& lightPos
-		, vector<ID3D11ShaderResourceView*>& rims);
+	static void Draw(TextureView depthMap, DeviceContext context, const XMVECTOR& lightPos
+		, vector<TextureView>& rims);
 };
 
 #endif

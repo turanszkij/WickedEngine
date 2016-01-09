@@ -78,7 +78,7 @@ void DeferredRenderableComponent::Render(){
 }
 
 
-void DeferredRenderableComponent::RenderScene(wiRenderer::DeviceContext context){
+void DeferredRenderableComponent::RenderScene(DeviceContext context){
 	static const int tessellationQuality = 0;
 
 	wiRenderer::UpdatePerFrameCB(context);

@@ -1,6 +1,7 @@
 #pragma once
 #include "wiImage.h"
 #include "wiImageEffects.h"
+#include "wiGraphicsAPI.h"
 
 class wiResourceManager;
 
@@ -8,7 +9,7 @@ class wiSprite : public wiImage
 {
 private:
 	string texture, mask, normal;
-	ID3D11ShaderResourceView* texturePointer,*normalPointer,*maskPointer;
+	TextureView texturePointer,normalPointer,maskPointer;
 	wiResourceManager* ContentHolder;
 public:
 	wiSprite(wiResourceManager* contentHolder = nullptr);
@@ -21,9 +22,9 @@ public:
 
 	void Update(float);
 	void Update();
-	void Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* context);
+	void Draw(TextureView refracRes, DeviceContext context);
 	void Draw();
-	void DrawNormal(ID3D11DeviceContext* context);
+	void DrawNormal(DeviceContext context);
 
 	string name;
 
@@ -65,7 +66,7 @@ public:
 	};
 	Anim anim;
 	
-	ID3D11ShaderResourceView* getTexture(){return texturePointer;}
-	void setTexture(ID3D11ShaderResourceView* value){texturePointer=value;}
+	TextureView getTexture(){return texturePointer;}
+	void setTexture(TextureView value){texturePointer=value;}
 };
 

@@ -50,16 +50,16 @@ private:
 
 		ALIGN_16
 	};
-	ID3D11Buffer		   *vertexBuffer;
-	static ID3D11InputLayout   *vertexLayout;
-	static ID3D11VertexShader  *vertexShader;
-	static ID3D11PixelShader   *pixelShader,*simplestPS;
-	static ID3D11GeometryShader*geometryShader;
-	static ID3D11Buffer*           constantBuffer;
-	static ID3D11BlendState*		blendStateAlpha,*blendStateAdd;
-	static ID3D11SamplerState*			sampleState;
-	static ID3D11RasterizerState*		rasterizerState,*wireFrameRS;
-	static ID3D11DepthStencilState*	depthStencilState;
+	BufferResource		   vertexBuffer;
+	static VertexLayout   vertexLayout;
+	static VertexShader  vertexShader;
+	static PixelShader   pixelShader,simplestPS;
+	static GeometryShader geometryShader;
+	static BufferResource           constantBuffer;
+	static BlendState		blendStateAlpha,blendStateAdd;
+	static Sampler			sampleState;
+	static RasterizerState		rasterizerState,wireFrameRS;
+	static DepthStencilState	depthStencilState;
 
 public:
 	static void LoadShaders();
@@ -101,12 +101,12 @@ public:
 
 #define DRAW_DEFAULT 0
 #define DRAW_DARK 1
-	void Draw(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
-	void DrawPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
-	void DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG = DRAW_DEFAULT);
+	void Draw(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG = DRAW_DEFAULT);
+	void DrawPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG = DRAW_DEFAULT);
+	void DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG = DRAW_DEFAULT);
 	void CleanUp();
 
-	std::string name;
+	string name;
 	//std::string material;
 	Material* material;
 	Light* light;

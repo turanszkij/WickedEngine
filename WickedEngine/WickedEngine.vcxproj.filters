@@ -1786,6 +1786,9 @@
     <ClInclude Include="wiEnums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="wiGraphicsAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />

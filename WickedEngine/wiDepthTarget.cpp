@@ -19,7 +19,7 @@ wiDepthTarget::~wiDepthTarget()
 
 void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 {
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
+	Texture2DDesc depthBufferDesc;
 	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
 
 	// Set up the description of the depth buffer.
@@ -61,7 +61,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 }
 void wiDepthTarget::InitializeCube(int size)
 {
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
+	Texture2DDesc depthBufferDesc;
 	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
 
 	// Set up the description of the depth buffer.
@@ -104,11 +104,11 @@ void wiDepthTarget::InitializeCube(int size)
 	wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
 }
 
-void wiDepthTarget::Clear(ID3D11DeviceContext* context)
+void wiDepthTarget::Clear(DeviceContext context)
 {
 	context->ClearDepthStencilView( depthTarget, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
-void wiDepthTarget::CopyFrom(const wiDepthTarget& from, ID3D11DeviceContext* context)
+void wiDepthTarget::CopyFrom(const wiDepthTarget& from, DeviceContext context)
 {
 	if(shaderResource) shaderResource->Release();
 	static D3D11_SHADER_RESOURCE_VIEW_DESC desc;

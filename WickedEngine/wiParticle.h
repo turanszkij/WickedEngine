@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiGraphicsAPI.h"
 #define MAX_PARTICLES 10000
 
 

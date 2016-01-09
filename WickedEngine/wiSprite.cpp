@@ -40,15 +40,15 @@ void wiSprite::Init(){
 void wiSprite::CreateReference(const string& newTexture, const string& newMask, const string& newNormal){
 	if(newTexture.length()) {
 		texture = newTexture;
-		texturePointer = (ID3D11ShaderResourceView*)ContentHolder->add(newTexture);
+		texturePointer = (TextureView)ContentHolder->add(newTexture);
 	}
 	if(newMask.length()) {
-		maskPointer = (ID3D11ShaderResourceView*)ContentHolder->add(newMask);
+		maskPointer = (TextureView)ContentHolder->add(newMask);
 		effects.setMaskMap( maskPointer );
 		mask = newMask;
 	}
 	if(newNormal.length()) {
-		normalPointer = (ID3D11ShaderResourceView*)ContentHolder->add(newNormal);
+		normalPointer = (TextureView)ContentHolder->add(newNormal);
 		//effects.setNormalMap( normalPointer );
 		normal = newNormal;
 	}
@@ -59,7 +59,7 @@ void wiSprite::CleanUp(){
 	ContentHolder->del(mask);
 }
 
-void wiSprite::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* context){
+void wiSprite::Draw(TextureView refracRes, DeviceContext context){
 	if(effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE) ){
 		effects.setRefractionMap(refracRes);
 		wiImage::Draw(texturePointer,effects,context);
@@ -68,7 +68,7 @@ void wiSprite::Draw(ID3D11ShaderResourceView* refracRes, ID3D11DeviceContext* co
 void wiSprite::Draw(){
 	wiSprite::Draw(NULL,wiRenderer::getImmediateContext());
 }
-void wiSprite::DrawNormal(ID3D11DeviceContext* context){
+void wiSprite::DrawNormal(DeviceContext context){
 	if(normalPointer && effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){
 		//effects.setRefractionMap(refracRes);
 

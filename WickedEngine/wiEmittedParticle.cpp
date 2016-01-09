@@ -7,15 +7,15 @@
 #include "wiRandom.h"
 
 //ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
-ID3D11InputLayout   *wiEmittedParticle::vertexLayout;
-ID3D11VertexShader  *wiEmittedParticle::vertexShader;
-ID3D11PixelShader   *wiEmittedParticle::pixelShader,*wiEmittedParticle::simplestPS;
-ID3D11GeometryShader*wiEmittedParticle::geometryShader;
-ID3D11Buffer*           wiEmittedParticle::constantBuffer;
-ID3D11BlendState*		wiEmittedParticle::blendStateAlpha,*wiEmittedParticle::blendStateAdd;
-ID3D11SamplerState*			wiEmittedParticle::sampleState;
-ID3D11RasterizerState*		wiEmittedParticle::rasterizerState,*wiEmittedParticle::wireFrameRS;
-ID3D11DepthStencilState*	wiEmittedParticle::depthStencilState;
+VertexLayout	wiEmittedParticle::vertexLayout;
+VertexShader  wiEmittedParticle::vertexShader;
+PixelShader   wiEmittedParticle::pixelShader,wiEmittedParticle::simplestPS;
+GeometryShader		wiEmittedParticle::geometryShader;
+BufferResource           wiEmittedParticle::constantBuffer;
+BlendState		wiEmittedParticle::blendStateAlpha,wiEmittedParticle::blendStateAdd;
+Sampler			wiEmittedParticle::sampleState;
+RasterizerState		wiEmittedParticle::rasterizerState,wiEmittedParticle::wireFrameRS;
+DepthStencilState	wiEmittedParticle::depthStencilState;
 set<wiEmittedParticle*> wiEmittedParticle::systems;
 
 wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
@@ -228,7 +228,7 @@ void wiEmittedParticle::Burst(float num)
 }
 
 
-void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG)
+void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG)
 {
 	if(!points.empty()){
 		
@@ -240,12 +240,7 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, ID3D1
 
 			bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
-			//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_POINTLIST );
-			//context->IASetInputLayout( vertexLayout );
-			//context->VSSetShader( vertexShader, NULL, 0 );
-			//context->GSSetShader( geometryShader, NULL, 0 );
-			//context->PSSetShader( wireRender?simplestPS:pixelShader, NULL, 0 );
-			wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::POINTLIST,context);
+			wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,context);
 			wiRenderer::BindVertexLayout(vertexLayout,context);
 			wiRenderer::BindPS(wireRender?simplestPS:pixelShader,context);
 			wiRenderer::BindVS(vertexShader,context);
@@ -261,57 +256,32 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, ID3D1
 			(*cb).mAdd.y = (FLAG==DRAW_DARK?true:false);
 			(*cb).mMotionBlurAmount = motionBlurAmount;
 		
-			//context->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
 
 			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
-			//ConstantBuffer* dataPtr;
-			//context->Map(constantBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr = (ConstantBuffer*)mappedResource.pData;
-			//memcpy(dataPtr,&cb,sizeof(ConstantBuffer));
-			//context->Unmap(constantBuffer,0);
-	
-			//context->RSSetState(wireRender?wireFrameRS:rasterizerState);
-			//context->OMSetDepthStencilState(depthStencilState, 1);
 			wiRenderer::BindRasterizerState(wireRender?wireFrameRS:rasterizerState,context);
 			wiRenderer::BindDepthStencilState(depthStencilState,1,context);
 	
-			//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			//UINT sampleMask   = 0xffffffff;
-			//context->OMSetBlendState((additive?blendStateAdd:blendStateAlpha), blendFactor, sampleMask);
 			wiRenderer::BindBlendState((additive?blendStateAdd:blendStateAlpha),context);
 
-			//context->GSSetConstantBuffers( 0, 1, &constantBuffer );
-			//context->PSSetSamplers(0, 1, &sampleState);
 			wiRenderer::BindConstantBufferGS(constantBuffer,0,context);
 			wiRenderer::BindSamplerPS(sampleState,0,context);
 
-		
-			//context->UpdateSubresource( vertexBuffer, 0, 0, points.data(), 0, 0 );
-
-
-			//UINT stride = sizeof( Point );
-			//UINT offset = 0;
-			//context->IASetVertexBuffers( 0, 1, &vertexBuffer, &stride, &offset );
 			wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Point),context);
 
 			if(!wireRender && material->texture) wiRenderer::BindTexturePS(material->texture,0,context);
-			//context->Draw( renderPoints.size(),0);
 			wiRenderer::Draw(renderPoints.size(),context);
 
 
-			//context->GSSetShader(0,0,0);
 			wiRenderer::BindGS(nullptr,context);
-			//context->GSSetConstantBuffers(0,0,0);
 			wiRenderer::BindConstantBufferGS(nullptr,0,context);
 		}
 	}
 }
-void wiEmittedParticle::DrawPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
+void wiEmittedParticle::DrawPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG){
 	if(material->premultipliedTexture)
 		Draw(camera,context,depth,FLAG);
 }
-void wiEmittedParticle::DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, int FLAG){
+void wiEmittedParticle::DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG){
 	if(!material->premultipliedTexture)
 		Draw(camera,context,depth,FLAG);
 }
@@ -336,7 +306,7 @@ void wiEmittedParticle::CleanUp()
 
 void wiEmittedParticle::LoadShaders()
 {
-	D3D11_INPUT_ELEMENT_DESC layout[] =
+	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -345,17 +315,17 @@ void wiEmittedParticle::LoadShaders()
 		{ "VELOCITY", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
-	wiRenderer::VertexShaderInfo* vsinfo = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
 		vertexLayout = vsinfo->vertexLayout;
 	}
 
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS.cso", wiResourceManager::PIXELSHADER));
-	simplestPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS.cso", wiResourceManager::PIXELSHADER));
+	simplestPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<wiRenderer::GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 
@@ -377,7 +347,7 @@ void wiEmittedParticle::LoadShaders()
 
 
  //   // Define the input layout
- //   D3D11_INPUT_ELEMENT_DESC layout[] =
+ //   VertexLayoutDesc layout[] =
  //   {
 	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	//	{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },

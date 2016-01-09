@@ -24,47 +24,47 @@
 #pragma region STATICS
 D3D_DRIVER_TYPE						wiRenderer::driverType;
 D3D_FEATURE_LEVEL					wiRenderer::featureLevel;
-wiRenderer::SwapChain					wiRenderer::swapChain;
-wiRenderer::RenderTargetView			wiRenderer::renderTargetView;
-wiRenderer::ViewPort					wiRenderer::viewPort;
-wiRenderer::GraphicsDevice			wiRenderer::graphicsDevice;
-wiRenderer::DeviceContext				wiRenderer::immediateContext;
+SwapChain					wiRenderer::swapChain;
+RenderTargetView			wiRenderer::renderTargetView;
+ViewPort					wiRenderer::viewPort;
+GraphicsDevice			wiRenderer::graphicsDevice;
+DeviceContext				wiRenderer::immediateContext;
 bool wiRenderer::DX11 = false,wiRenderer::VSYNC=true,wiRenderer::DEFERREDCONTEXT_SUPPORT=false;
-wiRenderer::DeviceContext				wiRenderer::deferredContexts[];
-wiRenderer::CommandList				wiRenderer::commandLists[];
+DeviceContext				wiRenderer::deferredContexts[];
+CommandList				wiRenderer::commandLists[];
 mutex								wiRenderer::graphicsMutex;
-wiRenderer::Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ssMirrorLin,wiRenderer::ssMirrorPoi,wiRenderer::ssWrapLin,wiRenderer::ssWrapPoi
+Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ssMirrorLin,wiRenderer::ssMirrorPoi,wiRenderer::ssWrapLin,wiRenderer::ssWrapPoi
 		,wiRenderer::ssClampAni,wiRenderer::ssWrapAni,wiRenderer::ssMirrorAni,wiRenderer::ssComp;
 
-map<wiRenderer::DeviceContext,long> wiRenderer::drawCalls;
+map<DeviceContext,long> wiRenderer::drawCalls;
 
 int wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
-ID3D11BlendState		*wiRenderer::blendState, *wiRenderer::blendStateTransparent, *wiRenderer::blendStateAdd;
-ID3D11Buffer			*wiRenderer::constantBuffer, *wiRenderer::staticCb, *wiRenderer::shCb, *wiRenderer::pixelCB, *wiRenderer::matCb
-	, *wiRenderer::lightCb[3], *wiRenderer::tessBuf, *wiRenderer::lineBuffer, *wiRenderer::skyCb
-	, *wiRenderer::trailCB, *wiRenderer::lightStaticCb, *wiRenderer::vLightCb,*wiRenderer::cubeShCb,*wiRenderer::fxCb
-	, *wiRenderer::decalCbVS, *wiRenderer::decalCbPS, *wiRenderer::viewPropCB;
-ID3D11VertexShader		*wiRenderer::vertexShader10, *wiRenderer::vertexShader, *wiRenderer::shVS, *wiRenderer::lineVS, *wiRenderer::trailVS
-	,*wiRenderer::waterVS,*wiRenderer::lightVS[3],*wiRenderer::vSpotLightVS,*wiRenderer::vPointLightVS,*wiRenderer::cubeShVS,*wiRenderer::sOVS,*wiRenderer::decalVS;
-ID3D11PixelShader		*wiRenderer::pixelShader, *wiRenderer::shPS, *wiRenderer::linePS, *wiRenderer::trailPS, *wiRenderer::simplestPS,*wiRenderer::blackoutPS
-	,*wiRenderer::textureonlyPS,*wiRenderer::waterPS,*wiRenderer::transparentPS,*wiRenderer::lightPS[3],*wiRenderer::vLightPS,*wiRenderer::cubeShPS
-	,*wiRenderer::decalPS,*wiRenderer::fowardSimplePS;
-ID3D11GeometryShader *wiRenderer::cubeShGS,*wiRenderer::sOGS;
-ID3D11HullShader		*wiRenderer::hullShader;
-ID3D11DomainShader		*wiRenderer::domainShader;
-ID3D11InputLayout		*wiRenderer::vertexLayout, *wiRenderer::lineIL,*wiRenderer::trailIL, *wiRenderer::sOIL;
-ID3D11SamplerState		*wiRenderer::texSampler, *wiRenderer::mapSampler, *wiRenderer::comparisonSampler, *wiRenderer::mirSampler,*wiRenderer::pointSampler;
-ID3D11RasterizerState	*wiRenderer::rasterizerState, *wiRenderer::rssh, *wiRenderer::nonCullRSsh, *wiRenderer::wireRS, *wiRenderer::nonCullRS,*wiRenderer::nonCullWireRS
-	,*wiRenderer::backFaceRS;
-ID3D11DepthStencilState	*wiRenderer::depthStencilState,*wiRenderer::xRayStencilState,*wiRenderer::depthReadStencilState,*wiRenderer::stencilReadState
-	,*wiRenderer::stencilReadMatch;
-ID3D11PixelShader		*wiRenderer::skyPS;
-ID3D11VertexShader		*wiRenderer::skyVS;
-ID3D11SamplerState		*wiRenderer::skySampler;
-wiRenderer::TextureView wiRenderer::noiseTex,wiRenderer::trailDistortTex,wiRenderer::enviroMap,wiRenderer::colorGrading;
+BlendState		wiRenderer::blendState, wiRenderer::blendStateTransparent, wiRenderer::blendStateAdd;
+BufferResource			wiRenderer::constantBuffer, wiRenderer::staticCb, wiRenderer::shCb, wiRenderer::pixelCB, wiRenderer::matCb
+	, wiRenderer::lightCb[3], wiRenderer::tessBuf, wiRenderer::lineBuffer, wiRenderer::skyCb
+	, wiRenderer::trailCB, wiRenderer::lightStaticCb, wiRenderer::vLightCb,wiRenderer::cubeShCb,wiRenderer::fxCb
+	, wiRenderer::decalCbVS, wiRenderer::decalCbPS, wiRenderer::viewPropCB;
+VertexShader		wiRenderer::vertexShader10, wiRenderer::vertexShader, wiRenderer::shVS, wiRenderer::lineVS, wiRenderer::trailVS
+	,wiRenderer::waterVS,wiRenderer::lightVS[3],wiRenderer::vSpotLightVS,wiRenderer::vPointLightVS,wiRenderer::cubeShVS,wiRenderer::sOVS,wiRenderer::decalVS;
+PixelShader		wiRenderer::pixelShader, wiRenderer::shPS, wiRenderer::linePS, wiRenderer::trailPS, wiRenderer::simplestPS,wiRenderer::blackoutPS
+	,wiRenderer::textureonlyPS,wiRenderer::waterPS,wiRenderer::transparentPS,wiRenderer::lightPS[3],wiRenderer::vLightPS,wiRenderer::cubeShPS
+	,wiRenderer::decalPS,wiRenderer::fowardSimplePS;
+GeometryShader wiRenderer::cubeShGS,wiRenderer::sOGS;
+HullShader		wiRenderer::hullShader;
+DomainShader		wiRenderer::domainShader;
+VertexLayout		wiRenderer::vertexLayout, wiRenderer::lineIL,wiRenderer::trailIL, wiRenderer::sOIL;
+Sampler		wiRenderer::texSampler, wiRenderer::mapSampler, wiRenderer::comparisonSampler, wiRenderer::mirSampler,wiRenderer::pointSampler;
+RasterizerState	wiRenderer::rasterizerState, wiRenderer::rssh, wiRenderer::nonCullRSsh, wiRenderer::wireRS, wiRenderer::nonCullRS,wiRenderer::nonCullWireRS
+	,wiRenderer::backFaceRS;
+DepthStencilState	wiRenderer::depthStencilState,wiRenderer::xRayStencilState,wiRenderer::depthReadStencilState,wiRenderer::stencilReadState
+	,wiRenderer::stencilReadMatch;
+PixelShader		wiRenderer::skyPS;
+VertexShader		wiRenderer::skyVS;
+Sampler		wiRenderer::skySampler;
+TextureView wiRenderer::noiseTex,wiRenderer::trailDistortTex,wiRenderer::enviroMap,wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
@@ -72,9 +72,6 @@ Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::p
 PHYSICS* wiRenderer::physicsEngine = nullptr;
 Wind wiRenderer::wind;
 WorldInfo wiRenderer::worldInfo;
-
-vector<wiRenderer::TextureView> wiRenderer::textureSlotsPS(D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT);
-wiRenderer::PixelShader wiRenderer::boundPS=nullptr;
 
 string wiRenderer::SHADERPATH = "shaders/";
 #pragma endregion
@@ -202,7 +199,7 @@ HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window)
 	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&pIDXGIFactory);
 
 
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(graphicsDevice, reinterpret_cast<IUnknown*>(window), &sd
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(graphicsDevice, reinterpret_cast<APIInterface>(window), &sd
 		, nullptr, &swapChain);
 
 	if (FAILED(hr)){
@@ -237,7 +234,7 @@ HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window)
 	
 
     // Create a render target view
-    ID3D11Texture2D* pBackBuffer = NULL;
+    Texture2D pBackBuffer = NULL;
     hr = swapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D ), ( LPVOID* )&pBackBuffer );
     if( FAILED( hr ) ){
 		wiHelper::messageBox("BackBuffer creation Failed!", "Error!", nullptr);
@@ -946,7 +943,7 @@ void wiRenderer::LoadBuffers()
 void wiRenderer::LoadBasicShaders()
 {
 	{
-		D3D11_INPUT_ELEMENT_DESC layout[] =
+		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -968,7 +965,7 @@ void wiRenderer::LoadBasicShaders()
 
 	{
 
-		D3D11_INPUT_ELEMENT_DESC oslayout[] =
+		VertexLayoutDesc oslayout[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -987,7 +984,7 @@ void wiRenderer::LoadBasicShaders()
 	}
 
 	{
-		D3D11_SO_DECLARATION_ENTRY pDecl[] =
+		StreamOutDeclaration pDecl[] =
 		{
 			// semantic name, semantic index, start component, component count, output slot
 			{ 0, "SV_POSITION", 0, 0, 4, 0 },   // output all components of position
@@ -1022,7 +1019,7 @@ void wiRenderer::LoadBasicShaders()
 }
 void wiRenderer::LoadLineShaders()
 {
-	D3D11_INPUT_ELEMENT_DESC layout[] =
+	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
@@ -1070,7 +1067,7 @@ void wiRenderer::LoadWaterShaders()
 
 }
 void wiRenderer::LoadTrailShaders(){
-	D3D11_INPUT_ELEMENT_DESC layout[] =
+	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -2004,7 +2001,7 @@ void wiRenderer::Update(float amount)
 	
 	}	
 }
-void wiRenderer::UpdateRenderInfo(ID3D11DeviceContext* context)
+void wiRenderer::UpdateRenderInfo(DeviceContext context)
 {
 	UpdateObjects();
 
@@ -2105,7 +2102,7 @@ void wiRenderer::UpdateSoftBodyPinning(){
 		}
 	}
 }
-void wiRenderer::UpdateSkinnedVB(ID3D11DeviceContext* context){
+void wiRenderer::UpdateSkinnedVB(DeviceContext context){
 	wiRenderer::graphicsMutex.lock();
 	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
 		Mesh* m = iter->second;
@@ -2164,17 +2161,17 @@ void wiRenderer::ManageWaterRipples(){
 		)
 		waterRipples.pop_front();
 }
-void wiRenderer::DrawWaterRipples(ID3D11DeviceContext* context){
+void wiRenderer::DrawWaterRipples(DeviceContext context){
 	//wiImage::BatchBegin(context);
 	for(wiSprite* i:waterRipples){
 		i->DrawNormal(context);
 	}
 }
 
-void wiRenderer::DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context)
+void wiRenderer::DrawDebugSpheres(Camera* camera, DeviceContext context)
 {
 	if(debugSpheres){
-		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+		//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
 		//context->IASetInputLayout( lineIL );
 		BindPrimitiveTopology(TRIANGLESTRIP,context);
 		BindVertexLayout(lineIL,context);
@@ -2239,7 +2236,7 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, ID3D11DeviceContext* context)
 	}
 	
 }
-void wiRenderer::DrawDebugBoneLines(Camera* camera, ID3D11DeviceContext* context)
+void wiRenderer::DrawDebugBoneLines(Camera* camera, DeviceContext context)
 {
 	if(debugBoneLines){
 		BindPrimitiveTopology(LINELIST,context);
@@ -2270,7 +2267,7 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, ID3D11DeviceContext* context
 		}
 	}
 }
-void wiRenderer::DrawDebugLines(Camera* camera, ID3D11DeviceContext* context)
+void wiRenderer::DrawDebugLines(Camera* camera, DeviceContext context)
 {
 	if (linesTemp.empty())
 		return;
@@ -2306,10 +2303,10 @@ void wiRenderer::DrawDebugLines(Camera* camera, ID3D11DeviceContext* context)
 		delete x;
 	linesTemp.clear();
 }
-void wiRenderer::DrawDebugBoxes(Camera* camera, ID3D11DeviceContext* context)
+void wiRenderer::DrawDebugBoxes(Camera* camera, DeviceContext context)
 {
 	if(debugBoxes){
-		//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_LINELIST );
+		//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_LINELIST );
 		//context->IASetInputLayout( lineIL );
 		BindPrimitiveTopology(LINELIST,context);
 		BindVertexLayout(lineIL,context);
@@ -2382,7 +2379,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, ID3D11DeviceContext* context)
 	}
 }
 
-void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark)
+void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark)
 {
 	struct particlesystem_comparator {
 		bool operator() (const wiEmittedParticle* a, const wiEmittedParticle* b) const{
@@ -2411,7 +2408,7 @@ void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context,
 	//	}
 	//}
 }
-void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, ID3D11ShaderResourceView* depth, bool dark)
+void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark)
 {
 	for(map<string,vector<wiEmittedParticle*>>::iterator iter=emitterSystems.begin();iter!=emitterSystems.end();++iter){
 		for(wiEmittedParticle* e:iter->second)
@@ -2427,8 +2424,8 @@ void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *co
 	//	}
 	//}
 }
-void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes){
-	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
+	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
 	//context->IASetInputLayout( trailIL );
 	BindPrimitiveTopology(TRIANGLESTRIP,context);
 	BindVertexLayout(trailIL,context);
@@ -2520,12 +2517,12 @@ void wiRenderer::DrawTrails(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 		}
 	}
 }
-void wiRenderer::DrawImagesAdd(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes){
+void wiRenderer::DrawImagesAdd(DeviceContext context, TextureView refracRes){
 	imagesRTAdd.Activate(context,0,0,0,1);
 	//wiImage::BatchBegin(context);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ADDITIVE){
-			/*ID3D11ShaderResourceView* nor = x->effects.normalMap;
+			/*TextureView nor = x->effects.normalMap;
 			x->effects.setNormalMap(nullptr);
 			bool changedBlend=false;
 			if(x->effects.blendFlag==BLENDMODE_OPAQUE && nor){
@@ -2539,12 +2536,12 @@ void wiRenderer::DrawImagesAdd(ID3D11DeviceContext* context, ID3D11ShaderResourc
 		}
 	}
 }
-void wiRenderer::DrawImages(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes){
+void wiRenderer::DrawImages(DeviceContext context, TextureView refracRes){
 	imagesRT.Activate(context,0,0,0,0);
 	//wiImage::BatchBegin(context);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ALPHA || x->effects.blendFlag==BLENDMODE_OPAQUE){
-			/*ID3D11ShaderResourceView* nor = x->effects.normalMap;
+			/*TextureView nor = x->effects.normalMap;
 			x->effects.setNormalMap(nullptr);
 			bool changedBlend=false;
 			if(x->effects.blendFlag==BLENDMODE_OPAQUE && nor){
@@ -2558,15 +2555,15 @@ void wiRenderer::DrawImages(ID3D11DeviceContext* context, ID3D11ShaderResourceVi
 		}
 	}
 }
-void wiRenderer::DrawImagesNormals(ID3D11DeviceContext* context, ID3D11ShaderResourceView* refracRes){
+void wiRenderer::DrawImagesNormals(DeviceContext context, TextureView refracRes){
 	normalMapRT.Activate(context,0,0,0,0);
 	//wiImage::BatchBegin(context);
 	for(wiSprite* x : images){
 		x->DrawNormal(context);
 	}
 }
-void wiRenderer::DrawLights(Camera* camera, ID3D11DeviceContext* context
-				, ID3D11ShaderResourceView* depth, ID3D11ShaderResourceView* normal, ID3D11ShaderResourceView* material
+void wiRenderer::DrawLights(Camera* camera, DeviceContext context
+				, TextureView depth, TextureView normal, TextureView material
 				, unsigned int stencilRef){
 
 	
@@ -2682,7 +2679,7 @@ void wiRenderer::DrawLights(Camera* camera, ID3D11DeviceContext* context
 
 	}
 }
-void wiRenderer::DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context)
+void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 {
 	
 	static thread_local Frustum frustum = Frustum();
@@ -2770,7 +2767,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, ID3D11DeviceContext* context)
 }
 
 
-void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResourceView* depth){
+void wiRenderer::DrawLensFlares(DeviceContext context, TextureView depth){
 	
 		
 	CulledList culledObjects;
@@ -2796,7 +2793,7 @@ void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResour
 							)*100000;
 			}
 			
-			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,GetScreenWidth(),GetScreenHeight(),0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
+			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetScreenWidth(),(float)GetScreenHeight(),0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
 
 			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
 				wiLensFlare::Draw(depth,context,flarePos,l->lensFlareRimTextures);
@@ -2805,7 +2802,7 @@ void wiRenderer::DrawLensFlares(ID3D11DeviceContext* context, ID3D11ShaderResour
 
 	}
 }
-void wiRenderer::ClearShadowMaps(ID3D11DeviceContext* context){
+void wiRenderer::ClearShadowMaps(DeviceContext context){
 	if (GetGameSpeed())
 	{
 		for (unsigned int index = 0; index < Light::shadowMaps_pointLight.size(); ++index) {
@@ -2824,7 +2821,7 @@ void wiRenderer::ClearShadowMaps(ID3D11DeviceContext* context){
 		//}
 	}
 }
-void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
+void wiRenderer::DrawForShadowMap(DeviceContext context)
 {
 	if (GameSpeed) {
 
@@ -3417,7 +3414,7 @@ void wiRenderer::DrawForShadowMap(ID3D11DeviceContext* context)
 	//	BindGS(nullptr, context);
 	//}
 }
-void wiRenderer::DrawForSO(ID3D11DeviceContext* context)
+void wiRenderer::DrawForSO(DeviceContext context)
 {
 	BindPrimitiveTopology(POINTLIST,context);
 	BindVertexLayout(sOIL,context);
@@ -3470,9 +3467,9 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 	}
 }
 
-void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11DeviceContext* context
+void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
 				  , bool BlackOut, SHADERTYPE shaded
-				  , ID3D11ShaderResourceView* refRes, bool grass, GRAPHICSTHREAD thread)
+				  , TextureView refRes, bool grass, GRAPHICSTHREAD thread)
 {
 	if (objects.empty())
 	{
@@ -3644,8 +3641,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, ID3D11Device
 
 }
 
-void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* refracRes, ID3D11ShaderResourceView* refRes
-	, ID3D11ShaderResourceView* waterRippleNormals, ID3D11ShaderResourceView* depth, ID3D11DeviceContext* context)
+void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
+	, TextureView waterRippleNormals, TextureView depth, DeviceContext context)
 {
 	if (objects.empty())
 	{
@@ -3778,7 +3775,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, ID3D11ShaderResourceView* 
 }
 
 
-void wiRenderer::DrawSky(ID3D11DeviceContext* context)
+void wiRenderer::DrawSky(DeviceContext context)
 {
 	if (enviroMap == nullptr)
 		return;
@@ -3859,7 +3856,7 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 }
 
 
-void wiRenderer::UpdatePerWorldCB(ID3D11DeviceContext* context){
+void wiRenderer::UpdatePerWorldCB(DeviceContext context){
 	static thread_local PixelCB* pcb = new PixelCB;
 	(*pcb).mSun=XMVector3Normalize( GetSunPosition() );
 	(*pcb).mHorizon=worldInfo.horizon;
@@ -3868,7 +3865,7 @@ void wiRenderer::UpdatePerWorldCB(ID3D11DeviceContext* context){
 	(*pcb).mFogSEH=worldInfo.fogSEH;
 	UpdateBuffer(pixelCB, pcb, context);
 }
-void wiRenderer::UpdatePerFrameCB(ID3D11DeviceContext* context){
+void wiRenderer::UpdatePerFrameCB(DeviceContext context){
 	static thread_local ViewPropCB* cb = new ViewPropCB;
 	(*cb).mZFarP=cam->zFarP;
 	(*cb).mZNearP=cam->zNearP;
@@ -3878,7 +3875,7 @@ void wiRenderer::UpdatePerFrameCB(ID3D11DeviceContext* context){
 
 	BindConstantBufferPS(viewPropCB,10,context);
 }
-void wiRenderer::UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF){
+void wiRenderer::UpdatePerRenderCB(DeviceContext context, int tessF){
 	if(tessF){
 		static thread_local TessBuffer* tb = new TessBuffer;
 		(*tb).g_f4Eye = cam->GetEye();
@@ -3887,7 +3884,7 @@ void wiRenderer::UpdatePerRenderCB(ID3D11DeviceContext* context, int tessF){
 	}
 
 }
-void wiRenderer::UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane){
+void wiRenderer::UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane){
 
 	
 	static thread_local StaticCB* cb = new StaticCB;
@@ -3915,7 +3912,7 @@ void wiRenderer::UpdatePerViewCB(ID3D11DeviceContext* context, Camera* camera, C
 	(*lcb).mProjInv = XMMatrixInverse(0, XMMatrixTranspose(camera->GetViewProjection()));
 	UpdateBuffer(lightStaticCb,lcb,context);
 }
-void wiRenderer::UpdatePerEffectCB(ID3D11DeviceContext* context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask){
+void wiRenderer::UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask){
 	static thread_local FxCB* fb = new FxCB;
 	(*fb).mFx = blackoutBlackWhiteInvCol;
 	(*fb).colorMask=colorMask;

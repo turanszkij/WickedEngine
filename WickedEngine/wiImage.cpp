@@ -6,17 +6,17 @@
 #include "wiHelper.h"
 
 #pragma region STATICS
-ID3D11BlendState*		wiImage::blendState, *wiImage::blendStateAdd, *wiImage::blendStateNoBlend, *wiImage::blendStateAvg;
-ID3D11Buffer*           wiImage::constantBuffer,*wiImage::PSCb,*wiImage::blurCb,*wiImage::processCb,*wiImage::shaftCb,*wiImage::deferredCb;
+BlendState		wiImage::blendState, wiImage::blendStateAdd, wiImage::blendStateNoBlend, wiImage::blendStateAvg;
+BufferResource           wiImage::constantBuffer,wiImage::PSCb,wiImage::blurCb,wiImage::processCb,wiImage::shaftCb,wiImage::deferredCb;
 
-ID3D11VertexShader*     wiImage::vertexShader,*wiImage::screenVS;
-ID3D11PixelShader*      wiImage::pixelShader,*wiImage::blurHPS,*wiImage::blurVPS,*wiImage::shaftPS,*wiImage::outlinePS
-	,*wiImage::dofPS,*wiImage::motionBlurPS,*wiImage::bloomSeparatePS,*wiImage::fxaaPS,*wiImage::ssaoPS,*wiImage::deferredPS
-	,*wiImage::ssssPS,*wiImage::linDepthPS,*wiImage::colorGradePS,*wiImage::ssrPS;
+VertexShader     wiImage::vertexShader,wiImage::screenVS;
+PixelShader      wiImage::pixelShader,wiImage::blurHPS,wiImage::blurVPS,wiImage::shaftPS,wiImage::outlinePS
+	,wiImage::dofPS,wiImage::motionBlurPS,wiImage::bloomSeparatePS,wiImage::fxaaPS,wiImage::ssaoPS,wiImage::deferredPS
+	,wiImage::ssssPS,wiImage::linDepthPS,wiImage::colorGradePS,wiImage::ssrPS;
 	
 
-ID3D11RasterizerState*		wiImage::rasterizerState;
-ID3D11DepthStencilState*	wiImage::depthStencilStateGreater,*wiImage::depthStencilStateLess,*wiImage::depthNoStencilState;
+RasterizerState		wiImage::rasterizerState;
+DepthStencilState	wiImage::depthStencilStateGreater,wiImage::depthStencilStateLess,wiImage::depthNoStencilState;
 
 
 //map<string,wiImage::ImageResource> wiImage::images;
@@ -79,24 +79,24 @@ void wiImage::LoadShaders()
 {
 
 
-	vertexShader = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imageVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	screenVS = static_cast<wiRenderer::VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShader = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imageVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	screenVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	pixelShader = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS.cso", wiResourceManager::PIXELSHADER));
-	blurHPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
-	blurVPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
-	shaftPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
-	outlinePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "outlinePS.cso", wiResourceManager::PIXELSHADER));
-	dofPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
-	motionBlurPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "motionBlurPS.cso", wiResourceManager::PIXELSHADER));
-	bloomSeparatePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
-	fxaaPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fxaa.cso", wiResourceManager::PIXELSHADER));
-	ssaoPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssao.cso", wiResourceManager::PIXELSHADER));
-	ssssPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssss.cso", wiResourceManager::PIXELSHADER));
-	linDepthPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "linDepthPS.cso", wiResourceManager::PIXELSHADER));
-	colorGradePS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
-	deferredPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
-	ssrPS = static_cast<wiRenderer::PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssr.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS.cso", wiResourceManager::PIXELSHADER));
+	blurHPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
+	blurVPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
+	shaftPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
+	outlinePS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "outlinePS.cso", wiResourceManager::PIXELSHADER));
+	dofPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
+	motionBlurPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "motionBlurPS.cso", wiResourceManager::PIXELSHADER));
+	bloomSeparatePS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
+	fxaaPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fxaa.cso", wiResourceManager::PIXELSHADER));
+	ssaoPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssao.cso", wiResourceManager::PIXELSHADER));
+	ssssPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssss.cso", wiResourceManager::PIXELSHADER));
+	linDepthPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "linDepthPS.cso", wiResourceManager::PIXELSHADER));
+	colorGradePS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
+	deferredPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
+	ssrPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssr.cso", wiResourceManager::PIXELSHADER));
 	
 
 
@@ -285,16 +285,16 @@ void wiImage::SetUpStates()
 }
 
 
-void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effects){
+void wiImage::Draw(TextureView texture, const wiImageEffects& effects){
 	Draw(texture,effects,wiRenderer::getImmediateContext());
 }
-void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effects,ID3D11DeviceContext* context){
+void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceContext context){
 	if(!context)
 		return;
 
 	{
 		// This equals the old BatchBegin
-		wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
+		wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
 		wiRenderer::BindRasterizerState(rasterizerState, context);
 		switch (effects.stencilComp)
 		{
@@ -558,10 +558,10 @@ void wiImage::Draw(wiRenderer::TextureView texture, const wiImageEffects& effect
 	wiRenderer::Draw(4,context);
 }
 
-void wiImage::DrawDeferred(wiRenderer::TextureView texture
-		, wiRenderer::TextureView depth, wiRenderer::TextureView lightmap, wiRenderer::TextureView normal
-		, wiRenderer::TextureView ao, ID3D11DeviceContext* context, int stencilRef){
-	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+void wiImage::DrawDeferred(TextureView texture
+		, TextureView depth, TextureView lightmap, TextureView normal
+		, TextureView ao, DeviceContext context, int stencilRef){
+	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
 
 	//UINT stride = sizeof( Vertex );
     //UINT offset = 0;
@@ -571,7 +571,7 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 	//context->RSSetState(rasterizerState);
 	//context->OMSetDepthStencilState(depthStencilStateLess, stencilRef);
 
-	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
+	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
 	wiRenderer::BindRasterizerState(rasterizerState,context);
 	wiRenderer::BindDepthStencilState(depthNoStencilState,stencilRef,context);
 
@@ -630,15 +630,15 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 //{
 //	BatchBegin(wiRenderer::getImmediateContext());
 //}
-//void wiImage::BatchBegin(ID3D11DeviceContext* context)
+//void wiImage::BatchBegin(DeviceContext context)
 //{
-//	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+//	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
 //
 //	//context->RSSetState(rasterizerState);
 //	//context->OMSetDepthStencilState(depthNoStencilState, 0);
 //
 //	
-//	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
+//	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
 //	wiRenderer::BindRasterizerState(rasterizerState,context);
 //	wiRenderer::BindDepthStencilState(depthNoStencilState, 0, context);
 //
@@ -653,14 +653,14 @@ void wiImage::DrawDeferred(wiRenderer::TextureView texture
 //	wiRenderer::BindVS(vertexShader,context);
 //	wiRenderer::BindPS(pixelShader,context);
 //}
-//void wiImage::BatchBegin(ID3D11DeviceContext* context, unsigned int stencilref, bool stencilOpLess)
+//void wiImage::BatchBegin(DeviceContext context, unsigned int stencilref, bool stencilOpLess)
 //{
-//	//context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+//	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
 //
 //	//context->RSSetState(rasterizerState);
 //	//context->OMSetDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref);
 //
-//	wiRenderer::BindPrimitiveTopology(wiRenderer::PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
+//	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
 //	wiRenderer::BindRasterizerState(rasterizerState,context);
 //	wiRenderer::BindDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref, context);
 //
@@ -737,7 +737,7 @@ wiImage::ImageResource::ImageResource(const string& newDirectory, const string& 
 		MessageBoxA(0,ss.str().c_str(),"Loading Image Failed!",0);
 	}
 }
-wiRenderer::TextureView wiImage::getImageByName(const string& get){
+TextureView wiImage::getImageByName(const string& get){
 	map<string,ImageResource>::iterator iter = images.find(get);
 	if(iter!=images.end())
 		return iter->second.texture;

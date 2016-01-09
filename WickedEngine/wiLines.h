@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-
+#include "wiGraphicsAPI.h"
 
 class Lines
 {
@@ -41,7 +41,7 @@ public:
 	Description desc;
 	int parentArmature,parentBone;
 	
-	ID3D11Buffer* vertexBuffer;
+	BufferResource vertexBuffer;
 
 	ALIGN_16
 };

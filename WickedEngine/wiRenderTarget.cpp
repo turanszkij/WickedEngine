@@ -6,7 +6,7 @@
 void wiRenderTarget::clear(){
 	textureDesc = { 0 };
 	numViews = 0;
-	viewPort = D3D11_VIEWPORT();
+	viewPort = ViewPort();
 	depth = NULL;
 	retargetted = false;
 }
@@ -152,11 +152,11 @@ void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth)
 	InitializeCube(size,numViews,hasDepth,DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
-void wiRenderTarget::Activate(ID3D11DeviceContext* context)
+void wiRenderTarget::Activate(DeviceContext context)
 {
 	Activate(context,0,0,0,0);
 }
-void wiRenderTarget::Activate(ID3D11DeviceContext* context, float r, float g, float b, float a)
+void wiRenderTarget::Activate(DeviceContext context, float r, float g, float b, float a)
 {
 	if(context!=nullptr){
 		Set(context);
@@ -166,7 +166,7 @@ void wiRenderTarget::Activate(ID3D11DeviceContext* context, float r, float g, fl
 		if(depth) depth->Clear(context);
 	}
 }
-void wiRenderTarget::Activate(ID3D11DeviceContext* context, wiDepthTarget* getDepth, float r, float g, float b, float a)
+void wiRenderTarget::Activate(DeviceContext context, wiDepthTarget* getDepth, float r, float g, float b, float a)
 {
 	if(context!=nullptr){
 		Set(context,getDepth);
@@ -175,22 +175,22 @@ void wiRenderTarget::Activate(ID3D11DeviceContext* context, wiDepthTarget* getDe
 			context->ClearRenderTargetView(renderTarget[i], ClearColor);
 	}
 }
-void wiRenderTarget::Activate(ID3D11DeviceContext* context, wiDepthTarget* getDepth)
+void wiRenderTarget::Activate(DeviceContext context, wiDepthTarget* getDepth)
 {
 	Activate(context,getDepth,0,0,0,0);
 }
-void wiRenderTarget::Set(ID3D11DeviceContext* context)
+void wiRenderTarget::Set(DeviceContext context)
 {
-	//ID3D11ShaderResourceView* t[]={nullptr};
+	//TextureView t[]={nullptr};
 	//context->PSSetShaderResources(6,1,t);
 	if(context!=nullptr){
 		context->RSSetViewports(1, &viewPort);
 		context->OMSetRenderTargets(numViews, renderTarget.data(),(depth?depth->depthTarget:nullptr));
 	}
 }
-void wiRenderTarget::Set(ID3D11DeviceContext* context, wiDepthTarget* getDepth)
+void wiRenderTarget::Set(DeviceContext context, wiDepthTarget* getDepth)
 {
-	//ID3D11ShaderResourceView* t[]={nullptr};
+	//TextureView t[]={nullptr};
 	//context->PSSetShaderResources(6,1,t);
 	if(context!=nullptr){
 		depth = getDepth;
@@ -198,7 +198,7 @@ void wiRenderTarget::Set(ID3D11DeviceContext* context, wiDepthTarget* getDepth)
 		context->OMSetRenderTargets(numViews, renderTarget.data(),(depth?depth->depthTarget:nullptr));
 	}
 }
-void wiRenderTarget::Retarget(ID3D11ShaderResourceView* resource)
+void wiRenderTarget::Retarget(TextureView resource)
 {
 	retargetted=true;
 	for(unsigned int i=0;i<shaderResource.size();++i){
