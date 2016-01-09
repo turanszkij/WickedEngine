@@ -286,7 +286,7 @@ protected:
 	static PixelShader		skyPS;
 	static VertexShader		skyVS;
 	static Sampler		skySampler;
-	static TextureView noiseTex,trailDistortTex,enviroMap,colorGrading;
+	static TextureView enviroMap,colorGrading;
 	static void LoadBuffers();
 	static void LoadBasicShaders();
 	static void LoadLineShaders();
@@ -347,8 +347,6 @@ public:
 	static void SetColorGrading(TextureView tex){colorGrading=tex;};
 	static void SetEnviromentMap(TextureView tex){ enviroMap = tex; }
 	static TextureView GetEnviromentMap(){ return enviroMap; }
-	static void SetNoiseTexture(TextureView tex){ noiseTex = tex; }
-	static TextureView GetNoiseTexture(){ return noiseTex; }
 
 
 	static Transform* getTransformByName(const string& name);
@@ -692,6 +690,8 @@ public:
 	vector<HitSphere*> spheres;
 	static map<string,Transform*> transforms;
 	static list<Decal*> decals;
+
+	static vector<Object*> objectsWithTrails;
 	
 	static deque<wiSprite*> images;
 	static deque<wiSprite*> waterRipples;

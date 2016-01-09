@@ -108,6 +108,11 @@ TextureView wiTextureHelper::wiTextureHelperInstance::getBlack()
 	return getColor(wiColor(0, 0, 0, 255));
 }
 
+TextureView wiTextureHelper::wiTextureHelperInstance::getTransparent()
+{
+	return getColor(wiColor(0, 0, 0, 0));
+}
+
 TextureView wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& color)
 {
 	if (colorTextures.find(color.rgba) != colorTextures.end())

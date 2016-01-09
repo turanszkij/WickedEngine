@@ -64,7 +64,7 @@ DepthStencilState	wiRenderer::depthStencilState,wiRenderer::xRayStencilState,wiR
 PixelShader		wiRenderer::skyPS;
 VertexShader		wiRenderer::skyVS;
 Sampler		wiRenderer::skySampler;
-TextureView wiRenderer::noiseTex,wiRenderer::trailDistortTex,wiRenderer::enviroMap,wiRenderer::colorGrading;
+TextureView wiRenderer::enviroMap,wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
@@ -96,6 +96,7 @@ vector<Light*>		wiRenderer::lights;
 map<string,vector<wiEmittedParticle*>> wiRenderer::emitterSystems;
 map<string,Transform*> wiRenderer::transforms;
 list<Decal*> wiRenderer::decals;
+vector<Object*>		wiRenderer::objectsWithTrails;
 
 #pragma endregion
 
@@ -401,8 +402,6 @@ void wiRenderer::SetUpStaticComponents()
 	refCam->SetUp(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800);
 	prevFrameCam = new Camera;
 	
-	noiseTex = wiTextureHelper::getInstance()->getRandom64x64();
-	trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
 
 	wireRender=false;
 	debugSpheres=false;
@@ -565,10 +564,6 @@ void wiRenderer::CleanUpStatic()
 	if(lineBuffer){
 		lineBuffer->Release();
 		lineBuffer=NULL;
-	}
-	if(noiseTex){
-		noiseTex->Release();
-		noiseTex=NULL;
 	}
 
 	if(trailIL) trailIL->Release(); trailIL=NULL;
@@ -2049,6 +2044,7 @@ void wiRenderer::UpdateRenderInfo(DeviceContext context)
 	wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
 }
 void wiRenderer::UpdateObjects(){
+	objectsWithTrails.clear();
 	for (Object* o : objects){
 
 		XMMATRIX world = o->getTransform();
@@ -2079,7 +2075,11 @@ void wiRenderer::UpdateObjects(){
 		else if(o->mesh->renderable)
 			o->bounds.createFromHalfWidth(o->translation,o->scale);
 
-		o->FadeTrail();
+		if (!o->trail.empty())
+		{
+			objectsWithTrails.push_back(o);
+			o->FadeTrail();
+		}
 	}
 }
 void wiRenderer::UpdateSoftBodyPinning(){
@@ -2425,52 +2425,32 @@ void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *co
 	//}
 }
 void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
-	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
-	//context->IASetInputLayout( trailIL );
 	BindPrimitiveTopology(TRIANGLESTRIP,context);
 	BindVertexLayout(trailIL,context);
-	
-	//context->RSSetState(wireRender?nonCullWireRS:nonCullRS);
-	//context->OMSetDepthStencilState(depthReadStencilState, STENCILREF_EMPTY);
-
-	
-	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//UINT sampleMask   = 0xffffffff;
-	//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 
 	BindRasterizerState(wireRender?nonCullWireRS:nonCullRS,context);
 	BindDepthStencilState(depthStencilState,STENCILREF_EMPTY,context);
 	BindBlendState(blendState,context);
 
-	//context->VSSetShader( trailVS, NULL, 0 );
-	//context->PSSetShader( trailPS, NULL, 0 );
 	BindPS(trailPS,context);
 	BindVS(trailVS,context);
 	
 	BindTexturePS(refracRes,0,context);
-	//BindTexturePS(trailDistortTex,1,context);
-	//context->PSSetSamplers( 0,1,&mirSampler );
 	BindSamplerPS(mirSampler,0,context);
 
-	for (Object* o : objects)
+	for (Object* o : objectsWithTrails)
 	{
 		if(o->trailBuff && o->trail.size()>=4){
-			
-			if (o->trailDistortTex != nullptr)
-			{
-				BindTexturePS(o->trailDistortTex, 1, context);
-			}
-			else
-			{
-				BindTexturePS(trailDistortTex, 1, context);
-			}
 
-			//context->VSSetConstantBuffers( 0, 1, &trailCB );
+			BindTexturePS(o->trailDistortTex, 1, context);
+			BindTexturePS(o->trailTex, 2, context);
+
 			BindConstantBufferVS(trailCB,0,context);
 
 			vector<RibbonVertex> trails;
 
 			int bounds = o->trail.size();
+			trails.reserve(bounds * 10);
 			int req = bounds-3;
 			for(int k=0;k<req;k+=2)
 			{
@@ -2495,15 +2475,23 @@ void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 					XMStoreFloat3(&xpoint0,point0);
 					XMStoreFloat3(&xpoint1,point1);
 					trails.push_back(RibbonVertex(xpoint0
-						,wiMath::Lerp(o->trail[k].tex,o->trail[k+2].tex,r)
-						,wiMath::Lerp(o->trail[k].col,o->trail[k+2].col,r)
-						,1
-						));
-					trails.push_back(RibbonVertex(xpoint1
-						,wiMath::Lerp(o->trail[k+1].tex,o->trail[k+3].tex,r)
-						,wiMath::Lerp(o->trail[k+1].col,o->trail[k+3].col,r)
+						, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 0), XMFLOAT2((float)(k + 1) / (float)bounds, 0), r)
+						, wiMath::Lerp(o->trail[k].col, o->trail[k + 2].col, r)
 						, 1
 						));
+					if (k == 0)
+					{
+						trails.back().col = wiMath::Lerp(XMFLOAT4(0,0,0,0), trails.back().col, r);
+					}
+					trails.push_back(RibbonVertex(xpoint1
+						, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 1), XMFLOAT2((float)(k + 1) / (float)bounds, 1), r)
+						, wiMath::Lerp(o->trail[k + 1].col, o->trail[k + 3].col, r)
+						, 1
+						));
+					if (k == 0)
+					{
+						trails.back().col = wiMath::Lerp(XMFLOAT4(0, 0, 0, 0), trails.back().col, r);
+					}
 				}
 			}
 			if(!trails.empty()){
@@ -3527,8 +3515,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 			else
 				return;
 
-		BindSamplerVS(texSampler,0,context);
-		BindTextureVS(noiseTex,0,context);
 		if(DX11Eff && tessF) 
 			BindSamplerDS(texSampler,0,context);
 		BindSamplerPS(texSampler,0,context);

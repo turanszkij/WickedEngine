@@ -503,6 +503,7 @@ Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 
 	lunamethod(Object_BindLua, EmitTrail),
 	lunamethod(Object_BindLua, SetTrailDistortTex),
+	lunamethod(Object_BindLua, SetTrailTex),
 	lunamethod(Object_BindLua, SetTransparency),
 	lunamethod(Object_BindLua, GetTransparency),
 	lunamethod(Object_BindLua, SetColor),
@@ -588,6 +589,32 @@ int Object_BindLua::SetTrailDistortTex(lua_State *L)
 	else
 	{
 		wiLua::SError(L, "SetTrailDistortTex(Texture tex) not enough arguments!");
+	}
+	return 0;
+}
+int Object_BindLua::SetTrailTex(lua_State *L)
+{
+	if (object == nullptr)
+	{
+		wiLua::SError(L, "SetTrailTex(Texture tex) object is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
+		if (tex != nullptr)
+		{
+			object->trailTex = tex->texture;
+		}
+		else
+		{
+			wiLua::SError(L, "SetTrailTex(Texture tex) argument is not a Texture!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetTrailTex(Texture tex) not enough arguments!");
 	}
 	return 0;
 }

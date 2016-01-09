@@ -93,6 +93,7 @@ public:
 
 	int EmitTrail(lua_State *L);
 	int SetTrailDistortTex(lua_State *L);
+	int SetTrailTex(lua_State *L);
 	int SetTransparency(lua_State *L);
 	int GetTransparency(lua_State *L);
 	int SetColor(lua_State *L);

@@ -522,6 +522,7 @@ struct Object : public Streamable, public Transform
 	deque<RibbonVertex> trail;
 	BufferResource trailBuff;
 	TextureView trailDistortTex;
+	TextureView trailTex;
 
 	int physicsObjectI;
 
@@ -550,6 +551,7 @@ struct Object : public Streamable, public Transform
 		transparency = 0.0f;
 		color = XMFLOAT3(1, 1, 1);
 		trailDistortTex = nullptr;
+		trailTex = nullptr;
 	}
 
 	void CleanUp(){

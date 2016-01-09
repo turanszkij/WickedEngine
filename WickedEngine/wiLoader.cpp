@@ -7,6 +7,7 @@
 #include "wiHairParticle.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
+#include "wiTextureHelper.h"
 
 thread_local vector<Instance>		Mesh::instances;
 BufferResource Mesh::meshInstanceBuffer=nullptr;
@@ -898,14 +899,16 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 	for (unsigned int i = 0; i<objects.size(); i++){
 		if(objects[i]->mesh){
 			if(objects[i]->mesh->trailInfo.base>=0 && objects[i]->mesh->trailInfo.tip>=0){
-					//objects[i]->trail.resize(MAX_RIBBONTRAILS);
-					D3D11_BUFFER_DESC bd;
-					ZeroMemory( &bd, sizeof(bd) );
-					bd.Usage = D3D11_USAGE_DYNAMIC;
-					bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
-					bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-					bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-					wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
+				//objects[i]->trail.resize(MAX_RIBBONTRAILS);
+				D3D11_BUFFER_DESC bd;
+				ZeroMemory( &bd, sizeof(bd) );
+				bd.Usage = D3D11_USAGE_DYNAMIC;
+				bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
+				bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+				bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
+				objects[i]->trailTex = wiTextureHelper::getInstance()->getTransparent();
+				objects[i]->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
 			}
 		}
 	}
@@ -2172,41 +2175,41 @@ void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 		int x = trail.size();
 
 		if (base >= 0 && tip >= 0) {
-			XMFLOAT2 newBTex = XMFLOAT2((float)(x / 2), 0);
-			XMFLOAT2 newTTex = XMFLOAT2(newBTex.x, 1);
 			XMFLOAT4 baseP, tipP;
 			XMFLOAT4 newCol = XMFLOAT4(col.x, col.y, col.z, 1);
 			baseP = wiRenderer::TransformVertex(mesh, base).pos;
 			tipP = wiRenderer::TransformVertex(mesh, tip).pos;
-			//XMStoreFloat4(&baseP, XMVector3Transform(XMLoadFloat4(&baseP), XMLoadFloat4x4(&world)));
-			//XMStoreFloat4(&tipP, XMVector3Transform(XMLoadFloat4(&tipP), XMLoadFloat4x4(&world)));
 
-			trail.push_back(RibbonVertex(XMFLOAT3(baseP.x, baseP.y, baseP.z), newBTex, XMFLOAT4(0, 0, 0, 1),fadeSpeed));
-			trail.push_back(RibbonVertex(XMFLOAT3(tipP.x, tipP.y, tipP.z), newTTex, newCol,fadeSpeed));
+			trail.push_back(RibbonVertex(XMFLOAT3(baseP.x, baseP.y, baseP.z), XMFLOAT2(0,0), XMFLOAT4(0, 0, 0, 1),fadeSpeed));
+			trail.push_back(RibbonVertex(XMFLOAT3(tipP.x, tipP.y, tipP.z), XMFLOAT2(0,0), newCol,fadeSpeed));
 		}
 	}
 }
 void Object::FadeTrail() {
 	for (unsigned int j = 0; j<trail.size(); ++j) {
-		if (trail[j].col.w <= 0 /*&& trail[j].inc==-1*/)
+		const float fade = trail[j].fade;
+		if (trail[j].col.x>0) trail[j].col.x = trail[j].col.x - fade*(wiRenderer::GetGameSpeed() + wiRenderer::GetGameSpeed()*(1 - j % 2) * 2);
+		else trail[j].col.x = 0;
+		if (trail[j].col.y>0) trail[j].col.y = trail[j].col.y - fade*(wiRenderer::GetGameSpeed() + wiRenderer::GetGameSpeed()*(1 - j % 2) * 2);
+		else trail[j].col.y = 0;
+		if (trail[j].col.z>0) trail[j].col.z = trail[j].col.z - fade*(wiRenderer::GetGameSpeed() + wiRenderer::GetGameSpeed()*(1 - j % 2) * 2);
+		else trail[j].col.z = 0;
+		if (trail[j].col.w>0)
+			trail[j].col.w -= fade*wiRenderer::GetGameSpeed();
+		else
+			trail[j].col.w = 0;
+
+#if 0
+		// Collapse trail... perhaps will be needed
+		if (j % 2 == 0)
 		{
-			trail.pop_front();
+			trail[j].pos = wiMath::Lerp(trail[j].pos, trail[j + 1].pos, trail[j].fade * wiRenderer::GetGameSpeed());
+			trail[j + 1].pos = wiMath::Lerp(trail[j + 1].pos, trail[j].pos, trail[j + 1].fade * wiRenderer::GetGameSpeed());
 		}
-		else 
-		{
-			const float fade = trail[j].fade;
-			if (trail[j].col.x>0) trail[j].col.x = trail[j].col.x - fade*(wiRenderer::GetGameSpeed() + wiRenderer::GetGameSpeed()*(1 - j % 2) * 2);
-			else trail[j].col.x = 0;
-			if (trail[j].col.y>0) trail[j].col.y = trail[j].col.y - fade*(wiRenderer::GetGameSpeed() + wiRenderer::GetGameSpeed()*(1 - j % 2) * 2);
-			else trail[j].col.y = 0;
-			if (trail[j].col.z>0) trail[j].col.z = trail[j].col.z - fade*(wiRenderer::GetGameSpeed() + wiRenderer::GetGameSpeed()*(1 - j % 2) * 2);
-			else trail[j].col.z = 0;
-			if (trail[j].col.w>0)
-				trail[j].col.w -= fade*wiRenderer::GetGameSpeed();
-			else
-				trail[j].col.w = 0;
-			/*if(trail[j].col.w>=1)
-			trail[j].inc=-1;*/
-		}
+#endif
+	}
+	while (!trail.empty() && trail.front().col.w <= 0)
+	{
+		trail.pop_front();
 	}
 }

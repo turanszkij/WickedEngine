@@ -30,6 +30,7 @@ private:
 
 		TextureView getWhite();
 		TextureView getBlack();
+		TextureView getTransparent();
 		TextureView getColor(const wiColor& color);
 	};
 

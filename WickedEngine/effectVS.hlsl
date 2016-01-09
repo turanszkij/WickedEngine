@@ -9,8 +9,8 @@ struct HullInputType
 	float3 vel				: TEXCOORD1;
 };
 
-Texture2D noiseTex:register(t0);
-SamplerState texSampler:register(s0);
+//Texture2D noiseTex:register(t0);
+//SamplerState texSampler:register(s0);
 
 HullInputType main(Input input)
 {
