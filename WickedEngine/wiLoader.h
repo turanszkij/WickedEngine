@@ -601,9 +601,7 @@ struct ActionFrames
 	vector< KeyFrame > keyframesSca;
 
 	ActionFrames(){
-		keyframesRot.resize(0);
-		keyframesPos.resize(0);
-		keyframesSca.resize(0);
+		CleanUp();
 	}
 	void CleanUp(){
 		keyframesRot.clear();
@@ -627,9 +625,14 @@ struct Bone : public Transform
 	Bone(){};
 	Bone(string newName):Transform(){
 		name=newName;
-		childrenN.resize(0);
-		childrenI.resize(0);
-		actionFrames.resize(0);
+		childrenN.clear();
+		childrenI.clear();
+		actionFrames.clear();
+		// create identity action
+		actionFrames.push_back(ActionFrames());
+		actionFrames.back().keyframesPos.push_back(KeyFrame(1, 0, 0, 0, 1));
+		actionFrames.back().keyframesRot.push_back(KeyFrame(1, 0, 0, 0, 1));
+		actionFrames.back().keyframesSca.push_back(KeyFrame(1, 1, 1, 1, 0));
 		length=1.0f;
 		boneRelativity=new XMFLOAT4X4();
 		boneRelativityPrev=new XMFLOAT4X4();
@@ -743,9 +746,12 @@ public:
 		stringstream ss("");
 		ss<<newName<<identifier;
 		name=ss.str();
-		boneCollection.resize(0);
-		rootbones.resize(0);
-		actions.resize(0);
+		boneCollection.clear();
+		rootbones.clear();
+		actions.clear();
+		actions.push_back(Action());
+		actions.back().name = "[WickedEngine-Default]{IdentityAction}";
+		actions.back().frameCount = 1;
 		XMStoreFloat4x4(&world,XMMatrixIdentity());
 		animationLayers.clear();
 		animationLayers.push_back(new AnimationLayer());
@@ -771,7 +777,8 @@ public:
 		return *animationLayers.begin(); 
 	}
 
-	bool ChangeAction(const string& actionName, float blendFrames = 0.0f, const string& animLayer = "")
+	// Empty actionName will be the Identity Action (T-pose)
+	void ChangeAction(const string& actionName="", float blendFrames = 0.0f, const string& animLayer = "", float weight = 1.0f)
 	{
 		AnimationLayer* anim = GetPrimaryAnimation();
 		if (animLayer.length() > 0)
@@ -779,17 +786,20 @@ public:
 			anim = GetAnimLayer(animLayer);
 		}
 
-		int i = 0;
-		for (Action& x : actions)
+		if (actionName.length() > 0)
 		{
-			if (!x.name.compare(actionName))
+			for (unsigned int i = 1; i < actions.size();++i)
 			{
-				anim->ChangeAction(i, blendFrames);
-				return true;
+				if (!actions[i].name.compare(actionName))
+				{
+					anim->ChangeAction(i, blendFrames, weight);
+					return;
+				}
 			}
-			i++;
 		}
-		return false;
+		
+		// Fall back to identity action
+		anim->ChangeAction(0, blendFrames, weight);
 	}
 	AnimationLayer* GetAnimLayer(const string& name)
 	{

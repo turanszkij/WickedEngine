@@ -889,37 +889,33 @@ int Armature_BindLua::ChangeAction(lua_State* L)
 {
 	if (armature == nullptr)
 	{
-		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) armature is null!");
+		wiLua::SError(L, "ChangeAction(opt string name, opt float blendFrames=0, opt string animLayer) armature is null!");
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		string armatureName = wiLua::SGetString(L, 1);
-		float blendFrames = 0.0f;
+		float blendFrames = 0.0f; 
+		string layer = "";
+		float weight = 1.0f;
 		if (argc > 1)
 		{
 			blendFrames = wiLua::SGetFloat(L, 2);
 			if (argc > 2)
 			{
-				if (!armature->ChangeAction(armatureName, blendFrames, wiLua::SGetString(L,3)))
+				layer = wiLua::SGetString(L, 3);
+				if (argc > 3)
 				{
-					wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) action not found!");
-				}
-				else
-				{
-					return 0;
+					weight = wiLua::SGetFloat(L, 4);
 				}
 			}
 		}
-		if (!armature->ChangeAction(armatureName,blendFrames))
-		{
-			wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) action not found!");
-		}
+		armature->ChangeAction(armatureName, blendFrames, layer, weight);
 	}
 	else
 	{
-		wiLua::SError(L, "ChangeAction(String name, opt float blendFrames=0, opt string animLayer) not enough arguments!");
+		armature->ChangeAction();
 	}
 	return 0;
 }

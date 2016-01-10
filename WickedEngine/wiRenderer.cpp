@@ -1662,7 +1662,6 @@ void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XM
 		int activeAction = anim.activeAction, prevAction = anim.prevAction;
 		int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
 
-		// ANIMATION BLENDING IS USED ONLY FOR TRANSITIONS
 		XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
 		XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
 		XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);

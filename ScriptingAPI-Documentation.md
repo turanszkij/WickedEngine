@@ -355,11 +355,11 @@ It inherits functions from Transform.
 - GetAction(opt string animLayer = "") : string? result
 - GetActions() : string? result
 - GetBones() : string? result
-- GetBone(String name) : Transform? result
+- GetBone(string name) : Transform? result
 - GetFrame(opt string animLayer = "") : float? result
 - GetFrameCount(opt string animLayer = "") : float? result
 - IsValid() : boolean result
-- ChangeAction(String name, opt float blendFrames = 0, opt string animLayer = "")
+- ChangeAction(opt string name = "", opt float blendFrames = 0, opt string animLayer = "", opt float weight = 1.0)
 - StopAction(opt string animLayer = "")
 - PauseAction(opt string animLayer = "")
 - PlayAction(opt string animLayer = "")
