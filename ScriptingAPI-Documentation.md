@@ -13,6 +13,8 @@ The documentation completion is still pending....
 	2. Sprite
 		1. ImageEffects
 		2. SpriteAnim
+		3. MovingTexAnim
+		4. DrawRecAnim
 	3. Texture
 	4. Sound
 		1. SoundEffect
@@ -187,7 +189,50 @@ Specify Sprite properties, like position, size, etc.
 #### SpriteAnim
 Animate Sprites easily with this helper.
 - [constructor]SpriteAnim()
-- SetRot(float rotation)
+- SetRot(float val)
+- SetRotation(float val)
+- SetOpacity(float val)
+- SetFade(float val)
+- SetRepeatable(boolean val)
+- SetVelocity(Vector val)
+- SetScaleX(float val)
+- SetScaleY(float val)
+- SetMovingTexAnim(MovingTexAnim val)
+- SetDrawRecAnim(DrawRecAnim val)
+- GetRot() : float result
+- GetRotation() : float result
+- GetOpacity() : float result
+- GetFade() : float result
+- GetRepeatable() : boolean result
+- GetVelocity() : Vector result
+- GetScaleX() : float result
+- GetScaleY() : float result
+- GetMovingTexAnim() : GetMovingTexAnim result
+- GetDrawRecAnim() : GetDrawRecAnim result
+
+#### MovingTexAnim
+Move texture continuously along the sprite.
+- [constructor]MovingTexAnim(opt float speedX,speedY)
+- SetSpeedX(float val)
+- SetSpeedY(float val)
+- GetSpeedX() : float result
+- GetSpeedY() : float result
+
+#### DrawRecAnim
+Animate sprite frame by frame.
+- [constructor]DrawRecAnim()
+- SetOnFrameChangeWait(float val)
+- SetFrameCount(float val)
+- SetJumpX(float val)
+- SetJumpY(float val)
+- SetSizX(float val)
+- SetSizY(float val)
+- GetOnFrameChangeWait() : float result
+- GetFrameCount() : float result
+- GetJumpX() : float result
+- GetJumpY() : float result
+- GetSizX() : float result
+- GetSizY() : float result
 
 ### Texture
 Just holds texture information in VRAM.
@@ -295,6 +340,7 @@ It is a renderable entity (optionally), which contains a Mesh.
 It inherits functions from Cullable.
 - [void-constructor]Object()
 - EmitTrail(Vector color, opt float fadeSpeed=0.06)
+- SetTrailTex(Texture tex)
 - SetTrailDistortTex(Texture tex)
 - SetTransparency(float value)
 - GetTransparency() : float? result

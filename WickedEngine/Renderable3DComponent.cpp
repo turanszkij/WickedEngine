@@ -10,6 +10,8 @@
 Renderable3DComponent::Renderable3DComponent()
 {
 	_needToUpdateRenderData.store(true);
+
+	Renderable2DComponent();
 }
 Renderable3DComponent::~Renderable3DComponent()
 {
@@ -57,7 +59,7 @@ void Renderable3DComponent::setProperties()
 
 void Renderable3DComponent::Initialize()
 {
-	RenderableComponent::Initialize();
+	Renderable2DComponent::Initialize();
 
 	rtSSR.Initialize(
 		(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
@@ -158,7 +160,7 @@ void Renderable3DComponent::Initialize()
 
 void Renderable3DComponent::Load()
 {
-	RenderableComponent::Load();
+	Renderable2DComponent::Load();
 
 	wiRenderer::HAIRPARTICLEENABLED = getHairParticlesEnabled();
 	wiRenderer::EMITTERSENABLED = getEmittedParticlesEnabled();
@@ -170,14 +172,15 @@ void Renderable3DComponent::Start()
 }
 
 void Renderable3DComponent::Update(){
-	RenderableComponent::Update();
-
 	wiRenderer::Update();
 	wiRenderer::UpdateLights();
 	wiRenderer::SychronizeWithPhysicsEngine();
 	wiRenderer::UpdateImages();
 
 	_needToUpdateRenderData.store(true);
+
+
+	Renderable2DComponent::Update();
 }
 
 void Renderable3DComponent::Compose(){
