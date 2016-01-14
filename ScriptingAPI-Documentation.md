@@ -31,6 +31,8 @@ The documentation completion is still pending....
 		7. AABB
 		8. Emitter
 		9. Decal
+		10. Material
+		11. Camera
 	8. MainComponent
 	9. RenderableComponent
 		1. Renderable2DComponent
@@ -107,8 +109,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetScreenHeight() : float result
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
-- GetCamera() : Transform? result
-- LoadModel(string directory, string name, opt string identifier, opt Matrix transform)
+- GetCamera() : Camera? result
+- LoadModel(string directory, string name, opt string identifier, opt Matrix transform) : Model? result
 - LoadWorldInfo(string directory, string name)
 - FinishLoading()
 - SetEnvironmentMap(Texture cubemap)
@@ -313,7 +315,7 @@ It provides several key features of parenting.
 It inherits functions from Node.
 - [constructor]Transform()
 - AttachTo(Transform parent, opt boolean translation,rotation,scale)
-- Detach(opt boolean eraseFromParent) [warning: Leave the parameter unless you know what you are doing]
+- Detach()
 - Scale(Vector vector)
 - Rotate(Vector vectorRollPitchYaw)
 - Translate(Vector vector)
@@ -407,6 +409,18 @@ Decal is a texture sticker placeable onto any surface. It is a Transform and a C
 - [constructor]Material(opt string name="")
 - GetName() : string name
 - SetName(string value)
+
+#### Camera
+Main camera looking at the scene. It is a Transform.
+- [constructor]Camera()
+- SetFarPlane(float val)
+- SetNearPlane(float val)
+- GetFarPlane() : float result
+- GetNearPlane() : float result
+
+#### Model
+Collection of Objects, Armatures, Lights, Decals. Also a transform by itself
+- [constructor]Model()
 
 ### MainComponent
 The main component which holds information and manages the running of the current program.

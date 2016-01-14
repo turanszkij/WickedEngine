@@ -8,433 +8,10 @@
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiTextureHelper.h"
-
-thread_local vector<Instance>		Mesh::instances;
-BufferResource Mesh::meshInstanceBuffer=nullptr;
+#include "wiPHYSICS.h"
 
 
-void Mesh::LoadFromFile(const string& newName, const string& fname
-						, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier){
-	name = newName;
-
-	BYTE* buffer;
-	size_t fileSize;
-	if (wiHelper::readByteData(fname, &buffer, fileSize)){
-
-		int offset=0;
-
-		int VERSION;
-		memcpy(&VERSION,buffer,sizeof(int));
-		offset+=sizeof(int);
-
-		if(VERSION>=1001){
-			int doubleside;
-			memcpy(&doubleside,buffer+offset,sizeof(int));
-			offset+=sizeof(int);
-			if(doubleside){
-				doubleSided=true;
-			}
-		}
-
-		int billboard;
-		memcpy(&billboard,buffer+offset,sizeof(int));
-		offset+=sizeof(int);
-		if(billboard){
-			char axis;
-			memcpy(&axis,buffer+offset,1);
-			offset+=1;
-
-			if(toupper(axis)=='Y') 
-				billboardAxis=XMFLOAT3(0,1,0);
-			else if(toupper(axis)=='X') 
-				billboardAxis=XMFLOAT3(1,0,0);
-			else if(toupper(axis)=='Z') 
-				billboardAxis=XMFLOAT3(0,0,1);
-			else 
-				billboardAxis=XMFLOAT3(0,0,0);
-			isBillboarded=true;
-		}
-
-		int parented; //parentnamelength
-		memcpy(&parented,buffer+offset,sizeof(int));
-		offset+=sizeof(int);
-		if(parented){
-			char* pName = new char[parented+1]();
-			memcpy(pName,buffer+offset,parented);
-			offset+=parented;
-			parent=pName;
-			delete[] pName;
-
-			stringstream identified_parent("");
-			identified_parent<<parent<<identifier;
-			for(Armature* a : armatures){
-				if(!a->name.compare(identified_parent.str())){
-					armature=a;
-				}
-			}
-		}
-
-		int materialCount;
-		memcpy(&materialCount,buffer+offset,sizeof(int));
-		offset+=sizeof(int);
-		for(int i=0;i<materialCount;++i){
-			int matNameLen;
-			memcpy(&matNameLen,buffer+offset,sizeof(int));
-			offset+=sizeof(int);
-			char* matName = new char[matNameLen+1]();
-			memcpy(matName,buffer+offset,matNameLen);
-			offset+=matNameLen;
-
-			stringstream identified_matname("");
-			identified_matname<<matName<<identifier;
-			MaterialCollection::const_iterator iter = materialColl.find(identified_matname.str());
-			if(iter!=materialColl.end()){
-				materials.push_back(iter->second);
-			}
-			
-			materialNames.push_back(identified_matname.str());
-			delete[] matName;
-		}
-		int rendermesh,vertexCount;
-		memcpy(&rendermesh,buffer+offset,sizeof(int));
-		offset+=sizeof(int);
-		memcpy(&vertexCount,buffer+offset,sizeof(int));
-		offset+=sizeof(int);
-
-		vertices.reserve(vertexCount);
-		for(int i=0;i<vertexCount;++i){
-			SkinnedVertex vert = SkinnedVertex();
-			float v[8];
-			memcpy(v,buffer+offset,sizeof(float)*8);
-			offset+=sizeof(float)*8;
-			vert.pos.x=v[0];
-			vert.pos.y=v[1];
-			vert.pos.z=v[2];
-			if(!isBillboarded){
-				vert.nor.x=v[3];
-				vert.nor.y=v[4];
-				vert.nor.z=v[5];
-			}
-			else{
-				vert.nor.x = billboardAxis.x;
-				vert.nor.y = billboardAxis.y;
-				vert.nor.z = billboardAxis.z;
-			}
-			vert.tex.x=v[6];
-			vert.tex.y=v[7];
-			int matIndex;
-			memcpy(&matIndex,buffer+offset,sizeof(int));
-			offset+=sizeof(int);
-			vert.tex.z = (float)matIndex;
-			
-			int weightCount=0;
-			memcpy(&weightCount,buffer+offset,sizeof(int));
-			offset+=sizeof(int);
-			for(int j=0;j<weightCount;++j){
-				
-				int weightNameLen=0;
-				memcpy(&weightNameLen,buffer+offset,sizeof(int));
-				offset+=sizeof(int);
-				char* weightName = new char[weightNameLen+1](); //bone name
-				memcpy(weightName,buffer+offset,weightNameLen);
-				offset+=weightNameLen;
-				float weightValue=0;
-				memcpy(&weightValue,buffer+offset,sizeof(float));
-				offset+=sizeof(float);
-				
-#pragma region BONE INDEX SETUP
-				string nameB = weightName;
-				if(armature){
-					bool gotBone=false;
-					int BONEINDEX=0;
-					int b=0;
-					while(!gotBone && b<(int)armature->boneCollection.size()){
-						if(!armature->boneCollection[b]->name.compare(nameB)){
-							gotBone=true;
-							BONEINDEX=b; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
-						}
-						b++;
-					}
-					if(gotBone){ //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
-						if(!vert.wei.x) {
-							vert.wei.x=weightValue;
-							vert.bon.x = (float)BONEINDEX;
-						}
-						else if(!vert.wei.y) {
-							vert.wei.y=weightValue;
-							vert.bon.y = (float)BONEINDEX;
-						}
-						else if(!vert.wei.z) {
-							vert.wei.z=weightValue;
-							vert.bon.z = (float)BONEINDEX;
-						}
-						else if(!vert.wei.w) {
-							vert.wei.w=weightValue;
-							vert.bon.w = (float)BONEINDEX;
-						}
-					}
-				}
-
-					//(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
-
-				if(nameB.find("trailbase")!=string::npos)
-					trailInfo.base = vertices.size();
-				else if(nameB.find("trailtip")!=string::npos)
-					trailInfo.tip = vertices.size();
-						
-				bool windAffection=false;
-				if(nameB.find("wind")!=string::npos)
-					windAffection=true;
-				bool gotvg=false;
-				for (unsigned int v = 0; v<vertexGroups.size(); ++v)
-					if(!nameB.compare(vertexGroups[v].name)){
-						gotvg=true;
-						vertexGroups[v].addVertex( VertexRef(vertices.size(),weightValue) );
-						if(windAffection)
-							vert.tex.w=weightValue;
-					}
-				if(!gotvg){
-					vertexGroups.push_back(VertexGroup(nameB));
-					vertexGroups.back().addVertex( VertexRef(vertices.size(),weightValue) );
-					if(windAffection)
-						vert.tex.w=weightValue;
-				}
-#pragma endregion
-
-				delete[] weightName;
-
-				
-			}
-
-			
-			vertices.push_back(vert);
-		}
-
-		if(rendermesh){
-			int indexCount;
-			memcpy(&indexCount,buffer+offset,sizeof(int));
-			offset+=sizeof(int);
-			unsigned int* indexArray = new unsigned int[indexCount];
-			memcpy(indexArray,buffer+offset,sizeof(unsigned int)*indexCount);
-			offset+=sizeof(unsigned int)*indexCount;
-			indices.reserve(indexCount);
-			for(int i=0;i<indexCount;++i){
-				indices.push_back(indexArray[i]);
-			}
-			delete[] indexArray;
-
-			int softBody;
-			memcpy(&softBody,buffer+offset,sizeof(int));
-			offset+=sizeof(int);
-			if(softBody){
-				int softCount[2]; //ind,vert
-				memcpy(softCount,buffer+offset,sizeof(int)*2);
-				offset+=sizeof(int)*2;
-				unsigned int* softind = new unsigned int[softCount[0]];
-				memcpy(softind,buffer+offset,sizeof(unsigned int)*softCount[0]);
-				offset+=sizeof(unsigned int)*softCount[0];
-				float* softvert = new float[softCount[1]];
-				memcpy(softvert,buffer+offset,sizeof(float)*softCount[1]);
-				offset+=sizeof(float)*softCount[1];
-
-				physicsindices.reserve(softCount[0]);
-				physicsverts.reserve(softCount[1]/3);
-				for(int i=0;i<softCount[0];++i){
-					physicsindices.push_back(softind[i]);
-				}
-				for(int i=0;i<softCount[1];i+=3){
-					physicsverts.push_back(XMFLOAT3(softvert[i],softvert[i+1],softvert[i+2]));
-				}
-
-				delete[] softind;
-				delete[] softvert;
-			}
-			else{
-
-			}
-		}
-		else{
-
-		}
-
-		memcpy(aabb.corners,buffer+offset,sizeof(aabb.corners));
-		offset+=sizeof(aabb.corners);
-
-		int isSoftbody;
-		memcpy(&isSoftbody,buffer+offset,sizeof(int));
-		offset+=sizeof(int);
-		if(isSoftbody){
-			float prop[2]; //mass,friction
-			memcpy(prop,buffer+offset,sizeof(float)*2);
-			offset+=sizeof(float)*2;
-			softBody=true;
-			mass=prop[0];
-			friction=prop[1];
-			int vglenghts[3]; //goal,mass,soft
-			memcpy(vglenghts,buffer+offset,sizeof(int)*3);
-			offset+=sizeof(int)*3;
-
-			char* vgg = new char[vglenghts[0]+1]();
-			char* vgm = new char[vglenghts[1]+1]();
-			char* vgs = new char[vglenghts[2]+1]();
-			
-			memcpy(vgg,buffer+offset,vglenghts[0]);
-			offset+=vglenghts[0];
-			memcpy(vgm,buffer+offset,vglenghts[1]);
-			offset+=vglenghts[1];
-			memcpy(vgs,buffer+offset,vglenghts[2]);
-			offset+=vglenghts[2];
-
-			for (unsigned int v = 0; v<vertexGroups.size(); ++v){
-				if(!strcmp(vgm,vertexGroups[v].name.c_str()))
-					massVG=v;
-				if(!strcmp(vgg,vertexGroups[v].name.c_str()))
-					goalVG=v;
-				if(!strcmp(vgs,vertexGroups[v].name.c_str()))
-					softVG=v;
-			}
-
-			delete[]vgg;
-			delete[]vgm;
-			delete[]vgs;
-		}
-
-		delete[] buffer;
-
-		renderable=rendermesh==0?false:true;
-
-		CreateVertexArrays();
-
-		Optimize();
-
-		CreateBuffers();
-	}
-}
-void Mesh::Optimize()
-{
-	//TODO
-}
-void Mesh::CreateBuffers(){
-	if(!buffersComplete){
-
-		D3D11_BUFFER_DESC bd;
-		if (meshInstanceBuffer == nullptr)
-		{
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = D3D11_USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(Instance) * 2;
-			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			wiRenderer::graphicsDevice->CreateBuffer(&bd, 0, &meshInstanceBuffer);
-		}
-
-
-		if(goalVG>=0){
-			goalPositions.resize(vertexGroups[goalVG].vertices.size());
-			goalNormals.resize(vertexGroups[goalVG].vertices.size());
-		}
-
-
-
-			ZeroMemory( &bd, sizeof(bd) );
-	#ifdef USE_GPU_SKINNING
-			bd.Usage = (softBody?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
-			bd.CPUAccessFlags = (softBody?D3D11_CPU_ACCESS_WRITE:0);
-			if(hasArmature() && !softBody)
-				bd.ByteWidth = sizeof( SkinnedVertex ) * vertices.size();
-			else
-				bd.ByteWidth = sizeof( Vertex ) * vertices.size();
-	#else
-			bd.Usage = ((softBody || hasArmature())?D3D11_USAGE_DYNAMIC:D3D11_USAGE_IMMUTABLE);
-			bd.CPUAccessFlags = ((softBody || hasArmature())?D3D11_CPU_ACCESS_WRITE:0);
-			bd.ByteWidth = sizeof( Vertex ) * vertices.size();
-	#endif
-			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			D3D11_SUBRESOURCE_DATA InitData;
-			ZeroMemory( &InitData, sizeof(InitData) );
-			if(hasArmature() && !softBody)
-				InitData.pSysMem = vertices.data();
-			else
-				InitData.pSysMem = skinnedVertices.data();
-			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &meshVertBuff );
-		
-			
-			ZeroMemory( &bd, sizeof(bd) );
-			bd.Usage = D3D11_USAGE_IMMUTABLE;
-			bd.ByteWidth = sizeof( unsigned int ) * indices.size();
-			bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			ZeroMemory( &InitData, sizeof(InitData) );
-			InitData.pSysMem = indices.data();
-			wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &meshIndexBuff );
-			
-		if(renderable)
-		{
-		
-			ZeroMemory( &bd, sizeof(bd) );
-			bd.Usage = D3D11_USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(BoneShaderBuffer);
-			bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &boneBuffer );
-
-			if(hasArmature() && !softBody){
-				ZeroMemory( &bd, sizeof(bd) );
-				bd.Usage = D3D11_USAGE_DEFAULT;
-				bd.ByteWidth = sizeof(Vertex) * vertices.size();
-				bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
-				bd.CPUAccessFlags = 0;
-				bd.StructureByteStride=0;
-				wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &sOutBuffer );
-			}
-
-			//PHYSICALMAPPING
-			for (unsigned int i = 0; i<vertices.size(); ++i){
-				for (unsigned int j = 0; j<physicsverts.size(); ++j){
-					if(		fabs( vertices[i].pos.x-physicsverts[j].x ) < FLT_EPSILON
-						&&	fabs( vertices[i].pos.y-physicsverts[j].y ) < FLT_EPSILON
-						&&	fabs( vertices[i].pos.z-physicsverts[j].z ) < FLT_EPSILON
-						)
-					{
-						physicalmapGP.push_back(j);
-						break;
-					}
-				}
-			}
-		}
-
-
-		buffersComplete=true;
-	}
-
-}
-void Mesh::CreateVertexArrays()
-{
-	if (skinnedVertices.empty())
-	{
-		skinnedVertices.resize(vertices.size());
-		for (unsigned int i = 0; i<vertices.size(); ++i){
-			skinnedVertices[i].pos = vertices[i].pos;
-			skinnedVertices[i].nor = vertices[i].nor;
-			skinnedVertices[i].tex = vertices[i].tex;
-		}
-	}
-}
-void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
-{
-	if (numerator >= (int)instances.size())
-	{
-		instances.resize( (instances.size() + 1) * 2);
-	}
-	instances[numerator] = instance;
-}
-void Mesh::UpdateRenderableInstances(int count, DeviceContext context)
-{
-	wiRenderer::UpdateBuffer(meshInstanceBuffer, instances.data(), context, sizeof(Instance)*count);
-}
-
-void LoadWiArmatures(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures
-					 , map<string,Transform*>& transforms)
+void LoadWiArmatures(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures)
 {
 	stringstream filename("");
 	filename<<directory<<name;
@@ -544,8 +121,6 @@ void LoadWiArmatures(const string& directory, const string& name, const string& 
 		for (unsigned int i = 0; i<armature->rootbones.size(); ++i){
 			RecursiveRest(armature,armature->rootbones[i]);
 		}
-
-		transforms.insert(pair<string,Transform*>(armature->name,armature));
 	}
 
 }
@@ -728,7 +303,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 }
 void LoadWiObjects(const string& directory, const string& name, const string& identifier, vector<Object*>& objects
 					, vector<Armature*>& armatures
-				   , MeshCollection& meshes, map<string,Transform*>& transforms, const MaterialCollection& materials)
+				   , MeshCollection& meshes, const MaterialCollection& materials)
 {
 	int objectI=objects.size()-1;
 	
@@ -746,7 +321,6 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 				identified_name<<line.substr(9,strlen(line.c_str())-9)<<identifier;
 				objects.push_back(new Object(identified_name.str()));
 				objectI++;
-				transforms.insert(pair<string,Transform*>(objects.back()->name,objects.back()));
 			}
 			else{
 				switch(line[0]){
@@ -786,29 +360,31 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 						file>>parentName;
 						stringstream identified_parentName("");
 						identified_parentName<<parentName<<identifier;
-						for(Armature* a : armatures){
-							if(!a->name.compare(identified_parentName.str())){
-								objects.back()->parentName=identified_parentName.str();
-								objects.back()->parent=a;
-								objects.back()->attachTo(a,1,1,1);
-								objects.back()->armatureDeform=true;
-							}
-						}
+						objects.back()->parentName = identified_parentName.str();
+						//for(Armature* a : armatures){
+						//	if(!a->name.compare(identified_parentName.str())){
+						//		objects.back()->parentName=identified_parentName.str();
+						//		objects.back()->parent=a;
+						//		objects.back()->attachTo(a,1,1,1);
+						//		objects.back()->armatureDeform=true;
+						//	}
+						//}
 					}
 					break;
 				case 'b':
 					{
 						string bone="";
 						file>>bone;
-						if(objects.back()->parent!=nullptr){
-							for(Bone* b : ((Armature*)objects.back()->parent)->boneCollection){
-								if(!bone.compare(b->name)){
-									objects.back()->parent=b;
-									objects.back()->armatureDeform=false;
-									break;
-								}
-							}
-						}
+						objects.back()->boneParent = bone;
+						//if(objects.back()->parent!=nullptr){
+						//	for(Bone* b : ((Armature*)objects.back()->parent)->boneCollection){
+						//		if(!bone.compare(b->name)){
+						//			objects.back()->parent=b;
+						//			objects.back()->armatureDeform=false;
+						//			break;
+						//		}
+						//	}
+						//}
 					}
 					break;
 				case 'I':
@@ -1219,9 +795,7 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 	}
 	file.close();
 }
-void LoadWiLights(const string& directory, const string& name, const string& identifier, vector<Light*>& lights
-				  , const vector<Armature*>& armatures
-				  , map<string,Transform*>& transforms)
+void LoadWiLights(const string& directory, const string& name, const string& identifier, vector<Light*>& lights)
 {
 
 	stringstream filename("");
@@ -1243,13 +817,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					identified_name<<lname<<identifier;
 					lights.back()->name=identified_name.str();
 					lights.back()->shadowBias = 0.00001f;
-					//if(shadow){
-					//	lights.back()->shadowMap.resize(1);
-					//	lights.back()->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
-					//}
-					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::POINT)];
 					
-					transforms.insert(pair<string,Transform*>(lights.back()->name,lights.back()));
 				}
 				break;
 			case 'D':
@@ -1267,8 +835,6 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 							, 0, true
 							);
 					}
-					//lightGwiRenderer[Light::getTypeStr(Light::DIRECTIONAL)]->usedBy.push_back(lights.size()-1);
-					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::DIRECTIONAL)];
 				}
 				break;
 			case 'S':
@@ -1278,15 +844,6 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					file>>lights.back()->name;
 					file>>lights.back()->shadow>>lights.back()->enerDis.z;
 					lights.back()->shadowBias = 0.00001f;
-					//if(shadow){
-					//	lights.back()->shadowMap.resize(1);
-					//	lights.back()->shadowMap[0].Initialize(
-					//		wiRenderer::SHADOWMAPRES,wiRenderer::SHADOWMAPRES
-					//		,0,true
-					//		);
-					//}
-					//lightGwiRenderer[Light::getTypeStr(Light::SPOT)]->usedBy.push_back(lights.size()-1);
-					//lights.back()->mesh=lightGwiRenderer[Light::getTypeStr(Light::SPOT)];
 				}
 				break;
 			case 'p':
@@ -1297,26 +854,27 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					stringstream identified_parentName("");
 					identified_parentName<<parentName<<identifier;
 					lights.back()->parentName=identified_parentName.str();
-					for(map<string,Transform*>::iterator it=transforms.begin();it!=transforms.end();++it){
-						if(!it->second->name.compare(lights.back()->parentName)){
-							lights.back()->parent=it->second;
-							lights.back()->attachTo(it->second,1,1,1);
-							break;
-						}
-					}
+					//for(map<string,Transform*>::iterator it=transforms.begin();it!=transforms.end();++it){
+					//	if(!it->second->name.compare(lights.back()->parentName)){
+					//		lights.back()->parent=it->second;
+					//		lights.back()->attachTo(it->second,1,1,1);
+					//		break;
+					//	}
+					//}
 				}
 				break;
 			case 'b':
 				{
 					string parentBone="";
 					file>>parentBone;
+					lights.back()->boneParent = parentBone;
 
-					for(Bone* b : ((Armature*)lights.back()->parent)->boneCollection){
-						if(!b->name.compare(parentBone)){
-							lights.back()->parent=b;
-							lights.back()->attachTo(b,1,1,1);
-						}
-					}
+					//for(Bone* b : ((Armature*)lights.back()->parent)->boneCollection){
+					//	if(!b->name.compare(parentBone)){
+					//		lights.back()->parent=b;
+					//		lights.back()->attachTo(b,1,1,1);
+					//	}
+					//}
 				}
 				break;
 			case 'I':
@@ -1393,7 +951,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 	file.close();
 }
 void LoadWiHitSpheres(const string& directory, const string& name, const string& identifier, vector<HitSphere*>& spheres
-					  ,const vector<Armature*>& armatures, map<string,Transform*>& transforms)
+					  ,const vector<Armature*>& armatures)
 {
 	stringstream filename("");
 	filename<<directory<<name;
@@ -1433,14 +991,15 @@ void LoadWiHitSpheres(const string& directory, const string& name, const string&
 					//}
 					//spheres.push_back(new HitSphere(identified_name.str(),scale,loc,parentA,parent,prop));
 
-					Transform* parent = nullptr;
-					if(transforms.find(identified_parent.str())!=transforms.end())
-					{
-						parent = transforms[identified_parent.str()];
-						spheres.push_back(new HitSphere(identified_name.str(),scale,loc,parent,prop));
-						spheres.back()->attachTo(parent,1,1,1);
-						transforms.insert(pair<string,Transform*>(spheres.back()->name,spheres.back()));
-					}
+					// PARENTING DISABLED ON REFACTOR! CHECK!
+					//Transform* parent = nullptr;
+					//if(transforms.find(identified_parent.str())!=transforms.end())
+					//{
+					//	parent = transforms[identified_parent.str()];
+					//	spheres.push_back(new HitSphere(identified_name.str(),scale,loc,parent,prop));
+					//	spheres.back()->attachTo(parent,1,1,1);
+					//	transforms.insert(pair<string,Transform*>(spheres.back()->name,spheres.back()));
+					//}
 
 				}
 				break;
@@ -1533,7 +1092,7 @@ void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worl
 	file.close();
 }
 void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
-				   ,const vector<Armature*>& armatures, map<string,Transform*>& transforms){
+				   ,const vector<Armature*>& armatures){
 	stringstream filename("");
 	filename<<directory<<name;
 
@@ -1644,109 +1203,80 @@ void LoadWiDecals(const string&directory, const string& name, const string& text
 	file.close();
 }
 
-void LoadFromDisk(const string& dir, const string& name, const string& identifier
-				  , vector<Armature*>& armatures
-				  , MaterialCollection& materials
-				  , vector<Object*>& objects
-				  , MeshCollection& meshes
-				  , vector<Light*>& lights
-				  , vector<HitSphere*>& spheres
-				  , WorldInfo& worldInfo, Wind& wind
-				  , vector<Camera>& cameras
-				  , map<string,Transform*>& transforms
-				  , list<Decal*>& decals
-				  )
-{
-	MaterialCollection		l_materials;
-	vector<Armature*>		l_armatures;
-	vector<Object*>			l_objects;
-	MeshCollection			l_meshes;
-	vector<Light*>			l_lights;
-	vector<HitSphere*>		l_spheres;
-	WorldInfo				l_worldInfo = worldInfo;
-	Wind					l_wind = wind;
-	vector<Camera>			l_cameras;
-	map<string,Transform*>  l_transforms;
-	list<Decal*>			l_decals;
 
-	stringstream directory(""),armatureFilePath(""),materialLibFilePath(""),meshesFilePath(""),objectsFilePath("")
-		,actionsFilePath(""),lightsFilePath(""),worldInfoFilePath(""),enviroMapFilePath(""),hitSpheresFilePath("")
-		,camerasFilePath(""),decalsFilePath("");
+//void LoadFromDisk(const string& dir, const string& name, const string& identifier
+//				  , vector<Armature*>& armatures
+//				  , MaterialCollection& materials
+//				  , vector<Object*>& objects
+//				  , MeshCollection& meshes
+//				  , vector<Light*>& lights
+//				  , vector<HitSphere*>& spheres
+//				  , WorldInfo& worldInfo, Wind& wind
+//				  , vector<Camera>& cameras
+//				  , map<string,Transform*>& transforms
+//				  , list<Decal*>& decals
+//				  )
+//{
+//	MaterialCollection		l_materials;
+//	vector<Armature*>		l_armatures;
+//	vector<Object*>			l_objects;
+//	MeshCollection			l_meshes;
+//	vector<Light*>			l_lights;
+//	vector<HitSphere*>		l_spheres;
+//	WorldInfo				l_worldInfo = worldInfo;
+//	Wind					l_wind = wind;
+//	vector<Camera>			l_cameras;
+//	map<string,Transform*>  l_transforms;
+//	list<Decal*>			l_decals;
+//
+//	stringstream directory(""),armatureFilePath(""),materialLibFilePath(""),meshesFilePath(""),objectsFilePath("")
+//		,actionsFilePath(""),lightsFilePath(""),worldInfoFilePath(""),enviroMapFilePath(""),hitSpheresFilePath("")
+//		,camerasFilePath(""),decalsFilePath("");
+//
+//	directory<<dir;
+//	armatureFilePath<<name<<".wia";
+//	materialLibFilePath<<name<<".wim";
+//	meshesFilePath<<name<<".wi";
+//	objectsFilePath<<name<<".wio";
+//	actionsFilePath<<name<<".wiact";
+//	lightsFilePath<<name<<".wil";
+//	worldInfoFilePath<<name<<".wiw";
+//	hitSpheresFilePath<<name<<".wih";
+//	camerasFilePath<<name<<".wic";
+//	decalsFilePath<<name<<".wid";
+//
+//	LoadWiArmatures(directory.str(), armatureFilePath.str(),identifier,l_armatures,l_transforms);
+//	LoadWiMaterialLibrary(directory.str(), materialLibFilePath.str(),identifier, "textures/", l_materials);
+//	LoadWiMeshes(directory.str(), meshesFilePath.str(),identifier,meshes,l_armatures,l_materials);
+//	LoadWiObjects(directory.str(), objectsFilePath.str(),identifier,l_objects,l_armatures,meshes,l_transforms,l_materials);
+//	LoadWiActions(directory.str(), actionsFilePath.str(),identifier,l_armatures);
+//	LoadWiLights(directory.str(), lightsFilePath.str(),identifier, l_lights, l_armatures,l_transforms);
+//	LoadWiHitSpheres(directory.str(), hitSpheresFilePath.str(),identifier,spheres,l_armatures,l_transforms);
+//	LoadWiCameras(directory.str(), camerasFilePath.str(),identifier,l_cameras,l_armatures,l_transforms);
+//	LoadWiWorldInfo(directory.str(), worldInfoFilePath.str(),l_worldInfo,l_wind);
+//	LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", l_decals);
+//
+//	wiRenderer::graphicsMutex.lock();
+//	{
+//		armatures.insert(armatures.end(),l_armatures.begin(),l_armatures.end());
+//		objects.insert(objects.end(),l_objects.begin(),l_objects.end());
+//		lights.insert(lights.end(),l_lights.begin(),l_lights.end());
+//		spheres.insert(spheres.end(),l_spheres.begin(),l_spheres.end());
+//		cameras.insert(cameras.end(),l_cameras.begin(),l_cameras.end());
+//
+//		meshes.insert(l_meshes.begin(),l_meshes.end());
+//		materials.insert(l_materials.begin(),l_materials.end());
+//
+//		worldInfo=l_worldInfo;
+//		wind=l_wind;
+//
+//		transforms.insert(l_transforms.begin(),l_transforms.end());
+//
+//		decals.insert(decals.end(),l_decals.begin(),l_decals.end());
+//	}
+//	wiRenderer::graphicsMutex.unlock();
+//}
 
-	directory<<dir;
-	armatureFilePath<<name<<".wia";
-	materialLibFilePath<<name<<".wim";
-	meshesFilePath<<name<<".wi";
-	objectsFilePath<<name<<".wio";
-	actionsFilePath<<name<<".wiact";
-	lightsFilePath<<name<<".wil";
-	worldInfoFilePath<<name<<".wiw";
-	hitSpheresFilePath<<name<<".wih";
-	camerasFilePath<<name<<".wic";
-	decalsFilePath<<name<<".wid";
-
-	LoadWiArmatures(directory.str(), armatureFilePath.str(),identifier,l_armatures,l_transforms);
-	LoadWiMaterialLibrary(directory.str(), materialLibFilePath.str(),identifier, "textures/", l_materials);
-	LoadWiMeshes(directory.str(), meshesFilePath.str(),identifier,meshes,l_armatures,l_materials);
-	LoadWiObjects(directory.str(), objectsFilePath.str(),identifier,l_objects,l_armatures,meshes,l_transforms,l_materials);
-	LoadWiActions(directory.str(), actionsFilePath.str(),identifier,l_armatures);
-	LoadWiLights(directory.str(), lightsFilePath.str(),identifier, l_lights, l_armatures,l_transforms);
-	LoadWiHitSpheres(directory.str(), hitSpheresFilePath.str(),identifier,spheres,l_armatures,l_transforms);
-	LoadWiCameras(directory.str(), camerasFilePath.str(),identifier,l_cameras,l_armatures,l_transforms);
-	LoadWiWorldInfo(directory.str(), worldInfoFilePath.str(),l_worldInfo,l_wind);
-	LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", l_decals);
-
-	wiRenderer::graphicsMutex.lock();
-	{
-		armatures.insert(armatures.end(),l_armatures.begin(),l_armatures.end());
-		objects.insert(objects.end(),l_objects.begin(),l_objects.end());
-		lights.insert(lights.end(),l_lights.begin(),l_lights.end());
-		spheres.insert(spheres.end(),l_spheres.begin(),l_spheres.end());
-		cameras.insert(cameras.end(),l_cameras.begin(),l_cameras.end());
-
-		meshes.insert(l_meshes.begin(),l_meshes.end());
-		materials.insert(l_materials.begin(),l_materials.end());
-
-		worldInfo=l_worldInfo;
-		wind=l_wind;
-
-		transforms.insert(l_transforms.begin(),l_transforms.end());
-
-		decals.insert(decals.end(),l_decals.begin(),l_decals.end());
-	}
-	wiRenderer::graphicsMutex.unlock();
-}
-
-void Material::CleanUp(){
-	/*if(refMap) refMap->Release();
-	if(texture) texture->Release();
-	if(normalMap) normalMap->Release();
-	if(displacementMap) displacementMap->Release();
-	if(specularMap) specularMap->Release();*/
-	wiResourceManager::GetGlobal()->del(refMapName);
-	wiResourceManager::GetGlobal()->del(textureName);
-	wiResourceManager::GetGlobal()->del(normalMapName);
-	wiResourceManager::GetGlobal()->del(displacementMapName);
-	wiResourceManager::GetGlobal()->del(specularMapName);
-	refMap=nullptr;
-	texture=nullptr;
-	normalMap=nullptr;
-	displacementMap=nullptr;
-	specularMap=nullptr;
-}
-
-
-vector<wiRenderTarget> Light::shadowMaps_pointLight;
-vector<wiRenderTarget> Light::shadowMaps_spotLight;
-void Light::CleanUp(){
-	shadowCam.clear();
-	//shadowMap.clear();
-	shadowMaps_dirLight.clear();
-	lensFlareRimTextures.clear();
-	for(string x:lensFlareNames)
-		wiResourceManager::GetGlobal()->del(x);
-	lensFlareNames.clear();
-}
 
 void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
 	if(type==SPTREE_GENERATE_QUADTREE)
@@ -1756,8 +1286,595 @@ void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
 	tree->initialize(objects);
 }
 
+#pragma region CULLABLE
 Cullable::Cullable():bounds(AABB())/*,lastSquaredDistMulThousand(0)*/{}
+#pragma endregion
+
+#pragma region STREAMABLE
 Streamable::Streamable():directory(""),meshfile(""),materialfile(""),loaded(false){}
+#pragma endregion
+
+#pragma region MATERIAL
+Material::~Material() {
+	wiResourceManager::GetGlobal()->del(refMapName);
+	wiResourceManager::GetGlobal()->del(textureName);
+	wiResourceManager::GetGlobal()->del(normalMapName);
+	wiResourceManager::GetGlobal()->del(displacementMapName);
+	wiResourceManager::GetGlobal()->del(specularMapName);
+	refMap = nullptr;
+	texture = nullptr;
+	normalMap = nullptr;
+	displacementMap = nullptr;
+	specularMap = nullptr;
+}
+#pragma endregion
+
+#pragma region MESH
+
+thread_local vector<Instance>		Mesh::instances;
+BufferResource Mesh::meshInstanceBuffer = nullptr;
+
+
+void Mesh::LoadFromFile(const string& newName, const string& fname
+	, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier) {
+	name = newName;
+
+	BYTE* buffer;
+	size_t fileSize;
+	if (wiHelper::readByteData(fname, &buffer, fileSize)) {
+
+		int offset = 0;
+
+		int VERSION;
+		memcpy(&VERSION, buffer, sizeof(int));
+		offset += sizeof(int);
+
+		if (VERSION >= 1001) {
+			int doubleside;
+			memcpy(&doubleside, buffer + offset, sizeof(int));
+			offset += sizeof(int);
+			if (doubleside) {
+				doubleSided = true;
+			}
+		}
+
+		int billboard;
+		memcpy(&billboard, buffer + offset, sizeof(int));
+		offset += sizeof(int);
+		if (billboard) {
+			char axis;
+			memcpy(&axis, buffer + offset, 1);
+			offset += 1;
+
+			if (toupper(axis) == 'Y')
+				billboardAxis = XMFLOAT3(0, 1, 0);
+			else if (toupper(axis) == 'X')
+				billboardAxis = XMFLOAT3(1, 0, 0);
+			else if (toupper(axis) == 'Z')
+				billboardAxis = XMFLOAT3(0, 0, 1);
+			else
+				billboardAxis = XMFLOAT3(0, 0, 0);
+			isBillboarded = true;
+		}
+
+		int parented; //parentnamelength
+		memcpy(&parented, buffer + offset, sizeof(int));
+		offset += sizeof(int);
+		if (parented) {
+			char* pName = new char[parented + 1]();
+			memcpy(pName, buffer + offset, parented);
+			offset += parented;
+			parent = pName;
+			delete[] pName;
+
+			stringstream identified_parent("");
+			identified_parent << parent << identifier;
+			for (Armature* a : armatures) {
+				if (!a->name.compare(identified_parent.str())) {
+					armature = a;
+				}
+			}
+		}
+
+		int materialCount;
+		memcpy(&materialCount, buffer + offset, sizeof(int));
+		offset += sizeof(int);
+		for (int i = 0; i<materialCount; ++i) {
+			int matNameLen;
+			memcpy(&matNameLen, buffer + offset, sizeof(int));
+			offset += sizeof(int);
+			char* matName = new char[matNameLen + 1]();
+			memcpy(matName, buffer + offset, matNameLen);
+			offset += matNameLen;
+
+			stringstream identified_matname("");
+			identified_matname << matName << identifier;
+			MaterialCollection::const_iterator iter = materialColl.find(identified_matname.str());
+			if (iter != materialColl.end()) {
+				materials.push_back(iter->second);
+			}
+
+			materialNames.push_back(identified_matname.str());
+			delete[] matName;
+		}
+		int rendermesh, vertexCount;
+		memcpy(&rendermesh, buffer + offset, sizeof(int));
+		offset += sizeof(int);
+		memcpy(&vertexCount, buffer + offset, sizeof(int));
+		offset += sizeof(int);
+
+		vertices.reserve(vertexCount);
+		for (int i = 0; i<vertexCount; ++i) {
+			SkinnedVertex vert = SkinnedVertex();
+			float v[8];
+			memcpy(v, buffer + offset, sizeof(float) * 8);
+			offset += sizeof(float) * 8;
+			vert.pos.x = v[0];
+			vert.pos.y = v[1];
+			vert.pos.z = v[2];
+			if (!isBillboarded) {
+				vert.nor.x = v[3];
+				vert.nor.y = v[4];
+				vert.nor.z = v[5];
+			}
+			else {
+				vert.nor.x = billboardAxis.x;
+				vert.nor.y = billboardAxis.y;
+				vert.nor.z = billboardAxis.z;
+			}
+			vert.tex.x = v[6];
+			vert.tex.y = v[7];
+			int matIndex;
+			memcpy(&matIndex, buffer + offset, sizeof(int));
+			offset += sizeof(int);
+			vert.tex.z = (float)matIndex;
+
+			int weightCount = 0;
+			memcpy(&weightCount, buffer + offset, sizeof(int));
+			offset += sizeof(int);
+			for (int j = 0; j<weightCount; ++j) {
+
+				int weightNameLen = 0;
+				memcpy(&weightNameLen, buffer + offset, sizeof(int));
+				offset += sizeof(int);
+				char* weightName = new char[weightNameLen + 1](); //bone name
+				memcpy(weightName, buffer + offset, weightNameLen);
+				offset += weightNameLen;
+				float weightValue = 0;
+				memcpy(&weightValue, buffer + offset, sizeof(float));
+				offset += sizeof(float);
+
+#pragma region BONE INDEX SETUP
+				string nameB = weightName;
+				if (armature) {
+					bool gotBone = false;
+					int BONEINDEX = 0;
+					int b = 0;
+					while (!gotBone && b<(int)armature->boneCollection.size()) {
+						if (!armature->boneCollection[b]->name.compare(nameB)) {
+							gotBone = true;
+							BONEINDEX = b; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
+						}
+						b++;
+					}
+					if (gotBone) { //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
+						if (!vert.wei.x) {
+							vert.wei.x = weightValue;
+							vert.bon.x = (float)BONEINDEX;
+						}
+						else if (!vert.wei.y) {
+							vert.wei.y = weightValue;
+							vert.bon.y = (float)BONEINDEX;
+						}
+						else if (!vert.wei.z) {
+							vert.wei.z = weightValue;
+							vert.bon.z = (float)BONEINDEX;
+						}
+						else if (!vert.wei.w) {
+							vert.wei.w = weightValue;
+							vert.bon.w = (float)BONEINDEX;
+						}
+					}
+				}
+
+				//(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
+
+				if (nameB.find("trailbase") != string::npos)
+					trailInfo.base = vertices.size();
+				else if (nameB.find("trailtip") != string::npos)
+					trailInfo.tip = vertices.size();
+
+				bool windAffection = false;
+				if (nameB.find("wind") != string::npos)
+					windAffection = true;
+				bool gotvg = false;
+				for (unsigned int v = 0; v<vertexGroups.size(); ++v)
+					if (!nameB.compare(vertexGroups[v].name)) {
+						gotvg = true;
+						vertexGroups[v].addVertex(VertexRef(vertices.size(), weightValue));
+						if (windAffection)
+							vert.tex.w = weightValue;
+					}
+				if (!gotvg) {
+					vertexGroups.push_back(VertexGroup(nameB));
+					vertexGroups.back().addVertex(VertexRef(vertices.size(), weightValue));
+					if (windAffection)
+						vert.tex.w = weightValue;
+				}
+#pragma endregion
+
+				delete[] weightName;
+
+
+			}
+
+
+			vertices.push_back(vert);
+		}
+
+		if (rendermesh) {
+			int indexCount;
+			memcpy(&indexCount, buffer + offset, sizeof(int));
+			offset += sizeof(int);
+			unsigned int* indexArray = new unsigned int[indexCount];
+			memcpy(indexArray, buffer + offset, sizeof(unsigned int)*indexCount);
+			offset += sizeof(unsigned int)*indexCount;
+			indices.reserve(indexCount);
+			for (int i = 0; i<indexCount; ++i) {
+				indices.push_back(indexArray[i]);
+			}
+			delete[] indexArray;
+
+			int softBody;
+			memcpy(&softBody, buffer + offset, sizeof(int));
+			offset += sizeof(int);
+			if (softBody) {
+				int softCount[2]; //ind,vert
+				memcpy(softCount, buffer + offset, sizeof(int) * 2);
+				offset += sizeof(int) * 2;
+				unsigned int* softind = new unsigned int[softCount[0]];
+				memcpy(softind, buffer + offset, sizeof(unsigned int)*softCount[0]);
+				offset += sizeof(unsigned int)*softCount[0];
+				float* softvert = new float[softCount[1]];
+				memcpy(softvert, buffer + offset, sizeof(float)*softCount[1]);
+				offset += sizeof(float)*softCount[1];
+
+				physicsindices.reserve(softCount[0]);
+				physicsverts.reserve(softCount[1] / 3);
+				for (int i = 0; i<softCount[0]; ++i) {
+					physicsindices.push_back(softind[i]);
+				}
+				for (int i = 0; i<softCount[1]; i += 3) {
+					physicsverts.push_back(XMFLOAT3(softvert[i], softvert[i + 1], softvert[i + 2]));
+				}
+
+				delete[] softind;
+				delete[] softvert;
+			}
+			else {
+
+			}
+		}
+		else {
+
+		}
+
+		memcpy(aabb.corners, buffer + offset, sizeof(aabb.corners));
+		offset += sizeof(aabb.corners);
+
+		int isSoftbody;
+		memcpy(&isSoftbody, buffer + offset, sizeof(int));
+		offset += sizeof(int);
+		if (isSoftbody) {
+			float prop[2]; //mass,friction
+			memcpy(prop, buffer + offset, sizeof(float) * 2);
+			offset += sizeof(float) * 2;
+			softBody = true;
+			mass = prop[0];
+			friction = prop[1];
+			int vglenghts[3]; //goal,mass,soft
+			memcpy(vglenghts, buffer + offset, sizeof(int) * 3);
+			offset += sizeof(int) * 3;
+
+			char* vgg = new char[vglenghts[0] + 1]();
+			char* vgm = new char[vglenghts[1] + 1]();
+			char* vgs = new char[vglenghts[2] + 1]();
+
+			memcpy(vgg, buffer + offset, vglenghts[0]);
+			offset += vglenghts[0];
+			memcpy(vgm, buffer + offset, vglenghts[1]);
+			offset += vglenghts[1];
+			memcpy(vgs, buffer + offset, vglenghts[2]);
+			offset += vglenghts[2];
+
+			for (unsigned int v = 0; v<vertexGroups.size(); ++v) {
+				if (!strcmp(vgm, vertexGroups[v].name.c_str()))
+					massVG = v;
+				if (!strcmp(vgg, vertexGroups[v].name.c_str()))
+					goalVG = v;
+				if (!strcmp(vgs, vertexGroups[v].name.c_str()))
+					softVG = v;
+			}
+
+			delete[]vgg;
+			delete[]vgm;
+			delete[]vgs;
+		}
+
+		delete[] buffer;
+
+		renderable = rendermesh == 0 ? false : true;
+
+		CreateVertexArrays();
+
+		Optimize();
+
+		CreateBuffers();
+	}
+}
+void Mesh::Optimize()
+{
+	//TODO
+}
+void Mesh::CreateBuffers() {
+	if (!buffersComplete) {
+
+		D3D11_BUFFER_DESC bd;
+		if (meshInstanceBuffer == nullptr)
+		{
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = D3D11_USAGE_DYNAMIC;
+			bd.ByteWidth = sizeof(Instance) * 2;
+			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			wiRenderer::graphicsDevice->CreateBuffer(&bd, 0, &meshInstanceBuffer);
+		}
+
+
+		if (goalVG >= 0) {
+			goalPositions.resize(vertexGroups[goalVG].vertices.size());
+			goalNormals.resize(vertexGroups[goalVG].vertices.size());
+		}
+
+
+
+		ZeroMemory(&bd, sizeof(bd));
+#ifdef USE_GPU_SKINNING
+		bd.Usage = (softBody ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE);
+		bd.CPUAccessFlags = (softBody ? D3D11_CPU_ACCESS_WRITE : 0);
+		if (hasArmature() && !softBody)
+			bd.ByteWidth = sizeof(SkinnedVertex) * vertices.size();
+		else
+			bd.ByteWidth = sizeof(Vertex) * vertices.size();
+#else
+		bd.Usage = ((softBody || hasArmature()) ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE);
+		bd.CPUAccessFlags = ((softBody || hasArmature()) ? D3D11_CPU_ACCESS_WRITE : 0);
+		bd.ByteWidth = sizeof(Vertex) * vertices.size();
+#endif
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		D3D11_SUBRESOURCE_DATA InitData;
+		ZeroMemory(&InitData, sizeof(InitData));
+		if (hasArmature() && !softBody)
+			InitData.pSysMem = vertices.data();
+		else
+			InitData.pSysMem = skinnedVertices.data();
+		wiRenderer::graphicsDevice->CreateBuffer(&bd, &InitData, &meshVertBuff);
+
+
+		ZeroMemory(&bd, sizeof(bd));
+		bd.Usage = D3D11_USAGE_IMMUTABLE;
+		bd.ByteWidth = sizeof(unsigned int) * indices.size();
+		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		ZeroMemory(&InitData, sizeof(InitData));
+		InitData.pSysMem = indices.data();
+		wiRenderer::graphicsDevice->CreateBuffer(&bd, &InitData, &meshIndexBuff);
+
+		if (renderable)
+		{
+
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = D3D11_USAGE_DYNAMIC;
+			bd.ByteWidth = sizeof(BoneShaderBuffer);
+			bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &boneBuffer);
+
+			if (hasArmature() && !softBody) {
+				ZeroMemory(&bd, sizeof(bd));
+				bd.Usage = D3D11_USAGE_DEFAULT;
+				bd.ByteWidth = sizeof(Vertex) * vertices.size();
+				bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
+				bd.CPUAccessFlags = 0;
+				bd.StructureByteStride = 0;
+				wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &sOutBuffer);
+			}
+
+			//PHYSICALMAPPING
+			for (unsigned int i = 0; i<vertices.size(); ++i) {
+				for (unsigned int j = 0; j<physicsverts.size(); ++j) {
+					if (fabs(vertices[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+						&&	fabs(vertices[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+						&&	fabs(vertices[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+						)
+					{
+						physicalmapGP.push_back(j);
+						break;
+					}
+				}
+			}
+		}
+
+
+		buffersComplete = true;
+	}
+
+}
+void Mesh::CreateVertexArrays()
+{
+	if (skinnedVertices.empty())
+	{
+		skinnedVertices.resize(vertices.size());
+		for (unsigned int i = 0; i<vertices.size(); ++i) {
+			skinnedVertices[i].pos = vertices[i].pos;
+			skinnedVertices[i].nor = vertices[i].nor;
+			skinnedVertices[i].tex = vertices[i].tex;
+		}
+	}
+}
+void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
+{
+	if (numerator >= (int)instances.size())
+	{
+		instances.resize((instances.size() + 1) * 2);
+	}
+	instances[numerator] = instance;
+}
+void Mesh::UpdateRenderableInstances(int count, DeviceContext context)
+{
+	wiRenderer::UpdateBuffer(meshInstanceBuffer, instances.data(), context, sizeof(Instance)*count);
+}
+#pragma endregion
+
+#pragma region MODEL
+Model::Model()
+{
+
+}
+void Model::LoadFromDisk(const string& dir, const string& name, const string& identifier)
+{
+	stringstream directory(""), armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
+		, actionsFilePath(""), lightsFilePath(""), decalsFilePath("");
+
+	directory << dir;
+	armatureFilePath << name << ".wia";
+	materialLibFilePath << name << ".wim";
+	meshesFilePath << name << ".wi";
+	objectsFilePath << name << ".wio";
+	actionsFilePath << name << ".wiact";
+	lightsFilePath << name << ".wil";
+	decalsFilePath << name << ".wid";
+
+	LoadWiArmatures(directory.str(), armatureFilePath.str(), identifier, armatures);
+	LoadWiMaterialLibrary(directory.str(), materialLibFilePath.str(), identifier, "textures/", materials);
+	LoadWiMeshes(directory.str(), meshesFilePath.str(), identifier, meshes, armatures, materials);
+	LoadWiObjects(directory.str(), objectsFilePath.str(), identifier, objects, armatures, meshes, materials);
+	LoadWiActions(directory.str(), actionsFilePath.str(), identifier, armatures);
+	LoadWiLights(directory.str(), lightsFilePath.str(), identifier, lights);
+	LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", decals);
+
+	vector<Transform*> transforms(0);
+	transforms.reserve(armatures.size() + objects.size() + lights.size() + decals.size());
+
+	for (Armature* x : armatures)
+	{
+		if (x->actions.size() > 1)
+		{
+			// If it has actions besides the identity, activate the first by default
+			x->GetPrimaryAnimation()->ChangeAction(1);
+		}
+		transforms.push_back(x);
+	}
+	for (Object* x : objects) {
+		transforms.push_back(x);
+		for (wiEmittedParticle* e : x->eParticleSystems)
+		{
+			if (e->light != nullptr)
+			{
+				lights.push_back(e->light);
+			}
+		}
+	}
+	for (Light* x : lights)
+	{
+		x->SetUp();
+		transforms.push_back(x);
+	}
+	for (Decal* x : decals)
+	{
+		transforms.push_back(x);
+	}
+
+
+	// Match loaded parenting information
+	for (Transform* x : transforms)
+	{
+		for (Transform* y : transforms)
+		{
+			if (x != y && x->parentName.length() > 0 && !x->parentName.compare(y->name))
+			{
+				// Match parent
+				x->attachTo(y);
+				break;
+			}
+		}
+
+		if (x->parent != nullptr && x->parentName.length() > 0 && x->boneParent.length() > 0)
+		{
+			// Match Bone parent
+			Armature* armature = dynamic_cast<Armature*>(x->parent);
+			if (armature != nullptr)
+			{
+				// Only if the current parent is an Armature!
+				for (Bone* b : armature->boneCollection) {
+					if (!b->name.compare(x->boneParent))
+					{
+						x->attachTo(b);
+					}
+				}
+			}
+		}
+
+		if (x->parent == nullptr)
+		{
+			x->attachTo(this);
+		}
+	}
+
+	//RecalculateHierarchy();
+}
+void Model::UpdateModel()
+{
+	for (MaterialCollection::iterator iter = materials.begin(); iter != materials.end(); ++iter) {
+		Material* iMat = iter->second;
+		iMat->framesToWaitForTexCoordOffset -= 1.0f;
+		if (iMat->framesToWaitForTexCoordOffset <= 0) {
+			iMat->texOffset.x += iMat->movingTex.x*wiRenderer::GetGameSpeed();
+			iMat->texOffset.y += iMat->movingTex.y*wiRenderer::GetGameSpeed();
+			iMat->framesToWaitForTexCoordOffset = iMat->movingTex.z*wiRenderer::GetGameSpeed();
+		}
+	}
+
+	for (Armature* x : armatures)
+	{
+		x->UpdateArmature();
+	}
+	for (Object* x : objects)
+	{
+		x->UpdateObject();
+	}
+	for (Light*x : lights)
+	{
+		x->UpdateLight();
+	}
+	
+	list<Decal*>::iterator iter = decals.begin();
+	while (iter != decals.end())
+	{
+		Decal* decal = *iter;
+		decal->UpdateDecal();
+		if (decal->life>-2) {
+			if (decal->life <= 0) {
+				decal->detach();
+				decals.erase(iter++);
+				delete decal;
+				continue;
+			}
+		}
+		++iter;
+	}
+}
+#pragma endregion
 
 #pragma region AABB
 AABB::AABB(){
@@ -1901,6 +2018,7 @@ AABB AABB::operator* (float a)
 }
 #pragma endregion
 
+#pragma region SPHERE
 bool SPHERE::intersects(const AABB& b){
 	XMFLOAT3 min = b.getMin();
 	XMFLOAT3 max = b.getMax();
@@ -1911,12 +2029,16 @@ bool SPHERE::intersects(const AABB& b){
 bool SPHERE::intersects(const SPHERE& b){
 	return wiMath::Distance(center,b.center)<=radius+b.radius;
 }
+#pragma endregion
 
+#pragma region RAY
 bool RAY::intersects(const AABB& box) const{
 	return box.intersects(*this);
 }
+#pragma endregion
 
-ID3D11Buffer *HitSphere::vertexBuffer=nullptr;
+#pragma region HITSPHERE
+BufferResource HitSphere::vertexBuffer=nullptr;
 void HitSphere::SetUpStatic()
 {
 	const int numVert = (RESOLUTION+1)*2;
@@ -1946,60 +2068,410 @@ void HitSphere::CleanUpStatic()
 		vertexBuffer=NULL;
 	}
 }
+void HitSphere::UpdateTransform()
+{
+	Transform::UpdateTransform();
+	
+	//getMatrix();
+	center = translation;
+	radius = radius_saved*scale.x;
+}
+#pragma endregion
 
 #pragma region BONE
-XMMATRIX Bone::getTransform(int getTranslation, int getRotation, int getScale){
+XMMATRIX Bone::getMatrix(int getTranslation, int getRotation, int getScale)
+{
 	
 	return XMMatrixTranslation(0,0,length)*XMLoadFloat4x4(&world);
+}
+void Bone::UpdateTransform()
+{
+	//Transform::UpdateTransform();
+
+	// Needs to be updated differently than regular Transforms
+
+	for (Transform* child : children)
+	{
+		child->UpdateTransform();
+	}
+}
+#pragma endregion
+
+#pragma region ANIMATIONLAYER
+AnimationLayer::AnimationLayer()
+{
+	name = "";
+
+	activeAction = prevAction = 0;
+	ResetAction();
+	ResetActionPrev();
+
+	playing = true;
+	blendCurrentFrame = 0.0f;
+	blendFrames = 0.0f;
+	blendFact = 0.0f;
+	currentFramePrevAction = 0.0f;
+	weight = 1.0f;
+	type = ANIMLAYER_TYPE_ADDITIVE;
+
+	looped = true;
+}
+
+void AnimationLayer::ChangeAction(int actionIndex, float blendFrames, float weight)
+{
+	currentFramePrevAction = currentFrame;
+	ResetAction();
+	prevAction = activeAction;
+	activeAction = actionIndex;
+	this->blendFrames = blendFrames;
+	blendFact = 0.0f;
+	blendCurrentFrame = 0.0f;
+	this->weight = weight;
+}
+void AnimationLayer::ResetAction()
+{
+	currentFrame = 1;
+}
+void AnimationLayer::ResetActionPrev()
+{
+	currentFramePrevAction = 1;
+}
+void AnimationLayer::PauseAction()
+{
+	playing = false;
+}
+void AnimationLayer::StopAction()
+{
+	ResetAction();
+	PauseAction();
+}
+void AnimationLayer::PlayAction()
+{
+	playing = true;
+}
+#pragma endregion
+
+#pragma region ARMATURE
+void Armature::UpdateTransform()
+{
+	Transform::UpdateTransform();
+
+	// calculate frame
+	for (Bone* root : rootbones) 
+	{
+		RecursiveBoneTransform(this, root, getMatrix());
+	}
+
+}
+void Armature::UpdateArmature()
+{
+
+	for (auto& x : animationLayers)
+	{
+		AnimationLayer& anim = *x;
+
+		// current action
+		float cf = anim.currentFrame;
+		int maxCf = 0;
+		int activeAction = anim.activeAction;
+		int prevAction = anim.prevAction;
+		float frameInc = (anim.playing ? wiRenderer::GetGameSpeed() : 0.f);
+
+		cf = anim.currentFrame += frameInc;
+		maxCf = actions[activeAction].frameCount;
+		if ((int)cf > maxCf)
+		{
+			if (anim.looped)
+			{
+				anim.ResetAction();
+				cf = anim.currentFrame;
+			}
+			else
+			{
+				anim.currentFrame = cf = (float)maxCf;
+			}
+		}
+
+
+		// prev action
+		float cfPrevAction = anim.currentFramePrevAction;
+		int maxCfPrevAction = actions[prevAction].frameCount;
+		cfPrevAction = anim.currentFramePrevAction += frameInc;
+		if ((int)cfPrevAction > maxCfPrevAction)
+		{
+			if (anim.looped)
+			{
+				anim.ResetActionPrev();
+				cfPrevAction = anim.currentFramePrevAction;
+			}
+			else
+			{
+				anim.currentFramePrevAction = cfPrevAction = (float)maxCfPrevAction;
+			}
+		}
+
+		// blending
+		anim.blendCurrentFrame += frameInc;
+		if (abs(anim.blendFrames) > 0)
+			anim.blendFact = wiMath::Clamp(anim.blendCurrentFrame / anim.blendFrames, 0, 1);
+		else
+			anim.blendFact = 1;
+	}
+}
+void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat)
+{
+	Bone* parent = (Bone*)bone->parent;
+
+	// TRANSITION BLENDING + ADDITIVE BLENDING
+	XMVECTOR& finalTrans = XMVectorSet(0, 0, 0, 0);
+	XMVECTOR& finalRotat = XMQuaternionIdentity();
+	XMVECTOR& finalScala = XMVectorSet(1, 1, 1, 0);
+
+	for (auto& x : armature->animationLayers)
+	{
+		AnimationLayer& anim = *x;
+
+		float cf = anim.currentFrame, cfPrev = anim.currentFramePrevAction;
+		int activeAction = anim.activeAction, prevAction = anim.prevAction;
+		int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
+
+		XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
+
+		XMVECTOR& currTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR& currRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR& currScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
+
+		float blendFact = anim.blendFact;
+
+		switch (anim.type)
+		{
+		case AnimationLayer::ANIMLAYER_TYPE_PRIMARY:
+			finalTrans = XMVectorLerp(prevTrans, currTrans, blendFact);
+			finalRotat = XMQuaternionSlerp(prevRotat, currRotat, blendFact);
+			finalScala = XMVectorLerp(prevScala, currScala, blendFact);
+			break;
+		case AnimationLayer::ANIMLAYER_TYPE_ADDITIVE:
+			finalTrans = XMVectorLerp(finalTrans, XMVectorAdd(finalTrans, XMVectorLerp(prevTrans, currTrans, blendFact)), anim.weight);
+			finalRotat = XMQuaternionSlerp(finalRotat, XMQuaternionMultiply(finalRotat, XMQuaternionSlerp(prevRotat, currRotat, blendFact)), anim.weight); // normalize?
+			finalScala = XMVectorLerp(finalScala, XMVectorMultiply(finalScala, XMVectorLerp(prevScala, currScala, blendFact)), anim.weight);
+			break;
+		default:
+			break;
+		}
+	}
+	XMVectorSetW(finalTrans, 1);
+	XMVectorSetW(finalScala, 1);
+
+	bone->worldPrev = bone->world;
+	bone->translationPrev = bone->translation;
+	bone->rotationPrev = bone->rotation;
+	XMStoreFloat3(&bone->translation, finalTrans);
+	XMStoreFloat4(&bone->rotation, finalRotat);
+	XMStoreFloat3(&bone->scale, finalScala);
+
+	XMMATRIX& anim =
+		XMMatrixScalingFromVector(finalScala)
+		* XMMatrixRotationQuaternion(finalRotat)
+		* XMMatrixTranslationFromVector(finalTrans);
+
+	XMMATRIX& rest =
+		XMLoadFloat4x4(&bone->world_rest);
+
+	XMMATRIX& boneMat =
+		anim * rest * parentCombinedMat
+		;
+
+	XMMATRIX& finalMat =
+		XMLoadFloat4x4(&bone->recursiveRestInv)*
+		boneMat
+		;
+
+	XMStoreFloat4x4(&bone->world, boneMat);
+
+	bone->boneRelativityPrev = bone->boneRelativity;
+	XMStoreFloat4x4(&bone->boneRelativity, finalMat);
+
+	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
+		RecursiveBoneTransform(armature, bone->childrenI[i], boneMat);
+	}
+
+	// Because bones are not updated in the regular Transform fashion, a separate update needs to be called
+	bone->UpdateTransform();
+}
+XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const vector<KeyFrame>& keyframeList, KeyFrameType type)
+{
+	XMVECTOR result = XMVectorSet(0, 0, 0, 0);
+
+	if (type == POSITIONKEYFRAMETYPE) result = XMVectorSet(0, 0, 0, 1);
+	if (type == ROTATIONKEYFRAMETYPE) result = XMVectorSet(0, 0, 0, 1);
+	if (type == SCALARKEYFRAMETYPE)   result = XMVectorSet(1, 1, 1, 1);
+
+	//SEARCH 2 INTERPOLATABLE FRAMES
+	int nearest[2] = { 0,0 };
+	int first = 0, last = 0;
+	if (keyframeList.size()>1) {
+		first = keyframeList[0].frameI;
+		last = keyframeList.back().frameI;
+
+		if (cf <= first) { //BROKEN INTERVAL
+			nearest[0] = 0;
+			nearest[1] = 0;
+		}
+		else if (cf >= last) {
+			nearest[0] = keyframeList.size() - 1;
+			nearest[1] = keyframeList.size() - 1;
+		}
+		else { //IN BETWEEN TWO KEYFRAMES, DECIDE WHICH
+			for (int k = keyframeList.size() - 1; k>0; k--)
+				if (keyframeList[k].frameI <= cf) {
+					nearest[0] = k;
+					break;
+				}
+			for (unsigned int k = 0; k<keyframeList.size(); k++)
+				if (keyframeList[k].frameI >= cf) {
+					nearest[1] = k;
+					break;
+				}
+		}
+
+		//INTERPOLATE BETWEEN THE TWO FRAMES
+		int keyframes[2] = {
+			keyframeList[nearest[0]].frameI,
+			keyframeList[nearest[1]].frameI
+		};
+		float interframe = 0;
+		if (cf <= first || cf >= last) { //BROKEN INTERVAL
+			float intervalBegin = (float)(maxCf - keyframes[0]);
+			float intervalEnd = keyframes[1] + intervalBegin;
+			float intervalLen = abs(intervalEnd - intervalBegin);
+			float offsetCf = cf + intervalBegin;
+			if (intervalLen) interframe = offsetCf / intervalLen;
+		}
+		else {
+			float intervalBegin = (float)keyframes[0];
+			float intervalEnd = (float)keyframes[1];
+			float intervalLen = abs(intervalEnd - intervalBegin);
+			float offsetCf = cf - intervalBegin;
+			if (intervalLen) interframe = offsetCf / intervalLen;
+		}
+
+		if (type == ROTATIONKEYFRAMETYPE) {
+			XMVECTOR quat[2] = {
+				XMLoadFloat4(&keyframeList[nearest[0]].data),
+				XMLoadFloat4(&keyframeList[nearest[1]].data)
+			};
+			result = XMQuaternionNormalize(XMQuaternionSlerp(quat[0], quat[1], interframe));
+		}
+		else {
+			XMVECTOR tran[2] = {
+				XMLoadFloat4(&keyframeList[nearest[0]].data),
+				XMLoadFloat4(&keyframeList[nearest[1]].data)
+			};
+			result = XMVectorLerp(tran[0], tran[1], interframe);
+		}
+	}
+	else {
+		if (!keyframeList.empty())
+			result = XMLoadFloat4(&keyframeList.back().data);
+	}
+
+	return result;
+}
+
+void Armature::ChangeAction(const string& actionName, float blendFrames, const string& animLayer, float weight)
+{
+	AnimationLayer* anim = GetPrimaryAnimation();
+	if (animLayer.length() > 0)
+	{
+		anim = GetAnimLayer(animLayer);
+	}
+
+	if (actionName.length() > 0)
+	{
+		for (unsigned int i = 1; i < actions.size(); ++i)
+		{
+			if (!actions[i].name.compare(actionName))
+			{
+				anim->ChangeAction(i, blendFrames, weight);
+				return;
+			}
+		}
+	}
+
+	// Fall back to identity action
+	anim->ChangeAction(0, blendFrames, weight);
+}
+AnimationLayer* Armature::GetAnimLayer(const string& name)
+{
+	for (auto& x : animationLayers)
+	{
+		if (!x->name.compare(name))
+		{
+			return x;
+		}
+	}
+	animationLayers.push_back(new AnimationLayer);
+	animationLayers.back()->name = name;
+	return animationLayers.back();
+}
+void Armature::AddAnimLayer(const string& name)
+{
+	for (auto& x : animationLayers)
+	{
+		if (!x->name.compare(name))
+		{
+			return;
+		}
+	}
+	animationLayers.push_back(new AnimationLayer);
+	animationLayers.back()->name = name;
+}
+void Armature::DeleteAnimLayer(const string& name)
+{
+	auto i = animationLayers.begin();
+	while (i != animationLayers.end())
+	{
+		if ((*i)->type != AnimationLayer::ANIMLAYER_TYPE_PRIMARY && !(*i)->name.compare(name))
+		{
+			animationLayers.erase(i++);
+		}
+		else
+		{
+			++i;
+		}
+	}
 }
 #pragma endregion
 
 #pragma region TRANSFORM
 
-
-XMMATRIX Transform::getTransform(int getTranslation, int getRotation, int getScale){
-	worldPrev=world;
-	translationPrev=translation;
-	scalePrev=scale;
-	rotationPrev=rotation;
-
-	XMVECTOR s = XMLoadFloat3(&scale_rest);
-	XMVECTOR r = XMLoadFloat4(&rotation_rest);
-	XMVECTOR t = XMLoadFloat3(&translation_rest);
-	XMMATRIX& w = 
-		XMMatrixScalingFromVector(s)*
-		XMMatrixRotationQuaternion(r)*
-		XMMatrixTranslationFromVector(t)
-		;
-	XMStoreFloat4x4( &world_rest,w );
-
-	if(parent!=nullptr){
-		w = w * XMLoadFloat4x4(&parent_inv_rest) * parent->getTransform();
-		XMVECTOR v[3];
-		XMMatrixDecompose(&v[0],&v[1],&v[2],w);
-		XMStoreFloat3( &scale,v[0] );
-		XMStoreFloat4( &rotation,v[1] );
-		XMStoreFloat3( &translation,v[2] );
-		XMStoreFloat4x4( &world, w );
-	}
-	else{
-		world = world_rest;
-		translation=translation_rest;
-		rotation=rotation_rest;
-		scale=scale_rest;
+void Transform::DeleteTree(Transform* transform)
+{
+	if (transform == nullptr)
+	{
+		return;
 	}
 
-	return w;
+	for (auto* x : transform->children)
+	{
+		DeleteTree(x);
+	}
+	delete transform;
+}
 
-	//XMVECTOR s = XMVectorSet(1,1,1,1);
-	//XMVECTOR r = XMVectorSet(0,0,0,1);
-	//XMVECTOR t = XMVectorSet(0,0,0,1);
-	//if(getScale) 
-	//	s = XMLoadFloat3(&scale_rest);
-	//if(getRotation) 
-	//	r = XMLoadFloat4(&rotation_rest);
-	//if(getTranslation) 
-	//	t = XMLoadFloat3(&translation_rest);
+XMMATRIX Transform::getMatrix(int getTranslation, int getRotation, int getScale){
+	return XMLoadFloat4x4(&world);
+
+	//worldPrev=world;
+	//translationPrev=translation;
+	//scalePrev=scale;
+	//rotationPrev=rotation;
+
+	//XMVECTOR s = XMLoadFloat3(&scale_rest);
+	//XMVECTOR r = XMLoadFloat4(&rotation_rest);
+	//XMVECTOR t = XMLoadFloat3(&translation_rest);
 	//XMMATRIX& w = 
 	//	XMMatrixScalingFromVector(s)*
 	//	XMMatrixRotationQuaternion(r)*
@@ -2007,8 +2479,9 @@ XMMATRIX Transform::getTransform(int getTranslation, int getRotation, int getSca
 	//	;
 	//XMStoreFloat4x4( &world_rest,w );
 
-	//if(parent!=nullptr){
-	//	w = w * XMLoadFloat4x4(&parent_inv_rest) * parent->getTransform(copyParentT,copyParentR,copyParentS);
+	//if(parent!=nullptr)
+	//{
+	//	w = w * XMLoadFloat4x4(&parent_inv_rest) * parent->getMatrix();
 	//	XMVECTOR v[3];
 	//	XMMatrixDecompose(&v[0],&v[1],&v[2],w);
 	//	XMStoreFloat3( &scale,v[0] );
@@ -2016,33 +2489,57 @@ XMMATRIX Transform::getTransform(int getTranslation, int getRotation, int getSca
 	//	XMStoreFloat3( &translation,v[2] );
 	//	XMStoreFloat4x4( &world, w );
 	//}
-	//else{
+	//else
+	//{
 	//	world = world_rest;
 	//	translation=translation_rest;
 	//	rotation=rotation_rest;
 	//	scale=scale_rest;
 	//}
 
-	//
 	//return w;
 }
 //attach to parent
 void Transform::attachTo(Transform* newParent, int copyTranslation, int copyRotation, int copyScale){
-	if(newParent!=nullptr){
-		parent=newParent;
-		copyParentT=copyTranslation;
-		copyParentR=copyRotation;
-		copyParentS=copyScale;
-		XMStoreFloat4x4( &parent_inv_rest, XMMatrixInverse( nullptr,parent->getTransform(copyParentT,copyParentR,copyParentS) ) );
+	if (newParent != nullptr) {
+		if (parent != nullptr)
+		{
+			detach();
+		}
+		parent = newParent;
+		parentName = newParent->name;
+		copyParentT = copyTranslation;
+		copyParentR = copyRotation;
+		copyParentS = copyScale;
+		XMStoreFloat4x4(&parent_inv_rest, XMMatrixInverse(nullptr, parent->getMatrix(copyParentT, copyParentR, copyParentS)));
 		parent->children.insert(this);
 	}
+}
+Transform* Transform::find(const string& findname)
+{
+	if (!name.compare(findname))
+	{
+		return this;
+	}
+	for (Transform* x : children)
+	{
+		if (x != nullptr)
+		{
+			Transform* found = x->find(findname);
+			if (found != nullptr)
+			{
+				return found;
+			}
+		}
+	}
+	return nullptr;
 }
 //detach child - detach all if no parameters
 void Transform::detachChild(Transform* child){
 	if(child==nullptr){
 		for(Transform* c : children){
 			if(c!=nullptr){
-				c->detach(0);
+				c->detach();
 			}
 		}
 		children.clear();
@@ -2054,9 +2551,9 @@ void Transform::detachChild(Transform* child){
 	}
 }
 //detach from parent
-void Transform::detach(int eraseFromParent){
+void Transform::detach(){
 	if(parent!=nullptr){
-		if(eraseFromParent && parent->children.find(this)!=parent->children.end()){
+		if(parent->children.find(this)!=parent->children.end()){
 			parent->children.erase(this);
 		}
 		applyTransform(copyParentT,copyParentR,copyParentS);
@@ -2081,6 +2578,8 @@ void Transform::transform(const XMFLOAT3& t, const XMFLOAT4& r, const XMFLOAT3& 
 	scale_rest.x*=s.x;
 	scale_rest.y*=s.y;
 	scale_rest.z*=s.z;
+
+	UpdateTransform();
 }
 void Transform::transform(const XMMATRIX& m){
 	XMVECTOR v[3];
@@ -2091,6 +2590,46 @@ void Transform::transform(const XMMATRIX& m){
 		XMStoreFloat4(&r,v[1]);
 		XMStoreFloat3(&t,v[2]);
 		transform(t,r,s);
+	}
+}
+void Transform::UpdateTransform()
+{
+	worldPrev = world;
+	translationPrev = translation;
+	scalePrev = scale;
+	rotationPrev = rotation;
+
+	XMVECTOR s = XMLoadFloat3(&scale_rest);
+	XMVECTOR r = XMLoadFloat4(&rotation_rest);
+	XMVECTOR t = XMLoadFloat3(&translation_rest);
+	XMMATRIX& w =
+		XMMatrixScalingFromVector(s)*
+		XMMatrixRotationQuaternion(r)*
+		XMMatrixTranslationFromVector(t)
+		;
+	XMStoreFloat4x4(&world_rest, w);
+
+	if (parent != nullptr)
+	{
+		w = w * XMLoadFloat4x4(&parent_inv_rest) * parent->getMatrix();
+		XMVECTOR v[3];
+		XMMatrixDecompose(&v[0], &v[1], &v[2], w);
+		XMStoreFloat3(&scale, v[0]);
+		XMStoreFloat4(&rotation, v[1]);
+		XMStoreFloat3(&translation, v[2]);
+		XMStoreFloat4x4(&world, w);
+	}
+	else
+	{
+		world = world_rest;
+		translation = translation_rest;
+		rotation = rotation_rest;
+		scale = scale_rest;
+	}
+
+	for (Transform* child : children)
+	{
+		child->UpdateTransform();
 	}
 }
 void Transform::Translate(const XMFLOAT3& value)
@@ -2109,10 +2648,21 @@ void Transform::RotateRollPitchYaw(const XMFLOAT3& value)
 	quat = XMQuaternionMultiply(z, quat);
 
 	XMStoreFloat4(&rotation_rest, quat);
+
+	UpdateTransform();
 }
 void Transform::Scale(const XMFLOAT3& value)
 {
 	transform(XMFLOAT3(0, 0, 0), XMFLOAT4(0, 0, 0, 1), value);
+}
+
+Transform* Transform::GetRoot()
+{
+	if (parent != nullptr)
+	{
+		return parent->GetRoot();
+	}
+	return this;
 }
 
 #pragma endregion
@@ -2123,7 +2673,7 @@ Decal::Decal(const XMFLOAT3& tra, const XMFLOAT3& sca, const XMFLOAT4& rot, cons
 	rotation_rest=rotation=rot;
 	translation_rest=translation=tra;
 
-	Update();
+	UpdateTransform();
 
 	texture=normal=nullptr;
 	addTexture(tex);
@@ -2132,19 +2682,9 @@ Decal::Decal(const XMFLOAT3& tra, const XMFLOAT3& sca, const XMFLOAT4& rot, cons
 	life = -2; //persistent
 	fadeStart=0;
 }
-void Decal::Update(){
-	XMMATRIX rotMat = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
-	XMVECTOR eye = XMLoadFloat3(&translation);
-	XMVECTOR frontV = XMVector3Transform( XMVectorSet(0,0,1,0),rotMat );
-	XMStoreFloat3(&front,frontV);
-	XMVECTOR at = XMVectorAdd(eye,frontV);
-	XMVECTOR up = XMVector3Transform( XMVectorSet(0,1,0,0),rotMat );
-	XMStoreFloat4x4(&view, XMMatrixLookAtLH(eye,at,up));
-	XMStoreFloat4x4(&projection, XMMatrixOrthographicLH(scale.x, scale.y, -scale.z * 0.5f, scale.z * 0.5f));
-	XMStoreFloat4x4(&world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&scale))*rotMat*XMMatrixTranslationFromVector(eye));
-
-	bounds.createFromHalfWidth(XMFLOAT3(0,0,0),XMFLOAT3(scale.x,scale.y,scale.z));
-	bounds = bounds.get(XMLoadFloat4x4(&world_rest));
+Decal::~Decal() {
+	wiResourceManager::GetGlobal()->del(texName);
+	wiResourceManager::GetGlobal()->del(norName);
 }
 void Decal::addTexture(const string& tex){
 	texName=tex;
@@ -2158,13 +2698,43 @@ void Decal::addNormal(const string& nor){
 		normal = (TextureView)wiResourceManager::GetGlobal()->add(nor);
 	}
 }
-void Decal::CleanUp(){
-	wiResourceManager::GetGlobal()->del(texName);
-	wiResourceManager::GetGlobal()->del(norName);
+void Decal::UpdateTransform()
+{
+	Transform::UpdateTransform();
+
+	XMMATRIX rotMat = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
+	XMVECTOR eye = XMLoadFloat3(&translation);
+	XMVECTOR frontV = XMVector3Transform(XMVectorSet(0, 0, 1, 0), rotMat);
+	XMStoreFloat3(&front, frontV);
+	XMVECTOR at = XMVectorAdd(eye, frontV);
+	XMVECTOR up = XMVector3Transform(XMVectorSet(0, 1, 0, 0), rotMat);
+	XMStoreFloat4x4(&view, XMMatrixLookAtLH(eye, at, up));
+	XMStoreFloat4x4(&projection, XMMatrixOrthographicLH(scale.x, scale.y, -scale.z * 0.5f, scale.z * 0.5f));
+	XMStoreFloat4x4(&world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&scale))*rotMat*XMMatrixTranslationFromVector(eye));
+
+	bounds.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(scale.x, scale.y, scale.z));
+	bounds = bounds.get(XMLoadFloat4x4(&world_rest));
+
+}
+void Decal::UpdateDecal()
+{
+	if (life>-2) {
+		life -= wiRenderer::GetGameSpeed();
+	}
 }
 #pragma endregion
 
+#pragma region CAMERA
+void Camera::UpdateTransform()
+{
+	Transform::UpdateTransform();
 
+	//getMatrix();
+	UpdateProps();
+}
+#pragma endregion
+
+#pragma region OBJECT
 void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 	if (mesh != nullptr)
 	{
@@ -2213,3 +2783,155 @@ void Object::FadeTrail() {
 		trail.pop_front();
 	}
 }
+void Object::UpdateTransform()
+{
+	Transform::UpdateTransform();
+
+	XMMATRIX world = getMatrix();
+
+	if (mesh->isBillboarded) {
+		XMMATRIX bbMat = XMMatrixIdentity();
+		if (mesh->billboardAxis.x || mesh->billboardAxis.y || mesh->billboardAxis.z) {
+			float angle = 0;
+			angle = (float)atan2(translation.x - wiRenderer::getCamera()->translation.x, translation.z - wiRenderer::getCamera()->translation.z) * (180.0f / XM_PI);
+			bbMat = XMMatrixRotationAxis(XMLoadFloat3(&mesh->billboardAxis), angle * 0.0174532925f);
+		}
+		else
+			bbMat = XMMatrixInverse(0, XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 0), XMVectorSubtract(XMLoadFloat3(&translation), wiRenderer::getCamera()->GetEye()), XMVectorSet(0, 1, 0, 0)));
+
+		XMMATRIX w = XMMatrixScalingFromVector(XMLoadFloat3(&scale)) *
+			bbMat *
+			XMMatrixRotationQuaternion(XMLoadFloat4(&rotation)) *
+			XMMatrixTranslationFromVector(XMLoadFloat3(&translation)
+				);
+		XMStoreFloat4x4(&this->world, w);
+	}
+
+	if (mesh->softBody)
+		bounds = mesh->aabb;
+	else if (!mesh->isBillboarded && mesh->renderable) {
+		bounds = mesh->aabb.get(world);
+	}
+	else if (mesh->renderable)
+		bounds.createFromHalfWidth(translation, scale);
+
+}
+void Object::UpdateObject()
+{
+	if (!trail.empty())
+	{
+		wiRenderer::objectsWithTrails.push_back(this);
+		FadeTrail();
+	}
+
+	for (wiEmittedParticle* x : eParticleSystems)
+	{
+		x->Update(wiRenderer::GetGameSpeed());
+		wiRenderer::emitterSystems.push_back(x);
+	}
+}
+#pragma endregion
+
+#pragma region LIGHT
+vector<wiRenderTarget> Light::shadowMaps_pointLight;
+vector<wiRenderTarget> Light::shadowMaps_spotLight;
+Light::~Light() {
+	shadowCam.clear();
+	//shadowMap.clear();
+	shadowMaps_dirLight.clear();
+	lensFlareRimTextures.clear();
+	for (string x : lensFlareNames)
+		wiResourceManager::GetGlobal()->del(x);
+	lensFlareNames.clear();
+}
+void Light::SetUp()
+{
+	if (!shadowCam.empty())
+		return;
+
+	if (type == Light::DIRECTIONAL) {
+
+		float lerp = 0.5f;
+		float lerp1 = 0.12f;
+		float lerp2 = 0.016f;
+		XMVECTOR a0, a, b0, b;
+		a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		float size = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp), XMVectorLerp(a0, a, lerp))));
+		float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp1), XMVectorLerp(a0, a, lerp1))));
+		float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp2), XMVectorLerp(a0, a, lerp2))));
+		XMVECTOR rot = XMQuaternionIdentity();
+
+		shadowCam.push_back(SHCAM(size, rot, 0, wiRenderer::getCamera()->zFarP));
+		shadowCam.push_back(SHCAM(size1, rot, 0, wiRenderer::getCamera()->zFarP));
+		shadowCam.push_back(SHCAM(size2, rot, 0, wiRenderer::getCamera()->zFarP));
+
+	}
+	else if (type == Light::SPOT && shadow) {
+		shadowCam.push_back(SHCAM(XMFLOAT4(0, 0, 0, 1), wiRenderer::getCamera()->zNearP, enerDis.y, enerDis.z));
+	}
+	else if (type == Light::POINT && shadow) {
+		shadowCam.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), wiRenderer::getCamera()->zNearP, enerDis.y, XM_PI / 2.0f)); //+x
+		shadowCam.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), wiRenderer::getCamera()->zNearP, enerDis.y, XM_PI / 2.0f)); //-x
+
+		shadowCam.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), wiRenderer::getCamera()->zNearP, enerDis.y, XM_PI / 2.0f)); //+y
+		shadowCam.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), wiRenderer::getCamera()->zNearP, enerDis.y, XM_PI / 2.0f)); //-y
+
+		shadowCam.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), wiRenderer::getCamera()->zNearP, enerDis.y, XM_PI / 2.0f)); //+z
+		shadowCam.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), wiRenderer::getCamera()->zNearP, enerDis.y, XM_PI / 2.0f)); //-z
+	}
+}
+void Light::UpdateTransform()
+{
+	Transform::UpdateTransform();
+}
+void Light::UpdateLight()
+{
+	//Shadows
+	if (type == Light::DIRECTIONAL) {
+
+		float lerp = 0.5f;//third slice distance from cam (percentage)
+		float lerp1 = 0.12f;//second slice distance from cam (percentage)
+		float lerp2 = 0.016f;//first slice distance from cam (percentage)
+		XMVECTOR c, d, e, e1, e2;
+		c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth() * 0.5f, (float)wiRenderer::GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth() * 0.5f, (float)wiRenderer::GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+
+		if (!shadowCam.empty()) {
+
+			float f = shadowCam[0].size / (float)wiRenderer::SHADOWMAPRES;
+			e = XMVectorFloor(XMVectorLerp(d, c, lerp) / f)*f;
+			f = shadowCam[1].size / (float)wiRenderer::SHADOWMAPRES;
+			e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) / f)*f;
+			f = shadowCam[2].size / (float)wiRenderer::SHADOWMAPRES;
+			e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) / f)*f;
+
+			XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation_rest));
+			shadowCam[0].Update(rrr*XMMatrixTranslationFromVector(e));
+			if (shadowCam.size()>1) {
+				shadowCam[1].Update(rrr*XMMatrixTranslationFromVector(e1));
+				if (shadowCam.size()>2)
+					shadowCam[2].Update(rrr*XMMatrixTranslationFromVector(e2));
+			}
+		}
+
+		bounds.createFromHalfWidth(wiRenderer::getCamera()->translation, XMFLOAT3(10000, 10000, 10000));
+	}
+	else if (type == Light::SPOT) {
+		if (!shadowCam.empty()) {
+			shadowCam[0].Update(XMLoadFloat4x4(&world));
+		}
+
+		bounds.createFromHalfWidth(translation, XMFLOAT3(enerDis.y, enerDis.y, enerDis.y));
+	}
+	else if (type == Light::POINT) {
+		for (unsigned int i = 0; i<shadowCam.size(); ++i) {
+			shadowCam[i].Update(XMLoadFloat3(&translation));
+		}
+
+		bounds.createFromHalfWidth(translation, XMFLOAT3(enerDis.y, enerDis.y, enerDis.y));
+	}
+}
+#pragma endregion

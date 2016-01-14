@@ -8,14 +8,14 @@ struct Object;
 class PHYSICS
 {
 public:
-	struct Transform{
+	struct PhysicsTransform{
 		XMFLOAT4 rotation;
 		XMFLOAT3 position;
-		Transform(){
+		PhysicsTransform(){
 			rotation=XMFLOAT4(0,0,0,1);
 			position=XMFLOAT3(0,0,0);
 		}
-		Transform(const XMFLOAT4& newRot, const XMFLOAT3& newPos){
+		PhysicsTransform(const XMFLOAT4& newRot, const XMFLOAT3& newPos){
 			rotation=newRot;
 			position=newPos;
 		}
@@ -23,7 +23,7 @@ public:
 	static int softBodyIterationCount;
 	static bool rigidBodyPhysicsEnabled, softBodyPhysicsEnabled;
 protected:
-	vector<Transform*> transforms;
+	vector<PhysicsTransform*> transforms;
 	bool firstRunWorld;
 	int registeredObjects;
 public:
@@ -60,7 +60,7 @@ public:
 	virtual void connectSoftBodyToVertices(const Mesh* const mesh, int objectI)=0;
 	virtual void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI)=0;
 
-	virtual Transform* getObject(int index)=0;
+	virtual PhysicsTransform* getObject(int index)=0;
 
 	virtual void registerObject(Object* object)=0;
 };

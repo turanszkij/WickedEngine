@@ -18,6 +18,8 @@ namespace wiLoader_BindLua
 		EmittedParticle_BindLua::Bind();
 		Decal_BindLua::Bind();
 		Material_BindLua::Bind();
+		Camera_BindLua::Bind();
+		Model_BindLua::Bind();
 	}
 }
 
@@ -169,13 +171,7 @@ int Transform_BindLua::AttachTo(lua_State* L)
 }
 int Transform_BindLua::Detach(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
-	int eraseFromParent = 1;
-	if (argc > 0)
-	{
-		eraseFromParent = wiLua::SGetInt(L, 1);
-	}
-	transform->detach(eraseFromParent);
+	transform->detach();
 	return 0;
 }
 int Transform_BindLua::DetachChild(lua_State* L)
@@ -308,7 +304,7 @@ int Transform_BindLua::MatrixTransform(lua_State* L)
 }
 int Transform_BindLua::GetMatrix(lua_State* L)
 {
-	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(transform->getTransform()));
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(transform->getMatrix()));
 	return 1;
 }
 int Transform_BindLua::ClearTransform(lua_State* L)
@@ -1650,5 +1646,167 @@ void Material_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<Material_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+
+
+
+
+const char Camera_BindLua::className[] = "Camera";
+
+Luna<Camera_BindLua>::FunctionType Camera_BindLua::methods[] = {
+	lunamethod(Node_BindLua, GetName),
+	lunamethod(Node_BindLua, SetName),
+
+	lunamethod(Transform_BindLua, AttachTo),
+	lunamethod(Transform_BindLua, Detach),
+	lunamethod(Transform_BindLua, DetachChild),
+	lunamethod(Transform_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, Scale),
+	lunamethod(Transform_BindLua, Rotate),
+	lunamethod(Transform_BindLua, Translate),
+	lunamethod(Transform_BindLua, MatrixTransform),
+	lunamethod(Transform_BindLua, GetMatrix),
+	lunamethod(Transform_BindLua, ClearTransform),
+	lunamethod(Transform_BindLua, SetTransform),
+	lunamethod(Transform_BindLua, GetPosition),
+	lunamethod(Transform_BindLua, GetRotation),
+	lunamethod(Transform_BindLua, GetScale),
+
+	lunamethod(Camera_BindLua, SetFarPlane),
+	lunamethod(Camera_BindLua, SetNearPlane),
+	lunamethod(Camera_BindLua, GetFarPlane),
+	lunamethod(Camera_BindLua, GetNearPlane),
+	{ NULL, NULL }
+};
+Luna<Camera_BindLua>::PropertyType Camera_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+Camera_BindLua::Camera_BindLua(Camera* cam)
+{
+	node = cam;
+	transform = cam;
+	this->cam = cam;
+}
+Camera_BindLua::Camera_BindLua(lua_State *L)
+{
+	Transform_BindLua();
+	cam = new Camera;
+}
+Camera_BindLua::~Camera_BindLua()
+{
+}
+
+int Camera_BindLua::SetFarPlane(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		cam->zFarP = wiLua::SGetFloat(L, 1);
+		cam->UpdateProjection();
+	}
+	else
+	{
+		wiLua::SError(L, "SetFarPlane(float val) not enough arguments!");
+	}
+	return 0;
+}
+int Camera_BindLua::SetNearPlane(lua_State *L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		cam->zNearP = wiLua::SGetFloat(L, 1);
+		cam->UpdateProjection();
+	}
+	else
+	{
+		wiLua::SError(L, "SetNearPlane(float val) not enough arguments!");
+	}
+	return 0;
+}
+int Camera_BindLua::GetFarPlane(lua_State *L)
+{
+	wiLua::SSetFloat(L, cam->zFarP);
+	return 1;
+}
+int Camera_BindLua::GetNearPlane(lua_State *L)
+{
+	wiLua::SSetFloat(L, cam->zNearP);
+	return 1;
+}
+
+void Camera_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Camera_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+	}
+}
+
+
+
+
+
+
+
+
+const char Model_BindLua::className[] = "Model";
+
+Luna<Model_BindLua>::FunctionType Model_BindLua::methods[] = {
+	lunamethod(Node_BindLua, GetName),
+	lunamethod(Node_BindLua, SetName),
+
+	lunamethod(Transform_BindLua, AttachTo),
+	lunamethod(Transform_BindLua, Detach),
+	lunamethod(Transform_BindLua, DetachChild),
+	lunamethod(Transform_BindLua, ApplyTransform),
+	lunamethod(Transform_BindLua, Scale),
+	lunamethod(Transform_BindLua, Rotate),
+	lunamethod(Transform_BindLua, Translate),
+	lunamethod(Transform_BindLua, MatrixTransform),
+	lunamethod(Transform_BindLua, GetMatrix),
+	lunamethod(Transform_BindLua, ClearTransform),
+	lunamethod(Transform_BindLua, SetTransform),
+	lunamethod(Transform_BindLua, GetPosition),
+	lunamethod(Transform_BindLua, GetRotation),
+	lunamethod(Transform_BindLua, GetScale),
+
+	{ NULL, NULL }
+};
+Luna<Model_BindLua>::PropertyType Model_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+Model_BindLua::Model_BindLua(Model* model)
+{
+	node = model;
+	transform = model;
+	this->model = model;
+}
+Model_BindLua::Model_BindLua(lua_State *L)
+{
+	Transform_BindLua();
+	model = new Model;
+}
+Model_BindLua::~Model_BindLua()
+{
+}
+
+
+void Model_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Model_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

@@ -249,3 +249,42 @@ public:
 	static void Bind();
 };
 
+class Camera_BindLua : public Transform_BindLua
+{
+public:
+	Camera* cam;
+
+	static const char className[];
+	static Luna<Camera_BindLua>::FunctionType methods[];
+	static Luna<Camera_BindLua>::PropertyType properties[];
+
+	Camera_BindLua(Camera* cam);
+	Camera_BindLua(lua_State* L);
+	~Camera_BindLua();
+
+	int GetFarPlane(lua_State* L);
+	int SetFarPlane(lua_State* L);
+	int GetNearPlane(lua_State* L);
+	int SetNearPlane(lua_State* L);
+
+	static void Bind();
+};
+
+class Model_BindLua :public Transform_BindLua
+{
+public:
+	Model* model;
+
+	static const char className[];
+	static Luna<Model_BindLua>::FunctionType methods[];
+	static Luna<Model_BindLua>::PropertyType properties[];
+
+	Model_BindLua(Model* model);
+	Model_BindLua(lua_State* L);
+	~Model_BindLua();
+
+	static void Bind();
+};
+
+
+

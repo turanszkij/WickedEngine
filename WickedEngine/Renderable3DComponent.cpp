@@ -173,7 +173,6 @@ void Renderable3DComponent::Start()
 
 void Renderable3DComponent::Update(){
 	wiRenderer::Update();
-	wiRenderer::UpdateLights();
 	wiRenderer::SychronizeWithPhysicsEngine();
 	wiRenderer::UpdateImages();
 
@@ -197,8 +196,8 @@ void Renderable3DComponent::RenderFrameSetUp(DeviceContext context) {
 		return;
 	}
 
-	wiRenderer::UpdateRenderInfo(context);
-	wiRenderer::UpdateSkinnedVB(context);
+	wiRenderer::UpdateRenderData(context);
+	//wiRenderer::UpdateSkinnedVB(context);
 
 	_needToUpdateRenderData.store(false);
 }

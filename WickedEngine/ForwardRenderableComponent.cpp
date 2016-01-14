@@ -33,7 +33,9 @@ void ForwardRenderableComponent::Start()
 {
 	Renderable3DComponent::Start();
 }
-void ForwardRenderableComponent::Render(){
+void ForwardRenderableComponent::Render()
+{
+	wiRenderer::UpdatePerFrameData();
 
 	if (getThreadingCount() > 1)
 	{

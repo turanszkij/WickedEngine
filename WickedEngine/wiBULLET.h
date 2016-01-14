@@ -57,7 +57,7 @@ public:
 	void connectSoftBodyToVertices(const Mesh*  const mesh, int objectI);
 	void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI);
 
-	Transform* getObject(int index);
+	PhysicsTransform* getObject(int index);
 
 	void registerObject(Object* object);
 
@@ -69,12 +69,10 @@ public:
 	void ClearWorld();
 	void CleanUp();
 
-	
-	void* operator new(size_t);
-	void operator delete(void*);
-
 	void setGrab(bool val, const RAY& ray);
 	static void pickingPreTickCallback (btDynamicsWorld *world, btScalar timeStep);
 	static void soundTickCallback(btDynamicsWorld *world, btScalar timeStep);
+
+	ALIGN_16
 };
 

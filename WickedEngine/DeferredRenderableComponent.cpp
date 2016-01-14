@@ -45,7 +45,9 @@ void DeferredRenderableComponent::Start()
 {
 	Renderable3DComponent::Start();
 }
-void DeferredRenderableComponent::Render(){
+void DeferredRenderableComponent::Render()
+{
+	wiRenderer::UpdatePerFrameData();
 
 	if (getThreadingCount() > 1)
 	{

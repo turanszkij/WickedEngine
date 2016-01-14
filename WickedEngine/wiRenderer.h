@@ -22,6 +22,7 @@ struct Camera;
 struct HitSphere;
 struct RAY;
 struct Camera;
+struct Model;
 
 
 class  Lines;
@@ -302,17 +303,9 @@ protected:
 
 	static void addVertexCount(const int& toadd){vertexCount+=toadd;}
 
-	enum KeyFrameType{
-		ROTATIONKEYFRAMETYPE,
-		POSITIONKEYFRAMETYPE,
-		SCALARKEYFRAMETYPE,
-	};
-
 
 	static float GameSpeed, overrideGameSpeed;
 
-	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
-	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int frameCount,const std::vector<KeyFrame>& keyframes, KeyFrameType type);
 public:
 	static string SHADERPATH;
 
@@ -321,14 +314,15 @@ public:
 	static void SetUpStaticComponents();
 	static void CleanUpStatic();
 	
-	static void Update(float amount = GetGameSpeed());
-	static void UpdateRenderInfo(DeviceContext context);
-	static void UpdateObjects();
-	static void UpdateSoftBodyPinning();
-	static void UpdateSkinnedVB(DeviceContext context);
+	static void Update();
+	// Render data that needs to be updated on the main thread!
+	static void UpdatePerFrameData();
+	static void UpdateRenderData(DeviceContext context);
+	//static void UpdateSoftBodyPinning();
 	static void UpdateSPTree(wiSPTree*& tree);
 	static void UpdateImages();
 	static void ManageImages();
+	static void PutDecal(Decal* decal);
 	static void PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane);
 	static void ManageWaterRipples();
 	static void DrawWaterRipples(DeviceContext context);
@@ -642,7 +636,7 @@ public:
 	static void DrawSky(DeviceContext context);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
 		, bool BlackOut, SHADERTYPE shaded, TextureView refRes, bool grass, GRAPHICSTHREAD thread);
-	static void DrawForSO(DeviceContext context);
+	//static void DrawForSO(DeviceContext context);
 	static void ClearShadowMaps(DeviceContext context);
 	static void DrawForShadowMap(DeviceContext context);
 	static void DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
@@ -676,29 +670,35 @@ public:
 	static void FinishLoading();
 	static wiSPTree* spTree;
 	static wiSPTree* spTree_lights;
+
+	// - every model will be attached to the world node
+	// - every item which are added later to the world will be added to one of its containers (ie PutDecal)
+	static Model* world;
 	
-	static vector<Object*> objects;	
-	static MeshCollection meshes;
-	static MaterialCollection materials;
-	static vector<Armature*> armatures;
+	//static vector<Object*> objects;	
+	//static MeshCollection meshes;
+	//static MaterialCollection materials;
+	//static vector<Armature*> armatures;
+	//static vector<Light*> lights;
+	//static map<string,vector<wiEmittedParticle*>> emitterSystems;
+	//static map<string,Transform*> transforms;
+	//static list<Decal*> decals;
+
+
+	static vector<Model*> models;
+
+	vector<Camera> cameras;
+	vector<HitSphere*> spheres;
 	static vector<Lines*> boneLines;
 	static vector<Lines*> linesTemp;
 	static vector<Cube> cubes;
-	static vector<Light*> lights;
-	static map<string,vector<wiEmittedParticle*>> emitterSystems;
-	vector<Camera> cameras;
-	vector<HitSphere*> spheres;
-	static map<string,Transform*> transforms;
-	static list<Decal*> decals;
 
 	static vector<Object*> objectsWithTrails;
+	static vector<wiEmittedParticle*> emitterSystems;
 	
 	static deque<wiSprite*> images;
 	static deque<wiSprite*> waterRipples;
 	static void CleanUpStaticTemp();
-	
-	static void SetUpLights();
-	static void UpdateLights();
 
 
 	static wiRenderTarget normalMapRT, imagesRT, imagesRTAdd;
@@ -735,7 +735,7 @@ public:
 	static PHYSICS* physicsEngine;
 	static void SychronizeWithPhysicsEngine();
 
-	static void LoadModel(const string& dir, const string& name, const XMMATRIX& transform = XMMatrixIdentity(), const string& ident = "common", PHYSICS* physicsEngine = nullptr);
+	static Model* LoadModel(const string& dir, const string& name, const XMMATRIX& transform = XMMatrixIdentity(), const string& ident = "common");
 	static void LoadWorldInfo(const string& dir, const string& name);
 };
 

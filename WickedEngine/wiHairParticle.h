@@ -75,6 +75,6 @@ public:
 	Object* object;
 	vector<Patch*> patches;
 	wiSPTree* spTree;
-	ID3D11Buffer *vb[3];
+	BufferResource vb[3];
 };
 

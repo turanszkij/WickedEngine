@@ -8,19 +8,30 @@
 #include "Matrix_BindLua.h"
 #include "wiWaterPlane.h"
 #include "Texture_BindLua.h"
+#include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiPHYSICS.h"
 
 namespace wiRenderer_BindLua
 {
 
+	void AddTransformName(Transform* root, stringstream& ss)
+	{
+		if (root == nullptr)
+			return;
+		ss << root->name << endl;
+		for (auto x : root->children)
+		{
+			if (x != nullptr)
+			{
+				AddTransformName(x, ss);
+			}
+		}
+	}
 	int GetTransforms(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& x : wiRenderer::transforms)
-		{
-			ss << x.first << endl;
-		}
+		AddTransformName(wiRenderer::world, ss);
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
@@ -60,9 +71,12 @@ namespace wiRenderer_BindLua
 	int GetArmatures(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& x : wiRenderer::armatures)
+		for (auto& m : wiRenderer::models)
 		{
-			ss << x->name << endl;
+			for (auto& x : m->armatures)
+			{
+				ss << x->name << endl;
+			}
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
@@ -90,9 +104,12 @@ namespace wiRenderer_BindLua
 	int GetObjects(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& x : wiRenderer::objects)
+		for (auto& m : wiRenderer::models)
 		{
-			ss << x->name << endl;
+			for (auto& x : m->objects)
+			{
+				ss << x->name << endl;
+			}
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
@@ -120,12 +137,13 @@ namespace wiRenderer_BindLua
 	int GetEmitters(lua_State* L)
 	{
 		stringstream ss("");
-		for (map<string, vector<wiEmittedParticle*> >::iterator it = wiRenderer::emitterSystems.begin(); it != wiRenderer::emitterSystems.end(); ++it)
+		for (auto& x : wiRenderer::emitterSystems)
 		{
-			ss << it->first << "(" << it->second.size() << ")" << endl;
+			ss << x->name << endl;
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
+		return 0;
 	}
 	int GetEmitter(lua_State* L)
 	{
@@ -133,21 +151,20 @@ namespace wiRenderer_BindLua
 		if (argc > 0)
 		{
 			string name = wiLua::SGetString(L, 1);
-			map<string, vector<wiEmittedParticle*> >::iterator it = wiRenderer::emitterSystems.find(name);
-			if (it != wiRenderer::emitterSystems.end())
+			int i = 0;
+			for (auto& x : wiRenderer::emitterSystems)
 			{
-				int i = 0;
-				for (auto& x : it->second)
+				if (!x->name.compare(name))
 				{
 					Luna<EmittedParticle_BindLua>::push(L, new EmittedParticle_BindLua(x));
-					i++;
+					++i;
 				}
+			}
+			if (i > 0)
+			{
 				return i;
 			}
-			else
-			{
-				wiLua::SError(L, "GetEmitter(string name) no emitter by that name!");
-			}
+			wiLua::SError(L, "GetEmitter(string name) no emitter by that name!");
 		}
 		else
 		{
@@ -158,27 +175,38 @@ namespace wiRenderer_BindLua
 	int GetMeshes(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& x : wiRenderer::meshes)
+		for (auto& m : wiRenderer::models)
 		{
-			ss << x.first << endl;
+			for (auto& x : m->meshes)
+			{
+				ss << x.first << endl;
+			}
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
 	int GetLights(lua_State* L)
 	{
-		for (auto& x : wiRenderer::lights)
+		stringstream ss("");
+		for (auto& m : wiRenderer::models)
 		{
-			wiLua::SSetString(L, x->name);
+			for (auto& x : m->lights)
+			{
+				ss << x->name << endl;
+			}
 		}
-		return wiRenderer::lights.size();
+		wiLua::SSetString(L, ss.str());
+		return 1;
 	}
 	int GetMaterials(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& x : wiRenderer::materials)
+		for (auto& m : wiRenderer::models)
 		{
-			ss << x.first << endl;
+			for (auto& x : m->materials)
+			{
+				ss << x.first << endl;
+			}
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;
@@ -215,7 +243,7 @@ namespace wiRenderer_BindLua
 	}
 	int GetCamera(lua_State* L)
 	{
-		Luna<Transform_BindLua>::push(L, new Transform_BindLua(wiRenderer::getCamera()));
+		Luna<Camera_BindLua>::push(L, new Camera_BindLua(wiRenderer::getCamera()));
 		return 1;
 	}
 
@@ -259,7 +287,9 @@ namespace wiRenderer_BindLua
 					}
 				}
 			}
-			wiRenderer::LoadModel(dir, name, transform, identifier, wiRenderer::physicsEngine);
+			Model* model = wiRenderer::LoadModel(dir, name, transform, identifier);
+			Luna<Model_BindLua>::push(L, new Model_BindLua(model));
+			return 1;
 		}
 		else
 		{
@@ -509,7 +539,7 @@ namespace wiRenderer_BindLua
 			Decal_BindLua* decal = Luna<Decal_BindLua>::lightcheck(L, 1);
 			if (decal != nullptr)
 			{
-				wiRenderer::decals.push_back(decal->decal);
+				wiRenderer::PutDecal(decal->decal);
 			}
 			else
 			{

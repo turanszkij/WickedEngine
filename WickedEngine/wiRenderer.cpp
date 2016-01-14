@@ -82,21 +82,18 @@ int wiRenderer::vertexCount;
 deque<wiSprite*> wiRenderer::images;
 deque<wiSprite*> wiRenderer::waterRipples;
 
-wiSPTree* wiRenderer::spTree;
-wiSPTree* wiRenderer::spTree_lights;
+wiSPTree* wiRenderer::spTree = nullptr;
+wiSPTree* wiRenderer::spTree_lights = nullptr;
+Model* wiRenderer::world = nullptr;
 
-vector<Object*>		wiRenderer::objects;
-MeshCollection		wiRenderer::meshes;
-MaterialCollection	wiRenderer::materials;
-vector<Armature*>	wiRenderer::armatures;
-vector<Lines*>		wiRenderer::boneLines;
-vector<Lines*>		wiRenderer::linesTemp;
-vector<Cube>		wiRenderer::cubes;
-vector<Light*>		wiRenderer::lights;
-map<string,vector<wiEmittedParticle*>> wiRenderer::emitterSystems;
-map<string,Transform*> wiRenderer::transforms;
-list<Decal*> wiRenderer::decals;
+vector<Model*> wiRenderer::models;
+
 vector<Object*>		wiRenderer::objectsWithTrails;
+vector<wiEmittedParticle*> wiRenderer::emitterSystems;
+
+vector<Lines*>	wiRenderer::boneLines;
+vector<Lines*>	wiRenderer::linesTemp;
+vector<Cube>	wiRenderer::cubes;
 
 #pragma endregion
 
@@ -599,74 +596,40 @@ void wiRenderer::CleanUpStaticTemp(){
 		x->CleanUp();
 	waterRipples.clear();
 
-	
-	for(Light* l : lights)
-		l->CleanUp();
-	lights.clear();
-
-	for(Armature* armature : armatures)
-		armature->CleanUp();
-	armatures.clear();
-
-	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
-		iter->second->CleanUp();
-	}
-	meshes.clear();
-	
-	for(unsigned int i=0;i<objects.size();i++){
-		objects[i]->CleanUp();
-		for(unsigned int j=0;j<objects[i]->eParticleSystems.size();++j)
-			objects[i]->eParticleSystems[j]->CleanUp();
-		objects[i]->eParticleSystems.clear();
-
-		for(unsigned int j=0;j<objects[i]->hParticleSystems.size();++j)
-			objects[i]->hParticleSystems[j]->CleanUp();
-		objects[i]->hParticleSystems.clear();
-	}
-	objects.clear();
-
-	for(MaterialCollection::iterator iter=materials.begin(); iter!=materials.end();++iter)
-		iter->second->CleanUp();
-	materials.clear();
-
-
-	for (unsigned int i = 0; i < boneLines.size(); i++)
-		delete boneLines[i];
-	boneLines.clear();
-
-	cubes.clear();
-
-	emitterSystems.clear();
-
-	
 	if(spTree) 
 		spTree->CleanUp();
 	spTree = nullptr;
 
+	models.clear();
 	
 	if(spTree_lights)
 		spTree_lights->CleanUp();
 	spTree_lights=nullptr;
 
-	for(Decal* decal:decals){
-		decal->CleanUp();
-		delete decal;
-	}
-	decals.clear();
+	// Do not delete!
+	cam->detach();
 
+	Transform::DeleteTree(world);
+	world = nullptr;
 }
 XMVECTOR wiRenderer::GetSunPosition()
 {
-	for(Light* l : lights)
-		if(l->type==Light::DIRECTIONAL)
-			return -XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) );
+	for (Model* model : models)
+	{
+		for (Light* l : model->lights)
+			if (l->type == Light::DIRECTIONAL)
+				return -XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)));
+	}
 	return XMVectorSet(0.5f,1,-0.5f,0);
 }
 XMFLOAT4 wiRenderer::GetSunColor()
 {
-	for(Light* l : lights)
-		if(l->type==Light::DIRECTIONAL)
-			return l->color;
+	for (Model* model : models)
+	{
+		for (Light* l : model->lights)
+			if (l->type == Light::DIRECTIONAL)
+				return l->color;
+	}
 	return XMFLOAT4(1,1,1,1);
 }
 float wiRenderer::GetGameSpeed(){return GameSpeed*overrideGameSpeed;}
@@ -684,38 +647,54 @@ void wiRenderer::UpdateSpheres()
 	//		);
 	//}
 
-	for(HitSphere* s : spheres){
-		s->getTransform();
-		s->center=s->translation;
-		s->radius=s->radius_saved*s->scale.x;
-	}
+	//for(HitSphere* s : spheres){
+	//	s->getMatrix();
+	//	s->center=s->translation;
+	//	s->radius=s->radius_saved*s->scale.x;
+	//}
 }
 float wiRenderer::getSphereRadius(const int& index){
 	return spheres[index]->radius;
 }
 void wiRenderer::SetUpBoneLines()
 {
-	boneLines.resize(0);
-	for (unsigned int i = 0; i<armatures.size(); i++){
-		for (unsigned int j = 0; j<armatures[i]->boneCollection.size(); j++){
-			boneLines.push_back( new Lines(armatures[i]->boneCollection[j]->length,XMFLOAT4A(1,1,1,1),i,j) );
+	boneLines.clear();
+	for (Model* model : models)
+	{
+		for (unsigned int i = 0; i < model->armatures.size(); i++) {
+			for (unsigned int j = 0; j < model->armatures[i]->boneCollection.size(); j++) {
+				boneLines.push_back(new Lines(model->armatures[i]->boneCollection[j]->length, XMFLOAT4A(1, 1, 1, 1), i, j));
+			}
 		}
 	}
 }
 void wiRenderer::UpdateBoneLines()
 {
 	if (debugBoneLines)
-		for (unsigned int i = 0; i<boneLines.size(); i++){
-			int armatureI=boneLines[i]->parentArmature;
-			int boneI = boneLines[i]->parentBone;
+	{
+			for (unsigned int i = 0; i < boneLines.size(); i++) {
+				int armatureI = boneLines[i]->parentArmature;
+				int boneI = boneLines[i]->parentBone;
 
-			//XMMATRIX rest = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->recursiveRest) ;
-			//XMMATRIX pose = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->world) ;
-			//XMFLOAT4X4 finalM;
-			//XMStoreFloat4x4( &finalM,  /*rest**/pose );
+				//XMMATRIX rest = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->recursiveRest) ;
+				//XMMATRIX pose = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->world) ;
+				//XMFLOAT4X4 finalM;
+				//XMStoreFloat4x4( &finalM,  /*rest**/pose );
 
-			boneLines[i]->Transform(armatures[armatureI]->boneCollection[boneI]->world);
-		}
+				int arm = 0;
+				for (Model* model : models)
+				{
+					for (Armature* armature : model->armatures)
+					{
+						if (arm == armatureI)
+						{
+							boneLines[i]->Transform(armature->boneCollection[boneI]->world);
+						}
+						arm++;
+					}
+				}
+			}
+	}
 }
 void iterateSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col);
 void iterateSPTree(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col){
@@ -768,11 +747,11 @@ void wiRenderer::UpdateCubes(){
 		if(spTree) iterateSPTree(spTree->root,cubes,XMFLOAT4A(1,1,0,1));
 		if(spTree_lights) iterateSPTree(spTree_lights->root,cubes,XMFLOAT4A(1,1,1,1));
 	}
-	if(debugBoxes){
-		for(Decal* decal : decals){
-			cubes.push_back(Cube(decal->bounds.getCenter(),decal->bounds.getHalfWidth(),XMFLOAT4A(1,0,1,1)));
-		}
-	}
+	//if(debugBoxes){
+	//	for(Decal* decal : decals){
+	//		cubes.push_back(Cube(decal->bounds.getCenter(),decal->bounds.getHalfWidth(),XMFLOAT4A(1,0,1,1)));
+	//	}
+	//}
 }
 void wiRenderer::UpdateSPTree(wiSPTree*& tree){
 	if(tree && tree->root){
@@ -1575,18 +1554,21 @@ void wiRenderer::SetUpStates()
 
 Transform* wiRenderer::getTransformByName(const string& get)
 {
-	auto transf = transforms.find(get);
-	if (transf != transforms.end())
-	{
-		return transf->second;
-	}
-	return nullptr;
+	//auto transf = transforms.find(get);
+	//if (transf != transforms.end())
+	//{
+	//	return transf->second;
+	//}
+	return world->find(get);
 }
 Armature* wiRenderer::getArmatureByName(const string& get)
 {
-	for(Armature* armature : armatures)
-		if(!armature->name.compare(get))
-			return armature;
+	for (Model* model : models)
+	{
+		for (Armature* armature : model->armatures)
+			if (!armature->name.compare(get))
+				return armature;
+	}
 	return nullptr;
 }
 int wiRenderer::getActionByName(Armature* armature, const string& get)
@@ -1610,9 +1592,12 @@ int wiRenderer::getBoneByName(Armature* armature, const string& get)
 }
 Material* wiRenderer::getMaterialByName(const string& get)
 {
-	MaterialCollection::iterator iter = materials.find(get);
-	if(iter!=materials.end())
-		return iter->second;
+	for (Model* model : models)
+	{
+		MaterialCollection::iterator iter = model->materials.find(get);
+		if (iter != model->materials.end())
+			return iter->second;
+	}
 	return NULL;
 }
 HitSphere* wiRenderer::getSphereByName(const string& get){
@@ -1623,11 +1608,14 @@ HitSphere* wiRenderer::getSphereByName(const string& get){
 }
 Object* wiRenderer::getObjectByName(const string& name)
 {
-	for (auto& x : objects)
+	for (Model* model : models)
 	{
-		if (!x->name.compare(name))
+		for (auto& x : model->objects)
 		{
-			return x;
+			if (!x->name.compare(name))
+			{
+				return x;
+			}
 		}
 	}
 
@@ -1635,175 +1623,19 @@ Object* wiRenderer::getObjectByName(const string& name)
 }
 Light* wiRenderer::getLightByName(const string& name)
 {
-	for (auto& x : lights)
+	for (Model* model : models)
 	{
-		if (!x->name.compare(name))
+		for (auto& x : model->lights)
 		{
-			return x;
+			if (!x->name.compare(name))
+			{
+				return x;
+			}
 		}
 	}
 	return nullptr;
 }
 
-void wiRenderer::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat)
-{
-	Bone* parent = (Bone*)bone->parent;
-
-	// TRANSITION BLENDING + ADDITIVE BLENDING
-	XMVECTOR& finalTrans = XMVectorSet(0, 0, 0, 0);
-	XMVECTOR& finalRotat = XMQuaternionIdentity();
-	XMVECTOR& finalScala = XMVectorSet(1, 1, 1, 0);
-
-	for (auto& x : armature->animationLayers)
-	{
-		AnimationLayer& anim = *x;
-
-		float cf = anim.currentFrame, cfPrev = anim.currentFramePrevAction;
-		int activeAction = anim.activeAction, prevAction = anim.prevAction;
-		int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
-
-		XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
-
-		XMVECTOR& currTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR& currRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR& currScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
-
-		float blendFact = anim.blendFact;
-
-		switch (anim.type)
-		{
-		case AnimationLayer::ANIMLAYER_TYPE_PRIMARY:
-			finalTrans = XMVectorLerp(prevTrans, currTrans, blendFact);
-			finalRotat = XMQuaternionSlerp(prevRotat, currRotat, blendFact);
-			finalScala = XMVectorLerp(prevScala, currScala, blendFact);
-			break;
-		case AnimationLayer::ANIMLAYER_TYPE_ADDITIVE:
-			finalTrans = XMVectorLerp(finalTrans, XMVectorAdd(finalTrans, XMVectorLerp(prevTrans, currTrans, blendFact)), anim.weight);
-			finalRotat = XMQuaternionSlerp(finalRotat, XMQuaternionMultiply(finalRotat, XMQuaternionSlerp(prevRotat, currRotat, blendFact)), anim.weight); // normalize?
-			finalScala = XMVectorLerp(finalScala, XMVectorMultiply(finalScala, XMVectorLerp(prevScala, currScala, blendFact)), anim.weight);
-			break;
-		default:
-			break;
-		}
-	}
-	XMVectorSetW(finalTrans, 1);
-	XMVectorSetW(finalScala, 1);
-							
-	bone->worldPrev = bone->world;
-	bone->translationPrev = bone->translation;
-	bone->rotationPrev = bone->rotation;
-	XMStoreFloat3(&bone->translation , finalTrans );
-	XMStoreFloat4(&bone->rotation , finalRotat );
-	XMStoreFloat3(&bone->scale , finalScala );
-
-	XMMATRIX& anim = 
-		XMMatrixScalingFromVector( finalScala )
-		* XMMatrixRotationQuaternion( finalRotat ) 
-		* XMMatrixTranslationFromVector( finalTrans );
-
-	XMMATRIX& rest =
-		XMLoadFloat4x4( &bone->world_rest );
-
-	XMMATRIX& boneMat = 
-		anim * rest * parentCombinedMat
-		;
-
-	XMMATRIX& finalMat = 
-		XMLoadFloat4x4( &bone->recursiveRestInv )*
-		boneMat
-		;
-	
-	XMStoreFloat4x4( &bone->world,boneMat );
-
-	*bone->boneRelativityPrev=*bone->boneRelativity;
-	XMStoreFloat4x4( bone->boneRelativity,finalMat );
-
-	for (unsigned int i = 0; i<bone->childrenI.size(); ++i){
-		RecursiveBoneTransform(armature,bone->childrenI[i],boneMat);
-	}
-
-}
-XMVECTOR wiRenderer::InterPolateKeyFrames(float cf, const int maxCf, const vector<KeyFrame>& keyframeList, KeyFrameType type)
-{
-	XMVECTOR result = XMVectorSet(0,0,0,0);
-	
-	if(type==POSITIONKEYFRAMETYPE) result=XMVectorSet(0,0,0,1);
-	if(type==ROTATIONKEYFRAMETYPE) result=XMVectorSet(0,0,0,1);
-	if(type==SCALARKEYFRAMETYPE)   result=XMVectorSet(1,1,1,1);
-	
-	//SEARCH 2 INTERPOLATABLE FRAMES
-	int nearest[2] = {0,0};
-	int first=0,last=0;
-	if(keyframeList.size()>1){
-		first=keyframeList[0].frameI;
-		last=keyframeList.back().frameI;
-
-		if(cf<=first){ //BROKEN INTERVAL
-			nearest[0] = 0;
-			nearest[1] = 0;
-		}
-		else if(cf>=last){
-			nearest[0] = keyframeList.size()-1;
-			nearest[1] = keyframeList.size()-1;
-		}
-		else{ //IN BETWEEN TWO KEYFRAMES, DECIDE WHICH
-			for(int k=keyframeList.size()-1;k>0;k--)
-				if(keyframeList[k].frameI<=cf){
-					nearest[0] = k;
-					break;
-				}
-			for (unsigned int k = 0; k<keyframeList.size(); k++)
-				if(keyframeList[k].frameI>=cf){
-					nearest[1] = k;
-					break;
-			}
-		}
-
-		//INTERPOLATE BETWEEN THE TWO FRAMES
-		int keyframes[2] = {
-			keyframeList[nearest[0]].frameI,
-			keyframeList[nearest[1]].frameI
-		};
-		float interframe=0;
-		if(cf<=first || cf>=last){ //BROKEN INTERVAL
-			float intervalBegin = (float)(maxCf - keyframes[0]);
-			float intervalEnd = keyframes[1] + intervalBegin;
-			float intervalLen = abs(intervalEnd - intervalBegin);
-			float offsetCf = cf + intervalBegin;
-			if(intervalLen) interframe = offsetCf / intervalLen;
-		}
-		else{
-			float intervalBegin = (float)keyframes[0];
-			float intervalEnd = (float)keyframes[1];
-			float intervalLen = abs(intervalEnd - intervalBegin);
-			float offsetCf = cf - intervalBegin;
-			if(intervalLen) interframe = offsetCf / intervalLen;
-		}
-
-		if(type==ROTATIONKEYFRAMETYPE){
-			XMVECTOR quat[2]={
-				XMLoadFloat4(&keyframeList[nearest[0]].data),
-				XMLoadFloat4(&keyframeList[nearest[1]].data)
-			};
-			result = XMQuaternionNormalize( XMQuaternionSlerp(quat[0],quat[1],interframe) );
-		}
-		else{
-			XMVECTOR tran[2]={
-				XMLoadFloat4(&keyframeList[nearest[0]].data),
-				XMLoadFloat4(&keyframeList[nearest[1]].data)
-			};
-			result = XMVectorLerp(tran[0],tran[1],interframe);
-		}
-	}
-	else{
-		if(!keyframeList.empty())
-			result = XMLoadFloat4(&keyframeList.back().data);
-	}
-
-	return result;
-}
 Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
 {
 	return TransformVertex(mesh, mesh->vertices[vertexI], mat);
@@ -1827,7 +1659,7 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex
 		float sumw = 0;
 		for(unsigned int i=0;i<4;i++){
 			sumw += inWei[i];
-			sump += XMLoadFloat4x4( mesh->armature->boneCollection[int(inBon[i])]->boneRelativity ) * inWei[i];
+			sump += XMLoadFloat4x4( &mesh->armature->boneCollection[int(inBon[i])]->boneRelativity ) * inWei[i];
 		}
 		if(sumw) sump/=sumw;
 
@@ -1872,8 +1704,8 @@ XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, const int& vertexI){
 		float sumw = 0;
 		for(unsigned int i=0;i<4;i++){
 			sumw += inWei[i];
-			sump += XMLoadFloat4x4( mesh->armature->boneCollection[int(inBon[i])]->boneRelativity ) * inWei[i];
-			sumpPrev += XMLoadFloat4x4( mesh->armature->boneCollection[int(inBon[i])]->boneRelativityPrev ) * inWei[i];
+			sump += XMLoadFloat4x4( &mesh->armature->boneCollection[int(inBon[i])]->boneRelativity ) * inWei[i];
+			sumpPrev += XMLoadFloat4x4( &mesh->armature->boneCollection[int(inBon[i])]->boneRelativityPrev ) * inWei[i];
 		}
 		if(sumw){
 			sump/=sumw;
@@ -1886,118 +1718,43 @@ XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, const int& vertexI){
 	XMStoreFloat3( &velocity,GetGameSpeed()*XMVectorSubtract(XMVector3Transform(pos,sump),XMVector3Transform(pos,sumpPrev)) );
 	return velocity;
 }
-void wiRenderer::Update(float amount)
+void wiRenderer::Update()
 {
 	*prevFrameCam = *cam;
-	cam->Update();
+	cam->UpdateTransform();
 	refCam->Reflect(cam);
 
-	//if(GetGameSpeed())
+	objectsWithTrails.clear();
+	emitterSystems.clear();
+
+
+	world->UpdateTransform();
+
+	for (Model* model : models)
 	{
-		for(Armature* armature : armatures){
-			if(armature->actions.size()){
-				XMMATRIX world = armature->getTransform();
-
-				for (auto& x : armature->animationLayers)
-				{
-					AnimationLayer& anim = *x;
-
-					// current action
-					float cf = anim.currentFrame;
-					int maxCf = 0;
-					int activeAction = anim.activeAction;
-					int prevAction = anim.prevAction;
-					float frameInc = (anim.playing ? amount : 0.f);
-
-					cf = anim.currentFrame += frameInc;
-					maxCf = armature->actions[activeAction].frameCount;
-					if ((int)cf > maxCf)
-					{
-						if (anim.looped)
-						{
-							anim.ResetAction();
-							cf = anim.currentFrame;
-						}
-						else
-						{
-							anim.currentFrame = cf = (float)maxCf;
-						}
-					}
+		model->UpdateModel();
+	}
 
 
-					// prev action
-					float cfPrevAction = anim.currentFramePrevAction;
-					int maxCfPrevAction = armature->actions[prevAction].frameCount;
-					cfPrevAction = anim.currentFramePrevAction += frameInc;
-					if ((int)cfPrevAction > maxCfPrevAction)
-					{
-						if (anim.looped)
-						{
-							anim.ResetActionPrev();
-							cfPrevAction = anim.currentFramePrevAction;
-						}
-						else
-						{
-							anim.currentFramePrevAction = cfPrevAction = (float)maxCfPrevAction;
-						}
-					}
-
-					// blending
-					anim.blendCurrentFrame += frameInc;
-					if (abs(anim.blendFrames) > 0)
-						anim.blendFact = wiMath::Clamp(anim.blendCurrentFrame / anim.blendFrames, 0, 1);
-					else
-						anim.blendFact = 0;
-				}
-
-				// calculate frame
-				for (unsigned int j = 0; j<armature->rootbones.size(); ++j) {
-					RecursiveBoneTransform(armature, armature->rootbones[j], world);
-				}
-
-			}
-		}
-
-		
-
-		for(MaterialCollection::iterator iter=materials.begin(); iter!=materials.end();++iter){
-			Material* iMat=iter->second;
-			iMat->framesToWaitForTexCoordOffset-=1.0f;
-			if(iMat->framesToWaitForTexCoordOffset<=0){
-				iMat->texOffset.x+=iMat->movingTex.x*GameSpeed;
-				iMat->texOffset.y+=iMat->movingTex.y*GameSpeed;
-				iMat->framesToWaitForTexCoordOffset=iMat->movingTex.z*GameSpeed;
-			}
-		}
-
-		for(map<string,vector<wiEmittedParticle*>>::iterator iter=emitterSystems.begin();iter!=emitterSystems.end();++iter){
-			for(wiEmittedParticle* e:iter->second)
-				e->Update(GameSpeed);
-		}
-
-
-		list<Decal*>::iterator iter = decals.begin();
-		while (iter != decals.end())
-		{
-			Decal* decal = *iter;
-			decal->getTransform();
-			decal->Update();
-			if(decal->life>-2){
-				decal->life-=GameSpeed;
-				if(decal->life<=0){
-					decal->detach();
-					decals.erase(iter++);
-					continue;
-				}
-			}
-			++iter;
-		}
-	
-	}	
 }
-void wiRenderer::UpdateRenderInfo(DeviceContext context)
+void wiRenderer::UpdatePerFrameData()
 {
-	UpdateObjects();
+	if (GetGameSpeed() > 0)
+	{
+
+		UpdateSPTree(spTree);
+		UpdateSPTree(spTree_lights);
+	}
+
+	UpdateBoneLines();
+	UpdateCubes();
+
+	wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
+
+}
+void wiRenderer::UpdateRenderData(DeviceContext context)
+{
+	//UpdateObjects();
 
 	if (context == nullptr)
 		return;
@@ -2005,122 +1762,79 @@ void wiRenderer::UpdateRenderInfo(DeviceContext context)
 	UpdatePerWorldCB(context);
 		
 
+
+
 	//if(GetGameSpeed())
 	{
-
-
-		for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
-			Mesh* mesh = iter->second;
-			if(mesh->hasArmature() && !mesh->softBody && mesh->renderable){
 #ifdef USE_GPU_SKINNING
-				BoneShaderBuffer bonebuf = BoneShaderBuffer();
-				for (unsigned int k = 0; k<mesh->armature->boneCollection.size(); k++){
-					bonebuf.pose[k]=XMMatrixTranspose(XMLoadFloat4x4(mesh->armature->boneCollection[k]->boneRelativity));
-					bonebuf.prev[k]=XMMatrixTranspose(XMLoadFloat4x4(mesh->armature->boneCollection[k]->boneRelativityPrev));
-				}
-				
-				
-				UpdateBuffer(mesh->boneBuffer,&bonebuf,context);
-#else
-				for(int vi=0;vi<mesh->skinnedVertices.size();++vi)
-					mesh->skinnedVertices[vi]=TransformVertex(mesh,vi);
+		// Vertices are going to be skinned in a shader
+		BindPrimitiveTopology(POINTLIST, context);
+		BindVertexLayout(sOIL, context);
+		BindVS(sOVS, context);
+		BindGS(sOGS, context);
+		BindPS(nullptr, context);
 #endif
+
+
+		for (Model* model : models)
+		{
+			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
+			{
+				Mesh* mesh = iter->second;
+
+				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable) 
+				{
+#ifdef USE_GPU_SKINNING
+					// Upload bones for skinning to shader
+					static thread_local BoneShaderBuffer* bonebuf = new BoneShaderBuffer;
+					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
+						bonebuf->pose[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativity));
+						bonebuf->prev[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativityPrev));
+					}
+					UpdateBuffer(mesh->boneBuffer, bonebuf, context);
+
+					// Do the skinning
+					BindVertexBuffer(mesh->meshVertBuff, 0, sizeof(SkinnedVertex), context);
+					BindConstantBufferVS(mesh->boneBuffer, 1, context);
+					BindStreamOutTarget(mesh->sOutBuffer, context);
+					Draw(mesh->vertices.size(), context);
+#else
+					// Doing skinning on the CPU
+					for (int vi = 0; vi < mesh->skinnedVertices.size(); ++vi)
+						mesh->skinnedVertices[vi] = TransformVertex(mesh, vi);
+#endif
+				}
+
+				// Upload CPU skinned vertex buffer (Soft body VB)
+#ifdef USE_GPU_SKINNING
+				// If GPU skinning is enabled, we only skin soft bodies on the CPU
+				if (mesh->softBody)
+#else
+				// Upload skinned vertex buffer to GPU
+				if (mesh->softBody || mesh->hasArmature())
+#endif
+				{
+					UpdateBuffer(mesh->meshVertBuff, mesh->skinnedVertices.data(), context, sizeof(Vertex)*mesh->skinnedVertices.size());
+				}
 			}
 		}
+
 #ifdef USE_GPU_SKINNING
-		//wiRenderer::graphicsMutex.lock();
-		DrawForSO(context);
-		//wiRenderer::graphicsMutex.unlock();
+		// Unload skinning shader
+		BindGS(nullptr, context);
+		BindVS(nullptr, context);
+		BindStreamOutTarget(nullptr, context);
 #endif
+		
+
+//#ifdef USE_GPU_SKINNING
+//		DrawForSO(context);
+//#endif
 
 
-		UpdateSPTree(spTree);
 	}
 	
-	UpdateBoneLines();
-	UpdateCubes();
 
-	wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
-}
-void wiRenderer::UpdateObjects(){
-	objectsWithTrails.clear();
-	for (Object* o : objects){
-
-		XMMATRIX world = o->getTransform();
-		
-		if(o->mesh->isBillboarded){
-			XMMATRIX bbMat = XMMatrixIdentity();
-			if(o->mesh->billboardAxis.x || o->mesh->billboardAxis.y || o->mesh->billboardAxis.z){
-				float angle = 0;
-				angle = (float)atan2(o->translation.x - wiRenderer::getCamera()->translation.x, o->translation.z - wiRenderer::getCamera()->translation.z) * (180.0f / XM_PI);
-				bbMat = XMMatrixRotationAxis(XMLoadFloat3(&o->mesh->billboardAxis), angle * 0.0174532925f );
-			}
-			else
-				bbMat = XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMVectorSubtract(XMLoadFloat3(&o->translation),wiRenderer::getCamera()->GetEye()),XMVectorSet(0,1,0,0)));
-					
-			XMMATRIX w = XMMatrixScalingFromVector(XMLoadFloat3(&o->scale)) * 
-						bbMat * 
-						XMMatrixRotationQuaternion(XMLoadFloat4(&o->rotation)) *
-						XMMatrixTranslationFromVector(XMLoadFloat3(&o->translation)
-					);
-			XMStoreFloat4x4(&o->world,w);
-		}
-
-		if(o->mesh->softBody)
-			o->bounds=o->mesh->aabb;
-		else if(!o->mesh->isBillboarded && o->mesh->renderable){
-			o->bounds=o->mesh->aabb.get(world);
-		}
-		else if(o->mesh->renderable)
-			o->bounds.createFromHalfWidth(o->translation,o->scale);
-
-		if (!o->trail.empty())
-		{
-			objectsWithTrails.push_back(o);
-			o->FadeTrail();
-		}
-	}
-}
-void wiRenderer::UpdateSoftBodyPinning(){
-	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
-		Mesh* m = iter->second;
-		if(m->softBody){
-			int gvg = m->goalVG;
-			if(gvg>=0){
-				int j=0;
-				for(map<int,float>::iterator it=m->vertexGroups[gvg].vertices.begin();it!=m->vertexGroups[gvg].vertices.end();++it){
-					int vi = (*it).first;
-					Vertex tvert=m->skinnedVertices[vi];
-					if(m->hasArmature()) 
-						tvert = TransformVertex(m,vi);
-					m->goalPositions[j] = XMFLOAT3(tvert.pos.x,tvert.pos.y,tvert.pos.z);
-					m->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
-					++j;
-				}
-			}
-		}
-	}
-}
-void wiRenderer::UpdateSkinnedVB(DeviceContext context){
-	wiRenderer::graphicsMutex.lock();
-	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter){
-		Mesh* m = iter->second;
-#ifdef USE_GPU_SKINNING
-		if(m->softBody)
-#else
-		if(m->softBody || m->hasArmature())
-#endif
-		{
-			UpdateBuffer(m->meshVertBuff,m->skinnedVertices.data(),context,sizeof(Vertex)*m->skinnedVertices.size());
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
-			//void* dataPtr;
-			//wiRenderer::getImmediateContext()->Map(m->meshVertBuff,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr = (void*)mappedResource.pData;
-			//memcpy(dataPtr,m->skinnedVertices.data(),sizeof(Vertex)*m->skinnedVertices.size());
-			//wiRenderer::getImmediateContext()->Unmap(m->meshVertBuff,0);
-		}
-	}
-	wiRenderer::graphicsMutex.unlock();
 }
 void wiRenderer::UpdateImages(){
 	for (wiSprite* x : images)
@@ -2137,6 +1851,15 @@ void wiRenderer::ManageImages(){
 				(images.front()->effects.opacity <= 0 + FLT_EPSILON || images.front()->effects.fade==1)
 			)
 			images.pop_front();
+}
+void wiRenderer::PutDecal(Decal* decal)
+{
+	if (world == nullptr)
+	{
+		return;
+	}
+
+	world->decals.push_back(decal);
 }
 void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane){
 	wiSprite* img=new wiSprite("","",image);
@@ -2387,41 +2110,21 @@ void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context,
 	};
 
 	set<wiEmittedParticle*,particlesystem_comparator> psystems;
-	for(map<string,vector<wiEmittedParticle*>>::iterator iter=emitterSystems.begin();iter!=emitterSystems.end();++iter){
-		for(wiEmittedParticle* e:iter->second){
-			e->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(e->bounding_box->getCenter(),camera->translation)*1000);
-			psystems.insert(e);
-		}
+	for(wiEmittedParticle* e : emitterSystems){
+		e->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(e->bounding_box->getCenter(),camera->translation)*1000);
+		psystems.insert(e);
 	}
 
 	for(wiEmittedParticle* e:psystems){
 		e->DrawNonPremul(camera,context,depth,dark);
 	}
-
-	//for(int i=0;i<objects.size();++i){
-	//	for(int j=0;j<objects[i]->eParticleSystems.size();j++){
-	//		Material* mat = objects[i]->eParticleSystems[j]->material;
-	//		if(mat){
-	//			if(!mat->premultipliedTexture) objects[i]->eParticleSystems[j]->Draw(eye,view,mat->texture,context,depth,dark);
-	//		}
-	//	}
-	//}
 }
 void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark)
 {
-	for(map<string,vector<wiEmittedParticle*>>::iterator iter=emitterSystems.begin();iter!=emitterSystems.end();++iter){
-		for(wiEmittedParticle* e:iter->second)
-			e->DrawPremul(camera,context,depth,dark);
+	for (wiEmittedParticle* e : emitterSystems)
+	{
+		e->DrawPremul(camera, context, depth, dark);
 	}
-
-	//for(int i=0;i<objects.size();++i){
-	//	for(int j=0;j<objects[i]->eParticleSystems.size();j++){
-	//		Material* mat = objects[i]->eParticleSystems[j]->material;
-	//		if(mat){
-	//			if(mat->premultipliedTexture) objects[i]->eParticleSystems[j]->Draw(eye,view,mat->texture,context,depth,dark);
-	//		}
-	//	}
-	//}
 }
 void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 	BindPrimitiveTopology(TRIANGLESTRIP,context);
@@ -2478,19 +2181,11 @@ void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 						, wiMath::Lerp(o->trail[k].col, o->trail[k + 2].col, r)
 						, 1
 						));
-					if (k == 0)
-					{
-						trails.back().col = wiMath::Lerp(XMFLOAT4(0,0,0,0), trails.back().col, r);
-					}
 					trails.push_back(RibbonVertex(xpoint1
 						, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 1), XMFLOAT2((float)(k + 1) / (float)bounds, 1), r)
 						, wiMath::Lerp(o->trail[k + 1].col, o->trail[k + 3].col, r)
 						, 1
 						));
-					if (k == 0)
-					{
-						trails.back().col = wiMath::Lerp(XMFLOAT4(0, 0, 0, 0), trails.back().col, r);
-					}
 				}
 			}
 			if(!trails.empty()){
@@ -2913,7 +2608,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 										int k = 0;
 										for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 											if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-												if (mesh->softBody || (*viter)->armatureDeform)
+												if (mesh->softBody || (*viter)->isArmatureDeformed())
 													Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
 												else
 													Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
@@ -3018,7 +2713,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									int k = 0;
 									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 										if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-											if (mesh->softBody || (*viter)->armatureDeform)
+											if (mesh->softBody || (*viter)->isArmatureDeformed())
 												Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
 											else
 												Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
@@ -3124,7 +2819,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 							int k = 0;
 							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 								if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-									if (mesh->softBody || (*viter)->armatureDeform)
+									if (mesh->softBody || (*viter)->isArmatureDeformed())
 										Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
 									else
 										Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
@@ -3401,30 +3096,6 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 	//	BindGS(nullptr, context);
 	//}
 }
-void wiRenderer::DrawForSO(DeviceContext context)
-{
-	BindPrimitiveTopology(POINTLIST,context);
-	BindVertexLayout(sOIL,context);
-	BindVS(sOVS,context);
-	BindGS(sOGS,context);
-	BindPS(nullptr,context);
-
-	for(MeshCollection::iterator iter=meshes.begin(); iter!=meshes.end(); ++iter)
-	{
-		Mesh* mesh = iter->second;
-		if(mesh->hasArmature() && !mesh->softBody)
-		{
-			BindVertexBuffer(mesh->meshVertBuff,0,sizeof(SkinnedVertex),context);
-			BindConstantBufferVS(mesh->boneBuffer,1,context);
-			BindStreamOutTarget(mesh->sOutBuffer,context);
-			Draw(mesh->vertices.size(),context);
-		}
-	}
-
-	BindGS(nullptr,context);
-	BindVS(nullptr,context);
-	BindStreamOutTarget(nullptr,context);
-}
 
 void wiRenderer::SetDirectionalLightShadowProps(int resolution, int softShadowQuality)
 {
@@ -3458,14 +3129,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 				  , bool BlackOut, SHADERTYPE shaded
 				  , TextureView refRes, bool grass, GRAPHICSTHREAD thread)
 {
-	if (objects.empty())
-	{
-		return;
-	}
-
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
-	culledObjects.reserve(objects.size());
 	if(spTree)
 		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
 
@@ -3566,7 +3231,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 			int k=0;
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
 				if((*viter)->emitterType !=Object::EmitterType::EMITTER_INVISIBLE){
-					if (mesh->softBody || (*viter)->armatureDeform)
+					if (mesh->softBody || (*viter)->isArmatureDeformed())
 						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k);
 					else 
 						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k);
@@ -3629,14 +3294,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
 	, TextureView waterRippleNormals, TextureView depth, DeviceContext context)
 {
-	if (objects.empty())
-	{
-		return;
-	}
-
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
-	culledObjects.reserve(objects.size());
 	if (spTree)
 		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
 
@@ -3699,7 +3358,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 			int k = 0;
 			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
 				if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE){
-					if (mesh->softBody || (*viter)->armatureDeform)
+					if (mesh->softBody || (*viter)->isArmatureDeformed())
 						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k);
 					else
 						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k);
@@ -3786,57 +3445,59 @@ void wiRenderer::DrawSky(DeviceContext context)
 
 void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView depth)
 {
-	if(!decals.empty()){
+	for (Model* model : models)
+	{
+		if (model->decals.empty())
+			continue;
 
-		BindTexturePS(depth,1,context);
-		BindSamplerPS(ssClampAni,0,context);
-		BindVS(decalVS,context);
-		BindPS(decalPS,context);
-		BindRasterizerState(backFaceRS,context);
-		BindBlendState(blendStateTransparent,context);
-		BindDepthStencilState(stencilReadMatch,STENCILREF::STENCILREF_DEFAULT,context);
-		BindVertexLayout(nullptr,context);
-		BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,context);
-		BindConstantBufferVS(decalCbVS,0,context);
-		BindConstantBufferPS(lightStaticCb,0,context);
-		BindConstantBufferPS(decalCbPS,1,context);
+		BindTexturePS(depth, 1, context);
+		BindSamplerPS(ssClampAni, 0, context);
+		BindVS(decalVS, context);
+		BindPS(decalPS, context);
+		BindRasterizerState(backFaceRS, context);
+		BindBlendState(blendStateTransparent, context);
+		BindDepthStencilState(stencilReadMatch, STENCILREF::STENCILREF_DEFAULT, context);
+		BindVertexLayout(nullptr, context);
+		BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, context);
+		BindConstantBufferVS(decalCbVS, 0, context);
+		BindConstantBufferPS(lightStaticCb, 0, context);
+		BindConstantBufferPS(decalCbPS, 1, context);
 
-		for(Decal* decal : decals){
+		for (Decal* decal : model->decals) {
 
-			if((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds.corners)){
-				
-				BindTexturePS(decal->texture,2,context);
-				BindTexturePS(decal->normal,3,context);
+			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds.corners)) {
+
+				BindTexturePS(decal->texture, 2, context);
+				BindTexturePS(decal->normal, 3, context);
 
 				static thread_local DecalCBVS* dcbvs = new DecalCBVS;
-				dcbvs->mWVP=
+				dcbvs->mWVP =
 					XMMatrixTranspose(
 						XMLoadFloat4x4(&decal->world)
 						*camera->GetViewProjection()
-					);
-				UpdateBuffer(decalCbVS,dcbvs,context);
+						);
+				UpdateBuffer(decalCbVS, dcbvs, context);
 
 				static thread_local DecalCBPS* dcbps = new DecalCBPS;
-				dcbps->mDecalVP=
+				dcbps->mDecalVP =
 					XMMatrixTranspose(
 						XMLoadFloat4x4(&decal->view)*XMLoadFloat4x4(&decal->projection)
-					);
-				dcbps->hasTexNor=0;
-				if(decal->texture!=nullptr)
-					dcbps->hasTexNor|=0x0000001;
-				if(decal->normal!=nullptr)
-					dcbps->hasTexNor|=0x0000010;
-				XMStoreFloat3(&dcbps->eye,camera->GetEye());
-				dcbps->opacity=wiMath::Clamp((decal->life<=-2?1:decal->life<decal->fadeStart?decal->life/decal->fadeStart:1),0,1);
-				dcbps->front=decal->front;
-				UpdateBuffer(decalCbPS,dcbps,context);
+						);
+				dcbps->hasTexNor = 0;
+				if (decal->texture != nullptr)
+					dcbps->hasTexNor |= 0x0000001;
+				if (decal->normal != nullptr)
+					dcbps->hasTexNor |= 0x0000010;
+				XMStoreFloat3(&dcbps->eye, camera->GetEye());
+				dcbps->opacity = wiMath::Clamp((decal->life <= -2 ? 1 : decal->life < decal->fadeStart ? decal->life / decal->fadeStart : 1), 0, 1);
+				dcbps->front = decal->front;
+				UpdateBuffer(decalCbPS, dcbps, context);
 
-				Draw(36,context);
+				Draw(36, context);
 
 			}
 
 		}
-
 	}
 }
 
@@ -3904,184 +3565,11 @@ void wiRenderer::UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blacko
 	UpdateBuffer(fxCb,fb,context);
 }
 
-void wiRenderer::FinishLoading(){
-	physicsEngine->FirstRunWorld();
-	physicsEngine->addWind(wind.direction);
-	for (Object* o : objects){
-		for (wiEmittedParticle* e : o->eParticleSystems){
-			emitterSystems[e->name].push_back(e);
-			if (e->light != nullptr)
-				lights.push_back(e->light);
-		}
-		if (physicsEngine){
-			physicsEngine->registerObject(o);
-		}
-	}
-
-	SetUpLights();
-
-	Update();
-	UpdateRenderInfo(nullptr);
-	UpdateLights();
-	GenerateSPTree(spTree,vector<Cullable*>(objects.begin(),objects.end()),SPTREE_GENERATE_OCTREE);
-	GenerateSPTree(spTree_lights,vector<Cullable*>(lights.begin(),lights.end()),SPTREE_GENERATE_OCTREE);
-	SetUpCubes();
-	SetUpBoneLines();
-
-
-	vector<thread> aoThreads(0);
-
-	for (Object* o : objects)
-	{
-		//if (o->mesh->renderable && !o->mesh->calculatedAO && o->mesh->usedBy.size() == 1 && !o->isDynamic() && o->particleEmitter != Object::EMITTER_INVISIBLE)
-		if (o->mesh->renderable /*&& o->mesh->usedBy.size() <2*/)
-		{
-			//aoThreads.push_back(thread(CalculateVertexAO, o));
-		}
-	}
-
-	for (auto& t : aoThreads)
-	{
-		t.join();
-	}
-
-	for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter)
-	{
-		//iter->second->CreateBuffers();
-		addVertexCount(iter->second->vertices.size());
-	}
-
-}
-
-
-void wiRenderer::SetUpLights()
+void wiRenderer::FinishLoading()
 {
-	for(Light* l:lights){
-		if (!l->shadowCam.empty())
-			continue;
 
-		if(l->type==Light::DIRECTIONAL){
-
-			float lerp = 0.5f;
-			float lerp1 = 0.12f;
-			float lerp2 = 0.016f;
-			XMVECTOR a0,a,b0,b;
-			a0 = XMVector3Unproject(XMVectorSet(0, (float)GetScreenHeight(), 0, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			a = XMVector3Unproject(XMVectorSet(0, (float)GetScreenHeight(), 1, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			b0 = XMVector3Unproject(XMVectorSet((float)GetScreenWidth(), (float)GetScreenHeight(), 0, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			b = XMVector3Unproject(XMVectorSet((float)GetScreenWidth(), (float)GetScreenHeight(), 1, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-			float size=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp),XMVectorLerp(a0,a,lerp))));
-			float size1=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp1),XMVectorLerp(a0,a,lerp1))));
-			float size2=XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0,b,lerp2),XMVectorLerp(a0,a,lerp2))));
-			XMVECTOR rot = XMQuaternionIdentity();
-
-			l->shadowCam.push_back(SHCAM(size,rot,0,wiRenderer::getCamera()->zFarP));
-			l->shadowCam.push_back(SHCAM(size1,rot,0,wiRenderer::getCamera()->zFarP));
-			l->shadowCam.push_back(SHCAM(size2,rot,0,wiRenderer::getCamera()->zFarP));
-
-		}
-		else if(l->type==Light::SPOT && l->shadow){
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0,0,1),wiRenderer::getCamera()->zNearP,l->enerDis.y,l->enerDis.z) );
-		}
-		else if(l->type==Light::POINT && l->shadow){
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5f,-0.5f,-0.5f,-0.5f),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //+x
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.5f,0.5f,0.5f,-0.5f),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //-x
-
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(1,0,0,-0),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //+y
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0,0,-1),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //-y
-
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0.707f,0,0,-0.707f),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //+z
-			l->shadowCam.push_back( SHCAM(XMFLOAT4(0,0.707f,0.707f,0),wiRenderer::getCamera()->zNearP,l->enerDis.y,XM_PI/2.0f) ); //-z
-		}
-	}
-
-	
 }
-void wiRenderer::UpdateLights()
-{
-	if(GetGameSpeed()){
-	for(Light* l:lights){
-		//Attributes
-		//if(l->parent!=nullptr){
-		//	XMVECTOR sca,rot,pos;
-		//	XMMatrixDecompose(&sca,&rot,&pos,XMLoadFloat4x4(&l->parent->world));
-		//	XMStoreFloat3(&l->translation,pos);
-		//	XMStoreFloat4(&l->rotation,XMQuaternionMultiply(XMLoadFloat4(&l->rotation_rest),rot));
-		//}
-		//else{
-		//	l->translation=l->translation_rest;
-		//	l->rotation=l->rotation_rest;
-		//}
-		l->getTransform();
 
-		//Shadows
-		if(l->type==Light::DIRECTIONAL){
-
-			float lerp = 0.5f;//third slice distance from cam (percentage)
-			float lerp1 = 0.12f;//second slice distance from cam (percentage)
-			float lerp2 = 0.016f;//first slice distance from cam (percentage)
-			XMVECTOR c,d,e,e1,e2;
-			c = XMVector3Unproject(XMVectorSet((float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, getCamera()->GetProjection(), getCamera()->GetView(), XMMatrixIdentity());
-			d = XMVector3Unproject(XMVectorSet((float)GetScreenWidth() * 0.5f, (float)GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0.1f, 1.0f, getCamera()->GetProjection(), getCamera()->GetView(), XMMatrixIdentity());
-
-			if (!l->shadowCam.empty()) {
-
-				float f = l->shadowCam[0].size/(float)SHADOWMAPRES;
-				e=	XMVectorFloor( XMVectorLerp(d,c,lerp)/f	)*f;
-				f = l->shadowCam[1].size/(float)SHADOWMAPRES;
-				e1=	XMVectorFloor( XMVectorLerp(d,c,lerp1)/f)*f;
-				f = l->shadowCam[2].size/(float)SHADOWMAPRES;
-				e2=	XMVectorFloor( XMVectorLerp(d,c,lerp2)/f)*f;
-
-				//static float rot=0.0f;
-				////rot+=0.001f;
-				//XMStoreFloat4(&l->rotation,XMQuaternionMultiply(XMLoadFloat4(&l->rotation_rest),XMQuaternionRotationAxis(XMVectorSet(1,0,0,0),rot)));
-
-
-				XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation_rest));
-				l->shadowCam[0].Update(rrr*XMMatrixTranslationFromVector(e));
-				if(l->shadowCam.size()>1){
-					l->shadowCam[1].Update(rrr*XMMatrixTranslationFromVector(e1));
-					if(l->shadowCam.size()>2)
-						l->shadowCam[2].Update(rrr*XMMatrixTranslationFromVector(e2));
-				}
-			}
-			
-			l->bounds.createFromHalfWidth(getCamera()->translation,XMFLOAT3(10000,10000,10000));
-		}
-		else if(l->type==Light::SPOT){
-			if(!l->shadowCam.empty()){
-				l->shadowCam[0].Update( XMLoadFloat4x4(&l->world) );
-			}
-			//l->shadowCam[0].Update( XMMatrixRotationQuaternion(XMLoadFloat4(&l->frameRot))*XMMatrixTranslationFromVector(XMLoadFloat3(&l->framePos)) );
-			//l->bounds=l->mesh->aabb.get( 
-			//	XMMatrixScaling(l->enerDis.y,l->enerDis.y,l->enerDis.y)
-			//	*XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))
-			//	*XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) 
-			//	);
-
-			l->bounds.createFromHalfWidth(l->translation,XMFLOAT3(l->enerDis.y,l->enerDis.y,l->enerDis.y));
-		}
-		else if(l->type==Light::POINT){
-			for(unsigned int i=0;i<l->shadowCam.size();++i){
-				l->shadowCam[i].Update(XMLoadFloat3(&l->translation));
-			}
-			//l->bounds=l->mesh->aabb.get( 
-			//	XMMatrixScaling(l->enerDis.y,l->enerDis.y,l->enerDis.y)
-			//	*XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))
-			//	*XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) 
-			//	);
-
-			l->bounds.createFromHalfWidth(l->translation,XMFLOAT3(l->enerDis.y,l->enerDis.y,l->enerDis.y));
-		}
-	}
-
-	
-	UpdateSPTree(spTree_lights);
-		
-
-	}
-}
 
 wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 	const string& layerDisable)
@@ -4212,7 +3700,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 
 	Mesh* mesh = object->mesh;
 
-	XMMATRIX& objectMat = object->getTransform();
+	XMMATRIX& objectMat = object->getMatrix();
 
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -4231,7 +3719,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 		//XMStoreFloat3(&vPos, p);
 		//XMStoreFloat3(&vNor, n);
 
-		Vertex v = TransformVertex(mesh, vert, object->getTransform());
+		Vertex v = TransformVertex(mesh, vert, objectMat);
 		vPos.x = v.pos.x;
 		vPos.y = v.pos.y;
 		vPos.z = v.pos.z;
@@ -4273,25 +3761,32 @@ void wiRenderer::CalculateVertexAO(Object* object)
 	mesh->calculatedAO = true;
 }
 
-void wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX& transform, const string& ident, PHYSICS* physicsEngine)
+Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX& transform, const string& ident)
 {
 	static int unique_identifier = 0;
 
-	vector<Object*> newObjects(0);
-	vector<Light*> newLights(0);
 	stringstream idss("");
 	idss<<"_"<<ident;
 
-	LoadFromDisk(dir,name,idss.str(),armatures,materials,newObjects
-		,meshes,newLights,vector<HitSphere*>(),worldInfo,wind,vector<Camera>()
-		,transforms,decals);
+	Model* model = new Model;
+	model->LoadFromDisk(dir,name,idss.str());
+	LoadWorldInfo(dir, name);
 
+	model->transform(transform);
 
-	for(Object* o:newObjects){
-		o->transform(transform);
-		o->bounds=o->bounds.get(transform);
-		o->getTransform();
-		if(physicsEngine!=nullptr){
+	if (world == nullptr)
+	{
+		world = new Model;
+		world->name = "[WickedEngine-Default]{World}";
+		models.push_back(world);
+	}
+	model->attachTo(world);
+
+	models.push_back(model);
+
+	for (Object* o : model->objects)
+	{
+		if (physicsEngine != nullptr) {
 			physicsEngine->registerObject(o);
 		}
 	}
@@ -4299,66 +3794,107 @@ void wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX
 	graphicsMutex.lock();
 
 	if(spTree){
-		spTree->AddObjects(spTree->root,vector<Cullable*>(newObjects.begin(),newObjects.end()));
+		spTree->AddObjects(spTree->root,vector<Cullable*>(model->objects.begin(), model->objects.end()));
+	}
+	else
+	{
+		GenerateSPTree(spTree, vector<Cullable*>(model->objects.begin(), model->objects.end()), SPTREE_GENERATE_OCTREE);
 	}
 	if(spTree_lights){
-		spTree_lights->AddObjects(spTree_lights->root,vector<Cullable*>(newLights.begin(),newLights.end()));
+		spTree_lights->AddObjects(spTree_lights->root,vector<Cullable*>(model->lights.begin(),model->lights.end()));
 	}
-	
-	objects.insert(objects.end(),newObjects.begin(),newObjects.end());
-
-	UpdateLights();
-	lights.insert(lights.end(),newLights.begin(),newLights.end());
+	else
+	{
+		GenerateSPTree(spTree_lights, vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
+	}
 
 	unique_identifier++;
 
 	graphicsMutex.unlock();
 
+
+
+	Update();
+	UpdateRenderData(nullptr);
+	SetUpCubes();
+	SetUpBoneLines();
+
+	return model;
 }
 void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
 {
-	LoadWiWorldInfo(dir, name, worldInfo, wind);
+	LoadWiWorldInfo(dir, name+".wiw", worldInfo, wind);
+	if(physicsEngine)
+		physicsEngine->addWind(wind.direction);
 }
 
 void wiRenderer::SychronizeWithPhysicsEngine()
 {
 	if (physicsEngine && GetGameSpeed()){
 
-		UpdateSoftBodyPinning();
-		for (Object* object : objects){
-			int pI = object->physicsObjectI;
-			if (pI >= 0){
-				if (object->mesh->softBody){
-					physicsEngine->connectSoftBodyToVertices(
-						object->mesh, pI
-						);
+		//UpdateSoftBodyPinning();
+		for (Model* model : models)
+		{
+			// Soft body pinning update
+			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter) {
+				Mesh* m = iter->second;
+				if (m->softBody) {
+					int gvg = m->goalVG;
+					if (gvg >= 0) {
+						int j = 0;
+						for (map<int, float>::iterator it = m->vertexGroups[gvg].vertices.begin(); it != m->vertexGroups[gvg].vertices.end(); ++it) {
+							int vi = (*it).first;
+							Vertex tvert = m->skinnedVertices[vi];
+							if (m->hasArmature())
+								tvert = TransformVertex(m, vi);
+							m->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
+							m->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
+							++j;
+						}
+					}
 				}
-				if (object->kinematic){
-					XMVECTOR s, r, t;
-					XMMatrixDecompose(&s, &r, &t, XMLoadFloat4x4(&object->world));
-					XMFLOAT3 T;
-					XMFLOAT4 R;
-					XMStoreFloat4(&R, r);
-					XMStoreFloat3(&T, t);
-					physicsEngine->transformBody(R, T, pI);
+			}
+
+
+			for (Object* object : model->objects) {
+				int pI = object->physicsObjectI;
+				if (pI >= 0) {
+					if (object->mesh->softBody) {
+						physicsEngine->connectSoftBodyToVertices(
+							object->mesh, pI
+							);
+					}
+					if (object->kinematic) {
+						//XMVECTOR s, r, t;
+						//XMMatrixDecompose(&s, &r, &t, XMLoadFloat4x4(&object->world));
+						//XMFLOAT3 T;
+						//XMFLOAT4 R;
+						//XMStoreFloat4(&R, r);
+						//XMStoreFloat3(&T, t);
+						//physicsEngine->transformBody(R, T, pI);
+						physicsEngine->transformBody(object->rotation, object->translation, pI);
+					}
 				}
 			}
 		}
 
 		physicsEngine->Update();
 
-		for (Object* object : objects){
-			int pI = object->physicsObjectI;
-			if (pI >= 0 && !object->kinematic){
-				PHYSICS::Transform* transform(physicsEngine->getObject(pI));
-				object->translation_rest = transform->position;
-				object->rotation_rest = transform->rotation;
+		for (Model* model : models)
+		{
+			for (Object* object : model->objects) {
+				int pI = object->physicsObjectI;
+				if (pI >= 0 && !object->kinematic) {
+					PHYSICS::PhysicsTransform* transform(physicsEngine->getObject(pI));
+					object->translation_rest = transform->position;
+					object->rotation_rest = transform->rotation;
 
-				if (object->mesh->softBody){
-					object->scale_rest = XMFLOAT3(1, 1, 1);
-					physicsEngine->connectVerticesToSoftBody(
-						object->mesh, pI
-						);
+					if (object->mesh->softBody) {
+						object->scale_rest = XMFLOAT3(1, 1, 1);
+						physicsEngine->connectVerticesToSoftBody(
+							object->mesh, pI
+							);
+					}
 				}
 			}
 		}

@@ -144,7 +144,7 @@ void wiBULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& 
 			body->getMotionState()->getWorldTransform(trans);
 			btQuaternion nRot = trans.getRotation();
 			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new Transform(
+			transforms.push_back(new PhysicsTransform(
 				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
 				);
 		}
@@ -254,7 +254,7 @@ void wiBULLET::addSphere(float rad, const XMFLOAT3& pos
 			body->getMotionState()->getWorldTransform(trans);
 			btQuaternion nRot = trans.getRotation();
 			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new Transform(
+			transforms.push_back(new PhysicsTransform(
 				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
 				);
 		}
@@ -307,7 +307,7 @@ void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLO
 			body->getMotionState()->getWorldTransform(trans);
 			btQuaternion nRot = trans.getRotation();
 			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new Transform(
+			transforms.push_back(new PhysicsTransform(
 				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
 				);
 		}
@@ -365,7 +365,7 @@ void wiBULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOA
 			body->getMotionState()->getWorldTransform(trans);
 			btQuaternion nRot = trans.getRotation();
 			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new Transform(
+			transforms.push_back(new PhysicsTransform(
 				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
 				);
 		}
@@ -445,7 +445,7 @@ void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vect
 			body->getMotionState()->getWorldTransform(trans);
 			btQuaternion nRot = trans.getRotation();
 			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new Transform(
+			transforms.push_back(new PhysicsTransform(
 				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
 				);
 		}
@@ -572,7 +572,7 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 
 		((btSoftRigidDynamicsWorld*)dynamicsWorld)->addSoftBody(softBody);
 
-		transforms.push_back(new Transform());
+		transforms.push_back(new PhysicsTransform);
 	}
 
 }
@@ -643,7 +643,7 @@ void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objec
 	}
 }
 
-PHYSICS::Transform* wiBULLET::getObject(int index){
+PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 	
 	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[index];
 	btTransform trans;
@@ -669,13 +669,19 @@ PHYSICS::Transform* wiBULLET::getObject(int index){
 
 void wiBULLET::registerObject(Object* object){
 	if(object->rigidBody && rigidBodyPhysicsEnabled){
-		XMVECTOR s,r,t;
-		XMMatrixDecompose(&s,&r,&t,XMLoadFloat4x4(&object->world));
+		//XMVECTOR s,r,t;
+		//XMMatrixDecompose(&s,&r,&t,XMLoadFloat4x4(&object->world));
 		XMFLOAT3 S,T;
 		XMFLOAT4 R;
-		XMStoreFloat3(&S,s);
-		XMStoreFloat4(&R,r);
-		XMStoreFloat3(&T,t);
+		//XMStoreFloat3(&S,s);
+		//XMStoreFloat4(&R,r);
+		//XMStoreFloat3(&T,t);
+		object->applyTransform();
+		object->attachTo(object->GetRoot());
+
+		S = object->scale;
+		T = object->translation;
+		R = object->rotation;
 
 		if(!object->collisionShape.compare("BOX")){
 			addBox(
@@ -810,15 +816,6 @@ void wiBULLET::CleanUp(){
 }
 
 
-void* wiBULLET::operator new(size_t size)
-{
-	void* result = _aligned_malloc(size,16);
-	return result;
-}
-void wiBULLET::operator delete(void* p)
-{
-	if(p) _aligned_free(p);
-}
 
 void wiBULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
 	int numManifolds = world->getDispatcher()->getNumManifolds();

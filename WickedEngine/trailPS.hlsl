@@ -12,16 +12,29 @@ struct VertexToPixel{
 
 float4 main(VertexToPixel PSIn) : SV_TARGET
 {
+
+	float2 co = abs(PSIn.tex - 0.5f)*2.f;
+	float blendOut = 1 - pow(max(co.x,co.y), 2);
+
 	float4 tex = xTexture.Sample(xSampler,PSIn.tex);
-	tex.a *= PSIn.col.a;
+	tex.a *= PSIn.col.a * blendOut;
 
-	float4 color = float4(PSIn.col.rgb,1);
+	float4 color = float4(PSIn.col.rgb * blendOut,1);
 
+	blendOut *= PSIn.col.a;
 	float2 distortionCo;
 		distortionCo.x = PSIn.dis.x/PSIn.dis.w/2.0f + 0.5f;
 		distortionCo.y = -PSIn.dis.y/PSIn.dis.w/2.0f + 0.5f;
-	float2 distort = (xDistortionTexture.Sample(xSampler,PSIn.tex).rg - float2(0.5f, 0.5f))*0.3f*PSIn.col.a;
-	color.rgb += xRefracTexture.SampleLevel(xSampler,distortionCo+distort,0).rgb;
+	float2 distort = (xDistortionTexture.Sample(xSampler,PSIn.tex).rg - float2(0.5f, 0.5f))*0.3f * blendOut;
+
+	// Chromatic Aberration
+	float2 dim;
+	xRefracTexture.GetDimensions(dim.x, dim.y);
+	dim = 6.0f / dim * blendOut;
+	color.r += xRefracTexture.SampleLevel(xSampler, distortionCo + distort + dim * float2(1, 1), 0).r;
+	color.g += xRefracTexture.SampleLevel(xSampler, distortionCo + distort + dim * float2(-1, 1), 0).g;
+	color.b += xRefracTexture.SampleLevel(xSampler, distortionCo + distort + dim * float2(0, -1), 0).b;
+
 	color.rgb = lerp(color.rgb, tex.rgb, tex.a);
 
 	return float4(color.rgb,1);

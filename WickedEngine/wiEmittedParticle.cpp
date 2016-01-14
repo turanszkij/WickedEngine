@@ -47,6 +47,7 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 	light=nullptr;
 	if(material->blendFlag==BLENDMODE_ADDITIVE){
 		light=new Light();
+		light->SetUp();
 		light->color.x=material->diffuseColor.x;
 		light->color.y=material->diffuseColor.y;
 		light->color.z=material->diffuseColor.z;
@@ -207,6 +208,7 @@ void wiEmittedParticle::Update(float gamespeed)
 	if(light!=nullptr){
 		light->translation_rest=bounding_box->getCenter();
 		light->enerDis=XMFLOAT4(5,bounding_box->getRadius()*3,0,0);
+		light->UpdateLight();
 	}
 	
 	//D3D11_MAPPED_SUBRESOURCE mappedResource;

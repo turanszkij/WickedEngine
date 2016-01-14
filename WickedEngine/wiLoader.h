@@ -180,7 +180,7 @@ struct Material
 		isSky=water=shadeless=false;
 		cast_shadow=true;
 	}
-	void CleanUp();
+	~Material();
 
 	bool IsTransparent() { return alpha < 1.0f; }
 	bool IsWater() { return water; }
@@ -262,13 +262,15 @@ struct RAY{
 	}
 	bool intersects(const AABB& box) const;
 };
-struct BoneShaderBuffer
-{
 #ifdef USE_GPU_SKINNING
+GFX_STRUCT BoneShaderBuffer
+{
 	XMMATRIX pose[MAXBONECOUNT];
 	XMMATRIX prev[MAXBONECOUNT];
-#endif
+
+	ALIGN_16
 };
+#endif
 struct VertexRef{
 	int index;
 	float weight;
@@ -335,7 +337,7 @@ struct Mesh{
 		name=newName;
 		init();
 	}
-	void CleanUp(){
+	~Mesh(){
 		if(meshVertBuff) {meshVertBuff->Release(); meshVertBuff=NULL; }
 		if(meshInstanceBuffer) {meshInstanceBuffer->Release(); meshInstanceBuffer=NULL;}
 		if(meshIndexBuff) {meshIndexBuff->Release(); meshIndexBuff=NULL; }
@@ -410,16 +412,9 @@ struct Node
 		return "";
 	}
 };
-struct Load_Debug_Properties
+struct Transform : public Node
 {
 	string parentName;
-
-	Load_Debug_Properties(){
-		parentName="";
-	}
-};
-struct Transform : public Node, public Load_Debug_Properties
-{
 	Transform* parent;
 	set<Transform*> children;
 	
@@ -427,48 +422,49 @@ struct Transform : public Node, public Load_Debug_Properties
 	XMFLOAT4 rotation_rest, rotation, rotationPrev;
 	XMFLOAT3 scale_rest, scale, scalePrev;
 	XMFLOAT4X4 world_rest, world, worldPrev;
-	XMFLOAT4X4 *boneRelativity, *boneRelativityPrev; //for bones only (calculating efficiency)
+
+	string boneParent;	//for transforms that are parented to bones (for blender-import compatibility)
 
 	XMFLOAT4X4 parent_inv_rest;
 	int copyParentT,copyParentR,copyParentS;
 
 	Transform():Node(){
+		parent = nullptr;
+		parentName = "";
+		boneParent = "";
 		Clear();
 	}
 	~Transform(){
-		if(boneRelativity!=nullptr){
-			delete boneRelativity;
-			boneRelativity=nullptr;
-		}
-		if(boneRelativityPrev!=nullptr){
-			delete boneRelativityPrev;
-			boneRelativityPrev=nullptr;
-		}
 	};
 	void Clear()
 	{
-		parent = nullptr;
 		copyParentT = copyParentR = copyParentS = 1;
-		boneRelativity = boneRelativityPrev = nullptr;
 		translation_rest = translation = translationPrev = XMFLOAT3(0, 0, 0);
 		scale_rest = scale = scalePrev = XMFLOAT3(1, 1, 1);
 		rotation_rest = rotation = rotationPrev = XMFLOAT4(0, 0, 0, 1);
 		world_rest = world = worldPrev = parent_inv_rest = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 	}
+	static void DeleteTree(Transform* transform);
 
-	virtual XMMATRIX getTransform(int getTranslation = 1, int getRotation = 1, int getScale = 1);
+	virtual XMMATRIX getMatrix(int getTranslation = 1, int getRotation = 1, int getScale = 1);
 	//attach to parent
-	void attachTo(Transform* newParent, int copyTranslation=1, int copyRotation=1, int copyScale=1);
+	void attachTo(Transform* newParent, int copyTranslation=1, int copyRotation=1, int copyScale=1); 
+	//find transform in tree
+	Transform* find(const string& name);
 	//detach child - detach all if no parameters
 	void detachChild(Transform* child = nullptr);
 	//detach from parent
-	void detach(int erasefromParent = 1);
+	void detach();
 	void applyTransform(int t=1, int r=1, int s=1);
 	void transform(const XMFLOAT3& t = XMFLOAT3(0,0,0), const XMFLOAT4& r = XMFLOAT4(0,0,0,1), const XMFLOAT3& s = XMFLOAT3(1,1,1));
 	void transform(const XMMATRIX& m = XMMatrixIdentity());
 	void Translate(const XMFLOAT3& value);
 	void RotateRollPitchYaw(const XMFLOAT3& value);
 	void Scale(const XMFLOAT3& value);
+	// Update this transform and children recursively
+	virtual void UpdateTransform();
+	// Get the root of the tree
+	Transform* GetRoot();
 };
 struct Cullable
 {
@@ -495,8 +491,6 @@ public:
 };
 struct Object : public Streamable, public Transform
 {
-	bool armatureDeform;
-
 	//PARTICLE
 	enum EmitterType{
 		NO_EMITTER,
@@ -526,14 +520,19 @@ struct Object : public Streamable, public Transform
 
 	int physicsObjectI;
 
+	// Is it deformed with an armature?
+	bool isArmatureDeformed()
+	{
+		return mesh->hasArmature();
+	}
+	// Is it controlled by the physics engine or an Armature?
 	bool isDynamic()
 	{
-		return ((physicsObjectI >= 0 && !kinematic) || mesh->hasArmature() || mesh->softBody);
+		return ((physicsObjectI >= 0 && !kinematic) || mesh->softBody || isArmatureDeformed());
 	}
 
 	Object(){};
 	Object(string newName):Transform(){
-		armatureDeform=false;
 		name=newName;
 		XMStoreFloat4x4( &world,XMMatrixIdentity() );
 		XMStoreFloat4x4( &worldPrev,XMMatrixIdentity() );
@@ -553,10 +552,8 @@ struct Object : public Streamable, public Transform
 		trailDistortTex = nullptr;
 		trailTex = nullptr;
 	}
-
-	void CleanUp(){
-		trail.clear();
-		if(trailBuff) {trailBuff->Release(); trailBuff=NULL;}
+	~Object(){
+		SAFE_RELEASE(trailBuff);
 	}
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
@@ -569,6 +566,8 @@ struct Object : public Streamable, public Transform
 		}
 		return retVal;
 	}
+	virtual void UpdateTransform();
+	void UpdateObject();
 };
 struct KeyFrame
 {
@@ -601,12 +600,6 @@ struct ActionFrames
 	vector< KeyFrame > keyframesSca;
 
 	ActionFrames(){
-		CleanUp();
-	}
-	void CleanUp(){
-		keyframesRot.clear();
-		keyframesPos.clear();
-		keyframesSca.clear();
 	}
 };
 struct Bone : public Transform
@@ -618,6 +611,9 @@ struct Bone : public Transform
 	vector<ActionFrames> actionFrames;
 
 	XMFLOAT4X4 recursivePose, recursiveRest, recursiveRestInv;
+
+	// These will be used in the skinning process to transform verts
+	XMFLOAT4X4 boneRelativity, boneRelativityPrev;
 
 	float length;
 	bool connected;
@@ -634,20 +630,11 @@ struct Bone : public Transform
 		actionFrames.back().keyframesRot.push_back(KeyFrame(1, 0, 0, 0, 1));
 		actionFrames.back().keyframesSca.push_back(KeyFrame(1, 1, 1, 1, 0));
 		length=1.0f;
-		boneRelativity=new XMFLOAT4X4();
-		boneRelativityPrev=new XMFLOAT4X4();
 		connected = false;
 	}
-	void CleanUp(){
-		childrenN.clear();
-		childrenI.clear();
 
-		for(unsigned int i=0;i<actionFrames.size();i++)
-			actionFrames[i].CleanUp();
-		actionFrames.clear();
-	}
-
-	XMMATRIX getTransform(int getTranslation = 1, int getRotation = 1, int getScale = 1);
+	XMMATRIX getMatrix(int getTranslation = 1, int getRotation = 1, int getScale = 1);
+	virtual void UpdateTransform();
 };
 struct AnimationLayer
 {
@@ -677,57 +664,14 @@ struct AnimationLayer
 
 	bool looped;
 
-	AnimationLayer()
-	{
-		name = "";
+	AnimationLayer();
 
-		activeAction = prevAction = 0;
-		ResetAction();
-		ResetActionPrev();
-
-		playing = true;
-		blendCurrentFrame = 0.0f;
-		blendFrames = 0.0f;
-		blendFact = 0.0f;
-		currentFramePrevAction = 0.0f;
-		weight = 1.0f;
-		type = ANIMLAYER_TYPE_ADDITIVE;
-
-		looped = true;
-	}
-
-	void ChangeAction(int actionIndex, float blendFrames = 0.0f, float weight = 1.0f)
-	{
-		currentFramePrevAction = currentFrame;
-		ResetAction();
-		prevAction = activeAction;
-		activeAction = actionIndex;
-		this->blendFrames = blendFrames;
-		blendFact = 0.0f;
-		blendCurrentFrame = 0.0f;
-		this->weight = weight;
-	}
-	void ResetAction()
-	{
-		currentFrame = 1;
-	}
-	void ResetActionPrev()
-	{
-		currentFramePrevAction = 1;
-	}
-	void PauseAction()
-	{
-		playing = false;
-	}
-	void StopAction()
-	{
-		ResetAction();
-		PauseAction();
-	}
-	void PlayAction()
-	{
-		playing = true;
-	}
+	void ChangeAction(int actionIndex, float blendFrames = 0.0f, float weight = 1.0f);
+	void ResetAction();
+	void ResetActionPrev();
+	void PauseAction();
+	void StopAction();
+	void PlayAction();
 };
 struct Armature : public Transform
 {
@@ -757,11 +701,11 @@ public:
 		animationLayers.push_back(new AnimationLayer());
 		animationLayers.back()->type = AnimationLayer::ANIMLAYER_TYPE_PRIMARY;
 	}
-	void CleanUp(){
+	~Armature()
+	{
 		actions.clear();
 		for (Bone* b : boneCollection)
 		{
-			b->CleanUp();
 			delete b;
 		}
 		boneCollection.clear();
@@ -778,69 +722,21 @@ public:
 	}
 
 	// Empty actionName will be the Identity Action (T-pose)
-	void ChangeAction(const string& actionName="", float blendFrames = 0.0f, const string& animLayer = "", float weight = 1.0f)
-	{
-		AnimationLayer* anim = GetPrimaryAnimation();
-		if (animLayer.length() > 0)
-		{
-			anim = GetAnimLayer(animLayer);
-		}
+	void ChangeAction(const string& actionName = "", float blendFrames = 0.0f, const string& animLayer = "", float weight = 1.0f);
+	AnimationLayer* GetAnimLayer(const string& name);
+	void AddAnimLayer(const string& name);
+	void DeleteAnimLayer(const string& name);
+	virtual void UpdateTransform();
+	void UpdateArmature();
 
-		if (actionName.length() > 0)
-		{
-			for (unsigned int i = 1; i < actions.size();++i)
-			{
-				if (!actions[i].name.compare(actionName))
-				{
-					anim->ChangeAction(i, blendFrames, weight);
-					return;
-				}
-			}
-		}
-		
-		// Fall back to identity action
-		anim->ChangeAction(0, blendFrames, weight);
-	}
-	AnimationLayer* GetAnimLayer(const string& name)
-	{
-		for (auto& x : animationLayers)
-		{
-			if (!x->name.compare(name))
-			{
-				return x;
-			}
-		}
-		animationLayers.push_back(new AnimationLayer);
-		animationLayers.back()->name = name;
-		return animationLayers.back();
-	}
-	void AddAnimLayer(const string& name)
-	{
-		for (auto& x : animationLayers)
-		{
-			if (!x->name.compare(name))
-			{
-				return;
-			}
-		}
-		animationLayers.push_back(new AnimationLayer);
-		animationLayers.back()->name = name;
-	}
-	void DeleteAnimLayer(const string& name)
-	{
-		auto i = animationLayers.begin();
-		while (i != animationLayers.end())
-		{
-			if ((*i)->type != AnimationLayer::ANIMLAYER_TYPE_PRIMARY && !(*i)->name.compare(name))
-			{
-				animationLayers.erase(i++);
-			}
-			else
-			{
-				++i;
-			}
-		}
-	}
+private:
+	enum KeyFrameType {
+		ROTATIONKEYFRAMETYPE,
+		POSITIONKEYFRAMETYPE,
+		SCALARKEYFRAMETYPE,
+	};
+	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
+	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int frameCount, const vector<KeyFrame>& keyframes, KeyFrameType type);
 };
 struct SHCAM{	
 	XMFLOAT4X4 View,Projection;
@@ -950,7 +846,10 @@ struct Light : public Cullable , public Transform
 		shadowMap_index = -1;
 		shadowBias = 0.00001f;
 	}
-	void CleanUp();
+	~Light();
+	void SetUp();
+	virtual void UpdateTransform();
+	void UpdateLight();
 };
 struct Decal : public Cullable, public Transform
 {
@@ -961,10 +860,12 @@ struct Decal : public Cullable, public Transform
 	float life,fadeStart;
 
 	Decal(const XMFLOAT3& tra=XMFLOAT3(0,0,0), const XMFLOAT3& sca=XMFLOAT3(1,1,1), const XMFLOAT4& rot=XMFLOAT4(0,0,0,1), const string& tex="", const string& nor="");
-	void Update();
+	~Decal();
+	
 	void addTexture(const string& tex);
 	void addNormal(const string& nor);
-	void CleanUp();
+	virtual void UpdateTransform();
+	void UpdateDecal();
 };
 struct WorldInfo{
 	XMFLOAT3 horizon;
@@ -999,11 +900,10 @@ struct Camera:public Transform{
 		translation_rest=newPos;
 		rotation_rest=newRot;
 		name=newName;
-		getTransform();
 	}
 	void SetUp(int newWidth, int newHeight, float newNear, float newFar)
 	{
-		XMMATRIX View, Projection;
+		XMMATRIX View;
 		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
 
 		zNearP = newNear;
@@ -1012,22 +912,13 @@ struct Camera:public Transform{
 		width = (float)newWidth;
 		height = (float)newHeight;
 
-
-		Projection = XMMatrixPerspectiveFovLH(XM_PI / 3.0f, (float)width / (float)height, zNearP, zFarP);
-
+		UpdateProjection();
 
 		XMStoreFloat4x4(&this->View, View);
-		XMStoreFloat4x4(&this->Projection, Projection);
 		XMStoreFloat3(&this->At, At);
 		XMStoreFloat3(&this->Up, Up);
 
-		Update();
-	}
-	void Update()
-	{
-		getTransform();
-
-		UpdateProps();
+		UpdateTransform();
 	}
 	void UpdateProps()
 	{
@@ -1081,6 +972,10 @@ struct Camera:public Transform{
 
 		frustum.ConstructFrustum(zFarP, Projection, this->View);
 	}
+	void UpdateProjection()
+	{
+		XMStoreFloat4x4(&this->Projection, XMMatrixPerspectiveFovLH(XM_PI / 3.0f, (float)width / (float)height, zNearP, zFarP));
+	}
 
 	XMVECTOR GetEye()
 	{
@@ -1106,10 +1001,11 @@ struct Camera:public Transform{
 	{
 		return XMMatrixMultiply(GetView(),GetProjection());
 	}
+	virtual void UpdateTransform();
 };
 struct HitSphere:public SPHERE, public Transform{
 	float radius_saved, radius;
-	static ID3D11Buffer *vertexBuffer;
+	static BufferResource vertexBuffer;
 	enum HitSphereType{
 		HITTYPE,
 		ATKTYPE,
@@ -1137,6 +1033,7 @@ struct HitSphere:public SPHERE, public Transform{
 		TYPE=TYPE_SAVED;
 		radius=radius_saved;
 	}
+	virtual void UpdateTransform();
 
 static const int RESOLUTION = 36;
 	static void SetUpStatic();
@@ -1144,41 +1041,51 @@ static const int RESOLUTION = 36;
 
 };
 
+struct Model : public Transform
+{
+	vector<Object*> objects;
+	MeshCollection meshes;
+	MaterialCollection materials;
+	vector<Armature*> armatures;
+	vector<Light*> lights;
+	list<Decal*> decals;
+
+	Model();
+	void LoadFromDisk(const string& dir, const string& name, const string& identifier);
+	void UpdateModel();
+};
+
 
 
 // Create rest positions for bone tree
 void RecursiveRest(Armature* armature, Bone* bone);
 
-void LoadWiArmatures(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures
-					 , map<string,Transform*>& transforms);
+void LoadWiArmatures(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures);
 void LoadWiMaterialLibrary(const string& directory, const string& filename, const string& identifier, const string& texturesDir, MaterialCollection& materials);
 void LoadWiObjects(const string& directory, const string& filename, const string& identifier, vector<Object*>& objects
-				   , vector<Armature*>& armatures, MeshCollection& meshes
-				   , map<string,Transform*>& transforms, const MaterialCollection& materials);
+				   , vector<Armature*>& armatures, MeshCollection& meshes, const MaterialCollection& materials);
 void LoadWiMeshes(const string& directory, const string& filename, const string& identifier, MeshCollection& meshes, const vector<Armature*>& armatures, const MaterialCollection& materials);
 void LoadWiActions(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures);
-void LoadWiLights(const string& directory, const string& filename, const string& identifier, vector<Light*>& lights
-				  , const vector<Armature*>& armatures
-				  , map<string,Transform*>& transforms);
+void LoadWiLights(const string& directory, const string& filename, const string& identifier, vector<Light*>& lights);
 void LoadWiHitSpheres(const string& directory, const string& name, const string& identifier, vector<HitSphere*>& spheres
-					  ,const vector<Armature*>& armatures, map<string,Transform*>& transforms);
+					  ,const vector<Armature*>& armatures);
 void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worldInfo, Wind& wind);
 void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
-				   ,const vector<Armature*>& armatures, map<string,Transform*>& transforms);
+				   ,const vector<Armature*>& armatures);
 void LoadWiDecals(const string&directory, const string& name, const string& texturesDir, list<Decal*>& decals);
 
-void LoadFromDisk(const string& dir, const string& name, const string& identifier
-				  , vector<Armature*>& armatures
-				  , MaterialCollection& materials
-				  , vector<Object*>& objects
-				  , MeshCollection& meshes
-				  , vector<Light*>& lights
-				  , vector<HitSphere*>& spheres
-				  , WorldInfo& worldInfo, Wind& wind
-				  , vector<Camera>& cameras
-				  , map<string,Transform*>& transforms
-				  , list<Decal*>& decals
-				  );
+//void LoadFromDisk(const string& dir, const string& name, const string& identifier
+//				  , vector<Armature*>& armatures
+//				  , MaterialCollection& materials
+//				  , vector<Object*>& objects
+//				  , MeshCollection& meshes
+//				  , vector<Light*>& lights
+//				  , vector<HitSphere*>& spheres
+//				  , WorldInfo& worldInfo, Wind& wind
+//				  , vector<Camera>& cameras
+//				  , map<string,Transform*>& transforms
+//				  , list<Decal*>& decals
+//				  );
 
 
 
