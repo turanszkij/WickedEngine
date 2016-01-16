@@ -30,6 +30,7 @@ wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 	count=newCount;
 	material=nullptr;
 	object = newObject;
+	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, object->getMatrix()));
 	for(Material* m : object->mesh->materials)
 		if(!newMat.compare(m->name)){
 			material = m;
@@ -371,9 +372,31 @@ void wiHairParticle::SetUpPatches()
 }
 void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 {
-	
+	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
+	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
+	XMMATRIX inverseRenderMat = XMMatrixInverse(nullptr, renderMatrix);
+
 	static thread_local Frustum frustum = Frustum();
-	frustum.ConstructFrustum((float)LOD[2], camera->Projection, camera->View);
+
+	// Culling camera needs to be transformed according to hair ps transform (inverse) 
+	XMFLOAT4X4 cull_View;
+	XMFLOAT3 eye;
+	{
+		XMMATRIX View;
+		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye;
+
+		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation));
+		At = XMVector3Normalize(XMVector3Transform(XMVector3Transform(At, camRot), inverseRenderMat));
+		Up = XMVector3Normalize(XMVector3Transform(XMVector3Transform(Up, camRot), inverseRenderMat));
+		Eye = XMVector3Transform(camera->GetEye(), inverseRenderMat);
+
+		View = XMMatrixLookToLH(Eye, At, Up);
+
+		XMStoreFloat4x4(&cull_View, View);
+		XMStoreFloat3(&eye, Eye);
+	}
+
+	frustum.ConstructFrustum((float)LOD[2], camera->Projection, cull_View);
 
 		
 	CulledList culledPatches;
@@ -401,11 +424,12 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 
 
 		static thread_local CBGS* gcb = new CBGS;
+		(*gcb).mWorld = XMMatrixTranspose(renderMatrix);
 		(*gcb).mView = XMMatrixTranspose(camera->GetView());
 		(*gcb).mProj = XMMatrixTranspose(camera->GetProjection());
 		(*gcb).mPrevViewProjection = XMMatrixTranspose(wiRenderer::prevFrameCam->GetViewProjection());
 		(*gcb).colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z, wiRenderer::GetScene().wind.time);
-		(*gcb).eye=camera->translation;
+		(*gcb).eye = eye;
 		(*gcb).drawdistance = (float)LOD[2];
 		(*gcb).wind=wiRenderer::GetScene().wind.direction;
 		(*gcb).windRandomness=wiRenderer::GetScene().wind.randomness;
@@ -432,7 +456,7 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 				Cullable* culled = *iter;
 				Patch* patch = ((PatchHolder*)culled)->patch;
 
-				float dis = wiMath::Distance(camera->translation,((PatchHolder*)culled)->bounds.getCenter());
+				float dis = wiMath::Distance(eye,((PatchHolder*)culled)->bounds.getCenter());
 
 				if(dis<LOD[i]){
 					culledPatches.erase(iter++);

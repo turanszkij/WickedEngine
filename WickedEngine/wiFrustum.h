@@ -11,7 +11,7 @@ public:
 	Frustum();
 	void CleanUp();
 
-	void ConstructFrustum(float screenDepth, XMFLOAT4X4 projectionMatrix, XMFLOAT4X4 viewMatrix);
+	void ConstructFrustum(float screenDepth, XMFLOAT4X4 projectionMatrix, const XMFLOAT4X4& viewMatrix, const XMMATRIX& world = XMMatrixIdentity());
 
 	bool CheckPoint(const XMFLOAT3&);
 	bool CheckSphere(const XMFLOAT3&, float);

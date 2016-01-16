@@ -34,6 +34,7 @@ void main(
 	element.tex=float2(0,0);
 	element.pos=pos;
 	element.pos.xyz+=-right*frame.x+normal*frame.y+wind;
+	element.pos = mul(element.pos, xWorld);
 	float4 savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
@@ -42,6 +43,7 @@ void main(
 	element.tex=float2(1,0);
 	element.pos=pos;
 	element.pos.xyz+=right*frame.x+normal*frame.y+wind;
+	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
@@ -50,6 +52,7 @@ void main(
 	element.tex=float2(0,1);
 	element.pos=pos;
 	element.pos.xyz += -right*frame.x;
+	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
@@ -58,6 +61,7 @@ void main(
 	element.tex=float2(1,1);
 	element.pos=pos;
 	element.pos.xyz += right*frame.x;
+	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
@@ -70,6 +74,7 @@ void main(
 	element.tex=float2(0,0);
 	element.pos=pos;
 	element.pos.xyz += -front*frame.x + normal*frame.y + wind;
+	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
@@ -78,6 +83,7 @@ void main(
 	element.tex=float2(1,0);
 	element.pos=pos;
 	element.pos.xyz += front*frame.x + normal*frame.y + wind;
+	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
@@ -86,6 +92,7 @@ void main(
 	element.tex=float2(0,1);
 	element.pos=pos;
 	element.pos.xyz += -front*frame.x;
+	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);
@@ -94,6 +101,7 @@ void main(
 	element.tex=float2(1,1);
 	element.pos=pos;
 	element.pos.xyz += front*frame.x;
+	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
 	element.pos = element.pos2D = mul(element.pos, xViewProjection);
 	element.pos2DPrev = mul(savedPos, xPrevViewProjection);

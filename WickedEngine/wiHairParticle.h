@@ -33,6 +33,7 @@ private:
 	Material* material;
 	GFX_STRUCT CBGS
 	{
+		XMMATRIX mWorld;
 		XMMATRIX mView;
 		XMMATRIX mProj;
 		XMMATRIX mPrevViewProjection;
@@ -71,7 +72,8 @@ public:
 	static void CleanUpStatic();
 	static void SetUpStatic();
 	static void Settings(int lod0,int lod1,int lod2);
-
+	
+	XMFLOAT4X4 OriginalMatrix_Inverse;
 	Object* object;
 	vector<Patch*> patches;
 	wiSPTree* spTree;

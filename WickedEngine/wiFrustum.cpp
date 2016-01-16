@@ -8,7 +8,7 @@ void Frustum::CleanUp()
 {
 }
 
-void Frustum::ConstructFrustum(float screenDepth, XMFLOAT4X4 projectionMatrix, XMFLOAT4X4 viewMatrix)
+void Frustum::ConstructFrustum(float screenDepth, XMFLOAT4X4 projectionMatrix, const XMFLOAT4X4& viewMatrix, const XMMATRIX& world)
 {
 	view=viewMatrix;
 
@@ -23,7 +23,7 @@ void Frustum::ConstructFrustum(float screenDepth, XMFLOAT4X4 projectionMatrix, X
 	projectionMatrix._43 = -r * zMinimum;
 
 	// Create the frustum matrix from the view matrix and updated projection matrix.
-	XMStoreFloat4x4( &matrix,XMMatrixMultiply(XMLoadFloat4x4(&viewMatrix), XMLoadFloat4x4(&projectionMatrix)) );
+	XMStoreFloat4x4(&matrix, XMMatrixMultiply(XMMatrixMultiply(XMLoadFloat4x4(&viewMatrix),world), XMLoadFloat4x4(&projectionMatrix)));
 
 	// Calculate near plane of frustum.
 	m_planes[0].x = matrix._14 + matrix._13;
