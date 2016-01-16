@@ -19,6 +19,7 @@ struct Armature;
 struct Bone;
 struct Mesh;
 struct Material;
+struct Object;
 
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string,Material*> MaterialCollection;
@@ -313,7 +314,6 @@ struct Mesh{
 
 	bool calculatedAO;
 
-	int armatureIndex;
 	Armature* armature;
 
 	AABB aabb;
@@ -353,7 +353,8 @@ struct Mesh{
 		, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier="");
 	bool buffersComplete;
 	void Optimize();
-	void CreateBuffers();
+	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
+	void CreateBuffers(Object* object);
 	void CreateVertexArrays();
 	static void AddRenderableInstance(const Instance& instance, int numerator);
 	static void UpdateRenderableInstances(int count, DeviceContext context);
@@ -375,7 +376,6 @@ struct Mesh{
 		//usedBy.resize(0);
 		aabb=AABB();
 		trailInfo=RibbonTrail();
-		armatureIndex=0;
 		armature=NULL;
 		isBillboarded=false;
 		billboardAxis=XMFLOAT3(0,0,0);
@@ -434,8 +434,7 @@ struct Transform : public Node
 		boneParent = "";
 		Clear();
 	}
-	~Transform(){
-	};
+	virtual ~Transform();
 	void Clear()
 	{
 		copyParentT = copyParentR = copyParentS = 1;
@@ -444,7 +443,6 @@ struct Transform : public Node
 		rotation_rest = rotation = rotationPrev = XMFLOAT4(0, 0, 0, 1);
 		world_rest = world = worldPrev = parent_inv_rest = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 	}
-	static void DeleteTree(Transform* transform);
 
 	virtual XMMATRIX getMatrix(int getTranslation = 1, int getRotation = 1, int getScale = 1);
 	//attach to parent
@@ -460,6 +458,7 @@ struct Transform : public Node
 	void transform(const XMMATRIX& m = XMMatrixIdentity());
 	void Translate(const XMFLOAT3& value);
 	void RotateRollPitchYaw(const XMFLOAT3& value);
+	void Rotate(const XMFLOAT4& quaternion);
 	void Scale(const XMFLOAT3& value);
 	// Update this transform and children recursively
 	virtual void UpdateTransform();
@@ -523,7 +522,7 @@ struct Object : public Streamable, public Transform
 	// Is it deformed with an armature?
 	bool isArmatureDeformed()
 	{
-		return mesh->hasArmature();
+		return mesh->hasArmature() && boneParent.empty();
 	}
 	// Is it controlled by the physics engine or an Armature?
 	bool isDynamic()
@@ -552,9 +551,7 @@ struct Object : public Streamable, public Transform
 		trailDistortTex = nullptr;
 		trailTex = nullptr;
 	}
-	~Object(){
-		SAFE_RELEASE(trailBuff);
-	}
+	virtual ~Object();
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
 	int GetRenderTypes()
@@ -701,21 +698,7 @@ public:
 		animationLayers.push_back(new AnimationLayer());
 		animationLayers.back()->type = AnimationLayer::ANIMLAYER_TYPE_PRIMARY;
 	}
-	~Armature()
-	{
-		actions.clear();
-		for (Bone* b : boneCollection)
-		{
-			delete b;
-		}
-		boneCollection.clear();
-		rootbones.clear();
-		for (auto& x : animationLayers)
-		{
-			delete x;
-		}
-		animationLayers.clear();
-	}
+	virtual ~Armature();
 
 	inline AnimationLayer* GetPrimaryAnimation() { 
 		return *animationLayers.begin(); 
@@ -846,7 +829,7 @@ struct Light : public Cullable , public Transform
 		shadowMap_index = -1;
 		shadowBias = 0.00001f;
 	}
-	~Light();
+	virtual ~Light();
 	void SetUp();
 	virtual void UpdateTransform();
 	void UpdateLight();
@@ -860,7 +843,7 @@ struct Decal : public Cullable, public Transform
 	float life,fadeStart;
 
 	Decal(const XMFLOAT3& tra=XMFLOAT3(0,0,0), const XMFLOAT3& sca=XMFLOAT3(1,1,1), const XMFLOAT4& rot=XMFLOAT4(0,0,0,1), const string& tex="", const string& nor="");
-	~Decal();
+	virtual ~Decal();
 	
 	void addTexture(const string& tex);
 	void addNormal(const string& nor);
@@ -1051,8 +1034,26 @@ struct Model : public Transform
 	list<Decal*> decals;
 
 	Model();
+	virtual ~Model();
+	void CleanUp();
 	void LoadFromDisk(const string& dir, const string& name, const string& identifier);
 	void UpdateModel();
+};
+
+struct Scene
+{
+	// First is always the world node
+	vector<Model*> models;
+	WorldInfo worldInfo;
+	Wind wind;
+
+	Scene();
+	~Scene();
+	void ClearWorld();
+
+	Model* GetWorldNode();
+	void AddModel(Model* model);
+	void Update();
 };
 
 
@@ -1073,20 +1074,6 @@ void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worl
 void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
 				   ,const vector<Armature*>& armatures);
 void LoadWiDecals(const string&directory, const string& name, const string& texturesDir, list<Decal*>& decals);
-
-//void LoadFromDisk(const string& dir, const string& name, const string& identifier
-//				  , vector<Armature*>& armatures
-//				  , MaterialCollection& materials
-//				  , vector<Object*>& objects
-//				  , MeshCollection& meshes
-//				  , vector<Light*>& lights
-//				  , vector<HitSphere*>& spheres
-//				  , WorldInfo& worldInfo, Wind& wind
-//				  , vector<Camera>& cameras
-//				  , map<string,Transform*>& transforms
-//				  , list<Decal*>& decals
-//				  );
-
 
 
 #include "wiSPTree.h"

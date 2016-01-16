@@ -401,20 +401,23 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 					break;
 				case 'r':
 					file>>trans[0]>>trans[1]>>trans[2]>>trans[3];
-					objects.back()->rotation_rest = XMFLOAT4(trans[0],trans[1],trans[2],trans[3]);
+					objects.back()->Rotate(XMFLOAT4(trans[0], trans[1], trans[2],trans[3]));
+					//objects.back()->rotation_rest = XMFLOAT4(trans[0],trans[1],trans[2],trans[3]);
 					break;
 				case 's':
 					file>>trans[0]>>trans[1]>>trans[2];
-					objects.back()->scale_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
+					objects.back()->Scale(XMFLOAT3(trans[0], trans[1], trans[2]));
+					//objects.back()->scale_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
 					break;
 				case 't':
 					file>>trans[0]>>trans[1]>>trans[2];
-					objects.back()->translation_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
-					XMStoreFloat4x4( &objects.back()->world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&objects.back()->scale_rest))
-																*XMMatrixRotationQuaternion(XMLoadFloat4(&objects.back()->rotation_rest))
-																*XMMatrixTranslationFromVector(XMLoadFloat3(&objects.back()->translation_rest))
-															);
-					objects.back()->world=objects.back()->world_rest;
+					objects.back()->Translate(XMFLOAT3(trans[0], trans[1], trans[2]));
+					//objects.back()->translation_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
+					//XMStoreFloat4x4( &objects.back()->world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&objects.back()->scale_rest))
+					//											*XMMatrixRotationQuaternion(XMLoadFloat4(&objects.back()->rotation_rest))
+					//											*XMMatrixTranslationFromVector(XMLoadFloat3(&objects.back()->translation_rest))
+					//										);
+					//objects.back()->world=objects.back()->world_rest;
 					break;
 				case 'E':
 					{
@@ -472,32 +475,34 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 	}
 	file.close();
 
-	for (unsigned int i = 0; i<objects.size(); i++){
-		if(objects[i]->mesh){
-			if(objects[i]->mesh->trailInfo.base>=0 && objects[i]->mesh->trailInfo.tip>=0){
-				//objects[i]->trail.resize(MAX_RIBBONTRAILS);
-				D3D11_BUFFER_DESC bd;
-				ZeroMemory( &bd, sizeof(bd) );
-				bd.Usage = D3D11_USAGE_DYNAMIC;
-				bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
-				bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-				bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-				wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
-				objects[i]->trailTex = wiTextureHelper::getInstance()->getTransparent();
-				objects[i]->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
-			}
-		}
-	}
+	//for (unsigned int i = 0; i<objects.size(); i++){
+	//	if(objects[i]->mesh){
+	//		if(objects[i]->mesh->trailInfo.base>=0 && objects[i]->mesh->trailInfo.tip>=0){
+	//			//objects[i]->trail.resize(MAX_RIBBONTRAILS);
+	//			D3D11_BUFFER_DESC bd;
+	//			ZeroMemory( &bd, sizeof(bd) );
+	//			bd.Usage = D3D11_USAGE_DYNAMIC;
+	//			bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
+	//			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	//			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	//			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
+	//			objects[i]->trailTex = wiTextureHelper::getInstance()->getTransparent();
+	//			objects[i]->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
+	//		}
+	//	}
+	//}
 
-	for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter){
-		Mesh* iMesh = iter->second;
+	//for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter){
+	//	Mesh* iMesh = iter->second;
 
-		iMesh->CreateVertexArrays();
-		iMesh->CreateBuffers();
-	}
+	//	iMesh->CreateVertexArrays();
+	//	iMesh->Optimize();
+	//	iMesh->CreateBuffers();
+	//}
 
 }
-void LoadWiMeshes(const string& directory, const string& name, const string& identifier, MeshCollection& meshes, const vector<Armature*>& armatures, const MaterialCollection& materials)
+void LoadWiMeshes(const string& directory, const string& name, const string& identifier, MeshCollection& meshes, 
+	const vector<Armature*>& armatures, const MaterialCollection& materials)
 {
 	int meshI=meshes.size()-1;
 	Mesh* currentMesh = NULL;
@@ -530,7 +535,6 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						currentMesh->parent=identified_parentArmature.str();
 						for (unsigned int i = 0; i<armatures.size(); ++i)
 							if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str())){
-								currentMesh->armatureIndex=i;
 								currentMesh->armature=armatures[i];
 							}
 					}
@@ -893,14 +897,16 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 				{
 					float x,y,z;
 					file>>x>>y>>z;
-					lights.back()->translation_rest=XMFLOAT3(x,y,z);
+					lights.back()->Translate(XMFLOAT3(x, y, z));
+					//lights.back()->translation_rest=XMFLOAT3(x,y,z);
 					break;
 				}
 			case 'r':
 				{
 					float x,y,z,w;
 					file>>x>>y>>z>>w;
-					lights.back()->rotation_rest=XMFLOAT4(x,y,z,w);
+					lights.back()->Rotate(XMFLOAT4(x, y, z, w));
+					//lights.back()->rotation_rest=XMFLOAT4(x,y,z,w);
 					break;
 				}
 			case 'c':
@@ -1286,6 +1292,49 @@ void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
 	tree->initialize(objects);
 }
 
+#pragma region SCENE
+Scene::Scene()
+{
+	models.push_back(new Model);
+	models.back()->name = "[WickedEngine-default]{WorldNode}";
+}
+Scene::~Scene()
+{
+	for (Model* x : models)
+	{
+		SAFE_DELETE(x);
+	}
+}
+void Scene::ClearWorld()
+{
+	Model* world = GetWorldNode();
+	for (unsigned int i = 1; i < models.size();++i)
+	{
+		SAFE_DELETE(models[i]);
+	}
+	models.clear();
+	models.push_back(world);
+}
+Model* Scene::GetWorldNode()
+{
+	return models[0];
+}
+void Scene::AddModel(Model* model)
+{
+	models.push_back(model);
+	model->attachTo(models[0]);
+}
+void Scene::Update()
+{
+	models[0]->UpdateTransform();
+
+	for (Model* x : models)
+	{
+		x->UpdateModel();
+	}
+}
+#pragma endregion
+
 #pragma region CULLABLE
 Cullable::Cullable():bounds(AABB())/*,lastSquaredDistMulThousand(0)*/{}
 #pragma endregion
@@ -1605,18 +1654,18 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 
 		renderable = rendermesh == 0 ? false : true;
 
-		CreateVertexArrays();
+		//CreateVertexArrays();
 
-		Optimize();
+		//Optimize();
 
-		CreateBuffers();
+		//CreateBuffers();
 	}
 }
 void Mesh::Optimize()
 {
 	//TODO
 }
-void Mesh::CreateBuffers() {
+void Mesh::CreateBuffers(Object* object) {
 	if (!buffersComplete) {
 
 		D3D11_BUFFER_DESC bd;
@@ -1642,19 +1691,19 @@ void Mesh::CreateBuffers() {
 #ifdef USE_GPU_SKINNING
 		bd.Usage = (softBody ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE);
 		bd.CPUAccessFlags = (softBody ? D3D11_CPU_ACCESS_WRITE : 0);
-		if (hasArmature() && !softBody)
+		if (object->isArmatureDeformed() && !softBody)
 			bd.ByteWidth = sizeof(SkinnedVertex) * vertices.size();
 		else
 			bd.ByteWidth = sizeof(Vertex) * vertices.size();
 #else
-		bd.Usage = ((softBody || hasArmature()) ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE);
-		bd.CPUAccessFlags = ((softBody || hasArmature()) ? D3D11_CPU_ACCESS_WRITE : 0);
+		bd.Usage = ((softBody || object->isArmatureDeformed()) ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE);
+		bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? D3D11_CPU_ACCESS_WRITE : 0);
 		bd.ByteWidth = sizeof(Vertex) * vertices.size();
 #endif
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		D3D11_SUBRESOURCE_DATA InitData;
 		ZeroMemory(&InitData, sizeof(InitData));
-		if (hasArmature() && !softBody)
+		if (object->isArmatureDeformed() && !softBody)
 			InitData.pSysMem = vertices.data();
 		else
 			InitData.pSysMem = skinnedVertices.data();
@@ -1680,7 +1729,7 @@ void Mesh::CreateBuffers() {
 			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 			wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &boneBuffer);
 
-			if (hasArmature() && !softBody) {
+			if (object->isArmatureDeformed() && !softBody) {
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = D3D11_USAGE_DEFAULT;
 				bd.ByteWidth = sizeof(Vertex) * vertices.size();
@@ -1691,15 +1740,18 @@ void Mesh::CreateBuffers() {
 			}
 
 			//PHYSICALMAPPING
-			for (unsigned int i = 0; i<vertices.size(); ++i) {
-				for (unsigned int j = 0; j<physicsverts.size(); ++j) {
-					if (fabs(vertices[i].pos.x - physicsverts[j].x) < FLT_EPSILON
-						&&	fabs(vertices[i].pos.y - physicsverts[j].y) < FLT_EPSILON
-						&&	fabs(vertices[i].pos.z - physicsverts[j].z) < FLT_EPSILON
-						)
-					{
-						physicalmapGP.push_back(j);
-						break;
+			if (!physicsverts.empty())
+			{
+				for (unsigned int i = 0; i < vertices.size(); ++i) {
+					for (unsigned int j = 0; j < physicsverts.size(); ++j) {
+						if (fabs(vertices[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+							&&	fabs(vertices[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+							&&	fabs(vertices[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+							)
+						{
+							physicalmapGP.push_back(j);
+							break;
+						}
 					}
 				}
 			}
@@ -1740,6 +1792,37 @@ void Mesh::UpdateRenderableInstances(int count, DeviceContext context)
 Model::Model()
 {
 
+}
+Model::~Model()
+{
+	CleanUp();
+}
+void Model::CleanUp()
+{
+	for (Armature* x : armatures)
+	{
+		SAFE_DELETE(x);
+	}
+	for (Object* x : objects)
+	{
+		for (wiEmittedParticle* y : x->eParticleSystems)
+		{
+			SAFE_DELETE(y);
+		}
+		for (wiHairParticle* y : x->hParticleSystems)
+		{
+			SAFE_DELETE(y);
+		}
+		SAFE_DELETE(x);
+	}
+	for (Light* x : lights)
+	{
+		SAFE_DELETE(x);
+	}
+	for (Decal* x : decals)
+	{
+		SAFE_DELETE(x);
+	}
 }
 void Model::LoadFromDisk(const string& dir, const string& name, const string& identifier)
 {
@@ -1804,7 +1887,9 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 			if (x != y && x->parentName.length() > 0 && !x->parentName.compare(y->name))
 			{
 				// Match parent
+				XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
 				x->attachTo(y);
+				x->parent_inv_rest = saved_parent_rest_inv;
 				break;
 			}
 		}
@@ -1819,7 +1904,10 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 				for (Bone* b : armature->boneCollection) {
 					if (!b->name.compare(x->boneParent))
 					{
+						XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
 						x->attachTo(b);
+						x->parent_inv_rest = saved_parent_rest_inv;
+						break;
 					}
 				}
 			}
@@ -1831,7 +1919,32 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		}
 	}
 
-	//RecalculateHierarchy();
+
+	// Set up Render data
+	for (Object* x : objects)
+	{
+		if (x->mesh) 
+		{
+			// Ribbon trails
+			if (x->mesh->trailInfo.base >= 0 && x->mesh->trailInfo.tip >= 0) {
+				D3D11_BUFFER_DESC bd;
+				ZeroMemory(&bd, sizeof(bd));
+				bd.Usage = D3D11_USAGE_DYNAMIC;
+				bd.ByteWidth = sizeof(RibbonVertex) * 1000;
+				bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+				bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &x->trailBuff);
+				x->trailTex = wiTextureHelper::getInstance()->getTransparent();
+				x->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
+			}
+
+			// Mesh renderdata setup
+			x->mesh->CreateVertexArrays();
+			x->mesh->Optimize();
+			x->mesh->CreateBuffers(x);
+		}
+	}
+
 }
 void Model::UpdateModel()
 {
@@ -2152,6 +2265,21 @@ void AnimationLayer::PlayAction()
 #pragma endregion
 
 #pragma region ARMATURE
+Armature::~Armature()
+{
+	actions.clear();
+	for (Bone* b : boneCollection)
+	{
+		SAFE_DELETE(b);
+	}
+	boneCollection.clear();
+	rootbones.clear();
+	for (auto& x : animationLayers)
+	{
+		SAFE_DELETE(x);
+	}
+	animationLayers.clear();
+}
 void Armature::UpdateTransform()
 {
 	Transform::UpdateTransform();
@@ -2447,19 +2575,25 @@ void Armature::DeleteAnimLayer(const string& name)
 
 #pragma region TRANSFORM
 
-void Transform::DeleteTree(Transform* transform)
+Transform::~Transform()
 {
-	if (transform == nullptr)
-	{
-		return;
-	}
-
-	for (auto* x : transform->children)
-	{
-		DeleteTree(x);
-	}
-	delete transform;
+	detach();
+	detachChild();
 }
+
+//void Transform::DeleteTree(Transform* transform)
+//{
+//	if (transform == nullptr)
+//	{
+//		return;
+//	}
+//
+//	for (auto* x : transform->children)
+//	{
+//		DeleteTree(x);
+//	}
+//	delete transform;
+//}
 
 XMMATRIX Transform::getMatrix(int getTranslation, int getRotation, int getScale){
 	return XMLoadFloat4x4(&world);
@@ -2537,7 +2671,12 @@ Transform* Transform::find(const string& findname)
 //detach child - detach all if no parameters
 void Transform::detachChild(Transform* child){
 	if(child==nullptr){
-		for(Transform* c : children){
+		if (children.empty())
+		{
+			return;
+		}
+		vector<Transform*> delChildren(children.begin(), children.end());
+		for(Transform* c : delChildren){
 			if(c!=nullptr){
 				c->detach();
 			}
@@ -2638,6 +2777,7 @@ void Transform::Translate(const XMFLOAT3& value)
 }
 void Transform::RotateRollPitchYaw(const XMFLOAT3& value)
 {
+	// This needs to be handled a bit differently
 	XMVECTOR quat = XMLoadFloat4(&rotation_rest);
 	XMVECTOR x = XMQuaternionRotationRollPitchYaw(value.x, 0, 0);
 	XMVECTOR y = XMQuaternionRotationRollPitchYaw(0, value.y, 0);
@@ -2650,6 +2790,10 @@ void Transform::RotateRollPitchYaw(const XMFLOAT3& value)
 	XMStoreFloat4(&rotation_rest, quat);
 
 	UpdateTransform();
+}
+void Transform::Rotate(const XMFLOAT4& quaternion)
+{
+	transform(XMFLOAT3(0, 0, 0), quaternion);
 }
 void Transform::Scale(const XMFLOAT3& value)
 {
@@ -2735,6 +2879,9 @@ void Camera::UpdateTransform()
 #pragma endregion
 
 #pragma region OBJECT
+Object::~Object() {
+	SAFE_RELEASE(trailBuff);
+}
 void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 	if (mesh != nullptr)
 	{
@@ -2787,6 +2934,9 @@ void Object::UpdateTransform()
 {
 	Transform::UpdateTransform();
 
+}
+void Object::UpdateObject()
+{
 	XMMATRIX world = getMatrix();
 
 	if (mesh->isBillboarded) {
@@ -2815,9 +2965,6 @@ void Object::UpdateTransform()
 	else if (mesh->renderable)
 		bounds.createFromHalfWidth(translation, scale);
 
-}
-void Object::UpdateObject()
-{
 	if (!trail.empty())
 	{
 		wiRenderer::objectsWithTrails.push_back(this);

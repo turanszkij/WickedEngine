@@ -23,7 +23,7 @@ struct HitSphere;
 struct RAY;
 struct Camera;
 struct Model;
-
+struct Scene;
 
 class  Lines;
 class  Cube;
@@ -306,6 +306,8 @@ protected:
 
 	static float GameSpeed, overrideGameSpeed;
 
+	static Scene* scene;
+
 public:
 	static string SHADERPATH;
 
@@ -330,7 +332,6 @@ public:
 	static float GetGameSpeed();
 	static void ChangeRasterizer(){wireRender=!wireRender;};
 	static bool GetRasterizer(){return wireRender;};
-	static WorldInfo worldInfo;
 	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}
 	static void SetToDrawDebugSpheres(bool param){debugSpheres=param;}
 	static void SetToDrawDebugBoneLines(bool param){ debugBoneLines = param; }
@@ -661,7 +662,6 @@ public:
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();
-	static Wind wind;
 	static int getVertexCount(){return vertexCount;}
 	static void resetVertexCount(){vertexCount=0;}
 	static int getVisibleObjectCount(){return visibleCount;}
@@ -671,21 +671,8 @@ public:
 	static wiSPTree* spTree;
 	static wiSPTree* spTree_lights;
 
-	// - every model will be attached to the world node
-	// - every item which are added later to the world will be added to one of its containers (ie PutDecal)
-	static Model* world;
-	
-	//static vector<Object*> objects;	
-	//static MeshCollection meshes;
-	//static MaterialCollection materials;
-	//static vector<Armature*> armatures;
-	//static vector<Light*> lights;
-	//static map<string,vector<wiEmittedParticle*>> emitterSystems;
-	//static map<string,Transform*> transforms;
-	//static list<Decal*> decals;
-
-
-	static vector<Model*> models;
+	// The scene holds all models, world information and wind information
+	static Scene& GetScene();
 
 	vector<Camera> cameras;
 	vector<HitSphere*> spheres;

@@ -31,7 +31,7 @@ namespace wiRenderer_BindLua
 	int GetTransforms(lua_State* L)
 	{
 		stringstream ss("");
-		AddTransformName(wiRenderer::world, ss);
+		AddTransformName(wiRenderer::GetScene().GetWorldNode(), ss);
 		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
@@ -71,7 +71,7 @@ namespace wiRenderer_BindLua
 	int GetArmatures(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& m : wiRenderer::models)
+		for (auto& m : wiRenderer::GetScene().models)
 		{
 			for (auto& x : m->armatures)
 			{
@@ -104,7 +104,7 @@ namespace wiRenderer_BindLua
 	int GetObjects(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& m : wiRenderer::models)
+		for (auto& m : wiRenderer::GetScene().models)
 		{
 			for (auto& x : m->objects)
 			{
@@ -175,7 +175,7 @@ namespace wiRenderer_BindLua
 	int GetMeshes(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& m : wiRenderer::models)
+		for (auto& m : wiRenderer::GetScene().models)
 		{
 			for (auto& x : m->meshes)
 			{
@@ -188,7 +188,7 @@ namespace wiRenderer_BindLua
 	int GetLights(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& m : wiRenderer::models)
+		for (auto& m : wiRenderer::GetScene().models)
 		{
 			for (auto& x : m->lights)
 			{
@@ -201,7 +201,7 @@ namespace wiRenderer_BindLua
 	int GetMaterials(lua_State* L)
 	{
 		stringstream ss("");
-		for (auto& m : wiRenderer::models)
+		for (auto& m : wiRenderer::GetScene().models)
 		{
 			for (auto& x : m->materials)
 			{

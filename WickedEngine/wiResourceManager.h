@@ -24,8 +24,12 @@ public:
 	{
 		void* data;
 		Data_Type type;
+		long refCount;
 
-		Resource(void* newData, Data_Type newType) :data(newData), type(newType){};
+		Resource(void* newData, Data_Type newType) :data(newData), type(newType)
+		{
+			refCount = 1;
+		};
 	};
 	typedef unordered_map<string, Resource*> container;
 	container resources;
@@ -43,11 +47,11 @@ public:
 	static wiResourceManager* GetGlobal();
 	static wiResourceManager* GetShaderManager();
 
-	const Resource* get(const string& name);
+	const Resource* get(const string& name, bool IncRefCount = false);
 	//specify datatype for shaders
 	void* add(const string& name, Data_Type newType = Data_Type::DYNAMIC
 		, VertexLayoutDesc* vertexLayoutDesc = nullptr, UINT elementCount = 0, StreamOutDeclaration* streamOutDecl = nullptr);
-	bool del(const string& name);
+	bool del(const string& name, bool forceDelete = false);
 	bool CleanUp();
 };
 

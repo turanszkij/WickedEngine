@@ -70,8 +70,6 @@ int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
 PHYSICS* wiRenderer::physicsEngine = nullptr;
-Wind wiRenderer::wind;
-WorldInfo wiRenderer::worldInfo;
 
 string wiRenderer::SHADERPATH = "shaders/";
 #pragma endregion
@@ -84,9 +82,8 @@ deque<wiSprite*> wiRenderer::waterRipples;
 
 wiSPTree* wiRenderer::spTree = nullptr;
 wiSPTree* wiRenderer::spTree_lights = nullptr;
-Model* wiRenderer::world = nullptr;
 
-vector<Model*> wiRenderer::models;
+Scene* wiRenderer::scene = nullptr;
 
 vector<Object*>		wiRenderer::objectsWithTrails;
 vector<wiEmittedParticle*> wiRenderer::emitterSystems;
@@ -418,7 +415,7 @@ void wiRenderer::SetUpStaticComponents()
 	//MaterialCollection m;
 	//LoadWiMeshes("lights/","lights.wi","",lightGwiRenderer,a,m);
 
-	wind=Wind();
+	GetScene().wind=Wind();
 
 	Cube::LoadStatic();
 	HitSphere::SetUpStatic();
@@ -600,21 +597,18 @@ void wiRenderer::CleanUpStaticTemp(){
 		spTree->CleanUp();
 	spTree = nullptr;
 
-	models.clear();
 	
 	if(spTree_lights)
 		spTree_lights->CleanUp();
 	spTree_lights=nullptr;
 
-	// Do not delete!
 	cam->detach();
 
-	Transform::DeleteTree(world);
-	world = nullptr;
+	GetScene().ClearWorld();
 }
 XMVECTOR wiRenderer::GetSunPosition()
 {
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		for (Light* l : model->lights)
 			if (l->type == Light::DIRECTIONAL)
@@ -624,7 +618,7 @@ XMVECTOR wiRenderer::GetSunPosition()
 }
 XMFLOAT4 wiRenderer::GetSunColor()
 {
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		for (Light* l : model->lights)
 			if (l->type == Light::DIRECTIONAL)
@@ -659,7 +653,7 @@ float wiRenderer::getSphereRadius(const int& index){
 void wiRenderer::SetUpBoneLines()
 {
 	boneLines.clear();
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		for (unsigned int i = 0; i < model->armatures.size(); i++) {
 			for (unsigned int j = 0; j < model->armatures[i]->boneCollection.size(); j++) {
@@ -682,7 +676,7 @@ void wiRenderer::UpdateBoneLines()
 				//XMStoreFloat4x4( &finalM,  /*rest**/pose );
 
 				int arm = 0;
-				for (Model* model : models)
+				for (Model* model : GetScene().models)
 				{
 					for (Armature* armature : model->armatures)
 					{
@@ -1559,11 +1553,11 @@ Transform* wiRenderer::getTransformByName(const string& get)
 	//{
 	//	return transf->second;
 	//}
-	return world->find(get);
+	return GetScene().GetWorldNode()->find(get);
 }
 Armature* wiRenderer::getArmatureByName(const string& get)
 {
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		for (Armature* armature : model->armatures)
 			if (!armature->name.compare(get))
@@ -1592,7 +1586,7 @@ int wiRenderer::getBoneByName(Armature* armature, const string& get)
 }
 Material* wiRenderer::getMaterialByName(const string& get)
 {
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		MaterialCollection::iterator iter = model->materials.find(get);
 		if (iter != model->materials.end())
@@ -1608,7 +1602,7 @@ HitSphere* wiRenderer::getSphereByName(const string& get){
 }
 Object* wiRenderer::getObjectByName(const string& name)
 {
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		for (auto& x : model->objects)
 		{
@@ -1623,7 +1617,7 @@ Object* wiRenderer::getObjectByName(const string& name)
 }
 Light* wiRenderer::getLightByName(const string& name)
 {
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		for (auto& x : model->lights)
 		{
@@ -1728,12 +1722,7 @@ void wiRenderer::Update()
 	emitterSystems.clear();
 
 
-	world->UpdateTransform();
-
-	for (Model* model : models)
-	{
-		model->UpdateModel();
-	}
+	GetScene().Update();
 
 
 }
@@ -1749,7 +1738,7 @@ void wiRenderer::UpdatePerFrameData()
 	UpdateBoneLines();
 	UpdateCubes();
 
-	wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&wind.direction)))*0.1f;
+	GetScene().wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&GetScene().wind.direction)))*0.1f;
 
 }
 void wiRenderer::UpdateRenderData(DeviceContext context)
@@ -1764,27 +1753,31 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 
 
 
-	//if(GetGameSpeed())
+	
 	{
-#ifdef USE_GPU_SKINNING
-		// Vertices are going to be skinned in a shader
-		BindPrimitiveTopology(POINTLIST, context);
-		BindVertexLayout(sOIL, context);
-		BindVS(sOVS, context);
-		BindGS(sOGS, context);
-		BindPS(nullptr, context);
-#endif
+		bool streamOutSetUp = false;
 
 
-		for (Model* model : models)
+		for (Model* model : GetScene().models)
 		{
 			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
 			{
 				Mesh* mesh = iter->second;
 
-				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable) 
+				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices.empty()
+					&& mesh->sOutBuffer != nullptr && mesh->meshVertBuff != nullptr && mesh->boneBuffer != nullptr)
 				{
 #ifdef USE_GPU_SKINNING
+					if (!streamOutSetUp)
+					{
+						streamOutSetUp = true;
+						BindPrimitiveTopology(POINTLIST, context);
+						BindVertexLayout(sOIL, context);
+						BindVS(sOVS, context);
+						BindGS(sOGS, context);
+						BindPS(nullptr, context);
+					}
+
 					// Upload bones for skinning to shader
 					static thread_local BoneShaderBuffer* bonebuf = new BoneShaderBuffer;
 					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
@@ -1820,16 +1813,14 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 		}
 
 #ifdef USE_GPU_SKINNING
-		// Unload skinning shader
-		BindGS(nullptr, context);
-		BindVS(nullptr, context);
-		BindStreamOutTarget(nullptr, context);
+		if (streamOutSetUp)
+		{
+			// Unload skinning shader
+			BindGS(nullptr, context);
+			BindVS(nullptr, context);
+			BindStreamOutTarget(nullptr, context);
+		}
 #endif
-		
-
-//#ifdef USE_GPU_SKINNING
-//		DrawForSO(context);
-//#endif
 
 
 	}
@@ -1854,12 +1845,7 @@ void wiRenderer::ManageImages(){
 }
 void wiRenderer::PutDecal(Decal* decal)
 {
-	if (world == nullptr)
-	{
-		return;
-	}
-
-	world->decals.push_back(decal);
+	GetScene().GetWorldNode()->decals.push_back(decal);
 }
 void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane){
 	wiSprite* img=new wiSprite("","",image);
@@ -2250,7 +2236,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 
 	
 	static thread_local Frustum frustum = Frustum();
-	frustum.ConstructFrustum(min(camera->zFarP, worldInfo.fogSEH.y),camera->Projection,camera->View);
+	frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y),camera->Projection,camera->View);
 	
 	CulledList culledObjects;
 	if(spTree_lights)
@@ -2365,7 +2351,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 {
 	
 	static thread_local Frustum frustum = Frustum();
-	frustum.ConstructFrustum(min(camera->zFarP, worldInfo.fogSEH.y), camera->Projection, camera->View);
+	frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
 
 		
 		CulledList culledObjects;
@@ -2598,10 +2584,10 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 										//D3D11_MAPPED_SUBRESOURCE mappedResource;
 										ForShadowMapCB cb;
 										cb.mViewProjection = l->shadowCam[index].getVP();
-										cb.mWind = wind.direction;
-										cb.time = wind.time;
-										cb.windRandomness = wind.randomness;
-										cb.windWaveSize = wind.waveSize;
+										cb.mWind = GetScene().wind.direction;
+										cb.time = GetScene().wind.time;
+										cb.windRandomness = GetScene().wind.randomness;
+										cb.windWaveSize = GetScene().wind.waveSize;
 										UpdateBuffer(shCb, &cb, context);
 
 
@@ -2703,10 +2689,10 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									//D3D11_MAPPED_SUBRESOURCE mappedResource;
 									ForShadowMapCB cb;
 									cb.mViewProjection = l->shadowCam[index].getVP();
-									cb.mWind = wind.direction;
-									cb.time = wind.time;
-									cb.windRandomness = wind.randomness;
-									cb.windWaveSize = wind.waveSize;
+									cb.mWind = GetScene().wind.direction;
+									cb.time = GetScene().wind.time;
+									cb.windRandomness = GetScene().wind.randomness;
+									cb.windWaveSize = GetScene().wind.waveSize;
 									UpdateBuffer(shCb, &cb, context);
 
 
@@ -3445,7 +3431,7 @@ void wiRenderer::DrawSky(DeviceContext context)
 
 void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView depth)
 {
-	for (Model* model : models)
+	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
 			continue;
@@ -3505,10 +3491,10 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 void wiRenderer::UpdatePerWorldCB(DeviceContext context){
 	static thread_local PixelCB* pcb = new PixelCB;
 	(*pcb).mSun=XMVector3Normalize( GetSunPosition() );
-	(*pcb).mHorizon=worldInfo.horizon;
-	(*pcb).mAmbient=worldInfo.ambient;
+	(*pcb).mHorizon= GetScene().worldInfo.horizon;
+	(*pcb).mAmbient= GetScene().worldInfo.ambient;
 	(*pcb).mSunColor=GetSunColor();
-	(*pcb).mFogSEH=worldInfo.fogSEH;
+	(*pcb).mFogSEH= GetScene().worldInfo.fogSEH;
 	UpdateBuffer(pixelCB, pcb, context);
 }
 void wiRenderer::UpdatePerFrameCB(DeviceContext context){
@@ -3539,10 +3525,10 @@ void wiRenderer::UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* 
 	(*cb).mPrevViewProjection = XMMatrixTranspose(prevFrameCam->GetViewProjection());
 	(*cb).mCamPos = camera->GetEye();
 	(*cb).mClipPlane = newClipPlane;
-	(*cb).mWind=wind.direction;
-	(*cb).time=wind.time;
-	(*cb).windRandomness=wind.randomness;
-	(*cb).windWaveSize=wind.waveSize;
+	(*cb).mWind= GetScene().wind.direction;
+	(*cb).time= GetScene().wind.time;
+	(*cb).windRandomness= GetScene().wind.randomness;
+	(*cb).windWaveSize= GetScene().wind.waveSize;
 	UpdateBuffer(staticCb,cb,context);
 
 	static thread_local SkyBuffer* scb = new SkyBuffer;
@@ -3774,15 +3760,7 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 	model->transform(transform);
 
-	if (world == nullptr)
-	{
-		world = new Model;
-		world->name = "[WickedEngine-Default]{World}";
-		models.push_back(world);
-	}
-	model->attachTo(world);
-
-	models.push_back(model);
+	GetScene().AddModel(model);
 
 	for (Object* o : model->objects)
 	{
@@ -3792,6 +3770,8 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 	}
 	
 	graphicsMutex.lock();
+
+	Update();
 
 	if(spTree){
 		spTree->AddObjects(spTree->root,vector<Cullable*>(model->objects.begin(), model->objects.end()));
@@ -3810,22 +3790,33 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 	unique_identifier++;
 
+
+
+	UpdateRenderData(nullptr);
+
+	SetUpCubes();
+	SetUpBoneLines();
+
 	graphicsMutex.unlock();
 
 
 
-	Update();
-	UpdateRenderData(nullptr);
-	SetUpCubes();
-	SetUpBoneLines();
 
 	return model;
 }
 void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
 {
-	LoadWiWorldInfo(dir, name+".wiw", worldInfo, wind);
+	LoadWiWorldInfo(dir, name+".wiw", GetScene().worldInfo, GetScene().wind);
 	if(physicsEngine)
-		physicsEngine->addWind(wind.direction);
+		physicsEngine->addWind(GetScene().wind.direction);
+}
+Scene& wiRenderer::GetScene()
+{
+	if (scene == nullptr)
+	{
+		scene = new Scene;
+	}
+	return *scene;
 }
 
 void wiRenderer::SychronizeWithPhysicsEngine()
@@ -3833,7 +3824,7 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 	if (physicsEngine && GetGameSpeed()){
 
 		//UpdateSoftBodyPinning();
-		for (Model* model : models)
+		for (Model* model : GetScene().models)
 		{
 			// Soft body pinning update
 			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter) {
@@ -3880,7 +3871,7 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 
 		physicsEngine->Update();
 
-		for (Model* model : models)
+		for (Model* model : GetScene().models)
 		{
 			for (Object* object : model->objects) {
 				int pI = object->physicsObjectI;

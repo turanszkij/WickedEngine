@@ -599,11 +599,11 @@ void wiImage::DrawDeferred(TextureView texture
 	static thread_local DeferredBuffer* cb = new DeferredBuffer;
 	//cb.mSun=XMVector3Normalize(wiRenderer::GetSunPosition());
 	//cb.mEye=wiRenderer::getCamera()->Eye;
-	(*cb).mAmbient=wiRenderer::worldInfo.ambient;
+	(*cb).mAmbient=wiRenderer::GetScene().worldInfo.ambient;
 	//cb.mBiasResSoftshadow=shadowProps;
-	(*cb).mHorizon=wiRenderer::worldInfo.horizon;
+	(*cb).mHorizon=wiRenderer::GetScene().worldInfo.horizon;
 	(*cb).mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::getCamera()->GetView()*wiRenderer::getCamera()->GetProjection()) );
-	(*cb).mFogSEH=wiRenderer::worldInfo.fogSEH;
+	(*cb).mFogSEH=wiRenderer::GetScene().worldInfo.fogSEH;
 
 	wiRenderer::UpdateBuffer(deferredCb,cb,context);
 

@@ -46,11 +46,15 @@ void wiResourceManager::SetUp()
 	types.insert(pair<string, Data_Type>("wav", SOUND));
 }
 
-const wiResourceManager::Resource* wiResourceManager::get(const string& name)
+const wiResourceManager::Resource* wiResourceManager::get(const string& name, bool incRefCount)
 {
 	container::iterator it = resources.find(name);
-	if(it!=resources.end())
+	if (it != resources.end())
+	{
+		if(incRefCount)
+			it->second->refCount++;
 		return it->second;
+	}
 	else return nullptr;
 }
 
@@ -60,8 +64,9 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 	if (types.empty())
 		SetUp();
 
-	const Resource* res = get(name);
-	if(!res){
+	const Resource* res = get(name,true);
+	if(!res)
+	{
 		string ext = name.substr(name.length()-3,name.length());
 		Data_Type type;
 #pragma region dynamic type selection
@@ -236,10 +241,11 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 
 		return success;
 	}
+
 	return res->data;
 }
 
-bool wiResourceManager::del(const string& name)
+bool wiResourceManager::del(const string& name, bool forceDelete)
 {
 	Resource* res = nullptr;
 	container::iterator it = resources.find(name);
@@ -247,7 +253,7 @@ bool wiResourceManager::del(const string& name)
 		res = it->second;
 	else return false;
 
-	if(res){
+	if(res && (res->refCount<=1 || forceDelete)){
 		LOCK();
 		bool success = true;
 

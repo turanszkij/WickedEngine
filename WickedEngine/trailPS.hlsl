@@ -15,13 +15,13 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 
 	float2 co = abs(PSIn.tex - 0.5f)*2.f;
 	float blendOut = 1 - pow(max(co.x,co.y), 2);
+	blendOut *= PSIn.col.a;
 
 	float4 tex = xTexture.Sample(xSampler,PSIn.tex);
-	tex.a *= PSIn.col.a * blendOut;
+	tex.a *= blendOut;
 
 	float4 color = float4(PSIn.col.rgb * blendOut,1);
 
-	blendOut *= PSIn.col.a;
 	float2 distortionCo;
 		distortionCo.x = PSIn.dis.x/PSIn.dis.w/2.0f + 0.5f;
 		distortionCo.y = -PSIn.dis.y/PSIn.dis.w/2.0f + 0.5f;
@@ -30,7 +30,7 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 	// Chromatic Aberration
 	float2 dim;
 	xRefracTexture.GetDimensions(dim.x, dim.y);
-	dim = 6.0f / dim * blendOut;
+	dim = 4.0f / dim * blendOut;
 	color.r += xRefracTexture.SampleLevel(xSampler, distortionCo + distort + dim * float2(1, 1), 0).r;
 	color.g += xRefracTexture.SampleLevel(xSampler, distortionCo + distort + dim * float2(-1, 1), 0).g;
 	color.b += xRefracTexture.SampleLevel(xSampler, distortionCo + distort + dim * float2(0, -1), 0).b;

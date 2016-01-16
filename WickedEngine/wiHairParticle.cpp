@@ -404,12 +404,12 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 		(*gcb).mView = XMMatrixTranspose(camera->GetView());
 		(*gcb).mProj = XMMatrixTranspose(camera->GetProjection());
 		(*gcb).mPrevViewProjection = XMMatrixTranspose(wiRenderer::prevFrameCam->GetViewProjection());
-		(*gcb).colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z,wiRenderer::wind.time);
+		(*gcb).colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z, wiRenderer::GetScene().wind.time);
 		(*gcb).eye=camera->translation;
 		(*gcb).drawdistance = (float)LOD[2];
-		(*gcb).wind=wiRenderer::wind.direction;
-		(*gcb).windRandomness=wiRenderer::wind.randomness;
-		(*gcb).windWaveSize=wiRenderer::wind.waveSize;
+		(*gcb).wind=wiRenderer::GetScene().wind.direction;
+		(*gcb).windRandomness=wiRenderer::GetScene().wind.randomness;
+		(*gcb).windWaveSize=wiRenderer::GetScene().wind.waveSize;
 		
 		wiRenderer::UpdateBuffer(cbgs,gcb,context);
 
