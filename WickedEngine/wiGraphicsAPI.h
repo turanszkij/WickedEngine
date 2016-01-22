@@ -4,8 +4,7 @@
 #include <d3d11_2.h>
 #include <DXGI1_2.h>
 
-#pragma once
-#include "CommonInclude.h"
+#include "ConstantBufferMapping.h"
 
 
 #ifndef WINSTORE_SUPPORT
@@ -57,3 +56,5 @@ struct VertexShaderInfo {
 		vertexLayout = VertexLayout();
 	}
 };
+
+

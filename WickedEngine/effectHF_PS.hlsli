@@ -1,15 +1,5 @@
-cbuffer constBuffer:register(b0){
-	float4 xHorizon;
-	float4 xSun;
-	float4 xAmbient;
-	float4 xSunColor;
-	float4 xFogSEH;
-};
-cbuffer fxBuffer:register(b1){
-	float4 xFx;
-	float4 colorMask;
-}
-
+#ifndef _EFFECTHF_PS_
+#define _EFFECTHF_PS_
 
 TextureCube enviroTex:register(t0);
 Texture2D<float4> xTextureRef:register(t1);
@@ -32,3 +22,5 @@ struct PixelOutputType
 };
 
 #include "tangentComputeHF.hlsli"
+
+#endif // _EFFECTHF_PS_

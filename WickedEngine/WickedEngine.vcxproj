@@ -499,6 +499,7 @@
     <ClCompile Include="wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ConstantBufferMapping.h" />
     <ClInclude Include="DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="ForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="wiGraphicsAPI.h" />
@@ -832,9 +833,9 @@
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="..\ScriptingAPI-Documentation.md" />
-    <None Include="blurHF.hlsli" />
     <None Include="circle.hlsli" />
     <None Include="cone.hlsli" />
+    <None Include="globals.hlsli" />
     <None Include="cube.hlsli" />
     <None Include="depthConvertHF.hlsli" />
     <None Include="dirLightHF.hlsli" />
@@ -865,7 +866,6 @@
     <None Include="spotLightHF.hlsli" />
     <None Include="tangentComputeHF.hlsli" />
     <None Include="toonHF.hlsli" />
-    <None Include="viewProp.hlsli" />
     <None Include="volumeLightHF.hlsli" />
     <None Include="windHF.hlsli" />
   </ItemGroup>

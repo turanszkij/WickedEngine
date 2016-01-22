@@ -22,7 +22,7 @@ static const float4 kernel[] = {
     float4(0.00471691, 0.000184771, 5.07565e-005, 2),
 };
 
-float4 main(VertextoPixel PSIn) : SV_TARGET 
+float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
     // Fetch color and linear depth for current pixel:
     float4 colorM = xTexture.Sample(Sampler, PSIn.tex);
@@ -33,32 +33,32 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 
     // Accumulate center sample, multiplying it with its gaussian weight:
     float4 colorBlurred = colorM;
-    colorBlurred.rgb *= kernel[0].rgb;
+ //   colorBlurred.rgb *= kernel[0].rgb;
 
-    // Calculate the step that we will use to fetch the surrounding pixels,
-    // where "step" is:
-    //     step = sssStrength * gaussianWidth * pixelSize * dir
-    // The closer the pixel, the stronger the effect needs to be, hence
-    // the factor 1.0 / depthM.
-	float2 step = float2(xPostProcess.w,xBloom.w);
-    float2 finalStep = colorM.a * step / depthM;
+ //   // Calculate the step that we will use to fetch the surrounding pixels,
+ //   // where "step" is:
+ //   //     step = sssStrength * gaussianWidth * pixelSize * dir
+ //   // The closer the pixel, the stronger the effect needs to be, hence
+ //   // the factor 1.0 / depthM.
+	//float2 step = float2(xPPParams[7],xBloom.w);
+ //   float2 finalStep = colorM.a * step / depthM;
 
-    // Accumulate the other samples:
-    //[unroll]
-    for (int i = 1; i < SSSS_N_SAMPLES; i++) {
-        // Fetch color and depth for current sample:
-        float2 offset = PSIn.tex + kernel[i].a * finalStep;
-        float3 color = xTexture.SampleLevel(Sampler, offset, 0).rgb;
-        float depth = ( xSceneDepthMap.SampleLevel(Sampler,offset,0).r );
+ //   // Accumulate the other samples:
+ //   //[unroll]
+ //   for (int i = 1; i < SSSS_N_SAMPLES; i++) {
+ //       // Fetch color and depth for current sample:
+ //       float2 offset = PSIn.tex + kernel[i].a * finalStep;
+ //       float3 color = xTexture.SampleLevel(Sampler, offset, 0).rgb;
+ //       float depth = ( xSceneDepthMap.SampleLevel(Sampler,offset,0).r );
 
-        // If the difference in depth is huge, we lerp color back to "colorM":
-		static const float correction = 500;
-        float s = min(0.0125 * correction * abs(depthM - depth), 1.0);
-        color = lerp(color, colorM.rgb, s);
+ //       // If the difference in depth is huge, we lerp color back to "colorM":
+	//	static const float correction = 500;
+ //       float s = min(0.0125 * correction * abs(depthM - depth), 1.0);
+ //       color = lerp(color, colorM.rgb, s);
 
-        // Accumulate:
-        colorBlurred.rgb += kernel[i].rgb * color.rgb;
-    }
+ //       // Accumulate:
+ //       colorBlurred.rgb += kernel[i].rgb * color.rgb;
+ //   }
 
     // The result will be alpha blended with current buffer by using specific 
     // RGB weights. For more details, I refer you to the GPU Pro chapter :)

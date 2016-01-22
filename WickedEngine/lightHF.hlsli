@@ -1,19 +1,14 @@
+#ifndef _LIGHTHF_
+#define _LIGHTHF_
 #include "specularHF.hlsli"
 #include "toonHF.hlsli"
 #include "globalsHF.hlsli"
-//#include "ViewProp.h"
-#include "viewProp.hlsli"
+#include "globals.hlsli"
 
 struct VertexToPixel{
 	float4 pos			: SV_POSITION;
-	//float3 pos3D		: POSITION3D;
 	float4 pos2D		: POSITION2D;
-	float3 cam			: CAMERAPOS;
 };
-
-cbuffer lightStatic:register(b0){
-	float4x4 matProjInv;
-}
 
 #include "reconstructPositionHF.hlsli"
 
@@ -24,6 +19,8 @@ Texture2D<float4> materialMap:register(t2);
 SamplerState Sampler:register(s0);
 
 static const float specularMaximumIntensity = 1;
+
+#endif // _LIGHTHF_
 
 
 

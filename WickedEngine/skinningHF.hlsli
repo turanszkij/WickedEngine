@@ -1,11 +1,13 @@
 #include "skinningDEF.h"
+#include "globals.hlsli"
 
 #ifdef USE_GPU_SKINNING
 #define SKINNING_ON
 
 typedef matrix<float,4,4> bonetype;
 
-cbuffer boneBuffer:register(b1){
+CBUFFER(BoneCB, CBSLOT_RENDERER_BONEBUFFER)
+{
 	bonetype pose[MAXBONECOUNT];
 	bonetype prev[MAXBONECOUNT];
 }

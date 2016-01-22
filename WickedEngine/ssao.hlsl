@@ -43,7 +43,7 @@ static const float3 AO_SAMPLES[ NUM_SAMPLES ] =
 
 
 
-float4 main( VertextoPixel input ):SV_Target
+float4 main(VertexToPixelPostProcess input ):SV_Target
 {
 	//float4 normap = xNormalMap.SampleLevel( Sampler, input.tex, 0 );
 	float4 normap = loadNormal(input.tex.xy);

@@ -1789,6 +1789,9 @@
     <ClInclude Include="wiGraphicsAPI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ConstantBufferMapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />
@@ -1815,9 +1818,6 @@
     </None>
     <None Include="fxaa.hlsli">
       <Filter>shaders\image</Filter>
-    </None>
-    <None Include="blurHF.hlsli">
-      <Filter>shaders\headers</Filter>
     </None>
     <None Include="circle.hlsli">
       <Filter>shaders\headers</Filter>
@@ -1888,9 +1888,6 @@
     <None Include="toonHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
-    <None Include="viewProp.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
     <None Include="windHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
@@ -1901,6 +1898,9 @@
       <Filter>shaders\headers</Filter>
     </None>
     <None Include="..\ScriptingAPI-Documentation.md" />
+    <None Include="globals.hlsli">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />

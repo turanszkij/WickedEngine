@@ -1,17 +1,7 @@
+#include "pointLightHF.hlsli"
+
 Texture2D<float4> xTextureTex:register(t0);
 SamplerState texSampler:register(s0);
-
-cbuffer matBuffer:register(b1){
-	float4 diffuseColor;
-	float4 hasRefNorTexSpe;
-	float4 specular;
-	float4 refractionIndexMovingTexEnv;
-};
-cbuffer lightBuffer:register(b2){
-	float4 lightPos;
-	float4 lightColor;
-	float4 lightEnerdis;
-};
 
 struct VertextoPixel
 {
@@ -23,7 +13,7 @@ struct VertextoPixel
 
 float main(VertextoPixel PSIn) : SV_DEPTH
 {
-	[branch]if(hasRefNorTexSpe.z)
+	[branch]if(g_xMat_hasTex)
 		clip( xTextureTex.Sample(texSampler,PSIn.tex).a<0.1?-1:1 );
 	return distance(PSIn.pos3D.xyz,lightPos.xyz)/lightEnerdis.y;
 }

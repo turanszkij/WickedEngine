@@ -1,3 +1,7 @@
+#ifndef _EFFECTHF_PSVS_
+#define _EFFECTHF_PSVS_
+#include "globals.hlsli"
+
 struct PixelInputType
 {
 	float4 pos						: SV_POSITION;
@@ -7,7 +11,6 @@ struct PixelInputType
 	float4 pos2D					: SCREENPOSITION;
 	float3 pos3D					: WORLDPOSITION;
 	float4 pos2DPrev				: SCREENPOSITIONPREV;
-	float3 cam						: CAMERAPOS;
 	float4 ReflectionMapSamplingPos : TEXCOORD1;
 	float  ao						: AMBIENT_OCCLUSION;
 	float  dither					: DITHER;
@@ -15,17 +18,4 @@ struct PixelInputType
 	float3 nor2D					: NORMAL2D;
 };
 
-cbuffer matBuffer:register(b2){
-	float4 diffuseColor;
-	uint hasRef,hasNor,hasTex,hasSpe;
-	float4 specular;
-	float refractionIndex;
-	float2 movingTex;
-	float metallic;
-	uint shadeless;
-	uint specular_power;
-	uint toonshaded;
-	uint matIndex;
-	float emit;
-	float padding[3];
-};
+#endif // _EFFECTHF_PSVS_

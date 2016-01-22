@@ -48,6 +48,8 @@ protected:
 		XMMATRIX mProjection;
 		XMMATRIX mTrans;
 		XMFLOAT4 mDimensions;
+
+		CB_SETBINDSLOT(CBSLOT_FONT_FONT)
 		
 		ALIGN_16
 	};

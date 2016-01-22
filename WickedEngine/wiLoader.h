@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "skinningDEF.h"
 #include "wiImageEffects.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
@@ -263,15 +262,6 @@ struct RAY{
 	}
 	bool intersects(const AABB& box) const;
 };
-#ifdef USE_GPU_SKINNING
-GFX_STRUCT BoneShaderBuffer
-{
-	XMMATRIX pose[MAXBONECOUNT];
-	XMMATRIX prev[MAXBONECOUNT];
-
-	ALIGN_16
-};
-#endif
 struct VertexRef{
 	int index;
 	float weight;
@@ -302,7 +292,6 @@ struct Mesh{
 	BufferResource meshVertBuff;
 	static BufferResource meshInstanceBuffer;
 	BufferResource meshIndexBuff;
-	BufferResource boneBuffer;
 	BufferResource sOutBuffer;
 
 	vector<string> materialNames;
@@ -366,7 +355,6 @@ struct Mesh{
 		meshVertBuff=NULL;
 		meshInstanceBuffer=NULL;
 		meshIndexBuff=NULL;
-		boneBuffer=NULL;
 		sOutBuffer=NULL;
 		materialNames.resize(0);
 		materialIndices.resize(0);
@@ -855,10 +843,12 @@ struct WorldInfo{
 	XMFLOAT3 zenith;
 	XMFLOAT3 ambient;
 	XMFLOAT3 fogSEH;
+	XMFLOAT4 water;
 
 	WorldInfo(){
 		horizon=zenith=ambient=XMFLOAT3(0,0,0);
 		fogSEH=XMFLOAT3(100,1000,0);
+		water = XMFLOAT4(0, 0, 0, 0);
 	}
 };
 struct Wind{

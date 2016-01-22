@@ -41,12 +41,11 @@ private:
 
 	GFX_STRUCT ConstantBuffer
 	{
-		XMMATRIX	mView;
-		XMMATRIX	mProjection;
-		XMVECTOR	mCamPos;
 		XMFLOAT2	mAdd;
 		float		mMotionBlurAmount;
 		float		padding;
+
+		CB_SETBINDSLOT(CBSLOT_OTHER_EMITTEDPARTICLE)
 
 		ALIGN_16
 	};

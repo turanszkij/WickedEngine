@@ -7,7 +7,7 @@
 
 #pragma region STATICS
 BlendState		wiImage::blendState, wiImage::blendStateAdd, wiImage::blendStateNoBlend, wiImage::blendStateAvg;
-BufferResource           wiImage::constantBuffer,wiImage::PSCb,wiImage::blurCb,wiImage::processCb,wiImage::shaftCb,wiImage::deferredCb;
+BufferResource           wiImage::constantBuffer,wiImage::processCb;
 
 VertexShader     wiImage::vertexShader,wiImage::screenVS;
 PixelShader      wiImage::pixelShader,wiImage::blurHPS,wiImage::blurVPS,wiImage::shaftPS,wiImage::outlinePS
@@ -18,8 +18,6 @@ PixelShader      wiImage::pixelShader,wiImage::blurHPS,wiImage::blurVPS,wiImage:
 RasterizerState		wiImage::rasterizerState;
 DepthStencilState	wiImage::depthStencilStateGreater,wiImage::depthStencilStateLess,wiImage::depthNoStencilState;
 
-
-//map<string,wiImage::ImageResource> wiImage::images;
 #pragma endregion
 
 wiImage::wiImage()
@@ -31,48 +29,20 @@ void wiImage::LoadBuffers()
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
+	bd.ByteWidth = sizeof(ImageCB);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
+	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB));
+	wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB));
 
-
-	ZeroMemory( &bd, sizeof(bd) );
+	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(PSConstantBuffer);
+	bd.ByteWidth = sizeof(PostProcessCB);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &PSCb );
-
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(BlurBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &blurCb );
-	
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ProcessBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &processCb );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(LightShaftBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &shaftCb );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(DeferredBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &deferredCb );
+	wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &processCb);
+	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(PostProcessCB));
 }
 
 void wiImage::LoadShaders()
@@ -292,6 +262,9 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 	if(!context)
 		return;
 
+
+	static thread_local ImageCB* cb = new ImageCB;
+	static thread_local PostProcessCB* prcb = new PostProcessCB;
 	{
 		// This equals the old BatchBegin
 		wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
@@ -315,7 +288,6 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 
 	if(!effects.blur){
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
-			static thread_local ConstantBuffer* cb = new ConstantBuffer;
 			if(effects.typeFlag==SCREEN){
 				(*cb).mViewProjection = XMMatrixTranspose(XMMatrixOrthographicLH((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 100));
 				(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::GetScreenWidth() / 2 - effects.siz.x / 2, -wiRenderer::GetScreenHeight() / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
@@ -355,115 +327,75 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 
 			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
 	
-			//context->UpdateSubresource( constantBuffer, 0, NULL, &cb, 0, 0 );
-
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
-			//ConstantBuffer* dataPtr;
-			//context->Map(constantBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr = (ConstantBuffer*)mappedResource.pData;
-			//memcpy(dataPtr,&cb,sizeof(ConstantBuffer));
-			//context->Unmap(constantBuffer,0);
-
-			//context->VSSetConstantBuffers( 0, 1, &constantBuffer );
-
-			wiRenderer::BindConstantBufferVS(constantBuffer,0,context);
 		}
 		else if(!effects.sunPos.x && !effects.sunPos.y){
-			//context->VSSetShader(screenVS,0,0);
 			wiRenderer::BindVS(screenVS,context);
 			
 
 			if(effects.process.outline) 
-				//context->PSSetShader(outlinePS,0,0);
 					wiRenderer::BindPS(outlinePS,context);
 			else if(effects.process.motionBlur) 
-				//context->PSSetShader(motionBlurPS,0,0);
 				wiRenderer::BindPS(motionBlurPS,context);
 			else if(effects.process.dofStrength) 
-				//context->PSSetShader(dofPS,0,0);
 				wiRenderer::BindPS(dofPS,context);
 			else if(effects.process.fxaa) 
-				//context->PSSetShader(fxaaPS,0,0);
 				wiRenderer::BindPS(fxaaPS,context);
 			else if(effects.process.ssao) {
-				//context->PSSetShader(ssaoPS,0,0);
 				wiRenderer::BindPS(ssaoPS,context);
 			}
 			else if(effects.process.linDepth) 
-				//context->PSSetShader(linDepthPS,0,0);
 				wiRenderer::BindPS(linDepthPS, context);
 			else if (effects.process.colorGrade)
 				wiRenderer::BindPS(colorGradePS, context);
 			else if (effects.process.ssr){
-				wiRenderer::BindConstantBufferPS(deferredCb, 0, context);
 				wiRenderer::BindPS(ssrPS, context);
 			}
-			else if(effects.process.ssss.x||effects.process.ssss.y) 
-				//context->PSSetShader(ssssPS,0,0);
+			else if(effects.process.ssss.x||effects.process.ssss.y)
 				wiRenderer::BindPS(ssssPS,context);
 			else if(effects.bloom.separate)
-				//context->PSSetShader(bloomSeparatePS,0,0);
 				wiRenderer::BindPS(bloomSeparatePS,context);
 			else wiHelper::messageBox("Postprocess branch not implemented!");
 			
-			static thread_local ProcessBuffer* prcb = new ProcessBuffer;
-			(*prcb).mPostProcess=XMFLOAT4(effects.process.motionBlur,effects.process.outline,effects.process.dofStrength,effects.process.ssss.x);
-			(*prcb).mBloom=XMFLOAT4(effects.bloom.separate,effects.bloom.threshold,effects.bloom.saturation,effects.process.ssss.y);
+			(*prcb).params[0] = effects.process.motionBlur; 
+			(*prcb).params[1] = effects.process.outline;
+			(*prcb).params[2] = effects.process.dofStrength;
+			(*prcb).params[3] = effects.process.ssss.x;
+			(*prcb).params[4] = effects.bloom.separate;
+			(*prcb).params[5] = effects.bloom.threshold;
+			(*prcb).params[6] = effects.bloom.saturation;
+			(*prcb).params[7] = effects.process.ssss.y;
 
 			wiRenderer::UpdateBuffer(processCb,prcb,context);
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
-			//ProcessBuffer* dataPtr2;
-			//context->Map(processCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr2 = (ProcessBuffer*)mappedResource.pData;
-			//memcpy(dataPtr2,&prcb,sizeof(ProcessBuffer));
-			//context->Unmap(processCb,0);
-
-			//context->PSSetConstantBuffers( 1, 1, &processCb );
-
-			wiRenderer::BindConstantBufferPS(processCb,1,context);
 		}
-		else{ //LIGHTSHAFTS
-			//context->VSSetShader(screenVS,0,0);
-			//context->PSSetShader(shaftPS,0,0);
+		else{ 
 			wiRenderer::BindVS(screenVS,context);
 			wiRenderer::BindPS(shaftPS,context);
-			
-			static thread_local LightShaftBuffer* scb = new LightShaftBuffer;
-			(*scb).mProperties=XMFLOAT4(0.65f,0.25f,0.945f,0.2f); //Density|Weight|Decay|Exposure
-			(*scb).mLightShaft=effects.sunPos;
 
-			wiRenderer::UpdateBuffer(shaftCb,scb,context);
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
-			//LightShaftBuffer* dataPtr2;
-			//context->Map(shaftCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr2 = (LightShaftBuffer*)mappedResource.pData;
-			//memcpy(dataPtr2,&scb,sizeof(LightShaftBuffer));
-			//context->Unmap(shaftCb,0);
+			 //Density|Weight|Decay|Exposure
+			(*prcb).params[0] = 0.65f;
+			(*prcb).params[1] = 0.25f;
+			(*prcb).params[2] = 0.945f;
+			(*prcb).params[3] = 0.2f;
 
-			//context->PSSetConstantBuffers( 0, 1, &shaftCb );
-			wiRenderer::BindConstantBufferPS(shaftCb,0,context);
+			wiRenderer::UpdateBuffer(processCb,prcb,context);
 		}
 
 		
-		//D3D11_MAPPED_SUBRESOURCE mappedResource;
-		static thread_local PSConstantBuffer* pscb = new PSConstantBuffer;
 		int normalmapmode=0;
 		if(effects.normalMap && effects.refractionMap)
 			normalmapmode=1;
 		if(effects.extractNormalMap==true)
 			normalmapmode=2;
-		(*pscb).mMaskFadOpaDis = XMFLOAT4((effects.maskMap ? 1.f : 0.f), effects.fade, effects.opacity, (float)normalmapmode);
-		(*pscb).mDimension = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), effects.siz.x, effects.siz.y);
+		(*prcb).params[0] = (effects.maskMap ? 1.f : 0.f);
+		(*prcb).params[1] = effects.fade;
+		(*prcb).params[2] = effects.opacity;
+		(*prcb).params[3] = (float)normalmapmode;
+		(*prcb).params[4] = (float)wiRenderer::GetScreenWidth();
+		(*prcb).params[5] = (float)wiRenderer::GetScreenHeight();
+		(*prcb).params[6] = effects.siz.x;
+		(*prcb).params[7] = effects.siz.y;
 
-		wiRenderer::UpdateBuffer(PSCb,pscb,context);
-		//PSConstantBuffer* dataPtr2;
-		//context->Map(PSCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-		//dataPtr2 = (PSConstantBuffer*)mappedResource.pData;
-		//memcpy(dataPtr2,&pscb,sizeof(PSConstantBuffer));
-		//context->Unmap(PSCb,0);
-
-		//context->PSSetConstantBuffers( 2, 1, &PSCb );
-		wiRenderer::BindConstantBufferPS(PSCb,2,context);
+		wiRenderer::UpdateBuffer(processCb,prcb,context);
 		
 		wiRenderer::BindTexturePS(effects.depthMap,0,context);
 		wiRenderer::BindTexturePS(effects.normalMap,1,context);
@@ -474,14 +406,13 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 	else{ //BLUR
 		wiRenderer::BindVS(screenVS,context);
 		
-		static thread_local BlurBuffer* cb = new BlurBuffer;
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
-			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetScreenWidth();
+			(*prcb).params[0] = 1.0f / wiRenderer::GetScreenWidth();
 		}
 		else{
 			wiRenderer::BindPS(blurVPS,context);
-			(*cb).mWeightTexelStrenMip.y = 1.0f / wiRenderer::GetScreenHeight();
+			(*prcb).params[0] = 1.0f / wiRenderer::GetScreenHeight();
 		}
 
 		float weight0 = 1.0f;
@@ -490,93 +421,69 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 		float weight3 = 0.18f;
 		float weight4 = 0.1f;
 		float normalization = (weight0 + 2.0f * (weight1 + weight2 + weight3 + weight4));
-		(*cb).mWeight=XMVectorSet(weight0,weight1,weight2,weight3) / normalization;
-		(*cb).mWeightTexelStrenMip.x = weight4 / normalization;
-		(*cb).mWeightTexelStrenMip.z = effects.blur;
-		(*cb).mWeightTexelStrenMip.w = effects.mipLevel;
+		(*prcb).params[0] = weight0 / normalization;
+		(*prcb).params[1] = weight1 / normalization;
+		(*prcb).params[2] = weight2 / normalization;
+		(*prcb).params[3] = weight3 / normalization;
+		(*prcb).params[4] = weight4 / normalization;
+		(*prcb).params[5] = effects.blur;
+		(*prcb).params[6] = effects.mipLevel;
 
-		wiRenderer::UpdateBuffer(blurCb,cb,context);
+		wiRenderer::UpdateBuffer(processCb,prcb,context);
 
-		wiRenderer::BindConstantBufferPS(blurCb,0,context);
 	}
 
-	//if(texture) 
 	wiRenderer::BindTexturePS(texture,6,context);
 
 	
 	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	UINT sampleMask   = 0xffffffff;
 	if(effects.blendFlag==BLENDMODE_ALPHA)
-		//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 		wiRenderer::BindBlendState(blendState,context);
 	else if(effects.blendFlag==BLENDMODE_ADDITIVE)
-		//context->OMSetBlendState(blendStateAdd, blendFactor, sampleMask);
 		wiRenderer::BindBlendState(blendStateAdd,context);
 	else if(effects.blendFlag==BLENDMODE_OPAQUE)
-		//context->OMSetBlendState(blendStateNoBlend, blendFactor, sampleMask);
 		wiRenderer::BindBlendState(blendStateNoBlend,context);
 	else if(effects.blendFlag==BLENDMODE_MAX)
-		//context->OMSetBlendState(blendStateAvg, blendFactor, sampleMask);
 		wiRenderer::BindBlendState(blendStateAvg,context);
 
 	if(effects.quality==QUALITY_NEAREST){
 		if(effects.sampleFlag==SAMPLEMODE_MIRROR)
-			//context->PSSetSamplers(0, 1, &ssMirrorPoi);
 			wiRenderer::BindSamplerPS(wiRenderer::ssMirrorPoi,0,context);
 		else if(effects.sampleFlag==SAMPLEMODE_WRAP)
-			//context->PSSetSamplers(0, 1, &ssWrapPoi);
 			wiRenderer::BindSamplerPS(wiRenderer::ssWrapPoi,0,context);
 		else if(effects.sampleFlag==SAMPLEMODE_CLAMP)
-			//context->PSSetSamplers(0, 1, &ssClampPoi);
 			wiRenderer::BindSamplerPS(wiRenderer::ssClampPoi,0,context);
 	}
 	else if(effects.quality==QUALITY_BILINEAR){
 		if(effects.sampleFlag==SAMPLEMODE_MIRROR)
-			//context->PSSetSamplers(0, 1, &ssMirrorLin);
 			wiRenderer::BindSamplerPS(wiRenderer::ssMirrorLin,0,context);
 		else if(effects.sampleFlag==SAMPLEMODE_WRAP)
-			//context->PSSetSamplers(0, 1, &ssWrapLin);
 			wiRenderer::BindSamplerPS(wiRenderer::ssWrapLin,0,context);
 		else if(effects.sampleFlag==SAMPLEMODE_CLAMP)
-			//context->PSSetSamplers(0, 1, &ssClampLin);
 			wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
 	}
 	else if(effects.quality==QUALITY_ANISOTROPIC){
 		if(effects.sampleFlag==SAMPLEMODE_MIRROR)
-			//context->PSSetSamplers(0, 1, &ssMirrorAni);
 			wiRenderer::BindSamplerPS(wiRenderer::ssMirrorAni,0,context);
 		else if(effects.sampleFlag==SAMPLEMODE_WRAP)
-			//context->PSSetSamplers(0, 1, &ssWrapAni);
 			wiRenderer::BindSamplerPS(wiRenderer::ssWrapAni,0,context);
 		else if(effects.sampleFlag==SAMPLEMODE_CLAMP)
-			//context->PSSetSamplers(0, 1, &ssClampAni);
 			wiRenderer::BindSamplerPS(wiRenderer::ssClampAni,0,context);
 	}
 
 	
-	//context->Draw(4,0);
 	wiRenderer::Draw(4,context);
 }
 
 void wiImage::DrawDeferred(TextureView texture
 		, TextureView depth, TextureView lightmap, TextureView normal
 		, TextureView ao, DeviceContext context, int stencilRef){
-	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
-
-	//UINT stride = sizeof( Vertex );
-    //UINT offset = 0;
-    //context->IASetVertexBuffers( 0, 1, &vertexBuffer, &stride, &offset );
-	//context->IASetInputLayout( vertexLayout );
-
-	//context->RSSetState(rasterizerState);
-	//context->OMSetDepthStencilState(depthStencilStateLess, stencilRef);
 
 	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
 	wiRenderer::BindRasterizerState(rasterizerState,context);
 	wiRenderer::BindDepthStencilState(depthNoStencilState,stencilRef,context);
 
-	//context->VSSetShader(screenVS,0,0);
-	//context->PSSetShader(deferredPS,0,0);
 	wiRenderer::BindVS(screenVS,context);
 	wiRenderer::BindPS(deferredPS,context);
 	
@@ -587,94 +494,12 @@ void wiImage::DrawDeferred(TextureView texture
 	wiRenderer::BindTexturePS(ao,8,context);
 
 	
-	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//UINT sampleMask   = 0xffffffff;
-	//context->OMSetBlendState(blendState, blendFactor, sampleMask);
-	//context->PSSetSamplers(0, 1, &ssClampLin);
 	wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
-	//context->PSSetSamplers(1, 1, &ssComp);
 
 	wiRenderer::BindBlendState(blendStateNoBlend,context);
 
-	static thread_local DeferredBuffer* cb = new DeferredBuffer;
-	//cb.mSun=XMVector3Normalize(wiRenderer::GetSunPosition());
-	//cb.mEye=wiRenderer::getCamera()->Eye;
-	(*cb).mAmbient=wiRenderer::GetScene().worldInfo.ambient;
-	//cb.mBiasResSoftshadow=shadowProps;
-	(*cb).mHorizon=wiRenderer::GetScene().worldInfo.horizon;
-	(*cb).mViewProjInv=XMMatrixInverse( 0,XMMatrixTranspose(wiRenderer::getCamera()->GetView()*wiRenderer::getCamera()->GetProjection()) );
-	(*cb).mFogSEH=wiRenderer::GetScene().worldInfo.fogSEH;
-
-	wiRenderer::UpdateBuffer(deferredCb,cb,context);
-
-	/*cb.mShM[0] = shMs[0];
-	cb.mShM[1] = shMs[1];
-	cb.mShM[2] = shMs[2];*/
-	//delete[] shMs;
-	//D3D11_MAPPED_SUBRESOURCE mappedResource;
-	//DeferredBuffer* dataPtr;
-	//context->Map(deferredCb,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-	//dataPtr = (DeferredBuffer*)mappedResource.pData;
-	//memcpy(dataPtr,&cb,sizeof(DeferredBuffer));
-	//context->Unmap(deferredCb,0);
-	//context->PSSetConstantBuffers(0,1,&deferredCb);
-	//
-	//context->Draw(4,0);
-
-	wiRenderer::BindConstantBufferPS(deferredCb,0,context);
 	wiRenderer::Draw(4,context);
 }
-
-//
-//void wiImage::BatchBegin()
-//{
-//	BatchBegin(wiRenderer::getImmediateContext());
-//}
-//void wiImage::BatchBegin(DeviceContext context)
-//{
-//	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
-//
-//	//context->RSSetState(rasterizerState);
-//	//context->OMSetDepthStencilState(depthNoStencilState, 0);
-//
-//	
-//	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
-//	wiRenderer::BindRasterizerState(rasterizerState,context);
-//	wiRenderer::BindDepthStencilState(depthNoStencilState, 0, context);
-//
-//	
-//	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-//	//UINT sampleMask   = 0xffffffff;
-//	//context->OMSetBlendState(blendState,blendFactor,sampleMask);
-//	wiRenderer::BindBlendState(blendState,context);
-//
-//	//context->VSSetShader( vertexShader, NULL, 0 );
-//	//context->PSSetShader( pixelShader, NULL, 0 );
-//	wiRenderer::BindVS(vertexShader,context);
-//	wiRenderer::BindPS(pixelShader,context);
-//}
-//void wiImage::BatchBegin(DeviceContext context, unsigned int stencilref, bool stencilOpLess)
-//{
-//	//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
-//
-//	//context->RSSetState(rasterizerState);
-//	//context->OMSetDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref);
-//
-//	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
-//	wiRenderer::BindRasterizerState(rasterizerState,context);
-//	wiRenderer::BindDepthStencilState(stencilOpLess?depthStencilStateLess:depthStencilStateGreater, stencilref, context);
-//
-//	
-//	//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-//	//UINT sampleMask   = 0xffffffff;
-//	//context->OMSetBlendState(blendState,blendFactor,sampleMask);
-//	wiRenderer::BindBlendState(blendState,context);
-//
-//	//context->VSSetShader( vertexShader, NULL, 0 );
-//	//context->PSSetShader( pixelShader, NULL, 0 );
-//	wiRenderer::BindVS(vertexShader,context);
-//	wiRenderer::BindPS(pixelShader,context);
-//}
 
 
 void wiImage::Load(){
@@ -684,10 +509,6 @@ void wiImage::Load(){
 }
 void wiImage::CleanUp()
 {
-//	for(map<string,ImageResource>::iterator iter=images.begin();iter!=images.end();++iter)
-//		iter->second.CleanUp();
-//	images.clear();
-
 	if(vertexShader) vertexShader->Release();
 	if(pixelShader) pixelShader->Release();
 	if(screenVS) screenVS->Release();
@@ -704,11 +525,7 @@ void wiImage::CleanUp()
 	wiRenderer::SafeRelease(ssrPS);
 
 	if(constantBuffer) constantBuffer->Release();
-	if(PSCb) PSCb->Release();
-	if(blurCb) blurCb->Release();
 	if(processCb) processCb->Release();
-	if(shaftCb) shaftCb->Release();
-	if(deferredCb) deferredCb->Release();
 
 	if(rasterizerState) rasterizerState->Release();
 	if(blendState) blendState->Release();
@@ -721,31 +538,3 @@ void wiImage::CleanUp()
 	if(depthStencilStateLess) depthStencilStateLess->Release(); depthStencilStateLess=nullptr;
 	if(depthStencilStateGreater) depthStencilStateGreater->Release(); depthStencilStateGreater=nullptr;
 }
-
-/*
-wiImage::ImageResource::ImageResource(const string& newDirectory, const string& newName){
-	name=newName;
-	wstring wname(name.begin(),name.end());
-	wstring wdir(newDirectory.begin(),newDirectory.end());
-	wstringstream wss(L"");
-	wss<<wdir<<wname;
-	CreateWICTextureFromFile(false,wiRenderer::graphicsDevice,NULL,wss.str().c_str(),NULL,&texture,NULL);
-	
-	if(!texture) {
-		stringstream ss("");
-		ss<<newDirectory<<newName;
-		MessageBoxA(0,ss.str().c_str(),"Loading Image Failed!",0);
-	}
-}
-TextureView wiImage::getImageByName(const string& get){
-	map<string,ImageResource>::iterator iter = images.find(get);
-	if(iter!=images.end())
-		return iter->second.texture;
-	return nullptr;
-}
-void wiImage::addImageResource(const string& dir, const string& name){
-	MUTEX.lock();
-	images.insert( pair<string,ImageResource>(name,ImageResource(dir,name)) );
-	MUTEX.unlock();
-}
-*/

@@ -1,3 +1,5 @@
+#include "globals.hlsli"
+
 struct GS_CUBEMAP_IN 
 { 
 	float4 Pos		: SV_POSITION;    // World position 
@@ -12,8 +14,9 @@ struct PS_CUBEMAP_IN
 };
 
 
-cbuffer constantBuffer:register(b0){
-	float4x4 xViewProjection[6];
+CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
+{
+	float4x4 xCubeShadowVP[6];
 }
 
 [maxvertexcount(18)] 
@@ -26,7 +29,7 @@ void main( triangle GS_CUBEMAP_IN input[3], inout TriangleStream<PS_CUBEMAP_IN> 
         output.RTIndex = f; 
         for( int v = 0; v < 3; v++ ) 
         { 
-            output.Pos = mul( input[v].Pos, xViewProjection[f] );
+            output.Pos = mul( input[v].Pos, xCubeShadowVP[f] );
 			output.pos3D = input[v].Pos.xyz;
             output.Tex = input[v].Tex;
             CubeMapStream.Append( output ); 

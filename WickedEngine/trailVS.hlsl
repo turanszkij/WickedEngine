@@ -1,6 +1,4 @@
-cbuffer constantBuffer:register(b0){
-	float4x4 xViewProjection;
-}
+#include "globals.hlsli"
 
 struct VertexToPixel{
 	float4 pos						: SV_POSITION;
@@ -13,7 +11,7 @@ VertexToPixel main( float3 inPos : POSITION, float2 inTex : TEXCOORD0, float4 in
 {
 	VertexToPixel Out = (VertexToPixel)0;
 
-	Out.pos = Out.dis = mul( float4(inPos,1),xViewProjection );
+	Out.pos = Out.dis = mul( float4(inPos,1),g_xCamera_VP );
 	Out.col = inCol;
 	Out.tex = inTex;
 

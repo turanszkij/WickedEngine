@@ -21,6 +21,8 @@ private:
 		XMVECTOR mSunPos;
 		XMFLOAT4 mScreen;
 
+		CB_SETBINDSLOT(CBSLOT_OTHER_LENSFLARE)
+
 		ALIGN_16
 	};
 

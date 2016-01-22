@@ -1,7 +1,12 @@
+#ifndef _POINTLIGHTHF_
+#define _POINTLIGHTHF_
+#include "globals.hlsli"
+
 TextureCube xTextureSh:register(t7);
 SamplerComparisonState compSampler:register(s1);
 
-cbuffer lightBuffer:register(b1){
+CBUFFER(PointLightCB, CBSLOT_RENDERER_POINTLIGHT)
+{
 	float3 lightPos; float pad;
 	float4 lightColor;
 	float4 lightEnerdis;
@@ -14,7 +19,7 @@ inline float pointLight(in float3 pos3D, in float3 normal, out float3 lightDir, 
 	attenuation = /*saturate*/( att * (lightEnerdis.y-lightdis) / lightEnerdis.y );
 	lightDir = normalize( lightPos - pos3D );
 	float  lightint = saturate( dot( lightDir,normal ) );
-	[branch]if(toonshaded) toon(lightint);
+	//[branch]if(toonshaded) toon(lightint);
 
 
 	[branch]if(lightEnerdis.w){
@@ -25,3 +30,5 @@ inline float pointLight(in float3 pos3D, in float3 normal, out float3 lightDir, 
 
 	return saturate(attenuation*lightint);
 }
+
+#endif // _POINTLIGHTHF_

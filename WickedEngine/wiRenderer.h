@@ -2,13 +2,13 @@
 #include "CommonInclude.h"
 #include "wiEnums.h"
 #include "wiGraphicsAPI.h"
+#include "skinningDEF.h"
 
 struct Transform;
 struct Vertex;
 struct SkinnedVertex;
 struct Material;
 struct Object;
-struct BoneShaderBuffer;
 struct Mesh;
 struct Armature;
 struct Bone;
@@ -97,41 +97,53 @@ public:
 	static void SetSpotLightShadowProps(int count, int resolution);
 
 protected:
-	GFX_STRUCT ConstantBuffer
-	{
-		XMVECTOR mDisplace;
 
-		ALIGN_16
-	};
-	GFX_STRUCT StaticCB
+	// Persistent buffers:
+	GFX_STRUCT WorldCB
 	{
-		XMMATRIX mViewProjection;
-		XMMATRIX mRefViewProjection;
-		XMMATRIX mPrevViewProjection;
-		XMVECTOR mCamPos;
-		//XMFLOAT4A mMotionBlur;
-		XMFLOAT4 mClipPlane;
-		XMFLOAT3 mWind; float time;
-		float windRandomness;
-		float windWaveSize;
+		XMFLOAT4 mSun;
+		XMFLOAT4 mSunColor;
+		XMFLOAT3 mHorizon;
+		XMFLOAT3 mZenith;
+		XMFLOAT3 mAmbient;
+		XMFLOAT3 mFog;
+		XMFLOAT2 mScreenWidthHeight;
 		float padding[2];
 
-		ALIGN_16
-	};
-	GFX_STRUCT PixelCB
-	{
-		//XMFLOAT4A mFx;
-		XMFLOAT3 mHorizon; float pad;
-		XMVECTOR mSun;
-		XMFLOAT3 mAmbient; float pad1;
-		XMFLOAT4 mSunColor;
-		XMFLOAT3 mFogSEH; float pad2;
+		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 
 		ALIGN_16
 	};
-	GFX_STRUCT FxCB{
-		XMFLOAT4 mFx;
-		XMFLOAT4 colorMask;
+	GFX_STRUCT FrameCB
+	{
+		XMFLOAT3 mWindDirection;
+		float mWindTime;
+		float mWindWaveSize;
+		float mWindRandomness;
+		float padding[2];
+		
+		CB_SETBINDSLOT(CBSLOT_RENDERER_FRAME)
+
+		ALIGN_16
+	};
+	GFX_STRUCT CameraCB
+	{
+		XMMATRIX mView;
+		XMMATRIX mProj;
+		XMMATRIX mVP;
+		XMMATRIX mPrevV;
+		XMMATRIX mPrevP;
+		XMMATRIX mPrevVP;
+		XMMATRIX mReflVP;
+		XMMATRIX mInvP;
+		XMFLOAT3   mCamPos;
+		XMFLOAT3   mAt;
+		XMFLOAT3   mUp;
+		float      mZNearP;
+		float      mZFarP;
+		float padding[3];
+
+		CB_SETBINDSLOT(CBSLOT_RENDERER_CAMERA)
 
 		ALIGN_16
 	};
@@ -150,51 +162,55 @@ protected:
 		float emit;
 		float padding[3];
 
+		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
+
 		MaterialCB() {};
 		MaterialCB(const Material& mat, UINT materialIndex) { Create(mat,materialIndex); };
 		void Create(const Material& mat, UINT materialIndex);
 
 		ALIGN_16
 	};
-	GFX_STRUCT ForShadowMapCB
-	{
-		XMMATRIX mViewProjection;
-		XMFLOAT3 mWind; float time;
-		float windRandomness;
-		float windWaveSize;
-
-		ALIGN_16
-	};
-	GFX_STRUCT CubeShadowCb{
-		XMMATRIX mViewProjection[6];
-
-		ALIGN_16
-	};
-	GFX_STRUCT TessBuffer
-	{
-		XMVECTOR  g_f4Eye;
-		XMFLOAT4A g_f4TessFactors;
-
-		ALIGN_16
-	};
-	GFX_STRUCT dLightBuffer
+	GFX_STRUCT DirectionalLightCB
 	{
 		XMVECTOR direction;
 		XMFLOAT4 col;
 		XMFLOAT4 mBiasResSoftshadow;
 		XMMATRIX mShM[3];
 
+		CB_SETBINDSLOT(CBSLOT_RENDERER_DIRLIGHT)
+
 		ALIGN_16
 	};
-	GFX_STRUCT pLightBuffer
+	GFX_STRUCT MiscCB
+	{
+		XMMATRIX mTransform;
+		XMFLOAT4 mColor;
+
+		CB_SETBINDSLOT(CBSLOT_RENDERER_MISC)
+
+		ALIGN_16
+	};
+	GFX_STRUCT ShadowCB
+	{
+		XMMATRIX mVP;
+
+		CB_SETBINDSLOT(CBSLOT_RENDERER_SHADOW)
+
+		ALIGN_16
+	};
+
+	// On demand buffers:
+	GFX_STRUCT PointLightCB
 	{
 		XMFLOAT3 pos; float pad;
 		XMFLOAT4 col;
 		XMFLOAT4 enerdis;
 
+		CB_SETBINDSLOT(CBSLOT_RENDERER_POINTLIGHT)
+
 		ALIGN_16
 	};
-	GFX_STRUCT sLightBuffer
+	GFX_STRUCT SpotLightCB
 	{
 		XMMATRIX world;
 		XMVECTOR direction;
@@ -203,43 +219,21 @@ protected:
 		XMFLOAT4 mBiasResSoftshadow;
 		XMMATRIX mShM;
 
+		CB_SETBINDSLOT(CBSLOT_RENDERER_SPOTLIGHT)
+
 		ALIGN_16
 	};
-	GFX_STRUCT vLightBuffer
+	GFX_STRUCT VolumeLightCB
 	{
 		XMMATRIX world;
 		XMFLOAT4 col;
 		XMFLOAT4 enerdis;
 
-		ALIGN_16
-	};
-	GFX_STRUCT LightStaticCB{
-		XMMATRIX mProjInv;
+		CB_SETBINDSLOT(CBSLOT_RENDERER_VOLUMELIGHT)
 
 		ALIGN_16
 	};
-	GFX_STRUCT LineBuffer{
-		XMMATRIX mWorldViewProjection;
-		XMFLOAT4 color;
-
-		ALIGN_16
-	};
-	GFX_STRUCT SkyBuffer
-	{
-		XMMATRIX mV;
-		XMMATRIX mP;
-		XMMATRIX mPrevView;
-		XMMATRIX mPrevProjection;
-
-		ALIGN_16
-	};
-	GFX_STRUCT DecalCBVS
-	{
-		XMMATRIX mWVP;
-
-		ALIGN_16
-	};
-	GFX_STRUCT DecalCBPS
+	GFX_STRUCT DecalCB
 	{
 		XMMATRIX mDecalVP;
 		int hasTexNor;
@@ -247,15 +241,32 @@ protected:
 		float opacity;
 		XMFLOAT3 front;
 
+		CB_SETBINDSLOT(CBSLOT_RENDERER_DECAL)
+
 		ALIGN_16
 	};
-	GFX_STRUCT ViewPropCB
+	GFX_STRUCT CubeMapRenderCB
 	{
-		XMMATRIX matView;
-		XMMATRIX matProj;
-		float mZNearP;
-		float mZFarP;
-		float padding[2];
+		XMMATRIX mViewProjection[6];
+
+		CB_SETBINDSLOT(CBSLOT_RENDERER_CUBEMAPRENDER)
+
+		ALIGN_16
+	};
+	GFX_STRUCT BoneCB
+	{
+		XMMATRIX pose[MAXBONECOUNT];
+		XMMATRIX prev[MAXBONECOUNT];
+
+		CB_SETBINDSLOT(CBSLOT_RENDERER_BONEBUFFER)
+
+		ALIGN_16
+	};
+	GFX_STRUCT APICB
+	{
+		XMFLOAT4 clipPlane;
+
+		CB_SETBINDSLOT(CBSLOT_API)
 
 		ALIGN_16
 	};
@@ -270,9 +281,27 @@ protected:
 
 
 	static bool						wireRender, debugSpheres, debugBoneLines, debugBoxes;
+
+	enum CBTYPES
+	{
+		CBTYPE_WORLD,
+		CBTYPE_FRAME,
+		CBTYPE_CAMERA,
+		CBTYPE_MATERIAL,
+		CBTYPE_DIRLIGHT,
+		CBTYPE_MISC,
+		CBTYPE_POINTLIGHT,
+		CBTYPE_SPOTLIGHT,
+		CBTYPE_VOLUMELIGHT,
+		CBTYPE_DECAL,
+		CBTYPE_CUBEMAPRENDER,
+		CBTYPE_BONEBUFFER,
+		CBTYPE_SHADOW,
+		CBTYPE_CLIPPLANE,
+		CBTYPE_LAST
+	};
+	static BufferResource	constantBuffers[CBTYPE_LAST];
 	static BlendState		blendState, blendStateTransparent, blendStateAdd;
-	static BufferResource			constantBuffer, staticCb, shCb, pixelCB, matCb, lightCb[3], tessBuf
-		, lineBuffer, trailCB, lightStaticCb, vLightCb,cubeShCb,fxCb,skyCb,decalCbVS,decalCbPS,viewPropCB;
 	static VertexShader		vertexShader10, vertexShader,shVS,lineVS,trailVS,waterVS
 		,lightVS[3],vSpotLightVS,vPointLightVS,cubeShVS,sOVS,decalVS;
 	static PixelShader		pixelShader,shPS,linePS,trailPS,simplestPS,blackoutPS,textureonlyPS,waterPS,transparentPS
@@ -627,12 +656,15 @@ public:
 		   }
 	   }
 
-	static void UpdatePerWorldCB(DeviceContext context);
-	static void UpdatePerFrameCB(DeviceContext context);
-	static void UpdatePerRenderCB(DeviceContext context, int tessF);
-	static void UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
-	static void UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
-
+	//static void UpdatePerWorldCB(DeviceContext context);
+	//static void UpdatePerFrameCB(DeviceContext context);
+	//static void UpdatePerRenderCB(DeviceContext context, int tessF);
+	//static void UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
+	//static void UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
+	static void UpdateWorldCB(DeviceContext context);
+	static void UpdateFrameCB(DeviceContext context);
+	static void UpdateCameraCB(DeviceContext context);
+	static void SetClipPlane(XMFLOAT4 clipPlane, DeviceContext context);
 	
 	static void DrawSky(DeviceContext context);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context

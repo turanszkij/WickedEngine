@@ -72,10 +72,9 @@ void ForwardRenderableComponent::RenderScene(DeviceContext context)
 {
 	rtMain.Activate(context, 0, 0, 0, 1);
 	{
-		wiRenderer::UpdatePerFrameCB(context);
-		wiRenderer::UpdatePerRenderCB(context, 0);
-		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera(), wiRenderer::getRefCamera());
+
+		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), context);
+
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, 0, context
 			, false, SHADERTYPE_FORWARD_SIMPLE
 			, nullptr, true, GRAPHICSTHREAD_SCENE);

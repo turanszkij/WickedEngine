@@ -1,22 +1,8 @@
+#ifndef _EFFECTHF_VS_
+#define _EFFECTHF_VS_
+
 #include "effectInputLayoutHF.hlsli"
 #include "windHF.hlsli"
-
-cbuffer staticBuffer:register(b0){
-	float4x4 xViewProjection;
-	float4x4 xRefViewProjection;
-	float4x4 xPrevViewProjection;
-	float4	 xCamPos;
-	float4	 xClipPlane;
-	float3	 xWind; float time;
-	float	 windRandomness;
-	float	 windWaveSize;
-}
-
-//#include "skinningHF.hlsli"
-
-cbuffer constantBuffer:register(b3){
-	float4	 xDisplace;
-};
 
 inline float2x3 tangentBinormal(in float3 normal){
 	float3 tangent; 
@@ -41,3 +27,5 @@ inline float2x3 tangentBinormal(in float3 normal){
 
 	return float2x3(tangent,binormal);
 }
+
+#endif // _EFFECTHF_VS_

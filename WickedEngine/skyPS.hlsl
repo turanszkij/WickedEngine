@@ -1,5 +1,6 @@
 #include "effectHF_PS.hlsli"
 #include "globalsHF.hlsli"
+#include "globals.hlsli"
 
 struct VSOut{
 	float4 pos : SV_POSITION;
@@ -28,13 +29,14 @@ PSOut main(VSOut PSIn)
 	float3 nor = inNor*overBright;
 	float3 sun = 0;
 	float3 col = 0;
-	[branch]if(xFx.x==0){
+	//[branch]if(xFx.x==0){
 		col = /*lerp( xHorizon.rgb,*/ enviroTex.SampleLevel( texSampler,nor,0 ).rgb/*, saturate(nor.y/0.3f) )*/;
-		sun = clamp(pow(abs(dot(xSun.xyz,nor)),256)*xSunColor.rgb, 0, inf);
-	}
-	else{
-		sun = clamp(pow(abs(dot(xSun.xyz,nor)),64)*xSunColor.rgb, 0, inf);
-	}
+		sun = clamp(pow(abs(dot(g_xWorld_SunDir.xyz,nor)),256)*g_xWorld_SunColor.rgb, 0, inf);
+	//}
+	//else
+	//{
+	//	sun = clamp(pow(abs(dot(g_xWorld_SunDir.xyz,nor)),64)*g_xWorld_SunColor.rgb, 0, inf);
+	//}
 	//return float4( col+sun ,1);
 
 	PSOut Out = (PSOut)0;

@@ -1,25 +1,7 @@
 //#include "skinningHF.hlsli"
 #include "windHF.hlsli"
 #include "effectInputLayoutHF.hlsli"
-
-cbuffer constantBuffer:register(b0){
-	float4x4 xViewProjection;
-	float3 xWind;
-	float time;
-	float windRandomness,windWaveSize;
-}
-
-cbuffer matBuffer:register(b1){
-	float4 diffuseColor;
-	float4 hasRefNorTexSpe;
-	float4 specular;
-	float4 refractionIndexMovingTexEnv;
-	uint shadeless;
-	uint specular_power;
-	uint toonshaded;
-	uint matIndex;
-};
-
+#include "globals.hlsli"
 
 struct VertextoPixel
 {
@@ -31,7 +13,7 @@ VertextoPixel main(Input input)
 {
 	VertextoPixel Out = (VertextoPixel)0;
 
-	[branch]if((uint)input.tex.z == matIndex){
+	[branch]if((uint)input.tex.z == g_xMat_matIndex){
 		
 		float4x4 WORLD = float4x4(
 				float4(input.wi0.x,input.wi1.x,input.wi2.x,0)
@@ -46,9 +28,9 @@ VertextoPixel main(Input input)
 //		Skinning(pos,input.bon,input.wei);
 //#endif
 		pos=mul(pos,WORLD);
-		affectWind(pos.xyz,xWind,time,input.tex.w,input.id,windRandomness,windWaveSize);
+		affectWind(pos.xyz,input.tex.w,input.id);
 
-		Out.pos = mul( pos, xViewProjection );
+		Out.pos = mul( pos, g_xCamera_VP );
 		Out.tex = input.tex.xy;
 
 	}

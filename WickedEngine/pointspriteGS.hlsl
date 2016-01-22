@@ -1,7 +1,7 @@
-cbuffer constatBuffer:register(c0){
-	float4x4	xView;
-	float4x4	xProjection;
-	float4		xCamPos;
+#include "globals.hlsli"
+
+CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
+{
 	float2		xAdd;
 	float		xMotionBlurAmount;
 	float		padding;
@@ -34,8 +34,8 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 		);
 
 	p[0].vel = normalize(p[0].vel);
-    float3 normal			= p[0].pos.xyz - xCamPos.xyz;
-	normal					= mul(normal, (float3x3)xView);
+    float3 normal			= p[0].pos.xyz - g_xCamera_CamPos.xyz;
+	normal					= mul(normal, (float3x3)g_xCamera_View);
 
 	float3 r = float3( mul(float2(0,1),rot),0 );
     float3 rightAxis		= cross(r, normal);
@@ -45,8 +45,8 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 
     float4 rightVector		= float4(rightAxis.xyz, 1.0f);
     float4 upVector         = float4(upAxis.xyz, 1.0f);
-	p[0].pos				= mul(p[0].pos, xView);
-	p[0].vel				= mul(p[0].vel, xView);
+	p[0].pos				= mul(p[0].pos, g_xCamera_View);
+	p[0].vel				= mul(p[0].vel, (float3x3)g_xCamera_View);
 
 
 	float quadLength = p[0].inSizOpMir.x*0.5f;
@@ -62,7 +62,7 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 	// extrude along velocity (blur)
 	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(0.0f, 0.0f);
-    p1.pos = mul(p1.pos, xProjection);
+    p1.pos = mul(p1.pos, g_xCamera_Proj);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
 	p1.pp = p1.pos;
@@ -73,7 +73,7 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 	// extrude along velocity (blur)
 	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(0.0f, 1.0f);
-    p1.pos = mul(p1.pos, xProjection);
+    p1.pos = mul(p1.pos, g_xCamera_Proj);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
 	p1.pp = p1.pos;
@@ -84,7 +84,7 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 	// extrude along velocity (blur)
 	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(1.0f, 0.0f);
-    p1.pos = mul(p1.pos, xProjection);
+    p1.pos = mul(p1.pos, g_xCamera_Proj);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
 	p1.pp = p1.pos;
@@ -95,7 +95,7 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 	// extrude along velocity (blur)
 	p1.pos.xyz += p[0].vel * dot(normalize(p1.pos.xyz - p[0].pos.xyz), p[0].vel) * xMotionBlurAmount;
     p1.tex = float2(1.0f, 1.0f);
-    p1.pos = mul(p1.pos, xProjection);
+    p1.pos = mul(p1.pos, g_xCamera_Proj);
 	if(p[0].inSizOpMir.z==1) p1.tex.x=1-p1.tex.x;
 	if(p[0].inSizOpMir.w==1) p1.tex.y=1-p1.tex.y;
 	p1.pp = p1.pos;

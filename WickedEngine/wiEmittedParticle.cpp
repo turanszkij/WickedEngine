@@ -251,21 +251,19 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, Textu
 			wiRenderer::BindTexturePS(depth,1,context);
 
 			static thread_local ConstantBuffer* cb = new ConstantBuffer;
-			(*cb).mView = XMMatrixTranspose(camera->GetView());
-			(*cb).mProjection = XMMatrixTranspose( camera->GetProjection() );
-			(*cb).mCamPos = camera->GetEye();
 			(*cb).mAdd.x = additive;
 			(*cb).mAdd.y = (FLAG==DRAW_DARK?true:false);
 			(*cb).mMotionBlurAmount = motionBlurAmount;
 		
 
 			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
+			wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer));
+
 			wiRenderer::BindRasterizerState(wireRender?wireFrameRS:rasterizerState,context);
 			wiRenderer::BindDepthStencilState(depthStencilState,1,context);
 	
 			wiRenderer::BindBlendState((additive?blendStateAdd:blendStateAlpha),context);
 
-			wiRenderer::BindConstantBufferGS(constantBuffer,0,context);
 			wiRenderer::BindSamplerPS(sampleState,0,context);
 
 			wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Point),context);
@@ -275,7 +273,6 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, Textu
 
 
 			wiRenderer::BindGS(nullptr,context);
-			wiRenderer::BindConstantBufferGS(nullptr,0,context);
 		}
 	}
 }
@@ -329,62 +326,6 @@ void wiEmittedParticle::LoadShaders()
 
 	geometryShader = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
 
-
-
-
-
-
-
-
-
-
-
-
- //   ID3DBlob* pVSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load pointspriteVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	//
-	//
-
-
- //   // Define the input layout
- //   VertexLayoutDesc layout[] =
- //   {
-	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//	{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//	//{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	//	{ "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
- //   };
-	//UINT numElements = ARRAYSIZE( layout );
-	//
- //   // Create the input layout
-	//wiRenderer::graphicsDevice->CreateInputLayout( layout, numElements, pVSBlob->GetBufferPointer(),
- //                                         pVSBlob->GetBufferSize(), &vertexLayout );
-
-	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
-
- //   
-
-	//ID3DBlob* pPSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspritePS_simplest.cso", &pPSBlob))){MessageBox(0,L"Failed To load pointspritePS_simplest.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &simplestPS );
-
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-
-
-	//ID3DBlob* pGSBlob = NULL;
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/pointspriteGS.cso", &pGSBlob))){MessageBox(0,L"Failed To load pointspriteGS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateGeometryShader( pGSBlob->GetBufferPointer(), pGSBlob->GetBufferSize(), NULL, &geometryShader );
-
-	//if(pGSBlob){ pGSBlob->Release();pGSBlob=NULL; }
 
 
 }

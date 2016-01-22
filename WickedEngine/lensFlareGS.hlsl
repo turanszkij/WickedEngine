@@ -1,7 +1,7 @@
-cbuffer constatBuffer:register(b0){
-	/*float4x4	xView;
-	float4x4	xProjection;
-	float4		xCamPos;*/
+#include "globals.hlsli"
+
+CBUFFER(LensFlareCB, CBSLOT_OTHER_LENSFLARE)
+{
 	float4		xSunPos;
 	float4		xScreen;
 };

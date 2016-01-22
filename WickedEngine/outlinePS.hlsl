@@ -86,7 +86,7 @@ inline float edgeValueNormal(float2 texCo, float2 texDim, float Thickness, float
 	return 1;
 }
 
-float4 main(VertextoPixel PSIn) : SV_TARGET
+float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float4 color = float4(0,0,0,1);
 	float numSampling = 0.0f;
@@ -98,7 +98,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 	xSceneDepthMap.GetDimensions(depthMapSize.x,depthMapSize.y);
 	color = xSceneDepthMap.Load(int3(depthMapSize.xy*PSIn.tex,0));*/
 	
-	color.rgb*=edgeValueDepth(PSIn.tex,xDimension.xy,OUTLINEWIDTHDEPTH,OUTLINETHRESHOLDDEPTH);
+	color.rgb*=edgeValueDepth(PSIn.tex, xDimensions.xy,OUTLINEWIDTHDEPTH,OUTLINETHRESHOLDDEPTH);
 	//color.rgb*=edgeValueNormal(PSIn.tex,xDimension.xy,OUTLINEWIDTHNORMAL,OUTLINETHRESHOLDNORMAL);
 
 	return color/numSampling;

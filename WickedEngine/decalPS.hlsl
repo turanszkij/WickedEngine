@@ -1,7 +1,3 @@
-cbuffer lightStatic:register(b0){
-	float4x4 matProjInv;
-}
-
 #include "reconstructPositionHF.hlsli"
 #include "tangentComputeHF.hlsli"
 
@@ -20,7 +16,8 @@ struct PixelOutputType
 	float4 nor	: SV_TARGET1;
 };
 
-cbuffer decalCB:register(b1){
+CBUFFER(DecalCB, CBSLOT_RENDERER_DECAL)
+{
 	float4x4 xDecalVP;
 	int hasTexNor;
 	float3 eye;

@@ -1,6 +1,11 @@
-float4x4 xProjection;
-float4x4 xTrans;
-float4	 xDimensions;
+#include "globals.hlsli"
+
+CBUFFER(FontCB, CBSLOT_FONT_FONT)
+{
+	float4x4 xProjection;
+	float4x4 xTrans;
+	float4	 xDimensions;
+}
 
 struct VertextoPixel
 {

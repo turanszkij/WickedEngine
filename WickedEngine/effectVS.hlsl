@@ -9,14 +9,12 @@ struct HullInputType
 	float3 vel				: TEXCOORD1;
 };
 
-//Texture2D noiseTex:register(t0);
-//SamplerState texSampler:register(s0);
 
 HullInputType main(Input input)
 {
 	HullInputType Out = (HullInputType)0;
 
-	[branch]if((uint)input.tex.z == matIndex){
+	[branch]if((uint)input.tex.z == g_xMat_matIndex){
 	
 		float4x4 WORLD = float4x4(
 				float4(input.wi0.x,input.wi1.x,input.wi2.x,0)
@@ -29,9 +27,6 @@ HullInputType main(Input input)
 		float4 posPrev = input.pre;
 		float4 vel = float4(0,0,0,1);
 		
-//#ifdef SKINNING_ON
-//		Skinning(pos,posPrev,input.nor,input.bon,input.wei);
-//#endif
 
 		pos = mul( pos,WORLD );
 		if(posPrev.w){
@@ -39,21 +34,14 @@ HullInputType main(Input input)
 			vel = pos - posPrev;
 		}
 
-		//Out.clip = dot(pos, xClipPlane);
 
 		float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
-		affectWind(pos.xyz,xWind,time,input.tex.w,input.id,windRandomness,windWaveSize);
+		affectWind(pos.xyz,input.tex.w,input.id);
 
-		//VERTEX OFFSET MOTION BLUR
-		//if(xMotionBlur.x){
-		//	float offsetMod = dot(inNor,vel);
-		//	pos = lerp(pos,posPrev,(offsetMod<0?((1-saturate(offsetMod))/**(noiseTex.SampleLevel( texSampler,inTex,0 ).r)*/*0.6f):0));
-		//}
 
 		Out.pos=pos.xyz;
 		Out.tex=input.tex.xyz;
 		Out.nor = normalize(normal);
-		//Out.vel = mul( mul(vel.xyz,(float3x3)WORLD), xViewProjection ).xyz;
 
 	}
 

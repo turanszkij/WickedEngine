@@ -1722,13 +1722,6 @@ void Mesh::CreateBuffers(Object* object) {
 		if (renderable)
 		{
 
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = D3D11_USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(BoneShaderBuffer);
-			bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &boneBuffer);
-
 			if (object->isArmatureDeformed() && !softBody) {
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = D3D11_USAGE_DEFAULT;

@@ -1,6 +1,7 @@
 #include "toonHF.hlsli"
 
-cbuffer lightBuffer:register(b1){
+CBUFFER(DirLightCB, CBSLOT_RENDERER_DIRLIGHT)
+{
 	float4 lightDir;
 	float4 lightColor;
 	float4 xBiasResSoftshadow;

@@ -10,11 +10,11 @@ PixelOutputType main(PixelInputType PSIn)
 	PixelOutputType Out = (PixelOutputType)0;
 
 	float3 normal = normalize(PSIn.nor);
-	float4 baseColor = diffuseColor;
-	float4 spec=specular;
+	float4 baseColor = g_xMat_diffuseColor;
+	float4 spec= g_xMat_specular;
 
 	float depth = PSIn.pos.z/PSIn.pos.w;
-	float3 eyevector = normalize(PSIn.cam - PSIn.pos3D);
+	float3 eyevector = normalize(g_xCamera_CamPos - PSIn.pos3D);
 
 	float2 ScreenCoord, ScreenCoordPrev;
 	ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
@@ -23,8 +23,8 @@ PixelOutputType main(PixelInputType PSIn)
 	ScreenCoordPrev.y = -PSIn.pos2DPrev.y / PSIn.pos2DPrev.w / 2.0f + 0.5f;
 
 
-	PSIn.tex+=movingTex;
-	[branch]if(hasTex) {
+	PSIn.tex+= g_xMat_movingTex;
+	[branch]if(g_xMat_hasTex) {
 		baseColor = xTextureTex.Sample(texSampler,PSIn.tex);
 	}
 	baseColor.rgb *= PSIn.instanceColor;
@@ -37,8 +37,8 @@ PixelOutputType main(PixelInputType PSIn)
 
 	//NORMALMAP
 	float3 bumpColor=0;
-	if(hasNor){
-		float4 nortex = xTextureNor.Sample(texSampler,PSIn.tex+movingTex);
+	if(g_xMat_hasNor){
+		float4 nortex = xTextureNor.Sample(texSampler,PSIn.tex+ g_xMat_movingTex);
 		if(nortex.a>0){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex.xy);
 			bumpColor = 2.0f * nortex.rgb - 1.0f;
@@ -50,7 +50,7 @@ PixelOutputType main(PixelInputType PSIn)
 	
 	//SPECULAR
 	//if(hasRefNorTexSpe.w){
-		spec = lerp(spec,xTextureSpe.Sample(texSampler, PSIn.tex).r,hasSpe);
+		spec = lerp(spec,xTextureSpe.Sample(texSampler, PSIn.tex).r, g_xMat_hasSpe);
 	//}
 	
 
@@ -63,12 +63,12 @@ PixelOutputType main(PixelInputType PSIn)
 		enviroTex.GetDimensions(mip,size.x,size.y,mipLevels);
 
 		float3 ref = normalize(reflect(-eyevector, normal));
-		envCol = enviroTex.SampleLevel(texSampler,ref,(1-smoothstep(0,128,specular_power))*mipLevels);
-		baseColor = lerp(baseColor,envCol,metallic*spec);
+		envCol = enviroTex.SampleLevel(texSampler,ref,(1-smoothstep(0,128, g_xMat_specular_power))*mipLevels);
+		baseColor = lerp(baseColor,envCol, g_xMat_metallic*spec);
 	}
 
 
-	[branch]if(hasRef){
+	[branch]if(g_xMat_hasRef){
 		//REFLECTION
 		float2 RefTex;
 			RefTex.x = PSIn.ReflectionMapSamplingPos.x/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
@@ -87,15 +87,15 @@ PixelOutputType main(PixelInputType PSIn)
 
 	}
 
-	bool unshaded = shadeless||colorMask.a;
-	float properties = unshaded ? RT_UNSHADED : toonshaded ? RT_TOON : 0.0f;
+	bool unshaded = g_xMat_shadeless;
+	float properties = unshaded ? RT_UNSHADED : 0.0f;
 
 	float2 vel = ScreenCoord - ScreenCoordPrev;
 
 			
-	Out.col = float4((baseColor.rgb+colorMask.rgb)*(1+emit)*PSIn.ao,1);
-	Out.nor = float4((normal.xyz),properties);
-	Out.vel = float4(/*PSIn.vel.xy*float2(-1,1)*/ vel,specular_power,spec.a);
+	Out.col = float4(baseColor.rgb*(1+ g_xMat_emit)*PSIn.ao,1);
+	Out.nor = float4(normal.xyz,properties);
+	Out.vel = float4(vel, g_xMat_specular_power,spec.a);
 
 	
 	return Out;

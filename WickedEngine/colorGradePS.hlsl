@@ -1,5 +1,4 @@
 #include "postProcessHF.hlsli"
-#include "viewProp.hlsli"
 
 float4 sampleAs3DTexture(float3 uv, float width) {
     float sliceSize = 1.0 / width;              // space of 1 slice

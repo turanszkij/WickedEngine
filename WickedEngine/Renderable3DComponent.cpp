@@ -197,7 +197,6 @@ void Renderable3DComponent::RenderFrameSetUp(DeviceContext context) {
 	}
 
 	wiRenderer::UpdateRenderData(context);
-	//wiRenderer::UpdateSkinnedVB(context);
 
 	_needToUpdateRenderData.store(false);
 }
@@ -208,9 +207,6 @@ void Renderable3DComponent::RenderReflections(DeviceContext context){
 	}
 
 	rtReflection.Activate(context); {
-		wiRenderer::UpdatePerRenderCB(context, 0);
-		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
-
 		// reverse clipping if underwater
 		XMFLOAT4 water = getWaterPlane().getXMFLOAT4();
 		if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&getWaterPlane().getXMFLOAT4()), wiRenderer::getCamera()->GetEye())) < 0 )
@@ -220,7 +216,8 @@ void Renderable3DComponent::RenderReflections(DeviceContext context){
 			water.z *= -1;
 		}
 
-		wiRenderer::UpdatePerViewCB(context, wiRenderer::getRefCamera(), wiRenderer::getCamera(), water);
+		wiRenderer::SetClipPlane(water, context);
+
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, context
 			, false, SHADERTYPE_NONE
 			, nullptr, getHairParticlesReflectionEnabled(), GRAPHICSTHREAD_REFLECTIONS);
@@ -316,8 +313,6 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceCont
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
 	rtSun[0].Activate(context, mainRT.depth); {
-		wiRenderer::UpdatePerRenderCB(context, 0);
-		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(1, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
 		wiRenderer::DrawSky(context);
 	}
 

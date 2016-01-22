@@ -1,6 +1,7 @@
-inline void affectWind(inout float3 pos, in float3 wind, in float3 time, in float value, in uint randV, in uint randW, in float waveSize){
-	wind = sin(time+(pos.x+pos.y+pos.z))*wind.xyz*0.1*value;
-	//if(randV%randW) wind=-wind;
+#include "globals.hlsli"
+
+inline void affectWind(inout float3 pos, in float value, in uint randVertex){
+	float3 wind = sin(g_xFrame_WindTime +(pos.x+pos.y+pos.z))*g_xFrame_WindDirection.xyz*0.1*value;
 	pos+=wind;
 }
 

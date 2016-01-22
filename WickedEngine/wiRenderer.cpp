@@ -43,10 +43,7 @@ int wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOW
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
 BlendState		wiRenderer::blendState, wiRenderer::blendStateTransparent, wiRenderer::blendStateAdd;
-BufferResource			wiRenderer::constantBuffer, wiRenderer::staticCb, wiRenderer::shCb, wiRenderer::pixelCB, wiRenderer::matCb
-	, wiRenderer::lightCb[3], wiRenderer::tessBuf, wiRenderer::lineBuffer, wiRenderer::skyCb
-	, wiRenderer::trailCB, wiRenderer::lightStaticCb, wiRenderer::vLightCb,wiRenderer::cubeShCb,wiRenderer::fxCb
-	, wiRenderer::decalCbVS, wiRenderer::decalCbPS, wiRenderer::viewPropCB;
+BufferResource	wiRenderer::constantBuffers[wiRenderer::CBTYPE_LAST];
 VertexShader		wiRenderer::vertexShader10, wiRenderer::vertexShader, wiRenderer::shVS, wiRenderer::lineVS, wiRenderer::trailVS
 	,wiRenderer::waterVS,wiRenderer::lightVS[3],wiRenderer::vSpotLightVS,wiRenderer::vPointLightVS,wiRenderer::cubeShVS,wiRenderer::sOVS,wiRenderer::decalVS;
 PixelShader		wiRenderer::pixelShader, wiRenderer::shPS, wiRenderer::linePS, wiRenderer::trailPS, wiRenderer::simplestPS,wiRenderer::blackoutPS
@@ -348,8 +345,6 @@ void wiRenderer::SetUpStaticComponents()
 	comparisonSampler = NULL;
 	mirSampler = NULL;
 
-	constantBuffer = NULL;
-	staticCb = NULL;
 	vertexShader = NULL;
 	vertexShader10 = NULL;
 	pixelShader = NULL;
@@ -362,14 +357,11 @@ void wiRenderer::SetUpStaticComponents()
 	
 	shVS = NULL;
 	shPS = NULL;
-	shCb = NULL;
 
 	lineVS=NULL;
 	linePS=NULL;
 	lineIL=NULL;
-	lineBuffer=NULL;
 
-	trailCB=NULL;
 	trailIL=NULL;
 	trailPS=NULL;
 	trailVS=NULL;
@@ -410,10 +402,6 @@ void wiRenderer::SetUpStaticComponents()
 
 	resetVertexCount();
 	resetVisibleObjectCount();
-
-	//vector<Armature*>a(0);
-	//MaterialCollection m;
-	//LoadWiMeshes("lights/","lights.wi","",lightGwiRenderer,a,m);
 
 	GetScene().wind=Wind();
 
@@ -459,10 +447,6 @@ void wiRenderer::CleanUpStatic()
 	SafeRelease(fowardSimplePS);
 	if(shVS) shVS->Release(); shVS=NULL;
 	if(shPS) shPS->Release(); shPS=NULL;
-	if(shCb) shCb->Release(); shCb=NULL;
-	if(cubeShCb) cubeShCb->Release(); cubeShCb=NULL;
-	if(lightStaticCb) lightStaticCb->Release(); lightStaticCb=NULL;
-	if(vLightCb) vLightCb->Release(); vLightCb=NULL;
 	SafeRelease(vSpotLightVS);
 	SafeRelease(vPointLightVS);
 	if(vLightPS) vLightPS->Release(); vLightPS=NULL;
@@ -471,8 +455,6 @@ void wiRenderer::CleanUpStatic()
 	if(sOGS) sOGS->Release(); sOGS=NULL;
 	if(sOIL) sOIL->Release(); sOIL=NULL;
 
-	if(constantBuffer) constantBuffer->Release(); constantBuffer=NULL;
-	if(staticCb) staticCb->Release(); staticCb=NULL;
 	if(vertexShader) vertexShader->Release(); vertexShader=NULL;
 	if(vertexShader10) vertexShader10->Release(); vertexShader10=NULL;
 	if(pixelShader) pixelShader->Release(); pixelShader=NULL;
@@ -490,8 +472,6 @@ void wiRenderer::CleanUpStatic()
 	
 	SafeRelease(decalVS);
 	SafeRelease(decalPS);
-	SafeRelease(decalCbVS);
-	SafeRelease(decalCbPS);
 	SafeRelease(stencilReadMatch);
 
 	for(int i=0;i<3;++i){
@@ -503,14 +483,7 @@ void wiRenderer::CleanUpStatic()
 			lightVS[i]->Release();
 			lightVS[i]=NULL;
 		}
-		if(lightCb[i]){
-			lightCb[i]->Release(); 
-			lightCb[i]=NULL;
-		}
 	}
-
-	if(pixelCB) pixelCB->Release(); pixelCB=NULL;
-	if(fxCb) fxCb->Release(); fxCb=NULL;
 
 	if(texSampler) texSampler->Release(); texSampler=NULL;
 	if(mapSampler) mapSampler->Release(); mapSampler=NULL;
@@ -538,8 +511,6 @@ void wiRenderer::CleanUpStatic()
 	if(skySampler) skySampler->Release(); skySampler=NULL;
 	if(skyVS) skyVS->Release(); skyVS=NULL;
 
-	if(matCb) matCb->Release(); matCb=NULL;
-
 	if(hullShader) hullShader->Release(); hullShader=NULL; hullShader=NULL;
 	if(domainShader) domainShader->Release(); domainShader=NULL; domainShader=NULL;
 
@@ -555,17 +526,11 @@ void wiRenderer::CleanUpStatic()
 		lineIL->Release();
 		lineIL=NULL;
 	}
-	if(lineBuffer){
-		lineBuffer->Release();
-		lineBuffer=NULL;
-	}
 
 	if(trailIL) trailIL->Release(); trailIL=NULL;
 	if(trailPS) trailPS->Release(); trailPS=NULL;
 	if(trailVS) trailVS->Release(); trailVS=NULL;
-	if(trailCB) trailCB->Release(); trailCB=NULL;
 
-	SafeRelease(viewPropCB);
 
 	wiHairParticle::CleanUpStatic();
 	wiEmittedParticle::CleanUpStatic();
@@ -573,6 +538,10 @@ void wiRenderer::CleanUpStatic()
 	HitSphere::CleanUpStatic();
 
 
+	for (int i = 0; i < CBTYPE_LAST; ++i)
+	{
+		SafeRelease(constantBuffers[i]);
+	}
 
 	if (physicsEngine) physicsEngine->CleanUp();
 }
@@ -759,153 +728,91 @@ void wiRenderer::UpdateSPTree(wiSPTree*& tree){
 
 void wiRenderer::LoadBuffers()
 {
+	for (int i = 0; i < CBTYPE_LAST; ++i)
+	{
+		constantBuffers[i] = nullptr;
+	}
+
     D3D11_BUFFER_DESC bd;
-	// Create the constant buffer
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(StaticCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &staticCb );
-
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(PixelCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &pixelCB );
 
 
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ForShadowMapCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &shCb );
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(CubeShadowCb);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &cubeShCb );
+	//Persistent buffers...
+	bd.ByteWidth = sizeof(WorldCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_WORLD]);
+	BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+	BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+	BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+	BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+	BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
 
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.ByteWidth = sizeof(FrameCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_FRAME]);
+	BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+	BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+	BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+	BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+	BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+
+	bd.ByteWidth = sizeof(CameraCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CAMERA]);
+	BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+	BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+	BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+	BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+	BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+
 	bd.ByteWidth = sizeof(MaterialCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &matCb );
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_MATERIAL]);
+	BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+	BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+	BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+	BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+	BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
 
-	
+	bd.ByteWidth = sizeof(DirectionalLightCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_DIRLIGHT]);
+	BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
+	BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
 
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(TessBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &tessBuf );
+	bd.ByteWidth = sizeof(MiscCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_MISC]);
+	BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+	BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+	BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+	BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+	BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
 
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(LineBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &lineBuffer );
+	bd.ByteWidth = sizeof(ShadowCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_SHADOW]);
+	BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB));
 
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(XMMATRIX);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &trailCB );
-	
-	//
-	//ZeroMemory( &bd, sizeof(bd) );
-	//bd.Usage = D3D11_USAGE_DYNAMIC;
-	//bd.ByteWidth = sizeof(MatIndexBuf);
-	//bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	//bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	//wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &matIndexBuf );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(LightStaticCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &lightStaticCb );
+	bd.ByteWidth = sizeof(APICB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CLIPPLANE]);
+	BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB));
 
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(dLightBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &lightCb[0] );
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(pLightBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &lightCb[1] );
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(sLightBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &lightCb[2] );
 
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(vLightBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &vLightCb );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(FxCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &fxCb );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(SkyBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &skyCb );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(DecalCBVS);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &decalCbVS );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(DecalCBPS);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &decalCbPS );
-	
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ViewPropCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &viewPropCB );
+	// On demand buffers...
+	bd.ByteWidth = sizeof(PointLightCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_POINTLIGHT]);
 
+	bd.ByteWidth = sizeof(SpotLightCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_SPOTLIGHT]);
+
+	bd.ByteWidth = sizeof(VolumeLightCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_VOLUMELIGHT]);
+
+	bd.ByteWidth = sizeof(DecalCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_DECAL]);
+
+	bd.ByteWidth = sizeof(CubeMapRenderCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CUBEMAPRENDER]);
+
+	bd.ByteWidth = sizeof(BoneCB);
+	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_BONEBUFFER]);
 }
 
 void wiRenderer::LoadBasicShaders()
@@ -1743,15 +1650,11 @@ void wiRenderer::UpdatePerFrameData()
 }
 void wiRenderer::UpdateRenderData(DeviceContext context)
 {
-	//UpdateObjects();
-
 	if (context == nullptr)
 		return;
 
-	UpdatePerWorldCB(context);
-		
-
-
+	UpdateFrameCB(context);
+	UpdateCameraCB(context);
 
 	
 	{
@@ -1765,7 +1668,7 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 				Mesh* mesh = iter->second;
 
 				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices.empty()
-					&& mesh->sOutBuffer != nullptr && mesh->meshVertBuff != nullptr && mesh->boneBuffer != nullptr)
+					&& mesh->sOutBuffer != nullptr && mesh->meshVertBuff != nullptr)
 				{
 #ifdef USE_GPU_SKINNING
 					if (!streamOutSetUp)
@@ -1779,16 +1682,18 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 					}
 
 					// Upload bones for skinning to shader
-					static thread_local BoneShaderBuffer* bonebuf = new BoneShaderBuffer;
+					static thread_local BoneCB* bonebuf = new BoneCB;
 					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
 						bonebuf->pose[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativity));
 						bonebuf->prev[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativityPrev));
 					}
-					UpdateBuffer(mesh->boneBuffer, bonebuf, context);
+					UpdateBuffer(constantBuffers[CBTYPE_BONEBUFFER], bonebuf, context);
+
+					BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB));
+					BindConstantBufferGS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB));
 
 					// Do the skinning
 					BindVertexBuffer(mesh->meshVertBuff, 0, sizeof(SkinnedVertex), context);
-					BindConstantBufferVS(mesh->boneBuffer, 1, context);
 					BindStreamOutTarget(mesh->sOutBuffer, context);
 					Draw(mesh->vertices.size(), context);
 #else
@@ -1878,70 +1783,44 @@ void wiRenderer::DrawWaterRipples(DeviceContext context){
 
 void wiRenderer::DrawDebugSpheres(Camera* camera, DeviceContext context)
 {
-	if(debugSpheres){
-		//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_TRIANGLESTRIP );
-		//context->IASetInputLayout( lineIL );
-		BindPrimitiveTopology(TRIANGLESTRIP,context);
-		BindVertexLayout(lineIL,context);
-	
-		//context->RSSetState(rasterizerState);
-		//context->OMSetDepthStencilState(xRayStencilState, STENCILREF_EMPTY);
-
-	
-		//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		//UINT sampleMask   = 0xffffffff;
-		//context->OMSetBlendState(blendStateTransparent, blendFactor, sampleMask);
-		BindRasterizerState(rasterizerState,context);
-		BindDepthStencilState(xRayStencilState,STENCILREF_EMPTY,context);
-		BindBlendState(blendStateTransparent,context);
+	//if(debugSpheres){
+	//	BindPrimitiveTopology(TRIANGLESTRIP,context);
+	//	BindVertexLayout(lineIL,context);
+	//
+	//	BindRasterizerState(rasterizerState,context);
+	//	BindDepthStencilState(xRayStencilState,STENCILREF_EMPTY,context);
+	//	BindBlendState(blendStateTransparent,context);
 
 
-		//context->VSSetShader( lineVS, NULL, 0 );
-		//context->PSSetShader( linePS, NULL, 0 );
-		BindPS(linePS,context);
-		BindVS(lineVS,context);
-		
-		//context->VSSetConstantBuffers( 0, 1, &lineBuffer );
-		//
-		//UINT stride = sizeof( XMFLOAT3A );
-		//UINT offset = 0;
-		//context->IASetVertexBuffers( 0, 1, &HitSphere::vertexBuffer, &stride, &offset );
+	//	BindPS(linePS,context);
+	//	BindVS(lineVS,context);
 
-		BindConstantBufferVS(lineBuffer,0,context);
-		BindVertexBuffer(HitSphere::vertexBuffer,0,sizeof(XMFLOAT3A),context);
+	//	BindVertexBuffer(HitSphere::vertexBuffer,0,sizeof(XMFLOAT3A),context);
 
-		for (unsigned int i = 0; i<spheres.size(); i++){
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
-			LineBuffer sb;
-			sb.mWorldViewProjection=XMMatrixTranspose(
-				XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
-				XMMatrixScaling( spheres[i]->radius,spheres[i]->radius,spheres[i]->radius ) *
-				XMMatrixTranslationFromVector( XMLoadFloat3(&spheres[i]->translation) )
-				*camera->GetViewProjection()
-				);
+	//	for (unsigned int i = 0; i<spheres.size(); i++){
+	//		//D3D11_MAPPED_SUBRESOURCE mappedResource;
+	//		LineBuffer sb;
+	//		sb.mWorldViewProjection=XMMatrixTranspose(
+	//			XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
+	//			XMMatrixScaling( spheres[i]->radius,spheres[i]->radius,spheres[i]->radius ) *
+	//			XMMatrixTranslationFromVector( XMLoadFloat3(&spheres[i]->translation) )
+	//			*camera->GetViewProjection()
+	//			);
 
-			XMFLOAT4A propColor;
-			if(spheres[i]->TYPE==HitSphere::HitSphereType::HITTYPE)      propColor = XMFLOAT4A(0.1098f,0.4196f,1,1);
-			else if(spheres[i]->TYPE==HitSphere::HitSphereType::INVTYPE) propColor=XMFLOAT4A(0,0,0,1);
-			else if(spheres[i]->TYPE==HitSphere::HitSphereType::ATKTYPE) propColor=XMFLOAT4A(0.96f,0,0,1);
-			sb.color=propColor;
+	//		XMFLOAT4A propColor;
+	//		if(spheres[i]->TYPE==HitSphere::HitSphereType::HITTYPE)      propColor = XMFLOAT4A(0.1098f,0.4196f,1,1);
+	//		else if(spheres[i]->TYPE==HitSphere::HitSphereType::INVTYPE) propColor=XMFLOAT4A(0,0,0,1);
+	//		else if(spheres[i]->TYPE==HitSphere::HitSphereType::ATKTYPE) propColor=XMFLOAT4A(0.96f,0,0,1);
+	//		sb.color=propColor;
 
-			UpdateBuffer(lineBuffer,&sb,context);
-			//LineBuffer* dataPtr;
-			//context->Map(lineBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr = (LineBuffer*)mappedResource.pData;
-			//memcpy(dataPtr,&sb,sizeof(LineBuffer));
-			//context->Unmap(lineBuffer,0);
+	//		UpdateBuffer(lineBuffer,&sb,context);
 
 
-			//context->Draw((HitSphere::RESOLUTION+1)*2,0);
-			Draw((HitSphere::RESOLUTION+1)*2,context);
+	//		//context->Draw((HitSphere::RESOLUTION+1)*2,0);
+	//		Draw((HitSphere::RESOLUTION+1)*2,context);
 
-			//context->Draw(RESOLUTION,0);
-			//context->Draw(RESOLUTION,RESOLUTION+1);
-			//context->Draw(RESOLUTION,(RESOLUTION+1)*2);
-		}
-	}
+	//	}
+	//}
 	
 }
 void wiRenderer::DrawDebugBoneLines(Camera* camera, DeviceContext context)
@@ -1958,17 +1837,12 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, DeviceContext context)
 		BindPS(linePS,context);
 		BindVS(lineVS,context);
 
-		BindConstantBufferVS(lineBuffer,0,context);
-
+		static thread_local MiscCB* sb = new MiscCB;
 		for (unsigned int i = 0; i<boneLines.size(); i++){
-			LineBuffer sb;
-			sb.mWorldViewProjection = XMMatrixTranspose(
-				XMLoadFloat4x4(&boneLines[i]->desc.transform)
-				*camera->GetViewProjection()
-				);
-			sb.color = boneLines[i]->desc.color;
+			(*sb).mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
+			(*sb).mColor = boneLines[i]->desc.color;
 
-			UpdateBuffer(lineBuffer, &sb, context);
+			UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, context);
 
 			BindVertexBuffer(boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), context);
 			Draw(2, context);
@@ -1991,17 +1865,12 @@ void wiRenderer::DrawDebugLines(Camera* camera, DeviceContext context)
 	BindPS(linePS, context);
 	BindVS(lineVS, context);
 
-	BindConstantBufferVS(lineBuffer, 0, context);
-
+	static thread_local MiscCB* sb = new MiscCB;
 	for (unsigned int i = 0; i<linesTemp.size(); i++){
-		LineBuffer sb;
-		sb.mWorldViewProjection = XMMatrixTranspose(
-			XMLoadFloat4x4(&linesTemp[i]->desc.transform)
-			*camera->GetViewProjection()
-			);
-		sb.color = linesTemp[i]->desc.color;
+		(*sb).mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
+		(*sb).mColor = linesTemp[i]->desc.color;
 
-		UpdateBuffer(lineBuffer, &sb, context);
+		UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, context);
 
 		BindVertexBuffer(linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), context);
 		Draw(2, context);
@@ -2062,25 +1931,14 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, DeviceContext context)
 
 		BindVertexBuffer(Cube::vertexBuffer,0,sizeof(XMFLOAT3A),context);
 		BindIndexBuffer(Cube::indexBuffer,context);
-		BindConstantBufferVS(lineBuffer,0,context);
 
+		static thread_local MiscCB* sb = new MiscCB;
 		for (unsigned int i = 0; i<cubes.size(); i++){
-			//D3D11_MAPPED_SUBRESOURCE mappedResource;
-			LineBuffer sb;
-			sb.mWorldViewProjection=XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*camera->GetViewProjection());
-			sb.color=cubes[i].desc.color;
+			(*sb).mTransform =XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*camera->GetViewProjection());
+			(*sb).mColor=cubes[i].desc.color;
 
-			UpdateBuffer(lineBuffer,&sb,context);
-			//LineBuffer* dataPtr;
-			//context->Map(lineBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
-			//dataPtr = (LineBuffer*)mappedResource.pData;
-			//memcpy(dataPtr,&sb,sizeof(LineBuffer));
-			//context->Unmap(lineBuffer,0);
+			UpdateBuffer(constantBuffers[CBTYPE_MISC],sb,context);
 
-			//context->VSSetConstantBuffers( 0, 1, &lineBuffer );
-
-
-			//context->DrawIndexed(24,0,0);
 			DrawIndexed(24,context);
 		}
 
@@ -2132,8 +1990,6 @@ void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 
 			BindTexturePS(o->trailDistortTex, 1, context);
 			BindTexturePS(o->trailTex, 2, context);
-
-			BindConstantBufferVS(trailCB,0,context);
 
 			vector<RibbonVertex> trails;
 
@@ -2247,8 +2103,6 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 
 
 	BindPrimitiveTopology(TRIANGLELIST,context);
-	BindConstantBufferVS(staticCb,0,context);
-	BindConstantBufferPS(lightStaticCb,0,context);
 	
 	BindTexturePS(depth,0,context);
 	BindTexturePS(normal,1,context);
@@ -2263,13 +2117,17 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 
 	BindVertexBuffer(nullptr, 0, 0, context);
 
+	BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB));
+	BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB));
+
+	BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB));
+	BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB));
+
 	for(int type=0;type<3;++type){
 
 			
 		BindVS(lightVS[type],context);
 		BindPS(lightPS[type],context);
-		BindConstantBufferPS(lightCb[type],1,context);
-		BindConstantBufferVS(lightCb[type],1,context);
 
 
 		for(Cullable* c : culledObjects){
@@ -2279,7 +2137,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 			
 			if(type==0) //dir
 			{
-				static thread_local dLightBuffer* lcb = new dLightBuffer;
+				static thread_local DirectionalLightCB* lcb = new DirectionalLightCB;
 				(*lcb).direction=XMVector3Normalize(
 					-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
 					);
@@ -2289,13 +2147,13 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 					(*lcb).mShM[shmap]=l->shadowCam[shmap].getVP();
 					BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,4+shmap,context);
 				}
-				UpdateBuffer(lightCb[type],lcb,context);
+				UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,context);
 
 				Draw(6, context);
 			}
 			else if(type==1) //point
 			{
-				static thread_local pLightBuffer* lcb = new pLightBuffer;
+				static thread_local PointLightCB* lcb = new PointLightCB;
 				(*lcb).pos=l->translation;
 				(*lcb).col=l->color;
 				(*lcb).enerdis=l->enerDis;
@@ -2306,13 +2164,13 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 					(*lcb).enerdis.w = 1.f;
 					BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, 7, context);
 				}
-				UpdateBuffer(lightCb[type], lcb, context);
+				UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, context);
 
 				Draw(240, context);
 			}
 			else if(type==2) //spot
 			{
-				static thread_local sLightBuffer* lcb = new sLightBuffer;
+				static thread_local SpotLightCB* lcb = new SpotLightCB;
 				const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
 				XMMATRIX world,rot;
 				world = XMMatrixTranspose(
@@ -2336,7 +2194,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 					(*lcb).mShM = l->shadowCam[0].getVP();
 					BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, 4, context);
 				}
-				UpdateBuffer(lightCb[type], lcb, context);
+				UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], lcb, context);
 
 				Draw(192, context);
 			}
@@ -2363,14 +2221,15 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 
 		BindPrimitiveTopology(TRIANGLELIST,context);
 		BindVertexLayout(nullptr);
-		BindConstantBufferVS(staticCb,0,context);
 		BindBlendState(blendStateAdd,context);
 		BindDepthStencilState(depthReadStencilState,STENCILREF_DEFAULT,context);
 		BindRasterizerState(nonCullRS,context);
 
 		
 		BindPS(vLightPS,context);
-		BindConstantBufferVS(vLightCb,1,context);
+
+		BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB));
+		BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB));
 
 
 		for(int type=1;type<3;++type){
@@ -2387,7 +2246,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 				Light* l = (Light*)c;
 				if(l->type==type && l->noHalo==false){
 
-					static thread_local vLightBuffer* lcb = new vLightBuffer;
+					static thread_local VolumeLightCB* lcb = new VolumeLightCB;
 					XMMATRIX world;
 					float sca=1;
 					//if(type<1){ //sun
@@ -2420,7 +2279,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 					(*lcb).enerdis=l->enerDis;
 					(*lcb).enerdis.w=sca;
 
-					UpdateBuffer(vLightCb,lcb,context);
+					UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT],lcb,context);
 
 					if(type<=1)
 						Draw(108,context);
@@ -2512,9 +2371,6 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 			BindSamplerPS(texSampler, 0, context);
 
 			BindVS(shVS, context);
-			BindConstantBufferVS(shCb, 0, context);
-			BindConstantBufferVS(matCb, 1, context);
-			BindConstantBufferPS(matCb, 1, context);
 
 
 			set<Light*, Cullable> orderedSpotLights;
@@ -2582,13 +2438,9 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 											BindRasterizerState(nonCullRSsh, context);
 
 										//D3D11_MAPPED_SUBRESOURCE mappedResource;
-										ForShadowMapCB cb;
-										cb.mViewProjection = l->shadowCam[index].getVP();
-										cb.mWind = GetScene().wind.direction;
-										cb.time = GetScene().wind.time;
-										cb.windRandomness = GetScene().wind.randomness;
-										cb.windWaveSize = GetScene().wind.waveSize;
-										UpdateBuffer(shCb, &cb, context);
+										static thread_local ShadowCB* cb = new ShadowCB;
+										(*cb).mVP = l->shadowCam[index].getVP();
+										UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, context);
 
 
 										int k = 0;
@@ -2624,7 +2476,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 												static thread_local MaterialCB* mcb = new MaterialCB;
 												(*mcb).Create(*iMat, m);
 
-												UpdateBuffer(matCb, mcb, context);
+												UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
 
 
 												DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
@@ -2687,13 +2539,9 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 										BindRasterizerState(nonCullRSsh, context);
 
 									//D3D11_MAPPED_SUBRESOURCE mappedResource;
-									ForShadowMapCB cb;
-									cb.mViewProjection = l->shadowCam[index].getVP();
-									cb.mWind = GetScene().wind.direction;
-									cb.time = GetScene().wind.time;
-									cb.windRandomness = GetScene().wind.randomness;
-									cb.windWaveSize = GetScene().wind.waveSize;
-									UpdateBuffer(shCb, &cb, context);
+									static thread_local ShadowCB* cb = new ShadowCB;
+									(*cb).mVP = l->shadowCam[index].getVP();
+									UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, context);
 
 
 									int k = 0;
@@ -2729,7 +2577,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 											static thread_local MaterialCB* mcb = new MaterialCB;
 											(*mcb).Create(*iMat, m);
 
-											UpdateBuffer(matCb, mcb, context);
+											UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
 
 
 											DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
@@ -2755,8 +2603,8 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 				BindPS(cubeShPS, context);
 				BindVS(cubeShVS, context);
 				BindGS(cubeShGS, context);
-				BindConstantBufferGS(cubeShCb, 0, context);
-				BindConstantBufferPS(lightCb[1], 2, context);
+
+				BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB));
 
 				int i = 0;
 				for (Light* l : orderedPointLights)
@@ -2769,16 +2617,16 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 					Light::shadowMaps_pointLight[i].Set(context);
 
 					//D3D11_MAPPED_SUBRESOURCE mappedResource;
-					pLightBuffer lcb;
-					lcb.enerdis = l->enerDis;
-					lcb.pos = l->translation;
-					UpdateBuffer(lightCb[1], &lcb, context);
+					static thread_local PointLightCB* lcb = new PointLightCB;
+					(*lcb).enerdis = l->enerDis;
+					(*lcb).pos = l->translation;
+					UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, context);
 
-					CubeShadowCb cb;
+					static thread_local CubeMapRenderCB* cb = new CubeMapRenderCB;
 					for (unsigned int shcam = 0; shcam < l->shadowCam.size(); ++shcam)
-						cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
+						(*cb).mViewProjection[shcam] = l->shadowCam[shcam].getVP();
 
-					UpdateBuffer(cubeShCb, &cb, context);
+					UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, context);
 
 					CulledList culledObjects;
 					CulledCollection culledRenderer;
@@ -2832,7 +2680,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									static thread_local MaterialCB* mcb = new MaterialCB;
 									(*mcb).Create(*iMat, m);
 
-									UpdateBuffer(matCb, mcb, context);
+									UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
 
 									DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
 								}
@@ -2850,237 +2698,6 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 		}
 	}
 
-	//		int dirlightShadows_processed = 0;
-	//		int spotlightShadows_processed = 0;
-
-	//		//DIRECTIONAL AND SPOTLIGHT 2DSHADOWMAPS
-	//		for (Cullable* c : culledLights){
-	//			Light* l = (Light*)c;
-	//			if (l->type != Light::POINT){
-
-	//				int mapCount = l->type == (Light::DIRECTIONAL ? 3 : 1); // directional: 3, spot: 1 shadow maps
-
-	//				for (int index = 0; index < mapCount; ++index)
-	//				{
-	//					//l->shadowMap[index].Set(context);
-
-	//					CulledCollection culledRenderer;
-	//					CulledList culledObjects;
-
-	//					if (l->type == Light::DIRECTIONAL){
-	//						Light::shadowMaps_dirLight[index + dirlightShadows_processed].Set(context);
-	//						const float siz = l->shadowCam[index].size * 0.5f;
-	//						const float f = l->shadowCam[index].farplane;
-	//						AABB boundingbox;
-	//						boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
-	//						if (spTree)
-	//							wiSPTree::getVisible(spTree->root, boundingbox.get(
-	//							XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam[index].View))
-	//							), culledObjects);
-	//					}
-	//					else if (l->type == Light::SPOT){
-	//						Light::shadowMaps_spotLight[0].Set(context);
-	//						Frustum frustum = Frustum();
-	//						XMFLOAT4X4 proj, view;
-	//						XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam[index].Projection));
-	//						XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam[index].View));
-	//						frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, proj, view);
-	//						if (spTree)
-	//							wiSPTree::getVisible(spTree->root, frustum, culledObjects);
-	//					}
-
-	//					if (!culledObjects.empty()){
-
-	//						for (Cullable* object : culledObjects){
-	//							culledRenderer[((Object*)object)->mesh].insert((Object*)object);
-	//						}
-
-	//						for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
-	//							Mesh* mesh = iter->first;
-	//							CulledObjectList& visibleInstances = iter->second;
-
-	//							if (visibleInstances.size() && !mesh->isBillboarded){
-
-	//								if (!mesh->doubleSided)
-	//									BindRasterizerState(rssh, context);
-	//								else
-	//									BindRasterizerState(nonCullRSsh, context);
-
-	//								//D3D11_MAPPED_SUBRESOURCE mappedResource;
-	//								ForShadowMapCB cb;
-	//								cb.mViewProjection = l->shadowCam[index].getVP();
-	//								cb.mWind = wind.direction;
-	//								cb.time = wind.time;
-	//								cb.windRandomness = wind.randomness;
-	//								cb.windWaveSize = wind.waveSize;
-	//								UpdateBuffer(shCb, &cb, context);
-
-
-	//								int k = 0;
-	//								for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
-	//									if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
-	//										if (mesh->softBody || (*viter)->armatureDeform)
-	//											Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
-	//										else
-	//											Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
-	//										++k;
-	//									}
-	//								}
-	//								if (k<1)
-	//									continue;
-
-	//								Mesh::UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
-
-
-	//								BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
-	//								BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
-	//								BindIndexBuffer(mesh->meshIndexBuff, context);
-
-
-	//								int matsiz = mesh->materialIndices.size();
-	//								int m = 0;
-	//								for (Material* iMat : mesh->materials){
-
-	//									if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-	//										BindTexturePS(iMat->texture, 0, context);
-
-
-
-	//										MaterialCB* mcb = new MaterialCB(*iMat, m);
-
-	//										UpdateBuffer(matCb, mcb, context);
-
-	//										delete mcb;
-
-	//										DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
-
-	//										m++;
-	//									}
-	//								}
-	//							}
-	//						}
-
-	//					}
-	//				}
-	//				if (l->type == Light::DIRECTIONAL)
-	//					dirlightShadows_processed++;
-	//				else if (l->type == Light::SPOT)
-	//					spotlightShadows_processed++;
-
-	//			}
-	//		}
-
-	//		if (!orderedPointLights.empty() && POINTLIGHTSHADOW){
-
-
-	//			//set<Light*, Cullable> orderedLights;
-	//			//for (Light* l : pointLightsSaved){
-	//			//	l->lastSquaredDistMulThousand = (long)(wiMath::DistanceEstimated(l->translation, cam->translation) * 1000);
-	//			//	if(l->shadow)
-	//			//		orderedLights.insert(l);
-	//			//}
-
-	//			int cube_shadowrenders_remain = POINTLIGHTSHADOW;
-
-	//			BindPS(cubeShPS, context);
-	//			BindVS(cubeShVS, context);
-	//			BindGS(cubeShGS, context);
-	//			BindConstantBufferGS(cubeShCb, 0, context);
-	//			BindConstantBufferPS(lightCb[1], 2, context);
-	//			for (Light* l : orderedPointLights){
-
-	//				for (unsigned int index = 0; index<Light::shadowMaps_pointLight.size(); ++index){
-	//					if (cube_shadowrenders_remain <= 0)
-	//						break;
-	//					cube_shadowrenders_remain -= 1;
-	//					Light::shadowMaps_pointLight[index].Set(context);
-
-	//					Frustum frustum = Frustum();
-	//					XMFLOAT4X4 proj, view;
-	//					XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam[index].Projection));
-	//					XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam[index].View));
-	//					frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, proj, view);
-
-	//					//D3D11_MAPPED_SUBRESOURCE mappedResource;
-	//					pLightBuffer lcb;
-	//					lcb.enerdis = l->enerDis;
-	//					lcb.pos = l->translation;
-	//					UpdateBuffer(lightCb[1], &lcb, context);
-
-	//					CubeShadowCb cb;
-	//					for (unsigned int shcam = 0; shcam<l->shadowCam.size(); ++shcam)
-	//						cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
-
-	//					UpdateBuffer(cubeShCb, &cb, context);
-
-	//					CulledCollection culledRenderer;
-	//					CulledList culledObjects;
-
-	//					if (spTree)
-	//						wiSPTree::getVisible(spTree->root, l->bounds, culledObjects);
-
-	//					for (Cullable* object : culledObjects)
-	//						culledRenderer[((Object*)object)->mesh].insert((Object*)object);
-
-	//					for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
-	//						Mesh* mesh = iter->first;
-	//						CulledObjectList& visibleInstances = iter->second;
-
-	//						if (!mesh->isBillboarded && !visibleInstances.empty()){
-
-	//							if (!mesh->doubleSided)
-	//								BindRasterizerState(rssh, context);
-	//							else
-	//								BindRasterizerState(nonCullRSsh, context);
-
-
-
-	//							int k = 0;
-	//							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
-	//								if ((*viter)->particleEmitter != Object::wiParticleEmitter::EMITTER_INVISIBLE){
-	//									if (mesh->softBody || (*viter)->armatureDeform)
-	//										Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
-	//									else
-	//										Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, GRAPHICSTHREAD_SHADOWS);
-	//									++k;
-	//								}
-	//							}
-	//							if (k<1)
-	//								continue;
-
-	//							Mesh::UpdateRenderableInstances(visibleInstances.size(), GRAPHICSTHREAD_SHADOWS, context);
-
-
-	//							BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
-	//							BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
-	//							BindIndexBuffer(mesh->meshIndexBuff, context);
-
-
-	//							int matsiz = mesh->materialIndices.size();
-	//							int m = 0;
-	//							for (Material* iMat : mesh->materials){
-	//								if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-	//									BindTexturePS(iMat->texture, 0, context);
-
-	//									MaterialCB* mcb = new MaterialCB(*iMat, m);
-
-	//									UpdateBuffer(matCb, mcb, context);
-	//									delete mcb;
-
-	//									DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
-	//								}
-	//								m++;
-	//							}
-	//						}
-	//						visibleInstances.clear();
-	//					}
-	//				}
-	//			}
-	//		}
-	//	}
-
-	//	BindGS(nullptr, context);
-	//}
 }
 
 void wiRenderer::SetDirectionalLightShadowProps(int resolution, int softShadowQuality)
@@ -3171,18 +2788,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 		BindSamplerPS(mapSampler,1,context);
 
 
-		BindConstantBufferVS(staticCb,0,context);
-		if(DX11Eff && tessF){
-			BindConstantBufferDS(staticCb,0,context);
-			BindConstantBufferDS(constantBuffer,3,context);
-			BindConstantBufferHS(tessBuf,0,context);
-		}
-		BindConstantBufferPS(pixelCB,0,context);
-		BindConstantBufferPS(fxCb,1,context);
-		BindConstantBufferVS(constantBuffer,3,context);
-		BindConstantBufferVS(matCb,2,context);
-		BindConstantBufferPS(matCb,2,context);
-
 		BindBlendState(blendState,context);
 
 		if(!wireRender) {
@@ -3204,15 +2809,15 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 
 			int matsiz = mesh->materialIndices.size();
 			
-			if(DX11 && tessF){
-				static thread_local ConstantBuffer* cb = new ConstantBuffer;
-				if(matsiz == 1) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,0,0,0);
-				else if(matsiz == 2) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,0,0);
-				else if(matsiz == 3) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,mesh->materials[2]->hasDisplacementMap,0);
-				else if(matsiz == 4) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,mesh->materials[2]->hasDisplacementMap,mesh->materials[3]->hasDisplacementMap);
+			//if(DX11 && tessF){
+			//	static thread_local ConstantBuffer* cb = new ConstantBuffer;
+			//	if(matsiz == 1) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,0,0,0);
+			//	else if(matsiz == 2) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,0,0);
+			//	else if(matsiz == 3) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,mesh->materials[2]->hasDisplacementMap,0);
+			//	else if(matsiz == 4) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,mesh->materials[2]->hasDisplacementMap,mesh->materials[3]->hasDisplacementMap);
 
-				UpdateBuffer(constantBuffer,cb,context);
-			}
+			//	UpdateBuffer(constantBuffer,cb,context);
+			//}
 
 			int k=0;
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
@@ -3250,7 +2855,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 					static thread_local MaterialCB* mcb = new MaterialCB;
 					(*mcb).Create(*iMat, m);
 
-					UpdateBuffer(matCb, mcb, context);
+					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
 					
 
 					if(!wireRender) BindTexturePS(iMat->texture,3,context);
@@ -3303,13 +2908,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 		if(!wireRender) BindTexturePS(depth,7,context);
 		if(!wireRender) BindTexturePS(waterRippleNormals, 8, context);
 
-
-		BindConstantBufferVS(staticCb,0,context);
-		BindConstantBufferPS(pixelCB,0,context);
-		BindConstantBufferPS(fxCb,1,context);
-		BindConstantBufferVS(constantBuffer,3,context);
-		BindConstantBufferVS(matCb,2,context);
-		BindConstantBufferPS(matCb,2,context);
 
 		BindBlendState(blendState,context);
 	
@@ -3372,7 +2970,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 					static thread_local MaterialCB* mcb = new MaterialCB;
 					(*mcb).Create(*iMat, m);
 
-					UpdateBuffer(matCb, mcb, context);
+					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
 
 					if(!wireRender) BindTexturePS(iMat->texture,3,context);
 					if(!wireRender) BindTexturePS(iMat->refMap,4,context);
@@ -3421,20 +3019,23 @@ void wiRenderer::DrawSky(DeviceContext context)
 	BindTexturePS(enviroMap,0,context);
 	BindSamplerPS(skySampler,0,context);
 
-	BindConstantBufferVS(skyCb,3,context);
-	BindConstantBufferPS(pixelCB,0,context);
-	BindConstantBufferPS(fxCb,1,context);
-
 	BindVertexBuffer(nullptr,0,0,context);
 	Draw(240,context);
 }
 
 void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView depth)
 {
+	bool boundCB = false;
 	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
 			continue;
+
+		if (!boundCB)
+		{
+			boundCB = true;
+			BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB));
+		}
 
 		BindTexturePS(depth, 1, context);
 		BindSamplerPS(ssClampAni, 0, context);
@@ -3445,9 +3046,6 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 		BindDepthStencilState(stencilReadMatch, STENCILREF::STENCILREF_DEFAULT, context);
 		BindVertexLayout(nullptr, context);
 		BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, context);
-		BindConstantBufferVS(decalCbVS, 0, context);
-		BindConstantBufferPS(lightStaticCb, 0, context);
-		BindConstantBufferPS(decalCbPS, 1, context);
 
 		for (Decal* decal : model->decals) {
 
@@ -3456,15 +3054,11 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 				BindTexturePS(decal->texture, 2, context);
 				BindTexturePS(decal->normal, 3, context);
 
-				static thread_local DecalCBVS* dcbvs = new DecalCBVS;
-				dcbvs->mWVP =
-					XMMatrixTranspose(
-						XMLoadFloat4x4(&decal->world)
-						*camera->GetViewProjection()
-						);
-				UpdateBuffer(decalCbVS, dcbvs, context);
+				static thread_local MiscCB* dcbvs = new MiscCB;
+				(*dcbvs).mTransform =XMMatrixTranspose(XMLoadFloat4x4(&decal->world)*camera->GetViewProjection());
+				UpdateBuffer(constantBuffers[CBTYPE_MISC], dcbvs, context);
 
-				static thread_local DecalCBPS* dcbps = new DecalCBPS;
+				static thread_local DecalCB* dcbps = new DecalCB;
 				dcbps->mDecalVP =
 					XMMatrixTranspose(
 						XMLoadFloat4x4(&decal->view)*XMLoadFloat4x4(&decal->projection)
@@ -3477,7 +3071,7 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 				XMStoreFloat3(&dcbps->eye, camera->GetEye());
 				dcbps->opacity = wiMath::Clamp((decal->life <= -2 ? 1 : decal->life < decal->fadeStart ? decal->life / decal->fadeStart : 1), 0, 1);
 				dcbps->front = decal->front;
-				UpdateBuffer(decalCbPS, dcbps, context);
+				UpdateBuffer(constantBuffers[CBTYPE_DECAL], dcbps, context);
 
 				Draw(36, context);
 
@@ -3488,74 +3082,128 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 }
 
 
-void wiRenderer::UpdatePerWorldCB(DeviceContext context){
-	static thread_local PixelCB* pcb = new PixelCB;
-	(*pcb).mSun=XMVector3Normalize( GetSunPosition() );
-	(*pcb).mHorizon= GetScene().worldInfo.horizon;
-	(*pcb).mAmbient= GetScene().worldInfo.ambient;
-	(*pcb).mSunColor=GetSunColor();
-	(*pcb).mFogSEH= GetScene().worldInfo.fogSEH;
-	UpdateBuffer(pixelCB, pcb, context);
+//void wiRenderer::UpdatePerWorldCB(DeviceContext context){
+//	static thread_local PixelCB* pcb = new PixelCB;
+//	(*pcb).mSun=XMVector3Normalize( GetSunPosition() );
+//	(*pcb).mHorizon= GetScene().worldInfo.horizon;
+//	(*pcb).mAmbient= GetScene().worldInfo.ambient;
+//	(*pcb).mSunColor=GetSunColor();
+//	(*pcb).mFogSEH= GetScene().worldInfo.fogSEH;
+//	UpdateBuffer(pixelCB, pcb, context);
+//}
+//void wiRenderer::UpdatePerFrameCB(DeviceContext context){
+//	static thread_local ViewPropCB* cb = new ViewPropCB;
+//	(*cb).mZFarP=cam->zFarP;
+//	(*cb).mZNearP=cam->zNearP;
+//	(*cb).matView = XMMatrixTranspose( cam->GetView() );
+//	(*cb).matProj = XMMatrixTranspose( cam->GetProjection() );
+//	UpdateBuffer(viewPropCB,cb,context);
+//}
+//void wiRenderer::UpdatePerRenderCB(DeviceContext context, int tessF){
+//	if(tessF){
+//		static thread_local TessBuffer* tb = new TessBuffer;
+//		(*tb).g_f4Eye = cam->GetEye();
+//		(*tb).g_f4TessFactors = XMFLOAT4A( (float)tessF,2.f,4.f,6.f );
+//		UpdateBuffer(tessBuf,tb,context);
+//	}
+//
+//}
+//void wiRenderer::UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane){
+//
+//	
+//	static thread_local StaticCB* cb = new StaticCB;
+//	(*cb).mViewProjection = XMMatrixTranspose(camera->GetViewProjection());
+//	(*cb).mRefViewProjection = XMMatrixTranspose( refCamera->GetViewProjection());
+//	(*cb).mPrevViewProjection = XMMatrixTranspose(prevFrameCam->GetViewProjection());
+//	(*cb).mCamPos = camera->GetEye();
+//	(*cb).mClipPlane = newClipPlane;
+//	(*cb).mWind= GetScene().wind.direction;
+//	(*cb).time= GetScene().wind.time;
+//	(*cb).windRandomness= GetScene().wind.randomness;
+//	(*cb).windWaveSize= GetScene().wind.waveSize;
+//	UpdateBuffer(staticCb,cb,context);
+//
+//	static thread_local SkyBuffer* scb = new SkyBuffer;
+//	(*scb).mV=XMMatrixTranspose(camera->GetView());
+//	(*scb).mP = XMMatrixTranspose(camera->GetProjection());
+//	(*scb).mPrevView = XMMatrixTranspose(prevFrameCam->GetView());
+//	(*scb).mPrevProjection = XMMatrixTranspose(prevFrameCam->GetProjection());
+//	UpdateBuffer(skyCb,scb,context);
+//
+//	UpdateBuffer(trailCB, &XMMatrixTranspose(camera->GetViewProjection()), context);
+//
+//	static thread_local LightStaticCB* lcb = new LightStaticCB;
+//	(*lcb).mProjInv = XMMatrixInverse(0, XMMatrixTranspose(camera->GetViewProjection()));
+//	UpdateBuffer(lightStaticCb,lcb,context);
+//}
+//void wiRenderer::UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask){
+//	static thread_local FxCB* fb = new FxCB;
+//	(*fb).mFx = blackoutBlackWhiteInvCol;
+//	(*fb).colorMask=colorMask;
+//	UpdateBuffer(fxCb,fb,context);
+//}
+
+void wiRenderer::UpdateWorldCB(DeviceContext context)
+{
+	static thread_local WorldCB* cb = new WorldCB;
+
+	auto& world = GetScene().worldInfo;
+	(*cb).mAmbient = world.ambient;
+	(*cb).mFog = world.fogSEH;
+	(*cb).mHorizon = world.horizon;
+	(*cb).mZenith = world.zenith;
+	(*cb).mScreenWidthHeight = XMFLOAT2((float)GetScreenWidth(), (float)GetScreenHeight());
+	XMStoreFloat4(&(*cb).mSun, GetSunPosition());
+	(*cb).mSunColor = GetSunColor();
+
+	UpdateBuffer(constantBuffers[CBTYPE_WORLD], cb, context);
 }
-void wiRenderer::UpdatePerFrameCB(DeviceContext context){
-	static thread_local ViewPropCB* cb = new ViewPropCB;
-	(*cb).mZFarP=cam->zFarP;
-	(*cb).mZNearP=cam->zNearP;
-	(*cb).matView = XMMatrixTranspose( cam->GetView() );
-	(*cb).matProj = XMMatrixTranspose( cam->GetProjection() );
-	UpdateBuffer(viewPropCB,cb,context);
+void wiRenderer::UpdateFrameCB(DeviceContext context)
+{
+	static thread_local FrameCB* cb = new FrameCB;
 
-	BindConstantBufferPS(viewPropCB,10,context);
+	auto& wind = GetScene().wind;
+	(*cb).mWindTime = wind.time;
+	(*cb).mWindRandomness = wind.randomness;
+	(*cb).mWindWaveSize = wind.waveSize;
+	(*cb).mWindDirection = wind.direction;
+
+	UpdateBuffer(constantBuffers[CBTYPE_FRAME], cb, context);
 }
-void wiRenderer::UpdatePerRenderCB(DeviceContext context, int tessF){
-	if(tessF){
-		static thread_local TessBuffer* tb = new TessBuffer;
-		(*tb).g_f4Eye = cam->GetEye();
-		(*tb).g_f4TessFactors = XMFLOAT4A( (float)tessF,2.f,4.f,6.f );
-		UpdateBuffer(tessBuf,tb,context);
-	}
+void wiRenderer::UpdateCameraCB(DeviceContext context)
+{
+	static thread_local CameraCB* cb = new CameraCB;
 
+	auto camera = getCamera();
+	auto prevCam = prevFrameCam;
+	auto reflCam = getRefCamera();
+
+	(*cb).mView = XMMatrixTranspose(camera->GetView());
+	(*cb).mProj = XMMatrixTranspose(camera->GetProjection());
+	(*cb).mVP = XMMatrixTranspose(camera->GetViewProjection());
+	(*cb).mPrevV = XMMatrixTranspose(prevCam->GetView());
+	(*cb).mPrevP = XMMatrixTranspose(prevCam->GetProjection());
+	(*cb).mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
+	(*cb).mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
+	(*cb).mInvP = XMMatrixTranspose(XMMatrixInverse(nullptr, (*cb).mProj));
+	(*cb).mCamPos = camera->translation;
+	(*cb).mAt = camera->At;
+	(*cb).mUp = camera->Up;
+	(*cb).mZNearP = camera->zNearP;
+	(*cb).mZFarP = camera->zFarP;
+
+	UpdateBuffer(constantBuffers[CBTYPE_CAMERA], cb, context);
 }
-void wiRenderer::UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane){
-
-	
-	static thread_local StaticCB* cb = new StaticCB;
-	(*cb).mViewProjection = XMMatrixTranspose(camera->GetViewProjection());
-	(*cb).mRefViewProjection = XMMatrixTranspose( refCamera->GetViewProjection());
-	(*cb).mPrevViewProjection = XMMatrixTranspose(prevFrameCam->GetViewProjection());
-	(*cb).mCamPos = camera->GetEye();
-	(*cb).mClipPlane = newClipPlane;
-	(*cb).mWind= GetScene().wind.direction;
-	(*cb).time= GetScene().wind.time;
-	(*cb).windRandomness= GetScene().wind.randomness;
-	(*cb).windWaveSize= GetScene().wind.waveSize;
-	UpdateBuffer(staticCb,cb,context);
-
-	static thread_local SkyBuffer* scb = new SkyBuffer;
-	(*scb).mV=XMMatrixTranspose(camera->GetView());
-	(*scb).mP = XMMatrixTranspose(camera->GetProjection());
-	(*scb).mPrevView = XMMatrixTranspose(prevFrameCam->GetView());
-	(*scb).mPrevProjection = XMMatrixTranspose(prevFrameCam->GetProjection());
-	UpdateBuffer(skyCb,scb,context);
-
-	UpdateBuffer(trailCB, &XMMatrixTranspose(camera->GetViewProjection()), context);
-
-	static thread_local LightStaticCB* lcb = new LightStaticCB;
-	(*lcb).mProjInv = XMMatrixInverse(0, XMMatrixTranspose(camera->GetViewProjection()));
-	UpdateBuffer(lightStaticCb,lcb,context);
+void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, DeviceContext context)
+{
+	UpdateBuffer(constantBuffers[CBTYPE_CLIPPLANE], &clipPlane, context);
 }
-void wiRenderer::UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask){
-	static thread_local FxCB* fb = new FxCB;
-	(*fb).mFx = blackoutBlackWhiteInvCol;
-	(*fb).colorMask=colorMask;
-	UpdateBuffer(fxCb,fb,context);
-}
+
 
 void wiRenderer::FinishLoading()
 {
-
+	// Kept for backwards compatibility
 }
-
 
 wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 	const string& layerDisable)
@@ -3809,6 +3457,10 @@ void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
 	LoadWiWorldInfo(dir, name+".wiw", GetScene().worldInfo, GetScene().wind);
 	if(physicsEngine)
 		physicsEngine->addWind(GetScene().wind.direction);
+
+	graphicsMutex.lock();
+	UpdateWorldCB(getImmediateContext());
+	graphicsMutex.unlock();
 }
 Scene& wiRenderer::GetScene()
 {

@@ -105,11 +105,10 @@ void wiHairParticle::SetUpStatic(){
 	D3D11_BUFFER_DESC bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(CBGS);
+	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &cbgs );
-	
 
 	
 
@@ -423,22 +422,15 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 			wiRenderer::BindRasterizerState(ncrs,context);
 
 
-		static thread_local CBGS* gcb = new CBGS;
+		static thread_local ConstantBuffer* gcb = new ConstantBuffer;
 		(*gcb).mWorld = XMMatrixTranspose(renderMatrix);
-		(*gcb).mView = XMMatrixTranspose(camera->GetView());
-		(*gcb).mProj = XMMatrixTranspose(camera->GetProjection());
-		(*gcb).mPrevViewProjection = XMMatrixTranspose(wiRenderer::prevFrameCam->GetViewProjection());
-		(*gcb).colTime=XMFLOAT4(material->diffuseColor.x,material->diffuseColor.y,material->diffuseColor.z, wiRenderer::GetScene().wind.time);
-		(*gcb).eye = eye;
+		(*gcb).color=material->diffuseColor;
 		(*gcb).drawdistance = (float)LOD[2];
-		(*gcb).wind=wiRenderer::GetScene().wind.direction;
-		(*gcb).windRandomness=wiRenderer::GetScene().wind.randomness;
-		(*gcb).windWaveSize=wiRenderer::GetScene().wind.waveSize;
 		
 		wiRenderer::UpdateBuffer(cbgs,gcb,context);
+		wiRenderer::BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer));
 
 		wiRenderer::BindDepthStencilState(dss,STENCILREF_DEFAULT,context);
-		wiRenderer::BindConstantBufferGS(cbgs,0,context);
 
 
 		for(int i=0;i<3;++i){
@@ -473,7 +465,6 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 		}
 
 		wiRenderer::BindGS(nullptr,context);
-		wiRenderer::BindConstantBufferGS(nullptr,0,context);
 	}
 }
 

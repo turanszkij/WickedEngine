@@ -99,23 +99,22 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
     // Compute normal
     vertexNormal   = PhongNormal(fU, fV, fW, input);
 	
-	Out.clip = dot(vertexPosition, xClipPlane);
+	Out.clip = dot(vertexPosition, g_xClipPlane);
 
-	//DISPLACEMENT
-	if(xDisplace[(uint)patch[0].tex.z]) vertexPosition.xyz += vertexNormal * (-1+dispMap.SampleLevel( texSampler,vertexTex,0 ).r) *0.4;
-	
+	////DISPLACEMENT
+	//if(xDisplace[(uint)patch[0].tex.z]) vertexPosition.xyz += vertexNormal * (-1+dispMap.SampleLevel( texSampler,vertexTex,0 ).r) *0.4;
+	//
 
 	
-	Out.pos = Out.pos2D = mul( vertexPosition, xViewProjection );
+	Out.pos = Out.pos2D = mul( vertexPosition, g_xCamera_VP );
 	Out.pos3D = vertexPosition.xyz;
-	Out.cam = xCamPos.xyz;
 	Out.tex = vertexTex.xy;
 	Out.nor = vertexNormal;
 	/*float2x3 tanbin = tangentBinormal(Out.nor);
 	Out.tan=tanbin[0];
 	Out.bin=tanbin[1];*/
 
-	Out.ReflectionMapSamplingPos = mul(vertexPosition, xRefViewProjection );
+	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xCamera_ReflVP);
 	/*Out.ShadowMapSamplingPos[0] = mul(vertexPosition,  xShViewOprojection[0] );
 	Out.ShadowMapSamplingPos[1] = mul(vertexPosition,  xShViewOprojection[1] );
 	Out.ShadowMapSamplingPos[2] = mul(vertexPosition,  xShViewOprojection[2] );*/

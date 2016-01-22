@@ -82,14 +82,11 @@ void DeferredRenderableComponent::Render()
 
 void DeferredRenderableComponent::RenderScene(DeviceContext context){
 	static const int tessellationQuality = 0;
-
-	wiRenderer::UpdatePerFrameCB(context);
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
 	rtGBuffer.Activate(context); {
-		wiRenderer::UpdatePerRenderCB(context, tessellationQuality);
-		wiRenderer::UpdatePerViewCB(context, wiRenderer::getCamera(), wiRenderer::getRefCamera());
-		wiRenderer::UpdatePerEffectCB(context, XMFLOAT4(0, 0, 0, 0), XMFLOAT4(0, 0, 0, 0));
+
+		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), context);
 
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), wiRenderer::DX11, tessellationQuality, context, false
 			, SHADERTYPE_DEFERRED, rtReflection.shaderResource.front(), true, GRAPHICSTHREAD_SCENE);

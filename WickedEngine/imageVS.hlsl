@@ -1,21 +1,6 @@
-cbuffer vsBuffer:register(b0){
-	float4x4 xViewProjection;
-	float4x4 xTrans;
-	float4	 xDimensions;
-	float4	 xOffsetMirFade;
-	float4	 xDrawRec;
-	float4	 xBlurOpaPiv;
-	float4   xTexOffset;
-}
+#include "globals.hlsli"
+#include "imageHF.hlsli"
 
-
-struct VertextoPixel
-{
-	float4 pos				: SV_POSITION;
-	float4 tex				: TEXCOORD0; //intex,movingtex
-	float4 dis				: TEXCOORD1; //distortion
-	float mip				: TEXCOORD2;
-};
 
 VertextoPixel main(uint vI : SV_VERTEXID)
 {
@@ -57,7 +42,7 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 		inTex+=float2(xDrawRec.x/xDimensions.z,xDrawRec.y/xDimensions.w);
 	}
 	inPos+=float3(xOffsetMirFade.x,xOffsetMirFade.y,0);
-	Out.pos = Out.dis = mul( mul(float4(inPos,1),xTrans),xViewProjection );
+	Out.pos = Out.dis = mul( mul(float4(inPos,1),xTrans), xViewProjection);
 	
 	Out.tex.xy=inTex;
 	Out.tex.zw=xTexOffset.xy;
@@ -103,7 +88,7 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 //		inTex+=float2(xDrawRec.x/xDimensions.z,xDrawRec.y/xDimensions.w);
 //	}
 //	inPos+=float3(xOffsetMirFade.x,xOffsetMirFade.y,0);
-//	Out.pos = Out.dis = mul( mul(float4(inPos,1),xTrans),xViewProjection );
+//	Out.pos = Out.dis = mul( mul(float4(inPos,1),xTrans),g_xCamera_VP );
 //	
 //	Out.tex.xy=inTex;
 //	Out.tex.zw=xTexOffset.xy;

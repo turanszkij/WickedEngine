@@ -7,12 +7,10 @@ void main(
 )
 {
 	uint rand = input[0].pos.w;
-	float4x4 xViewProjection = mul(xView,xProjection);
-	//float3 viewDir = xView._m02_m12_m22;
 	float4 pos = float4(input[0].pos.xyz,1);
-	float3 color = saturate(colTime.xyz+sin(pos.x-pos.y-pos.z)*0.013f)*0.5;
-	float3 wind = sin(colTime.w+(pos.x+pos.y+pos.z)*0.1f)*windDir.xyz*0.1;
-	if(rand%(uint)windRandomness) wind=-wind;
+	float3 color = saturate(xColor.xyz + sin(pos.x - pos.y - pos.z)*0.013f)*0.5;
+	float3 wind = sin(g_xFrame_WindTime + (pos.x + pos.y + pos.z)*0.1f)*g_xFrame_WindDirection.xyz*0.1;
+	if (rand % (uint)g_xFrame_WindRandomness) wind = -wind;
 	float3 normal = /*normalize(*/input[0].nor.xyz/*-wind)*/;
 #ifdef GRASS_FADE_DITHER
 	float length = /*lerp(*/input[0].nor.w/*,0,pow(saturate(distance(pos.xyz,eye.xyz)/drawdistance),2))*/;
@@ -30,14 +28,12 @@ void main(
 		float4 mod = pos + float4(cross(MOD[i], normal), 0);
 #ifdef GRASS_FADE_DITHER
 		static const float grassPopDistanceThreshold = 0.9f;
-		const float fade = pow(saturate(distance(pos.xyz, eye.xyz) / (drawdistance*grassPopDistanceThreshold)), 10);
+		const float fade = pow(saturate(distance(pos.xyz, g_xCamera_CamPos.xyz) / (xDrawDistance*grassPopDistanceThreshold)), 10);
 #else
 		static const float fade = 0;
 #endif
-		genBlade(output, xViewProjection, mod, normal, length, 4, right, color, wind, fade);
+		genBlade(output, mod, normal, length, 4, right, color, wind, fade);
 	}
 	
-	//genBlade(output,xViewProjection,pos,normal,length,6,right,color, wind);
-	//genBlade(output,xViewProjection,pos+float4(0.2,-0.2,0.15,0),normal,length,6,right,color, wind);
 
 }

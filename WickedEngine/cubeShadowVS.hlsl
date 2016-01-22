@@ -1,16 +1,6 @@
 //#include "skinningHF.hlsli"
 #include "effectInputLayoutHF.hlsli"
-
-cbuffer matBuffer:register(b1){
-	float4 diffuseColor;
-	float4 hasRefNorTexSpe;
-	float4 specular;
-	float4 refractionIndexMovingTexEnv;
-	uint shadeless;
-	uint specular_power;
-	uint toonshaded;
-	uint matIndex;
-};
+#include "globals.hlsli"
 
 struct GS_CUBEMAP_IN 
 { 
@@ -22,7 +12,7 @@ GS_CUBEMAP_IN main(Input input)
 {
 	GS_CUBEMAP_IN Out = (GS_CUBEMAP_IN)0;
 
-	if((uint)input.tex.z == matIndex){
+	if((uint)input.tex.z == g_xMat_matIndex){
 		
 		float4x4 WORLD = float4x4(
 				float4(input.wi0.x,input.wi1.x,input.wi2.x,0)

@@ -1,11 +1,4 @@
 #include "postProcessHF.hlsli"
-
-cbuffer prop:register(b0) {
-	float4 xAmbient;
-	float4 xHorizon;
-	float4x4 matProjInv;
-	float4 xFogSEH;
-};
 #include "reconstructPositionHF.hlsli"
 
 
@@ -36,7 +29,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 
 	for (int i = 0; i < g_iNumBinarySearchSteps; i++)
 	{
-		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), matProj);
+		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), g_xCamera_Proj);
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -50,7 +43,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 		vHitCoord -= vDir;
 	}
 
-	float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), matProj);
+	float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), g_xCamera_Proj);
 	vProjectedCoord.xy /= vProjectedCoord.w;
 	vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -68,7 +61,7 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 	{
 		vHitCoord += vDir;
 
-		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), matProj);
+		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), g_xCamera_Proj);
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -87,7 +80,7 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 	return float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-float4 main(VertextoPixel input) : SV_Target
+float4 main(VertexToPixelPostProcess input) : SV_Target
 {
 	float4 o = 1;
 
@@ -102,8 +95,8 @@ float4 main(VertextoPixel input) : SV_Target
 
 
 	//Reflection vector
-	float3 vViewPos = mul(float4(vWorldPos.xyz, 1), matView).xyz;
-	float3 vViewNor = mul(float4(vNormZ.xyz, 0), matView).xyz;
+	float3 vViewPos = mul(float4(vWorldPos.xyz, 1), g_xCamera_View).xyz;
+	float3 vViewNor = mul(float4(vNormZ.xyz, 0), g_xCamera_View).xyz;
 	float3 vReflectDir = normalize(reflect(normalize(vViewPos.xyz), normalize(vViewNor.xyz)));
 
 

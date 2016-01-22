@@ -14,7 +14,7 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 		
 
 	
-	[branch]if(depth<zFarP){
+	[branch]if(depth<g_xCamera_ZFarP){
 
 		float4 norU = normalMap.SampleLevel(Sampler,screenPos,0);
 		bool unshaded = isUnshaded(norU.w);
@@ -28,7 +28,7 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 
 
 			float3 pos3D = getPosition(screenPos,depth);
-			float3 eyevector = normalize(PSIn.cam.xyz-pos3D.xyz);
+			float3 eyevector = normalize(g_xCamera_CamPos.xyz-pos3D.xyz);
 
 			float attenuation;
 			float3 lightToPixel;

@@ -9,7 +9,7 @@ PixelInputType main(Input input)
 	PixelInputType Out = (PixelInputType)0;
 
 
-	[branch]if((uint)input.tex.z == matIndex)
+	[branch]if((uint)input.tex.z == g_xMat_matIndex)
 	{
 
 		float4x4 WORLD = float4x4(
@@ -30,10 +30,10 @@ PixelInputType main(Input input)
 		pos = mul( pos,WORLD );
 
 
-		Out.clip = dot(pos, xClipPlane);
+		Out.clip = dot(pos, g_xClipPlane);
 		
 		float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
-		affectWind(pos.xyz,xWind,time,input.tex.w,input.id,windRandomness,windWaveSize);
+		affectWind(pos.xyz,input.tex.w,input.id);
 
 
 		[branch]
@@ -50,19 +50,18 @@ PixelInputType main(Input input)
 			//pos = lerp(pos,posPrev,(offsetMod<0?((1-saturate(offsetMod))*(noiseTex.SampleLevel( texSampler,input.tex.xy,0 ).r)*0.6f):0));
 		//}
 
-		Out.pos = Out.pos2D = mul( pos, xViewProjection );
-		Out.pos2DPrev = mul(posPrev, xPrevViewProjection);
+		Out.pos = Out.pos2D = mul( pos, g_xCamera_VP );
+		Out.pos2DPrev = mul(posPrev, g_xCamera_PrevVP);
 		Out.pos3D = pos.xyz;
-		Out.cam = xCamPos.xyz;
 		Out.tex = input.tex.xy;
 		Out.nor = normalize(normal);
-		Out.nor2D = mul(Out.nor.xyz, (float3x3)xViewProjection);
+		Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP);
 
 
-		Out.ReflectionMapSamplingPos = mul(pos, xRefViewProjection );
+		Out.ReflectionMapSamplingPos = mul(pos, g_xCamera_ReflVP);
 
 
-		//Out.vel = mul( vel.xyz, xViewProjection ).xyz;
+		//Out.vel = mul( vel.xyz, g_xCamera_VP ).xyz;
 
 		Out.ao = input.nor.w;
 

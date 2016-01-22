@@ -1,20 +1,7 @@
+#include "globals.hlsli"
+
 Texture2D<float4> xTextureTex:register(t0);
 SamplerState texSampler:register(s0);
-
-cbuffer matBuffer:register(b1){
-	float4 diffuseColor;
-	uint hasRef,hasNor,hasTex,hasSpe;
-	float4 specular;
-	float refractionIndex;
-	float2 movingTex;
-	float metallic;
-	uint shadeless;
-	uint specular_power;
-	uint toonshaded;
-	uint matIndex;
-	float emit;
-	float padding[3];
-};
 
 struct VertextoPixel
 {
@@ -38,7 +25,7 @@ float main(VertextoPixel PSIn) : SV_TARGET
 	return (color.rgb,1);*/
 	//return xTextureTex.Sample(texSampler,PSIn.tex);
 
-	[branch]if(hasTex)
+	[branch]if(g_xMat_hasTex)
 		clip( xTextureTex.Sample(texSampler,PSIn.tex).a<0.1?-1:1 );
 
 	return PSIn.pos.z;

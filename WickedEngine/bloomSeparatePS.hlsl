@@ -1,7 +1,7 @@
 #include "postProcessHF.hlsli"
 
 
-float4 main(VertextoPixel PSIn) : SV_TARGET
+float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	//float4 color = float4(0,0,0,0);
 

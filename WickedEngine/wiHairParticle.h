@@ -31,18 +31,13 @@ private:
 	int count;
 	string name,densityG,lenG;
 	Material* material;
-	GFX_STRUCT CBGS
+	GFX_STRUCT ConstantBuffer
 	{
 		XMMATRIX mWorld;
-		XMMATRIX mView;
-		XMMATRIX mProj;
-		XMMATRIX mPrevViewProjection;
-		XMFLOAT4 colTime;
-		XMFLOAT3 eye; float drawdistance;
-		XMFLOAT3 wind; float pad;
-		float windRandomness;
-		float windWaveSize;
-		float padding[2];
+		XMFLOAT3 color;
+		float drawdistance;
+
+		CB_SETBINDSLOT(CBSLOT_OTHER_HAIRPARTICLE)
 
 		ALIGN_16
 	};

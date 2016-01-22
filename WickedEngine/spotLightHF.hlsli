@@ -2,8 +2,8 @@ Texture2D<float> xTextureSh:register(t4);
 SamplerComparisonState compSampler:register(s1);
 
 
-
-cbuffer lightBuffer:register(b1){
+CBUFFER(SpotLightCB, CBSLOT_RENDERER_SPOTLIGHT)
+{
 	float4x4 lightWorld;
 	float4 lightDir;
 	float4 lightColor;

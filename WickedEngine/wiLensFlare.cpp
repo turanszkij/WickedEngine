@@ -47,17 +47,15 @@ void wiLensFlare::Draw(TextureView depthMap, DeviceContext context, const XMVECT
 		(*cb).mScreen = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 0);
 
 		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
+		wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer));
 
 	
 		wiRenderer::BindRasterizerState(rasterizerState,context);
 		wiRenderer::BindDepthStencilState(depthStencilState,1,context);
 		wiRenderer::BindBlendState(blendState,context);
-		wiRenderer::BindConstantBufferGS(constantBuffer,0,context);
 
-		//context->GSSetShaderResources( 0,1,&depthMap );
 		wiRenderer::BindTextureGS(depthMap,0,context);
-		//context->GSSetSamplers(0, 1, &samplerState);
-		//context->PSSetSamplers(0, 1, &samplerState);
+
 		wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
 		wiRenderer::BindSamplerGS(samplerState,0,context);
 
@@ -69,16 +67,12 @@ void wiLensFlare::Draw(TextureView depthMap, DeviceContext context, const XMVECT
 				i++;
 			}
 		}
-		//context->Draw(i,0);
 		wiRenderer::Draw(i,context);
 
 		
 
 
-		//context->GSSetShader(0,0,0);
 		wiRenderer::BindGS(nullptr,context);
-		//context->GSSetConstantBuffers(0,0,0);
-		wiRenderer::BindConstantBufferGS(nullptr,0,context);
 	}
 }
 
@@ -110,7 +104,6 @@ void wiLensFlare::SetUpCB()
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
-
 	
 }
 void wiLensFlare::SetUpStates()

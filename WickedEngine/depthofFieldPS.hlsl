@@ -1,9 +1,8 @@
 #include "postProcessHF.hlsli"
 //#include "ViewProp.h"
-#include "viewProp.hlsli"
 
 
-float4 main(VertextoPixel PSIn) : SV_TARGET
+float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float4 color = float4(0,0,0,0);
 	//float numSampling = 0.0f;
@@ -11,7 +10,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 	color += xTexture.SampleLevel(Sampler,PSIn.tex,0);
 	//numSampling++;
 
-	float targetDepth = xPostProcess.z;
+	float targetDepth = xPPParams[2];
 
 	//if(targetDepth){
 		float fragmentDepth = ( xSceneDepthMap.SampleLevel(Sampler,PSIn.tex,0).r );
