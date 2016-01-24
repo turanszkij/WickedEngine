@@ -13,11 +13,14 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 {
 	clip(dither(PSIn.pos.xy) - PSIn.dither);
 
-	float4 baseColor = float4(0, 0, 0, 1);
+	float4 baseColor = g_xMat_diffuseColor;
 	float depth = PSIn.pos2D.z;
 
+	PSIn.tex *= g_xMat_texMulAdd.xy;
+	PSIn.tex += g_xMat_texMulAdd.zw;
+
 	if (g_xMat_hasTex) {
-		baseColor = xTextureTex.Sample(texSampler, PSIn.tex);
+		baseColor *= xTextureTex.Sample(texSampler, PSIn.tex);
 	}
 	baseColor.rgb *= PSIn.instanceColor;
 
@@ -33,7 +36,7 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 		//NORMALMAP
 		float3 bumpColor = 0;
 		if (g_xMat_hasNor){
-			float4 nortex = xTextureNor.Sample(texSampler, PSIn.tex + g_xMat_movingTex);
+			float4 nortex = xTextureNor.Sample(texSampler, PSIn.tex);
 				if (nortex.a>0){
 					float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex.xy);
 						bumpColor = 2.0f * nortex.rgb - 1.0f;
@@ -63,7 +66,7 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 
 		applySpecular(baseColor, g_xWorld_SunColor, normal, eyevector, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, spec.a, 0);
 
-		baseColor = pow(abs(baseColor*(1 + g_xMat_emit)), INV_GAMMA);
+		baseColor = pow(abs(baseColor*(1 + g_xMat_emissive)), INV_GAMMA);
 
 		baseColor.rgb = applyFog(baseColor.rgb, getFog(getLinearDepth(depth / PSIn.pos2D.w)));
 	}

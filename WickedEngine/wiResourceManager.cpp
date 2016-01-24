@@ -48,14 +48,18 @@ void wiResourceManager::SetUp()
 
 const wiResourceManager::Resource* wiResourceManager::get(const string& name, bool incRefCount)
 {
+	LOCK();
 	container::iterator it = resources.find(name);
 	if (it != resources.end())
 	{
 		if(incRefCount)
 			it->second->refCount++;
+		UNLOCK();
 		return it->second;
 	}
-	else return nullptr;
+
+	UNLOCK();
+	return nullptr;
 }
 
 void* wiResourceManager::add(const string& name, Data_Type newType
@@ -95,9 +99,9 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 				|| !ext.compare("PNG")
 				)
 			{
-				wiRenderer::graphicsMutex.lock();
+				wiRenderer::Lock();
 				CreateWICTextureFromFile(true,wiRenderer::graphicsDevice,wiRenderer::getImmediateContext(),(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
-				wiRenderer::graphicsMutex.unlock();
+				wiRenderer::Unlock();
 			}
 			else if(!ext.compare("dds")){
 				CreateDDSTextureFromFile(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
@@ -247,11 +251,17 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 
 bool wiResourceManager::del(const string& name, bool forceDelete)
 {
+	LOCK();
 	Resource* res = nullptr;
 	container::iterator it = resources.find(name);
 	if (it != resources.end())
 		res = it->second;
-	else return false;
+	else
+	{
+		UNLOCK();
+		return false;
+	}
+	UNLOCK();
 
 	if(res && (res->refCount<=1 || forceDelete)){
 		LOCK();

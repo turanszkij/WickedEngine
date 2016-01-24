@@ -287,7 +287,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 					break;
 				case 'i':
 					{
-						file>>currentMat->emit;
+						file>>currentMat->emissive;
 					}
 					break;
 				default:break;
@@ -1945,8 +1945,8 @@ void Model::UpdateModel()
 		Material* iMat = iter->second;
 		iMat->framesToWaitForTexCoordOffset -= 1.0f;
 		if (iMat->framesToWaitForTexCoordOffset <= 0) {
-			iMat->texOffset.x += iMat->movingTex.x*wiRenderer::GetGameSpeed();
-			iMat->texOffset.y += iMat->movingTex.y*wiRenderer::GetGameSpeed();
+			iMat->texMulAdd.z += iMat->movingTex.x*wiRenderer::GetGameSpeed();
+			iMat->texMulAdd.w += iMat->movingTex.y*wiRenderer::GetGameSpeed();
 			iMat->framesToWaitForTexCoordOffset = iMat->movingTex.z*wiRenderer::GetGameSpeed();
 		}
 	}

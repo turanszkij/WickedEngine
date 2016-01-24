@@ -47,7 +47,7 @@ void wiLensFlare::Draw(TextureView depthMap, DeviceContext context, const XMVECT
 		(*cb).mScreen = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 0);
 
 		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
-		wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer));
+		wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),context);
 
 	
 		wiRenderer::BindRasterizerState(rasterizerState,context);

@@ -22,10 +22,10 @@ PixelOutputType main(PixelInputType PSIn)
 	ScreenCoordPrev.x = PSIn.pos2DPrev.x / PSIn.pos2DPrev.w / 2.0f + 0.5f;
 	ScreenCoordPrev.y = -PSIn.pos2DPrev.y / PSIn.pos2DPrev.w / 2.0f + 0.5f;
 
-
-	PSIn.tex+= g_xMat_movingTex;
+	PSIn.tex *= g_xMat_texMulAdd.xy;
+	PSIn.tex += g_xMat_texMulAdd.zw;
 	[branch]if(g_xMat_hasTex) {
-		baseColor = xTextureTex.Sample(texSampler,PSIn.tex);
+		baseColor *= xTextureTex.Sample(texSampler,PSIn.tex);
 	}
 	baseColor.rgb *= PSIn.instanceColor;
 	
@@ -38,7 +38,7 @@ PixelOutputType main(PixelInputType PSIn)
 	//NORMALMAP
 	float3 bumpColor=0;
 	if(g_xMat_hasNor){
-		float4 nortex = xTextureNor.Sample(texSampler,PSIn.tex+ g_xMat_movingTex);
+		float4 nortex = xTextureNor.Sample(texSampler,PSIn.tex);
 		if(nortex.a>0){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex.xy);
 			bumpColor = 2.0f * nortex.rgb - 1.0f;
@@ -93,7 +93,7 @@ PixelOutputType main(PixelInputType PSIn)
 	float2 vel = ScreenCoord - ScreenCoordPrev;
 
 			
-	Out.col = float4(baseColor.rgb*(1+ g_xMat_emit)*PSIn.ao,1);
+	Out.col = float4(baseColor.rgb*(1+ g_xMat_emissive)*PSIn.ao,1);
 	Out.nor = float4(normal.xyz,properties);
 	Out.vel = float4(vel, g_xMat_specular_power,spec.a);
 

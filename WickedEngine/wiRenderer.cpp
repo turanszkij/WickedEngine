@@ -273,12 +273,12 @@ void wiRenderer::DestroyDevice()
 }
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
 {
-	wiRenderer::graphicsMutex.lock();
+	Lock();
 
-	wiRenderer::getImmediateContext()->RSSetViewports( 1, &viewPort );
-	wiRenderer::getImmediateContext()->OMSetRenderTargets( 1, &renderTargetView, 0 );
+	immediateContext->RSSetViewports( 1, &viewPort );
+	immediateContext->OMSetRenderTargets( 1, &renderTargetView, 0 );
 	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-    wiRenderer::getImmediateContext()->ClearRenderTargetView( renderTargetView, ClearColor );
+	immediateContext->ClearRenderTargetView( renderTargetView, ClearColor );
 	//wiRenderer::getImmediateContext()->ClearDepthStencilView( g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	
@@ -301,9 +301,11 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 	}
 
 
-	wiRenderer::getImmediateContext()->OMSetRenderTargets(NULL, NULL,NULL);
+	immediateContext->OMSetRenderTargets(0,nullptr,nullptr);
 
-	wiRenderer::graphicsMutex.unlock();
+	UnbindTextures(0, 16, immediateContext);
+
+	Unlock();
 }
 void wiRenderer::ReleaseCommandLists()
 {
@@ -739,60 +741,74 @@ void wiRenderer::LoadBuffers()
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-
 	//Persistent buffers...
 	bd.ByteWidth = sizeof(WorldCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_WORLD]);
-	BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-	BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-	BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-	BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-	BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
 
 	bd.ByteWidth = sizeof(FrameCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_FRAME]);
-	BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-	BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-	BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-	BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-	BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
 
 	bd.ByteWidth = sizeof(CameraCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CAMERA]);
-	BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-	BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-	BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-	BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-	BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
 
 	bd.ByteWidth = sizeof(MaterialCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_MATERIAL]);
-	BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-	BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-	BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-	BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-	BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
 
 	bd.ByteWidth = sizeof(DirectionalLightCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_DIRLIGHT]);
-	BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
-	BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
 
 	bd.ByteWidth = sizeof(MiscCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_MISC]);
-	BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-	BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-	BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-	BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-	BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
 
 	bd.ByteWidth = sizeof(ShadowCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_SHADOW]);
-	BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB));
 
 	bd.ByteWidth = sizeof(APICB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CLIPPLANE]);
-	BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB));
+
+	// Bind once and forget
+	{
+		Lock();
+
+		BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+		BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+		BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+		BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+		BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
+
+		BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+		BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+		BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+		BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+		BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
+
+		BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+		BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+		BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+		BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+		BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
+
+		BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+		BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+		BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+		BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+		BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
+
+		BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
+		BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
+
+		BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+		BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+		BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+		BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+		BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
+
+		BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB));
+
+		BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB));
+
+		Unlock();
+	}
 
 
 	// On demand buffers...
@@ -813,6 +829,7 @@ void wiRenderer::LoadBuffers()
 
 	bd.ByteWidth = sizeof(BoneCB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_BONEBUFFER]);
+
 }
 
 void wiRenderer::LoadBasicShaders()
@@ -1000,7 +1017,7 @@ void wiRenderer::ReloadShaders(const string& path)
 		SHADERPATH = path;
 	}
 
-	graphicsMutex.lock();
+	Lock();
 	wiResourceManager::GetShaderManager()->CleanUp();
 	LoadBasicShaders();
 	LoadLineShaders();
@@ -1014,7 +1031,7 @@ void wiRenderer::ReloadShaders(const string& path)
 	wiFont::LoadShaders();
 	wiImage::LoadShaders();
 	wiLensFlare::LoadShaders();
-	graphicsMutex.unlock();
+	Unlock();
 }
 
 
@@ -1689,8 +1706,7 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 					}
 					UpdateBuffer(constantBuffers[CBTYPE_BONEBUFFER], bonebuf, context);
 
-					BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB));
-					BindConstantBufferGS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB));
+					BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
 
 					// Do the skinning
 					BindVertexBuffer(mesh->meshVertBuff, 0, sizeof(SkinnedVertex), context);
@@ -2115,13 +2131,15 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 	BindDepthStencilState(stencilReadState,stencilRef,context);
 	BindRasterizerState(backFaceRS,context);
 
+	BindVertexLayout(nullptr, context);
 	BindVertexBuffer(nullptr, 0, 0, context);
+	BindIndexBuffer(nullptr, context);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB));
-	BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB));
+	BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), context);
+	BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), context);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB));
-	BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB));
+	BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), context);
+	BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), context);
 
 	for(int type=0;type<3;++type){
 
@@ -2221,6 +2239,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 
 		BindPrimitiveTopology(TRIANGLELIST,context);
 		BindVertexLayout(nullptr);
+		BindVertexBuffer(nullptr, 0, 0, context);
+		BindIndexBuffer(nullptr, context);
 		BindBlendState(blendStateAdd,context);
 		BindDepthStencilState(depthReadStencilState,STENCILREF_DEFAULT,context);
 		BindRasterizerState(nonCullRS,context);
@@ -2228,8 +2248,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 		
 		BindPS(vLightPS,context);
 
-		BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB));
-		BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB));
+		BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), context);
+		BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), context);
 
 
 		for(int type=1;type<3;++type){
@@ -2604,7 +2624,8 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 				BindVS(cubeShVS, context);
 				BindGS(cubeShGS, context);
 
-				BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB));
+				BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), context);
+				BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), context);
 
 				int i = 0;
 				for (Light* l : orderedPointLights)
@@ -2791,7 +2812,14 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 		BindBlendState(blendState,context);
 
 		if(!wireRender) {
-			BindTexturePS(enviroMap,0,context);
+			if (enviroMap != nullptr)
+			{
+				BindTexturePS(enviroMap, 0, context);
+			}
+			else
+			{
+				UnbindTextures(0, 1, context);
+			}
 			if(refRes != nullptr) 
 				BindTexturePS(refRes,1,context);
 		}
@@ -2902,11 +2930,22 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 		BindSamplerPS(texSampler,0,context);
 		BindSamplerPS(mapSampler,1,context);
 	
-		if(!wireRender) BindTexturePS(enviroMap,0,context);
-		if(!wireRender) BindTexturePS(refRes,1,context);
-		if(!wireRender) BindTexturePS(refracRes,2,context);
-		if(!wireRender) BindTexturePS(depth,7,context);
-		if(!wireRender) BindTexturePS(waterRippleNormals, 8, context);
+		if (!wireRender)
+		{
+
+			if (enviroMap != nullptr)
+			{
+				BindTexturePS(enviroMap, 0, context);
+			}
+			else
+			{
+				UnbindTextures(0, 1, context);
+			}
+			BindTexturePS(refRes,1,context);
+			BindTexturePS(refracRes,2,context);
+			BindTexturePS(depth,7,context);
+			BindTexturePS(waterRippleNormals, 8, context);
+		}
 
 
 		BindBlendState(blendState,context);
@@ -3034,7 +3073,7 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 		if (!boundCB)
 		{
 			boundCB = true;
-			BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB));
+			BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),context);
 		}
 
 		BindTexturePS(depth, 1, context);
@@ -3185,7 +3224,7 @@ void wiRenderer::UpdateCameraCB(DeviceContext context)
 	(*cb).mPrevP = XMMatrixTranspose(prevCam->GetProjection());
 	(*cb).mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
 	(*cb).mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
-	(*cb).mInvP = XMMatrixTranspose(XMMatrixInverse(nullptr, (*cb).mProj));
+	(*cb).mInvP = XMMatrixInverse(nullptr, (*cb).mVP);
 	(*cb).mCamPos = camera->translation;
 	(*cb).mAt = camera->At;
 	(*cb).mUp = camera->Up;
@@ -3417,7 +3456,7 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 		}
 	}
 	
-	graphicsMutex.lock();
+	Lock();
 
 	Update();
 
@@ -3440,12 +3479,12 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 
 
-	UpdateRenderData(nullptr);
+	//UpdateRenderData(nullptr);
 
 	SetUpCubes();
 	SetUpBoneLines();
 
-	graphicsMutex.unlock();
+	Unlock();
 
 
 
@@ -3458,9 +3497,9 @@ void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
 	if(physicsEngine)
 		physicsEngine->addWind(GetScene().wind.direction);
 
-	graphicsMutex.lock();
+	Lock();
 	UpdateWorldCB(getImmediateContext());
-	graphicsMutex.unlock();
+	Unlock();
 }
 Scene& wiRenderer::GetScene()
 {
@@ -3555,11 +3594,12 @@ void wiRenderer::MaterialCB::Create(const Material& mat,UINT materialIndex){
 	hasSpe = mat.specularMap != nullptr;
 	specular = mat.specular;
 	refractionIndex = mat.refraction_index;
-	movingTex = mat.texOffset;
+	texMulAdd = mat.texMulAdd;
 	metallic = mat.enviroReflection;
 	shadeless = mat.shadeless;
 	specular_power = mat.specular_power;
 	toon = mat.toonshading;
 	matIndex = materialIndex;
-	emit = mat.emit;
+	emissive = mat.emissive;
+	roughness = mat.roughness;
 }

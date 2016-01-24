@@ -33,8 +33,6 @@ void wiImage::LoadBuffers()
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
-	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB));
-	wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB));
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = D3D11_USAGE_DYNAMIC;
@@ -42,7 +40,15 @@ void wiImage::LoadBuffers()
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &processCb);
-	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(PostProcessCB));
+
+	{
+		wiRenderer::Lock();
+		wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB));
+		wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB));
+
+		wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(PostProcessCB));
+		wiRenderer::Unlock();
+	}
 }
 
 void wiImage::LoadShaders()
@@ -68,78 +74,6 @@ void wiImage::LoadShaders()
 	deferredPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
 	ssrPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssr.cso", wiResourceManager::PIXELSHADER));
 	
-
-
-
- //   ID3DBlob* pVSBlob = NULL;
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/imageVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load imageVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &vertexShader );
-	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
-
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/screenVS.cso", &pVSBlob))){MessageBox(0,L"Failed To load screenVS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreateVertexShader( pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), NULL, &screenVS );
-	//if(pVSBlob){ pVSBlob->Release();pVSBlob=NULL; }
-
-
-	//ID3DBlob* pPSBlob = NULL;
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/imagePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load imagePS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &pixelShader );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-
-	//if(FAILED(D3DReadFileToBlob(L"shaders/horizontalBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load horizontalBlurPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blurHPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/verticalBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load verticalBlurPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &blurVPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/lightShaftPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load lightShaftPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &shaftPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/outlinePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load outlinePS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &outlinePS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/depthofFieldPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load depthofFieldPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &dofPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/motionBlurPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load motionBlurPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &motionBlurPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/bloomSeparatePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load bloomSeparatePS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &bloomSeparatePS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/fxaa.cso", &pPSBlob))){MessageBox(0,L"Failed To load fxaa.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &fxaaPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/ssao.cso", &pPSBlob))){MessageBox(0,L"Failed To load ssao.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ssaoPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/ssss.cso", &pPSBlob))){MessageBox(0,L"Failed To load ssss.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &ssssPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/linDepthPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load linDepthPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &linDepthPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/colorGradePS.cso", &pPSBlob))){MessageBox(0,L"Failed To load colorGradePS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &colorGradePS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
-	//
-	//if(FAILED(D3DReadFileToBlob(L"shaders/deferredPS.cso", &pPSBlob))){MessageBox(0,L"Failed To load deferredPS.cso",0,0);}
-	//wiRenderer::graphicsDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &deferredPS );
-	//if(pPSBlob){ pPSBlob->Release();pPSBlob=NULL; }
 }
 void wiImage::SetUpStates()
 {
@@ -282,8 +216,9 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			break;
 		}
 		wiRenderer::BindBlendState(blendState, context);
-		wiRenderer::BindVS(vertexShader, context);
-		wiRenderer::BindPS(pixelShader, context);
+		wiRenderer::BindVertexLayout(nullptr, context);
+		wiRenderer::BindVertexBuffer(nullptr, 0, 0, context);
+		wiRenderer::BindIndexBuffer(nullptr, context);
 	}
 
 	if(!effects.blur){
@@ -320,13 +255,29 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 				(*cb).mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
 			}
 	
-			(*cb).mOffsetMirFade = XMFLOAT4(effects.offset.x,effects.offset.y,effects.mirror,effects.fade);
 			(*cb).mDrawRec = effects.drawRec;
-			(*cb).mBlurOpaPiv = XMFLOAT4(effects.blurDir, effects.blur, effects.opacity, (float)effects.pivotFlag);
-			(*cb).mTexOffset = XMFLOAT4(effects.texOffset.x, effects.texOffset.y, effects.mipLevel, 0);
+			(*cb).mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
+			(*cb).mOffsetX = effects.offset.x;
+			(*cb).mOffsetY = effects.offset.y;
+			(*cb).mPivot = (UINT)effects.pivotFlag;
+			(*cb).mFade = effects.fade;
+			(*cb).mOpacity = effects.opacity;
+			(*cb).mMask = effects.maskMap != nullptr;
+			(*cb).mDistort = effects.normalMap != nullptr; 
+			(*cb).mMirror = effects.mirror;
+			
+			int normalmapmode = 0;
+			if(effects.normalMap && effects.refractionMap)
+				normalmapmode=1;
+			if(effects.extractNormalMap==true)
+				normalmapmode=2;
+			(*cb).mNormalmapSeparate = normalmapmode;
+			(*cb).mMipLevel = effects.mipLevel;
 
 			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
-	
+
+			wiRenderer::BindVS(vertexShader, context);
+			wiRenderer::BindPS(pixelShader, context);
 		}
 		else if(!effects.sunPos.x && !effects.sunPos.y){
 			wiRenderer::BindVS(screenVS,context);
@@ -376,26 +327,28 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			(*prcb).params[1] = 0.25f;
 			(*prcb).params[2] = 0.945f;
 			(*prcb).params[3] = 0.2f;
+			(*prcb).params[4] = effects.sunPos.x;
+			(*prcb).params[5] = effects.sunPos.y;
 
 			wiRenderer::UpdateBuffer(processCb,prcb,context);
 		}
 
 		
-		int normalmapmode=0;
-		if(effects.normalMap && effects.refractionMap)
-			normalmapmode=1;
-		if(effects.extractNormalMap==true)
-			normalmapmode=2;
-		(*prcb).params[0] = (effects.maskMap ? 1.f : 0.f);
-		(*prcb).params[1] = effects.fade;
-		(*prcb).params[2] = effects.opacity;
-		(*prcb).params[3] = (float)normalmapmode;
-		(*prcb).params[4] = (float)wiRenderer::GetScreenWidth();
-		(*prcb).params[5] = (float)wiRenderer::GetScreenHeight();
-		(*prcb).params[6] = effects.siz.x;
-		(*prcb).params[7] = effects.siz.y;
+		//int normalmapmode=0;
+		//if(effects.normalMap && effects.refractionMap)
+		//	normalmapmode=1;
+		//if(effects.extractNormalMap==true)
+		//	normalmapmode=2;
+		//(*prcb).params[0] = (effects.maskMap ? 1.f : 0.f);
+		//(*prcb).params[1] = effects.fade;
+		//(*prcb).params[2] = effects.opacity;
+		//(*prcb).params[3] = (float)normalmapmode;
+		//(*prcb).params[4] = (float)wiRenderer::GetScreenWidth();
+		//(*prcb).params[5] = (float)wiRenderer::GetScreenHeight();
+		//(*prcb).params[6] = effects.siz.x;
+		//(*prcb).params[7] = effects.siz.y;
 
-		wiRenderer::UpdateBuffer(processCb,prcb,context);
+		//wiRenderer::UpdateBuffer(processCb,prcb,context);
 		
 		wiRenderer::BindTexturePS(effects.depthMap,0,context);
 		wiRenderer::BindTexturePS(effects.normalMap,1,context);
@@ -408,11 +361,11 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 		
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
-			(*prcb).params[0] = 1.0f / wiRenderer::GetScreenWidth();
+			(*prcb).params[7] = 1.0f / wiRenderer::GetScreenWidth();
 		}
 		else{
 			wiRenderer::BindPS(blurVPS,context);
-			(*prcb).params[0] = 1.0f / wiRenderer::GetScreenHeight();
+			(*prcb).params[7] = 1.0f / wiRenderer::GetScreenHeight();
 		}
 
 		float weight0 = 1.0f;
@@ -483,6 +436,10 @@ void wiImage::DrawDeferred(TextureView texture
 	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
 	wiRenderer::BindRasterizerState(rasterizerState,context);
 	wiRenderer::BindDepthStencilState(depthNoStencilState,stencilRef,context);
+
+	wiRenderer::BindVertexLayout(nullptr, context);
+	wiRenderer::BindVertexBuffer(nullptr, 0, 0, context);
+	wiRenderer::BindIndexBuffer(nullptr, context);
 
 	wiRenderer::BindVS(screenVS,context);
 	wiRenderer::BindPS(deferredPS,context);

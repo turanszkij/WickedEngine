@@ -16,7 +16,7 @@ float4 sampleAs3DTexture(float3 uv, float width) {
     return result;
 }
 
-float4 main(VertextoPixel PSIn) : SV_TARGET
+float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float4 color = xTexture.Load(int3(PSIn.pos.xy,0));
 	

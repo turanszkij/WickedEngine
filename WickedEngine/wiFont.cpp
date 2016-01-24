@@ -129,7 +129,9 @@ void wiFont::SetUpCB()
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
+	wiRenderer::Lock();
 	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer));
+	wiRenderer::Unlock();
 }
 void wiFont::LoadShaders()
 {

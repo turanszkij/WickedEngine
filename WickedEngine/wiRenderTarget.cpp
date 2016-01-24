@@ -181,8 +181,6 @@ void wiRenderTarget::Activate(DeviceContext context, wiDepthTarget* getDepth)
 }
 void wiRenderTarget::Set(DeviceContext context)
 {
-	//TextureView t[]={nullptr};
-	//context->PSSetShaderResources(6,1,t);
 	if(context!=nullptr){
 		context->RSSetViewports(1, &viewPort);
 		context->OMSetRenderTargets(numViews, renderTarget.data(),(depth?depth->depthTarget:nullptr));
@@ -190,8 +188,6 @@ void wiRenderTarget::Set(DeviceContext context)
 }
 void wiRenderTarget::Set(DeviceContext context, wiDepthTarget* getDepth)
 {
-	//TextureView t[]={nullptr};
-	//context->PSSetShaderResources(6,1,t);
 	if(context!=nullptr){
 		depth = getDepth;
 		context->RSSetViewports(1, &viewPort);

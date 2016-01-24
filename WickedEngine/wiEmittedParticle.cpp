@@ -257,7 +257,7 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, Textu
 		
 
 			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
-			wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer));
+			wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),context);
 
 			wiRenderer::BindRasterizerState(wireRender?wireFrameRS:rasterizerState,context);
 			wiRenderer::BindDepthStencilState(depthStencilState,1,context);

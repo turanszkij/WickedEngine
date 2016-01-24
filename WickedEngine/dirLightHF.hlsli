@@ -1,12 +1,6 @@
 #include "toonHF.hlsli"
 
-CBUFFER(DirLightCB, CBSLOT_RENDERER_DIRLIGHT)
-{
-	float4 lightDir;
-	float4 lightColor;
-	float4 xBiasResSoftshadow;
-	float4x4 xShMat[3];
-};
+// dir light constant buffer is global
 
 Texture2D<float> xTextureSh[3]:register(t4);
 SamplerComparisonState compSampler:register(s1);
@@ -17,7 +11,7 @@ inline float offset_lookup(Texture2D<float> intex, SamplerComparisonState map,
 					 float scale,
 					 float realDistance)
 {
-	float BiasedDistance = realDistance - xBiasResSoftshadow.x;
+	float BiasedDistance = realDistance - g_xDirLight_mBiasResSoftshadow.x;
 
 	return intex.SampleCmpLevelZero( map, loc + offset / scale, BiasedDistance).r;
 }
@@ -26,13 +20,13 @@ inline float offset_lookup(Texture2D<float> intex, SamplerComparisonState map,
 inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shadowTexture){
 	float realDistance = shadowPos.z/shadowPos.w;
 	float sum = 0;
-	float scale = xBiasResSoftshadow.y;
+	float scale = g_xDirLight_mBiasResSoftshadow.y;
 	float retVal = 1;
 	
-	[branch]if(xBiasResSoftshadow.z){
+	[branch]if(g_xDirLight_mBiasResSoftshadow.z){
 		float samples = 0.0f;
 		float range = 0.5f;
-		if(xBiasResSoftshadow.z==2.0f) range = 1.5f;
+		if(g_xDirLight_mBiasResSoftshadow.z==2.0f) range = 1.5f;
 		for (float y = -range; y <= range; y += 1.0f)
 			for (float x = -range; x <= range; x += 1.0f)
 			{
@@ -49,12 +43,12 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 
 inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color, in bool toonshaded=false)
 {
-	float difLight=saturate(dot(normal.xyz,lightDir.xyz));
+	float difLight=saturate(dot(normal.xyz, g_xDirLight_direction.xyz));
 	[branch]if(toonshaded) toon(difLight);
 	float4 ShPos[3];
-		ShPos[0] = mul(float4(pos3D,1),xShMat[0]);
-		ShPos[1] = mul(float4(pos3D,1),xShMat[1]);
-		ShPos[2] = mul(float4(pos3D,1),xShMat[2]);
+		ShPos[0] = mul(float4(pos3D,1),g_xDirLight_ShM[0]);
+		ShPos[1] = mul(float4(pos3D,1),g_xDirLight_ShM[1]);
+		ShPos[2] = mul(float4(pos3D,1),g_xDirLight_ShM[2]);
 	float3 ShTex[3];
 		ShTex[0] = ShPos[0].xyz*float3(1,-1,1)/ShPos[0].w/2.0f +0.5f;
 		ShTex[1] = ShPos[1].xyz*float3(1,-1,1)/ShPos[1].w/2.0f +0.5f;

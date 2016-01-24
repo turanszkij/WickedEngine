@@ -15,7 +15,9 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 
 	float3 normal = normalize(PSIn.nor);
 	float4 spec = g_xMat_specular;
-	float4 baseColor = float4(0,0,0,1);
+	float4 baseColor = float4(0,0,0,1); 
+	
+	PSIn.tex *= g_xMat_texMulAdd.xy;
 	
 		float3 eyevector = normalize(g_xCamera_CamPos - PSIn.pos3D);
 		float2 screenPos;
@@ -31,8 +33,8 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		float3 bumpColor=0;
 		if(g_xMat_hasNor){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex);
-			bumpColor0 = 2.0f * xTextureNor.Sample(texSampler,PSIn.tex- g_xMat_movingTex.yy).rg - 1.0f;
-			bumpColor1 = 2.0f * xTextureNor.Sample(texSampler,PSIn.tex+ g_xMat_movingTex).rg - 1.0f;
+			bumpColor0 = 2.0f * xTextureNor.Sample(texSampler,PSIn.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
+			bumpColor1 = 2.0f * xTextureNor.Sample(texSampler,PSIn.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
 			bumpColor2 = xRippleMap.Sample(texSampler,screenPos).rg;
 			bumpColor= float3( bumpColor0+bumpColor1+bumpColor2,1 )  * g_xMat_refractionIndex;
 			normal = normalize(mul(normalize(bumpColor), tangentFrame));
@@ -88,7 +90,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		applySpecular(baseColor, g_xWorld_SunColor, normal, eyevector, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, spec.w, 0);
 		
 
-		baseColor.rgb = pow(abs(baseColor.rgb*(1 + g_xMat_emit)), INV_GAMMA) + g_xMat_emit;
+		baseColor.rgb = pow(abs(baseColor.rgb*(1 + g_xMat_emissive)), INV_GAMMA);
 
 		baseColor.rgb = applyFog(baseColor.rgb,getFog(getLinearDepth(depth/PSIn.pos2D.w)));
 		

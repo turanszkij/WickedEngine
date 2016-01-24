@@ -428,7 +428,7 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 		(*gcb).drawdistance = (float)LOD[2];
 		
 		wiRenderer::UpdateBuffer(cbgs,gcb,context);
-		wiRenderer::BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer));
+		wiRenderer::BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),context);
 
 		wiRenderer::BindDepthStencilState(dss,STENCILREF_DEFAULT,context);
 

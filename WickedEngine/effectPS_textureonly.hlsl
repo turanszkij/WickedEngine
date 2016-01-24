@@ -7,13 +7,14 @@
 
 float4 main(PixelInputType PSIn) : SV_TARGET
 {
-	float4 baseColor = float4(0,0,0,1);
+	float4 baseColor = g_xMat_diffuseColor;
 
-	baseColor = g_xMat_diffuseColor;
+	PSIn.tex *= g_xMat_texMulAdd.xy;
+	PSIn.tex += g_xMat_texMulAdd.zw;
 	
 	//if(PSIn.mat==matIndex){
 		if(g_xMat_hasTex) {
-			baseColor = xTextureTex.Sample(texSampler,PSIn.tex);
+			baseColor *= xTextureTex.Sample(texSampler,PSIn.tex);
 		}
 		baseColor.rgb *= PSIn.instanceColor;
 		//baseColor=pow(baseColor,GAMMA);
@@ -28,6 +29,6 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 	//}
 	//else discard;
 	
-	return baseColor*(1 + g_xMat_emit);
+	return baseColor*(1 + g_xMat_emissive);
 }
 

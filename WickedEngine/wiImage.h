@@ -12,14 +12,22 @@ private:
 protected:
 	GFX_STRUCT ImageCB
 	{
-		XMMATRIX mViewProjection;
-		XMMATRIX mTrans;
-		XMFLOAT4 mDimensions;
-		XMFLOAT4 mOffsetMirFade;
-		XMFLOAT4 mDrawRec;
-		XMFLOAT4 mBlurOpaPiv;
-		XMFLOAT4 mTexOffset;
-		XMFLOAT4 mMaskDistort;
+		XMMATRIX	mViewProjection;
+		XMMATRIX	mTrans;
+		XMFLOAT4	mDimensions;
+		XMFLOAT4	mDrawRec;
+		XMFLOAT4	mTexMulAdd;
+		UINT		mPivot;
+		UINT		mMask;
+		UINT		mDistort;
+		UINT		mNormalmapSeparate;
+		float		mOffsetX;
+		float		mOffsetY;
+		float		mMirror;
+		float		mFade;
+		float		mOpacity;
+		float		mMipLevel;
+		float pad[2];
 
 		CB_SETBINDSLOT(CBSLOT_IMAGE_IMAGE)
 
@@ -27,7 +35,7 @@ protected:
 	};
 	GFX_STRUCT PostProcessCB
 	{
-		float params[16];
+		float params[8];
 
 		CB_SETBINDSLOT(CBSLOT_IMAGE_POSTPROCESS)
 

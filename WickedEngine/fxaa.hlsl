@@ -8,13 +8,7 @@
 //#define FXAA_QUALITY__PRESET 39
 #include "fxaa.hlsli"
 
-struct PS_IN
-{
-	float4 pos: SV_POSITION;
-    float2 uv: TEXCOORD;
-};
-
-float4 main(PS_IN I): SV_Target
+float4 main(VertexToPixelPostProcess PSIn): SV_Target
 {
     static const float fxaaSubpix = 0.75;
     static const float fxaaEdgeThreshold = 0.166;
@@ -25,5 +19,5 @@ float4 main(PS_IN I): SV_Target
 
     FxaaTex tex = { Sampler, xTexture };
 
-    return FxaaPixelShader(I.uv, 0, tex, tex, tex, 1 / fxaaFrame, 0, 0, 0, fxaaSubpix, fxaaEdgeThreshold, fxaaEdgeThresholdMin, 0, 0, 0, 0);
+    return FxaaPixelShader(PSIn.tex, 0, tex, tex, tex, 1 / fxaaFrame, 0, 0, 0, fxaaSubpix, fxaaEdgeThreshold, fxaaEdgeThresholdMin, 0, 0, 0, 0);
 }

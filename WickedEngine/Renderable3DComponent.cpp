@@ -244,6 +244,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	if (getVolumeLightsEnabled())
 	{
+		wiRenderer::UnbindTextures(0, 16, context);
 		rtVolumeLight.Activate(context, mainRT.depth);
 		wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), context);
 	}
@@ -261,6 +262,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawWaterRipples(context);
 	}
 
+	wiRenderer::UnbindTextures(0, 16, context);
 	rtTransparent.Activate(context, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front()
 			, rtWaterRipple.shaderResource.back(), rtLinearDepth.shaderResource.back()
@@ -312,6 +314,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceCont
 
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
+	wiRenderer::UnbindTextures(0, 16, context);
 	rtSun[0].Activate(context, mainRT.depth); {
 		wiRenderer::DrawSky(context);
 	}

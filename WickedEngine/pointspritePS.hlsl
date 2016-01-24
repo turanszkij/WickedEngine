@@ -45,5 +45,6 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 
 	//color.rgb*=PSIn.col.rgb;
 
-	return clamp( color, 0, inf );
+	//return clamp( color, 0, inf );
+	return max(color, 0);
 }

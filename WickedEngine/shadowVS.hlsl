@@ -30,7 +30,7 @@ VertextoPixel main(Input input)
 		pos=mul(pos,WORLD);
 		affectWind(pos.xyz,input.tex.w,input.id);
 
-		Out.pos = mul( pos, g_xCamera_VP );
+		Out.pos = mul( pos, g_xShadow_VP);
 		Out.tex = input.tex.xy;
 
 	}

@@ -126,13 +126,14 @@ struct Material
 	float alpha;
 	float refraction_index;
 	float enviroReflection;
-	float emit;
+	float emissive;
+	float roughness;
 
 	XMFLOAT4 specular;
 	int specular_power;
 	XMFLOAT3 movingTex;
 	float framesToWaitForTexCoordOffset;
-	XMFLOAT2 texOffset;
+	XMFLOAT4 texMulAdd;
 	bool isSky;
 
 	bool cast_shadow;
@@ -170,13 +171,14 @@ struct Material
 		alpha=1.0f;
 		refraction_index=0.0f;
 		enviroReflection=0.0f;
-		emit=0.0f;
+		emissive=0.0f;
+		roughness = 0.0f;
 
 		specular=XMFLOAT4(0,0,0,0);
 		specular_power=50;
 		movingTex=XMFLOAT3(0,0,0);
 		framesToWaitForTexCoordOffset=0;
-		texOffset=XMFLOAT2(0,0);
+		texMulAdd=XMFLOAT4(1,1,0,0);
 		isSky=water=shadeless=false;
 		cast_shadow=true;
 	}

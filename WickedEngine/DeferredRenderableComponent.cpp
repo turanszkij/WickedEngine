@@ -106,6 +106,7 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 	}
 	dtDepthCopy.CopyFrom(*rtGBuffer.depth, context);
 
+	wiRenderer::UnbindTextures(0, 16, context);
 	rtGBuffer.Set(context); {
 		wiRenderer::DrawDecals(wiRenderer::getCamera(), context, dtDepthCopy.shaderResource);
 	}

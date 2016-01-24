@@ -103,10 +103,10 @@ protected:
 	{
 		XMFLOAT4 mSun;
 		XMFLOAT4 mSunColor;
-		XMFLOAT3 mHorizon;
-		XMFLOAT3 mZenith;
-		XMFLOAT3 mAmbient;
-		XMFLOAT3 mFog;
+		XMFLOAT3 mHorizon;				float pad0;
+		XMFLOAT3 mZenith;				float pad1;
+		XMFLOAT3 mAmbient;				float pad2;
+		XMFLOAT3 mFog;					float pad3;
 		XMFLOAT2 mScreenWidthHeight;
 		float padding[2];
 
@@ -116,11 +116,11 @@ protected:
 	};
 	GFX_STRUCT FrameCB
 	{
-		XMFLOAT3 mWindDirection;
+		XMFLOAT3 mWindDirection;		float pad0;
 		float mWindTime;
 		float mWindWaveSize;
 		float mWindRandomness;
-		float padding[2];
+		float padding[1];
 		
 		CB_SETBINDSLOT(CBSLOT_RENDERER_FRAME)
 
@@ -136,12 +136,12 @@ protected:
 		XMMATRIX mPrevVP;
 		XMMATRIX mReflVP;
 		XMMATRIX mInvP;
-		XMFLOAT3   mCamPos;
-		XMFLOAT3   mAt;
-		XMFLOAT3   mUp;
-		float      mZNearP;
-		float      mZFarP;
-		float padding[3];
+		XMFLOAT3 mCamPos;		float pad0;
+		XMFLOAT3 mAt;			float pad1;
+		XMFLOAT3 mUp;			float pad2;
+		float    mZNearP;
+		float    mZFarP;
+		float padding[2];
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_CAMERA)
 
@@ -150,17 +150,20 @@ protected:
 	GFX_STRUCT MaterialCB
 	{
 		XMFLOAT4 difColor;
-		UINT hasRef,hasNor,hasTex,hasSpe;
 		XMFLOAT4 specular;
-		float refractionIndex;
-		XMFLOAT2 movingTex;
-		float metallic;
+		XMFLOAT4 texMulAdd;
+		UINT hasRef;
+		UINT hasNor;
+		UINT hasTex;
+		UINT hasSpe;
 		UINT shadeless;
 		UINT specular_power;
 		UINT toon;
 		UINT matIndex;
-		float emit;
-		float padding[3];
+		float refractionIndex;
+		float metallic;
+		float emissive;
+		float roughness;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
 
@@ -390,10 +393,10 @@ public:
 	
 public:
 	inline static void BindTexturePS(TextureView texture, int slot, DeviceContext context = immediateContext) {
-	if (context != nullptr && texture != nullptr) {
-		context->PSSetShaderResources(slot, 1, &texture);
+		if (context != nullptr && texture != nullptr) {
+			context->PSSetShaderResources(slot, 1, &texture);
+		}
 	}
-}
 	inline static void BindTexturesPS(TextureView textures[], int slot, int num, DeviceContext context = immediateContext) {
 		if (context != nullptr && textures != nullptr) {
 			context->PSSetShaderResources(slot, num, textures);
@@ -437,6 +440,22 @@ public:
 	inline static void BindTexturesHS(TextureView textures[], int slot, int num, DeviceContext context = immediateContext) {
 		if (context != nullptr && textures != nullptr) {
 			context->HSSetShaderResources(slot, num, textures);
+		}
+	}
+	inline static void UnbindTextures(int slot, int num, DeviceContext context = immediateContext)
+	{
+		assert(num <= 16 && "UnbindTextures limit of 16 reached!");
+		if (context != nullptr)
+		{
+			static TextureView empties[16] = {
+				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
+				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
+			};
+			context->PSSetShaderResources(slot, num, empties);
+			context->VSSetShaderResources(slot, num, empties);
+			context->GSSetShaderResources(slot, num, empties);
+			context->HSSetShaderResources(slot, num, empties);
+			context->DSSetShaderResources(slot, num, empties);
 		}
 	}
 	inline static void BindSamplerPS(Sampler sampler, int slot, DeviceContext context = immediateContext) {
