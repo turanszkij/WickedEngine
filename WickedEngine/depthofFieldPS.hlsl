@@ -10,7 +10,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	color += xTexture.SampleLevel(Sampler,PSIn.tex,0);
 	//numSampling++;
 
-	float targetDepth = xPPParams[2];
+	float targetDepth = xPPParams0[2];
 
 	//if(targetDepth){
 		float fragmentDepth = ( xSceneDepthMap.SampleLevel(Sampler,PSIn.tex,0).r );

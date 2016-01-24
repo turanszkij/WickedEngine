@@ -42,11 +42,12 @@ CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 	float		xOpacity;
 	float		xMipLevel;
 	float		xPadding_ImageCB[2];
-}
+};
 
 CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
 {
-	float		xPPParams[8];
+	float4		xPPParams0;
+	float4		xPPParams1;
 };
 
 #endif // _IMAGEHF_

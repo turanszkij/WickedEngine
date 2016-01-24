@@ -305,7 +305,7 @@ protected:
 	};
 	static BufferResource	constantBuffers[CBTYPE_LAST];
 	static BlendState		blendState, blendStateTransparent, blendStateAdd;
-	static VertexShader		vertexShader10, vertexShader,shVS,lineVS,trailVS,waterVS
+	static VertexShader		vertexShader10, vertexShader, vertexShaderRefl,shVS,lineVS,trailVS,waterVS
 		,lightVS[3],vSpotLightVS,vPointLightVS,cubeShVS,sOVS,decalVS;
 	static PixelShader		pixelShader,shPS,linePS,trailPS,simplestPS,blackoutPS,textureonlyPS,waterPS,transparentPS
 		,lightPS[3],vLightPS,cubeShPS,decalPS,fowardSimplePS;
@@ -316,7 +316,7 @@ protected:
 	static Sampler		texSampler, mapSampler, comparisonSampler, mirSampler, pointSampler;
 	static RasterizerState	rasterizerState,rssh,nonCullRSsh,wireRS,nonCullRS,nonCullWireRS,backFaceRS;
 	static DepthStencilState depthStencilState,xRayStencilState,depthReadStencilState,stencilReadState,stencilReadMatch;
-	static PixelShader		skyPS;
+	static PixelShader		skyPS, sunPS;
 	static VertexShader		skyVS;
 	static Sampler		skySampler;
 	static TextureView enviroMap,colorGrading;
@@ -684,10 +684,11 @@ public:
 	static void UpdateFrameCB(DeviceContext context);
 	static void UpdateCameraCB(DeviceContext context);
 	static void SetClipPlane(XMFLOAT4 clipPlane, DeviceContext context);
-	
+
 	static void DrawSky(DeviceContext context);
+	static void DrawSun(DeviceContext context);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
-		, bool BlackOut, SHADERTYPE shaded, TextureView refRes, bool grass, GRAPHICSTHREAD thread);
+		, bool BlackOut, bool isReflection, SHADERTYPE shaded, TextureView refRes, bool grass, GRAPHICSTHREAD thread);
 	//static void DrawForSO(DeviceContext context);
 	static void ClearShadowMaps(DeviceContext context);
 	static void DrawForShadowMap(DeviceContext context);

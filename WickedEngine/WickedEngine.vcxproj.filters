@@ -2130,6 +2130,12 @@
     <FxCompile Include="ssr.hlsl">
       <Filter>shaders\image</Filter>
     </FxCompile>
+    <FxCompile Include="sunPS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="effectVS_reflection.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="fonts\basic.dds">

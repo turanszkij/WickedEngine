@@ -46,7 +46,7 @@ void wiImage::LoadBuffers()
 		wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB));
 		wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB));
 
-		wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(PostProcessCB));
+		wiRenderer::BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB));
 		wiRenderer::Unlock();
 	}
 }
@@ -307,14 +307,14 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 				wiRenderer::BindPS(bloomSeparatePS,context);
 			else wiHelper::messageBox("Postprocess branch not implemented!");
 			
-			(*prcb).params[0] = effects.process.motionBlur; 
-			(*prcb).params[1] = effects.process.outline;
-			(*prcb).params[2] = effects.process.dofStrength;
-			(*prcb).params[3] = effects.process.ssss.x;
-			(*prcb).params[4] = effects.bloom.separate;
-			(*prcb).params[5] = effects.bloom.threshold;
-			(*prcb).params[6] = effects.bloom.saturation;
-			(*prcb).params[7] = effects.process.ssss.y;
+			(*prcb).params0[0] = effects.process.motionBlur; 
+			(*prcb).params0[1] = effects.process.outline;
+			(*prcb).params0[2] = effects.process.dofStrength;
+			(*prcb).params0[3] = effects.process.ssss.x;
+			(*prcb).params1[0] = effects.bloom.separate;
+			(*prcb).params1[1] = effects.bloom.threshold;
+			(*prcb).params1[2] = effects.bloom.saturation;
+			(*prcb).params1[3] = effects.process.ssss.y;
 
 			wiRenderer::UpdateBuffer(processCb,prcb,context);
 		}
@@ -323,12 +323,12 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			wiRenderer::BindPS(shaftPS,context);
 
 			 //Density|Weight|Decay|Exposure
-			(*prcb).params[0] = 0.65f;
-			(*prcb).params[1] = 0.25f;
-			(*prcb).params[2] = 0.945f;
-			(*prcb).params[3] = 0.2f;
-			(*prcb).params[4] = effects.sunPos.x;
-			(*prcb).params[5] = effects.sunPos.y;
+			(*prcb).params0[0] = 0.65f;
+			(*prcb).params0[1] = 0.25f;
+			(*prcb).params0[2] = 0.945f;
+			(*prcb).params0[3] = 0.2f;
+			(*prcb).params1[0] = effects.sunPos.x;
+			(*prcb).params1[1] = effects.sunPos.y;
 
 			wiRenderer::UpdateBuffer(processCb,prcb,context);
 		}
@@ -361,26 +361,26 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 		
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
-			(*prcb).params[7] = 1.0f / wiRenderer::GetScreenWidth();
+			(*prcb).params1[3] = 1.0f / wiRenderer::GetScreenWidth();
 		}
 		else{
 			wiRenderer::BindPS(blurVPS,context);
-			(*prcb).params[7] = 1.0f / wiRenderer::GetScreenHeight();
+			(*prcb).params1[3] = 1.0f / wiRenderer::GetScreenHeight();
 		}
 
-		float weight0 = 1.0f;
-		float weight1 = 0.9f;
-		float weight2 = 0.55f;
-		float weight3 = 0.18f;
-		float weight4 = 0.1f;
-		float normalization = (weight0 + 2.0f * (weight1 + weight2 + weight3 + weight4));
-		(*prcb).params[0] = weight0 / normalization;
-		(*prcb).params[1] = weight1 / normalization;
-		(*prcb).params[2] = weight2 / normalization;
-		(*prcb).params[3] = weight3 / normalization;
-		(*prcb).params[4] = weight4 / normalization;
-		(*prcb).params[5] = effects.blur;
-		(*prcb).params[6] = effects.mipLevel;
+		static float weight0 = 1.0f;
+		static float weight1 = 0.9f;
+		static float weight2 = 0.55f;
+		static float weight3 = 0.18f;
+		static float weight4 = 0.1f;
+		const float normalization = 1.0f / (weight0 + 2.0f * (weight1 + weight2 + weight3 + weight4));
+		(*prcb).params0[0] = weight0 * normalization;
+		(*prcb).params0[1] = weight1 * normalization;
+		(*prcb).params0[2] = weight2 * normalization;
+		(*prcb).params0[3] = weight3 * normalization;
+		(*prcb).params1[0] = weight4 * normalization;
+		(*prcb).params1[1] = effects.blur;
+		(*prcb).params1[2] = effects.mipLevel;
 
 		wiRenderer::UpdateBuffer(processCb,prcb,context);
 

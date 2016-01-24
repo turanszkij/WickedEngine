@@ -44,7 +44,7 @@ bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
 BlendState		wiRenderer::blendState, wiRenderer::blendStateTransparent, wiRenderer::blendStateAdd;
 BufferResource	wiRenderer::constantBuffers[wiRenderer::CBTYPE_LAST];
-VertexShader		wiRenderer::vertexShader10, wiRenderer::vertexShader, wiRenderer::shVS, wiRenderer::lineVS, wiRenderer::trailVS
+VertexShader		wiRenderer::vertexShader10, wiRenderer::vertexShader, wiRenderer::vertexShaderRefl, wiRenderer::shVS, wiRenderer::lineVS, wiRenderer::trailVS
 	,wiRenderer::waterVS,wiRenderer::lightVS[3],wiRenderer::vSpotLightVS,wiRenderer::vPointLightVS,wiRenderer::cubeShVS,wiRenderer::sOVS,wiRenderer::decalVS;
 PixelShader		wiRenderer::pixelShader, wiRenderer::shPS, wiRenderer::linePS, wiRenderer::trailPS, wiRenderer::simplestPS,wiRenderer::blackoutPS
 	,wiRenderer::textureonlyPS,wiRenderer::waterPS,wiRenderer::transparentPS,wiRenderer::lightPS[3],wiRenderer::vLightPS,wiRenderer::cubeShPS
@@ -58,7 +58,7 @@ RasterizerState	wiRenderer::rasterizerState, wiRenderer::rssh, wiRenderer::nonCu
 	,wiRenderer::backFaceRS;
 DepthStencilState	wiRenderer::depthStencilState,wiRenderer::xRayStencilState,wiRenderer::depthReadStencilState,wiRenderer::stencilReadState
 	,wiRenderer::stencilReadMatch;
-PixelShader		wiRenderer::skyPS;
+PixelShader		wiRenderer::skyPS, wiRenderer::sunPS;
 VertexShader		wiRenderer::skyVS;
 Sampler		wiRenderer::skySampler;
 TextureView wiRenderer::enviroMap,wiRenderer::colorGrading;
@@ -890,6 +890,7 @@ void wiRenderer::LoadBasicShaders()
 
 
 	vertexShader = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaderRefl = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	lightVS[0] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	lightVS[1] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	lightVS[2] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
@@ -937,7 +938,7 @@ void wiRenderer::LoadSkyShaders()
 {
 	skyVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	skyPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
-
+	sunPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiRenderer::LoadShadowShaders()
 {
@@ -1670,6 +1671,7 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 	if (context == nullptr)
 		return;
 
+	//UpdateWorldCB(context);
 	UpdateFrameCB(context);
 	UpdateCameraCB(context);
 
@@ -1696,6 +1698,8 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 						BindVS(sOVS, context);
 						BindGS(sOGS, context);
 						BindPS(nullptr, context);
+						BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
+						BindConstantBufferGS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
 					}
 
 					// Upload bones for skinning to shader
@@ -1706,7 +1710,6 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 					}
 					UpdateBuffer(constantBuffers[CBTYPE_BONEBUFFER], bonebuf, context);
 
-					BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
 
 					// Do the skinning
 					BindVertexBuffer(mesh->meshVertBuff, 0, sizeof(SkinnedVertex), context);
@@ -2750,7 +2753,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 }
 
 void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
-				  , bool BlackOut, SHADERTYPE shaded
+				  , bool BlackOut, bool isReflection, SHADERTYPE shaded
 				  , TextureView refRes, bool grass, GRAPHICSTHREAD thread)
 {
 	CulledCollection culledRenderer;
@@ -2779,7 +2782,16 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 		if(DX11Eff && tessF)
 			BindVS(vertexShader,context);
 		else
-			BindVS(vertexShader10,context);
+		{
+			if (isReflection)
+			{
+				BindVS(vertexShaderRefl, context);
+			}
+			else
+			{
+				BindVS(vertexShader10, context);
+			}
+		}
 		if(DX11Eff && tessF)
 			BindHS(hullShader,context);
 		else
@@ -3059,7 +3071,22 @@ void wiRenderer::DrawSky(DeviceContext context)
 	BindSamplerPS(skySampler,0,context);
 
 	BindVertexBuffer(nullptr,0,0,context);
+	BindVertexLayout(nullptr, context);
 	Draw(240,context);
+}
+void wiRenderer::DrawSun(DeviceContext context)
+{
+	BindPrimitiveTopology(TRIANGLELIST, context);
+	BindRasterizerState(backFaceRS, context);
+	BindDepthStencilState(depthReadStencilState, STENCILREF_SKY, context);
+	BindBlendState(blendStateAdd, context);
+
+	BindVS(skyVS, context);
+	BindPS(sunPS, context);
+
+	BindVertexBuffer(nullptr, 0, 0, context);
+	BindVertexLayout(nullptr, context);
+	Draw(240, context);
 }
 
 void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView depth)
@@ -3443,7 +3470,6 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 	Model* model = new Model;
 	model->LoadFromDisk(dir,name,idss.str());
-	LoadWorldInfo(dir, name);
 
 	model->transform(transform);
 
@@ -3487,6 +3513,7 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 	Unlock();
 
 
+	LoadWorldInfo(dir, name);
 
 
 	return model;

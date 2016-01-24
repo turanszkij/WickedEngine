@@ -35,7 +35,8 @@ protected:
 	};
 	GFX_STRUCT PostProcessCB
 	{
-		float params[8];
+		float params0[4];
+		float params1[4];
 
 		CB_SETBINDSLOT(CBSLOT_IMAGE_POSTPROCESS)
 

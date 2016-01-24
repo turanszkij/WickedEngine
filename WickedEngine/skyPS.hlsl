@@ -31,7 +31,7 @@ PSOut main(VSOut PSIn)
 	float3 col = 0;
 	//[branch]if(xFx.x==0){
 		col = /*lerp( xHorizon.rgb,*/ enviroTex.SampleLevel( texSampler,nor,0 ).rgb/*, saturate(nor.y/0.3f) )*/;
-		sun = clamp(pow(abs(dot(g_xWorld_SunDir.xyz,nor)),256)*g_xWorld_SunColor.rgb, 0, inf);
+		sun = max(pow(abs(dot(g_xWorld_SunDir.xyz,nor)),256)*g_xWorld_SunColor.rgb, 0);
 	//}
 	//else
 	//{

@@ -12,7 +12,7 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_Fog;					float xPadding3_WorldCB;
 	float2		g_xWorld_ScreenWidthHeight;
 	float		xPadding_WorldCB[2];
-}
+};
 
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {

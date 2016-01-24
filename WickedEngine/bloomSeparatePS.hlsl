@@ -12,5 +12,6 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	//return lerp(color,grey,xBloom.z);
 	
-	return max(xTexture.SampleLevel(Sampler,PSIn.tex,0)-1, 0);
+	return max(float4(xTexture.SampleLevel(Sampler,PSIn.tex,6).rgb-1,1), 0);
+	//return float4(0,1,0,1);
 }

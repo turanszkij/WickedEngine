@@ -76,7 +76,7 @@ void ForwardRenderableComponent::RenderScene(DeviceContext context)
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), context);
 
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, 0, context
-			, false, SHADERTYPE_FORWARD_SIMPLE
+			, false, false, SHADERTYPE_FORWARD_SIMPLE
 			, nullptr, true, GRAPHICSTHREAD_SCENE);
 		wiRenderer::DrawSky(context);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), context);

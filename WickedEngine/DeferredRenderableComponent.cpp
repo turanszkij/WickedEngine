@@ -88,7 +88,7 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), context);
 
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), wiRenderer::DX11, tessellationQuality, context, false
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), wiRenderer::DX11, tessellationQuality, context, false, false
 			, SHADERTYPE_DEFERRED, rtReflection.shaderResource.front(), true, GRAPHICSTHREAD_SCENE);
 
 		wiRenderer::DrawSky(context);

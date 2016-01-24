@@ -219,7 +219,7 @@ void Renderable3DComponent::RenderReflections(DeviceContext context){
 		wiRenderer::SetClipPlane(water, context);
 
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, context
-			, false, SHADERTYPE_NONE
+			, false, true, SHADERTYPE_NONE
 			, nullptr, getHairParticlesReflectionEnabled(), GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::DrawSky(context);
 	}
@@ -316,7 +316,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceCont
 
 	wiRenderer::UnbindTextures(0, 16, context);
 	rtSun[0].Activate(context, mainRT.depth); {
-		wiRenderer::DrawSky(context);
+		wiRenderer::DrawSun(context);
 	}
 
 	//wiImage::BatchBegin(context);
