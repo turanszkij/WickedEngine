@@ -306,6 +306,8 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 	UnbindTextures(0, 16, immediateContext);
 
 	Unlock();
+
+	*prevFrameCam = *cam;
 }
 void wiRenderer::ReleaseCommandLists()
 {
@@ -1641,9 +1643,7 @@ XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, const int& vertexI){
 }
 void wiRenderer::Update()
 {
-	*prevFrameCam = *cam;
 	cam->UpdateTransform();
-	refCam->Reflect(cam);
 
 	objectsWithTrails.clear();
 	emitterSystems.clear();
@@ -1651,7 +1651,7 @@ void wiRenderer::Update()
 
 	GetScene().Update();
 
-
+	refCam->Reflect(cam);
 }
 void wiRenderer::UpdatePerFrameData()
 {
@@ -3156,68 +3156,6 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 		}
 	}
 }
-
-
-//void wiRenderer::UpdatePerWorldCB(DeviceContext context){
-//	static thread_local PixelCB* pcb = new PixelCB;
-//	(*pcb).mSun=XMVector3Normalize( GetSunPosition() );
-//	(*pcb).mHorizon= GetScene().worldInfo.horizon;
-//	(*pcb).mAmbient= GetScene().worldInfo.ambient;
-//	(*pcb).mSunColor=GetSunColor();
-//	(*pcb).mFogSEH= GetScene().worldInfo.fogSEH;
-//	UpdateBuffer(pixelCB, pcb, context);
-//}
-//void wiRenderer::UpdatePerFrameCB(DeviceContext context){
-//	static thread_local ViewPropCB* cb = new ViewPropCB;
-//	(*cb).mZFarP=cam->zFarP;
-//	(*cb).mZNearP=cam->zNearP;
-//	(*cb).matView = XMMatrixTranspose( cam->GetView() );
-//	(*cb).matProj = XMMatrixTranspose( cam->GetProjection() );
-//	UpdateBuffer(viewPropCB,cb,context);
-//}
-//void wiRenderer::UpdatePerRenderCB(DeviceContext context, int tessF){
-//	if(tessF){
-//		static thread_local TessBuffer* tb = new TessBuffer;
-//		(*tb).g_f4Eye = cam->GetEye();
-//		(*tb).g_f4TessFactors = XMFLOAT4A( (float)tessF,2.f,4.f,6.f );
-//		UpdateBuffer(tessBuf,tb,context);
-//	}
-//
-//}
-//void wiRenderer::UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane){
-//
-//	
-//	static thread_local StaticCB* cb = new StaticCB;
-//	(*cb).mViewProjection = XMMatrixTranspose(camera->GetViewProjection());
-//	(*cb).mRefViewProjection = XMMatrixTranspose( refCamera->GetViewProjection());
-//	(*cb).mPrevViewProjection = XMMatrixTranspose(prevFrameCam->GetViewProjection());
-//	(*cb).mCamPos = camera->GetEye();
-//	(*cb).mClipPlane = newClipPlane;
-//	(*cb).mWind= GetScene().wind.direction;
-//	(*cb).time= GetScene().wind.time;
-//	(*cb).windRandomness= GetScene().wind.randomness;
-//	(*cb).windWaveSize= GetScene().wind.waveSize;
-//	UpdateBuffer(staticCb,cb,context);
-//
-//	static thread_local SkyBuffer* scb = new SkyBuffer;
-//	(*scb).mV=XMMatrixTranspose(camera->GetView());
-//	(*scb).mP = XMMatrixTranspose(camera->GetProjection());
-//	(*scb).mPrevView = XMMatrixTranspose(prevFrameCam->GetView());
-//	(*scb).mPrevProjection = XMMatrixTranspose(prevFrameCam->GetProjection());
-//	UpdateBuffer(skyCb,scb,context);
-//
-//	UpdateBuffer(trailCB, &XMMatrixTranspose(camera->GetViewProjection()), context);
-//
-//	static thread_local LightStaticCB* lcb = new LightStaticCB;
-//	(*lcb).mProjInv = XMMatrixInverse(0, XMMatrixTranspose(camera->GetViewProjection()));
-//	UpdateBuffer(lightStaticCb,lcb,context);
-//}
-//void wiRenderer::UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask){
-//	static thread_local FxCB* fb = new FxCB;
-//	(*fb).mFx = blackoutBlackWhiteInvCol;
-//	(*fb).colorMask=colorMask;
-//	UpdateBuffer(fxCb,fb,context);
-//}
 
 void wiRenderer::UpdateWorldCB(DeviceContext context)
 {

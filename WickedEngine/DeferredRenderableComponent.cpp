@@ -183,6 +183,8 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 		}
 		fx.process.clear();
 		rtSSS.back().Activate(context, rtGBuffer.depth); {
+			fx.setMaskMap(nullptr);
+			fx.setNormalMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			fx.blendFlag = BLENDMODE_OPAQUE;

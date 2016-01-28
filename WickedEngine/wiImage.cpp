@@ -301,7 +301,7 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			else if (effects.process.ssr){
 				wiRenderer::BindPS(ssrPS, context);
 			}
-			else if(effects.process.ssss.x||effects.process.ssss.y)
+			else if(effects.process.ssss.x + effects.process.ssss.y > 0)
 				wiRenderer::BindPS(ssssPS,context);
 			else if(effects.bloom.separate)
 				wiRenderer::BindPS(bloomSeparatePS,context);

@@ -9,8 +9,9 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	numSampling++;
 
-	for(float i=-5;i<=5;i+=0.5){
-		color.rgb += xTexture.SampleLevel(Sampler,PSIn.tex+vel*i,0).rgb;
+	[unroll]
+	for(float i=-7.5f;i<=7.5f;i+=1.0f){
+		color.rgb += xTexture.SampleLevel(Sampler,PSIn.tex+vel*i*0.5f,0).rgb;
 		numSampling++;
 	}
 
