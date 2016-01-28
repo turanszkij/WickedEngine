@@ -43,15 +43,17 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		}
 		
 
-		//ENVIROMENT MAP
+		////ENVIROMENT MAP
 		//float3 ref = (reflect(-eyevector, normal));
-		//float3 reflectiveColor = enviroTex.Sample(texSampler,ref);
+		//float3 skyColor = enviroTex.Sample(texSampler,ref).rgb;
 
 		//REFLECTION
 		float2 RefTex;
 			RefTex.x = PSIn.ReflectionMapSamplingPos.x/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 			RefTex.y = -PSIn.ReflectionMapSamplingPos.y/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
-		float3 reflectiveColor = xTextureRef.SampleLevel(mapSampler,RefTex+bumpColor.rg,0).rgb;
+		float4 reflectiveColor = xTextureRef.SampleLevel(mapSampler,RefTex+bumpColor.rg,0);
+		
+		//reflectiveColor.rgb = lerp(skyColor, reflectiveColor.rgb, reflectiveColor.a);
 	
 		//REFRACTION 
 		float2 perturbatedRefrTexCoords = screenPos.xy + bumpColor.rg;
@@ -65,7 +67,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		
 		//FRESNEL TERM
 		float fresnelTerm = abs(eyeDot);
-		baseColor.rgb = lerp(reflectiveColor, refractiveColor, fresnelTerm);
+		baseColor.rgb = lerp(reflectiveColor.rgb, refractiveColor, fresnelTerm);
 
 		//DULL COLOR
 		baseColor.rgb = lerp(baseColor.rgb, g_xMat_diffuseColor.rgb, 0.16);

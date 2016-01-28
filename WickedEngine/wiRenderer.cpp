@@ -58,8 +58,8 @@ RasterizerState	wiRenderer::rasterizerState, wiRenderer::rssh, wiRenderer::nonCu
 	,wiRenderer::backFaceRS;
 DepthStencilState	wiRenderer::depthStencilState,wiRenderer::xRayStencilState,wiRenderer::depthReadStencilState,wiRenderer::stencilReadState
 	,wiRenderer::stencilReadMatch;
-PixelShader		wiRenderer::skyPS, wiRenderer::sunPS;
-VertexShader		wiRenderer::skyVS;
+PixelShader		wiRenderer::skyPS, wiRenderer::skyPS_refl, wiRenderer::sunPS;
+VertexShader		wiRenderer::skyVS, wiRenderer::skyVS_refl;
 Sampler		wiRenderer::skySampler;
 TextureView wiRenderer::enviroMap,wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -938,6 +938,8 @@ void wiRenderer::LoadSkyShaders()
 {
 	skyVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	skyPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
+	skyVS_refl = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	skyPS_refl = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_reflection.cso", wiResourceManager::PIXELSHADER));
 	sunPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiRenderer::LoadShadowShaders()
@@ -3054,7 +3056,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 }
 
 
-void wiRenderer::DrawSky(DeviceContext context)
+void wiRenderer::DrawSky(DeviceContext context, bool isReflection)
 {
 	if (enviroMap == nullptr)
 		return;
@@ -3064,8 +3066,16 @@ void wiRenderer::DrawSky(DeviceContext context)
 	BindDepthStencilState(depthReadStencilState,STENCILREF_SKY,context);
 	BindBlendState(blendState,context);
 	
-	BindVS(skyVS,context);
-	BindPS(skyPS,context);
+	if (!isReflection)
+	{
+		BindVS(skyVS, context);
+		BindPS(skyPS, context);
+	}
+	else
+	{
+		BindVS(skyVS_refl, context);
+		BindPS(skyPS_refl, context);
+	}
 	
 	BindTexturePS(enviroMap,0,context);
 	BindSamplerPS(skySampler,0,context);

@@ -221,7 +221,7 @@ void Renderable3DComponent::RenderReflections(DeviceContext context){
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, context
 			, false, true, SHADERTYPE_NONE
 			, nullptr, getHairParticlesReflectionEnabled(), GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::DrawSky(context);
+		wiRenderer::DrawSky(context,true);
 	}
 }
 void Renderable3DComponent::RenderShadows(DeviceContext context){
@@ -424,6 +424,7 @@ void Renderable3DComponent::RenderColorGradedComposition(){
 		}
 	}
 	wiImage::Draw(rtFinal[1].shaderResource.back(), fx);
+
 }
 
 

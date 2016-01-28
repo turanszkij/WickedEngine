@@ -1901,6 +1901,9 @@
     <None Include="globals.hlsli">
       <Filter>shaders</Filter>
     </None>
+    <None Include="skyHF.hlsli">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />
@@ -2134,6 +2137,12 @@
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="effectVS_reflection.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="skyVS_reflection.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="skyPS_reflection.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
   </ItemGroup>

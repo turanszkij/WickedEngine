@@ -1,5 +1,5 @@
-#include "icosphere.hlsli"
 #include "globals.hlsli"
+#include "icosphere.hlsli"
 
 struct VSOut{
 	float4 pos : SV_POSITION;
@@ -11,8 +11,8 @@ struct VSOut{
 VSOut main(uint vid : SV_VERTEXID)
 {
 	VSOut Out = (VSOut)0;
-	Out.pos = Out.pos2D = mul(float4(mul(ICOSPHERE[vid], (float3x3)g_xCamera_View), 0), g_xCamera_Proj);
+	Out.pos = Out.pos2D = mul(float4(ICOSPHERE[vid], 0), g_xCamera_VP);
 	Out.nor=ICOSPHERE[vid];
-	Out.pos2DPrev = mul(float4(mul(ICOSPHERE[vid], (float3x3)g_xCamera_PrevV), 0), g_xCamera_PrevP);
+	Out.pos2DPrev = mul(float4(ICOSPHERE[vid], 0), g_xCamera_PrevVP);
 	return Out;
 }

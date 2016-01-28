@@ -13,14 +13,21 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 	if (xMirror<0)
 		inTex.x = 1 - inTex.x;
 
-	inPos.x -= xDimensions.x*0.5f;
-	inPos.y += xDimensions.y*0.5f;
+	if (!xPivot) {//upperleft pivot
+		inPos.x-=xDimensions.x*0.5f;
+		inPos.y+=xDimensions.y*0.5f;
+	}
+	else if(xPivot==1){//center pivot
+		inPos.x-=xDimensions.z*0.5f;
+		inPos.y+=xDimensions.w*0.5f;
+	}
 	if(inTex.x==1)		    inPos.x+=xDimensions.z*xMirror;
 	if(inTex.y==1)		    inPos.y-=xDimensions.w;
 	
 	Out.pos = Out.dis = mul(mul(inPos,xTrans), xViewProjection); 
 	
 	Out.tex.xy = inTex;
+
 
 	////if(xDrawRec.x==0 && xDrawRec.y==0 && xDrawRec.z==0 && xDrawRec.w==0){
 	////	if(!xPivot){//upperleft pivot

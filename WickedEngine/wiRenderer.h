@@ -316,8 +316,8 @@ protected:
 	static Sampler		texSampler, mapSampler, comparisonSampler, mirSampler, pointSampler;
 	static RasterizerState	rasterizerState,rssh,nonCullRSsh,wireRS,nonCullRS,nonCullWireRS,backFaceRS;
 	static DepthStencilState depthStencilState,xRayStencilState,depthReadStencilState,stencilReadState,stencilReadMatch;
-	static PixelShader		skyPS, sunPS;
-	static VertexShader		skyVS;
+	static PixelShader		skyPS, skyPS_refl, sunPS;
+	static VertexShader		skyVS,skyVS_refl;
 	static Sampler		skySampler;
 	static TextureView enviroMap,colorGrading;
 	static void LoadBuffers();
@@ -685,7 +685,7 @@ public:
 	static void UpdateCameraCB(DeviceContext context);
 	static void SetClipPlane(XMFLOAT4 clipPlane, DeviceContext context);
 
-	static void DrawSky(DeviceContext context);
+	static void DrawSky(DeviceContext context, bool isReflection = false);
 	static void DrawSun(DeviceContext context);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
 		, bool BlackOut, bool isReflection, SHADERTYPE shaded, TextureView refRes, bool grass, GRAPHICSTHREAD thread);

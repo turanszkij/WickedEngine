@@ -119,7 +119,6 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 
 
 	if (getSSAOEnabled()){
-		//wiImage::BatchBegin(context, STENCILREF_DEFAULT);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = D3D11_COMPARISON_LESS;
 		rtSSAO[0].Activate(context); {
@@ -127,11 +126,9 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 			fx.setDepthMap(rtLinearDepth.shaderResource.back());
 			fx.setNormalMap(rtGBuffer.shaderResource[1]);
 			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
-			//fx.sampleFlag=SAMPLEMODE_CLAMP;
 			fx.quality = QUALITY_BILINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
 			wiImage::Draw(nullptr, fx, context);
-			//fx.sampleFlag=SAMPLEMODE_CLAMP;
 			fx.process.clear();
 		}
 		rtSSAO[1].Activate(context); {
@@ -164,7 +161,7 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 
 	if (getSSSEnabled())
 	{
-		//wiImage::BatchBegin(context, STENCILREF_SKIN);
+		wiRenderer::UnbindTextures(0, 16, context);
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = D3D11_COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;
@@ -186,14 +183,12 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 		}
 		fx.process.clear();
 		rtSSS.back().Activate(context, rtGBuffer.depth); {
-			//wiImage::BatchBegin(context);
 			fx.quality = QUALITY_NEAREST;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.stencilRef = 0;
 			fx.stencilComp = 0;
 			wiImage::Draw(rtDeferred.shaderResource.front(), fx, context);
-			//wiImage::BatchBegin(context, STENCILREF_SKIN);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = D3D11_COMPARISON_LESS;
 			wiImage::Draw(rtSSS[rtSSS.size() - 2].shaderResource.back(), fx, context);
@@ -205,7 +200,6 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 
 	if (getSSREnabled()){
 		rtSSR.Activate(context); {
-			//wiImage::BatchBegin(context);
 			context->GenerateMips(rtDeferred.shaderResource[0]);
 			fx.process.setSSR(true);
 			fx.setDepthMap(dtDepthCopy.shaderResource);
@@ -221,7 +215,6 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 	}
 
 	if (getMotionBlurEnabled()){ //MOTIONBLUR
-		//wiImage::BatchBegin(context);
 		rtMotionBlur.Activate(context);
 		fx.process.setMotionBlur(true);
 		fx.setVelocityMap(rtGBuffer.shaderResource.back());
