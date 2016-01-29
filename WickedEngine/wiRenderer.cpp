@@ -37,12 +37,15 @@ Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ssMirrorLin,wi
 		,wiRenderer::ssClampAni,wiRenderer::ssWrapAni,wiRenderer::ssMirrorAni,wiRenderer::ssComp;
 
 map<DeviceContext,long> wiRenderer::drawCalls;
-BufferResource	wiRenderer::constantBuffers[CBTYPE_LAST];
-VertexShader    wiRenderer::vertexShaders[VSTYPE_LAST];
-PixelShader		wiRenderer::pixelShaders[PSTYPE_LAST];
-GeometryShader	wiRenderer::geometryShaders[GSTYPE_LAST];
-HullShader		wiRenderer::hullShaders[HSTYPE_LAST];
-DomainShader	wiRenderer::domainShaders[DSTYPE_LAST];
+BufferResource		wiRenderer::constantBuffers[CBTYPE_LAST];
+VertexShader		wiRenderer::vertexShaders[VSTYPE_LAST];
+PixelShader			wiRenderer::pixelShaders[PSTYPE_LAST];
+GeometryShader		wiRenderer::geometryShaders[GSTYPE_LAST];
+HullShader			wiRenderer::hullShaders[HSTYPE_LAST];
+DomainShader		wiRenderer::domainShaders[DSTYPE_LAST];
+RasterizerState		wiRenderer::rasterizers[RSTYPE_LAST];
+DepthStencilState	wiRenderer::depthStencils[DSSTYPE_LAST];
+VertexLayout		wiRenderer::vertexLayouts[VLTYPE_LAST];
 
 int wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
@@ -50,12 +53,7 @@ bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
 BlendState		wiRenderer::blendState, wiRenderer::blendStateTransparent, wiRenderer::blendStateAdd;
 
-VertexLayout		wiRenderer::vertexLayout, wiRenderer::lineIL,wiRenderer::trailIL, wiRenderer::sOIL;
 Sampler		wiRenderer::texSampler, wiRenderer::mapSampler, wiRenderer::comparisonSampler, wiRenderer::mirSampler,wiRenderer::pointSampler;
-RasterizerState	wiRenderer::rasterizerState, wiRenderer::rssh, wiRenderer::nonCullRSsh, wiRenderer::wireRS, wiRenderer::nonCullRS,wiRenderer::nonCullWireRS
-	,wiRenderer::backFaceRS;
-DepthStencilState	wiRenderer::depthStencilState,wiRenderer::xRayStencilState,wiRenderer::depthReadStencilState,wiRenderer::stencilReadState
-	,wiRenderer::stencilReadMatch;
 Sampler		wiRenderer::skySampler;
 TextureView wiRenderer::enviroMap,wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -345,19 +343,6 @@ void wiRenderer::SetUpStaticComponents()
 	comparisonSampler = NULL;
 	mirSampler = NULL;
 
-	vertexLayout = NULL;
-	rasterizerState = NULL;
-	backFaceRS=NULL;
-	depthStencilState = NULL;
-	xRayStencilState=NULL;
-	depthReadStencilState=NULL;
-	
-	lineIL=NULL;
-
-	trailIL=NULL;
-	nonCullRS=NULL;
-	nonCullWireRS=NULL;
-
 
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
@@ -382,6 +367,18 @@ void wiRenderer::SetUpStaticComponents()
 	for (int i = 0; i < DSTYPE_LAST; ++i)
 	{
 		SafeInit(domainShaders[i]);
+	}
+	for (int i = 0; i < RSTYPE_LAST; ++i)
+	{
+		SafeInit(rasterizers[i]);
+	}
+	for (int i = 0; i < DSSTYPE_LAST; ++i)
+	{
+		SafeInit(depthStencils[i]);
+	}
+	for (int i = 0; i < VLTYPE_LAST; ++i)
+	{
+		SafeInit(vertexLayouts[i]);
 	}
 
 	//thread t1(LoadBasicShaders);
@@ -463,10 +460,6 @@ void wiRenderer::SetUpStaticComponents()
 }
 void wiRenderer::CleanUpStatic()
 {
-	if(sOIL) sOIL->Release(); sOIL=NULL;
-	if(vertexLayout) vertexLayout->Release(); vertexLayout=NULL;
-	
-	SafeRelease(stencilReadMatch);
 
 	if(texSampler) texSampler->Release(); texSampler=NULL;
 	if(mapSampler) mapSampler->Release(); mapSampler=NULL;
@@ -474,30 +467,12 @@ void wiRenderer::CleanUpStatic()
 	if(comparisonSampler) comparisonSampler->Release(); comparisonSampler=NULL;
 	if(mirSampler) mirSampler->Release(); mirSampler=NULL;
 
-	if(rasterizerState) rasterizerState->Release(); rasterizerState=NULL;
-	if(rssh) rssh->Release(); rssh=NULL;
-	if(nonCullRSsh) nonCullRSsh->Release(); nonCullRSsh=NULL;
-	if(wireRS) wireRS->Release(); wireRS=NULL;
-	if(nonCullWireRS) nonCullWireRS->Release(); nonCullWireRS=NULL;
-	if(nonCullRS) nonCullRS->Release(); nonCullRS=NULL;
-	if(backFaceRS) backFaceRS->Release(); backFaceRS=NULL;
-	if(depthStencilState) depthStencilState->Release(); depthStencilState=NULL;
-	if(stencilReadState) stencilReadState->Release(); stencilReadState=NULL;
-	if(xRayStencilState) xRayStencilState->Release(); xRayStencilState=NULL;
-	if(depthReadStencilState) depthReadStencilState->Release(); depthReadStencilState=NULL;
 	if(blendState) blendState->Release(); blendState=NULL;
 	if(blendStateTransparent) blendStateTransparent->Release(); blendStateTransparent=NULL;
 	if(blendStateAdd) blendStateAdd->Release(); blendStateAdd=NULL;
 
 
 	if(skySampler) skySampler->Release(); skySampler=NULL;
-
-	if(lineIL){
-		lineIL->Release();
-		lineIL=NULL;
-	}
-
-	if(trailIL) trailIL->Release(); trailIL=NULL;
 
 
 	wiHairParticle::CleanUpStatic();
@@ -529,6 +504,18 @@ void wiRenderer::CleanUpStatic()
 	for (int i = 0; i < DSTYPE_LAST; ++i)
 	{
 		SafeRelease(domainShaders[i]);
+	}
+	for (int i = 0; i < RSTYPE_LAST; ++i)
+	{
+		SafeRelease(rasterizers[i]);
+	}
+	for (int i = 0; i < DSSTYPE_LAST; ++i)
+	{
+		SafeRelease(depthStencils[i]);
+	}
+	for (int i = 0; i < VLTYPE_LAST; ++i)
+	{
+		SafeRelease(vertexLayouts[i]);
 	}
 
 	if (physicsEngine) physicsEngine->CleanUp();
@@ -837,7 +824,7 @@ void wiRenderer::LoadBasicShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_EFFECT10] = vsinfo->vertexShader;
-			vertexLayout = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_EFFECT] = vsinfo->vertexLayout;
 		}
 	}
 
@@ -857,7 +844,7 @@ void wiRenderer::LoadBasicShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOVS.cso", wiResourceManager::VERTEXSHADER, oslayout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_STREAMOUT] = vsinfo->vertexShader;
-			sOIL = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_STREAMOUT] = vsinfo->vertexLayout;
 		}
 	}
 
@@ -907,7 +894,7 @@ void wiRenderer::LoadLineShaders()
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShaders[VSTYPE_LINE] = vsinfo->vertexShader;
-		lineIL = vsinfo->vertexLayout;
+		vertexLayouts[VLTYPE_LINE] = vsinfo->vertexLayout;
 	}
 
 
@@ -959,7 +946,7 @@ void wiRenderer::LoadTrailShaders(){
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
 		vertexShaders[VSTYPE_TRAIL] = vsinfo->vertexShader;
-		trailIL = vsinfo->vertexLayout;
+		vertexLayouts[VLTYPE_TRAIL] = vsinfo->vertexLayout;
 	}
 
 
@@ -1283,7 +1270,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
+	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_FRONT]);
 
 	
 	rs.FillMode=D3D11_FILL_SOLID;
@@ -1296,7 +1283,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	graphicsDevice->CreateRasterizerState(&rs,&rssh);
+	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_SHADOW]);
 	rs.FillMode=D3D11_FILL_SOLID;
 	rs.CullMode=D3D11_CULL_NONE;
 	rs.FrontCounterClockwise=true;
@@ -1307,7 +1294,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	graphicsDevice->CreateRasterizerState(&rs,&nonCullRSsh);
+	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
 	rs.FillMode=D3D11_FILL_WIREFRAME;
 	rs.CullMode=D3D11_CULL_BACK;
@@ -1319,7 +1306,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	graphicsDevice->CreateRasterizerState(&rs,&wireRS);
+	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_WIRE]);
 
 	
 	rs.FillMode=D3D11_FILL_SOLID;
@@ -1332,7 +1319,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	graphicsDevice->CreateRasterizerState(&rs,&nonCullRS);
+	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_DOUBLESIDED]);
 	
 	rs.FillMode=D3D11_FILL_WIREFRAME;
 	rs.CullMode=D3D11_CULL_NONE;
@@ -1344,7 +1331,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	graphicsDevice->CreateRasterizerState(&rs,&nonCullWireRS);
+	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
 	
 	rs.FillMode=D3D11_FILL_SOLID;
 	rs.CullMode=D3D11_CULL_FRONT;
@@ -1356,7 +1343,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	graphicsDevice->CreateRasterizerState(&rs,&backFaceRS);
+	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_BACK]);
 
 	D3D11_DEPTH_STENCIL_DESC dsd;
 	dsd.DepthEnable = true;
@@ -1375,7 +1362,7 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 	// Create the depth stencil state.
-	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
+	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFAULT]);
 
 	
 	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
@@ -1392,7 +1379,7 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 	// Create the depth stencil state.
-	graphicsDevice->CreateDepthStencilState(&dsd, &stencilReadState);
+	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD]);
 
 	
 	dsd.DepthEnable = false;
@@ -1407,18 +1394,18 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	graphicsDevice->CreateDepthStencilState(&dsd, &stencilReadMatch);
+	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD_MATCH]);
 
 
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-	graphicsDevice->CreateDepthStencilState(&dsd, &depthReadStencilState);
+	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
 	dsd.StencilEnable=false;
-	graphicsDevice->CreateDepthStencilState(&dsd, &xRayStencilState);
+	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_XRAY]);
 
 	
 	D3D11_BLEND_DESC bd;
@@ -1680,7 +1667,7 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 					{
 						streamOutSetUp = true;
 						BindPrimitiveTopology(POINTLIST, context);
-						BindVertexLayout(sOIL, context);
+						BindVertexLayout(vertexLayouts[VLTYPE_STREAMOUT], context);
 						BindVS(vertexShaders[VSTYPE_STREAMOUT], context);
 						BindGS(geometryShaders[GSTYPE_STREAMOUT], context);
 						BindPS(nullptr, context);
@@ -1790,10 +1777,10 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, DeviceContext context)
 {
 	//if(debugSpheres){
 	//	BindPrimitiveTopology(TRIANGLESTRIP,context);
-	//	BindVertexLayout(lineIL,context);
+	//	BindVertexLayout(vertexLayouts[VLTYPE_EFFECT] : vertexLayouts[VLTYPE_LINE],context);
 	//
-	//	BindRasterizerState(rasterizerState,context);
-	//	BindDepthStencilState(xRayStencilState,STENCILREF_EMPTY,context);
+	//	BindRasterizerState(rasterizers[RSTYPE_FRONT],context);
+	//	BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,context);
 	//	BindBlendState(blendStateTransparent,context);
 
 
@@ -1832,10 +1819,10 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, DeviceContext context)
 {
 	if(debugBoneLines){
 		BindPrimitiveTopology(LINELIST,context);
-		BindVertexLayout(lineIL,context);
+		BindVertexLayout(vertexLayouts[VLTYPE_LINE],context);
 	
-		BindRasterizerState(rssh,context);
-		BindDepthStencilState(xRayStencilState,STENCILREF_EMPTY,context);
+		BindRasterizerState(rasterizers[RSTYPE_SHADOW],context);
+		BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,context);
 		BindBlendState(blendState,context);
 
 
@@ -1860,10 +1847,10 @@ void wiRenderer::DrawDebugLines(Camera* camera, DeviceContext context)
 		return;
 
 	BindPrimitiveTopology(LINELIST, context);
-	BindVertexLayout(lineIL, context);
+	BindVertexLayout(vertexLayouts[VLTYPE_LINE], context);
 
-	BindRasterizerState(rssh, context);
-	BindDepthStencilState(xRayStencilState, STENCILREF_EMPTY, context);
+	BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
+	BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, context);
 	BindBlendState(blendState, context);
 
 
@@ -1889,10 +1876,10 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, DeviceContext context)
 {
 	if(debugBoxes){
 		BindPrimitiveTopology(LINELIST,context);
-		BindVertexLayout(lineIL,context);
+		BindVertexLayout(vertexLayouts[VLTYPE_LINE],context);
 
-		BindRasterizerState(nonCullWireRS,context);
-		BindDepthStencilState(xRayStencilState,STENCILREF_EMPTY,context);
+		BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED],context);
+		BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,context);
 		BindBlendState(blendState,context);
 
 
@@ -1942,10 +1929,10 @@ void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *co
 }
 void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 	BindPrimitiveTopology(TRIANGLESTRIP,context);
-	BindVertexLayout(trailIL,context);
+	BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],context);
 
-	BindRasterizerState(wireRender?nonCullWireRS:nonCullRS,context);
-	BindDepthStencilState(depthStencilState,STENCILREF_EMPTY,context);
+	BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE_DOUBLESIDED]:rasterizers[RSTYPE_DOUBLESIDED],context);
+	BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,context);
 	BindBlendState(blendState,context);
 
 	BindPS(pixelShaders[PSTYPE_TRAIL],context);
@@ -2082,8 +2069,8 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 
 	
 	BindBlendState(blendStateAdd,context);
-	BindDepthStencilState(stencilReadState,stencilRef,context);
-	BindRasterizerState(backFaceRS,context);
+	BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD],stencilRef,context);
+	BindRasterizerState(rasterizers[RSTYPE_BACK],context);
 
 	BindVertexLayout(nullptr, context);
 	BindVertexBuffer(nullptr, 0, 0, context);
@@ -2196,8 +2183,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 		BindVertexBuffer(nullptr, 0, 0, context);
 		BindIndexBuffer(nullptr, context);
 		BindBlendState(blendStateAdd,context);
-		BindDepthStencilState(depthReadStencilState,STENCILREF_DEFAULT,context);
-		BindRasterizerState(nonCullRS,context);
+		BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,context);
+		BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED],context);
 
 		
 		BindPS(pixelShaders[PSTYPE_VOLUMELIGHT],context);
@@ -2334,10 +2321,10 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 		{
 
 			BindPrimitiveTopology(TRIANGLELIST, context);
-			BindVertexLayout(vertexLayout, context);
+			BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], context);
 
 
-			BindDepthStencilState(depthStencilState, STENCILREF_DEFAULT, context);
+			BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, context);
 
 			BindBlendState(blendState, context);
 
@@ -2407,9 +2394,9 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									if (visibleInstances.size() && !mesh->isBillboarded) {
 
 										if (!mesh->doubleSided)
-											BindRasterizerState(rssh, context);
+											BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
 										else
-											BindRasterizerState(nonCullRSsh, context);
+											BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], context);
 
 										//D3D11_MAPPED_SUBRESOURCE mappedResource;
 										static thread_local ShadowCB* cb = new ShadowCB;
@@ -2508,9 +2495,9 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 								if (visibleInstances.size() && !mesh->isBillboarded) {
 
 									if (!mesh->doubleSided)
-										BindRasterizerState(rssh, context);
+										BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
 									else
-										BindRasterizerState(nonCullRSsh, context);
+										BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], context);
 
 									//D3D11_MAPPED_SUBRESOURCE mappedResource;
 									static thread_local ShadowCB* cb = new ShadowCB;
@@ -2619,9 +2606,9 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 						if (!mesh->isBillboarded && !visibleInstances.empty()) {
 
 							if (!mesh->doubleSided)
-								BindRasterizerState(rssh, context);
+								BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
 							else
-								BindRasterizerState(nonCullRSsh, context);
+								BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], context);
 
 
 
@@ -2728,7 +2715,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 			BindPrimitiveTopology(PATCHLIST,context);
 		else		
 			BindPrimitiveTopology(TRIANGLELIST,context);
-		BindVertexLayout(vertexLayout,context);
+		BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],context);
 
 		if(DX11Eff && tessF)
 			BindVS(vertexShaders[VSTYPE_EFFECT],context);
@@ -2794,9 +2781,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 
 
 			if(!mesh->doubleSided)
-				BindRasterizerState(wireRender?wireRS:rasterizerState,context);
+				BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_FRONT],context);
 			else
-				BindRasterizerState(wireRender?wireRS:nonCullRS,context);
+				BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_DOUBLESIDED],context);
 
 			int matsiz = mesh->materialIndices.size();
 			
@@ -2836,11 +2823,11 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 				if(!iMat->IsTransparent() && !iMat->isSky && !iMat->water){
 					
 					if(iMat->shadeless)
-						BindDepthStencilState(depthStencilState,STENCILREF_SHADELESS,context);
+						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SHADELESS,context);
 					if(iMat->subsurface_scattering)
-						BindDepthStencilState(depthStencilState,STENCILREF_SKIN,context);
+						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SKIN,context);
 					else
-						BindDepthStencilState(depthStencilState,mesh->stencilRef,context);
+						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],mesh->stencilRef,context);
 
 
 					static thread_local MaterialCB* mcb = new MaterialCB;
@@ -2887,7 +2874,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 
 		BindPrimitiveTopology(TRIANGLELIST,context);
-		BindVertexLayout(vertexLayout,context);
+		BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],context);
 		BindVS(vertexShaders[VSTYPE_EFFECT10],context);
 
 		BindSamplerPS(texSampler,0,context);
@@ -2932,9 +2919,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 				continue;
 
 			if (!mesh->doubleSided)
-				BindRasterizerState(wireRender ? wireRS : rasterizerState, context);
+				BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], context);
 			else
-				BindRasterizerState(wireRender ? wireRS : nonCullRS, context);
+				BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], context);
 
 
 			int matsiz = mesh->materialIndices.size();
@@ -2983,16 +2970,16 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 					{
 						lastRenderType = RENDERTYPE_TRANSPARENT;
 
-						BindDepthStencilState(depthStencilState, STENCILREF_TRANSPARENT, context);
+						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_TRANSPARENT, context);
 						BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_EFFECT_TRANSPARENT], context);
 					}
 					if (iMat->IsWater() && lastRenderType != RENDERTYPE_WATER)
 					{
 						lastRenderType = RENDERTYPE_WATER;
 
-						BindDepthStencilState(depthReadStencilState, STENCILREF_EMPTY, context);
+						BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, context);
 						BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_WATER], context);
-						BindRasterizerState(wireRender ? wireRS : nonCullRS, context);
+						BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], context);
 					}
 					
 					DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
@@ -3011,8 +2998,8 @@ void wiRenderer::DrawSky(DeviceContext context, bool isReflection)
 		return;
 
 	BindPrimitiveTopology(TRIANGLELIST,context);
-	BindRasterizerState(backFaceRS,context);
-	BindDepthStencilState(depthReadStencilState,STENCILREF_SKY,context);
+	BindRasterizerState(rasterizers[RSTYPE_BACK],context);
+	BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,context);
 	BindBlendState(blendState,context);
 	
 	if (!isReflection)
@@ -3036,8 +3023,8 @@ void wiRenderer::DrawSky(DeviceContext context, bool isReflection)
 void wiRenderer::DrawSun(DeviceContext context)
 {
 	BindPrimitiveTopology(TRIANGLELIST, context);
-	BindRasterizerState(backFaceRS, context);
-	BindDepthStencilState(depthReadStencilState, STENCILREF_SKY, context);
+	BindRasterizerState(rasterizers[RSTYPE_BACK], context);
+	BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, context);
 	BindBlendState(blendStateAdd, context);
 
 	BindVS(vertexShaders[VSTYPE_SKY], context);
@@ -3066,9 +3053,9 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 		BindSamplerPS(ssClampAni, 0, context);
 		BindVS(vertexShaders[VSTYPE_DECAL], context);
 		BindPS(pixelShaders[PSTYPE_DECAL], context);
-		BindRasterizerState(backFaceRS, context);
+		BindRasterizerState(rasterizers[RSTYPE_BACK], context);
 		BindBlendState(blendStateTransparent, context);
-		BindDepthStencilState(stencilReadMatch, STENCILREF::STENCILREF_DEFAULT, context);
+		BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD_MATCH], STENCILREF::STENCILREF_DEFAULT, context);
 		BindVertexLayout(nullptr, context);
 		BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, context);
 

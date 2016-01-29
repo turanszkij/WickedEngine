@@ -2,7 +2,6 @@
 #include "wiRenderer.h"
 #include "wiImage.h"
 #include "wiImageEffects.h"
-#include "wiStencilRef.h"
 #include "wiHelper.h"
 
 ForwardRenderableComponent::ForwardRenderableComponent(){

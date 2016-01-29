@@ -780,7 +780,6 @@
     <ClInclude Include="wiResourceManager_BindLua.h" />
     <ClInclude Include="wiSound_BindLua.h" />
     <ClInclude Include="wiSprite_BindLua.h" />
-    <ClInclude Include="wiStencilRef.h" />
     <ClInclude Include="wiTextureHelper.h" />
     <ClInclude Include="WickedEngine.h" />
     <ClInclude Include="wiCpuInfo.h" />

@@ -39,7 +39,6 @@
 #include "wiPHYSICS.h"
 #include "wiBULLET.h"
 #include "wiEnums.h"
-#include "wiStencilRef.h"
 #include "wiInitializer.h"
 #include "wiLua.h"
 #include "wiLuna.h"

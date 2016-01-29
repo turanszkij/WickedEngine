@@ -275,12 +275,15 @@ protected:
 	};
 
 
-	static BufferResource	constantBuffers[CBTYPE_LAST];
-	static VertexShader     vertexShaders[VSTYPE_LAST];
-	static PixelShader		pixelShaders[PSTYPE_LAST];
-	static GeometryShader	geometryShaders[GSTYPE_LAST];
-	static HullShader		hullShaders[HSTYPE_LAST];
-	static DomainShader		domainShaders[DSTYPE_LAST];
+	static BufferResource		constantBuffers[CBTYPE_LAST];
+	static VertexShader			vertexShaders[VSTYPE_LAST];
+	static PixelShader			pixelShaders[PSTYPE_LAST];
+	static GeometryShader		geometryShaders[GSTYPE_LAST];
+	static HullShader			hullShaders[HSTYPE_LAST];
+	static DomainShader			domainShaders[DSTYPE_LAST];
+	static RasterizerState		rasterizers[RSTYPE_LAST];
+	static DepthStencilState	depthStencils[DSSTYPE_LAST];
+	static VertexLayout			vertexLayouts[VLTYPE_LAST];
 
 
 	void UpdateSpheres();
@@ -295,10 +298,7 @@ protected:
 
 
 	static BlendState		blendState, blendStateTransparent, blendStateAdd;
-	static VertexLayout       vertexLayout, lineIL, trailIL, sOIL;
 	static Sampler		texSampler, mapSampler, comparisonSampler, mirSampler, pointSampler;
-	static RasterizerState	rasterizerState,rssh,nonCullRSsh,wireRS,nonCullRS,nonCullWireRS,backFaceRS;
-	static DepthStencilState depthStencilState,xRayStencilState,depthReadStencilState,stencilReadState,stencilReadMatch;
 	static Sampler		skySampler;
 	static TextureView enviroMap,colorGrading;
 	static void LoadBuffers();

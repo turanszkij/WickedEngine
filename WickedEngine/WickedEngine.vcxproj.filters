@@ -1600,9 +1600,6 @@
     <ClInclude Include="wiWaterPlane.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wiStencilRef.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="wiInitializer.h">
       <Filter>Header Files</Filter>
     </ClInclude>

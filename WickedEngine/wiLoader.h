@@ -4,7 +4,6 @@
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiEnums.h"
-#include "wiStencilRef.h"
 #include "wiMath.h"
 #include "wiFrustum.h"
 
