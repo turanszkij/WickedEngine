@@ -275,6 +275,14 @@ protected:
 	};
 
 
+	static BufferResource	constantBuffers[CBTYPE_LAST];
+	static VertexShader     vertexShaders[VSTYPE_LAST];
+	static PixelShader		pixelShaders[PSTYPE_LAST];
+	static GeometryShader	geometryShaders[GSTYPE_LAST];
+	static HullShader		hullShaders[HSTYPE_LAST];
+	static DomainShader		domainShaders[DSTYPE_LAST];
+
+
 	void UpdateSpheres();
 	static void SetUpBoneLines();
 	static void UpdateBoneLines();
@@ -285,39 +293,12 @@ protected:
 
 	static bool						wireRender, debugSpheres, debugBoneLines, debugBoxes;
 
-	enum CBTYPES
-	{
-		CBTYPE_WORLD,
-		CBTYPE_FRAME,
-		CBTYPE_CAMERA,
-		CBTYPE_MATERIAL,
-		CBTYPE_DIRLIGHT,
-		CBTYPE_MISC,
-		CBTYPE_POINTLIGHT,
-		CBTYPE_SPOTLIGHT,
-		CBTYPE_VOLUMELIGHT,
-		CBTYPE_DECAL,
-		CBTYPE_CUBEMAPRENDER,
-		CBTYPE_BONEBUFFER,
-		CBTYPE_SHADOW,
-		CBTYPE_CLIPPLANE,
-		CBTYPE_LAST
-	};
-	static BufferResource	constantBuffers[CBTYPE_LAST];
+
 	static BlendState		blendState, blendStateTransparent, blendStateAdd;
-	static VertexShader		vertexShader10, vertexShader, vertexShaderRefl,shVS,lineVS,trailVS,waterVS
-		,lightVS[3],vSpotLightVS,vPointLightVS,cubeShVS,sOVS,decalVS;
-	static PixelShader		pixelShader,shPS,linePS,trailPS,simplestPS,blackoutPS,textureonlyPS,waterPS,transparentPS
-		,lightPS[3],vLightPS,cubeShPS,decalPS,fowardSimplePS;
-	static GeometryShader cubeShGS,sOGS;
-	static HullShader		hullShader;
-	static DomainShader		domainShader;
 	static VertexLayout       vertexLayout, lineIL, trailIL, sOIL;
 	static Sampler		texSampler, mapSampler, comparisonSampler, mirSampler, pointSampler;
 	static RasterizerState	rasterizerState,rssh,nonCullRSsh,wireRS,nonCullRS,nonCullWireRS,backFaceRS;
 	static DepthStencilState depthStencilState,xRayStencilState,depthReadStencilState,stencilReadState,stencilReadMatch;
-	static PixelShader		skyPS, skyPS_refl, sunPS;
-	static VertexShader		skyVS,skyVS_refl;
 	static Sampler		skySampler;
 	static TextureView enviroMap,colorGrading;
 	static void LoadBuffers();
@@ -669,11 +650,16 @@ public:
 	}
 	template<typename T>
 	inline static void SafeRelease(T& resource) {
-		   if (resource != nullptr) {
-			   resource->Release();
-			   resource = nullptr;
-		   }
-	   }
+		if (resource != nullptr) {
+			resource->Release();
+			resource = nullptr;
+		}
+	}
+	template<typename T>
+	inline static void SafeInit(T& resource)
+	{
+		resource = nullptr;
+	}
 
 	//static void UpdatePerWorldCB(DeviceContext context);
 	//static void UpdatePerFrameCB(DeviceContext context);

@@ -37,29 +37,25 @@ Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ssMirrorLin,wi
 		,wiRenderer::ssClampAni,wiRenderer::ssWrapAni,wiRenderer::ssMirrorAni,wiRenderer::ssComp;
 
 map<DeviceContext,long> wiRenderer::drawCalls;
+BufferResource	wiRenderer::constantBuffers[CBTYPE_LAST];
+VertexShader    wiRenderer::vertexShaders[VSTYPE_LAST];
+PixelShader		wiRenderer::pixelShaders[PSTYPE_LAST];
+GeometryShader	wiRenderer::geometryShaders[GSTYPE_LAST];
+HullShader		wiRenderer::hullShaders[HSTYPE_LAST];
+DomainShader	wiRenderer::domainShaders[DSTYPE_LAST];
 
 int wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
 BlendState		wiRenderer::blendState, wiRenderer::blendStateTransparent, wiRenderer::blendStateAdd;
-BufferResource	wiRenderer::constantBuffers[wiRenderer::CBTYPE_LAST];
-VertexShader		wiRenderer::vertexShader10, wiRenderer::vertexShader, wiRenderer::vertexShaderRefl, wiRenderer::shVS, wiRenderer::lineVS, wiRenderer::trailVS
-	,wiRenderer::waterVS,wiRenderer::lightVS[3],wiRenderer::vSpotLightVS,wiRenderer::vPointLightVS,wiRenderer::cubeShVS,wiRenderer::sOVS,wiRenderer::decalVS;
-PixelShader		wiRenderer::pixelShader, wiRenderer::shPS, wiRenderer::linePS, wiRenderer::trailPS, wiRenderer::simplestPS,wiRenderer::blackoutPS
-	,wiRenderer::textureonlyPS,wiRenderer::waterPS,wiRenderer::transparentPS,wiRenderer::lightPS[3],wiRenderer::vLightPS,wiRenderer::cubeShPS
-	,wiRenderer::decalPS,wiRenderer::fowardSimplePS;
-GeometryShader wiRenderer::cubeShGS,wiRenderer::sOGS;
-HullShader		wiRenderer::hullShader;
-DomainShader		wiRenderer::domainShader;
+
 VertexLayout		wiRenderer::vertexLayout, wiRenderer::lineIL,wiRenderer::trailIL, wiRenderer::sOIL;
 Sampler		wiRenderer::texSampler, wiRenderer::mapSampler, wiRenderer::comparisonSampler, wiRenderer::mirSampler,wiRenderer::pointSampler;
 RasterizerState	wiRenderer::rasterizerState, wiRenderer::rssh, wiRenderer::nonCullRSsh, wiRenderer::wireRS, wiRenderer::nonCullRS,wiRenderer::nonCullWireRS
 	,wiRenderer::backFaceRS;
 DepthStencilState	wiRenderer::depthStencilState,wiRenderer::xRayStencilState,wiRenderer::depthReadStencilState,wiRenderer::stencilReadState
 	,wiRenderer::stencilReadMatch;
-PixelShader		wiRenderer::skyPS, wiRenderer::skyPS_refl, wiRenderer::sunPS;
-VertexShader		wiRenderer::skyVS, wiRenderer::skyVS_refl;
 Sampler		wiRenderer::skySampler;
 TextureView wiRenderer::enviroMap,wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -349,9 +345,6 @@ void wiRenderer::SetUpStaticComponents()
 	comparisonSampler = NULL;
 	mirSampler = NULL;
 
-	vertexShader = NULL;
-	vertexShader10 = NULL;
-	pixelShader = NULL;
 	vertexLayout = NULL;
 	rasterizerState = NULL;
 	backFaceRS=NULL;
@@ -359,31 +352,53 @@ void wiRenderer::SetUpStaticComponents()
 	xRayStencilState=NULL;
 	depthReadStencilState=NULL;
 	
-	shVS = NULL;
-	shPS = NULL;
-
-	lineVS=NULL;
-	linePS=NULL;
 	lineIL=NULL;
 
 	trailIL=NULL;
-	trailPS=NULL;
-	trailVS=NULL;
 	nonCullRS=NULL;
 	nonCullWireRS=NULL;
 
-	//matIndexBuf=NULL;
 
-	hullShader=NULL;
-	domainShader=NULL;
+	for (int i = 0; i < CBTYPE_LAST; ++i)
+	{
+		SafeInit(constantBuffers[i]);
+	}
+	for (int i = 0; i < VSTYPE_LAST; ++i)
+	{
+		SafeInit(vertexShaders[i]);
+	}
+	for (int i = 0; i < PSTYPE_LAST; ++i)
+	{
+		SafeInit(pixelShaders[i]);
+	}
+	for (int i = 0; i < GSTYPE_LAST; ++i)
+	{
+		SafeInit(geometryShaders[i]);
+	}
+	for (int i = 0; i < HSTYPE_LAST; ++i)
+	{
+		SafeInit(hullShaders[i]);
+	}
+	for (int i = 0; i < DSTYPE_LAST; ++i)
+	{
+		SafeInit(domainShaders[i]);
+	}
 
-	thread t1(wiRenderer::LoadBasicShaders);
-	thread t2(wiRenderer::LoadShadowShaders);
-	thread t3(wiRenderer::LoadSkyShaders);
-	thread t4(wiRenderer::LoadLineShaders);
-	thread t5(wiRenderer::LoadTrailShaders);
-	thread t6(wiRenderer::LoadWaterShaders);
-	thread t7(wiRenderer::LoadTessShaders);
+	//thread t1(LoadBasicShaders);
+	//thread t2(LoadShadowShaders);
+	//thread t3(LoadSkyShaders);
+	//thread t4(LoadLineShaders);
+	//thread t5(LoadTrailShaders);
+	//thread t6(LoadWaterShaders);
+	//thread t7(LoadTessShaders);
+
+	LoadBasicShaders();
+	LoadShadowShaders();
+	LoadSkyShaders();
+	LoadLineShaders();
+	LoadTrailShaders();
+	LoadWaterShaders();
+	LoadTessShaders();
 
 	//cam = new Camera(SCREENWIDTH, SCREENHEIGHT, 0.1f, 800, XMVectorSet(0, 4, -4, 1));
 	cam = new Camera();
@@ -438,56 +453,20 @@ void wiRenderer::SetUpStaticComponents()
 	SetPointLightShadowProps(2, 512);
 	SetSpotLightShadowProps(2, 512);
 
-	t1.join();
-	t2.join();
-	t3.join();
-	t4.join();
-	t5.join();
-	t6.join();
-	t7.join();
+	//t1.join();
+	//t2.join();
+	//t3.join();
+	//t4.join();
+	//t5.join();
+	//t6.join();
+	//t7.join();
 }
 void wiRenderer::CleanUpStatic()
 {
-	SafeRelease(fowardSimplePS);
-	if(shVS) shVS->Release(); shVS=NULL;
-	if(shPS) shPS->Release(); shPS=NULL;
-	SafeRelease(vSpotLightVS);
-	SafeRelease(vPointLightVS);
-	if(vLightPS) vLightPS->Release(); vLightPS=NULL;
-	
-	if(sOVS) sOVS->Release(); sOVS=NULL;
-	if(sOGS) sOGS->Release(); sOGS=NULL;
 	if(sOIL) sOIL->Release(); sOIL=NULL;
-
-	if(vertexShader) vertexShader->Release(); vertexShader=NULL;
-	if(vertexShader10) vertexShader10->Release(); vertexShader10=NULL;
-	if(pixelShader) pixelShader->Release(); pixelShader=NULL;
-	if(simplestPS) simplestPS->Release(); simplestPS=NULL;
-	if(blackoutPS)blackoutPS->Release(); blackoutPS=NULL;
-	if(textureonlyPS)textureonlyPS->Release(); textureonlyPS=NULL;
-	if(waterPS) waterPS->Release(); waterPS=NULL;
-	if(waterVS) waterVS->Release(); waterVS=NULL;
-	if(transparentPS) transparentPS->Release(); transparentPS=NULL;
 	if(vertexLayout) vertexLayout->Release(); vertexLayout=NULL;
 	
-	if(cubeShGS) cubeShGS->Release(); cubeShGS=NULL;
-	if(cubeShVS) cubeShVS->Release(); cubeShVS=NULL;
-	if(cubeShPS) cubeShPS->Release(); cubeShPS=NULL;
-	
-	SafeRelease(decalVS);
-	SafeRelease(decalPS);
 	SafeRelease(stencilReadMatch);
-
-	for(int i=0;i<3;++i){
-		if(lightPS[i]){
-			lightPS[i]->Release();
-			lightPS[i]=NULL;
-		}
-		if(lightVS[i]){
-			lightVS[i]->Release();
-			lightVS[i]=NULL;
-		}
-	}
 
 	if(texSampler) texSampler->Release(); texSampler=NULL;
 	if(mapSampler) mapSampler->Release(); mapSampler=NULL;
@@ -511,29 +490,14 @@ void wiRenderer::CleanUpStatic()
 	if(blendStateAdd) blendStateAdd->Release(); blendStateAdd=NULL;
 
 
-	if(skyPS) skyPS->Release(); skyPS=NULL;
 	if(skySampler) skySampler->Release(); skySampler=NULL;
-	if(skyVS) skyVS->Release(); skyVS=NULL;
 
-	if(hullShader) hullShader->Release(); hullShader=NULL; hullShader=NULL;
-	if(domainShader) domainShader->Release(); domainShader=NULL; domainShader=NULL;
-
-	if(lineVS){
-		lineVS->Release();
-		lineVS=NULL;
-	}
-	if(linePS){
-		linePS->Release();
-		linePS=NULL;
-	}
 	if(lineIL){
 		lineIL->Release();
 		lineIL=NULL;
 	}
 
 	if(trailIL) trailIL->Release(); trailIL=NULL;
-	if(trailPS) trailPS->Release(); trailPS=NULL;
-	if(trailVS) trailVS->Release(); trailVS=NULL;
 
 
 	wiHairParticle::CleanUpStatic();
@@ -545,6 +509,26 @@ void wiRenderer::CleanUpStatic()
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
 		SafeRelease(constantBuffers[i]);
+	}
+	for (int i = 0; i < VSTYPE_LAST; ++i)
+	{
+		SafeRelease(vertexShaders[i]);
+	}
+	for (int i = 0; i < PSTYPE_LAST; ++i)
+	{
+		SafeRelease(pixelShaders[i]);
+	}
+	for (int i = 0; i < GSTYPE_LAST; ++i)
+	{
+		SafeRelease(geometryShaders[i]);
+	}
+	for (int i = 0; i < HSTYPE_LAST; ++i)
+	{
+		SafeRelease(hullShaders[i]);
+	}
+	for (int i = 0; i < DSTYPE_LAST; ++i)
+	{
+		SafeRelease(domainShaders[i]);
 	}
 
 	if (physicsEngine) physicsEngine->CleanUp();
@@ -852,7 +836,7 @@ void wiRenderer::LoadBasicShaders()
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
-			vertexShader10 = vsinfo->vertexShader;
+			vertexShaders[VSTYPE_EFFECT10] = vsinfo->vertexShader;
 			vertexLayout = vsinfo->vertexLayout;
 		}
 	}
@@ -872,7 +856,7 @@ void wiRenderer::LoadBasicShaders()
 
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOVS.cso", wiResourceManager::VERTEXSHADER, oslayout, numElements));
 		if (vsinfo != nullptr){
-			sOVS = vsinfo->vertexShader;
+			vertexShaders[VSTYPE_STREAMOUT] = vsinfo->vertexShader;
 			sOIL = vsinfo->vertexLayout;
 		}
 	}
@@ -887,30 +871,30 @@ void wiRenderer::LoadBasicShaders()
 			{ 0, "TEXCOORD", 1, 0, 4, 0 },     // output the first 2 texture coordinates
 		};
 
-		sOGS = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
+		geometryShaders[GSTYPE_STREAMOUT] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
 	}
 
 
-	vertexShader = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vertexShaderRefl = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	lightVS[0] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	lightVS[1] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	lightVS[2] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vSpotLightVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vPointLightVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	decalVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_EFFECT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_EFFECT_REFLECTION] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_DIRLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_POINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOLUMESPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOLUMEPOINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_DECAL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS.cso", wiResourceManager::PIXELSHADER));
-	transparentPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_transparent.cso", wiResourceManager::PIXELSHADER));
-	simplestPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_simplest.cso", wiResourceManager::PIXELSHADER));
-	fowardSimplePS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_forwardSimple.cso", wiResourceManager::PIXELSHADER));
-	blackoutPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_blackout.cso", wiResourceManager::PIXELSHADER));
-	textureonlyPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
-	lightPS[0] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
-	lightPS[1] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
-	lightPS[2] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
-	vLightPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
-	decalPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_EFFECT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_EFFECT_TRANSPARENT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_transparent.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_EFFECT_FORWARDSIMPLE] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_forwardSimple.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_blackout.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiRenderer::LoadLineShaders()
 {
@@ -922,45 +906,45 @@ void wiRenderer::LoadLineShaders()
 
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
-		lineVS = vsinfo->vertexShader;
+		vertexShaders[VSTYPE_LINE] = vsinfo->vertexShader;
 		lineIL = vsinfo->vertexLayout;
 	}
 
 
-	linePS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadTessShaders()
 {
-	hullShader = static_cast<HullShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectHS.cso", wiResourceManager::HULLSHADER));
-	domainShader = static_cast<DomainShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectDS.cso", wiResourceManager::DOMAINSHADER));
+	hullShaders[HSTYPE_EFFECT] = static_cast<HullShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectHS.cso", wiResourceManager::HULLSHADER));
+	domainShaders[DSTYPE_EFFECT] = static_cast<DomainShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectDS.cso", wiResourceManager::DOMAINSHADER));
 
 }
 void wiRenderer::LoadSkyShaders()
 {
-	skyVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	skyPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
-	skyVS_refl = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	skyPS_refl = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_reflection.cso", wiResourceManager::PIXELSHADER));
-	sunPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
+	vertexShaders[VSTYPE_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	pixelShaders[PSTYPE_SKY] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
+	vertexShaders[VSTYPE_SKY_REFLECTION] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	pixelShaders[PSTYPE_SKY_REFLECTION] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_reflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SUN] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiRenderer::LoadShadowShaders()
 {
 
-	shVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	cubeShVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	shPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS.cso", wiResourceManager::PIXELSHADER));
-	cubeShPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOW] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
 
-	cubeShGS = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiRenderer::LoadWaterShaders()
 {
 
-	waterVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	waterPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterPS.cso", wiResourceManager::PIXELSHADER));
+	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	pixelShaders[PSTYPE_WATER]= static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadTrailShaders(){
@@ -974,12 +958,12 @@ void wiRenderer::LoadTrailShaders(){
 
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 	if (vsinfo != nullptr){
-		trailVS = vsinfo->vertexShader;
+		vertexShaders[VSTYPE_TRAIL] = vsinfo->vertexShader;
 		trailIL = vsinfo->vertexLayout;
 	}
 
 
-	trailPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 
@@ -1697,8 +1681,8 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 						streamOutSetUp = true;
 						BindPrimitiveTopology(POINTLIST, context);
 						BindVertexLayout(sOIL, context);
-						BindVS(sOVS, context);
-						BindGS(sOGS, context);
+						BindVS(vertexShaders[VSTYPE_STREAMOUT], context);
+						BindGS(geometryShaders[GSTYPE_STREAMOUT], context);
 						BindPS(nullptr, context);
 						BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
 						BindConstantBufferGS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
@@ -1855,8 +1839,8 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, DeviceContext context)
 		BindBlendState(blendState,context);
 
 
-		BindPS(linePS,context);
-		BindVS(lineVS,context);
+		BindPS(pixelShaders[PSTYPE_LINE],context);
+		BindVS(vertexShaders[VSTYPE_LINE],context);
 
 		static thread_local MiscCB* sb = new MiscCB;
 		for (unsigned int i = 0; i<boneLines.size(); i++){
@@ -1883,8 +1867,8 @@ void wiRenderer::DrawDebugLines(Camera* camera, DeviceContext context)
 	BindBlendState(blendState, context);
 
 
-	BindPS(linePS, context);
-	BindVS(lineVS, context);
+	BindPS(pixelShaders[PSTYPE_LINE], context);
+	BindVS(vertexShaders[VSTYPE_LINE], context);
 
 	static thread_local MiscCB* sb = new MiscCB;
 	for (unsigned int i = 0; i<linesTemp.size(); i++){
@@ -1904,52 +1888,17 @@ void wiRenderer::DrawDebugLines(Camera* camera, DeviceContext context)
 void wiRenderer::DrawDebugBoxes(Camera* camera, DeviceContext context)
 {
 	if(debugBoxes){
-		//context->IASetPrimitiveTopology( PRIMITIVETOPOLOGY_LINELIST );
-		//context->IASetInputLayout( lineIL );
 		BindPrimitiveTopology(LINELIST,context);
 		BindVertexLayout(lineIL,context);
-	
-		//context->RSSetState(nonCullWireRS);
-		//context->OMSetDepthStencilState(xRayStencilState, STENCILREF_EMPTY);
-
-	
-		//float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		//UINT sampleMask   = 0xffffffff;
-		//context->OMSetBlendState(blendState, blendFactor, sampleMask);
 
 		BindRasterizerState(nonCullWireRS,context);
 		BindDepthStencilState(xRayStencilState,STENCILREF_EMPTY,context);
 		BindBlendState(blendState,context);
 
 
-		//context->VSSetShader( lineVS, NULL, 0 );
-		//context->PSSetShader( linePS, NULL, 0 );
-		BindPS(linePS,context);
-		BindVS(lineVS,context);
+		BindPS(pixelShaders[PSTYPE_LINE],context);
+		BindVS(vertexShaders[VSTYPE_LINE],context);
 		
-		//vector<Lines> edges(0);
-		/*for(Object* object:objects){
-			edges.push_back(Lines(object->frameBB.corners[0],object->frameBB.corners[1],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[1],object->frameBB.corners[2],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[0],object->frameBB.corners[3],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[0],object->frameBB.corners[4],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[1],object->frameBB.corners[5],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[4],object->frameBB.corners[5],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[5],object->frameBB.corners[6],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[4],object->frameBB.corners[7],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[2],object->frameBB.corners[6],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[3],object->frameBB.corners[7],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[2],object->frameBB.corners[3],XMFLOAT4A(1,0,0,1)));
-			edges.push_back(Lines(object->frameBB.corners[6],object->frameBB.corners[7],XMFLOAT4A(1,0,0,1)));
-		}*/
-
-		//iterateSPTree(spTree->root,edges);
-
-		//UINT stride = sizeof( XMFLOAT3A );
-		//UINT offset = 0;
-		//context->IASetVertexBuffers( 0, 1, &Cube::vertexBuffer, &stride, &offset );
-		//context->IASetIndexBuffer(Cube::indexBuffer,DXGI_FORMAT_R32_UINT,0);
-
 		BindVertexBuffer(Cube::vertexBuffer,0,sizeof(XMFLOAT3A),context);
 		BindIndexBuffer(Cube::indexBuffer,context);
 
@@ -1999,8 +1948,8 @@ void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 	BindDepthStencilState(depthStencilState,STENCILREF_EMPTY,context);
 	BindBlendState(blendState,context);
 
-	BindPS(trailPS,context);
-	BindVS(trailVS,context);
+	BindPS(pixelShaders[PSTYPE_TRAIL],context);
+	BindVS(vertexShaders[VSTYPE_TRAIL],context);
 	
 	BindTexturePS(refracRes,0,context);
 	BindSamplerPS(mirSampler,0,context);
@@ -2149,8 +2098,8 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 	for(int type=0;type<3;++type){
 
 			
-		BindVS(lightVS[type],context);
-		BindPS(lightPS[type],context);
+		BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],context);
+		BindPS(pixelShaders[PSTYPE_DIRLIGHT + type],context);
 
 
 		for(Cullable* c : culledObjects){
@@ -2251,7 +2200,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 		BindRasterizerState(nonCullRS,context);
 
 		
-		BindPS(vLightPS,context);
+		BindPS(pixelShaders[PSTYPE_VOLUMELIGHT],context);
 
 		BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), context);
 		BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), context);
@@ -2261,10 +2210,10 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 
 			
 			if(type<=1){
-				BindVS(vPointLightVS,context);
+				BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT],context);
 			}
 			else{
-				BindVS(vSpotLightVS,context);
+				BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT],context);
 			}
 
 			for(Cullable* c : culledObjects){
@@ -2392,10 +2341,10 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 
 			BindBlendState(blendState, context);
 
-			BindPS(shPS, context);
+			BindPS(pixelShaders[PSTYPE_SHADOW], context);
 			BindSamplerPS(texSampler, 0, context);
 
-			BindVS(shVS, context);
+			BindVS(vertexShaders[VSTYPE_SHADOW], context);
 
 
 			set<Light*, Cullable> orderedSpotLights;
@@ -2625,9 +2574,9 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 			//POINTLIGHTS
 			if(!orderedPointLights.empty())
 			{
-				BindPS(cubeShPS, context);
-				BindVS(cubeShVS, context);
-				BindGS(cubeShGS, context);
+				BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], context);
+				BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], context);
+				BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], context);
 
 				BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), context);
 				BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), context);
@@ -2782,38 +2731,38 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 		BindVertexLayout(vertexLayout,context);
 
 		if(DX11Eff && tessF)
-			BindVS(vertexShader,context);
+			BindVS(vertexShaders[VSTYPE_EFFECT],context);
 		else
 		{
 			if (isReflection)
 			{
-				BindVS(vertexShaderRefl, context);
+				BindVS(vertexShaders[VSTYPE_EFFECT_REFLECTION], context);
 			}
 			else
 			{
-				BindVS(vertexShader10, context);
+				BindVS(vertexShaders[VSTYPE_EFFECT10], context);
 			}
 		}
 		if(DX11Eff && tessF)
-			BindHS(hullShader,context);
+			BindHS(hullShaders[HSTYPE_EFFECT],context);
 		else
 			BindHS(nullptr,context);
 		if(DX11Eff && tessF) 
-			BindDS(domainShader,context);
+			BindDS(domainShaders[DSTYPE_EFFECT],context);
 		else		
 			BindDS(nullptr,context);
 
 		if (wireRender)
-			BindPS(simplestPS, context);
+			BindPS(pixelShaders[PSTYPE_SIMPLEST], context);
 		else
 			if (BlackOut)
-				BindPS(blackoutPS, context);
+				BindPS(pixelShaders[PSTYPE_BLACKOUT], context);
 			else if (shaded == SHADERTYPE_NONE)
-				BindPS(textureonlyPS, context);
+				BindPS(pixelShaders[PSTYPE_TEXTUREONLY], context);
 			else if (shaded == SHADERTYPE_DEFERRED)
-				BindPS(pixelShader, context);
+				BindPS(pixelShaders[PSTYPE_EFFECT], context);
 			else if (shaded == SHADERTYPE_FORWARD_SIMPLE)
-				BindPS(fowardSimplePS, context);
+				BindPS(pixelShaders[PSTYPE_EFFECT_FORWARDSIMPLE], context);
 			else
 				return;
 
@@ -2939,7 +2888,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 
 		BindPrimitiveTopology(TRIANGLELIST,context);
 		BindVertexLayout(vertexLayout,context);
-		BindVS(vertexShader10,context);
+		BindVS(vertexShaders[VSTYPE_EFFECT10],context);
 
 		BindSamplerPS(texSampler,0,context);
 		BindSamplerPS(mapSampler,1,context);
@@ -3035,14 +2984,14 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 						lastRenderType = RENDERTYPE_TRANSPARENT;
 
 						BindDepthStencilState(depthStencilState, STENCILREF_TRANSPARENT, context);
-						BindPS(wireRender ? simplestPS : transparentPS, context);
+						BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_EFFECT_TRANSPARENT], context);
 					}
 					if (iMat->IsWater() && lastRenderType != RENDERTYPE_WATER)
 					{
 						lastRenderType = RENDERTYPE_WATER;
 
 						BindDepthStencilState(depthReadStencilState, STENCILREF_EMPTY, context);
-						BindPS(wireRender ? simplestPS : waterPS, context); 
+						BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_WATER], context);
 						BindRasterizerState(wireRender ? wireRS : nonCullRS, context);
 					}
 					
@@ -3068,13 +3017,13 @@ void wiRenderer::DrawSky(DeviceContext context, bool isReflection)
 	
 	if (!isReflection)
 	{
-		BindVS(skyVS, context);
-		BindPS(skyPS, context);
+		BindVS(vertexShaders[VSTYPE_SKY], context);
+		BindPS(pixelShaders[PSTYPE_SKY], context);
 	}
 	else
 	{
-		BindVS(skyVS_refl, context);
-		BindPS(skyPS_refl, context);
+		BindVS(vertexShaders[VSTYPE_SKY_REFLECTION], context);
+		BindPS(pixelShaders[PSTYPE_SKY_REFLECTION], context);
 	}
 	
 	BindTexturePS(enviroMap,0,context);
@@ -3091,8 +3040,8 @@ void wiRenderer::DrawSun(DeviceContext context)
 	BindDepthStencilState(depthReadStencilState, STENCILREF_SKY, context);
 	BindBlendState(blendStateAdd, context);
 
-	BindVS(skyVS, context);
-	BindPS(sunPS, context);
+	BindVS(vertexShaders[VSTYPE_SKY], context);
+	BindPS(pixelShaders[PSTYPE_SUN], context);
 
 	BindVertexBuffer(nullptr, 0, 0, context);
 	BindVertexLayout(nullptr, context);
@@ -3115,8 +3064,8 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 
 		BindTexturePS(depth, 1, context);
 		BindSamplerPS(ssClampAni, 0, context);
-		BindVS(decalVS, context);
-		BindPS(decalPS, context);
+		BindVS(vertexShaders[VSTYPE_DECAL], context);
+		BindPS(pixelShaders[PSTYPE_DECAL], context);
 		BindRasterizerState(backFaceRS, context);
 		BindBlendState(blendStateTransparent, context);
 		BindDepthStencilState(stencilReadMatch, STENCILREF::STENCILREF_DEFAULT, context);
