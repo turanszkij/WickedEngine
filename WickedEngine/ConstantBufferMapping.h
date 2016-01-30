@@ -23,7 +23,7 @@
 
 
 // On demand buffers:
-// These are bound on demand and alive for undefined time
+// These are bound on demand and alive until another is bound at the same slot
 #define CBSLOT_RENDERER_CUBEMAPRENDER	11
 #define CBSLOT_RENDERER_POINTLIGHT		12
 #define CBSLOT_RENDERER_SPOTLIGHT		13
@@ -56,7 +56,7 @@
 // Shader:
 //////////
 
-// Automatically binds constantbuffers in the shader side:
+// Automatically binds constantbuffers on the shader side:
 // Needs macro expansion
 #define CBUFFER_X(name, slot) cbuffer name : register(b ## slot)
 #define CBUFFER(name, slot) CBUFFER_X(name, slot)

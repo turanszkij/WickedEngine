@@ -1789,6 +1789,9 @@
     <ClInclude Include="ConstantBufferMapping.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SamplerMapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\io_export_wicked_wi_bin.py" />
@@ -1868,9 +1871,6 @@
       <Filter>shaders\headers</Filter>
     </None>
     <None Include="reconstructPositionHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="samplersHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
     <None Include="skinningHF.hlsli">

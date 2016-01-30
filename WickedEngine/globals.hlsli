@@ -1,6 +1,18 @@
 #ifndef _SHADERDEF_CONSTANTBUFFERS_
 #define _SHADERDEF_CONSTANTBUFFERS_
 #include "ConstantBufferMapping.h"
+#include "SamplerMapping.h"
+
+SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	)
+SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	)
+SAMPLERSTATE(			sampler_linear_mirror,	SSLOT_LINEAR_MIRROR	)
+SAMPLERSTATE(			sampler_point_clamp,	SSLOT_POINT_CLAMP	)
+SAMPLERSTATE(			sampler_point_wrap,		SSLOT_POINT_WRAP	)
+SAMPLERSTATE(			sampler_point_mirror,	SSLOT_POINT_MIRROR	)
+SAMPLERSTATE(			sampler_aniso_clamp,	SSLOT_ANISO_CLAMP	)
+SAMPLERSTATE(			sampler_aniso_wrap,		SSLOT_ANISO_WRAP	)
+SAMPLERSTATE(			sampler_aniso_mirror,	SSLOT_ANISO_MIRROR	)
+SAMPLERCOMPARISONSTATE(	sampler_shadow_cmp,		SSLOT_SHADOWCOMP	)
 
 CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 {

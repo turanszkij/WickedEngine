@@ -502,6 +502,7 @@
     <ClInclude Include="ConstantBufferMapping.h" />
     <ClInclude Include="DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="ForwardRenderableComponent_BindLua.h" />
+    <ClInclude Include="SamplerMapping.h" />
     <ClInclude Include="wiGraphicsAPI.h" />
     <ClInclude Include="LoadingScreenComponent_BindLua.h" />
     <ClInclude Include="MainComponent_BindLua.h" />
@@ -858,7 +859,6 @@
     <None Include="postProcessHF.hlsli" />
     <None Include="quad.hlsli" />
     <None Include="reconstructPositionHF.hlsli" />
-    <None Include="samplersHF.hlsli" />
     <None Include="skinningHF.hlsli" />
     <None Include="skyHF.hlsli" />
     <None Include="sOHF.hlsli" />

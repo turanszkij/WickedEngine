@@ -661,11 +661,6 @@ public:
 		resource = nullptr;
 	}
 
-	//static void UpdatePerWorldCB(DeviceContext context);
-	//static void UpdatePerFrameCB(DeviceContext context);
-	//static void UpdatePerRenderCB(DeviceContext context, int tessF);
-	//static void UpdatePerViewCB(DeviceContext context, Camera* camera, Camera* refCamera, const XMFLOAT4& newClipPlane = XMFLOAT4(0,0,0,0));
-	//static void UpdatePerEffectCB(DeviceContext context, const XMFLOAT4& blackoutBlackWhiteInvCol, const XMFLOAT4 colorMask);
 	static void UpdateWorldCB(DeviceContext context);
 	static void UpdateFrameCB(DeviceContext context);
 	static void UpdateCameraCB(DeviceContext context);
@@ -675,7 +670,6 @@ public:
 	static void DrawSun(DeviceContext context);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
 		, bool BlackOut, bool isReflection, SHADERTYPE shaded, TextureView refRes, bool grass, GRAPHICSTHREAD thread);
-	//static void DrawForSO(DeviceContext context);
 	static void ClearShadowMaps(DeviceContext context);
 	static void DrawForShadowMap(DeviceContext context);
 	static void DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
@@ -735,7 +729,6 @@ public:
 	float getSphereRadius(const int& index);
 
 	string DIRECTORY;
-
 
 	struct Picked
 	{
