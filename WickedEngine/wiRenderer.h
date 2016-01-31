@@ -81,7 +81,7 @@ public:
 	inline static void Lock(){ graphicsMutex.lock(); }
 	inline static void Unlock(){ graphicsMutex.unlock(); }
 	
-	static Sampler samplers[SSLOT_COUNT_PERSISTENT];
+	static Sampler samplers[SSLOT_COUNT];
 
 	
 	static int SCREENWIDTH,SCREENHEIGHT;

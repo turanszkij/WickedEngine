@@ -1,7 +1,6 @@
 #include "pointLightHF.hlsli"
 
 Texture2D<float4> xTextureTex:register(t0);
-SamplerState texSampler:register(s0);
 
 struct VertextoPixel
 {

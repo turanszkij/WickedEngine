@@ -33,7 +33,7 @@ bool wiRenderer::DX11 = false,wiRenderer::VSYNC=true,wiRenderer::DEFERREDCONTEXT
 DeviceContext				wiRenderer::deferredContexts[];
 CommandList				wiRenderer::commandLists[];
 mutex								wiRenderer::graphicsMutex;
-Sampler wiRenderer::samplers[SSLOT_COUNT_PERSISTENT];
+Sampler wiRenderer::samplers[SSLOT_COUNT];
 
 map<DeviceContext,long> wiRenderer::drawCalls;
 BufferResource		wiRenderer::constantBuffers[CBTYPE_LAST];
@@ -1079,14 +1079,15 @@ void wiRenderer::SetUpStates()
 
 	Lock();
 	{
-		for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
+		for (int i = 0; i < SSLOT_COUNT; ++i)
 		{
-			int slot = i + SSLOT_COUNT_ONDEMAND;
-			BindSamplerPS(samplers[i], slot, immediateContext);
-			BindSamplerVS(samplers[i], slot, immediateContext);
-			BindSamplerGS(samplers[i], slot, immediateContext);
-			BindSamplerDS(samplers[i], slot, immediateContext);
-			BindSamplerHS(samplers[i], slot, immediateContext);
+			if (samplers[i] == nullptr)
+				continue;
+			BindSamplerPS(samplers[i], i, immediateContext);
+			BindSamplerVS(samplers[i], i, immediateContext);
+			BindSamplerGS(samplers[i], i, immediateContext);
+			BindSamplerDS(samplers[i], i, immediateContext);
+			BindSamplerHS(samplers[i], i, immediateContext);
 		}
 	}
 	Unlock();
