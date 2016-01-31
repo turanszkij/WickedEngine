@@ -3,7 +3,6 @@
 // dir light constant buffer is global
 
 Texture2D<float> xTextureSh[3]:register(t4);
-SamplerComparisonState compSampler:register(s1);
 
 inline float offset_lookup(Texture2D<float> intex, SamplerComparisonState map,
                      float2 loc,
@@ -30,13 +29,13 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 		for (float y = -range; y <= range; y += 1.0f)
 			for (float x = -range; x <= range; x += 1.0f)
 			{
-				sum += offset_lookup(shadowTexture, compSampler, ShTex, float2(x, y), scale, realDistance);
+				sum += offset_lookup(shadowTexture, sampler_cmp_depth, ShTex, float2(x, y), scale, realDistance);
 				samples++;
 			}
 
 		retVal *= sum / samples;
 	}
-	else retVal *= offset_lookup(shadowTexture, compSampler, ShTex, float2(0, 0), scale, realDistance);
+	else retVal *= offset_lookup(shadowTexture, sampler_cmp_depth, ShTex, float2(0, 0), scale, realDistance);
 
 	return retVal;
 }

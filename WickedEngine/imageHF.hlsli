@@ -10,7 +10,7 @@ Texture2D<float4> xRefracTexture:register(t4);
 Texture2D<float4> xMaskTex:register(t5);
 Texture2D<float4> xTexture:register(t6);
 
-SamplerState Sampler:register(s0);
+SAMPLERSTATE(Sampler, SSLOT_ONDEMAND0);
 
 struct VertextoPixel
 {

@@ -11,7 +11,6 @@ private:
 	static GeometryShader geometryShader;
 	static VertexShader vertexShader;
 	static VertexLayout inputLayout;
-	static Sampler samplerState;
 	static RasterizerState rasterizerState;
 	static DepthStencilState depthStencilState;
 	static BlendState blendState;

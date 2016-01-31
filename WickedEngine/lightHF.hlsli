@@ -16,7 +16,6 @@ Texture2D<float> depthMap:register(t0);
 Texture2D<float4> normalMap:register(t1);
 //Texture2D<float4> specularMap:register(t2);
 Texture2D<float4> materialMap:register(t2);
-SamplerState Sampler:register(s0);
 
 static const float specularMaximumIntensity = 1;
 

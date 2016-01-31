@@ -60,7 +60,6 @@ protected:
 	static PixelShader   pixelShader;
 	static BlendState		blendState;
 	static BufferResource         constantBuffer;
-	static Sampler			sampleState;
 	static RasterizerState		rasterizerState;
 	static DepthStencilState	depthStencilState;
 	

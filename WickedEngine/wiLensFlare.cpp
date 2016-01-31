@@ -8,7 +8,6 @@ PixelShader wiLensFlare::pixelShader;
 GeometryShader wiLensFlare::geometryShader;
 VertexShader wiLensFlare::vertexShader;
 VertexLayout wiLensFlare::inputLayout;
-Sampler wiLensFlare::samplerState;
 RasterizerState wiLensFlare::rasterizerState;
 DepthStencilState wiLensFlare::depthStencilState;
 BlendState wiLensFlare::blendState;
@@ -26,7 +25,6 @@ void wiLensFlare::CleanUp(){
 
 	if(constantBuffer) constantBuffer->Release(); constantBuffer = NULL;
 
-	if(samplerState) samplerState->Release(); samplerState = NULL;
 	if(rasterizerState) rasterizerState->Release(); rasterizerState = NULL;
 	if(blendState) blendState->Release(); blendState = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
@@ -55,9 +53,6 @@ void wiLensFlare::Draw(TextureView depthMap, DeviceContext context, const XMVECT
 		wiRenderer::BindBlendState(blendState,context);
 
 		wiRenderer::BindTextureGS(depthMap,0,context);
-
-		wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
-		wiRenderer::BindSamplerGS(samplerState,0,context);
 
 		int i=0;
 		for(TextureView x : rims){
@@ -108,26 +103,6 @@ void wiLensFlare::SetUpCB()
 }
 void wiLensFlare::SetUpStates()
 {
-	D3D11_SAMPLER_DESC samplerDesc;
-	ZeroMemory( &samplerDesc, sizeof(D3D11_SAMPLER_DESC) );
-	samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &samplerState);
-
-
-
-	
 	D3D11_RASTERIZER_DESC rs;
 	rs.FillMode=D3D11_FILL_SOLID;
 	rs.CullMode=D3D11_CULL_NONE;

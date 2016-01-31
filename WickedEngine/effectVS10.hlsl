@@ -2,7 +2,6 @@
 #include "effectHF_VS.hlsli"
 
 Texture2D noiseTex:register(t0);
-SamplerState texSampler:register(s0);
 
 PixelInputType main(Input input)
 {
@@ -47,7 +46,7 @@ PixelInputType main(Input input)
 		//VERTEX OFFSET MOTION BLUR
 		//if(xMotionBlur.x){
 			//float offsetMod = dot(input.nor,vel);
-			//pos = lerp(pos,posPrev,(offsetMod<0?((1-saturate(offsetMod))*(noiseTex.SampleLevel( texSampler,input.tex.xy,0 ).r)*0.6f):0));
+			//pos = lerp(pos,posPrev,(offsetMod<0?((1-saturate(offsetMod))*(noiseTex.SampleLevel( sampler_linear_wrap,input.tex.xy,0 ).r)*0.6f):0));
 		//}
 
 		Out.pos = Out.pos2D = mul( pos, g_xCamera_VP );

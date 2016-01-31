@@ -4,7 +4,6 @@
 Texture2D<float> xSceneDepthMap:register(t1);
 Texture2D<float4> xTexture:register(t2);
 Texture2D<float4> xNormal:register(t3);
-SamplerState texSampler:register(s0);
 
 struct VertexToPixel{
 	float4 pos			: SV_POSITION;
@@ -48,7 +47,7 @@ PixelOutputType main(VertexToPixel PSIn)
 	if (hasTexNor & 0x0000010){
 		float3 normal = normalize(cross(ddx(pos3D), ddy(pos3D)));
 		//clip( dot(normal,front)>-0.2?-1:1 ); //clip at oblique angle
-		float4 nortex=xNormal.Sample(texSampler,projTex.xy);
+		float4 nortex=xNormal.Sample(sampler_aniso_clamp,projTex.xy);
 		float3 eyevector = normalize( eye - pos3D );
 		if(nortex.a>0){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -projTex.xy);
@@ -60,7 +59,7 @@ PixelOutputType main(VertexToPixel PSIn)
 		Out.nor.xyz=normal;
 	}
 	if(hasTexNor & 0x0000001){
-		Out.col=xTexture.Sample(texSampler,projTex.xy);
+		Out.col=xTexture.Sample(sampler_aniso_clamp,projTex.xy);
 		Out.col.a*=opacity;
 		float3 edgeBlend = clipSpace.xyz;
 		edgeBlend.z = edgeBlend.z * 2 - 1;

@@ -33,8 +33,7 @@ bool wiRenderer::DX11 = false,wiRenderer::VSYNC=true,wiRenderer::DEFERREDCONTEXT
 DeviceContext				wiRenderer::deferredContexts[];
 CommandList				wiRenderer::commandLists[];
 mutex								wiRenderer::graphicsMutex;
-Sampler wiRenderer::ssClampLin,wiRenderer::ssClampPoi,wiRenderer::ssMirrorLin,wiRenderer::ssMirrorPoi,wiRenderer::ssWrapLin,wiRenderer::ssWrapPoi
-		,wiRenderer::ssClampAni,wiRenderer::ssWrapAni,wiRenderer::ssMirrorAni,wiRenderer::ssComp;
+Sampler wiRenderer::samplers[SSLOT_COUNT_PERSISTENT];
 
 map<DeviceContext,long> wiRenderer::drawCalls;
 BufferResource		wiRenderer::constantBuffers[CBTYPE_LAST];
@@ -53,8 +52,6 @@ bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
 BlendState		wiRenderer::blendState, wiRenderer::blendStateTransparent, wiRenderer::blendStateAdd;
 
-Sampler		wiRenderer::texSampler, wiRenderer::mapSampler, wiRenderer::comparisonSampler, wiRenderer::mirSampler,wiRenderer::pointSampler;
-Sampler		wiRenderer::skySampler;
 TextureView wiRenderer::enviroMap,wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 int wiRenderer::visibleCount;
@@ -338,12 +335,6 @@ void wiRenderer::CleanUp()
 
 void wiRenderer::SetUpStaticComponents()
 {
-	texSampler = NULL;
-	mapSampler = NULL;
-	comparisonSampler = NULL;
-	mirSampler = NULL;
-
-
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
 		SafeInit(constantBuffers[i]);
@@ -379,6 +370,10 @@ void wiRenderer::SetUpStaticComponents()
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
 		SafeInit(vertexLayouts[i]);
+	}
+	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
+	{
+		SafeInit(samplers[i]);
 	}
 
 	//thread t1(LoadBasicShaders);
@@ -460,19 +455,9 @@ void wiRenderer::SetUpStaticComponents()
 }
 void wiRenderer::CleanUpStatic()
 {
-
-	if(texSampler) texSampler->Release(); texSampler=NULL;
-	if(mapSampler) mapSampler->Release(); mapSampler=NULL;
-	if(pointSampler) pointSampler->Release(); pointSampler=NULL;
-	if(comparisonSampler) comparisonSampler->Release(); comparisonSampler=NULL;
-	if(mirSampler) mirSampler->Release(); mirSampler=NULL;
-
 	if(blendState) blendState->Release(); blendState=NULL;
 	if(blendStateTransparent) blendStateTransparent->Release(); blendStateTransparent=NULL;
 	if(blendStateAdd) blendStateAdd->Release(); blendStateAdd=NULL;
-
-
-	if(skySampler) skySampler->Release(); skySampler=NULL;
 
 
 	wiHairParticle::CleanUpStatic();
@@ -516,6 +501,10 @@ void wiRenderer::CleanUpStatic()
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
 		SafeRelease(vertexLayouts[i]);
+	}
+	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
+	{
+		SafeRelease(samplers[i]);
 	}
 
 	if (physicsEngine) physicsEngine->CleanUp();
@@ -1027,175 +1016,56 @@ void wiRenderer::SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssMirrorLin);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
+
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
+
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
 	
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssMirrorPoi);
-
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssWrapLin);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
 	
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssWrapPoi);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
 	
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssClampLin);
 	
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssClampPoi);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
 	
 	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 4;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssClampAni);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
 	
 	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 4;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssWrapAni);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
 	
 	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 4;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssMirrorAni);
-	
-	samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &ssComp);
-
-
-	
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &texSampler);
-
-	ZeroMemory( &samplerDesc, sizeof(D3D11_SAMPLER_DESC) );
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &mapSampler);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
 
 	ZeroMemory( &samplerDesc, sizeof(D3D11_SAMPLER_DESC) );
 	samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
@@ -1205,59 +1075,21 @@ void wiRenderer::SetUpStates()
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 16;
 	samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &comparisonSampler);
+	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
 
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &mirSampler);
-
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &pointSampler);
-	
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	graphicsDevice->CreateSamplerState(&samplerDesc, &skySampler);
-
+	Lock();
+	{
+		for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
+		{
+			int slot = i + SSLOT_COUNT_ONDEMAND;
+			BindSamplerPS(samplers[i], slot, immediateContext);
+			BindSamplerVS(samplers[i], slot, immediateContext);
+			BindSamplerGS(samplers[i], slot, immediateContext);
+			BindSamplerDS(samplers[i], slot, immediateContext);
+			BindSamplerHS(samplers[i], slot, immediateContext);
+		}
+	}
+	Unlock();
 	
 	D3D11_RASTERIZER_DESC rs;
 	rs.FillMode=D3D11_FILL_SOLID;
@@ -1284,6 +1116,7 @@ void wiRenderer::SetUpStates()
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_SHADOW]);
+
 	rs.FillMode=D3D11_FILL_SOLID;
 	rs.CullMode=D3D11_CULL_NONE;
 	rs.FrontCounterClockwise=true;
@@ -1307,7 +1140,6 @@ void wiRenderer::SetUpStates()
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_WIRE]);
-
 	
 	rs.FillMode=D3D11_FILL_SOLID;
 	rs.CullMode=D3D11_CULL_NONE;
@@ -1939,7 +1771,6 @@ void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 	BindVS(vertexShaders[VSTYPE_TRAIL],context);
 	
 	BindTexturePS(refracRes,0,context);
-	BindSamplerPS(mirSampler,0,context);
 
 	for (Object* o : objectsWithTrails)
 	{
@@ -2064,8 +1895,6 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 	BindTexturePS(depth,0,context);
 	BindTexturePS(normal,1,context);
 	BindTexturePS(material,2,context);
-	BindSamplerPS(pointSampler,0,context);
-	BindSamplerPS(comparisonSampler,1,context);
 
 	
 	BindBlendState(blendStateAdd,context);
@@ -2329,7 +2158,6 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 			BindBlendState(blendState, context);
 
 			BindPS(pixelShaders[PSTYPE_SHADOW], context);
-			BindSamplerPS(texSampler, 0, context);
 
 			BindVS(vertexShaders[VSTYPE_SHADOW], context);
 
@@ -2753,11 +2581,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 			else
 				return;
 
-		if(DX11Eff && tessF) 
-			BindSamplerDS(texSampler,0,context);
-		BindSamplerPS(texSampler,0,context);
-		BindSamplerPS(mapSampler,1,context);
-
 
 		BindBlendState(blendState,context);
 
@@ -2877,8 +2700,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 		BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],context);
 		BindVS(vertexShaders[VSTYPE_EFFECT10],context);
 
-		BindSamplerPS(texSampler,0,context);
-		BindSamplerPS(mapSampler,1,context);
 	
 		if (!wireRender)
 		{
@@ -3014,7 +2835,6 @@ void wiRenderer::DrawSky(DeviceContext context, bool isReflection)
 	}
 	
 	BindTexturePS(enviroMap,0,context);
-	BindSamplerPS(skySampler,0,context);
 
 	BindVertexBuffer(nullptr,0,0,context);
 	BindVertexLayout(nullptr, context);
@@ -3050,7 +2870,6 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 		}
 
 		BindTexturePS(depth, 1, context);
-		BindSamplerPS(ssClampAni, 0, context);
 		BindVS(vertexShaders[VSTYPE_DECAL], context);
 		BindPS(pixelShaders[PSTYPE_DECAL], context);
 		BindRasterizerState(rasterizers[RSTYPE_BACK], context);

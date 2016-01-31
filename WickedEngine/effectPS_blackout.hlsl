@@ -10,7 +10,7 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 
 	//if(mat == matIndex){
 		if(g_xMat_hasTex) {
-			baseColor = xTextureTex.Sample(texSampler,PSIn.tex);
+			baseColor = xTextureTex.Sample(sampler_aniso_wrap,PSIn.tex);
 			/*else if(mat==1) baseColor = xTextureTex1.Sample(texSampler,PSIn.tex);
 			else if(mat==2) baseColor = xTextureTex2.Sample(texSampler,PSIn.tex);
 			else if(mat==3) baseColor = xTextureTex3.Sample(texSampler,PSIn.tex);*/

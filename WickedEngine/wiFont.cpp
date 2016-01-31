@@ -11,7 +11,6 @@ VertexShader  wiFont::vertexShader;
 PixelShader   wiFont::pixelShader;
 BlendState		wiFont::blendState;
 BufferResource           wiFont::constantBuffer;
-Sampler			wiFont::sampleState;
 RasterizerState		wiFont::rasterizerState;
 DepthStencilState	wiFont::depthStencilState;
 vector<wiFont::Vertex> wiFont::vertexList;
@@ -39,32 +38,12 @@ void wiFont::Initialize()
 	pixelShader=NULL;
 	blendState=NULL;
 	constantBuffer=NULL;
-	sampleState=NULL;
 	rasterizerState=NULL;
 	depthStencilState=NULL;
 }
 
 void wiFont::SetUpStates()
 {
-	D3D11_SAMPLER_DESC samplerDesc;
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &sampleState);
-
-
-
-	
 	D3D11_RASTERIZER_DESC rs;
 	rs.FillMode=D3D11_FILL_SOLID;
 	rs.CullMode=D3D11_CULL_BACK;
@@ -173,7 +152,6 @@ void wiFont::CleanUpStatic()
 	if(pixelShader) pixelShader->Release();		pixelShader=NULL;
 	if(vertexLayout) vertexLayout->Release();	vertexLayout=NULL;
 	if(constantBuffer) constantBuffer->Release();	constantBuffer=NULL;
-	if(sampleState) sampleState->Release();		sampleState=NULL;
 	if(rasterizerState) rasterizerState->Release();	rasterizerState=NULL;
 	if(blendState) blendState->Release();		blendState=NULL;
 	if(depthStencilState) depthStencilState->Release();	depthStencilState=NULL;
@@ -311,7 +289,6 @@ void wiFont::Draw(DeviceContext context){
 		wiRenderer::BindIndexBuffer(indexBuffer,context);
 
 		wiRenderer::BindTexturePS(fontStyles[style].texture,0,context);
-		wiRenderer::BindSamplerPS(sampleState,0,context);
 		wiRenderer::DrawIndexed(text.length()*6,context);
 	}
 }

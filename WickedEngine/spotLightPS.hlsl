@@ -5,10 +5,8 @@
 float4 main(VertexToPixel PSIn) : SV_TARGET
 {
 	float4 light = float4(lightColor.rgb,1);
-	float2 screenPos;
-		screenPos.x = PSIn.pos2D.x/PSIn.pos2D.w/2.0f + 0.5f;
-		screenPos.y = -PSIn.pos2D.y/PSIn.pos2D.w/2.0f + 0.5f;
-	float depth = depthMap.SampleLevel(Sampler,screenPos,0);
+	float2 screenPos = float2(1,-1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;
+	float depth = depthMap.SampleLevel(sampler_point_clamp,screenPos,0);
 	//clip(depth<1?1:-1);
 
 		
@@ -16,11 +14,11 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 	
 	[branch]if(depth<g_xCamera_ZFarP){
 
-		float4 norU = normalMap.SampleLevel(Sampler,screenPos,0);
+		float4 norU = normalMap.SampleLevel(sampler_point_clamp,screenPos,0);
 		bool unshaded = isUnshaded(norU.w);
 
 		[branch]if(!unshaded){
-			float4 material = materialMap.SampleLevel(Sampler,screenPos,0);
+			float4 material = materialMap.SampleLevel(sampler_point_clamp,screenPos,0);
 			float specular = material.w*specularMaximumIntensity;
 			uint specular_power = material.z;
 			float3 normal = norU.xyz;

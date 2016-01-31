@@ -3,6 +3,7 @@
 #include "wiEnums.h"
 #include "wiGraphicsAPI.h"
 #include "skinningDEF.h"
+#include "SamplerMapping.h"
 
 struct Transform;
 struct Vertex;
@@ -80,8 +81,7 @@ public:
 	inline static void Lock(){ graphicsMutex.lock(); }
 	inline static void Unlock(){ graphicsMutex.unlock(); }
 	
-	static Sampler ssClampLin,ssClampPoi,ssMirrorLin,ssMirrorPoi,ssWrapLin,ssWrapPoi
-		,ssClampAni,ssWrapAni,ssMirrorAni,ssComp;
+	static Sampler samplers[SSLOT_COUNT_PERSISTENT];
 
 	
 	static int SCREENWIDTH,SCREENHEIGHT;
@@ -294,12 +294,10 @@ protected:
 	
 
 
-	static bool						wireRender, debugSpheres, debugBoneLines, debugBoxes;
+	static bool	wireRender, debugSpheres, debugBoneLines, debugBoxes;
 
 
-	static BlendState		blendState, blendStateTransparent, blendStateAdd;
-	static Sampler		texSampler, mapSampler, comparisonSampler, mirSampler, pointSampler;
-	static Sampler		skySampler;
+	static BlendState blendState, blendStateTransparent, blendStateAdd;
 	static TextureView enviroMap,colorGrading;
 	static void LoadBuffers();
 	static void LoadBasicShaders();

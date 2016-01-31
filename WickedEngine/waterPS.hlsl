@@ -33,9 +33,9 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		float3 bumpColor=0;
 		if(g_xMat_hasNor){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex);
-			bumpColor0 = 2.0f * xTextureNor.Sample(texSampler,PSIn.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
-			bumpColor1 = 2.0f * xTextureNor.Sample(texSampler,PSIn.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
-			bumpColor2 = xRippleMap.Sample(texSampler,screenPos).rg;
+			bumpColor0 = 2.0f * xTextureNor.Sample(sampler_aniso_wrap,PSIn.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
+			bumpColor1 = 2.0f * xTextureNor.Sample(sampler_aniso_wrap,PSIn.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
+			bumpColor2 = xRippleMap.Sample(sampler_aniso_wrap,screenPos).rg;
 			bumpColor= float3( bumpColor0+bumpColor1+bumpColor2,1 )  * g_xMat_refractionIndex;
 			normal = normalize(mul(normalize(bumpColor), tangentFrame));
 			//normal = (bumpColor.x * PSIn.tan) + (bumpColor.y * PSIn.bin) + (bumpColor.z * PSIn.nor);
@@ -51,15 +51,15 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		float2 RefTex;
 			RefTex.x = PSIn.ReflectionMapSamplingPos.x/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 			RefTex.y = -PSIn.ReflectionMapSamplingPos.y/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
-		float4 reflectiveColor = xTextureRef.SampleLevel(mapSampler,RefTex+bumpColor.rg,0);
+		float4 reflectiveColor = xTextureRef.SampleLevel(sampler_linear_mirror,RefTex+bumpColor.rg,0);
 		
 		//reflectiveColor.rgb = lerp(skyColor, reflectiveColor.rgb, reflectiveColor.a);
 	
 		//REFRACTION 
 		float2 perturbatedRefrTexCoords = screenPos.xy + bumpColor.rg;
 		float depth = PSIn.pos2D.z;
-		float refDepth = (xDepthMap.Sample(mapSampler, screenPos));
-		float3 refractiveColor = xTextureRefrac.SampleLevel(mapSampler, perturbatedRefrTexCoords, 0).rgb;
+		float refDepth = (xDepthMap.Sample(sampler_linear_mirror, screenPos));
+		float3 refractiveColor = xTextureRefrac.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 		float eyeDot = dot(normal, eyevector);
 		float mod = saturate(0.05*(refDepth-depth));
 		float3 dullColor = lerp(refractiveColor, g_xMat_diffuseColor.rgb, saturate(eyeDot));
@@ -83,7 +83,7 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 
 		//SPECULAR
 		if(g_xMat_hasSpe){
-			spec = xTextureSpe.Sample(texSampler, PSIn.tex);
+			spec = xTextureSpe.Sample(sampler_aniso_wrap, PSIn.tex);
 		}
 		/*float3 reflectionVector = reflect(xSun, normal);
 		float specR = dot(normalize(reflectionVector), eyevector);

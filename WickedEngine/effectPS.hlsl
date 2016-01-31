@@ -25,7 +25,7 @@ PixelOutputType main(PixelInputType PSIn)
 	PSIn.tex *= g_xMat_texMulAdd.xy;
 	PSIn.tex += g_xMat_texMulAdd.zw;
 	[branch]if(g_xMat_hasTex) {
-		baseColor *= xTextureTex.Sample(texSampler,PSIn.tex);
+		baseColor *= xTextureTex.Sample(sampler_aniso_wrap,PSIn.tex);
 	}
 	baseColor.rgb *= PSIn.instanceColor;
 	
@@ -38,7 +38,7 @@ PixelOutputType main(PixelInputType PSIn)
 	//NORMALMAP
 	float3 bumpColor=0;
 	if(g_xMat_hasNor){
-		float4 nortex = xTextureNor.Sample(texSampler,PSIn.tex);
+		float4 nortex = xTextureNor.Sample(sampler_aniso_wrap,PSIn.tex);
 		if(nortex.a>0){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -PSIn.tex.xy);
 			bumpColor = 2.0f * nortex.rgb - 1.0f;
@@ -50,7 +50,7 @@ PixelOutputType main(PixelInputType PSIn)
 	
 	//SPECULAR
 	//if(hasRefNorTexSpe.w){
-		spec = lerp(spec,xTextureSpe.Sample(texSampler, PSIn.tex).r, g_xMat_hasSpe);
+		spec = lerp(spec,xTextureSpe.Sample(sampler_aniso_wrap, PSIn.tex).r, g_xMat_hasSpe);
 	//}
 	
 
@@ -63,7 +63,7 @@ PixelOutputType main(PixelInputType PSIn)
 		enviroTex.GetDimensions(mip,size.x,size.y,mipLevels);
 
 		float3 ref = normalize(reflect(-eyevector, normal));
-		envCol = enviroTex.SampleLevel(texSampler,ref,(1-smoothstep(0,128, g_xMat_specular_power))*mipLevels);
+		envCol = enviroTex.SampleLevel(sampler_linear_clamp,ref,(1-smoothstep(0,128, g_xMat_specular_power))*mipLevels);
 		baseColor = lerp(baseColor,envCol, g_xMat_metallic*spec);
 	}
 
@@ -74,9 +74,9 @@ PixelOutputType main(PixelInputType PSIn)
 			RefTex.x = PSIn.ReflectionMapSamplingPos.x/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 			RefTex.y = -PSIn.ReflectionMapSamplingPos.y/PSIn.ReflectionMapSamplingPos.w/2.0f + 0.5f;
 		float colorMat = 0;
-		colorMat = xTextureMat.SampleLevel(texSampler,PSIn.tex,0);
+		colorMat = xTextureMat.SampleLevel(sampler_aniso_wrap,PSIn.tex,0);
 		normal = normalize( lerp(normal,PSIn.nor,pow(abs(colorMat.x),0.02f)) );
-		float4 colorReflection = xTextureRef.SampleLevel(mapSampler,RefTex+normal.xz,0);
+		float4 colorReflection = xTextureRef.SampleLevel(sampler_linear_clamp,RefTex+normal.xz,0);
 		baseColor.rgb=lerp(baseColor.rgb,colorReflection.rgb,colorMat);
 	}
 		

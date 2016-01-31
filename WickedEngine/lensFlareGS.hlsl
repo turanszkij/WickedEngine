@@ -20,7 +20,6 @@ struct VertextoPixel{
 
 Texture2D<float> depth:register(t0);
 Texture2D flare[7]:register(t1);
-SamplerComparisonState compSampler:register(s0);
 
 inline void append(inout TriangleStream<VertextoPixel> triStream, VertextoPixel p1, uint selector, float2 posMod, float2 size){
 	float2 pos = (xSunPos.xy-0.5)*float2(2,-2);
@@ -96,7 +95,7 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 	for (float y = -range; y <= range; y += 1.0f)
 		for (float x = -range; x <= range; x += 1.0f){
 			samples+=1.0f;
-			accdepth += ( depth.SampleCmpLevelZero(compSampler,xSunPos.xy+float2(x,y)/(depthMapSize*xSunPos.z),xSunPos.z).r ) ;
+			accdepth += ( depth.SampleCmpLevelZero(sampler_cmp_depth,xSunPos.xy+float2(x,y)/(depthMapSize*xSunPos.z),xSunPos.z).r ) ;
 		}
 	accdepth/=samples;
 

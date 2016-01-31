@@ -16,11 +16,8 @@ struct PSOut{
 
 PSOut main(VSOut PSIn)
 {
-	float2 ScreenCoord, ScreenCoordPrev;
-	ScreenCoord.x = PSIn.pos2D.x / PSIn.pos2D.w / 2.0f + 0.5f;
-	ScreenCoord.y = -PSIn.pos2D.y / PSIn.pos2D.w / 2.0f + 0.5f;
-	ScreenCoordPrev.x = PSIn.pos2DPrev.x / PSIn.pos2DPrev.w / 2.0f + 0.5f;
-	ScreenCoordPrev.y = -PSIn.pos2DPrev.y / PSIn.pos2DPrev.w / 2.0f + 0.5f;
+	float2 ScreenCoord = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;
+	float2 ScreenCoordPrev = float2(1, -1) * PSIn.pos2DPrev.xy / PSIn.pos2DPrev.w / 2.0f + 0.5f;
 	float2 vel = ScreenCoord - ScreenCoordPrev;
 
 	PSOut Out = (PSOut)0;

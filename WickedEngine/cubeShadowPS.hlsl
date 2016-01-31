@@ -14,6 +14,6 @@ struct VertextoPixel
 float main(VertextoPixel PSIn) : SV_DEPTH
 {
 	[branch]if(g_xMat_hasTex)
-		clip( xTextureTex.Sample(texSampler,PSIn.tex).a<0.1?-1:1 );
+		clip( xTextureTex.Sample(sampler_linear_wrap,PSIn.tex).a<0.1?-1:1 );
 	return distance(PSIn.pos3D.xyz,lightPos.xyz)/lightEnerdis.y;
 }

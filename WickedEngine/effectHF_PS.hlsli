@@ -10,9 +10,6 @@ Texture2D<float>  xTextureMat:register(t4);
 Texture2D<float4> xTextureNor:register(t5);
 Texture2D<float4> xTextureSpe:register(t6);
 
-SamplerState texSampler:register(s0);
-SamplerState mapSampler:register(s1);
-
 struct PixelOutputType
 {
 	float4 col	: SV_TARGET0;

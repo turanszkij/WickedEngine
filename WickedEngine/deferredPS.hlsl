@@ -16,9 +16,9 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	[branch]if(depth<g_xCamera_ZFarP){
 		color=pow(abs(color),GAMMA);
-		float4 lighting = xLightMap.SampleLevel(Sampler,PSIn.tex,0);
+		float4 lighting = xLightMap.SampleLevel(sampler_point_clamp,PSIn.tex,0);
 		color.rgb *= lighting.rgb + g_xWorld_Ambient.rgb;
-		color.rgb *= xAOMap.SampleLevel(Sampler, PSIn.tex.xy, 0).rrr;
+		color.rgb *= xAOMap.SampleLevel(sampler_linear_clamp, PSIn.tex.xy, 0).rrr;
 		color=pow(abs(color),INV_GAMMA);
 
 		float fog = getFog((depth));

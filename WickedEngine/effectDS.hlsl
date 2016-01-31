@@ -25,10 +25,6 @@ struct HullOutputType
 
 
 Texture2D dispMap:register(t0);
-/*Texture2D dispMap1:register(t1);
-Texture2D dispMap2:register(t2);
-Texture2D dispMap3:register(t3);*/
-SamplerState texSampler:register(s0);
 
 float3 GetLightDirection(float3 pos3D, float3 lightPos)
 {
@@ -102,7 +98,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.clip = dot(vertexPosition, g_xClipPlane);
 
 	////DISPLACEMENT
-	//if(xDisplace[(uint)patch[0].tex.z]) vertexPosition.xyz += vertexNormal * (-1+dispMap.SampleLevel( texSampler,vertexTex,0 ).r) *0.4;
+	//if(xDisplace[(uint)patch[0].tex.z]) vertexPosition.xyz += vertexNormal * (-1+dispMap.SampleLevel( sampler_aniso_wrap,vertexTex,0 ).r) *0.4;
 	//
 
 	

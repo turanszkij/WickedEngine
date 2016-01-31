@@ -1,5 +1,4 @@
 Texture2D<float> xTextureSh:register(t4);
-SamplerComparisonState compSampler:register(s1);
 
 
 CBUFFER(SpotLightCB, CBSLOT_RENDERER_SPOTLIGHT)
@@ -27,7 +26,7 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	float sum = 0;
 	float scale = xBiasResSoftshadow.y;
 	float retVal = 1;
-	retVal *= offset_lookup(shadowTexture, compSampler, ShTex, float2(0, 0), scale, realDistance);
+	retVal *= offset_lookup(shadowTexture, sampler_cmp_depth, ShTex, float2(0, 0), scale, realDistance);
 
 	return retVal;
 }

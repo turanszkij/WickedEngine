@@ -4,6 +4,7 @@
 #include "wiImageEffects.h"
 #include "wiLoader.h"
 #include "wiHelper.h"
+#include "SamplerMapping.h"
 
 #pragma region STATICS
 BlendState		wiImage::blendState, wiImage::blendStateAdd, wiImage::blendStateNoBlend, wiImage::blendStateAvg;
@@ -401,28 +402,28 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 		wiRenderer::BindBlendState(blendStateAvg,context);
 
 	if(effects.quality==QUALITY_NEAREST){
-		if(effects.sampleFlag==SAMPLEMODE_MIRROR)
-			wiRenderer::BindSamplerPS(wiRenderer::ssMirrorPoi,0,context);
-		else if(effects.sampleFlag==SAMPLEMODE_WRAP)
-			wiRenderer::BindSamplerPS(wiRenderer::ssWrapPoi,0,context);
-		else if(effects.sampleFlag==SAMPLEMODE_CLAMP)
-			wiRenderer::BindSamplerPS(wiRenderer::ssClampPoi,0,context);
+		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, context);
+		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, context);
+		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, context);
 	}
 	else if(effects.quality==QUALITY_BILINEAR){
-		if(effects.sampleFlag==SAMPLEMODE_MIRROR)
-			wiRenderer::BindSamplerPS(wiRenderer::ssMirrorLin,0,context);
-		else if(effects.sampleFlag==SAMPLEMODE_WRAP)
-			wiRenderer::BindSamplerPS(wiRenderer::ssWrapLin,0,context);
-		else if(effects.sampleFlag==SAMPLEMODE_CLAMP)
-			wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
+		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, context);
+		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, context);
+		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, context);
 	}
 	else if(effects.quality==QUALITY_ANISOTROPIC){
-		if(effects.sampleFlag==SAMPLEMODE_MIRROR)
-			wiRenderer::BindSamplerPS(wiRenderer::ssMirrorAni,0,context);
-		else if(effects.sampleFlag==SAMPLEMODE_WRAP)
-			wiRenderer::BindSamplerPS(wiRenderer::ssWrapAni,0,context);
-		else if(effects.sampleFlag==SAMPLEMODE_CLAMP)
-			wiRenderer::BindSamplerPS(wiRenderer::ssClampAni,0,context);
+		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, context);
+		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, context);
+		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, context);
 	}
 
 	
@@ -451,7 +452,7 @@ void wiImage::DrawDeferred(TextureView texture
 	wiRenderer::BindTexturePS(ao,8,context);
 
 	
-	wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
+	//wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
 
 	wiRenderer::BindBlendState(blendStateNoBlend,context);
 
