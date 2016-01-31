@@ -13,7 +13,6 @@ PixelShader   wiEmittedParticle::pixelShader,wiEmittedParticle::simplestPS;
 GeometryShader		wiEmittedParticle::geometryShader;
 BufferResource           wiEmittedParticle::constantBuffer;
 BlendState		wiEmittedParticle::blendStateAlpha,wiEmittedParticle::blendStateAdd;
-Sampler			wiEmittedParticle::sampleState;
 RasterizerState		wiEmittedParticle::rasterizerState,wiEmittedParticle::wireFrameRS;
 DepthStencilState	wiEmittedParticle::depthStencilState;
 set<wiEmittedParticle*> wiEmittedParticle::systems;
@@ -264,8 +263,6 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, Textu
 	
 			wiRenderer::BindBlendState((additive?blendStateAdd:blendStateAlpha),context);
 
-			wiRenderer::BindSamplerPS(sampleState,0,context);
-
 			wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Point),context);
 
 			if(!wireRender && material->texture) wiRenderer::BindTexturePS(material->texture,0,context);
@@ -341,25 +338,6 @@ void wiEmittedParticle::SetUpCB()
 }
 void wiEmittedParticle::SetUpStates()
 {
-	D3D11_SAMPLER_DESC samplerDesc;
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &sampleState);
-
-
-
-	
 	D3D11_RASTERIZER_DESC rs;
 	rs.FillMode=D3D11_FILL_SOLID;
 	rs.CullMode=D3D11_CULL_BACK;
@@ -460,7 +438,6 @@ void wiEmittedParticle::SetUpStatic()
 	geometryShader = NULL;
 	vertexLayout = NULL;
 	constantBuffer = NULL;
-	sampleState = NULL;
 	rasterizerState = NULL;
 	blendStateAdd = NULL;
 	blendStateAlpha = NULL;
@@ -483,7 +460,6 @@ void wiEmittedParticle::CleanUpStatic()
 
 	if(constantBuffer) constantBuffer->Release(); constantBuffer = NULL;
 
-	if(sampleState) sampleState->Release(); sampleState = NULL;
 	if(rasterizerState) rasterizerState->Release(); rasterizerState = NULL;
 	if(wireFrameRS) wireFrameRS->Release(); wireFrameRS = NULL;
 	if(blendStateAdd) blendStateAdd->Release(); blendStateAdd = NULL;

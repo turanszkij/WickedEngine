@@ -56,7 +56,6 @@ private:
 	static GeometryShader geometryShader;
 	static BufferResource           constantBuffer;
 	static BlendState		blendStateAlpha,blendStateAdd;
-	static Sampler			sampleState;
 	static RasterizerState		rasterizerState,wireFrameRS;
 	static DepthStencilState	depthStencilState;
 

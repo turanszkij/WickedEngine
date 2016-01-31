@@ -48,7 +48,6 @@ private:
 	static BufferResource cbgs;
 	static DepthStencilState dss;
 	static RasterizerState rs,ncrs;
-	static Sampler ss;
 	static BlendState bs;
 	static int LOD[3];
 public:

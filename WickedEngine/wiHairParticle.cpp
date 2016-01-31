@@ -13,7 +13,6 @@ GeometryShader wiHairParticle::gs[],wiHairParticle::qgs[];
 BufferResource wiHairParticle::cbgs;
 DepthStencilState wiHairParticle::dss;
 RasterizerState wiHairParticle::rs, wiHairParticle::ncrs;
-Sampler wiHairParticle::ss;
 BlendState wiHairParticle::bs;
 int wiHairParticle::LOD[3];
 
@@ -61,7 +60,6 @@ void wiHairParticle::CleanUpStatic(){
 	if(ps) ps->Release(); ps=NULL;
 	if(qps) qps->Release(); qps=NULL;
 	if(cbgs) cbgs->Release(); cbgs=NULL;
-	if(ss) ss->Release(); ss=NULL;
 	if(bs) bs->Release(); bs=NULL;
 	if(rs) rs->Release(); rs=NULL;
 	if(ncrs) ncrs->Release(); ncrs=NULL;
@@ -156,22 +154,6 @@ void wiHairParticle::SetUpStatic(){
 	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 	// Create the depth stencil state.
 	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &dss);
-
-	D3D11_SAMPLER_DESC samplerDesc;
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	wiRenderer::graphicsDevice->CreateSamplerState(&samplerDesc, &ss);
 
 	
 	D3D11_BLEND_DESC bld;
@@ -413,7 +395,6 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 
 		if(texture){
 			wiRenderer::BindTexturePS(texture,0,context);
-			wiRenderer::BindSamplerPS(ss,0,context);
 			wiRenderer::BindTextureGS(texture,0,context);
 
 			wiRenderer::BindBlendState(bs,context);
