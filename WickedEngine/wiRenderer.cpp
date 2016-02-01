@@ -1938,7 +1938,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,context);
 
-				Draw(6, context);
+				Draw(3, context);
 			}
 			else if(type==1) //point
 			{

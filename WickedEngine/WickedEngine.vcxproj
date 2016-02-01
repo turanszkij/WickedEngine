@@ -835,6 +835,7 @@
     <None Include="..\ScriptingAPI-Documentation.md" />
     <None Include="circle.hlsli" />
     <None Include="cone.hlsli" />
+    <None Include="fullScreenTriangleHF.hlsli" />
     <None Include="globals.hlsli" />
     <None Include="cube.hlsli" />
     <None Include="depthConvertHF.hlsli" />

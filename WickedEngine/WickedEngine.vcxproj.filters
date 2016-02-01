@@ -1901,6 +1901,9 @@
     <None Include="skyHF.hlsli">
       <Filter>shaders</Filter>
     </None>
+    <None Include="fullScreenTriangleHF.hlsli">
+      <Filter>shaders\headers</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />

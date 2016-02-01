@@ -197,6 +197,7 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 	if(!context)
 		return;
 
+	bool fullScreenEffect = false;
 
 	static thread_local ImageCB* cb = new ImageCB;
 	static thread_local PostProcessCB* prcb = new PostProcessCB;
@@ -279,10 +280,11 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 
 			wiRenderer::BindVS(vertexShader, context);
 			wiRenderer::BindPS(pixelShader, context);
+			fullScreenEffect = false;
 		}
 		else if(!effects.sunPos.x && !effects.sunPos.y){
-			wiRenderer::BindVS(screenVS,context);
-			
+			wiRenderer::BindVS(screenVS, context);
+			fullScreenEffect = true;
 
 			if(effects.process.outline) 
 					wiRenderer::BindPS(outlinePS,context);
@@ -322,6 +324,7 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 		else{ 
 			wiRenderer::BindVS(screenVS,context);
 			wiRenderer::BindPS(shaftPS,context);
+			fullScreenEffect = true;
 
 			 //Density|Weight|Decay|Exposure
 			(*prcb).params0[0] = 0.65f;
@@ -359,6 +362,7 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 	}
 	else{ //BLUR
 		wiRenderer::BindVS(screenVS,context);
+		fullScreenEffect = true;
 		
 		if(effects.blurDir==0){
 			wiRenderer::BindPS(blurHPS,context);
@@ -427,14 +431,14 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 	}
 
 	
-	wiRenderer::Draw(4,context);
+	wiRenderer::Draw((fullScreenEffect ? 3 : 4), context);
 }
 
 void wiImage::DrawDeferred(TextureView texture
 		, TextureView depth, TextureView lightmap, TextureView normal
 		, TextureView ao, DeviceContext context, int stencilRef){
 
-	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP,context);
+	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,context);
 	wiRenderer::BindRasterizerState(rasterizerState,context);
 	wiRenderer::BindDepthStencilState(depthNoStencilState,stencilRef,context);
 
@@ -451,12 +455,9 @@ void wiImage::DrawDeferred(TextureView texture
 	wiRenderer::BindTexturePS(lightmap,7,context);
 	wiRenderer::BindTexturePS(ao,8,context);
 
-	
-	//wiRenderer::BindSamplerPS(wiRenderer::ssClampLin,0,context);
-
 	wiRenderer::BindBlendState(blendStateNoBlend,context);
 
-	wiRenderer::Draw(4,context);
+	wiRenderer::Draw(3,context);
 }
 
 
