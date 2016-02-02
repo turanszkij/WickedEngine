@@ -382,7 +382,7 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 		
 	CulledList culledPatches;
 	if(spTree)
-		wiSPTree::getVisible(spTree->root,frustum,culledPatches,SP_TREE_STRICT_CULL);
+		wiSPTree::getVisible(spTree->root,frustum,culledPatches);
 
 	if(!culledPatches.empty())
 	{

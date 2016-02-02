@@ -47,6 +47,9 @@ public:
 	unsigned int stencilRef;
 	int stencilComp;
 
+	// don't set anything, just fill the whole screen
+	bool presentFullScreen;
+
 	BLENDMODE blendFlag;
 	ImageType typeFlag;
 	SAMPLEMODE sampleFlag;
@@ -112,6 +115,7 @@ public:
 		mipLevel = 0.f;
 		stencilRef = 0;
 		stencilComp = 0;
+		presentFullScreen = false;
 		blendFlag = BLENDMODE_ALPHA;
 		typeFlag = SCREEN;
 		sampleFlag = SAMPLEMODE_MIRROR;

@@ -48,7 +48,7 @@ protected:
 
 	static VertexShader     vertexShader,screenVS;
 	static PixelShader      pixelShader,blurHPS,blurVPS,shaftPS,outlinePS,dofPS,motionBlurPS,bloomSeparatePS
-		,fxaaPS,ssaoPS,ssssPS,deferredPS,linDepthPS,colorGradePS,ssrPS;
+		,fxaaPS,ssaoPS,ssssPS,deferredPS,linDepthPS,colorGradePS,ssrPS, screenPS;
 	
 
 	

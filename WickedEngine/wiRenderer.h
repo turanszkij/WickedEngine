@@ -4,6 +4,7 @@
 #include "wiGraphicsAPI.h"
 #include "skinningDEF.h"
 #include "SamplerMapping.h"
+#include "wiSPTree.h"
 
 struct Transform;
 struct Vertex;
@@ -42,7 +43,6 @@ class  wiWaterPlane;
 
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string, Material*> MaterialCollection;
-typedef unordered_set<Cullable*> CulledList;
 
 
 class wiRenderer

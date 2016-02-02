@@ -76,11 +76,11 @@ inline float edgeValueNormal(float2 texCo, float2 texDim, float Thickness, float
 	float2 screen = float2(texDim.x,texDim.y)/Thickness;
 	float3 baseNor = xNormalMap.Sample(Sampler,texCo).rgb;
 	float4 sum = float4(0,0,0,0);
-	sum.x = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(-1,-1)/screen).xyz));
+	sum.x = abs(dot(baseNor,xNormalMap.SampleLevel(Sampler,texCo+float2(-1,-1)/screen,0).xyz));
 	if(sum.x){
-		sum.y = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(1,-1)/screen).xyz));
-		sum.z = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(-1,1)/screen).xyz));
-		sum.w = abs(dot(baseNor,xNormalMap.Sample(Sampler,texCo+float2(1,1)/screen).xyz));
+		sum.y = abs(dot(baseNor,xNormalMap.SampleLevel(Sampler,texCo+float2(1,-1)/screen,0).xyz));
+		sum.z = abs(dot(baseNor,xNormalMap.SampleLevel(Sampler,texCo+float2(-1,1)/screen,0).xyz));
+		sum.w = abs(dot(baseNor,xNormalMap.SampleLevel(Sampler,texCo+float2(1,1)/screen,0).xyz));
 		return step(Threshold.xxxx,sum).x;
 	}
 	return 1;
@@ -91,7 +91,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float4 color = float4(0,0,0,1);
 	float numSampling = 0.0f;
 
-	color += xTexture.Sample(Sampler,PSIn.tex);
+	color += xTexture.SampleLevel(Sampler,PSIn.tex,0);
 	numSampling++;
 
 	/*float2 depthMapSize;

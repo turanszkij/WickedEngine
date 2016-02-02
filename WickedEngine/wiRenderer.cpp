@@ -1053,6 +1053,7 @@ void wiRenderer::SetUpStates()
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MaxAnisotropy = 16;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
 	
 	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
@@ -2526,10 +2527,26 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	if(spTree)
-		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
+		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects,wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
+	else return;
 
 	if(!culledObjects.empty())
 	{	
+		//// sort opaques front to back
+		//vector<Cullable*> sortedObjects(culledObjects.begin(), culledObjects.end());
+		//for (unsigned int i = 0; i < sortedObjects.size() - 1; ++i)
+		//{
+		//	for (unsigned int j = 1; j < sortedObjects.size(); ++j)
+		//	{
+		//		if (wiMath::Distance(cam->translation, ((Object*)sortedObjects[i])->translation) >
+		//			wiMath::Distance(cam->translation, ((Object*)sortedObjects[j])->translation))
+		//		{
+		//			Cullable* swap = sortedObjects[i];
+		//			sortedObjects[i] = sortedObjects[j];
+		//			sortedObjects[j] = swap;
+		//		}
+		//	}
+		//}
 
 		for(Cullable* object : culledObjects){
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
@@ -2690,10 +2707,27 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	if (spTree)
-		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects);
+		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects, wiSPTree::SortType::SP_TREE_SORT_PAINTER);
 
 	if(!culledObjects.empty())
 	{
+		//// sort transparents back to front
+		//vector<Cullable*> sortedObjects(culledObjects.begin(), culledObjects.end());
+		//for (unsigned int i = 0; i < sortedObjects.size() - 1; ++i)
+		//{
+		//	for (unsigned int j = 1; j < sortedObjects.size(); ++j)
+		//	{
+		//		if (wiMath::Distance(cam->translation, ((Object*)sortedObjects[i])->translation) <
+		//			wiMath::Distance(cam->translation, ((Object*)sortedObjects[j])->translation))
+		//		{
+		//			Cullable* swap = sortedObjects[i];
+		//			sortedObjects[i] = sortedObjects[j];
+		//			sortedObjects[j] = swap;
+		//		}
+		//	}
+		//}
+
+
 		for(Cullable* object : culledObjects)
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 

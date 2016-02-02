@@ -328,6 +328,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceCont
 }
 void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, DeviceContext context){
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	fx.presentFullScreen = true;
 
 	rtFinal[0].Activate(context);
 
@@ -394,6 +395,7 @@ void Renderable3DComponent::RenderComposition2(DeviceContext context){
 	if (getBloomEnabled())
 	{
 		fx.blendFlag = BLENDMODE_ADDITIVE;
+		fx.presentFullScreen = true;
 		wiImage::Draw(rtBloom.back().shaderResource.back(), fx, context);
 	}
 }
@@ -416,6 +418,11 @@ void Renderable3DComponent::RenderColorGradedComposition(){
 			fx.setMaskMap(wiTextureHelper::getInstance()->getColorGradeDefault());
 		}
 	}
+	else
+	{
+		fx.presentFullScreen = true;
+	}
+
 	wiImage::Draw(rtFinal[1].shaderResource.back(), fx);
 }
 

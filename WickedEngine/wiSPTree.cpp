@@ -3,7 +3,7 @@
 #include "wiLoader.h"
 #include "wiFrustum.h"
 
-#define SP_TREE_MAX_DEPTH 100
+#define SP_TREE_MAX_DEPTH 5
 #define SP_TREE_OBJECT_PER_NODE 6
 #define SP_TREE_BOX_CONTAIN
 
@@ -114,7 +114,7 @@ void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects){
 	
 }
 
-void wiSPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, SortType sort, CullStrictness type){
 	if(!node) return;
 	int contain_type = frustum.CheckBox(node->box.corners);
 	if(!contain_type) 
@@ -129,16 +129,22 @@ void wiSPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, int
 				)
 			)
 			{
-				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.getCamPos())*1000);
+
+#ifdef SORT_SPTREE_CULL
+				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.getCamPos())*1000);
+				if (sort == SP_TREE_SORT_PAINTER)
+					object->lastSquaredDistMulThousand *= -1;
+#endif
+
 				objects.insert(object);
 			}
 		if(node->count){
 			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects,type);
+				getVisible(node->children[i],frustum,objects,sort,type);
 		}
 	}
 }
-void wiSPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, SortType sort, CullStrictness type){
 	if(!node) return;
 	int contain_type = frustum.intersects(node->box);
 	if(!contain_type) 
@@ -152,44 +158,62 @@ void wiSPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, int ty
 					(contain_type==INTERSECTS && frustum.intersects(object->bounds))
 				)
 			){
-				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.getCenter())*1000);
+
+#ifdef SORT_SPTREE_CULL
+				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.getCenter())*1000);
+				if (sort == SP_TREE_SORT_PAINTER)
+					object->lastSquaredDistMulThousand *= -1;
+#endif
+
 				objects.insert(object);
 			}
 		if(node->count){
 			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects,type);
+				getVisible(node->children[i],frustum,objects, sort,type);
 		}
 	}
 }
-void wiSPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, SortType sort, CullStrictness type){
 	if(!node) return;
 	int contain_type = frustum.intersects(node->box);
 	if(!contain_type) return;
 	else {
 		for(Cullable* object : node->objects)
 			if(frustum.intersects(object->bounds)){
-				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.center)*1000);
+
+#ifdef SORT_SPTREE_CULL
+				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.center)*1000);
+				if (sort == SP_TREE_SORT_PAINTER)
+					object->lastSquaredDistMulThousand *= -1;
+#endif
+
 				objects.insert(object);
 			}
 		if(node->count){
 			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects,type);
+				getVisible(node->children[i],frustum,objects, sort,type);
 		}
 	}
 }
-void wiSPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, int type){
+void wiSPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, SortType sort, CullStrictness type){
 	if(!node) return;
 	int contain_type = frustum.intersects(node->box);
 	if(!contain_type) return;
 	else {
 		for(Cullable* object : node->objects)
 			if(frustum.intersects(object->bounds)){
-				//object->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(object->bounds.getCenter(),frustum.center)*1000);
+
+#ifdef SORT_SPTREE_CULL
+				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.origin)*1000);
+				if (sort == SP_TREE_SORT_PAINTER)
+					object->lastSquaredDistMulThousand *= -1;
+#endif
+
 				objects.insert(object);
 			}
 		if(node->count){
 			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects,type);
+				getVisible(node->children[i],frustum,objects, sort,type);
 		}
 	}
 }

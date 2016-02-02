@@ -1,6 +1,6 @@
 struct VertexOut{
 	float4 pos : SV_POSITION;
-	uint vid : VERTEXID;
+	nointerpolation uint vid : VERTEXID;
 };
 
 VertexOut main(uint vid : SV_VertexID)

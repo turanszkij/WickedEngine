@@ -3,8 +3,8 @@
 struct VertextoPixel{
 	float4 pos				: SV_POSITION;
 	float3 texPos			: TEXCOORD0;
-	uint   sel				: TEXCOORD1;
-	float4 opa				: TEXCOORD2;
+	nointerpolation uint   sel				: TEXCOORD1;
+	nointerpolation float4 opa				: TEXCOORD2;
 };
 
 Texture2D flare[7]:register(t1);

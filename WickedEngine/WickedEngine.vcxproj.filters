@@ -2145,6 +2145,9 @@
     <FxCompile Include="skyPS_reflection.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
+    <FxCompile Include="screenPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="fonts\basic.dds">

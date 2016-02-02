@@ -3,14 +3,15 @@
 #include "wiLoader.h"
 
 class Frustum;
-//
-//struct cullable_comparator {
-//    bool operator() (const Cullable* a, const Cullable* b) const{
-//		return a->lastSquaredDistMulThousand<=b->lastSquaredDistMulThousand;
-//    }
-//};
-//typedef set<Cullable*,cullable_comparator> CulledList;
+
+//#define SORT_SPTREE_CULL
+// currently this is impossible as the distance evaluator would cause race conditions between threads (todo) :(
+
+#ifdef SORT_SPTREE_CULL
+typedef set<Cullable*, Cullable> CulledList;
+#else
 typedef unordered_set<Cullable*> CulledList;
+#endif
 
 typedef unordered_set<Object*> CulledObjectList;
 typedef unordered_map<Mesh*,CulledObjectList> CulledCollection;
@@ -57,13 +58,22 @@ public:
 		}
 	};
 	Node* root;
-#define SP_TREE_STRICT_CULL 0
-#define SP_TREE_LOOSE_CULL 1
+	enum CullStrictness
+	{
+		SP_TREE_STRICT_CULL,
+		SP_TREE_LOOSE_CULL
+	};
+	enum SortType
+	{
+		SP_TREE_SORT_PAINTER, // (back to front)
+		SP_TREE_SORT_FRONT_TO_BACK
+	};
+
 	void AddObjects(Node* node, const vector<Cullable*>& newObjects);
-	static void getVisible(Node* node, Frustum& frustum, CulledList& objects, int type = SP_TREE_STRICT_CULL);
-	static void getVisible(Node* node, AABB& frustum, CulledList& objects, int type = SP_TREE_STRICT_CULL);
-	static void getVisible(Node* node, SPHERE& frustum, CulledList& objects, int type = SP_TREE_STRICT_CULL);
-	static void getVisible(Node* node, RAY& frustum, CulledList& objects, int type = SP_TREE_STRICT_CULL);
+	static void getVisible(Node* node, Frustum& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
+	static void getVisible(Node* node, AABB& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
+	static void getVisible(Node* node, SPHERE& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
+	static void getVisible(Node* node, RAY& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
 	static void getAll(Node* node, CulledList& objects);
 	wiSPTree* updateTree(Node* node);
 

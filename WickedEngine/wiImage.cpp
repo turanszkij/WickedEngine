@@ -13,7 +13,7 @@ BufferResource           wiImage::constantBuffer,wiImage::processCb;
 VertexShader     wiImage::vertexShader,wiImage::screenVS;
 PixelShader      wiImage::pixelShader,wiImage::blurHPS,wiImage::blurVPS,wiImage::shaftPS,wiImage::outlinePS
 	,wiImage::dofPS,wiImage::motionBlurPS,wiImage::bloomSeparatePS,wiImage::fxaaPS,wiImage::ssaoPS,wiImage::deferredPS
-	,wiImage::ssssPS,wiImage::linDepthPS,wiImage::colorGradePS,wiImage::ssrPS;
+	,wiImage::ssssPS,wiImage::linDepthPS,wiImage::colorGradePS,wiImage::ssrPS, wiImage::screenPS;
 	
 
 RasterizerState		wiImage::rasterizerState;
@@ -74,7 +74,7 @@ void wiImage::LoadShaders()
 	colorGradePS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
 	deferredPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
 	ssrPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssr.cso", wiResourceManager::PIXELSHADER));
-	
+	screenPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiImage::SetUpStates()
 {
@@ -199,12 +199,36 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 
 	bool fullScreenEffect = false;
 
+	wiRenderer::BindVertexLayout(nullptr, context);
+	wiRenderer::BindVertexBuffer(nullptr, 0, 0, context);
+	wiRenderer::BindIndexBuffer(nullptr, context);
+	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
+	wiRenderer::BindRasterizerState(rasterizerState, context);
+
+	wiRenderer::BindTexturePS(texture, 6, context);
+
+	if (effects.blendFlag == BLENDMODE_ALPHA)
+		wiRenderer::BindBlendState(blendState, context);
+	else if (effects.blendFlag == BLENDMODE_ADDITIVE)
+		wiRenderer::BindBlendState(blendStateAdd, context);
+	else if (effects.blendFlag == BLENDMODE_OPAQUE)
+		wiRenderer::BindBlendState(blendStateNoBlend, context);
+	else if (effects.blendFlag == BLENDMODE_MAX)
+		wiRenderer::BindBlendState(blendStateAvg, context);
+	else
+		wiRenderer::BindBlendState(blendState, context);
+
+	if (effects.presentFullScreen)
+	{
+		wiRenderer::BindVS(screenVS, context);
+		wiRenderer::BindPS(screenPS, context);
+		wiRenderer::Draw(3, context);
+		return;
+	}
+
 	static thread_local ImageCB* cb = new ImageCB;
 	static thread_local PostProcessCB* prcb = new PostProcessCB;
 	{
-		// This equals the old BatchBegin
-		wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
-		wiRenderer::BindRasterizerState(rasterizerState, context);
 		switch (effects.stencilComp)
 		{
 		case D3D11_COMPARISON_LESS:
@@ -217,10 +241,6 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			wiRenderer::BindDepthStencilState(depthNoStencilState, effects.stencilRef, context);
 			break;
 		}
-		wiRenderer::BindBlendState(blendState, context);
-		wiRenderer::BindVertexLayout(nullptr, context);
-		wiRenderer::BindVertexBuffer(nullptr, 0, 0, context);
-		wiRenderer::BindIndexBuffer(nullptr, context);
 	}
 
 	if(!effects.blur){
@@ -391,19 +411,6 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 
 	}
 
-	wiRenderer::BindTexturePS(texture,6,context);
-
-	
-	float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	UINT sampleMask   = 0xffffffff;
-	if(effects.blendFlag==BLENDMODE_ALPHA)
-		wiRenderer::BindBlendState(blendState,context);
-	else if(effects.blendFlag==BLENDMODE_ADDITIVE)
-		wiRenderer::BindBlendState(blendStateAdd,context);
-	else if(effects.blendFlag==BLENDMODE_OPAQUE)
-		wiRenderer::BindBlendState(blendStateNoBlend,context);
-	else if(effects.blendFlag==BLENDMODE_MAX)
-		wiRenderer::BindBlendState(blendStateAvg,context);
 
 	if(effects.quality==QUALITY_NEAREST){
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
@@ -482,6 +489,7 @@ void wiImage::CleanUp()
 	if(deferredPS) deferredPS->Release();
 	wiRenderer::SafeRelease(colorGradePS);
 	wiRenderer::SafeRelease(ssrPS);
+	wiRenderer::SafeRelease(screenPS);
 
 	if(constantBuffer) constantBuffer->Release();
 	if(processCb) processCb->Release();

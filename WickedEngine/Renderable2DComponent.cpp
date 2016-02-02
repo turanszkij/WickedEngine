@@ -100,7 +100,10 @@ void Renderable2DComponent::Render()
 }
 void Renderable2DComponent::Compose()
 {
-	wiImage::Draw(rtFinal.shaderResource.back(), wiImageEffects((float)wiRenderer::GetScreenWidth(),(float)wiRenderer::GetScreenHeight()));
+	static wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	fx.presentFullScreen = true;
+
+	wiImage::Draw(rtFinal.shaderResource.back(), fx);
 
 	RenderableComponent::Compose();
 }
