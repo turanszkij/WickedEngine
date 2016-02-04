@@ -38,6 +38,7 @@ void ForwardRenderableComponent::Render()
 
 	if (getThreadingCount() > 1)
 	{
+
 		for (auto workerThread : workerThreads)
 		{
 			workerThread->wakeup();
@@ -110,6 +111,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 	switch (value) {
 	case 0:
 	case 1:
+		wiRenderer::RebindPersistentState(wiRenderer::getImmediateContext());
 		break;
 	case 2:
 		workerThreads.push_back(new wiTaskThread([&]
@@ -129,6 +131,12 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderComposition2(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
 			wiRenderer::FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
+
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_SCENE);
+		wiRenderer::ExecuteDeferredContexts();
 		break;
 	case 3:
 		workerThreads.push_back(new wiTaskThread([&]
@@ -152,6 +160,14 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderComposition2(wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
 			wiRenderer::FinishCommandList(GRAPHICSTHREAD_MISC1);
 		}));
+
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_SCENE);
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_MISC1);
+		wiRenderer::ExecuteDeferredContexts();
 		break;
 	case 4:
 	default:
@@ -180,6 +196,16 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderComposition2(wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC2));
 			wiRenderer::FinishCommandList(GRAPHICSTHREAD_MISC2);
 		}));
+
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_REFLECTIONS));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_SCENE));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_SCENE);
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC1));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_MISC1);
+		wiRenderer::RebindPersistentState(wiRenderer::getDeferredContext(GRAPHICSTHREAD_MISC2));
+		wiRenderer::FinishCommandList(GRAPHICSTHREAD_MISC2);
+		wiRenderer::ExecuteDeferredContexts();
 		break;
 	};
 }

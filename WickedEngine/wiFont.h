@@ -67,6 +67,7 @@ protected:
 	static void SetUpCB();
 public:
 	static void LoadShaders();
+	static void BindPersistentState(DeviceContext context);
 private:
 	static void LoadVertexBuffer();
 	static void LoadIndices();

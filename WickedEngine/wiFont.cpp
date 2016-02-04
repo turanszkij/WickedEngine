@@ -108,9 +108,8 @@ void wiFont::SetUpCB()
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
-	wiRenderer::Lock();
-	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer));
-	wiRenderer::Unlock();
+
+	BindPersistentState(wiRenderer::getImmediateContext());
 }
 void wiFont::LoadShaders()
 {
@@ -155,6 +154,15 @@ void wiFont::CleanUpStatic()
 	if(rasterizerState) rasterizerState->Release();	rasterizerState=NULL;
 	if(blendState) blendState->Release();		blendState=NULL;
 	if(depthStencilState) depthStencilState->Release();	depthStencilState=NULL;
+}
+
+void wiFont::BindPersistentState(DeviceContext context)
+{
+	wiRenderer::Lock();
+
+	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer), context);
+
+	wiRenderer::Unlock();
 }
 
 

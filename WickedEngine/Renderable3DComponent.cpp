@@ -309,6 +309,11 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceCont
 		return;
 	}
 
+	if (XMVectorGetX(XMVector3Dot(wiRenderer::GetSunPosition(), wiRenderer::getCamera()->GetAt())) < 0)
+	{
+		return;
+	}
+
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
 	wiRenderer::UnbindTextures(0, 16, context);

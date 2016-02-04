@@ -3,7 +3,7 @@
 #include "wiLoader.h"
 #include "wiFrustum.h"
 
-#define SP_TREE_MAX_DEPTH 5
+#define SP_TREE_MAX_DEPTH 12
 #define SP_TREE_OBJECT_PER_NODE 6
 #define SP_TREE_BOX_CONTAIN
 

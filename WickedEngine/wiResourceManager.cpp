@@ -143,19 +143,8 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 				wiRenderer::graphicsDevice->CreateVertexShader(buffer, bufferSize, NULL, &vertexShaderInfo->vertexShader);
 				if (vertexLayoutDesc != nullptr && elementCount > 0){
 					wiRenderer::graphicsDevice->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, &vertexShaderInfo->vertexLayout);
-					if (vertexShaderInfo->vertexLayout == nullptr)
-					{
-						success = nullptr;
-					}
-					else
-					{
-						success = vertexShaderInfo;
-					}
 				}
-				else
-				{
-					success = (vertexShaderInfo->vertexShader == nullptr ? nullptr : vertexShaderInfo);
-				}
+				success = vertexShaderInfo;
 				delete[] buffer;
 			}
 			else{

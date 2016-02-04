@@ -57,6 +57,7 @@ protected:
 
 public:
 	static void LoadShaders();
+	static void BindPersistentState(DeviceContext context);
 private:
 	static void LoadBuffers();
 	static void SetUpStates();

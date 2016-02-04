@@ -42,14 +42,7 @@ void wiImage::LoadBuffers()
 	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &processCb);
 
-	{
-		wiRenderer::Lock();
-		wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB));
-		wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB));
-
-		wiRenderer::BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB));
-		wiRenderer::Unlock();
-	}
+	BindPersistentState(wiRenderer::getImmediateContext());
 }
 
 void wiImage::LoadShaders()
@@ -189,6 +182,17 @@ void wiImage::SetUpStates()
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateAvg);
 }
 
+void wiImage::BindPersistentState(DeviceContext context)
+{
+	wiRenderer::Lock();
+
+	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB), context);
+	wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB), context);
+
+	wiRenderer::BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), context);
+
+	wiRenderer::Unlock();
+}
 
 void wiImage::Draw(TextureView texture, const wiImageEffects& effects){
 	Draw(texture,effects,wiRenderer::getImmediateContext());

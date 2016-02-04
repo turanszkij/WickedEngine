@@ -67,8 +67,7 @@ public:
 #endif
 	static void DestroyDevice();
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
-	static void wiRenderer::ReleaseCommandLists();
-	static void wiRenderer::ExecuteDeferredContexts();
+	static void ExecuteDeferredContexts();
 	static void FinishCommandList(GRAPHICSTHREAD thread);
 
 	static map<DeviceContext,long> drawCalls;
@@ -365,6 +364,8 @@ public:
 	static Light* getLightByName(const string& name);
 
 	static void ReloadShaders(const string& path = "");
+	static void BindPersistentState(DeviceContext context);
+	static void RebindPersistentState(DeviceContext context);
 
 	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 	static Vertex TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat = XMMatrixIdentity());

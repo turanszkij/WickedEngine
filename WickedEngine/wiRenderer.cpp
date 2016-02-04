@@ -282,7 +282,6 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 	
 
 
-	//wiFrameRate::Count();
 	wiFrameRate::Frame();
 
 	swapChain->Present( VSYNC, 0 );
@@ -300,22 +299,23 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 
 	*prevFrameCam = *cam;
 }
-void wiRenderer::ReleaseCommandLists()
-{
-	for(int i=0;i<GRAPHICSTHREAD_COUNT;i++)
-		if(commandLists[i]){ commandLists[i]->Release(); commandLists[i]=NULL; }
-}
 void wiRenderer::ExecuteDeferredContexts()
 {
-	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++)
-		if(commandLists[i]) wiRenderer::getImmediateContext()->ExecuteCommandList( commandLists[i], false );
+	for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
+	{
+		if (commandLists[i])
+		{
+			immediateContext->ExecuteCommandList(commandLists[i], true);
+			commandLists[i]->Release();
+			commandLists[i] = nullptr;
 
-	ReleaseCommandLists();
+			UnbindTextures(0, 16, deferredContexts[i]);
+		}
+	}
 }
 void wiRenderer::FinishCommandList(GRAPHICSTHREAD thread)
 {
-	SafeRelease(commandLists[thread]);
-	deferredContexts[thread]->FinishCommandList( false,&commandLists[thread] );
+	deferredContexts[thread]->FinishCommandList(true, &commandLists[thread]);
 }
 
 long wiRenderer::getDrawCallCount(){
@@ -444,6 +444,8 @@ void wiRenderer::SetUpStaticComponents()
 	SetDirectionalLightShadowProps(1024, 2);
 	SetPointLightShadowProps(2, 512);
 	SetSpotLightShadowProps(2, 512);
+
+	BindPersistentState(getImmediateContext());
 
 	//t1.join();
 	//t2.join();
@@ -728,50 +730,6 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(APICB);
 	graphicsDevice->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CLIPPLANE]);
 
-	// Bind once and forget
-	{
-		Lock();
-
-		BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-		BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-		BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-		BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-		BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB));
-
-		BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-		BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-		BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-		BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-		BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB));
-
-		BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-		BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-		BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-		BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-		BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB));
-
-		BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-		BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-		BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-		BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-		BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB));
-
-		BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
-		BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB));
-
-		BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-		BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-		BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-		BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-		BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB));
-
-		BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB));
-
-		BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB));
-
-		Unlock();
-	}
-
 
 	// On demand buffers...
 	bd.ByteWidth = sizeof(PointLightCB);
@@ -945,37 +903,6 @@ void wiRenderer::LoadTrailShaders(){
 
 void wiRenderer::ReloadShaders(const string& path)
 {
-	//// TODO : Also delete shaders from resourcemanager!
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectVS10.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "sOVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "sOGS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "dirLightVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "pointLightVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "spotLightVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "vSpotLightVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "vPointLightVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "decalVS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectPS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectPS_transparent.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectPS_simplest.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectPS_forwardSimple.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectPS_blackout.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "effectPS_textureonly.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "dirLightPS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "pointLightPS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "spotLightPS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "volumeLightPS.cso");
-	//wiResourceManager::GetGlobal()->del(SHADERPATH + "decalPS.cso");
-
-
-	//LoadBasicShaders();
-	////LoadLineShaders();
-	////LoadTessShaders();
-	////LoadSkyShaders();
-	////LoadShadowShaders();
-	////LoadWaterShaders();
-	////LoadTrailShaders();
 
 	if (path.length() > 0)
 	{
@@ -1077,21 +1004,6 @@ void wiRenderer::SetUpStates()
 	samplerDesc.MaxAnisotropy = 16;
 	samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
-
-	Lock();
-	{
-		for (int i = 0; i < SSLOT_COUNT; ++i)
-		{
-			if (samplers[i] == nullptr)
-				continue;
-			BindSamplerPS(samplers[i], i, immediateContext);
-			BindSamplerVS(samplers[i], i, immediateContext);
-			BindSamplerGS(samplers[i], i, immediateContext);
-			BindSamplerDS(samplers[i], i, immediateContext);
-			BindSamplerHS(samplers[i], i, immediateContext);
-		}
-	}
-	Unlock();
 	
 	D3D11_RASTERIZER_DESC rs;
 	rs.FillMode=D3D11_FILL_SOLID;
@@ -1279,6 +1191,68 @@ void wiRenderer::SetUpStates()
 	graphicsDevice->CreateBlendState(&bd,&blendStateAdd);
 }
 
+void wiRenderer::BindPersistentState(DeviceContext context)
+{
+	Lock();
+
+	for (int i = 0; i < SSLOT_COUNT; ++i)
+	{
+		if (samplers[i] == nullptr)
+			continue;
+		BindSamplerPS(samplers[i], i, context);
+		BindSamplerVS(samplers[i], i, context);
+		BindSamplerGS(samplers[i], i, context);
+		BindSamplerDS(samplers[i], i, context);
+		BindSamplerHS(samplers[i], i, context);
+	}
+
+
+	BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
+	BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
+	BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
+	BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
+	BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
+
+	BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
+	BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
+	BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
+	BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
+	BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
+
+	BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
+	BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
+	BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
+	BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
+	BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
+
+	BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
+	BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
+	BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
+	BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
+	BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
+
+	BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), context);
+	BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), context);
+
+	BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
+	BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
+	BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
+	BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
+	BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
+
+	BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB), context);
+
+	BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB), context);
+
+	Unlock();
+}
+void wiRenderer::RebindPersistentState(DeviceContext context)
+{
+	BindPersistentState(context);
+
+	wiImage::BindPersistentState(context);
+	wiFont::BindPersistentState(context);
+}
 
 Transform* wiRenderer::getTransformByName(const string& get)
 {
