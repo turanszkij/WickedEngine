@@ -825,6 +825,7 @@ void wiRenderer::LoadBasicShaders()
 	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
@@ -1891,7 +1892,28 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 
 			
 		BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],context);
-		BindPS(pixelShaders[PSTYPE_DIRLIGHT + type],context);
+
+		switch (type)
+		{
+		case 0:
+			if (SOFTSHADOW)
+			{
+				BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], context);
+			}
+			else
+			{
+				BindPS(pixelShaders[PSTYPE_DIRLIGHT], context);
+			}
+			break;
+		case 1:
+			BindPS(pixelShaders[PSTYPE_POINTLIGHT], context);
+			break;
+		case 2:
+			BindPS(pixelShaders[PSTYPE_SPOTLIGHT], context);
+			break;
+		default:
+			break;
+		}
 
 
 		for(Cullable* c : culledObjects){
@@ -2146,7 +2168,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 				if (l->shadow)
 				{
 					l->shadowMap_index = -1;
-					l->lastSquaredDistMulThousand = (long)(wiMath::DistanceEstimated(l->translation, cam->translation) * 1000);
+					l->lastSquaredDistMulThousand = (long)(wiMath::DistanceSquared(l->translation, cam->translation) * 1000);
 					switch (l->type)
 					{
 					case Light::SPOT:
@@ -2171,6 +2193,13 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 					{
 						CulledList culledObjects;
 						CulledCollection culledRenderer;
+
+						auto texDesc = l->shadowMaps_dirLight[index].GetDesc();
+						if (texDesc.Height != SHADOWMAPRES)
+						{
+							// Create the shadow map
+							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, 0, true);
+						}
 
 						l->shadowMaps_dirLight[index].Activate(context);
 

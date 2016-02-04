@@ -1,3 +1,6 @@
+#ifndef _SPOTLIGHT_HF_
+#define _SPOTLIGHT_HF_
+
 Texture2D<float> xTextureSh:register(t4);
 
 
@@ -63,3 +66,5 @@ inline float spotLight(in float3 pos3D, in float3 normal, out float attenuation,
 
 	return l;
 }
+
+#endif // _SPOTLIGHT_HF_

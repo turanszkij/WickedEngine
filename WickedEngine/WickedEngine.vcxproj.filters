@@ -2148,6 +2148,9 @@
     <FxCompile Include="screenPS.hlsl">
       <Filter>shaders\image</Filter>
     </FxCompile>
+    <FxCompile Include="dirLightSoftPS.hlsl">
+      <Filter>shaders\lighting</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="fonts\basic.dds">

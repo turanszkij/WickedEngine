@@ -1,3 +1,6 @@
+#ifndef _DIRLIGHT_HF_
+#define _DIRLIGHT_HF_
+
 #include "toonHF.hlsli"
 
 // dir light constant buffer is global
@@ -22,10 +25,11 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	float scale = g_xDirLight_mBiasResSoftshadow.y;
 	float retVal = 1;
 	
-	[branch]if(g_xDirLight_mBiasResSoftshadow.z){
+#ifdef DIRECTIONALLIGHT_SOFT
+	//[branch]if(g_xDirLight_mBiasResSoftshadow.z)
+	{
 		float samples = 0.0f;
-		float range = 0.5f;
-		if(g_xDirLight_mBiasResSoftshadow.z==2.0f) range = 1.5f;
+		static const float range = 1.5f;
 		for (float y = -range; y <= range; y += 1.0f)
 			for (float x = -range; x <= range; x += 1.0f)
 			{
@@ -35,7 +39,10 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 
 		retVal *= sum / samples;
 	}
-	else retVal *= offset_lookup(shadowTexture, sampler_cmp_depth, ShTex, float2(0, 0), scale, realDistance);
+	//else 
+#else
+		retVal *= offset_lookup(shadowTexture, sampler_cmp_depth, ShTex, float2(0, 0), scale, realDistance);
+#endif
 
 	return retVal;
 }
@@ -76,3 +83,13 @@ inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color, in 
 	}
 	return difLight;
 }
+
+
+// MACROS
+
+#define DEFERRED_DIRLIGHT_MAIN																										\
+	float lighting = dirLight(pos3D,normal,color,toonshaded);																		\
+	color.rgb *= lighting;																											\
+	applySpecular(color, color*lighting, normal, eyevector, g_xDirLight_direction.xyz, 1, specular_power, specular, toonshaded);
+
+#endif // _DIRLIGHT_HF_

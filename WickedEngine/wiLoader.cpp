@@ -832,13 +832,13 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					lights.back()->shadow = true;
 					lights.back()->shadowMaps_dirLight.resize(3);
 					lights.back()->shadowBias = 9.99995464e-005f;
-					for (int i = 0; i < 3; ++i)
-					{
-						lights.back()->shadowMaps_dirLight[i].Initialize(
-							wiRenderer::SHADOWMAPRES, wiRenderer::SHADOWMAPRES
-							, 0, true
-							);
-					}
+					//for (int i = 0; i < 3; ++i)
+					//{
+					//	lights.back()->shadowMaps_dirLight[i].Initialize(
+					//		wiRenderer::SHADOWMAPRES, wiRenderer::SHADOWMAPRES
+					//		, 0, true
+					//		);
+					//}
 				}
 				break;
 			case 'S':

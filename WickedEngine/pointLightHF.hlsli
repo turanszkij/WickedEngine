@@ -1,5 +1,5 @@
-#ifndef _POINTLIGHTHF_
-#define _POINTLIGHTHF_
+#ifndef _POINTLIGHT_HF_
+#define _POINTLIGHT_HF_
 #include "globals.hlsli"
 
 TextureCube xTextureSh:register(t7);
@@ -30,4 +30,4 @@ inline float pointLight(in float3 pos3D, in float3 normal, out float3 lightDir, 
 	return saturate(attenuation*lightint);
 }
 
-#endif // _POINTLIGHTHF_
+#endif // _POINTLIGHT_HF_
