@@ -287,7 +287,8 @@ void Renderable3DComponent::RenderBloom(DeviceContext context){
 
 	rtBloom[1].Activate(context); //horizontal
 	{
-		context->GenerateMips(rtBloom[0].shaderResource[0]);
+		wiRenderer::GenerateMips(rtBloom[0].shaderResource[0], context);
+		wiRenderer::GenerateMips(rtBloom[0].shaderResource[0], context);
 		fx.mipLevel = 5.32f;
 		fx.blur = getBloomStrength();
 		fx.blurDir = 0;
@@ -296,7 +297,6 @@ void Renderable3DComponent::RenderBloom(DeviceContext context){
 	}
 	rtBloom[2].Activate(context); //vertical
 	{
-		context->GenerateMips(rtBloom[0].shaderResource[0]);
 		fx.blur = getBloomStrength();
 		fx.blurDir = 1;
 		fx.blendFlag = BLENDMODE_OPAQUE;

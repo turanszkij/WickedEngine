@@ -608,6 +608,10 @@ public:
 			++drawCalls[context];
 		}
 	}
+	inline static void GenerateMips(TextureView texture, DeviceContext context = immediateContext)
+	{
+		context->GenerateMips(texture);
+	}
 	//<value>Comment: specify dataSize param if you are uploading multiple instances of data (eg. sizeof(Vertex)*vertices.count())
 	template<typename T>
 	inline static void ResizeBuffer(BufferResource& buffer, int dataCount) {

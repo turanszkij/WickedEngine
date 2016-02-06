@@ -93,7 +93,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasD
 		depth->Initialize(width,height,MSAAC,MSAAQ);
 	}
 }
-void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format)
+void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
 	this->numViews = numViews;
 	texture2D.resize(numViews);
@@ -104,7 +104,7 @@ void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI
 	ZeroMemory(&textureDesc, sizeof(textureDesc));
 	textureDesc.Width = size;
 	textureDesc.Height = size;
-	textureDesc.MipLevels = 1;
+	textureDesc.MipLevels = mipMapLevelCount;
 	textureDesc.ArraySize = 6;
 	textureDesc.Format = format;
 	textureDesc.SampleDesc.Count = 1;
@@ -113,6 +113,10 @@ void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI
 	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	textureDesc.CPUAccessFlags = 0;
 	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (mipMapLevelCount != 1)
+	{
+		textureDesc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	}
 
 	
 	D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
@@ -126,8 +130,8 @@ void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI
 	D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
 	shaderResourceViewDesc.Format = format;
 	shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-	shaderResourceViewDesc.TextureCube.MostDetailedMip = 0;
-	shaderResourceViewDesc.TextureCube.MipLevels = 1;
+	shaderResourceViewDesc.TextureCube.MostDetailedMip = 0; //from most detailed...
+	shaderResourceViewDesc.TextureCube.MipLevels = -1; //...to least detailed
 
 	for(int i=0;i<numViews;++i){
 		wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
@@ -160,7 +164,7 @@ void wiRenderTarget::Activate(DeviceContext context, float r, float g, float b, 
 {
 	if(context!=nullptr){
 		Set(context);
-		float ClearColor[4] = { r, g, b, a }; // red,green,blue,alpha
+		float ClearColor[4] = { r, g, b, a };
 		for(int i=0;i<numViews;++i)
 			context->ClearRenderTargetView(renderTarget[i], ClearColor);
 		if(depth) depth->Clear(context);
@@ -170,7 +174,7 @@ void wiRenderTarget::Activate(DeviceContext context, wiDepthTarget* getDepth, fl
 {
 	if(context!=nullptr){
 		Set(context,getDepth);
-		float ClearColor[4] = { r, g, b, a }; // red,green,blue,alpha
+		float ClearColor[4] = { r, g, b, a };
 		for(int i=0;i<numViews;++i)
 			context->ClearRenderTargetView(renderTarget[i], ClearColor);
 	}
@@ -178,6 +182,10 @@ void wiRenderTarget::Activate(DeviceContext context, wiDepthTarget* getDepth, fl
 void wiRenderTarget::Activate(DeviceContext context, wiDepthTarget* getDepth)
 {
 	Activate(context,getDepth,0,0,0,0);
+}
+void wiRenderTarget::Deactivate(DeviceContext context)
+{
+	context->OMSetRenderTargets(0, nullptr, nullptr);
 }
 void wiRenderTarget::Set(DeviceContext context)
 {

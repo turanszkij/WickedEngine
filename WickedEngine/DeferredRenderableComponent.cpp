@@ -201,7 +201,7 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 
 	if (getSSREnabled()){
 		rtSSR.Activate(context); {
-			context->GenerateMips(rtDeferred.shaderResource[0]);
+			wiRenderer::GenerateMips(rtDeferred.shaderResource[0], context);
 			fx.process.setSSR(true);
 			fx.setDepthMap(dtDepthCopy.shaderResource);
 			fx.setNormalMap(rtGBuffer.shaderResource[1]);

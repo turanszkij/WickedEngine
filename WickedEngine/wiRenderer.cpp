@@ -3357,7 +3357,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 {
 	EnvironmentProbe* probe = new EnvironmentProbe;
 	probe->transform(position);
-	probe->cubeMap.InitializeCube(resolution, 1, true, DXGI_FORMAT_R8G8B8A8_UNORM);
+	probe->cubeMap.InitializeCube(resolution, 1, true, DXGI_FORMAT_R16G16B16A16_FLOAT, 0);
 
 	Lock();
 
@@ -3476,7 +3476,10 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 	BindGS(nullptr, context);
 
-	context->GenerateMips(probe->cubeMap.shaderResource.front());
+	probe->cubeMap.Deactivate(context);
+
+	GenerateMips(probe->cubeMap.shaderResource[0], context);
+
 	enviroMap = probe->cubeMap.shaderResource.front();
 
 	scene->environmentProbes.push_back(probe);
