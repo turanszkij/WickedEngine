@@ -283,6 +283,7 @@ protected:
 	static RasterizerState		rasterizers[RSTYPE_LAST];
 	static DepthStencilState	depthStencils[DSSTYPE_LAST];
 	static VertexLayout			vertexLayouts[VLTYPE_LAST];
+	static BlendState			blendStates[BSTYPE_LAST];
 
 
 	void UpdateSpheres();
@@ -296,7 +297,6 @@ protected:
 	static bool	wireRender, debugSpheres, debugBoneLines, debugBoxes;
 
 
-	static BlendState blendState, blendStateTransparent, blendStateAdd;
 	static TextureView enviroMap,colorGrading;
 	static void LoadBuffers();
 	static void LoadBasicShaders();

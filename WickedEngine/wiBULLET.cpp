@@ -552,18 +552,8 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 			}
 		}
 
-		
-		//softBody->m_cfg.collisions	=	
-		//	btSoftBody::fCollision::CL_RS
-		//	;
-		//softBody->generateClusters(tCount/4);
 		softBody->getCollisionShape()->setMargin(btScalar(0.2));
 
-		//softBody->m_cfg.collisions	=	
-		//	btSoftBody::fCollision::SDF_RS+btSoftBody::fCollision::VF_SS
-		//	;
-			
-		//softBody->setWindVelocity(btVector3(-4, -12.0, -20.0)*0.3);
 		softBody->setWindVelocity(wind);
 		
 		softBody->setPose(true,true);
@@ -585,11 +575,14 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
 	btSoftBody* softBody = btSoftBody::upcast(obj);
 
-	btVector3 min, max;
-	softBody->getAabb(min,max);
-	mesh->aabb.create(XMFLOAT3(min.x(),min.y(),min.z()),XMFLOAT3(max.x(),max.y(),max.z()));
 
 	if(softBody){
+		btVector3 min, max;
+		softBody->getAabb(min, max);
+		mesh->aabb.create(XMFLOAT3(min.x(), min.y(), min.z()), XMFLOAT3(max.x(), max.y(), max.z()));
+
+		softBody->setWindVelocity(wind);
+
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
 		int gvg = mesh->goalVG;
