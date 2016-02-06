@@ -85,31 +85,3 @@ remove the known hiccups and bugs.
 	Light maps and other effects requiring multiple uv maps are not possible yet.
 	
 
-### TODOs:
-
-- Priority:
-	- Lua script bindings for most engine features
-	- Optimize image rendering
-		The Drawing fuctions are bloated, imageVS is no longer readable by humans, 
-		possible batching optimizations
-	- Decouple API from wiRenderer
-		The renderer has become too large, unmanageable, hardly readable. Aside from that it
-		is a good idea to decouple them for possible support of multiple apis in the future...
-- Other:
-	- Cleanup
-		No comment
-	- Documentation
-		Probably not in the near future
-	- HDR pipeline
-		Already using floating point rendertargets, but everything is saturated (except bloom).
-		It needs tone mapping and not much else
-	- Forward rendering pipeline
-		It should support everything that the deferred renderer supports. Now it has only a directional light
-		without shadows, but the lighting fuctions are reusable and already written in separate headers.
-	- Precalculated Ambient Occlusion
-		It has everything it needs in the engine, just need to put it together.
-	- Optimize Meshes
-		Remove duplicate vertices and improve cache coherency
-	- Port to Windows Phone and Win RT
-	- Windows RT controls helper
-	- Texture helper various texture generators (fractal, perlin, etc.) (low priority)
