@@ -54,3 +54,4 @@ Stencil layering
 Deferred decals
 Color Grading
 Lua Scripting
+Dynamic environment mapping
