@@ -5,7 +5,7 @@
 
 // dir light constant buffer is global
 
-Texture2D<float> xTextureSh[3]:register(t4);
+Texture2D<float> xTextureSh[3]:register(t13);
 
 inline float offset_lookup(Texture2D<float> intex, SamplerComparisonState map,
                      float2 loc,

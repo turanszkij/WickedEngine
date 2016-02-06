@@ -1,4 +1,3 @@
-#include "globals.hlsli"
 #include "effectInputLayoutHF.hlsli"
 #include "envMapHF.hlsli"
 

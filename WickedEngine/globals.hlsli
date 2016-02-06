@@ -2,6 +2,7 @@
 #define _SHADERDEF_CONSTANTBUFFERS_
 #include "ConstantBufferMapping.h"
 #include "SamplerMapping.h"
+#include "TextureMapping.h"
 
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	)
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	)

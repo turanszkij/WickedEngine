@@ -819,6 +819,7 @@ void wiRenderer::LoadBasicShaders()
 	vertexShaders[VSTYPE_VOLUMEPOINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_DECAL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
 	pixelShaders[PSTYPE_EFFECT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_EFFECT_TRANSPARENT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_transparent.cso", wiResourceManager::PIXELSHADER));
@@ -833,8 +834,10 @@ void wiRenderer::LoadBasicShaders()
 	pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
-	
+	pixelShaders[PSTYPE_ENVMAP_SKY] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS.cso", wiResourceManager::PIXELSHADER));
+
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiRenderer::LoadLineShaders()
@@ -1937,7 +1940,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 				(*lcb).mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
 					(*lcb).mShM[shmap]=l->shadowCam[shmap].getVP();
-					BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,4+shmap,context);
+					BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,13+shmap,context);
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,context);
 
@@ -3474,7 +3477,28 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	}
 
 
+
+	// sky
+	{
+		BindPrimitiveTopology(TRIANGLELIST, context);
+		BindRasterizerState(rasterizers[RSTYPE_BACK], context);
+		BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, context);
+		BindBlendState(blendStates[BSTYPE_OPAQUE], context);
+
+		BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], context);
+		BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], context);
+		BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], context);
+
+		BindTexturePS(enviroMap, 0, context);
+
+		BindVertexBuffer(nullptr, 0, 0, context);
+		BindVertexLayout(nullptr, context);
+		Draw(240, context);
+	}
+
+
 	BindGS(nullptr, context);
+
 
 	probe->cubeMap.Deactivate(context);
 
