@@ -10,7 +10,7 @@ inline float4 GetSkyColor(in float3 normal)
 	normal = normalize(normal) * overBright;
 
 	float3 col = /*lerp( xHorizon.rgb,*/ enviroTex.SampleLevel(sampler_linear_clamp, normal, 0).rgb/*, saturate(nor.y/0.3f) )*/;
-	float3 sun = max(pow(abs(dot(g_xWorld_SunDir.xyz, normal)), 256)*g_xWorld_SunColor.rgb, 0);
+	float3 sun = max(pow(abs(dot(g_xWorld_SunDir.xyz, normal)), 256)*g_xWorld_SunColor.rgb, 0) * saturate(dot(g_xWorld_SunDir.xyz, normal));
 
 	return float4(col + sun, 1);
 }

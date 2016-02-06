@@ -549,7 +549,7 @@ XMVECTOR wiRenderer::GetSunPosition()
 			if (l->type == Light::DIRECTIONAL)
 				return -XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)));
 	}
-	return XMVectorSet(0.5f,1,-0.5f,0);
+	return XMVectorSet(0, 1, 0, 1);
 }
 XMFLOAT4 wiRenderer::GetSunColor()
 {
