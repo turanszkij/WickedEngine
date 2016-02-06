@@ -1,25 +1,22 @@
-//#include "skinningHF.hlsli"
-#include "effectInputLayoutHF.hlsli"
 #include "globals.hlsli"
+#include "effectInputLayoutHF.hlsli"
 
 struct GS_CUBEMAP_IN 
 { 
 	float4 Pos		: SV_POSITION;    // World position 
-    float2 Tex		: TEXCOORD0;         // Texture coord
+    float2 Tex		: TEXCOORD0;      // Texture coord
 }; 
 
 GS_CUBEMAP_IN main(Input input)
 {
 	GS_CUBEMAP_IN Out = (GS_CUBEMAP_IN)0;
 
-	if((uint)input.tex.z == g_xMat_matIndex){
+	[branch]
+	if((uint)input.tex.z == g_xMat_matIndex)
+	{
 		
-		float4x4 WORLD = float4x4(
-				float4(input.wi0.x,input.wi1.x,input.wi2.x,0)
-				,float4(input.wi0.y,input.wi1.y,input.wi2.y,0)
-				,float4(input.wi0.z,input.wi1.z,input.wi2.z,0)
-				,float4(input.wi0.w,input.wi1.w,input.wi2.w,1)
-			);
+
+		float4x4 WORLD = MakeWorldMatrixFromInstance(input);
 
 		float4 pos = input.pos;
 		

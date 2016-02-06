@@ -127,6 +127,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - DrawLine(Vector origin,end, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
+- PutEnvProbe(Vector pos, opt int resolution = 256)
 - ClearWorld()
 - ReloadShaders(opt string path)
 

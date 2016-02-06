@@ -817,6 +817,7 @@ void wiRenderer::LoadBasicShaders()
 	vertexShaders[VSTYPE_VOLUMESPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOLUMEPOINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_DECAL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
 	pixelShaders[PSTYPE_EFFECT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_EFFECT_TRANSPARENT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "effectPS_transparent.cso", wiResourceManager::PIXELSHADER));
@@ -830,6 +831,10 @@ void wiRenderer::LoadBasicShaders()
 	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
+	
+	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
+
 }
 void wiRenderer::LoadLineShaders()
 {
@@ -3352,6 +3357,137 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 
 		physicsEngine->NextRunWorld();
 	}
+}
+
+void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
+{
+	EnvironmentProbe* probe = new EnvironmentProbe;
+	probe->transform(position);
+	probe->cubeMap.InitializeCube(resolution, 1, true, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	Lock();
+
+	DeviceContext context = getImmediateContext();
+
+	probe->cubeMap.Activate(context, 0, 0, 0, 1);
+
+	BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], context);
+	BindPrimitiveTopology(TRIANGLELIST, context);
+	BindBlendState(blendState, context);
+
+	BindPS(pixelShaders[PSTYPE_ENVMAP], context);
+	BindVS(vertexShaders[VSTYPE_ENVMAP], context);
+	BindGS(geometryShaders[GSTYPE_ENVMAP], context);
+
+	BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), context);
+
+
+	vector<SHCAM> cameras;
+	{
+		cameras.clear();
+
+		cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+x
+		cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-x
+
+		cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+y
+		cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-y
+
+		cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+z
+		cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-z
+	}
+
+
+	static thread_local CubeMapRenderCB* cb = new CubeMapRenderCB;
+	for (unsigned int i = 0; i < cameras.size(); ++i)
+	{
+		cameras[i].Update(XMLoadFloat3(&position));
+		(*cb).mViewProjection[i] = cameras[i].getVP();
+	}
+
+	UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, context);
+
+
+	CulledList culledObjects;
+	CulledCollection culledRenderer;
+
+	SPHERE culler = SPHERE(position, getCamera()->zFarP);
+	if (spTree)
+		wiSPTree::getVisible(spTree->root, culler, culledObjects);
+
+	for (Cullable* object : culledObjects)
+		culledRenderer[((Object*)object)->mesh].insert((Object*)object);
+
+	for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
+	{
+		Mesh* mesh = iter->first;
+		CulledObjectList& visibleInstances = iter->second;
+
+		if (!mesh->isBillboarded && !visibleInstances.empty()) {
+
+			if (!mesh->doubleSided)
+				BindRasterizerState(rasterizers[RSTYPE_FRONT], context);
+			else
+				BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], context);
+
+
+
+			int k = 0;
+			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
+				if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
+					if (mesh->softBody || (*viter)->isArmatureDeformed())
+						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
+					else
+						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
+					++k;
+				}
+			}
+			if (k < 1)
+				continue;
+
+			Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
+
+
+			BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
+			BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
+			BindIndexBuffer(mesh->meshIndexBuff, context);
+
+
+			int matsiz = mesh->materialIndices.size();
+			int m = 0;
+			for (Material* iMat : mesh->materials) {
+				if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
+
+					if (iMat->shadeless)
+						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, context);
+					if (iMat->subsurface_scattering)
+						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, context);
+					else
+						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, context);
+
+					BindTexturePS(iMat->texture, 3, context);
+
+					static thread_local MaterialCB* mcb = new MaterialCB;
+					(*mcb).Create(*iMat, m);
+
+					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
+
+					DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
+				}
+				m++;
+			}
+		}
+		visibleInstances.clear();
+	}
+
+
+	BindGS(nullptr, context);
+
+	context->GenerateMips(probe->cubeMap.shaderResource.front());
+	enviroMap = probe->cubeMap.shaderResource.front();
+
+	scene->environmentProbes.push_back(probe);
+
+	Unlock();
 }
 
 void wiRenderer::MaterialCB::Create(const Material& mat,UINT materialIndex){

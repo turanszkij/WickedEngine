@@ -754,5 +754,7 @@ public:
 
 	static Model* LoadModel(const string& dir, const string& name, const XMMATRIX& transform = XMMatrixIdentity(), const string& ident = "common");
 	static void LoadWorldInfo(const string& dir, const string& name);
+
+	static void PutEnvProbe(const XMFLOAT3& position, int resolution = 256);
 };
 

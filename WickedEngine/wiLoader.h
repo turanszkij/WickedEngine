@@ -1014,6 +1014,10 @@ static const int RESOLUTION = 36;
 	static void CleanUpStatic();
 
 };
+struct EnvironmentProbe : public Transform
+{
+	wiRenderTarget cubeMap;
+};
 
 struct Model : public Transform
 {
@@ -1037,6 +1041,7 @@ struct Scene
 	vector<Model*> models;
 	WorldInfo worldInfo;
 	Wind wind;
+	vector<EnvironmentProbe*> environmentProbes;
 
 	Scene();
 	~Scene();

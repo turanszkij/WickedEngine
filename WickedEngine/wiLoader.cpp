@@ -1314,6 +1314,12 @@ void Scene::ClearWorld()
 	}
 	models.clear();
 	models.push_back(world);
+
+	for (unsigned int i = 0; i < environmentProbes.size(); ++i)
+	{
+		SAFE_DELETE(environmentProbes[i]);
+	}
+	environmentProbes.clear();
 }
 Model* Scene::GetWorldNode()
 {

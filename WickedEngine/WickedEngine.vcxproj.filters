@@ -60,6 +60,9 @@
     <Filter Include="Lua Bindings">
       <UniqueIdentifier>{719a8bbd-d0a7-4a16-a409-8c3094008dfd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\envmap">
+      <UniqueIdentifier>{70f538e6-759d-4973-b000-32e41d97beba}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -1904,6 +1907,9 @@
     <None Include="fullScreenTriangleHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
+    <None Include="envMapHF.hlsli">
+      <Filter>shaders\envmap</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />
@@ -2150,6 +2156,15 @@
     </FxCompile>
     <FxCompile Include="dirLightSoftPS.hlsl">
       <Filter>shaders\lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="envMapVS.hlsl">
+      <Filter>shaders\envmap</Filter>
+    </FxCompile>
+    <FxCompile Include="envMapPS.hlsl">
+      <Filter>shaders\envmap</Filter>
+    </FxCompile>
+    <FxCompile Include="envMapGS.hlsl">
+      <Filter>shaders\envmap</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

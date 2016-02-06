@@ -247,7 +247,6 @@ namespace wiRenderer_BindLua
 		return 1;
 	}
 
-
 	int SetGameSpeed(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -553,6 +552,35 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
+	int PutEnvProbe(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* pos = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (pos != nullptr)
+			{
+				XMFLOAT3 p;
+				XMStoreFloat3(&p, pos->vector);
+				int res = 256;
+				if (argc > 1)
+				{
+					res = wiLua::SGetInt(L, 2);
+				}
+				wiRenderer::PutEnvProbe(p,res);
+			}
+			else
+			{
+				wiLua::SError(L, "PutEnvProbe(Vector pos, opt int resolution = 256) argument is not a Vector!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "PutEnvProbe(Vector pos, opt int resolution = 256) not enough arguments!");
+		}
+		return 0;
+	}
+
 
 	int ClearWorld(lua_State* L)
 	{
@@ -612,10 +640,14 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
 			wiLua::GetGlobal()->RegisterFunc("PutWaterRipple", PutWaterRipple);
 			wiLua::GetGlobal()->RegisterFunc("PutDecal", PutDecal);
+			wiLua::GetGlobal()->RegisterFunc("PutEnvProbe", PutEnvProbe);
+
+
 			wiLua::GetGlobal()->RunText("PICK_VOID = 0x0000000");
 			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0x0000001");
 			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 0x0000010");
 			wiLua::GetGlobal()->RunText("PICK_WATER = 0x0000100");
+
 
 			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
 			wiLua::GetGlobal()->RegisterFunc("ReloadShaders", ReloadShaders);
