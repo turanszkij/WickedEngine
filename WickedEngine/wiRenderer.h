@@ -424,10 +424,12 @@ public:
 	}
 	inline static void UnbindTextures(int slot, int num, DeviceContext context = immediateContext)
 	{
-		assert(num <= 16 && "UnbindTextures limit of 16 reached!");
+		assert(num <= 32 && "UnbindTextures limit of 32 reached!");
 		if (context != nullptr)
 		{
-			static TextureView empties[16] = {
+			static TextureView empties[32] = {
+				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
+				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 			};
@@ -668,7 +670,9 @@ public:
 	static void UpdateFrameCB(DeviceContext context);
 	static void UpdateCameraCB(DeviceContext context);
 	static void SetClipPlane(XMFLOAT4 clipPlane, DeviceContext context);
-
+	static void UpdateGBuffer(vector<TextureView> gbuffer, DeviceContext context = immediateContext);
+	static void UpdateDepthBuffer(TextureView depth, TextureView linearDepth, DeviceContext context = immediateContext);
+	
 	static void DrawSky(DeviceContext context, bool isReflection = false);
 	static void DrawSun(DeviceContext context);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context

@@ -3,6 +3,7 @@
 #include "wiResourceManager.h"
 #include "wiHelper.h"
 #include "wiLoader.h"
+#include "TextureMapping.h"
 
 
 BufferResource		wiFont::vertexBuffer,wiFont::indexBuffer;
@@ -296,7 +297,7 @@ void wiFont::Draw(DeviceContext context){
 		wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),context);
 		wiRenderer::BindIndexBuffer(indexBuffer,context);
 
-		wiRenderer::BindTexturePS(fontStyles[style].texture,0,context);
+		wiRenderer::BindTexturePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,context);
 		wiRenderer::DrawIndexed(text.length()*6,context);
 	}
 }

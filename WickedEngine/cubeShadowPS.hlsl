@@ -1,7 +1,5 @@
 #include "pointLightHF.hlsli"
 
-Texture2D<float4> xTextureTex:register(t0);
-
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
@@ -13,6 +11,6 @@ struct VertextoPixel
 float main(VertextoPixel PSIn) : SV_DEPTH
 {
 	[branch]if (g_xMat_hasTex)
-		ALPHATEST(xTextureTex.Sample(sampler_linear_wrap,PSIn.tex).a);
+		ALPHATEST(texture_0.Sample(sampler_linear_wrap,PSIn.tex).a);
 	return distance(PSIn.pos3D.xyz,lightPos.xyz)/lightEnerdis.y;
 }

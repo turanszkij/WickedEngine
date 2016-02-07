@@ -27,9 +27,8 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
     // Fetch color and linear depth for current pixel:
     float4 colorM = xTexture.Sample(Sampler, PSIn.tex);
 		clip(colorM.a?1:-1);
-	float2 depthMapSize;
-	xSceneDepthMap.GetDimensions(depthMapSize.x,depthMapSize.y);
-	float  depthM  = xSceneDepthMap.Load(int3(depthMapSize.xy*PSIn.tex.xy,0)).r;
+
+	float depthM = loadDepth(PSIn.tex.xy);
 
     // Accumulate center sample, multiplying it with its gaussian weight:
     float4 colorBlurred = colorM;
@@ -49,7 +48,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
         // Fetch color and depth for current sample:
         float2 offset = PSIn.tex + kernel[i].a * finalStep;
         float3 color = xTexture.SampleLevel(Sampler, offset, 0).rgb;
-        float depth = ( xSceneDepthMap.SampleLevel(Sampler,offset,0).r );
+        float depth = ( texture_lineardepth.SampleLevel(Sampler,offset,0).r );
 
         // If the difference in depth is huge, we lerp color back to "colorM":
 		static const float correction = 500;

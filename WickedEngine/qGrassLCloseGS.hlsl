@@ -1,5 +1,4 @@
 #include "grassHF_GS.hlsli"
-Texture2D tex:register(t0);
 
 [maxvertexcount(8)]
 void main(
@@ -8,7 +7,7 @@ void main(
 )
 {
 	float2 frame;
-    tex.GetDimensions(frame.x, frame.y);
+    texture_0.GetDimensions(frame.x, frame.y);
 	frame.xy/=frame.y;
 	frame.x*=0.5f;
 	

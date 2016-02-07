@@ -1,7 +1,6 @@
 #include "grassHF_GS.hlsli"
 #include "grassHF_PS.hlsli"
 #include "ditherHF.hlsli"
-Texture2D xTexture:register(t0);
 
 PS_OUT main(QGS_OUT PSIn)
 {
@@ -14,7 +13,7 @@ PS_OUT main(QGS_OUT PSIn)
 	float2 vel = ScreenCoord - ScreenCoordPrev;
 
 	PS_OUT Out = (PS_OUT)0;
-	float4 col = xTexture.Sample(sampler_linear_clamp,PSIn.tex);
+	float4 col = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
 	ALPHATEST(col.a)
 	Out.col = float4(col.rgb,1);
 	Out.nor = float4(PSIn.nor,0);

@@ -18,8 +18,8 @@ struct VertextoPixel{
 	nointerpolation float4 opa				: TEXCOORD2;
 };
 
-Texture2D<float> depth:register(t0);
-Texture2D flare[7]:register(t1);
+//Texture2D<float> depth:register(t0);
+//Texture2D flare[7]:register(t1);
 
 inline void append(inout TriangleStream<VertextoPixel> triStream, VertextoPixel p1, uint selector, float2 posMod, float2 size){
 	float2 pos = (xSunPos.xy-0.5)*float2(2,-2);
@@ -61,32 +61,32 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 	[branch]
 	switch(p[0].vid){
 	case 0:
-		flare[0].GetDimensions(flareSize.x,flareSize.y);
+		texture_0.GetDimensions(flareSize.x,flareSize.y);
 		break;
 	case 1:
-		flare[1].GetDimensions(flareSize.x,flareSize.y);
+		texture_1.GetDimensions(flareSize.x,flareSize.y);
 		break;
 	case 2:
-		flare[2].GetDimensions(flareSize.x,flareSize.y);
+		texture_2.GetDimensions(flareSize.x,flareSize.y);
 		break;
 	case 3:
-		flare[3].GetDimensions(flareSize.x,flareSize.y);
+		texture_3.GetDimensions(flareSize.x,flareSize.y);
 		break;
 	case 4:
-		flare[4].GetDimensions(flareSize.x,flareSize.y);
+		texture_4.GetDimensions(flareSize.x,flareSize.y);
 		break;
 	case 5:
-		flare[5].GetDimensions(flareSize.x,flareSize.y);
+		texture_5.GetDimensions(flareSize.x,flareSize.y);
 		break;
 	case 6:
-		flare[6].GetDimensions(flareSize.x,flareSize.y);
+		texture_6.GetDimensions(flareSize.x,flareSize.y);
 		break;
 	default:break;
 	};
 	
 	
 	float2 depthMapSize;
-	depth.GetDimensions(depthMapSize.x,depthMapSize.y);
+	texture_depth.GetDimensions(depthMapSize.x,depthMapSize.y);
 	flareSize/=depthMapSize;
 
 	const float range = 10.5f;
@@ -95,7 +95,7 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 	for (float y = -range; y <= range; y += 1.0f)
 		for (float x = -range; x <= range; x += 1.0f){
 			samples+=1.0f;
-			accdepth += ( depth.SampleCmpLevelZero(sampler_cmp_depth,xSunPos.xy+float2(x,y)/(depthMapSize*xSunPos.z),xSunPos.z).r ) ;
+			accdepth += (texture_depth.SampleCmpLevelZero(sampler_cmp_depth,xSunPos.xy+float2(x,y)/(depthMapSize*xSunPos.z),xSunPos.z).r ) ;
 		}
 	accdepth/=samples;
 

@@ -20,6 +20,7 @@
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
+#include "TextureMapping.h"
 
 #pragma region STATICS
 D3D_DRIVER_TYPE						wiRenderer::driverType;
@@ -293,7 +294,7 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 
 	immediateContext->OMSetRenderTargets(0,nullptr,nullptr);
 
-	UnbindTextures(0, 16, immediateContext);
+	UnbindTextures(0, TEXSLOT_COUNT, immediateContext);
 
 	Unlock();
 
@@ -309,7 +310,7 @@ void wiRenderer::ExecuteDeferredContexts()
 			commandLists[i]->Release();
 			commandLists[i] = nullptr;
 
-			UnbindTextures(0, 16, deferredContexts[i]);
+			UnbindTextures(0, TEXSLOT_COUNT, deferredContexts[i]);
 		}
 	}
 }
@@ -1756,14 +1757,14 @@ void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 	BindPS(pixelShaders[PSTYPE_TRAIL],context);
 	BindVS(vertexShaders[VSTYPE_TRAIL],context);
 	
-	BindTexturePS(refracRes,0,context);
+	BindTexturePS(refracRes,TEXSLOT_ONDEMAND0,context);
 
 	for (Object* o : objectsWithTrails)
 	{
 		if(o->trailBuff && o->trail.size()>=4){
 
-			BindTexturePS(o->trailDistortTex, 1, context);
-			BindTexturePS(o->trailTex, 2, context);
+			BindTexturePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, context);
+			BindTexturePS(o->trailTex, TEXSLOT_ONDEMAND2, context);
 
 			vector<RibbonVertex> trails;
 
@@ -1878,9 +1879,9 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 
 	BindPrimitiveTopology(TRIANGLELIST,context);
 	
-	BindTexturePS(depth,0,context);
-	BindTexturePS(normal,1,context);
-	BindTexturePS(material,2,context);
+	//BindTexturePS(depth,0,context);
+	//BindTexturePS(normal,1,context);
+	//BindTexturePS(material,2,context);
 
 	
 	BindBlendState(blendStates[BSTYPE_ADDITIVE],context);
@@ -1940,7 +1941,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 				(*lcb).mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
 					(*lcb).mShM[shmap]=l->shadowCam[shmap].getVP();
-					BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,13+shmap,context);
+					BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,TEXSLOT_SHADOW0+shmap,context);
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,context);
 
@@ -1957,7 +1958,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 				if (l->shadow && l->shadowMap_index>=0)
 				{
 					(*lcb).enerdis.w = 1.f;
-					BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, 7, context);
+					BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW_CUBE, context);
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, context);
 
@@ -1987,7 +1988,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context
 				if (l->shadow && l->shadowMap_index>=0)
 				{
 					(*lcb).mShM = l->shadowCam[0].getVP();
-					BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, 4, context);
+					BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW0, context);
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], lcb, context);
 
@@ -2129,20 +2130,14 @@ void wiRenderer::DrawLensFlares(DeviceContext context, TextureView depth){
 void wiRenderer::ClearShadowMaps(DeviceContext context){
 	if (GetGameSpeed())
 	{
+		UnbindTextures(TEXSLOT_SHADOW0, 1 + TEXSLOT_SHADOW_CUBE - TEXSLOT_SHADOW0, context);
+
 		for (unsigned int index = 0; index < Light::shadowMaps_pointLight.size(); ++index) {
 			Light::shadowMaps_pointLight[index].Activate(context);
 		}
 		for (unsigned int index = 0; index < Light::shadowMaps_spotLight.size(); ++index) {
 			Light::shadowMaps_spotLight[index].Activate(context);
 		}
-
-		//for (Light* l : lights)
-		//{
-		//	for (unsigned int i = 0; i < l->shadowMaps_dirLight.size(); ++i)
-		//	{
-		//		l->shadowMaps_dirLight[i].Activate(context);
-		//	}
-		//}
 	}
 }
 void wiRenderer::DrawForShadowMap(DeviceContext context)
@@ -2272,7 +2267,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 										for (Material* iMat : mesh->materials) {
 
 											if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-												BindTexturePS(iMat->texture, 0, context);
+												BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
 
 
 
@@ -2373,7 +2368,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									for (Material* iMat : mesh->materials) {
 
 										if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-											BindTexturePS(iMat->texture, 0, context);
+											BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
 
 
 
@@ -2479,7 +2474,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 							int m = 0;
 							for (Material* iMat : mesh->materials) {
 								if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-									BindTexturePS(iMat->texture, 0, context);
+									BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
 
 									static thread_local MaterialCB* mcb = new MaterialCB;
 									(*mcb).Create(*iMat, m);
@@ -2617,14 +2612,14 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 		if(!wireRender) {
 			if (enviroMap != nullptr)
 			{
-				BindTexturePS(enviroMap, 0, context);
+				BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
 			}
 			else
 			{
-				UnbindTextures(0, 1, context);
+				UnbindTextures(TEXSLOT_ENV_GLOBAL, 1, context);
 			}
 			if(refRes != nullptr) 
-				BindTexturePS(refRes,1,context);
+				BindTexturePS(refRes,TEXSLOT_ONDEMAND5,context);
 		}
 
 
@@ -2689,12 +2684,12 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
 					
 
-					if(!wireRender) BindTexturePS(iMat->texture,3,context);
-					if(!wireRender) BindTexturePS(iMat->refMap,4,context);
-					if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
-					if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
+					if(!wireRender) BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0,context);
+					if(!wireRender) BindTexturePS(iMat->refMap, TEXSLOT_ONDEMAND1,context);
+					if(!wireRender) BindTexturePS(iMat->normalMap, TEXSLOT_ONDEMAND2,context);
+					if(!wireRender) BindTexturePS(iMat->specularMap, TEXSLOT_ONDEMAND3,context);
 					if(DX11Eff)
-						BindTextureDS(iMat->displacementMap,0,context);
+						BindTextureDS(iMat->displacementMap, TEXSLOT_ONDEMAND4,context);
 					
 					DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
 				}
@@ -2753,16 +2748,16 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 
 			if (enviroMap != nullptr)
 			{
-				BindTexturePS(enviroMap, 0, context);
+				BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
 			}
 			else
 			{
-				UnbindTextures(0, 1, context);
+				UnbindTextures(TEXSLOT_ENV_GLOBAL, 1, context);
 			}
-			BindTexturePS(refRes,1,context);
-			BindTexturePS(refracRes,2,context);
-			BindTexturePS(depth,7,context);
-			BindTexturePS(waterRippleNormals, 8, context);
+			BindTexturePS(refRes, TEXSLOT_ONDEMAND5,context);
+			BindTexturePS(refracRes, TEXSLOT_ONDEMAND6,context);
+			//BindTexturePS(depth,7,context);
+			BindTexturePS(waterRippleNormals, TEXSLOT_ONDEMAND7, context);
 		}
 
 
@@ -2829,10 +2824,10 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 
 					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
 
-					if(!wireRender) BindTexturePS(iMat->texture,3,context);
-					if(!wireRender) BindTexturePS(iMat->refMap,4,context);
-					if(!wireRender) BindTexturePS(iMat->normalMap,5,context);
-					if(!wireRender) BindTexturePS(iMat->specularMap,6,context);
+					if(!wireRender) BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0,context);
+					if(!wireRender) BindTexturePS(iMat->refMap, TEXSLOT_ONDEMAND1,context);
+					if(!wireRender) BindTexturePS(iMat->normalMap, TEXSLOT_ONDEMAND2,context);
+					if(!wireRender) BindTexturePS(iMat->specularMap, TEXSLOT_ONDEMAND3,context);
 
 					if (iMat->IsTransparent() && lastRenderType != RENDERTYPE_TRANSPARENT)
 					{
@@ -2881,7 +2876,7 @@ void wiRenderer::DrawSky(DeviceContext context, bool isReflection)
 		BindPS(pixelShaders[PSTYPE_SKY_REFLECTION], context);
 	}
 	
-	BindTexturePS(enviroMap,0,context);
+	BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
 
 	BindVertexBuffer(nullptr,0,0,context);
 	BindVertexLayout(nullptr, context);
@@ -2916,7 +2911,7 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 			BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),context);
 		}
 
-		BindTexturePS(depth, 1, context);
+		//BindTexturePS(depth, 1, context);
 		BindVS(vertexShaders[VSTYPE_DECAL], context);
 		BindPS(pixelShaders[PSTYPE_DECAL], context);
 		BindRasterizerState(rasterizers[RSTYPE_BACK], context);
@@ -2929,8 +2924,8 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView d
 
 			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds.corners)) {
 
-				BindTexturePS(decal->texture, 2, context);
-				BindTexturePS(decal->normal, 3, context);
+				BindTexturePS(decal->texture, TEXSLOT_ONDEMAND0, context);
+				BindTexturePS(decal->normal, TEXSLOT_ONDEMAND1, context);
 
 				static thread_local MiscCB* dcbvs = new MiscCB;
 				(*dcbvs).mTransform =XMMatrixTranspose(XMLoadFloat4x4(&decal->world)*camera->GetViewProjection());
@@ -3014,7 +3009,23 @@ void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, DeviceContext context)
 {
 	UpdateBuffer(constantBuffers[CBTYPE_CLIPPLANE], &clipPlane, context);
 }
+void wiRenderer::UpdateGBuffer(vector<TextureView> gbuffer, DeviceContext context)
+{
+	for (unsigned int i = 0; i < gbuffer.size(); ++i)
+	{
+		BindTexturePS(gbuffer[i], TEXSLOT_GBUFFER0 + i, context);
+	}
+}
+void wiRenderer::UpdateDepthBuffer(TextureView depth, TextureView linearDepth, DeviceContext context)
+{
+	BindTexturePS(depth, TEXSLOT_DEPTH, context);
+	BindTextureVS(depth, TEXSLOT_DEPTH, context);
+	BindTextureGS(depth, TEXSLOT_DEPTH, context);
 
+	BindTexturePS(linearDepth, TEXSLOT_LINEARDEPTH, context);
+	BindTextureVS(linearDepth, TEXSLOT_LINEARDEPTH, context);
+	BindTextureGS(linearDepth, TEXSLOT_LINEARDEPTH, context);
+}
 
 void wiRenderer::FinishLoading()
 {
@@ -3461,7 +3472,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 					else
 						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, context);
 
-					BindTexturePS(iMat->texture, 3, context);
+					BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
 
 					static thread_local MaterialCB* mcb = new MaterialCB;
 					(*mcb).Create(*iMat, m);
@@ -3489,7 +3500,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 		BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], context);
 		BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], context);
 
-		BindTexturePS(enviroMap, 0, context);
+		BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
 
 		BindVertexBuffer(nullptr, 0, 0, context);
 		BindVertexLayout(nullptr, context);

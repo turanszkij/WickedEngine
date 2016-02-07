@@ -13,7 +13,7 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 	PSIn.tex += g_xMat_texMulAdd.zw;
 	
 	if(g_xMat_hasTex) {
-		baseColor *= xTextureTex.Sample(sampler_aniso_wrap,PSIn.tex);
+		baseColor *= xTextureMap.Sample(sampler_aniso_wrap,PSIn.tex);
 	}
 	baseColor.rgb *= PSIn.instanceColor;
 	

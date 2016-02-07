@@ -5,7 +5,7 @@
 
 // dir light constant buffer is global
 
-Texture2D<float> xTextureSh[3]:register(t13);
+//Texture2D<float> xTextureSh[3]:register(t13);
 
 inline float offset_lookup(Texture2D<float> intex, SamplerComparisonState map,
                      float2 loc,
@@ -60,9 +60,9 @@ inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color, in 
 		ShTex[1] = ShPos[1].xyz*float3(1,-1,1)/ShPos[1].w/2.0f +0.5f;
 		ShTex[2] = ShPos[2].xyz*float3(1,-1,1)/ShPos[2].w/2.0f +0.5f;
 	const float shadows[3]={
-		shadowCascade(ShPos[0],ShTex[0].xy,xTextureSh[0]),
-		shadowCascade(ShPos[1],ShTex[1].xy,xTextureSh[1]),
-		shadowCascade(ShPos[2],ShTex[2].xy,xTextureSh[2])
+		shadowCascade(ShPos[0],ShTex[0].xy,texture_shadow0),
+		shadowCascade(ShPos[1],ShTex[1].xy,texture_shadow1),
+		shadowCascade(ShPos[2],ShTex[2].xy,texture_shadow2)
 	};
 	[branch]if((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
 	{

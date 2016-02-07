@@ -17,30 +17,30 @@
 float loadDepth(float2 texCoord)
 {
 	float2 dim;
-	xSceneDepthMap.GetDimensions(dim.x, dim.y);
-	return xSceneDepthMap.Load(int3(dim*texCoord, 0)).r;
+	texture_lineardepth.GetDimensions(dim.x, dim.y);
+	return texture_lineardepth.Load(int3(dim*texCoord, 0)).r;
 }
 float4 loadNormal(float2 texCoord)
 {
 	float2 dim;
-	xNormalMap.GetDimensions(dim.x, dim.y);
-	return xNormalMap.Load(int3(dim*texCoord, 0));
+	texture_gbuffer1.GetDimensions(dim.x, dim.y);
+	return texture_gbuffer1.Load(int3(dim*texCoord, 0));
 }
 float4 loadVelocity(float2 texCoord)
 {
 	float2 dim;
-	xSceneVelocityMap.GetDimensions(dim.x, dim.y);
-	return xSceneVelocityMap.Load(int3(dim*texCoord, 0));
+	texture_gbuffer2.GetDimensions(dim.x, dim.y);
+	return texture_gbuffer2.Load(int3(dim*texCoord, 0));
 }
 float4 loadMask(float2 texCoord)
 {
 	float2 dim;
-	xMaskTex.GetDimensions(dim.x, dim.y);
-	return xMaskTex.Load(int3(dim*texCoord, 0));
+	texture_1.GetDimensions(dim.x, dim.y);
+	return texture_1.Load(int3(dim*texCoord, 0));
 }
 float4 loadScene(float2 texCoord)
 {
 	float2 dim;
-	xTexture.GetDimensions(dim.x, dim.y);
-	return xTexture.Load(int3(dim*texCoord, 0));
+	texture_0.GetDimensions(dim.x, dim.y);
+	return texture_0.Load(int3(dim*texCoord, 0));
 }

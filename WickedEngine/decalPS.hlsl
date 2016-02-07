@@ -1,9 +1,12 @@
 #include "reconstructPositionHF.hlsli"
 #include "tangentComputeHF.hlsli"
 
-Texture2D<float> xSceneDepthMap:register(t1);
-Texture2D<float4> xTexture:register(t2);
-Texture2D<float4> xNormal:register(t3);
+//Texture2D<float> xSceneDepthMap:register(t1);
+//Texture2D<float4> xTexture:register(t2);
+//Texture2D<float4> xNormal:register(t3);
+
+// texture_0	: texture map
+// texture_1	: normal map
 
 struct VertexToPixel{
 	float4 pos			: SV_POSITION;
@@ -31,7 +34,7 @@ PixelOutputType main(VertexToPixel PSIn)
 	float2 screenPos;
 		screenPos.x = PSIn.pos2D.x/PSIn.pos2D.w/2.0f + 0.5f;
 		screenPos.y = -PSIn.pos2D.y/PSIn.pos2D.w/2.0f + 0.5f;
-	float depth = xSceneDepthMap.Load(int3(PSIn.pos.xy,0)).r;
+	float depth = texture_depth.Load(int3(PSIn.pos.xy,0)).r;
 	float3 pos3D = getPosition(screenPos,depth);
 
 	float4 projPos;
@@ -47,7 +50,7 @@ PixelOutputType main(VertexToPixel PSIn)
 	if (hasTexNor & 0x0000010){
 		float3 normal = normalize(cross(ddx(pos3D), ddy(pos3D)));
 		//clip( dot(normal,front)>-0.2?-1:1 ); //clip at oblique angle
-		float4 nortex=xNormal.Sample(sampler_aniso_clamp,projTex.xy);
+		float4 nortex=texture_1.Sample(sampler_aniso_clamp,projTex.xy);
 		float3 eyevector = normalize( eye - pos3D );
 		if(nortex.a>0){
 			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -projTex.xy);
@@ -59,7 +62,7 @@ PixelOutputType main(VertexToPixel PSIn)
 		Out.nor.xyz=normal;
 	}
 	if(hasTexNor & 0x0000001){
-		Out.col=xTexture.Sample(sampler_aniso_clamp,projTex.xy);
+		Out.col=texture_0.Sample(sampler_aniso_clamp,projTex.xy);
 		Out.col.a*=opacity;
 		float3 edgeBlend = clipSpace.xyz;
 		edgeBlend.z = edgeBlend.z * 2 - 1;

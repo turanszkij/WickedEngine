@@ -5,6 +5,7 @@
 #include "wiLoader.h"
 #include "wiHelper.h"
 #include "SamplerMapping.h"
+#include "TextureMapping.h"
 
 #pragma region STATICS
 BlendState		wiImage::blendState, wiImage::blendStateAdd, wiImage::blendStateNoBlend, wiImage::blendStateAvg;
@@ -209,7 +210,7 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
 	wiRenderer::BindRasterizerState(rasterizerState, context);
 
-	wiRenderer::BindTexturePS(texture, 6, context);
+	wiRenderer::BindTexturePS(texture, TEXSLOT_ONDEMAND0, context);
 
 	if (effects.blendFlag == BLENDMODE_ALPHA)
 		wiRenderer::BindBlendState(blendState, context);
@@ -378,11 +379,11 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 
 		//wiRenderer::UpdateBuffer(processCb,prcb,context);
 		
-		wiRenderer::BindTexturePS(effects.depthMap,0,context);
-		wiRenderer::BindTexturePS(effects.normalMap,1,context);
-		wiRenderer::BindTexturePS(effects.velocityMap,3,context);
-		wiRenderer::BindTexturePS(effects.refractionMap,4,context);
-		wiRenderer::BindTexturePS(effects.maskMap,5,context);
+		//wiRenderer::BindTexturePS(effects.depthMap,0,context);
+		//wiRenderer::BindTexturePS(effects.normalMap,1,context);
+		//wiRenderer::BindTexturePS(effects.velocityMap,3,context);
+		//wiRenderer::BindTexturePS(effects.refractionMap,4,context);
+		wiRenderer::BindTexturePS(effects.maskMap,TEXSLOT_ONDEMAND1,context);
 	}
 	else{ //BLUR
 		wiRenderer::BindVS(screenVS,context);
@@ -460,11 +461,11 @@ void wiImage::DrawDeferred(TextureView texture
 	wiRenderer::BindVS(screenVS,context);
 	wiRenderer::BindPS(deferredPS,context);
 	
-	wiRenderer::BindTexturePS(depth,0,context);
-	wiRenderer::BindTexturePS(normal,1,context);
-	wiRenderer::BindTexturePS(texture,6,context);
-	wiRenderer::BindTexturePS(lightmap,7,context);
-	wiRenderer::BindTexturePS(ao,8,context);
+	//wiRenderer::BindTexturePS(depth,0,context);
+	//wiRenderer::BindTexturePS(normal,1,context);
+	//wiRenderer::BindTexturePS(texture,6,context);
+	wiRenderer::BindTexturePS(lightmap,TEXSLOT_ONDEMAND0,context);
+	wiRenderer::BindTexturePS(ao,TEXSLOT_ONDEMAND1,context);
 
 	wiRenderer::BindBlendState(blendStateNoBlend,context);
 

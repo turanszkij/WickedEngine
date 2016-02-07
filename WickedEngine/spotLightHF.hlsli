@@ -1,7 +1,7 @@
 #ifndef _SPOTLIGHT_HF_
 #define _SPOTLIGHT_HF_
 
-Texture2D<float> xTextureSh:register(t4);
+//Texture2D<float> xTextureSh:register(t4);
 
 
 CBUFFER(SpotLightCB, CBSLOT_RENDERER_SPOTLIGHT)
@@ -55,7 +55,7 @@ inline float spotLight(in float3 pos3D, in float3 normal, out float attenuation,
 		[branch]if((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 		{
 			//light.r+=1.0f;
-			l *= shadowCascade(ShPos,ShTex,xTextureSh);
+			l *= shadowCascade(ShPos,ShTex,texture_shadow0);
 		}
 
 		

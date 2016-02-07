@@ -2,13 +2,18 @@
 #define _IMAGEHF_
 #include "globals.hlsli"
 
-Texture2D<float> xSceneDepthMap:register(t0);
-Texture2D<float4> xNormalMap:register(t1);
-Texture2D<float4> xSpecular:register(t2);
-Texture2D<float4> xSceneVelocityMap:register(t3);
-Texture2D<float4> xRefracTexture:register(t4);
-Texture2D<float4> xMaskTex:register(t5);
-Texture2D<float4> xTexture:register(t6);
+//Texture2D<float> xSceneDepthMap:register(t0);
+//Texture2D<float4> xNormalMap:register(t1);
+//Texture2D<float4> xSpecular:register(t2);
+//Texture2D<float4> xSceneVelocityMap:register(t3);
+//Texture2D<float4> xRefracTexture:register(t4);
+//Texture2D<float4> xMaskTex:register(t5);
+//Texture2D<float4> xTexture:register(t6);
+
+// texture_0	: texture map
+// texture_1	: mask map
+#define xTexture	texture_0
+#define xMaskTex	texture_1
 
 SAMPLERSTATE(Sampler, SSLOT_ONDEMAND0);
 

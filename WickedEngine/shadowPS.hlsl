@@ -1,7 +1,5 @@
 #include "globals.hlsli"
 
-Texture2D<float4> xTextureTex:register(t0);
-
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
@@ -11,5 +9,5 @@ struct VertextoPixel
 void main(VertextoPixel PSIn)
 {
 	[branch]if (g_xMat_hasTex)
-		ALPHATEST(xTextureTex.Sample(sampler_linear_wrap, PSIn.tex).a);
+		ALPHATEST(texture_0.Sample(sampler_linear_wrap, PSIn.tex).a);
 }

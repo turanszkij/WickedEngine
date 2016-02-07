@@ -5,6 +5,7 @@
 #include "wiMath.h"
 #include "wiFrustum.h"
 #include "wiRandom.h"
+#include "TextureMapping.h"
 
 VertexLayout wiHairParticle::il;
 VertexShader wiHairParticle::vs;
@@ -394,8 +395,8 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 		wiRenderer::BindVS(vs,context);
 
 		if(texture){
-			wiRenderer::BindTexturePS(texture,0,context);
-			wiRenderer::BindTextureGS(texture,0,context);
+			wiRenderer::BindTexturePS(texture,TEXSLOT_ONDEMAND0,context);
+			wiRenderer::BindTextureGS(texture,TEXSLOT_ONDEMAND0,context);
 
 			wiRenderer::BindBlendState(bs,context);
 		}

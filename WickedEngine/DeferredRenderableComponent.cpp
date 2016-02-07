@@ -5,6 +5,7 @@
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiSprite.h"
+#include "TextureMapping.h"
 
 DeferredRenderableComponent::DeferredRenderableComponent(){
 	Renderable3DComponent::setProperties();
@@ -103,12 +104,20 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 		wiImage::Draw(rtGBuffer.depth->shaderResource, fx, context);
 		fx.process.clear();
 	}
+	rtLinearDepth.Deactivate(context);
 	dtDepthCopy.CopyFrom(*rtGBuffer.depth, context);
 
-	wiRenderer::UnbindTextures(0, 16, context);
+
+	wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, context);
+
+	wiRenderer::UpdateDepthBuffer(dtDepthCopy.shaderResource, rtLinearDepth.shaderResource.front(), context);
+
 	rtGBuffer.Set(context); {
 		wiRenderer::DrawDecals(wiRenderer::getCamera(), context, dtDepthCopy.shaderResource);
 	}
+	rtGBuffer.Deactivate(context);
+
+	wiRenderer::UpdateGBuffer(rtGBuffer.shaderResource, context);
 
 	rtLight.Activate(context, rtGBuffer.depth); {
 		wiRenderer::DrawLights(wiRenderer::getCamera(), context,
@@ -160,7 +169,7 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 
 	if (getSSSEnabled())
 	{
-		wiRenderer::UnbindTextures(0, 16, context);
+		//wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, context);
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = D3D11_COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;

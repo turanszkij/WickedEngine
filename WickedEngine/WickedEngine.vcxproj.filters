@@ -63,6 +63,9 @@
     <Filter Include="shaders\envmap">
       <UniqueIdentifier>{70f538e6-759d-4973-b000-32e41d97beba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Mapping">
+      <UniqueIdentifier>{37e02c00-e217-4c5b-8ecb-d3671f0c4c0c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -1790,13 +1793,13 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ConstantBufferMapping.h">
-      <Filter>Header Files</Filter>
+      <Filter>Resource Mapping</Filter>
     </ClInclude>
     <ClInclude Include="SamplerMapping.h">
-      <Filter>Header Files</Filter>
+      <Filter>Resource Mapping</Filter>
     </ClInclude>
     <ClInclude Include="TextureMapping.h">
-      <Filter>Header Files</Filter>
+      <Filter>Resource Mapping</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

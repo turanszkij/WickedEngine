@@ -5,6 +5,7 @@
 #include "wiResourceManager.h"
 #include "wiFrustum.h"
 #include "wiRandom.h"
+#include "TextureMapping.h"
 
 //ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
 VertexLayout	wiEmittedParticle::vertexLayout;
@@ -247,7 +248,7 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, Textu
 			wiRenderer::BindVS(vertexShader,context);
 			wiRenderer::BindGS(geometryShader,context);
 		
-			wiRenderer::BindTexturePS(depth,1,context);
+			//wiRenderer::BindTexturePS(depth,1,context);
 
 			static thread_local ConstantBuffer* cb = new ConstantBuffer;
 			(*cb).mAdd.x = additive;
@@ -265,7 +266,8 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, Textu
 
 			wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Point),context);
 
-			if(!wireRender && material->texture) wiRenderer::BindTexturePS(material->texture,0,context);
+			if(!wireRender && material->texture) 
+				wiRenderer::BindTexturePS(material->texture,TEXSLOT_ONDEMAND0,context);
 			wiRenderer::Draw(renderPoints.size(),context);
 
 

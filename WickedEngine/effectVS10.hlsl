@@ -1,7 +1,6 @@
 #include "effectHF_PSVS.hlsli"
 #include "effectHF_VS.hlsli"
 
-Texture2D noiseTex:register(t0);
 
 PixelInputType main(Input input)
 {

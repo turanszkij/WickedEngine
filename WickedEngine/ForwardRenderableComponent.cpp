@@ -93,7 +93,10 @@ void ForwardRenderableComponent::RenderScene(DeviceContext context)
 		//wiImage::BatchBegin(context);
 		wiImage::Draw(rtMain.depth->shaderResource, fx, context);
 	}
+	rtLinearDepth.Deactivate(context);
+	dtDepthCopy.CopyFrom(*rtMain.depth, context);
 
+	wiRenderer::UpdateDepthBuffer(dtDepthCopy.shaderResource, rtLinearDepth.shaderResource.front(), context);
 }
 
 

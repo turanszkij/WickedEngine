@@ -4,6 +4,32 @@
 #include "SamplerMapping.h"
 #include "TextureMapping.h"
 
+TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH)
+TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH)
+TEXTURE2D(texture_gbuffer0, float4, TEXSLOT_GBUFFER0)
+TEXTURE2D(texture_gbuffer1, float4, TEXSLOT_GBUFFER1)
+TEXTURE2D(texture_gbuffer2, float4, TEXSLOT_GBUFFER2)
+TEXTURE2D(texture_gbuffer3, float4, TEXSLOT_GBUFFER3)
+TEXTURE2D(texture_gbuffer4, float4, TEXSLOT_GBUFFER4)
+TEXTURECUBE(texture_env_global, float4, TEXSLOT_ENV_GLOBAL)
+TEXTURECUBE(texture_env0, float4, TEXSLOT_ENV0)
+TEXTURECUBE(texture_env1, float4, TEXSLOT_ENV1)
+TEXTURECUBE(texture_env2, float4, TEXSLOT_ENV2)
+TEXTURE2D(texture_shadow0, float, TEXSLOT_SHADOW0)
+TEXTURE2D(texture_shadow1, float, TEXSLOT_SHADOW1)
+TEXTURE2D(texture_shadow2, float, TEXSLOT_SHADOW2)
+TEXTURECUBE(texture_shadow_cube, float, TEXSLOT_SHADOW_CUBE)
+TEXTURE2D(texture_0, float4, TEXSLOT_ONDEMAND0)
+TEXTURE2D(texture_1, float4, TEXSLOT_ONDEMAND1)
+TEXTURE2D(texture_2, float4, TEXSLOT_ONDEMAND2)
+TEXTURE2D(texture_3, float4, TEXSLOT_ONDEMAND3)
+TEXTURE2D(texture_4, float4, TEXSLOT_ONDEMAND4)
+TEXTURE2D(texture_5, float4, TEXSLOT_ONDEMAND5)
+TEXTURE2D(texture_6, float4, TEXSLOT_ONDEMAND6)
+TEXTURE2D(texture_7, float4, TEXSLOT_ONDEMAND7)
+TEXTURE2D(texture_8, float4, TEXSLOT_ONDEMAND8)
+TEXTURE2D(texture_9, float4, TEXSLOT_ONDEMAND9)
+
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	)
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	)
 SAMPLERSTATE(			sampler_linear_mirror,	SSLOT_LINEAR_MIRROR	)
@@ -13,7 +39,7 @@ SAMPLERSTATE(			sampler_point_mirror,	SSLOT_POINT_MIRROR	)
 SAMPLERSTATE(			sampler_aniso_clamp,	SSLOT_ANISO_CLAMP	)
 SAMPLERSTATE(			sampler_aniso_wrap,		SSLOT_ANISO_WRAP	)
 SAMPLERSTATE(			sampler_aniso_mirror,	SSLOT_ANISO_MIRROR	)
-SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH	)
+SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		)
 
 CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 {
@@ -26,7 +52,6 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float2		g_xWorld_ScreenWidthHeight;
 	float		xPadding_WorldCB[2];
 };
-
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
 	float3		g_xFrame_WindDirection;			float xPadding0_FrameCB;

@@ -2,8 +2,6 @@
 #define _POINTLIGHT_HF_
 #include "globals.hlsli"
 
-TextureCube xTextureSh:register(t7);
-
 CBUFFER(PointLightCB, CBSLOT_RENDERER_POINTLIGHT)
 {
 	float3 lightPos; float pad;
@@ -24,7 +22,7 @@ inline float pointLight(in float3 pos3D, in float3 normal, out float3 lightDir, 
 	[branch]if(lightEnerdis.w){
 		const float3 lv = pos3D.xyz-lightPos.xyz;
 		static const float bias = 0.025;
-		lightint *= xTextureSh.SampleCmpLevelZero(sampler_cmp_depth,lv,length(lv)/lightEnerdis.y-bias ).r;
+		lightint *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth,lv,length(lv)/lightEnerdis.y-bias ).r;
 	}
 
 	return saturate(attenuation*lightint);

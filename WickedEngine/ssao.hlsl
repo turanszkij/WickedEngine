@@ -78,7 +78,7 @@ float4 main(VertexToPixelPostProcess input ):SV_Target
 		if(!occFrag.x && !occFrag.y && !occFrag.z)
 			break;
 
-		depthDiff = ( depth - ( xSceneDepthMap.SampleLevel(Sampler,newTex,0).r ) );
+		depthDiff = ( depth - ( texture_lineardepth.SampleLevel(Sampler,newTex,0).r ) );
 
 		bl += step( falloff, depthDiff ) * (1.0 - saturate( dot( occFrag.xyz, normal ) ) ) 
 			* (1-smoothstep( falloff,strength,depthDiff ) );

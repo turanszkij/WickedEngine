@@ -5,6 +5,7 @@
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiLoader.h"
+#include "TextureMapping.h"
 
 Renderable3DComponent::Renderable3DComponent()
 {
@@ -243,7 +244,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	if (getVolumeLightsEnabled())
 	{
-		wiRenderer::UnbindTextures(0, 16, context);
+		wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, context);
 		rtVolumeLight.Activate(context, mainRT.depth);
 		wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), context);
 	}
@@ -261,7 +262,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawWaterRipples(context);
 	}
 
-	wiRenderer::UnbindTextures(0, 16, context);
+	//wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, context);
 	rtTransparent.Activate(context, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front()
 			, rtWaterRipple.shaderResource.back(), rtLinearDepth.shaderResource.back()
@@ -316,7 +317,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceCont
 
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
-	wiRenderer::UnbindTextures(0, 16, context);
+	//wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, context);
 	rtSun[0].Activate(context, mainRT.depth); {
 		wiRenderer::DrawSun(context);
 	}

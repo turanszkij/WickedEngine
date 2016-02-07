@@ -1,6 +1,7 @@
 #include "wiLensFlare.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
+#include "TextureMapping.h"
 
 
 BufferResource wiLensFlare::constantBuffer;
@@ -52,13 +53,13 @@ void wiLensFlare::Draw(TextureView depthMap, DeviceContext context, const XMVECT
 		wiRenderer::BindDepthStencilState(depthStencilState,1,context);
 		wiRenderer::BindBlendState(blendState,context);
 
-		wiRenderer::BindTextureGS(depthMap,0,context);
+		//wiRenderer::BindTextureGS(depthMap,0,context);
 
 		int i=0;
 		for(TextureView x : rims){
 			if(x!=nullptr){
-				wiRenderer::BindTexturePS(x,i+1,context);
-				wiRenderer::BindTextureGS(x,i+1,context);
+				wiRenderer::BindTexturePS(x, TEXSLOT_ONDEMAND0 + i, context);
+				wiRenderer::BindTextureGS(x, TEXSLOT_ONDEMAND0 + i, context);
 				i++;
 			}
 		}

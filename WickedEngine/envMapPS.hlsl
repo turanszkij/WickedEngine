@@ -3,8 +3,6 @@
 #define DIRECTIONALLIGHT_SOFT
 #include "dirLightHF.hlsli"
 
-Texture2D<float4> xTextureTex:register(t3);
-
 float4 main(PSIn input) : SV_TARGET
 {
 	float4 baseColor = g_xMat_diffuseColor;
@@ -13,7 +11,7 @@ float4 main(PSIn input) : SV_TARGET
 	input.tex += g_xMat_texMulAdd.zw;
 	
 	if (g_xMat_hasTex) {
-		baseColor *= xTextureTex.Sample(sampler_aniso_wrap, input.tex.xy);
+		baseColor *= texture_0.Sample(sampler_aniso_wrap, input.tex.xy);
 	}
 	baseColor.rgb *= input.instanceColor;
 

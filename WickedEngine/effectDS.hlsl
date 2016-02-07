@@ -24,7 +24,6 @@ struct HullOutputType
 };
 
 
-Texture2D dispMap:register(t0);
 
 float3 GetLightDirection(float3 pos3D, float3 lightPos)
 {
