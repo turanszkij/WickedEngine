@@ -29,7 +29,7 @@ PixelOutputType main(PixelInputType PSIn)
 	}
 	baseColor.rgb *= PSIn.instanceColor;
 	
-	clip( baseColor.a - 0.1f );
+	ALPHATEST(baseColor.a)
 		
 	if(depth){
 

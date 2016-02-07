@@ -93,4 +93,6 @@ CBUFFER(APICB, CBSLOT_API)
 };
 
 
+#define ALPHATEST(x) clip((x)-0.1);
+
 #endif // _SHADERDEF_CONSTANTBUFFERS_

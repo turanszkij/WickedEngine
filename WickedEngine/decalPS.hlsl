@@ -66,7 +66,7 @@ PixelOutputType main(VertexToPixel PSIn)
 		edgeBlend = abs(edgeBlend);
 		Out.col.a *= 1 - pow(max(max(edgeBlend.x, edgeBlend.y), edgeBlend.z), 8);
 		//Out.col.a *= pow(saturate(-dot(normal,front)), 4);
-		clip( Out.col.a<0.05?-1:1 );
+		ALPHATEST(Out.col.a)
 		if(hasTexNor & 0x0000010)
 			Out.nor.a=Out.col.a;
 	}

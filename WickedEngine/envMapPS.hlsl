@@ -21,7 +21,7 @@ float4 main(PSIn input) : SV_TARGET
 	//lighting = saturate(dot(input.nor.xyz, g_xDirLight_direction.xyz));
 	//baseColor.rgb *= lighting;
 
-	clip(baseColor.a < 0.1f ? -1 : 1);
+	ALPHATEST(baseColor.a)
 
 	return baseColor*(1 + g_xMat_emissive);
 }

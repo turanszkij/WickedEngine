@@ -15,7 +15,7 @@ PS_OUT main(QGS_OUT PSIn)
 
 	PS_OUT Out = (PS_OUT)0;
 	float4 col = xTexture.Sample(sampler_linear_clamp,PSIn.tex);
-	clip( col.a < 0.1 ? -1:1 );
+	ALPHATEST(col.a)
 	Out.col = float4(col.rgb,1);
 	Out.nor = float4(PSIn.nor,0);
 	Out.vel = float4(vel,0,0);

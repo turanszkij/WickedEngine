@@ -19,11 +19,10 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 	
 		[branch]if(g_xMat_hasTex){
 			baseColor *= xTextureTex.Sample(sampler_aniso_wrap, PSIn.tex);
-			//baseColor*=baseColor.a;
 		}
 		baseColor.rgb *= PSIn.instanceColor;
-		//baseColor.a=1;
-		clip( baseColor.a < 0.1f ? -1:1 );
+
+		ALPHATEST(baseColor.a)
 
 		float3 eyevector = normalize(g_xCamera_CamPos - PSIn.pos3D);
 		float2 screenPos;
@@ -75,10 +74,6 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		if(g_xMat_hasSpe && !g_xMat_shadeless){
 			spec = xTextureSpe.Sample(sampler_aniso_wrap, PSIn.tex);
 		}
-		/*float3 reflectionVector = reflect(xSun, normal);
-		float specR = dot(normalize(reflectionVector), eyevector);
-		specR = pow(saturate(-specR), specular_power)*spec.w;
-		baseColor.rgb += saturate(xSunColor.rgb * specR);*/
 		[branch]if(!g_xMat_shadeless.x){
 			baseColor.rgb*=clamp( saturate( abs(dot(g_xWorld_SunDir.xyz,PSIn.nor)) * g_xWorld_SunColor.rgb ), g_xWorld_Ambient.rgb,1 );
 			applySpecular(baseColor, g_xWorld_SunColor, normal, eyevector, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, spec.w, 0);
@@ -87,11 +82,6 @@ float4 main( PixelInputType PSIn) : SV_TARGET
 		baseColor.rgb = pow(abs(baseColor.rgb*(1 + g_xMat_emissive)), INV_GAMMA);
 
 		baseColor.rgb = applyFog(baseColor.rgb,getFog(getLinearDepth(depth/PSIn.pos2D.w)));
-		
-		//Out.col = saturate(baseColor);
-		//Out.nor = float4((normal),1);
-		//Out.spe = saturate(spec);
-		//Out.vel = float4(PSIn.vel*float3(-1,1,1),1);
 
 	return baseColor;
 }

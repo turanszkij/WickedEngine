@@ -10,6 +10,6 @@ struct VertextoPixel
 
 void main(VertextoPixel PSIn)
 {
-	[branch]if(g_xMat_hasTex)
-		clip( xTextureTex.Sample(sampler_linear_wrap,PSIn.tex).a<0.1?-1:1 );
+	[branch]if (g_xMat_hasTex)
+		ALPHATEST(xTextureTex.Sample(sampler_linear_wrap, PSIn.tex).a);
 }

@@ -24,7 +24,7 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 	}
 	baseColor.rgb *= PSIn.instanceColor;
 
-	clip(baseColor.a < 0.1f ? -1 : 1);
+	ALPHATEST(baseColor.a)
 
 	if (!g_xMat_shadeless.x)
 	{
