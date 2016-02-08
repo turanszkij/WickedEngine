@@ -383,7 +383,9 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 		//wiRenderer::BindTexturePS(effects.normalMap,1,context);
 		//wiRenderer::BindTexturePS(effects.velocityMap,3,context);
 		//wiRenderer::BindTexturePS(effects.refractionMap,4,context);
-		wiRenderer::BindTexturePS(effects.maskMap,TEXSLOT_ONDEMAND1,context);
+		wiRenderer::BindTexturePS(effects.maskMap, TEXSLOT_ONDEMAND1, context);
+		wiRenderer::BindTexturePS(effects.distortionMap, TEXSLOT_ONDEMAND2, context);
+		wiRenderer::BindTexturePS(effects.refractionSource, TEXSLOT_ONDEMAND3, context);
 	}
 	else{ //BLUR
 		wiRenderer::BindVS(screenVS,context);
