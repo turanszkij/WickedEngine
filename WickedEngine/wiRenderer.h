@@ -680,24 +680,22 @@ public:
 	static void ClearShadowMaps(DeviceContext context);
 	static void DrawForShadowMap(DeviceContext context);
 	static void DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
-		, TextureView waterRippleNormals, TextureView depth, DeviceContext context);
+		, TextureView waterRippleNormals, DeviceContext context);
 	void DrawDebugSpheres(Camera* camera, DeviceContext context);
 	static void DrawDebugBoneLines(Camera* camera, DeviceContext context);
 	static void DrawDebugLines(Camera* camera, DeviceContext context);
 	static void DrawDebugBoxes(Camera* camera, DeviceContext context);
-	static void DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark = false);
-	static void DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark = false);
+	static void DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, bool dark = false);
+	static void DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, bool dark = false);
 	static void DrawTrails(DeviceContext context, TextureView refracRes);
 	static void DrawImagesAdd(DeviceContext context, TextureView refracRes);
 	//alpha-opaque
 	static void DrawImages(DeviceContext context, TextureView refracRes);
 	static void DrawImagesNormals(DeviceContext context, TextureView refracRes);
-	static void DrawLights(Camera* camera, DeviceContext context
-		, TextureView depth, TextureView normal, TextureView material
-		, unsigned int stencilRef = 2);
+	static void DrawLights(Camera* camera, DeviceContext context, unsigned int stencilRef = 2);
 	static void DrawVolumeLights(Camera* camera, DeviceContext context);
-	static void DrawLensFlares(DeviceContext context, TextureView depth);
-	static void DrawDecals(Camera* camera, DeviceContext context, TextureView depth);
+	static void DrawLensFlares(DeviceContext context);
+	static void DrawDecals(Camera* camera, DeviceContext context);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();

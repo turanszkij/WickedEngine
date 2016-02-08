@@ -113,15 +113,14 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 	wiRenderer::UpdateDepthBuffer(dtDepthCopy.shaderResource, rtLinearDepth.shaderResource.front(), context);
 
 	rtGBuffer.Set(context); {
-		wiRenderer::DrawDecals(wiRenderer::getCamera(), context, dtDepthCopy.shaderResource);
+		wiRenderer::DrawDecals(wiRenderer::getCamera(), context);
 	}
 	rtGBuffer.Deactivate(context);
 
 	wiRenderer::UpdateGBuffer(rtGBuffer.shaderResource, context);
 
 	rtLight.Activate(context, rtGBuffer.depth); {
-		wiRenderer::DrawLights(wiRenderer::getCamera(), context,
-			dtDepthCopy.shaderResource, rtGBuffer.shaderResource[1], rtGBuffer.shaderResource[2]);
+		wiRenderer::DrawLights(wiRenderer::getCamera(), context);
 	}
 
 
@@ -131,8 +130,8 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 		fx.stencilComp = D3D11_COMPARISON_LESS;
 		rtSSAO[0].Activate(context); {
 			fx.process.setSSAO(true);
-			fx.setDepthMap(rtLinearDepth.shaderResource.back());
-			fx.setNormalMap(rtGBuffer.shaderResource[1]);
+			//fx.setDepthMap(rtLinearDepth.shaderResource.back());
+			//fx.setNormalMap(rtGBuffer.shaderResource[1]);
 			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
 			fx.quality = QUALITY_BILINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
@@ -174,7 +173,7 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 		fx.stencilComp = D3D11_COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		fx.setDepthMap(rtLinearDepth.shaderResource.back());
+		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
 		for (unsigned int i = 0; i<rtSSS.size() - 1; ++i){
 			rtSSS[i].Activate(context, rtGBuffer.depth);
 			XMFLOAT2 dir = XMFLOAT2(0, 0);
@@ -192,7 +191,7 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 		fx.process.clear();
 		rtSSS.back().Activate(context, rtGBuffer.depth); {
 			fx.setMaskMap(nullptr);
-			fx.setNormalMap(nullptr);
+			//fx.setNormalMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			fx.blendFlag = BLENDMODE_OPAQUE;
@@ -212,9 +211,9 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 		rtSSR.Activate(context); {
 			wiRenderer::GenerateMips(rtDeferred.shaderResource[0], context);
 			fx.process.setSSR(true);
-			fx.setDepthMap(dtDepthCopy.shaderResource);
-			fx.setNormalMap(rtGBuffer.shaderResource[1]);
-			fx.setVelocityMap(rtGBuffer.shaderResource[2]);
+			//fx.setDepthMap(dtDepthCopy.shaderResource);
+			//fx.setNormalMap(rtGBuffer.shaderResource[1]);
+			//fx.setVelocityMap(rtGBuffer.shaderResource[2]);
 			fx.setMaskMap(rtLinearDepth.shaderResource.front());
 			if (getSSSEnabled())
 				wiImage::Draw(rtSSS.back().shaderResource.front(), fx, context);
@@ -227,8 +226,8 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 	if (getMotionBlurEnabled()){ //MOTIONBLUR
 		rtMotionBlur.Activate(context);
 		fx.process.setMotionBlur(true);
-		fx.setVelocityMap(rtGBuffer.shaderResource.back());
-		fx.setDepthMap(rtLinearDepth.shaderResource.back());
+		//fx.setVelocityMap(rtGBuffer.shaderResource.back());
+		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		if (getSSREnabled()){
 			wiImage::Draw(rtSSR.shaderResource.front(), fx, context);

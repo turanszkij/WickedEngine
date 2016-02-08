@@ -30,8 +30,7 @@ void wiLensFlare::CleanUp(){
 	if(blendState) blendState->Release(); blendState = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
 }
-void wiLensFlare::Draw(TextureView depthMap, DeviceContext context, const XMVECTOR& lightPos
-					 , vector<TextureView>& rims){
+void wiLensFlare::Draw(DeviceContext context, const XMVECTOR& lightPos, vector<TextureView>& rims){
 
 	if(!rims.empty()){
 

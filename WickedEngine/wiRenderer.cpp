@@ -1721,7 +1721,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, DeviceContext context)
 	}
 }
 
-void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark)
+void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, bool dark)
 {
 	struct particlesystem_comparator {
 		bool operator() (const wiEmittedParticle* a, const wiEmittedParticle* b) const{
@@ -1736,14 +1736,14 @@ void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context,
 	}
 
 	for(wiEmittedParticle* e:psystems){
-		e->DrawNonPremul(camera,context,depth,dark);
+		e->DrawNonPremul(camera,context,dark);
 	}
 }
-void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, TextureView depth, bool dark)
+void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, bool dark)
 {
 	for (wiEmittedParticle* e : emitterSystems)
 	{
-		e->DrawPremul(camera, context, depth, dark);
+		e->DrawPremul(camera, context, dark);
 	}
 }
 void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
@@ -1861,9 +1861,7 @@ void wiRenderer::DrawImagesNormals(DeviceContext context, TextureView refracRes)
 		x->DrawNormal(context);
 	}
 }
-void wiRenderer::DrawLights(Camera* camera, DeviceContext context
-				, TextureView depth, TextureView normal, TextureView material
-				, unsigned int stencilRef){
+void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int stencilRef){
 
 	
 	static thread_local Frustum frustum = Frustum();
@@ -2092,7 +2090,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 }
 
 
-void wiRenderer::DrawLensFlares(DeviceContext context, TextureView depth){
+void wiRenderer::DrawLensFlares(DeviceContext context){
 	
 		
 	CulledList culledObjects;
@@ -2121,7 +2119,7 @@ void wiRenderer::DrawLensFlares(DeviceContext context, TextureView depth){
 			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetScreenWidth(),(float)GetScreenHeight(),0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
 
 			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
-				wiLensFlare::Draw(depth,context,flarePos,l->lensFlareRimTextures);
+				wiLensFlare::Draw(context,flarePos,l->lensFlareRimTextures);
 
 		}
 
@@ -2709,7 +2707,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 }
 
 void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
-	, TextureView waterRippleNormals, TextureView depth, DeviceContext context)
+	, TextureView waterRippleNormals, DeviceContext context)
 {
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -2897,7 +2895,7 @@ void wiRenderer::DrawSun(DeviceContext context)
 	Draw(240, context);
 }
 
-void wiRenderer::DrawDecals(Camera* camera, DeviceContext context, TextureView depth)
+void wiRenderer::DrawDecals(Camera* camera, DeviceContext context)
 {
 	bool boundCB = false;
 	for (Model* model : GetScene().models)

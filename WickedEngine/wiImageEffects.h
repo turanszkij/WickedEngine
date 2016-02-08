@@ -92,12 +92,13 @@ public:
 	};
 	Processing process;
 	bool deferred;
-	TextureView normalMap, depthMap, velocityMap, refractionMap, maskMap;
+	TextureView maskMap, distortionMap, refractionSource;
+	// Generic texture
 	void setMaskMap(TextureView view) { maskMap = view; }
-	void setRefractionMap(TextureView view) { refractionMap = view; }
-	void setVelocityMap(TextureView view) { velocityMap = view; }
-	void setDepthMap(TextureView view) { depthMap = view; }
-	void setNormalMap(TextureView view) { normalMap = view; }
+	// The normalmap texture which should distort the refraction source
+	void setDistortionMap(TextureView view) { distortionMap = view; }
+	// The texture which should be distorted
+	void setRefractionSource(TextureView view) { refractionSource = view; }
 
 	void init() {
 		pos = XMFLOAT3(0, 0, 0);
@@ -124,11 +125,9 @@ public:
 		bloom = Bloom();
 		process = Processing();
 		deferred = false;
-		normalMap = nullptr;
-		depthMap = nullptr;
-		velocityMap = nullptr;
-		refractionMap = nullptr;
 		maskMap = nullptr;
+		distortionMap = nullptr;
+		refractionSource = nullptr;
 	}
 
 

@@ -230,7 +230,7 @@ void wiEmittedParticle::Burst(float num)
 }
 
 
-void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG)
+void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, int FLAG)
 {
 	if(!points.empty()){
 		
@@ -275,13 +275,13 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, Textu
 		}
 	}
 }
-void wiEmittedParticle::DrawPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG){
+void wiEmittedParticle::DrawPremul(Camera* camera, ID3D11DeviceContext *context, int FLAG){
 	if(material->premultipliedTexture)
-		Draw(camera,context,depth,FLAG);
+		Draw(camera,context,FLAG);
 }
-void wiEmittedParticle::DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG){
+void wiEmittedParticle::DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, int FLAG){
 	if(!material->premultipliedTexture)
-		Draw(camera,context,depth,FLAG);
+		Draw(camera,context,FLAG);
 }
 
 

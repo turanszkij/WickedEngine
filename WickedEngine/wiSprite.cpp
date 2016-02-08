@@ -61,7 +61,7 @@ void wiSprite::CleanUp(){
 
 void wiSprite::Draw(TextureView refracRes, DeviceContext context){
 	if(effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE) ){
-		effects.setRefractionMap(refracRes);
+		effects.setRefractionSource(refracRes);
 		wiImage::Draw(texturePointer,effects,context);
 	}
 }

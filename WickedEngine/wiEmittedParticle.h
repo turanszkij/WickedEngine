@@ -99,9 +99,9 @@ public:
 
 #define DRAW_DEFAULT 0
 #define DRAW_DARK 1
-	void Draw(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG = DRAW_DEFAULT);
-	void DrawPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG = DRAW_DEFAULT);
-	void DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, TextureView depth, int FLAG = DRAW_DEFAULT);
+	void Draw(Camera* camera, ID3D11DeviceContext *context, int FLAG = DRAW_DEFAULT);
+	void DrawPremul(Camera* camera, ID3D11DeviceContext *context, int FLAG = DRAW_DEFAULT);
+	void DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, int FLAG = DRAW_DEFAULT);
 	void CleanUp();
 
 	string name;

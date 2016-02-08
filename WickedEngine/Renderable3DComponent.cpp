@@ -239,7 +239,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	{
 		rtLensFlare.Activate(context);
 		if (!wiRenderer::GetRasterizer())
-			wiRenderer::DrawLensFlares(context, mainRT.depth->shaderResource);
+			wiRenderer::DrawLensFlares(context);
 	}
 
 	if (getVolumeLightsEnabled())
@@ -252,10 +252,10 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	if (getEmittedParticlesEnabled())
 	{
 		rtParticle.Activate(context, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
-		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), context, rtLinearDepth.shaderResource.back());
+		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), context);
 		
 		rtParticleAdditive.Activate(context, 0, 0, 0, 1);  //OFFSCREEN RENDER ADDITIVEPARTICLES
-		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera(), context, rtLinearDepth.shaderResource.back());
+		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera(), context);
 	}
 
 	rtWaterRipple.Activate(context, 0, 0, 0, 0); {
@@ -265,8 +265,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	//wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, context);
 	rtTransparent.Activate(context, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.shaderResource.front(), rtReflection.shaderResource.front()
-			, rtWaterRipple.shaderResource.back(), rtLinearDepth.shaderResource.back()
-			, context);
+			, rtWaterRipple.shaderResource.back(), context);
 		wiRenderer::DrawTrails(context, shadedSceneRT.shaderResource.front());
 	}
 
@@ -382,10 +381,10 @@ void Renderable3DComponent::RenderComposition2(DeviceContext context){
 		rtDof[2].Activate(context);
 		fx.process.setDOF(getDepthOfFieldFocus());
 		fx.setMaskMap(rtDof[1].shaderResource.back());
-		fx.setDepthMap(rtLinearDepth.shaderResource.back());
+		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
 		wiImage::Draw(rtFinal[0].shaderResource.back(), fx, context);
 		fx.setMaskMap(nullptr);
-		fx.setDepthMap(nullptr);
+		//fx.setDepthMap(nullptr);
 		fx.process.clear();
 	}
 

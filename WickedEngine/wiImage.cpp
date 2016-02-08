@@ -290,11 +290,11 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			(*cb).mFade = effects.fade;
 			(*cb).mOpacity = effects.opacity;
 			(*cb).mMask = effects.maskMap != nullptr;
-			(*cb).mDistort = effects.normalMap != nullptr; 
+			(*cb).mDistort = effects.distortionMap != nullptr; 
 			(*cb).mMirror = effects.mirror;
 			
 			int normalmapmode = 0;
-			if(effects.normalMap && effects.refractionMap)
+			if(effects.distortionMap && effects.refractionSource)
 				normalmapmode=1;
 			if(effects.extractNormalMap==true)
 				normalmapmode=2;
