@@ -1858,9 +1858,6 @@
     <None Include="imageHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
-    <None Include="lightHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
     <None Include="normalsCompressHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
@@ -1912,6 +1909,9 @@
     </None>
     <None Include="objectHF.hlsli">
       <Filter>shaders\object</Filter>
+    </None>
+    <None Include="lightHF.hlsli">
+      <Filter>shaders\lighting</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -1981,12 +1981,6 @@
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="trailVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="waterPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="waterVS.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="grassL0GS.hlsl">
@@ -2176,6 +2170,12 @@
       <Filter>shaders\object</Filter>
     </FxCompile>
     <FxCompile Include="objectVS10.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="waterPS.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="waterVS.hlsl">
       <Filter>shaders\object</Filter>
     </FxCompile>
   </ItemGroup>

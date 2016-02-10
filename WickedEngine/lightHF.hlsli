@@ -33,10 +33,10 @@ static const float specularMaximumIntensity = 1;
 	float4 material = texture_gbuffer2.SampleLevel(sampler_point_clamp,screenPos,0);		\
 	float specular = material.w*specularMaximumIntensity;							\
 	uint specular_power = material.z;												\
-	float3 normal = norU.xyz;														\
+	float3 N = norU.xyz;														\
 	bool toonshaded = isToon(norU.w);												\
-	float3 pos3D = getPosition(screenPos, depth);									\
-	float3 eyevector = normalize(g_xCamera_CamPos - pos3D.xyz);
+	float3 P = getPosition(screenPos, depth);									\
+	float3 V = normalize(P - g_xCamera_CamPos);
 
 #define DEFERREDLIGHT_RETURN	\
 	return max(unshaded? 1 : color, 0.0f);

@@ -37,7 +37,7 @@ struct PixelInputType
 	float  ao : AMBIENT_OCCLUSION;
 	nointerpolation float  dither : DITHER;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
-	float3 nor2D							: NORMAL2D;
+	float2 nor2D							: NORMAL2D;
 };
 
 struct PixelOutputType
@@ -58,11 +58,10 @@ inline void BaseColorMapping(in float2 UV, inout float4 baseColor)
 	}
 }
 
-inline void NormalMapping(in float2 UV, in float3 V, inout float3 N)
+inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float3 bumpColor)
 {
 	if (g_xMat_hasNor) 
 	{
-		float3 bumpColor = 0;
 		float4 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV);
 		float3x3 tangentFrame = compute_tangent_frame(N, V, -UV);
 		bumpColor = 2.0f * nortex.rgb - 1.0f;
@@ -85,6 +84,14 @@ inline void PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, 
 		float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz, 0);
 		baseColor.rgb = lerp(baseColor.rgb, colorReflection.rgb, colorMat);
 	}
+}
+
+inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float4 baseColor)
+{
+	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
+	float4 refractiveColor = (xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, 0));
+	baseColor.rgb = lerp(refractiveColor.rgb, baseColor.rgb, baseColor.a);
+	baseColor.a = 1;
 }
 
 // #define ENVMAP_CAMERA_BLEND
@@ -116,6 +123,14 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 	color.rgb += envCol.rgb * specularColor.rgb * metalness;
 }
 
+inline void DirectionalLight(in float3 N, in float3 V, in float4 specularColor, inout float4 baseColor)
+{
+	float3 light = saturate(dot(g_xWorld_SunDir.xyz, N));
+	light = clamp(light, g_xWorld_Ambient.rgb, 1);
+	baseColor.rgb *= light*g_xWorld_SunColor.rgb;
+	applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a, 0);
+}
+
 
 // MACROS
 ////////////
@@ -131,16 +146,18 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 	float2 refUV = float2(1, -1)*PSIn.ReflectionMapSamplingPos.xy / PSIn.ReflectionMapSamplingPos.w / 2.0f + 0.5f;	\
 	float2 ScreenCoord = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;								\
 	float2 ScreenCoordPrev = float2(1, -1)*PSIn.pos2DPrev.xy / PSIn.pos2DPrev.w / 2.0f + 0.5f;						\
-	float depth = PSIn.pos.z / PSIn.pos.w;																			\
+	float lineardepth = PSIn.pos2D.z;																				\
+	float depth = PSIn.pos2D.z / PSIn.pos2D.w;																		\
+	float3 bumpColor = 0;																							\
 	float4 baseColor = g_xMat_diffuseColor * float4(PSIn.instanceColor, 1);											\
-	BaseColorMapping(UV, baseColor);
-
-#define OBJECT_PS_MISC							\
-	clip(dither(PSIn.pos.xy) - PSIn.dither);	\
+	BaseColorMapping(UV, baseColor);																				\
 	ALPHATEST(baseColor.a)
 
+#define OBJECT_PS_DITHER						\
+	clip(dither(PSIn.pos.xy) - PSIn.dither);	\
+
 #define OBJECT_PS_NORMALMAPPING			\
-	NormalMapping(UV, V, N);
+	NormalMapping(UV, V, N, bumpColor);
 
 #define OBJECT_PS_SPECULARMAPPING		\
 	SpecularMapping(UV, specularColor);
@@ -151,6 +168,21 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 #define OBJECT_PS_PLANARREFLECTIONS							\
 	PlanarReflection(PSIn.tex, refUV, N, baseColor);
 
+#define OBJECT_PS_REFRACTION						\
+	Refraction(ScreenCoord, PSIn.nor2D, bumpColor, baseColor);
+
+#define OBJECT_PS_DEGAMMA						\
+	baseColor = pow(abs(baseColor), GAMMA);
+
+#define OBJECT_PS_GAMMA													\
+	baseColor = pow(abs(baseColor*(1 + g_xMat_emissive)), INV_GAMMA);
+
+#define OBJECT_PS_FOG																		\
+	baseColor.rgb = applyFog(baseColor.rgb, getFog(getLinearDepth(depth)));
+
+#define OBJECT_PS_DIRECTIONALLIGHT	\
+	DirectionalLight(N, V, specularColor, baseColor);
+
 #define OBJECT_PS_OUT_GBUFFER																		\
 	bool unshaded = g_xMat_shadeless;																\
 	float properties = unshaded ? RT_UNSHADED : 0.0f;												\
@@ -159,5 +191,8 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 	Out.nor = float4(N.xyz, properties);															\
 	Out.vel = float4(ScreenCoord - ScreenCoordPrev, g_xMat_specular_power, specularColor.a);		\
 	return Out;
+
+#define OBJECT_PS_OUT_FORWARD	\
+	return baseColor;
 
 #endif // _OBJECTSHADER_HF_

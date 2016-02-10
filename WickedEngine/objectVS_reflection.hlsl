@@ -39,7 +39,7 @@ PixelInputType main(Input input)
 		Out.pos3D = pos.xyz;
 		Out.tex = input.tex.xy;
 		Out.nor = normalize(normal);
-		Out.nor2D = float3(0,0,0);
+		Out.nor2D = float2(0,0);
 
 
 		Out.ReflectionMapSamplingPos = float4(0,0,0,0);

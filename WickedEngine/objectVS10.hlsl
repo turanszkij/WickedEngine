@@ -47,7 +47,7 @@ PixelInputType main(Input input)
 		Out.pos3D = pos.xyz;
 		Out.tex = input.tex.xy;
 		Out.nor = normalize(normal);
-		Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP);
+		Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP).xy;
 
 
 		Out.ReflectionMapSamplingPos = mul(pos, g_xCamera_ReflVP);

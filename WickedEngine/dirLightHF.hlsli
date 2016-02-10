@@ -88,8 +88,8 @@ inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color, in 
 // MACROS
 
 #define DEFERRED_DIRLIGHT_MAIN																										\
-	float lighting = dirLight(pos3D,normal,color,toonshaded);																		\
+	float lighting = dirLight(P,N,color,toonshaded);																		\
 	color.rgb *= lighting;																											\
-	applySpecular(color, color*lighting, normal, eyevector, g_xDirLight_direction.xyz, 1, specular_power, specular, toonshaded);
+	applySpecular(color, color*lighting, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular, toonshaded);
 
 #endif // _DIRLIGHT_HF_

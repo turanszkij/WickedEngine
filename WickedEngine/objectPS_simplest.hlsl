@@ -4,6 +4,6 @@
 
 float4 main(PixelInputType PSIn) : SV_TARGET
 {
-	return g_xMat_diffuseColor;
+	return g_xMat_diffuseColor * float4(PSIn.instanceColor,1);
 }
 
