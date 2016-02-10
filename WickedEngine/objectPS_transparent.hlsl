@@ -1,9 +1,4 @@
-#include "effectHF_PS.hlsli"
-#include "effectHF_PSVS.hlsli"
-#include "fogHF.hlsli"
-#include "depthConvertHF.hlsli"
-#include "gammaHF.hlsli"
-#include "specularHF.hlsli"
+#include "objectHF.hlsli"
 
 
 float4 main( PixelInputType PSIn) : SV_TARGET

@@ -1,5 +1,4 @@
-#include "effectHF_PS.hlsli"
-#include "globalsHF.hlsli"
+#include "objectHF.hlsli"
 #include "globals.hlsli"
 
 struct VSOut {

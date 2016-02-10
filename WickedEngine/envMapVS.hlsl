@@ -1,4 +1,4 @@
-#include "effectInputLayoutHF.hlsli"
+#include "objectInputLayoutHF.hlsli"
 #include "envMapHF.hlsli"
 
 VSOut main(Input input)

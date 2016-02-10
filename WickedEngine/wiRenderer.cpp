@@ -2525,6 +2525,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 	}
 }
 
+
 void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
 				  , bool BlackOut, bool isReflection, SHADERTYPE shaded
 				  , TextureView refRes, bool grass, GRAPHICSTHREAD thread)
@@ -2536,22 +2537,52 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 	else return;
 
 	if(!culledObjects.empty())
-	{	
-		//// sort opaques front to back
-		//vector<Cullable*> sortedObjects(culledObjects.begin(), culledObjects.end());
-		//for (unsigned int i = 0; i < sortedObjects.size() - 1; ++i)
-		//{
-		//	for (unsigned int j = 1; j < sortedObjects.size(); ++j)
-		//	{
-		//		if (wiMath::Distance(cam->translation, ((Object*)sortedObjects[i])->translation) >
-		//			wiMath::Distance(cam->translation, ((Object*)sortedObjects[j])->translation))
-		//		{
-		//			Cullable* swap = sortedObjects[i];
-		//			sortedObjects[i] = sortedObjects[j];
-		//			sortedObjects[j] = swap;
-		//		}
-		//	}
-		//}
+	{
+
+		TextureView envMaps[] = { enviroMap, enviroMap };
+		XMFLOAT3 envMapPositions[] = { XMFLOAT3(0,0,0),XMFLOAT3(0,0,0) };
+		if (!GetScene().environmentProbes.empty())
+		{
+			// Get the closest probes to the camera and bind to shader
+			vector<EnvironmentProbe*> sortedEnvProbes;
+			vector<float> sortedDistances;
+			sortedEnvProbes.reserve(GetScene().environmentProbes.size());
+			sortedDistances.reserve(GetScene().environmentProbes.size());
+			for (unsigned int i = 0; i < GetScene().environmentProbes.size(); ++i)
+			{
+				sortedEnvProbes.push_back(GetScene().environmentProbes[i]);
+				sortedDistances.push_back(wiMath::DistanceSquared(camera->translation, GetScene().environmentProbes[i]->translation));
+			}
+			for (unsigned int i = 0; i < sortedEnvProbes.size() - 1; ++i)
+			{
+				for (unsigned int j = i + 1; j < sortedEnvProbes.size(); ++j)
+				{
+					if (sortedDistances[i] > sortedDistances[j])
+					{
+						float swapDist = sortedDistances[i];
+						sortedDistances[i] = sortedDistances[j];
+						sortedDistances[j] = swapDist;
+						EnvironmentProbe* swapProbe = sortedEnvProbes[i];
+						sortedEnvProbes[i] = sortedEnvProbes[j];
+						sortedEnvProbes[j] = swapProbe;
+					}
+				}
+			}
+			for (unsigned int i = 0; i < min(sortedEnvProbes.size(), 2); ++i)
+			{
+				envMaps[i] = sortedEnvProbes[i]->cubeMap.shaderResource.front();
+				envMapPositions[i] = sortedEnvProbes[i]->translation;
+			}
+		}
+		static thread_local MiscCB* envProbeCB = new MiscCB;
+		envProbeCB->mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
+		envProbeCB->mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
+		envProbeCB->mTransform = XMMatrixTranspose(envProbeCB->mTransform);
+		UpdateBuffer(constantBuffers[CBTYPE_MISC], envProbeCB, context);
+		BindTexturePS(envMaps[0], TEXSLOT_ENV0, context);
+		BindTexturePS(envMaps[1], TEXSLOT_ENV1, context);
+		
+
 
 		for(Cullable* object : culledObjects){
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
@@ -2632,16 +2663,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 				BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_DOUBLESIDED],context);
 
 			int matsiz = mesh->materialIndices.size();
-			
-			//if(DX11 && tessF){
-			//	static thread_local ConstantBuffer* cb = new ConstantBuffer;
-			//	if(matsiz == 1) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,0,0,0);
-			//	else if(matsiz == 2) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,0,0);
-			//	else if(matsiz == 3) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,mesh->materials[2]->hasDisplacementMap,0);
-			//	else if(matsiz == 4) (*cb).mDisplace = XMVectorSet(mesh->materials[0]->hasDisplacementMap,mesh->materials[1]->hasDisplacementMap,mesh->materials[2]->hasDisplacementMap,mesh->materials[3]->hasDisplacementMap);
-
-			//	UpdateBuffer(constantBuffer,cb,context);
-			//}
 
 			int k=0;
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){

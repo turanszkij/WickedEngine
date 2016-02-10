@@ -1,6 +1,6 @@
 //#include "skinningHF.hlsli"
 #include "windHF.hlsli"
-#include "effectInputLayoutHF.hlsli"
+#include "objectInputLayoutHF.hlsli"
 #include "globals.hlsli"
 
 struct VertextoPixel

@@ -1,5 +1,4 @@
-#include "effectHF_PSVS.hlsli"
-#include "effectHF_VS.hlsli"
+#include "objectHF.hlsli"
 
 
 PixelInputType main(Input input)

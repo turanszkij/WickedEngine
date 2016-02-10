@@ -1,5 +1,4 @@
-#include "effectHF_VS.hlsli"
-#include "effectHF_PSVS.hlsli"
+#include "objectHF.hlsli"
 
 struct HullInputType
 {

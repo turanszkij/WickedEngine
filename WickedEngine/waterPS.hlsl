@@ -1,5 +1,4 @@
-#include "effectHF_PS.hlsli"
-#include "effectHF_PSVS.hlsli"
+#include "objectHF.hlsli"
 #include "depthConvertHF.hlsli"
 #include "fogHF.hlsli"
 #include "gammaHF.hlsli"

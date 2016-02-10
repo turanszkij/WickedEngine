@@ -1,7 +1,7 @@
 #ifndef _SKY_HF_
 #define _SKY_HF_
 #include "globals.hlsli"
-#include "effectHF_PS.hlsli"
+#include "objectHF.hlsli"
 
 inline float4 GetSkyColor(in float3 normal)
 {

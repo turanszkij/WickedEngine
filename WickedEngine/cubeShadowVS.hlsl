@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "effectInputLayoutHF.hlsli"
+#include "objectInputLayoutHF.hlsli"
 
 struct GS_CUBEMAP_IN 
 { 

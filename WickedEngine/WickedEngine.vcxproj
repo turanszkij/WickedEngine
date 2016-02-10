@@ -843,10 +843,7 @@
     <None Include="depthConvertHF.hlsli" />
     <None Include="dirLightHF.hlsli" />
     <None Include="ditherHF.hlsli" />
-    <None Include="effectHF_PS.hlsli" />
-    <None Include="effectHF_PSVS.hlsli" />
-    <None Include="effectHF_VS.hlsli" />
-    <None Include="effectInputLayoutHF.hlsli" />
+    <None Include="objectInputLayoutHF.hlsli" />
     <None Include="fogHF.hlsli" />
     <None Include="fxaa.hlsli" />
     <None Include="gammaHF.hlsli" />
@@ -857,6 +854,7 @@
     <None Include="imageHF.hlsli" />
     <None Include="lightHF.hlsli" />
     <None Include="normalsCompressHF.hlsli" />
+    <None Include="objectHF.hlsli" />
     <None Include="packHF.hlsli" />
     <None Include="pointLightHF.hlsli" />
     <None Include="postProcessHF.hlsli" />
@@ -1161,7 +1159,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectDS.hlsl">
+    <FxCompile Include="objectDS.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
@@ -1180,7 +1178,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectHS.hlsl">
+    <FxCompile Include="objectHS.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
@@ -1199,7 +1197,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectPS.hlsl">
+    <FxCompile Include="objectPS.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.1</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.1</ShaderModel>
@@ -1218,7 +1216,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectPS_blackout.hlsl">
+    <FxCompile Include="objectPS_blackout.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.1</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.1</ShaderModel>
@@ -1237,7 +1235,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectPS_forwardSimple.hlsl">
+    <FxCompile Include="objectPS_forwardSimple.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release_RT|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">Pixel</ShaderType>
@@ -1256,7 +1254,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectPS_simplest.hlsl">
+    <FxCompile Include="objectPS_simplest.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.1</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.1</ShaderModel>
@@ -1275,7 +1273,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectPS_textureonly.hlsl">
+    <FxCompile Include="objectPS_textureonly.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.1</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.1</ShaderModel>
@@ -1294,7 +1292,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectPS_transparent.hlsl">
+    <FxCompile Include="objectPS_transparent.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.1</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.1</ShaderModel>
@@ -1313,7 +1311,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectVS.hlsl">
+    <FxCompile Include="objectVS.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">5.0</ShaderModel>
@@ -1332,7 +1330,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectVS10.hlsl">
+    <FxCompile Include="objectVS10.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.1</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">shaders/%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.1</ShaderModel>
@@ -2304,7 +2302,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">
       </ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="effectVS_reflection.hlsl">
+    <FxCompile Include="objectVS_reflection.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='WinRT|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>

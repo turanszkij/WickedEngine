@@ -1,3 +1,6 @@
+#ifndef _SPECULAR_HF_
+#define _SPECULAR_HF_
+
 #include "toonHF.hlsli"
 #include "gammaHF.hlsli"
 
@@ -33,3 +36,5 @@ inline void applySpecular(inout float4 color, in float4 lightColor, in float3 no
 		//color.rgb *= 1+finalSpec;
 	}
 }
+
+#endif // _SPECULAR_HF_

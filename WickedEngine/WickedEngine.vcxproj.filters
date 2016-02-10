@@ -66,6 +66,9 @@
     <Filter Include="Resource Mapping">
       <UniqueIdentifier>{37e02c00-e217-4c5b-8ecb-d3671f0c4c0c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\object">
+      <UniqueIdentifier>{9ddbb33a-3546-4849-930c-65c71e4def34}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -1840,18 +1843,6 @@
     <None Include="depthConvertHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
-    <None Include="effectHF_PS.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="effectHF_PSVS.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="effectHF_VS.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="effectInputLayoutHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
     <None Include="fogHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
@@ -1916,6 +1907,12 @@
     <None Include="envMapHF.hlsli">
       <Filter>shaders\envmap</Filter>
     </None>
+    <None Include="objectInputLayoutHF.hlsli">
+      <Filter>shaders\object</Filter>
+    </None>
+    <None Include="objectHF.hlsli">
+      <Filter>shaders\object</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\features.txt" />
@@ -1939,33 +1936,6 @@
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="decalVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectDS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectHS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectPS_blackout.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectPS_simplest.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectPS_textureonly.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectPS_transparent.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectVS10.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="fontPS.hlsl">
@@ -2139,16 +2109,10 @@
     <FxCompile Include="fxaa.hlsl">
       <Filter>shaders\image</Filter>
     </FxCompile>
-    <FxCompile Include="effectPS_forwardSimple.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
     <FxCompile Include="ssr.hlsl">
       <Filter>shaders\image</Filter>
     </FxCompile>
     <FxCompile Include="sunPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="effectVS_reflection.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="skyVS_reflection.hlsl">
@@ -2180,6 +2144,39 @@
     </FxCompile>
     <FxCompile Include="envMap_skyGS.hlsl">
       <Filter>shaders\envmap</Filter>
+    </FxCompile>
+    <FxCompile Include="objectDS.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectHS.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_blackout.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forwardSimple.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_simplest.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_textureonly.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_transparent.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS_reflection.hlsl">
+      <Filter>shaders\object</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS10.hlsl">
+      <Filter>shaders\object</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

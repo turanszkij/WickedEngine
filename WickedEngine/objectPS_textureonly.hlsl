@@ -1,7 +1,4 @@
-#include "effectHF_PS.hlsli"
-#include "effectHF_PSVS.hlsli"
-#include "gammaHF.hlsli"
-#include "toonHF.hlsli"
+#include "objectHF.hlsli"
 
 
 
