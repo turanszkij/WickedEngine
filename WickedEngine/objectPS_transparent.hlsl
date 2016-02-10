@@ -1,7 +1,7 @@
 #include "objectHF.hlsli"
 
 
-float4 main( PixelInputType PSIn) : SV_TARGET
+float4 main( PixelInputType input) : SV_TARGET
 {
 	OBJECT_PS_MAKE
 

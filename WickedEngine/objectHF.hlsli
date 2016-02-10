@@ -11,6 +11,7 @@
 #include "depthConvertHF.hlsli"
 #include "fogHF.hlsli"
 #include "globalsHF.hlsli"
+#include "dirLightHF.hlsli"
 
 // DEFINITIONS
 //////////////////
@@ -80,7 +81,6 @@ inline void PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, 
 	[branch]if (g_xMat_hasRef) 
 	{
 		float colorMat = xReflectionMap.SampleLevel(sampler_aniso_wrap, UV, 0).r;
-		//normal = normalize(lerp(normal, PSIn.nor, pow(abs(colorMat.x), 0.02f)));
 		float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz, 0);
 		baseColor.rgb = lerp(baseColor.rgb, colorReflection.rgb, colorMat);
 	}
@@ -123,11 +123,13 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 	color.rgb += envCol.rgb * specularColor.rgb * metalness;
 }
 
-inline void DirectionalLight(in float3 N, in float3 V, in float4 specularColor, inout float4 baseColor)
+inline void DirectionalLight(in float3 P, in float3 N, in float3 V, in float4 specularColor, inout float4 baseColor)
 {
-	float3 light = saturate(dot(g_xWorld_SunDir.xyz, N));
+	float3 light;
+	//light = dirLight(P, N, baseColor);
+	light = saturate(dot(N, g_xDirLight_direction.xyz));
 	light = clamp(light, g_xWorld_Ambient.rgb, 1);
-	baseColor.rgb *= light*g_xWorld_SunColor.rgb;
+	baseColor.rgb *= g_xWorld_SunColor.rgb * light;
 	applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a, 0);
 }
 
@@ -135,26 +137,30 @@ inline void DirectionalLight(in float3 N, in float3 V, in float4 specularColor, 
 // MACROS
 ////////////
 
-#define OBJECT_PS_MAKE																								\
-	float3 N = normalize(PSIn.nor);																					\
-	float3 P = PSIn.pos3D;																							\
+#define OBJECT_PS_MAKE_COMMON																						\
+	float3 N = normalize(input.nor);																				\
+	float3 P = input.pos3D;																							\
 	float3 V = normalize(P - g_xCamera_CamPos);																		\
 	float roughness = 1 - (g_xMat_specular_power / 128.0f);															\
 	float metalness = g_xMat_metallic;																				\
-	float2 UV = PSIn.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;												\
+	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;												\
 	float4 specularColor = g_xMat_specular;																			\
-	float2 refUV = float2(1, -1)*PSIn.ReflectionMapSamplingPos.xy / PSIn.ReflectionMapSamplingPos.w / 2.0f + 0.5f;	\
-	float2 ScreenCoord = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;								\
-	float2 ScreenCoordPrev = float2(1, -1)*PSIn.pos2DPrev.xy / PSIn.pos2DPrev.w / 2.0f + 0.5f;						\
-	float lineardepth = PSIn.pos2D.z;																				\
-	float depth = PSIn.pos2D.z / PSIn.pos2D.w;																		\
 	float3 bumpColor = 0;																							\
-	float4 baseColor = g_xMat_diffuseColor * float4(PSIn.instanceColor, 1);											\
+	float4 baseColor = g_xMat_diffuseColor * float4(input.instanceColor, 1);										\
 	BaseColorMapping(UV, baseColor);																				\
-	ALPHATEST(baseColor.a)
+	ALPHATEST(baseColor.a)																							\
+	float depth = input.pos.z;
+	
+
+#define OBJECT_PS_MAKE																								\
+	OBJECT_PS_MAKE_COMMON																							\
+	float lineardepth = input.pos2D.z;																				\
+	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;\
+	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
+	float2 ScreenCoordPrev = float2(1, -1)*input.pos2DPrev.xy / input.pos2DPrev.w / 2.0f + 0.5f;
 
 #define OBJECT_PS_DITHER						\
-	clip(dither(PSIn.pos.xy) - PSIn.dither);	\
+	clip(dither(input.pos.xy) - input.dither);	\
 
 #define OBJECT_PS_NORMALMAPPING			\
 	NormalMapping(UV, V, N, bumpColor);
@@ -166,10 +172,10 @@ inline void DirectionalLight(in float3 N, in float3 V, in float4 specularColor, 
 	EnvironmentReflection(N, V, P, roughness, metalness, specularColor, baseColor);
 
 #define OBJECT_PS_PLANARREFLECTIONS							\
-	PlanarReflection(PSIn.tex, refUV, N, baseColor);
+	PlanarReflection(input.tex, refUV, N, baseColor);
 
 #define OBJECT_PS_REFRACTION						\
-	Refraction(ScreenCoord, PSIn.nor2D, bumpColor, baseColor);
+	Refraction(ScreenCoord, input.nor2D, bumpColor, baseColor);
 
 #define OBJECT_PS_DEGAMMA						\
 	baseColor = pow(abs(baseColor), GAMMA);
@@ -181,13 +187,13 @@ inline void DirectionalLight(in float3 N, in float3 V, in float4 specularColor, 
 	baseColor.rgb = applyFog(baseColor.rgb, getFog(getLinearDepth(depth)));
 
 #define OBJECT_PS_DIRECTIONALLIGHT	\
-	DirectionalLight(N, V, specularColor, baseColor);
+	DirectionalLight(P, N, V, specularColor, baseColor);
 
 #define OBJECT_PS_OUT_GBUFFER																		\
 	bool unshaded = g_xMat_shadeless;																\
 	float properties = unshaded ? RT_UNSHADED : 0.0f;												\
 	PixelOutputType Out = (PixelOutputType)0;														\
-	Out.col = float4(baseColor.rgb*(1 + g_xMat_emissive)*PSIn.ao, 1);								\
+	Out.col = float4(baseColor.rgb*(1 + g_xMat_emissive)*input.ao, 1);								\
 	Out.nor = float4(N.xyz, properties);															\
 	Out.vel = float4(ScreenCoord - ScreenCoordPrev, g_xMat_specular_power, specularColor.a);		\
 	return Out;

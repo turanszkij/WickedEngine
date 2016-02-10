@@ -3,23 +3,23 @@
 #define DIRECTIONALLIGHT_SOFT
 #include "dirLightHF.hlsli"
 
+#include "objectHF.hlsli"
+
 float4 main(PSIn input) : SV_TARGET
 {
-	float4 baseColor = g_xMat_diffuseColor;
+	OBJECT_PS_MAKE_COMMON
 
-	input.tex *= g_xMat_texMulAdd.xy;
-	input.tex += g_xMat_texMulAdd.zw;
-	
-	if (g_xMat_hasTex) {
-		baseColor *= texture_0.Sample(sampler_aniso_wrap, input.tex.xy);
-	}
-	baseColor.rgb *= input.instanceColor;
+	OBJECT_PS_NORMALMAPPING
 
-	//float lighting = dirLight(input.pos3D, input.nor, baseColor);
-	//lighting = saturate(dot(input.nor.xyz, g_xDirLight_direction.xyz));
-	//baseColor.rgb *= lighting;
+	OBJECT_PS_SPECULARMAPPING
 
-	ALPHATEST(baseColor.a)
+	OBJECT_PS_DEGAMMA
 
-	return baseColor*(1 + g_xMat_emissive);
+	OBJECT_PS_DIRECTIONALLIGHT
+
+	OBJECT_PS_GAMMA
+
+	OBJECT_PS_FOG
+
+	OBJECT_PS_OUT_FORWARD
 }

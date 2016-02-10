@@ -5,7 +5,7 @@
 #include "specularHF.hlsli"
 #include "globals.hlsli"
 
-float4 main(PixelInputType PSIn) : SV_TARGET
+float4 main(PixelInputType input) : SV_TARGET
 {
 	OBJECT_PS_MAKE
 
@@ -19,9 +19,9 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 	float2 bumpColor1=0;
 	float2 bumpColor2=0;
 	if(g_xMat_hasNor){
-		float3x3 tangentFrame = compute_tangent_frame(N, V, -PSIn.tex);
-		bumpColor0 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,PSIn.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
-		bumpColor1 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,PSIn.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
+		float3x3 tangentFrame = compute_tangent_frame(N, V, -input.tex);
+		bumpColor0 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,input.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
+		bumpColor1 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,input.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
 		bumpColor2 = xWaterRipples.Sample(sampler_aniso_wrap,ScreenCoord).rg;
 		bumpColor= float3( bumpColor0+bumpColor1+bumpColor2,1 )  * g_xMat_refractionIndex;
 		N = normalize(mul(normalize(bumpColor), tangentFrame));
@@ -29,7 +29,7 @@ float4 main(PixelInputType PSIn) : SV_TARGET
 		
 
 	//REFLECTION
-	float2 RefTex = float2(1, -1)*PSIn.ReflectionMapSamplingPos.xy / PSIn.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
+	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
 	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror,RefTex+bumpColor.rg,0);
 		
 	
