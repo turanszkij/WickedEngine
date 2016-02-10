@@ -159,46 +159,46 @@ inline void DirectionalLight(in float3 P, in float3 N, in float3 V, in float4 sp
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
 	float2 ScreenCoordPrev = float2(1, -1)*input.pos2DPrev.xy / input.pos2DPrev.w / 2.0f + 0.5f;
 
-#define OBJECT_PS_DITHER						\
-	clip(dither(input.pos.xy) - input.dither);	\
+#define OBJECT_PS_DITHER																							\
+	clip(dither(input.pos.xy) - input.dither);
 
-#define OBJECT_PS_NORMALMAPPING			\
+#define OBJECT_PS_NORMALMAPPING																						\
 	NormalMapping(UV, V, N, bumpColor);
 
-#define OBJECT_PS_SPECULARMAPPING		\
+#define OBJECT_PS_SPECULARMAPPING																					\
 	SpecularMapping(UV, specularColor);
 
-#define OBJECT_PS_ENVIRONMENTMAPPING										\
+#define OBJECT_PS_ENVIRONMENTMAPPING																				\
 	EnvironmentReflection(N, V, P, roughness, metalness, specularColor, baseColor);
 
-#define OBJECT_PS_PLANARREFLECTIONS							\
+#define OBJECT_PS_PLANARREFLECTIONS																					\
 	PlanarReflection(input.tex, refUV, N, baseColor);
 
-#define OBJECT_PS_REFRACTION						\
+#define OBJECT_PS_REFRACTION																						\
 	Refraction(ScreenCoord, input.nor2D, bumpColor, baseColor);
 
-#define OBJECT_PS_DEGAMMA						\
+#define OBJECT_PS_DEGAMMA																							\
 	baseColor = pow(abs(baseColor), GAMMA);
 
-#define OBJECT_PS_GAMMA													\
+#define OBJECT_PS_GAMMA																								\
 	baseColor = pow(abs(baseColor*(1 + g_xMat_emissive)), INV_GAMMA);
 
-#define OBJECT_PS_FOG																		\
+#define OBJECT_PS_FOG																								\
 	baseColor.rgb = applyFog(baseColor.rgb, getFog(getLinearDepth(depth)));
 
-#define OBJECT_PS_DIRECTIONALLIGHT	\
+#define OBJECT_PS_DIRECTIONALLIGHT																					\
 	DirectionalLight(P, N, V, specularColor, baseColor);
 
-#define OBJECT_PS_OUT_GBUFFER																		\
-	bool unshaded = g_xMat_shadeless;																\
-	float properties = unshaded ? RT_UNSHADED : 0.0f;												\
-	PixelOutputType Out = (PixelOutputType)0;														\
-	Out.col = float4(baseColor.rgb*(1 + g_xMat_emissive)*input.ao, 1);								\
-	Out.nor = float4(N.xyz, properties);															\
-	Out.vel = float4(ScreenCoord - ScreenCoordPrev, g_xMat_specular_power, specularColor.a);		\
+#define OBJECT_PS_OUT_GBUFFER																						\
+	bool unshaded = g_xMat_shadeless;																				\
+	float properties = unshaded ? RT_UNSHADED : 0.0f;																\
+	PixelOutputType Out = (PixelOutputType)0;																		\
+	Out.col = float4(baseColor.rgb*(1 + g_xMat_emissive)*input.ao, 1);												\
+	Out.nor = float4(N.xyz, properties);																			\
+	Out.vel = float4(ScreenCoord - ScreenCoordPrev, g_xMat_specular_power, specularColor.a);						\
 	return Out;
 
-#define OBJECT_PS_OUT_FORWARD	\
+#define OBJECT_PS_OUT_FORWARD																						\
 	return baseColor;
 
 #endif // _OBJECTSHADER_HF_
