@@ -19,7 +19,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	float2 bumpColor1=0;
 	float2 bumpColor2=0;
 	if(g_xMat_hasNor){
-		float3x3 tangentFrame = compute_tangent_frame(N, V, -input.tex);
+		float3x3 tangentFrame = compute_tangent_frame(N, P, UV);
 		bumpColor0 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,input.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
 		bumpColor1 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,input.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
 		bumpColor2 = xWaterRipples.Sample(sampler_aniso_wrap,ScreenCoord).rg;

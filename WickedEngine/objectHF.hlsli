@@ -28,15 +28,15 @@
 struct PixelInputType
 {
 	float4 pos								: SV_POSITION;
-	float clip : SV_ClipDistance0;
+	float  clip								: SV_ClipDistance0;
 	float2 tex								: TEXCOORD0;
 	float3 nor								: NORMAL;
 	float4 pos2D							: SCREENPOSITION;
 	float3 pos3D							: WORLDPOSITION;
 	float4 pos2DPrev						: SCREENPOSITIONPREV;
 	float4 ReflectionMapSamplingPos			: TEXCOORD1;
-	float  ao : AMBIENT_OCCLUSION;
-	nointerpolation float  dither : DITHER;
+	float  ao								: AMBIENT_OCCLUSION;
+	nointerpolation float  dither			: DITHER;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	float2 nor2D							: NORMAL2D;
 };
@@ -125,12 +125,16 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 
 inline void DirectionalLight(in float3 P, in float3 N, in float3 V, in float4 specularColor, inout float4 baseColor)
 {
-	float3 light;
-	//light = dirLight(P, N, baseColor);
-	light = saturate(dot(N, g_xDirLight_direction.xyz));
+	float3 light = saturate(dot(g_xWorld_SunDir.xyz, N));
 	light = clamp(light, g_xWorld_Ambient.rgb, 1);
-	baseColor.rgb *= g_xWorld_SunColor.rgb * light;
+	baseColor.rgb *= light*g_xWorld_SunColor.rgb;
 	applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a, 0);
+	//float3 light;
+	////light = dirLight(P, N, baseColor);
+	//light = saturate(dot(N, g_xDirLight_direction.xyz));
+	//light = clamp(light, g_xWorld_Ambient.rgb, 1);
+	//baseColor.rgb *= g_xWorld_SunColor.rgb * light;
+	//applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a, 0);
 }
 
 
@@ -163,7 +167,7 @@ inline void DirectionalLight(in float3 P, in float3 N, in float3 V, in float4 sp
 	clip(dither(input.pos.xy) - input.dither);
 
 #define OBJECT_PS_NORMALMAPPING																						\
-	NormalMapping(UV, V, N, bumpColor);
+	NormalMapping(UV, P, N, bumpColor);
 
 #define OBJECT_PS_SPECULARMAPPING																					\
 	SpecularMapping(UV, specularColor);
