@@ -1939,7 +1939,8 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 				(*lcb).mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
 					(*lcb).mShM[shmap]=l->shadowCam[shmap].getVP();
-					BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,TEXSLOT_SHADOW0+shmap,context);
+					if(l->shadowMaps_dirLight[shmap].depth)
+						BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,TEXSLOT_SHADOW0+shmap,context);
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,context);
 
@@ -1956,7 +1957,8 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 				if (l->shadow && l->shadowMap_index>=0)
 				{
 					(*lcb).enerdis.w = 1.f;
-					BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW_CUBE, context);
+					if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
+						BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW_CUBE, context);
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, context);
 
@@ -1986,7 +1988,8 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 				if (l->shadow && l->shadowMap_index>=0)
 				{
 					(*lcb).mShM = l->shadowCam[0].getVP();
-					BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW0, context);
+					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
+						BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW0, context);
 				}
 				UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], lcb, context);
 

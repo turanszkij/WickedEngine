@@ -31,6 +31,7 @@ public:
 	int SetMotionBlurEnabled(lua_State* L);
 	int SetSSSEnabled(lua_State* L);
 	int SetDepthOfFieldEnabled(lua_State* L);
+	int SetStereogramEnabled(lua_State* L);
 
 	int SetDepthOfFieldFocus(lua_State* L);
 	int SetDepthOfFieldStrength(lua_State* L);

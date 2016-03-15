@@ -112,6 +112,13 @@ void DeferredRenderableComponent::RenderScene(DeviceContext context){
 
 	wiRenderer::UpdateDepthBuffer(dtDepthCopy.shaderResource, rtLinearDepth.shaderResource.front(), context);
 
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
+
 	rtGBuffer.Set(context); {
 		wiRenderer::DrawDecals(wiRenderer::getCamera(), context);
 	}

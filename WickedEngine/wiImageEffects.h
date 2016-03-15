@@ -76,8 +76,9 @@ public:
 		bool ssr;
 		bool linDepth;
 		bool colorGrade;
+		bool stereogram;
 
-		void clear() { active = motionBlur = outline = fxaa = ssao = linDepth = colorGrade = ssr = false; dofStrength = 0; ssss = XMFLOAT2(0, 0); }
+		void clear() { active = motionBlur = outline = fxaa = ssao = linDepth = colorGrade = ssr = stereogram = false; dofStrength = 0; ssss = XMFLOAT2(0, 0); }
 		void setDOF(float value) { dofStrength = value; active = value > FLT_EPSILON; }
 		void setMotionBlur(bool value) { motionBlur = value; active = value; }
 		void setOutline(bool value) { outline = value; active = value; }
@@ -88,6 +89,7 @@ public:
 		//direction*Properties
 		void setSSSS(const XMFLOAT2& value) { ssss = value; active = value.x || value.y; }
 		void setSSR(bool value) { ssr = value; active = value; }
+		void setStereogram(bool value) { stereogram = value; active = value; }
 		Processing() { clear(); }
 	};
 	Processing process;

@@ -1,5 +1,5 @@
-#ifndef _SHADERDEF_CONSTANTBUFFERS_
-#define _SHADERDEF_CONSTANTBUFFERS_
+#ifndef _SHADER_GLOBALS_
+#define _SHADER_GLOBALS_
 #include "ConstantBufferMapping.h"
 #include "SamplerMapping.h"
 #include "TextureMapping.h"
@@ -120,4 +120,4 @@ CBUFFER(APICB, CBSLOT_API)
 
 #define ALPHATEST(x) clip((x)-0.1);
 
-#endif // _SHADERDEF_CONSTANTBUFFERS_
+#endif // _SHADER_GLOBALS_

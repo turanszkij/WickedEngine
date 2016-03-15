@@ -2178,6 +2178,9 @@
     <FxCompile Include="waterVS.hlsl">
       <Filter>shaders\object</Filter>
     </FxCompile>
+    <FxCompile Include="stereogramPS.hlsl">
+      <Filter>shaders\image</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="fonts\basic.dds">

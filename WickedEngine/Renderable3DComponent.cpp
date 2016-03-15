@@ -53,6 +53,7 @@ void Renderable3DComponent::setProperties()
 	setMotionBlurEnabled(true);
 	setSSSEnabled(true);
 	setDepthOfFieldEnabled(false);
+	setStereogramEnabled(false);
 
 	setPreferredThreadingCount(0);
 }
@@ -190,7 +191,8 @@ void Renderable3DComponent::Compose(){
 	Renderable2DComponent::Compose();
 }
 
-void Renderable3DComponent::RenderFrameSetUp(DeviceContext context) {
+void Renderable3DComponent::RenderFrameSetUp(DeviceContext context)
+{
 	if (!_needToUpdateRenderData.load())
 	{
 		return;
@@ -200,7 +202,14 @@ void Renderable3DComponent::RenderFrameSetUp(DeviceContext context) {
 
 	_needToUpdateRenderData.store(false);
 }
-void Renderable3DComponent::RenderReflections(DeviceContext context){
+void Renderable3DComponent::RenderReflections(DeviceContext context)
+{
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
 	if (!getReflectionsEnabled() || getReflectionQuality() < 0.01f)
 	{
 		return;
@@ -224,7 +233,14 @@ void Renderable3DComponent::RenderReflections(DeviceContext context){
 		wiRenderer::DrawSky(context,true);
 	}
 }
-void Renderable3DComponent::RenderShadows(DeviceContext context){
+void Renderable3DComponent::RenderShadows(DeviceContext context)
+{
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
 	if (!getShadowsEnabled())
 	{
 		return;
@@ -235,6 +251,12 @@ void Renderable3DComponent::RenderShadows(DeviceContext context){
 }
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, DeviceContext context)
 {
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
 	if (getLensFlareEnabled())
 	{
 		rtLensFlare.Activate(context);
@@ -270,7 +292,14 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 
 }
-void Renderable3DComponent::RenderBloom(DeviceContext context){
+void Renderable3DComponent::RenderBloom(DeviceContext context)
+{
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
 
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
@@ -303,7 +332,14 @@ void Renderable3DComponent::RenderBloom(DeviceContext context){
 		wiImage::Draw(rtBloom[1].shaderResource.back(), fx, context);
 	}
 }
-void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceContext context){
+void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceContext context)
+{
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
 	if (!getLightShaftsEnabled())
 	{
 		return;
@@ -331,7 +367,14 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, DeviceCont
 		}
 	}
 }
-void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, DeviceContext context){
+void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, DeviceContext context)
+{
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 	fx.presentFullScreen = true;
 
@@ -339,6 +382,8 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, De
 
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	wiImage::Draw(shadedSceneRT.shaderResource.front(), fx, context);
+
+
 	fx.blendFlag = BLENDMODE_ALPHA;
 	wiImage::Draw(rtTransparent.shaderResource.back(), fx, context);
 	if (getEmittedParticlesEnabled()){
@@ -360,6 +405,12 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, De
 	}
 }
 void Renderable3DComponent::RenderComposition2(DeviceContext context){
+	if (getStereogramEnabled())
+	{
+		// We don't need the following for stereograms...
+		return;
+	}
+
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 
@@ -409,6 +460,15 @@ void Renderable3DComponent::RenderColorGradedComposition(){
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_NEAREST;
+
+	if (getStereogramEnabled())
+	{
+		fx.presentFullScreen = false;
+		fx.process.clear();
+		fx.process.setStereogram(true);
+		wiImage::Draw(wiTextureHelper::getInstance()->getRandom64x64(), fx);
+		return;
+	}
 
 	if (getColorGradingEnabled())
 	{

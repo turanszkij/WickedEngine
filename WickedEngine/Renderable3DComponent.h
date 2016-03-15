@@ -42,6 +42,7 @@ private:
 	bool motionBlurEnabled;
 	bool sssEnabled;
 	bool depthOfFieldEnabled;
+	bool stereogramEnabled;
 
 protected:
 	wiRenderTarget
@@ -105,6 +106,7 @@ public:
 	inline bool getMotionBlurEnabled(){ return motionBlurEnabled; }
 	inline bool getSSSEnabled(){ return sssEnabled; }
 	inline bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
+	inline bool getStereogramEnabled() { return stereogramEnabled; }
 
 	inline unsigned int getThreadingCount(){ return (unsigned int)workerThreads.size(); }
 
@@ -139,6 +141,7 @@ public:
 	inline void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
 	inline void setSSSEnabled(bool value){ sssEnabled = value; }
 	inline void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
+	inline void setStereogramEnabled(bool value) { stereogramEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

@@ -14,7 +14,7 @@ BufferResource           wiImage::constantBuffer,wiImage::processCb;
 VertexShader     wiImage::vertexShader,wiImage::screenVS;
 PixelShader      wiImage::pixelShader,wiImage::blurHPS,wiImage::blurVPS,wiImage::shaftPS,wiImage::outlinePS
 	,wiImage::dofPS,wiImage::motionBlurPS,wiImage::bloomSeparatePS,wiImage::fxaaPS,wiImage::ssaoPS,wiImage::deferredPS
-	,wiImage::ssssPS,wiImage::linDepthPS,wiImage::colorGradePS,wiImage::ssrPS, wiImage::screenPS;
+	,wiImage::ssssPS,wiImage::linDepthPS,wiImage::colorGradePS,wiImage::ssrPS, wiImage::screenPS, wiImage::stereogramPS;
 	
 
 RasterizerState		wiImage::rasterizerState;
@@ -49,7 +49,6 @@ void wiImage::LoadBuffers()
 void wiImage::LoadShaders()
 {
 
-
 	vertexShader = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imageVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	screenVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
@@ -69,6 +68,8 @@ void wiImage::LoadShaders()
 	deferredPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
 	ssrPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssr.cso", wiResourceManager::PIXELSHADER));
 	screenPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenPS.cso", wiResourceManager::PIXELSHADER));
+	stereogramPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "stereogramPS.cso", wiResourceManager::PIXELSHADER));
+
 }
 void wiImage::SetUpStates()
 {
@@ -276,7 +277,6 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 					XMMatrixScaling(effects.scale.x,effects.scale.y,1)
 					*XMMatrixRotationZ(effects.rotation)
 					*faceRot
-					//*XMMatrixInverse(0,XMMatrixLookAtLH(XMVectorSet(0,0,0,0),XMLoadFloat3(&effects.pos)-wiRenderer::getCamera()->Eye,XMVectorSet(0,1,0,0)))
 					*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
 					);
 				(*cb).mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
@@ -312,28 +312,29 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			fullScreenEffect = true;
 
 			if(effects.process.outline) 
-					wiRenderer::BindPS(outlinePS,context);
+				wiRenderer::BindPS(outlinePS,context);
 			else if(effects.process.motionBlur) 
 				wiRenderer::BindPS(motionBlurPS,context);
 			else if(effects.process.dofStrength) 
 				wiRenderer::BindPS(dofPS,context);
 			else if(effects.process.fxaa) 
 				wiRenderer::BindPS(fxaaPS,context);
-			else if(effects.process.ssao) {
+			else if(effects.process.ssao)
 				wiRenderer::BindPS(ssaoPS,context);
-			}
 			else if(effects.process.linDepth) 
 				wiRenderer::BindPS(linDepthPS, context);
 			else if (effects.process.colorGrade)
 				wiRenderer::BindPS(colorGradePS, context);
-			else if (effects.process.ssr){
+			else if (effects.process.ssr)
 				wiRenderer::BindPS(ssrPS, context);
-			}
+			else if (effects.process.stereogram)
+				wiRenderer::BindPS(stereogramPS, context);
 			else if(effects.process.ssss.x + effects.process.ssss.y > 0)
 				wiRenderer::BindPS(ssssPS,context);
 			else if(effects.bloom.separate)
 				wiRenderer::BindPS(bloomSeparatePS,context);
-			else wiHelper::messageBox("Postprocess branch not implemented!");
+			else 
+				wiHelper::messageBox("Postprocess branch not implemented!");
 			
 			(*prcb).params0[0] = effects.process.motionBlur; 
 			(*prcb).params0[1] = effects.process.outline;
@@ -361,28 +362,6 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 
 			wiRenderer::UpdateBuffer(processCb,prcb,context);
 		}
-
-		
-		//int normalmapmode=0;
-		//if(effects.normalMap && effects.refractionMap)
-		//	normalmapmode=1;
-		//if(effects.extractNormalMap==true)
-		//	normalmapmode=2;
-		//(*prcb).params[0] = (effects.maskMap ? 1.f : 0.f);
-		//(*prcb).params[1] = effects.fade;
-		//(*prcb).params[2] = effects.opacity;
-		//(*prcb).params[3] = (float)normalmapmode;
-		//(*prcb).params[4] = (float)wiRenderer::GetScreenWidth();
-		//(*prcb).params[5] = (float)wiRenderer::GetScreenHeight();
-		//(*prcb).params[6] = effects.siz.x;
-		//(*prcb).params[7] = effects.siz.y;
-
-		//wiRenderer::UpdateBuffer(processCb,prcb,context);
-		
-		//wiRenderer::BindTexturePS(effects.depthMap,0,context);
-		//wiRenderer::BindTexturePS(effects.normalMap,1,context);
-		//wiRenderer::BindTexturePS(effects.velocityMap,3,context);
-		//wiRenderer::BindTexturePS(effects.refractionMap,4,context);
 		wiRenderer::BindTexturePS(effects.maskMap, TEXSLOT_ONDEMAND1, context);
 		wiRenderer::BindTexturePS(effects.distortionMap, TEXSLOT_ONDEMAND2, context);
 		wiRenderer::BindTexturePS(effects.refractionSource, TEXSLOT_ONDEMAND3, context);
@@ -497,6 +476,7 @@ void wiImage::CleanUp()
 	wiRenderer::SafeRelease(colorGradePS);
 	wiRenderer::SafeRelease(ssrPS);
 	wiRenderer::SafeRelease(screenPS);
+	wiRenderer::SafeRelease(stereogramPS);
 
 	if(constantBuffer) constantBuffer->Release();
 	if(processCb) processCb->Release();

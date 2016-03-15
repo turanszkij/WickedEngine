@@ -47,6 +47,7 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, SetMotionBlurEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSSSEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetStereogramEnabled),
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
@@ -281,6 +282,21 @@ int Renderable3DComponent_BindLua::SetDepthOfFieldEnabled(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "SetDepthOfFieldEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetStereogramEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetStereogramEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((Renderable3DComponent*)component)->setStereogramEnabled(wiLua::SGetBool(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetStereogramEnabled(bool value) not enough arguments!");
 	return 0;
 }
 
