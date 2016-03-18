@@ -347,7 +347,7 @@ struct Mesh{
 	void CreateBuffers(Object* object);
 	void CreateVertexArrays();
 	static void AddRenderableInstance(const Instance& instance, int numerator);
-	static void UpdateRenderableInstances(int count, DeviceContext context);
+	static void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
 	void init(){
 		parent="";
 		vertices.resize(0);

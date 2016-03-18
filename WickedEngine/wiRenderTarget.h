@@ -26,13 +26,13 @@ public:
 	void Initialize(UINT width, UINT height, int numViews = 1, bool hasDepth = false, UINT MSAAC = 1, UINT MSAAQ = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1);
 	void InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format, UINT mipMapLevelCount = 1);
 	void InitializeCube(UINT size, int numViews, bool hasDepth);
-	void Activate(DeviceContext);
-	void Activate(DeviceContext context, float r, float g, float b, float a);
-	void Activate(DeviceContext context, wiDepthTarget*, float r, float g, float b, float a);
-	void Activate(DeviceContext context, wiDepthTarget*);
-	void Deactivate(DeviceContext context);
-	void Set(DeviceContext context);
-	void Set(DeviceContext context, wiDepthTarget*);
+	void Activate(GRAPHICSTHREAD threadID);
+	void Activate(GRAPHICSTHREAD threadID, float r, float g, float b, float a);
+	void Activate(GRAPHICSTHREAD threadID, wiDepthTarget*, float r, float g, float b, float a);
+	void Activate(GRAPHICSTHREAD threadID, wiDepthTarget*);
+	void Deactivate(GRAPHICSTHREAD threadID);
+	void Set(GRAPHICSTHREAD threadID);
+	void Set(GRAPHICSTHREAD threadID, wiDepthTarget*);
 	void Retarget(TextureView resource);
 	void Restore();
 

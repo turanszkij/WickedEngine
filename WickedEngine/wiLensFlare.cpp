@@ -30,44 +30,44 @@ void wiLensFlare::CleanUp(){
 	if(blendState) blendState->Release(); blendState = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
 }
-void wiLensFlare::Draw(DeviceContext context, const XMVECTOR& lightPos, vector<TextureView>& rims){
+void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<TextureView>& rims){
 
 	if(!rims.empty()){
 
-		wiRenderer::BindPrimitiveTopology(POINTLIST,context);
-		wiRenderer::BindVertexLayout(inputLayout,context);
-		wiRenderer::BindPS(pixelShader,context);
-		wiRenderer::BindVS(vertexShader,context);
-		wiRenderer::BindGS(geometryShader,context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(POINTLIST,threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(inputLayout,threadID);
+		wiRenderer::graphicsDevice->BindPS(pixelShader,threadID);
+		wiRenderer::graphicsDevice->BindVS(vertexShader,threadID);
+		wiRenderer::graphicsDevice->BindGS(geometryShader,threadID);
 
 		static thread_local ConstantBuffer* cb = new ConstantBuffer;
 		(*cb).mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 1, 1);
 		(*cb).mScreen = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 0);
 
-		wiRenderer::UpdateBuffer(constantBuffer,cb,context);
-		wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),context);
+		wiRenderer::graphicsDevice->UpdateBuffer(constantBuffer,cb,threadID);
+		wiRenderer::graphicsDevice->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 	
-		wiRenderer::BindRasterizerState(rasterizerState,context);
-		wiRenderer::BindDepthStencilState(depthStencilState,1,context);
-		wiRenderer::BindBlendState(blendState,context);
+		wiRenderer::graphicsDevice->BindRasterizerState(rasterizerState,threadID);
+		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencilState,1,threadID);
+		wiRenderer::graphicsDevice->BindBlendState(blendState,threadID);
 
-		//wiRenderer::BindTextureGS(depthMap,0,context);
+		//wiRenderer::graphicsDevice->BindTextureGS(depthMap,0,threadID);
 
 		int i=0;
 		for(TextureView x : rims){
 			if(x!=nullptr){
-				wiRenderer::BindTexturePS(x, TEXSLOT_ONDEMAND0 + i, context);
-				wiRenderer::BindTextureGS(x, TEXSLOT_ONDEMAND0 + i, context);
+				wiRenderer::graphicsDevice->BindTexturePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				wiRenderer::graphicsDevice->BindTextureGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
 				i++;
 			}
 		}
-		wiRenderer::Draw(i,context);
+		wiRenderer::graphicsDevice->Draw(i,threadID);
 
 		
 
 
-		wiRenderer::BindGS(nullptr,context);
+		wiRenderer::graphicsDevice->BindGS(nullptr,threadID);
 	}
 }
 
@@ -75,7 +75,7 @@ void wiLensFlare::LoadShaders(){
 
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -92,20 +92,20 @@ void wiLensFlare::LoadShaders(){
 }
 void wiLensFlare::SetUpCB()
 {
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ConstantBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
 	
 }
 void wiLensFlare::SetUpStates()
 {
-	D3D11_RASTERIZER_DESC rs;
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_NONE;
+	RasterizerDesc rs;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -120,41 +120,41 @@ void wiLensFlare::SetUpStates()
 
 
 	
-	D3D11_DEPTH_STENCIL_DESC dsd;
+	DepthStencilDesc dsd;
 	dsd.DepthEnable = false;
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = D3D11_COMPARISON_LESS;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_LESS;
 
 	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
 
 	// Stencil operations if pixel is front-facing.
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_INCR;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Stencil operations if pixel is back-facing.
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_DECR;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
 	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
-	D3D11_BLEND_DESC bd;
+	BlendDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendState);
 }

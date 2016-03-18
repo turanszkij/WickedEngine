@@ -144,8 +144,8 @@ void wiEmittedParticle::Update(float gamespeed)
 	systems.insert(this);
 
 
-	XMFLOAT3 minP=XMFLOAT3(D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX)
-		,maxP=XMFLOAT3(-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX);
+	XMFLOAT3 minP=XMFLOAT3(FLOAT32_MAX,FLOAT32_MAX,FLOAT32_MAX)
+		,maxP=XMFLOAT3(-FLOAT32_MAX,-FLOAT32_MAX,-FLOAT32_MAX);
 
 	for (unsigned int i = 0; i<points.size(); ++i){
 		Point &point = points[i];
@@ -211,12 +211,12 @@ void wiEmittedParticle::Update(float gamespeed)
 		light->UpdateLight();
 	}
 	
-	//D3D11_MAPPED_SUBRESOURCE mappedResource;
+	//MAPPED_SUBRESOURCE mappedResource;
 	//Point* vertexPtr;
-	//wiRenderer::getImmediateContext()->Map(vertexBuffer,0,D3D11_MAP_WRITE_DISCARD,0,&mappedResource);
+	//GRAPHICSTHREAD_IMMEDIATE->Map(vertexBuffer,0,MAP_WRITE_DISCARD,0,&mappedResource);
 	//vertexPtr = (Point*)mappedResource.pData;
 	//memcpy(vertexPtr,renderPoints.data(),sizeof(Point)* renderPoints.size());
-	//wiRenderer::getImmediateContext()->Unmap(vertexBuffer,0);
+	//GRAPHICSTHREAD_IMMEDIATE->Unmap(vertexBuffer,0);
 }
 void wiEmittedParticle::Burst(float num)
 {
@@ -230,7 +230,7 @@ void wiEmittedParticle::Burst(float num)
 }
 
 
-void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, int FLAG)
+void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 {
 	if(!points.empty()){
 		
@@ -238,17 +238,17 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, int F
 		if(camera->frustum.CheckBox(bounding_box->corners)){
 			
 			vector<Point> renderPoints=vector<Point>(points.begin(),points.end());
-			wiRenderer::UpdateBuffer(vertexBuffer,renderPoints.data(),context,sizeof(Point)* renderPoints.size());
+			wiRenderer::graphicsDevice->UpdateBuffer(vertexBuffer,renderPoints.data(),threadID,sizeof(Point)* renderPoints.size());
 
 			bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
-			wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,context);
-			wiRenderer::BindVertexLayout(vertexLayout,context);
-			wiRenderer::BindPS(wireRender?simplestPS:pixelShader,context);
-			wiRenderer::BindVS(vertexShader,context);
-			wiRenderer::BindGS(geometryShader,context);
+			wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
+			wiRenderer::graphicsDevice->BindVertexLayout(vertexLayout,threadID);
+			wiRenderer::graphicsDevice->BindPS(wireRender?simplestPS:pixelShader,threadID);
+			wiRenderer::graphicsDevice->BindVS(vertexShader,threadID);
+			wiRenderer::graphicsDevice->BindGS(geometryShader,threadID);
 		
-			//wiRenderer::BindTexturePS(depth,1,context);
+			//wiRenderer::graphicsDevice->BindTexturePS(depth,1,threadID);
 
 			static thread_local ConstantBuffer* cb = new ConstantBuffer;
 			(*cb).mAdd.x = additive;
@@ -256,32 +256,32 @@ void wiEmittedParticle::Draw(Camera* camera, ID3D11DeviceContext *context, int F
 			(*cb).mMotionBlurAmount = motionBlurAmount;
 		
 
-			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
-			wiRenderer::BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),context);
+			wiRenderer::graphicsDevice->UpdateBuffer(constantBuffer,cb,threadID);
+			wiRenderer::graphicsDevice->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-			wiRenderer::BindRasterizerState(wireRender?wireFrameRS:rasterizerState,context);
-			wiRenderer::BindDepthStencilState(depthStencilState,1,context);
+			wiRenderer::graphicsDevice->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);
+			wiRenderer::graphicsDevice->BindDepthStencilState(depthStencilState,1,threadID);
 	
-			wiRenderer::BindBlendState((additive?blendStateAdd:blendStateAlpha),context);
+			wiRenderer::graphicsDevice->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
 
-			wiRenderer::BindVertexBuffer(vertexBuffer,0,sizeof(Point),context);
+			wiRenderer::graphicsDevice->BindVertexBuffer(vertexBuffer,0,sizeof(Point),threadID);
 
 			if(!wireRender && material->texture) 
-				wiRenderer::BindTexturePS(material->texture,TEXSLOT_ONDEMAND0,context);
-			wiRenderer::Draw(renderPoints.size(),context);
+				wiRenderer::graphicsDevice->BindTexturePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
+			wiRenderer::graphicsDevice->Draw(renderPoints.size(),threadID);
 
 
-			wiRenderer::BindGS(nullptr,context);
+			wiRenderer::graphicsDevice->BindGS(nullptr,threadID);
 		}
 	}
 }
-void wiEmittedParticle::DrawPremul(Camera* camera, ID3D11DeviceContext *context, int FLAG){
+void wiEmittedParticle::DrawPremul(Camera* camera, GRAPHICSTHREAD threadID, int FLAG){
 	if(material->premultipliedTexture)
-		Draw(camera,context,FLAG);
+		Draw(camera,threadID,FLAG);
 }
-void wiEmittedParticle::DrawNonPremul(Camera* camera, ID3D11DeviceContext *context, int FLAG){
+void wiEmittedParticle::DrawNonPremul(Camera* camera, GRAPHICSTHREAD threadID, int FLAG){
 	if(!material->premultipliedTexture)
-		Draw(camera,context,FLAG);
+		Draw(camera,threadID,FLAG);
 }
 
 
@@ -306,11 +306,11 @@ void wiEmittedParticle::LoadShaders()
 {
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		//{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "ROTATION", 0, DXGI_FORMAT_R32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "VELOCITY", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		//{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "ROTATION", 0, DXGI_FORMAT_R32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "VELOCITY", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -330,19 +330,19 @@ void wiEmittedParticle::LoadShaders()
 }
 void wiEmittedParticle::SetUpCB()
 {
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ConstantBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
 }
 void wiEmittedParticle::SetUpStates()
 {
-	D3D11_RASTERIZER_DESC rs;
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_BACK;
+	RasterizerDesc rs;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -354,8 +354,8 @@ void wiEmittedParticle::SetUpStates()
 	wiRenderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
 
 	
-	rs.FillMode=D3D11_FILL_WIREFRAME;
-	rs.CullMode=D3D11_CULL_NONE;
+	rs.FillMode=FILL_WIREFRAME;
+	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -370,53 +370,53 @@ void wiEmittedParticle::SetUpStates()
 
 
 	
-	D3D11_DEPTH_STENCIL_DESC dsd;
+	DepthStencilDesc dsd;
 	dsd.DepthEnable = false;
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = D3D11_COMPARISON_LESS;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_LESS;
 
 	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
 
 	// Stencil operations if pixel is front-facing.
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_INCR;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Stencil operations if pixel is back-facing.
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_DECR;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
 	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
-	D3D11_BLEND_DESC bd;
+	BlendDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=true;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateAlpha);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=true;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateAdd);
@@ -425,12 +425,12 @@ void wiEmittedParticle::LoadVertexBuffer()
 {
 	vertexBuffer=NULL;
 
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-    bd.Usage = D3D11_USAGE_DYNAMIC;
+    bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof( Point ) * MAX_PARTICLES;
-    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vertexBuffer );
 }
 void wiEmittedParticle::SetUpStatic()

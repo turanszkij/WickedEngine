@@ -21,22 +21,11 @@
 #include "wiRandom.h"
 #include "wiFont.h"
 #include "TextureMapping.h"
+#include "wiGraphicsAPI_DX11.h"
 
 #pragma region STATICS
-D3D_DRIVER_TYPE						wiRenderer::driverType;
-D3D_FEATURE_LEVEL					wiRenderer::featureLevel;
-SwapChain					wiRenderer::swapChain;
-RenderTargetView			wiRenderer::renderTargetView;
-ViewPort					wiRenderer::viewPort;
-GraphicsDevice			wiRenderer::graphicsDevice;
-DeviceContext				wiRenderer::immediateContext;
-bool wiRenderer::DX11 = false,wiRenderer::VSYNC=true,wiRenderer::DEFERREDCONTEXT_SUPPORT=false;
-DeviceContext				wiRenderer::deferredContexts[];
-CommandList				wiRenderer::commandLists[];
-mutex								wiRenderer::graphicsMutex;
 Sampler wiRenderer::samplers[SSLOT_COUNT];
 
-map<DeviceContext,long> wiRenderer::drawCalls;
 BufferResource		wiRenderer::constantBuffers[CBTYPE_LAST];
 VertexShader		wiRenderer::vertexShaders[VSTYPE_LAST];
 PixelShader			wiRenderer::pixelShaders[PSTYPE_LAST];
@@ -93,186 +82,21 @@ HRESULT wiRenderer::InitDevice(HWND window, int screenW, int screenH, bool windo
 HRESULT wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window)
 #endif
 {
-    HRESULT hr = S_OK;
+	SCREENWIDTH = screenW;
+	SCREENHEIGHT = screenH;
 
-	UINT createDeviceFlags = 0;
-#ifdef _DEBUG
-    createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
+	graphicsDevice = new GraphicsDevice_DX11(window, screenW, screenH, windowed);
 
-    D3D_DRIVER_TYPE driverTypes[] =
-    {
-        D3D_DRIVER_TYPE_HARDWARE,
-        D3D_DRIVER_TYPE_WARP,
-        D3D_DRIVER_TYPE_REFERENCE,
-    };
-    UINT numDriverTypes = ARRAYSIZE( driverTypes );
-
-    D3D_FEATURE_LEVEL featureLevels[] =
-    {
-		D3D_FEATURE_LEVEL_11_1,
-        D3D_FEATURE_LEVEL_11_0,
-        D3D_FEATURE_LEVEL_10_1,
-        //D3D_FEATURE_LEVEL_10_0,
-    };
-	UINT numFeatureLevels = ARRAYSIZE( featureLevels );
-	
-#ifndef WINSTORE_SUPPORT
-    DXGI_SWAP_CHAIN_DESC sd;
-    ZeroMemory( &sd, sizeof( sd ) );
-    sd.BufferCount = 2;
-	sd.BufferDesc.Width = SCREENWIDTH = screenW;
-	sd.BufferDesc.Height = SCREENHEIGHT = screenH;
-	sd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    sd.BufferDesc.RefreshRate.Numerator = 60;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = window;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.Windowed = windowed;
-#endif
-	
-	for( UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++ )
-    {
-        driverType = driverTypes[driverTypeIndex];
-#ifndef WINSTORE_SUPPORT
-        hr = D3D11CreateDeviceAndSwapChain( NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
-											D3D11_SDK_VERSION, &sd, &swapChain, &graphicsDevice, &featureLevel, &immediateContext );
-#else
-		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &graphicsDevice
-			, &featureLevel, &immediateContext);
-#endif
-
-		if( SUCCEEDED( hr ) )
-            break;
-    }
-	if(FAILED(hr)){
-        wiHelper::messageBox("SwapChain Creation Failed!","Error!",nullptr);
-#ifdef BACKLOG
-			wiBackLog::post("SwapChain Creation Failed!");
-#endif
-		exit(1);
-	}
-	DX11 = ( ( wiRenderer::graphicsDevice->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0 ) ? true:false );
-	drawCalls.insert(pair<DeviceContext,long>(immediateContext,0));
-
-
-#ifdef WINSTORE_SUPPORT
-	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
-	sd.Width = SCREENWIDTH = (int)window->Bounds.Width;
-	sd.Height = SCREENHEIGHT = (int)window->Bounds.Height;
-	sd.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // This is the most common swap chain format.
-	sd.Stereo = false;
-	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
-	sd.SampleDesc.Quality = 0;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.BufferCount = 2; // Use double-buffering to minimize latency.
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
-	sd.Flags = 0;
-	sd.Scaling = DXGI_SCALING_NONE;
-	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-
-	IDXGIDevice2 * pDXGIDevice;
-	hr = graphicsDevice->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
-
-	IDXGIAdapter * pDXGIAdapter;
-	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void **)&pDXGIAdapter);
-
-	IDXGIFactory2 * pIDXGIFactory;
-	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&pIDXGIFactory);
-
-
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(graphicsDevice, reinterpret_cast<APIInterface>(window), &sd
-		, nullptr, &swapChain);
-
-	if (FAILED(hr)){
-		wiHelper::messageBox("Swap chain creation failed!", "Error!");
-		exit(1);
-	}
-#endif
-
-	DEFERREDCONTEXT_SUPPORT = false;
-	D3D11_FEATURE_DATA_THREADING threadingFeature;
-	wiRenderer::graphicsDevice->CheckFeatureSupport( D3D11_FEATURE_THREADING,&threadingFeature,sizeof(threadingFeature) );
-	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists){
-		DEFERREDCONTEXT_SUPPORT = true;
-		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++){
-			wiRenderer::graphicsDevice->CreateDeferredContext( 0,&deferredContexts[i] );
-			drawCalls.insert(pair<DeviceContext,long>(deferredContexts[i],0));
-		}
-#ifdef BACKLOG
-		stringstream ss("");
-		ss<<NUM_DCONTEXT<<" defferred contexts created!";
-		wiBackLog::post(ss.str().c_str());
-#endif
-	}
-	else {
-		//MessageBox(window,L"Deferred Context not supported!",L"Error!",0);
-#ifdef BACKLOG
-		wiBackLog::post("Deferred context not supported!");
-#endif
-		DEFERREDCONTEXT_SUPPORT=false;
-		//exit(0);
-	}
-	
-
-    // Create a render target view
-    Texture2D pBackBuffer = NULL;
-    hr = swapChain->GetBuffer( 0, __uuidof( ID3D11Texture2D ), ( LPVOID* )&pBackBuffer );
-    if( FAILED( hr ) ){
-		wiHelper::messageBox("BackBuffer creation Failed!", "Error!", nullptr);
-		exit(0);
-	}
-
-    hr = wiRenderer::graphicsDevice->CreateRenderTargetView( pBackBuffer, NULL, &renderTargetView );
-    //pBackBuffer->Release();
-    if( FAILED( hr ) ){
-		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!", nullptr);
-		exit(0);
-	}
-
-
-    // Setup the main viewport
-	viewPort.Width = (FLOAT)SCREENWIDTH;
-	viewPort.Height = (FLOAT)SCREENHEIGHT;
-    viewPort.MinDepth = 0.0f;
-    viewPort.MaxDepth = 1.0f;
-    viewPort.TopLeftX = 0;
-    viewPort.TopLeftY = 0;
-
-	
-    return S_OK;
+	return (graphicsDevice != nullptr ? S_OK : E_FAIL);
 }
 void wiRenderer::DestroyDevice()
 {
-	
-	if( renderTargetView ) 
-		renderTargetView->Release();
-    if( swapChain ) 
-		swapChain->Release();
-	if( wiRenderer::getImmediateContext() ) 
-		wiRenderer::getImmediateContext()->ClearState();
-    if( wiRenderer::getImmediateContext() ) 
-		wiRenderer::getImmediateContext()->Release();
-    if( graphicsDevice ) 
-		graphicsDevice->Release();
-
-	for(int i=0;i<GRAPHICSTHREAD_COUNT;i++){
-		if(commandLists[i]) {commandLists[i]->Release(); commandLists[i]=0;}
-		if(deferredContexts[i]) {deferredContexts[i]->Release(); deferredContexts[i]=0;}
-	}
+	SAFE_DELETE(graphicsDevice);
 }
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
 {
-	Lock();
 
-	immediateContext->RSSetViewports( 1, &viewPort );
-	immediateContext->OMSetRenderTargets( 1, &renderTargetView, 0 );
-	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-	immediateContext->ClearRenderTargetView( renderTargetView, ClearColor );
-	//wiRenderer::getImmediateContext()->ClearDepthStencilView( g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
+	graphicsDevice->PresentBegin();
 	
 	if(drawToScreen1!=nullptr)
 		drawToScreen1();
@@ -285,47 +109,11 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 
 	wiFrameRate::Frame();
 
-	swapChain->Present( VSYNC, 0 );
-
-	for(auto& d : drawCalls){
-		d.second=0;
-	}
-
-
-	immediateContext->OMSetRenderTargets(0,nullptr,nullptr);
-
-	UnbindTextures(0, TEXSLOT_COUNT, immediateContext);
-
-	Unlock();
+	graphicsDevice->PresentEnd();
 
 	*prevFrameCam = *cam;
 }
-void wiRenderer::ExecuteDeferredContexts()
-{
-	for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
-	{
-		if (commandLists[i])
-		{
-			immediateContext->ExecuteCommandList(commandLists[i], true);
-			commandLists[i]->Release();
-			commandLists[i] = nullptr;
 
-			UnbindTextures(0, TEXSLOT_COUNT, deferredContexts[i]);
-		}
-	}
-}
-void wiRenderer::FinishCommandList(GRAPHICSTHREAD thread)
-{
-	deferredContexts[thread]->FinishCommandList(true, &commandLists[thread]);
-}
-
-long wiRenderer::getDrawCallCount(){
-	long retVal=0;
-	for(auto d:drawCalls){
-		retVal+=d.second;
-	}
-	return retVal;
-}
 
 void wiRenderer::CleanUp()
 {
@@ -338,43 +126,43 @@ void wiRenderer::SetUpStaticComponents()
 {
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
-		SafeInit(constantBuffers[i]);
+		SAFE_INIT(constantBuffers[i]);
 	}
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
-		SafeInit(vertexShaders[i]);
+		SAFE_INIT(vertexShaders[i]);
 	}
 	for (int i = 0; i < PSTYPE_LAST; ++i)
 	{
-		SafeInit(pixelShaders[i]);
+		SAFE_INIT(pixelShaders[i]);
 	}
 	for (int i = 0; i < GSTYPE_LAST; ++i)
 	{
-		SafeInit(geometryShaders[i]);
+		SAFE_INIT(geometryShaders[i]);
 	}
 	for (int i = 0; i < HSTYPE_LAST; ++i)
 	{
-		SafeInit(hullShaders[i]);
+		SAFE_INIT(hullShaders[i]);
 	}
 	for (int i = 0; i < DSTYPE_LAST; ++i)
 	{
-		SafeInit(domainShaders[i]);
+		SAFE_INIT(domainShaders[i]);
 	}
 	for (int i = 0; i < RSTYPE_LAST; ++i)
 	{
-		SafeInit(rasterizers[i]);
+		SAFE_INIT(rasterizers[i]);
 	}
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
 	{
-		SafeInit(depthStencils[i]);
+		SAFE_INIT(depthStencils[i]);
 	}
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
-		SafeInit(vertexLayouts[i]);
+		SAFE_INIT(vertexLayouts[i]);
 	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
-		SafeInit(samplers[i]);
+		SAFE_INIT(samplers[i]);
 	}
 
 	//thread t1(LoadBasicShaders);
@@ -446,7 +234,7 @@ void wiRenderer::SetUpStaticComponents()
 	SetPointLightShadowProps(2, 512);
 	SetSpotLightShadowProps(2, 512);
 
-	BindPersistentState(getImmediateContext());
+	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 
 	//t1.join();
 	//t2.join();
@@ -468,47 +256,47 @@ void wiRenderer::CleanUpStatic()
 
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
-		SafeRelease(constantBuffers[i]);
+		SAFE_RELEASE(constantBuffers[i]);
 	}
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
-		SafeRelease(vertexShaders[i]);
+		SAFE_RELEASE(vertexShaders[i]);
 	}
 	for (int i = 0; i < PSTYPE_LAST; ++i)
 	{
-		SafeRelease(pixelShaders[i]);
+		SAFE_RELEASE(pixelShaders[i]);
 	}
 	for (int i = 0; i < GSTYPE_LAST; ++i)
 	{
-		SafeRelease(geometryShaders[i]);
+		SAFE_RELEASE(geometryShaders[i]);
 	}
 	for (int i = 0; i < HSTYPE_LAST; ++i)
 	{
-		SafeRelease(hullShaders[i]);
+		SAFE_RELEASE(hullShaders[i]);
 	}
 	for (int i = 0; i < DSTYPE_LAST; ++i)
 	{
-		SafeRelease(domainShaders[i]);
+		SAFE_RELEASE(domainShaders[i]);
 	}
 	for (int i = 0; i < RSTYPE_LAST; ++i)
 	{
-		SafeRelease(rasterizers[i]);
+		SAFE_RELEASE(rasterizers[i]);
 	}
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
 	{
-		SafeRelease(depthStencils[i]);
+		SAFE_RELEASE(depthStencils[i]);
 	}
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
-		SafeRelease(vertexLayouts[i]);
+		SAFE_RELEASE(vertexLayouts[i]);
 	}
 	for (int i = 0; i < BSTYPE_LAST; ++i)
 	{
-		SafeRelease(blendStates[i]);
+		SAFE_RELEASE(blendStates[i]);
 	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
-		SafeRelease(samplers[i]);
+		SAFE_RELEASE(samplers[i]);
 	}
 
 	if (physicsEngine) physicsEngine->CleanUp();
@@ -701,11 +489,11 @@ void wiRenderer::LoadBuffers()
 		constantBuffers[i] = nullptr;
 	}
 
-    D3D11_BUFFER_DESC bd;
+    BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.Usage = USAGE_DYNAMIC;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
 	//Persistent buffers...
 	bd.ByteWidth = sizeof(WorldCB);
@@ -759,15 +547,15 @@ void wiRenderer::LoadBasicShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -781,11 +569,11 @@ void wiRenderer::LoadBasicShaders()
 
 		VertexLayoutDesc oslayout[] =
 		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		UINT numElements = ARRAYSIZE(oslayout);
 
@@ -845,7 +633,7 @@ void wiRenderer::LoadLineShaders()
 {
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 
@@ -895,9 +683,9 @@ void wiRenderer::LoadWaterShaders()
 void wiRenderer::LoadTrailShaders(){
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 
@@ -920,7 +708,8 @@ void wiRenderer::ReloadShaders(const string& path)
 		SHADERPATH = path;
 	}
 
-	Lock();
+	graphicsDevice->LOCK();
+
 	wiResourceManager::GetShaderManager()->CleanUp();
 	LoadBasicShaders();
 	LoadLineShaders();
@@ -934,91 +723,92 @@ void wiRenderer::ReloadShaders(const string& path)
 	wiFont::LoadShaders();
 	wiImage::LoadShaders();
 	wiLensFlare::LoadShaders();
-	Unlock();
+
+	graphicsDevice->UNLOCK();
 }
 
 
 void wiRenderer::SetUpStates()
 {
-	D3D11_SAMPLER_DESC samplerDesc;
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
+	SamplerDesc samplerDesc;
+	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
 	samplerDesc.BorderColor[0] = 0;
 	samplerDesc.BorderColor[1] = 0;
 	samplerDesc.BorderColor[2] = 0;
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	samplerDesc.MaxLOD = FLOAT32_MAX;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
 
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
 
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
 	
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
 	
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
 	
 	
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
 	
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MaxAnisotropy = 16;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
 	
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
 	
-	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
 
-	ZeroMemory( &samplerDesc, sizeof(D3D11_SAMPLER_DESC) );
-	samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	ZeroMemory( &samplerDesc, sizeof(SamplerDesc) );
+	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	samplerDesc.ComparisonFunc = COMPARISON_LESS_EQUAL;
 	graphicsDevice->CreateSamplerState(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
 	
-	D3D11_RASTERIZER_DESC rs;
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_BACK;
+	RasterizerDesc rs;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -1030,8 +820,8 @@ void wiRenderer::SetUpStates()
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_FRONT]);
 
 	
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_BACK;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -1042,8 +832,8 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_SHADOW]);
 
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_NONE;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -1054,8 +844,8 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
-	rs.FillMode=D3D11_FILL_WIREFRAME;
-	rs.CullMode=D3D11_CULL_BACK;
+	rs.FillMode=FILL_WIREFRAME;
+	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -1066,8 +856,8 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_WIRE]);
 	
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_NONE;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -1078,8 +868,8 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_DOUBLESIDED]);
 	
-	rs.FillMode=D3D11_FILL_WIREFRAME;
-	rs.CullMode=D3D11_CULL_NONE;
+	rs.FillMode=FILL_WIREFRAME;
+	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -1090,8 +880,8 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
 	
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_FRONT;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_FRONT;
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -1102,39 +892,39 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable=false;
 	graphicsDevice->CreateRasterizerState(&rs,&rasterizers[RSTYPE_BACK]);
 
-	D3D11_DEPTH_STENCIL_DESC dsd;
+	DepthStencilDesc dsd;
 	dsd.DepthEnable = true;
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	dsd.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
 
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_REPLACE;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
 	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFAULT]);
 
 	
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_LESS_EQUAL;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_LESS_EQUAL;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
 	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD]);
 
@@ -1143,21 +933,21 @@ void wiRenderer::SetUpStates()
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD_MATCH]);
 
 
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
 	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
@@ -1165,25 +955,25 @@ void wiRenderer::SetUpStates()
 	graphicsDevice->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_XRAY]);
 
 	
-	D3D11_BLEND_DESC bd;
+	BlendDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=false;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_MAX;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_MAX;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.AlphaToCoverageEnable=false;
 	graphicsDevice->CreateBlendState(&bd,&blendStates[BSTYPE_OPAQUE]);
 
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.AlphaToCoverageEnable=false;
@@ -1191,78 +981,78 @@ void wiRenderer::SetUpStates()
 
 
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_MAX;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
 	bd.IndependentBlendEnable=true,
 	bd.AlphaToCoverageEnable=false;
 	graphicsDevice->CreateBlendState(&bd,&blendStates[BSTYPE_ADDITIVE]);
 }
 
-void wiRenderer::BindPersistentState(DeviceContext context)
+void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	Lock();
+	graphicsDevice->LOCK();
 
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
 		if (samplers[i] == nullptr)
 			continue;
-		BindSamplerPS(samplers[i], i, context);
-		BindSamplerVS(samplers[i], i, context);
-		BindSamplerGS(samplers[i], i, context);
-		BindSamplerDS(samplers[i], i, context);
-		BindSamplerHS(samplers[i], i, context);
+		graphicsDevice->BindSamplerPS(samplers[i], i, threadID);
+		graphicsDevice->BindSamplerVS(samplers[i], i, threadID);
+		graphicsDevice->BindSamplerGS(samplers[i], i, threadID);
+		graphicsDevice->BindSamplerDS(samplers[i], i, threadID);
+		graphicsDevice->BindSamplerHS(samplers[i], i, threadID);
 	}
 
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
-	BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
-	BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
-	BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
-	BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), context);
+	graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	graphicsDevice->BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	graphicsDevice->BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
-	BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
-	BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
-	BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
-	BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), context);
+	graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	graphicsDevice->BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	graphicsDevice->BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
-	BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
-	BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
-	BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
-	BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), context);
+	graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	graphicsDevice->BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	graphicsDevice->BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
-	BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
-	BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
-	BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
-	BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), context);
+	graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
+	graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
+	graphicsDevice->BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
+	graphicsDevice->BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), context);
-	BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), context);
+	graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), threadID);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), threadID);
 
-	BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
-	BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
-	BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
-	BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
-	BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), context);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	graphicsDevice->BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	graphicsDevice->BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 
-	BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB), context);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB), threadID);
 
-	BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB), context);
+	graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB), threadID);
 
-	Unlock();
+	graphicsDevice->UNLOCK();
 }
-void wiRenderer::RebindPersistentState(DeviceContext context)
+void wiRenderer::RebindPersistentState(GRAPHICSTHREAD threadID)
 {
-	BindPersistentState(context);
+	BindPersistentState(threadID);
 
-	wiImage::BindPersistentState(context);
-	wiFont::BindPersistentState(context);
+	wiImage::BindPersistentState(threadID);
+	wiFont::BindPersistentState(threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const string& get)
@@ -1458,14 +1248,11 @@ void wiRenderer::UpdatePerFrameData()
 	GetScene().wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&GetScene().wind.direction)))*0.1f;
 
 }
-void wiRenderer::UpdateRenderData(DeviceContext context)
+void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
-	if (context == nullptr)
-		return;
-
-	//UpdateWorldCB(context);
-	UpdateFrameCB(context);
-	UpdateCameraCB(context);
+	//UpdateWorldCB(threadID);
+	UpdateFrameCB(threadID);
+	UpdateCameraCB(threadID);
 
 	
 	{
@@ -1485,13 +1272,13 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 					if (!streamOutSetUp)
 					{
 						streamOutSetUp = true;
-						BindPrimitiveTopology(POINTLIST, context);
-						BindVertexLayout(vertexLayouts[VLTYPE_STREAMOUT], context);
-						BindVS(vertexShaders[VSTYPE_STREAMOUT], context);
-						BindGS(geometryShaders[GSTYPE_STREAMOUT], context);
-						BindPS(nullptr, context);
-						BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
-						BindConstantBufferGS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), context);
+						wiRenderer::graphicsDevice->BindPrimitiveTopology(POINTLIST, threadID);
+						wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_STREAMOUT], threadID);
+						wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_STREAMOUT], threadID);
+						wiRenderer::graphicsDevice->BindGS(geometryShaders[GSTYPE_STREAMOUT], threadID);
+						wiRenderer::graphicsDevice->BindPS(nullptr, threadID);
+						wiRenderer::graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), threadID);
+						wiRenderer::graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), threadID);
 					}
 
 					// Upload bones for skinning to shader
@@ -1500,13 +1287,13 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 						bonebuf->pose[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativity));
 						bonebuf->prev[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativityPrev));
 					}
-					UpdateBuffer(constantBuffers[CBTYPE_BONEBUFFER], bonebuf, context);
+					wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_BONEBUFFER], bonebuf, threadID);
 
 
 					// Do the skinning
-					BindVertexBuffer(mesh->meshVertBuff, 0, sizeof(SkinnedVertex), context);
-					BindStreamOutTarget(mesh->sOutBuffer, context);
-					Draw(mesh->vertices.size(), context);
+					wiRenderer::graphicsDevice->BindVertexBuffer(mesh->meshVertBuff, 0, sizeof(SkinnedVertex), threadID);
+					wiRenderer::graphicsDevice->BindStreamOutTarget(mesh->sOutBuffer, threadID);
+					wiRenderer::graphicsDevice->Draw(mesh->vertices.size(), threadID);
 #else
 					// Doing skinning on the CPU
 					for (int vi = 0; vi < mesh->skinnedVertices.size(); ++vi)
@@ -1523,7 +1310,7 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 				if (mesh->softBody || mesh->hasArmature())
 #endif
 				{
-					UpdateBuffer(mesh->meshVertBuff, mesh->skinnedVertices.data(), context, sizeof(Vertex)*mesh->skinnedVertices.size());
+					wiRenderer::graphicsDevice->UpdateBuffer(mesh->meshVertBuff, mesh->skinnedVertices.data(), threadID, sizeof(Vertex)*mesh->skinnedVertices.size());
 				}
 			}
 		}
@@ -1532,9 +1319,9 @@ void wiRenderer::UpdateRenderData(DeviceContext context)
 		if (streamOutSetUp)
 		{
 			// Unload skinning shader
-			BindGS(nullptr, context);
-			BindVS(nullptr, context);
-			BindStreamOutTarget(nullptr, context);
+			wiRenderer::graphicsDevice->BindGS(nullptr, threadID);
+			wiRenderer::graphicsDevice->BindVS(nullptr, threadID);
+			wiRenderer::graphicsDevice->BindStreamOutTarget(nullptr, threadID);
 		}
 #endif
 
@@ -1585,31 +1372,31 @@ void wiRenderer::ManageWaterRipples(){
 		)
 		waterRipples.pop_front();
 }
-void wiRenderer::DrawWaterRipples(DeviceContext context){
-	//wiImage::BatchBegin(context);
+void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID){
+	//wiImage::BatchBegin(threadID);
 	for(wiSprite* i:waterRipples){
-		i->DrawNormal(context);
+		i->DrawNormal(threadID);
 	}
 }
 
-void wiRenderer::DrawDebugSpheres(Camera* camera, DeviceContext context)
+void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	//if(debugSpheres){
-	//	BindPrimitiveTopology(TRIANGLESTRIP,context);
-	//	BindVertexLayout(vertexLayouts[VLTYPE_EFFECT] : vertexLayouts[VLTYPE_LINE],context);
+	//	BindPrimitiveTopology(TRIANGLESTRIP,threadID);
+	//	BindVertexLayout(vertexLayouts[VLTYPE_EFFECT] : vertexLayouts[VLTYPE_LINE],threadID);
 	//
-	//	BindRasterizerState(rasterizers[RSTYPE_FRONT],context);
-	//	BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,context);
-	//	BindBlendState(blendStates[BSTYPE_TRANSPARENT],context);
+	//	BindRasterizerState(rasterizers[RSTYPE_FRONT],threadID);
+	//	BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
+	//	BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
-	//	BindPS(linePS,context);
-	//	BindVS(lineVS,context);
+	//	BindPS(linePS,threadID);
+	//	BindVS(lineVS,threadID);
 
-	//	BindVertexBuffer(HitSphere::vertexBuffer,0,sizeof(XMFLOAT3A),context);
+	//	BindVertexBuffer(HitSphere::vertexBuffer,0,sizeof(XMFLOAT3A),threadID);
 
 	//	for (unsigned int i = 0; i<spheres.size(); i++){
-	//		//D3D11_MAPPED_SUBRESOURCE mappedResource;
+	//		//MAPPED_SUBRESOURCE mappedResource;
 	//		LineBuffer sb;
 	//		sb.mWorldViewProjection=XMMatrixTranspose(
 	//			XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
@@ -1624,104 +1411,104 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, DeviceContext context)
 	//		else if(spheres[i]->TYPE==HitSphere::HitSphereType::ATKTYPE) propColor=XMFLOAT4A(0.96f,0,0,1);
 	//		sb.color=propColor;
 
-	//		UpdateBuffer(lineBuffer,&sb,context);
+	//		UpdateBuffer(lineBuffer,&sb,threadID);
 
 
-	//		//context->Draw((HitSphere::RESOLUTION+1)*2,0);
-	//		Draw((HitSphere::RESOLUTION+1)*2,context);
+	//		//threadID->Draw((HitSphere::RESOLUTION+1)*2,0);
+	//		Draw((HitSphere::RESOLUTION+1)*2,threadID);
 
 	//	}
 	//}
 	
 }
-void wiRenderer::DrawDebugBoneLines(Camera* camera, DeviceContext context)
+void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugBoneLines){
-		BindPrimitiveTopology(LINELIST,context);
-		BindVertexLayout(vertexLayouts[VLTYPE_LINE],context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(LINELIST,threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 	
-		BindRasterizerState(rasterizers[RSTYPE_SHADOW],context);
-		BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,context);
-		BindBlendState(blendStates[BSTYPE_OPAQUE],context);
+		wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW],threadID);
+		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
+		wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
 
-		BindPS(pixelShaders[PSTYPE_LINE],context);
-		BindVS(vertexShaders[VSTYPE_LINE],context);
+		wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 
 		static thread_local MiscCB* sb = new MiscCB;
 		for (unsigned int i = 0; i<boneLines.size(); i++){
 			(*sb).mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
 			(*sb).mColor = boneLines[i]->desc.color;
 
-			UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, context);
+			wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, threadID);
 
-			BindVertexBuffer(boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), context);
-			Draw(2, context);
+			wiRenderer::graphicsDevice->BindVertexBuffer(boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
+			wiRenderer::graphicsDevice->Draw(2, threadID);
 		}
 	}
 }
-void wiRenderer::DrawDebugLines(Camera* camera, DeviceContext context)
+void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if (linesTemp.empty())
 		return;
 
-	BindPrimitiveTopology(LINELIST, context);
-	BindVertexLayout(vertexLayouts[VLTYPE_LINE], context);
+	wiRenderer::graphicsDevice->BindPrimitiveTopology(LINELIST, threadID);
+	wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
 
-	BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
-	BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, context);
-	BindBlendState(blendStates[BSTYPE_OPAQUE], context);
+	wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+	wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
+	wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 
-	BindPS(pixelShaders[PSTYPE_LINE], context);
-	BindVS(vertexShaders[VSTYPE_LINE], context);
+	wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_LINE], threadID);
+	wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_LINE], threadID);
 
 	static thread_local MiscCB* sb = new MiscCB;
 	for (unsigned int i = 0; i<linesTemp.size(); i++){
 		(*sb).mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
 		(*sb).mColor = linesTemp[i]->desc.color;
 
-		UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, context);
+		wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, threadID);
 
-		BindVertexBuffer(linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), context);
-		Draw(2, context);
+		wiRenderer::graphicsDevice->BindVertexBuffer(linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
+		wiRenderer::graphicsDevice->Draw(2, threadID);
 	}
 
 	for (Lines* x : linesTemp)
 		delete x;
 	linesTemp.clear();
 }
-void wiRenderer::DrawDebugBoxes(Camera* camera, DeviceContext context)
+void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugBoxes){
-		BindPrimitiveTopology(LINELIST,context);
-		BindVertexLayout(vertexLayouts[VLTYPE_LINE],context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(LINELIST,threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
-		BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED],context);
-		BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,context);
-		BindBlendState(blendStates[BSTYPE_OPAQUE],context);
+		wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED],threadID);
+		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
+		wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
 
-		BindPS(pixelShaders[PSTYPE_LINE],context);
-		BindVS(vertexShaders[VSTYPE_LINE],context);
+		wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 		
-		BindVertexBuffer(Cube::vertexBuffer,0,sizeof(XMFLOAT3A),context);
-		BindIndexBuffer(Cube::indexBuffer,context);
+		wiRenderer::graphicsDevice->BindVertexBuffer(Cube::vertexBuffer,0,sizeof(XMFLOAT3A),threadID);
+		wiRenderer::graphicsDevice->BindIndexBuffer(Cube::indexBuffer,threadID);
 
 		static thread_local MiscCB* sb = new MiscCB;
 		for (unsigned int i = 0; i<cubes.size(); i++){
 			(*sb).mTransform =XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*camera->GetViewProjection());
 			(*sb).mColor=cubes[i].desc.color;
 
-			UpdateBuffer(constantBuffers[CBTYPE_MISC],sb,context);
+			wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MISC],sb,threadID);
 
-			DrawIndexed(24,context);
+			wiRenderer::graphicsDevice->DrawIndexed(24,threadID);
 		}
 
 	}
 }
 
-void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context, bool dark)
+void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark)
 {
 	struct particlesystem_comparator {
 		bool operator() (const wiEmittedParticle* a, const wiEmittedParticle* b) const{
@@ -1736,35 +1523,35 @@ void wiRenderer::DrawSoftParticles(Camera* camera, ID3D11DeviceContext *context,
 	}
 
 	for(wiEmittedParticle* e:psystems){
-		e->DrawNonPremul(camera,context,dark);
+		e->DrawNonPremul(camera,threadID,dark);
 	}
 }
-void wiRenderer::DrawSoftPremulParticles(Camera* camera, ID3D11DeviceContext *context, bool dark)
+void wiRenderer::DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark)
 {
 	for (wiEmittedParticle* e : emitterSystems)
 	{
-		e->DrawPremul(camera, context, dark);
+		e->DrawPremul(camera, threadID, dark);
 	}
 }
-void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
-	BindPrimitiveTopology(TRIANGLESTRIP,context);
-	BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],context);
+void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, TextureView refracRes){
+	wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
+	wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
 
-	BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE_DOUBLESIDED]:rasterizers[RSTYPE_DOUBLESIDED],context);
-	BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,context);
-	BindBlendState(blendStates[BSTYPE_OPAQUE],context);
+	wiRenderer::graphicsDevice->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE_DOUBLESIDED]:rasterizers[RSTYPE_DOUBLESIDED],threadID);
+	wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,threadID);
+	wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
-	BindPS(pixelShaders[PSTYPE_TRAIL],context);
-	BindVS(vertexShaders[VSTYPE_TRAIL],context);
+	wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_TRAIL],threadID);
+	wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_TRAIL],threadID);
 	
-	BindTexturePS(refracRes,TEXSLOT_ONDEMAND0,context);
+	wiRenderer::graphicsDevice->BindTexturePS(refracRes,TEXSLOT_ONDEMAND0,threadID);
 
 	for (Object* o : objectsWithTrails)
 	{
 		if(o->trailBuff && o->trail.size()>=4){
 
-			BindTexturePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, context);
-			BindTexturePS(o->trailTex, TEXSLOT_ONDEMAND2, context);
+			wiRenderer::graphicsDevice->BindTexturePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
+			wiRenderer::graphicsDevice->BindTexturePS(o->trailTex, TEXSLOT_ONDEMAND2, threadID);
 
 			vector<RibbonVertex> trails;
 
@@ -1806,19 +1593,19 @@ void wiRenderer::DrawTrails(DeviceContext context, TextureView refracRes){
 				}
 			}
 			if(!trails.empty()){
-				UpdateBuffer(o->trailBuff,trails.data(),context,sizeof(RibbonVertex)*trails.size());
+				wiRenderer::graphicsDevice->UpdateBuffer(o->trailBuff,trails.data(),threadID,sizeof(RibbonVertex)*trails.size());
 
-				BindVertexBuffer(o->trailBuff,0,sizeof(RibbonVertex),context);
-				Draw(trails.size(),context);
+				wiRenderer::graphicsDevice->BindVertexBuffer(o->trailBuff,0,sizeof(RibbonVertex),threadID);
+				wiRenderer::graphicsDevice->Draw(trails.size(),threadID);
 
 				trails.clear();
 			}
 		}
 	}
 }
-void wiRenderer::DrawImagesAdd(DeviceContext context, TextureView refracRes){
-	imagesRTAdd.Activate(context,0,0,0,1);
-	//wiImage::BatchBegin(context);
+void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, TextureView refracRes){
+	imagesRTAdd.Activate(threadID,0,0,0,1);
+	//wiImage::BatchBegin(threadID);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ADDITIVE){
 			/*TextureView nor = x->effects.normalMap;
@@ -1828,16 +1615,16 @@ void wiRenderer::DrawImagesAdd(DeviceContext context, TextureView refracRes){
 				x->effects.blendFlag=BLENDMODE_ADDITIVE;
 				changedBlend=true;
 			}*/
-			x->Draw(refracRes,  context);
+			x->Draw(refracRes,  threadID);
 			/*if(changedBlend)
 				x->effects.blendFlag=BLENDMODE_OPAQUE;
 			x->effects.setNormalMap(nor);*/
 		}
 	}
 }
-void wiRenderer::DrawImages(DeviceContext context, TextureView refracRes){
-	imagesRT.Activate(context,0,0,0,0);
-	//wiImage::BatchBegin(context);
+void wiRenderer::DrawImages(GRAPHICSTHREAD threadID, TextureView refracRes){
+	imagesRT.Activate(threadID,0,0,0,0);
+	//wiImage::BatchBegin(threadID);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ALPHA || x->effects.blendFlag==BLENDMODE_OPAQUE){
 			/*TextureView nor = x->effects.normalMap;
@@ -1847,21 +1634,21 @@ void wiRenderer::DrawImages(DeviceContext context, TextureView refracRes){
 				x->effects.blendFlag=BLENDMODE_ADDITIVE;
 				changedBlend=true;
 			}*/
-			x->Draw(refracRes,  context);
+			x->Draw(refracRes,  threadID);
 			/*if(changedBlend)
 				x->effects.blendFlag=BLENDMODE_OPAQUE;
 			x->effects.setNormalMap(nor);*/
 		}
 	}
 }
-void wiRenderer::DrawImagesNormals(DeviceContext context, TextureView refracRes){
-	normalMapRT.Activate(context,0,0,0,0);
-	//wiImage::BatchBegin(context);
+void wiRenderer::DrawImagesNormals(GRAPHICSTHREAD threadID, TextureView refracRes){
+	normalMapRT.Activate(threadID,0,0,0,0);
+	//wiImage::BatchBegin(threadID);
 	for(wiSprite* x : images){
-		x->DrawNormal(context);
+		x->DrawNormal(threadID);
 	}
 }
-void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int stencilRef){
+void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned int stencilRef){
 
 	
 	static thread_local Frustum frustum = Frustum();
@@ -1875,49 +1662,49 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 	{
 
 
-	BindPrimitiveTopology(TRIANGLELIST,context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST,threadID);
 	
-	//BindTexturePS(depth,0,context);
-	//BindTexturePS(normal,1,context);
-	//BindTexturePS(material,2,context);
+	//BindTexturePS(depth,0,threadID);
+	//BindTexturePS(normal,1,threadID);
+	//BindTexturePS(material,2,threadID);
 
 	
-	BindBlendState(blendStates[BSTYPE_ADDITIVE],context);
-	BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD],stencilRef,context);
-	BindRasterizerState(rasterizers[RSTYPE_BACK],context);
+	wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
+	wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD],stencilRef,threadID);
+	wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
 
-	BindVertexLayout(nullptr, context);
-	BindVertexBuffer(nullptr, 0, 0, context);
-	BindIndexBuffer(nullptr, context);
+	wiRenderer::graphicsDevice->BindVertexLayout(nullptr, threadID);
+	wiRenderer::graphicsDevice->BindVertexBuffer(nullptr, 0, 0, threadID);
+	wiRenderer::graphicsDevice->BindIndexBuffer(nullptr, threadID);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), context);
-	BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), context);
+	wiRenderer::graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
+	wiRenderer::graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
 
-	BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), context);
-	BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), context);
+	wiRenderer::graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
+	wiRenderer::graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
 
 	for(int type=0;type<3;++type){
 
 			
-		BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],context);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],threadID);
 
 		switch (type)
 		{
 		case 0:
 			if (SOFTSHADOW)
 			{
-				BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], context);
+				wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
 			}
 			else
 			{
-				BindPS(pixelShaders[PSTYPE_DIRLIGHT], context);
+				wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_DIRLIGHT], threadID);
 			}
 			break;
 		case 1:
-			BindPS(pixelShaders[PSTYPE_POINTLIGHT], context);
+			wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
 			break;
 		case 2:
-			BindPS(pixelShaders[PSTYPE_SPOTLIGHT], context);
+			wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
 			break;
 		default:
 			break;
@@ -1940,11 +1727,11 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
 					(*lcb).mShM[shmap]=l->shadowCam[shmap].getVP();
 					if(l->shadowMaps_dirLight[shmap].depth)
-						BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,TEXSLOT_SHADOW0+shmap,context);
+						wiRenderer::graphicsDevice->BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,TEXSLOT_SHADOW0+shmap,threadID);
 				}
-				UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,context);
+				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,threadID);
 
-				Draw(3, context);
+				wiRenderer::graphicsDevice->Draw(3, threadID);
 			}
 			else if(type==1) //point
 			{
@@ -1958,11 +1745,11 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 				{
 					(*lcb).enerdis.w = 1.f;
 					if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
-						BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW_CUBE, context);
+						wiRenderer::graphicsDevice->BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW_CUBE, threadID);
 				}
-				UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, context);
+				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, threadID);
 
-				Draw(240, context);
+				wiRenderer::graphicsDevice->Draw(240, threadID);
 			}
 			else if(type==2) //spot
 			{
@@ -1989,11 +1776,11 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 				{
 					(*lcb).mShM = l->shadowCam[0].getVP();
 					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
-						BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW0, context);
+						wiRenderer::graphicsDevice->BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW0, threadID);
 				}
-				UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], lcb, context);
+				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], lcb, threadID);
 
-				Draw(192, context);
+				wiRenderer::graphicsDevice->Draw(192, threadID);
 			}
 		}
 
@@ -2002,7 +1789,7 @@ void wiRenderer::DrawLights(Camera* camera, DeviceContext context, unsigned int 
 
 	}
 }
-void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
+void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	
 	static thread_local Frustum frustum = Frustum();
@@ -2016,29 +1803,29 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 		if(!culledObjects.empty())
 		{
 
-		BindPrimitiveTopology(TRIANGLELIST,context);
-		BindVertexLayout(nullptr);
-		BindVertexBuffer(nullptr, 0, 0, context);
-		BindIndexBuffer(nullptr, context);
-		BindBlendState(blendStates[BSTYPE_ADDITIVE],context);
-		BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,context);
-		BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED],context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST,threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(nullptr);
+		wiRenderer::graphicsDevice->BindVertexBuffer(nullptr, 0, 0, threadID);
+		wiRenderer::graphicsDevice->BindIndexBuffer(nullptr, threadID);
+		wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
+		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,threadID);
+		wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED],threadID);
 
 		
-		BindPS(pixelShaders[PSTYPE_VOLUMELIGHT],context);
+		wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_VOLUMELIGHT],threadID);
 
-		BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), context);
-		BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), context);
+		wiRenderer::graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		wiRenderer::graphicsDevice->BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
 
 		for(int type=1;type<3;++type){
 
 			
 			if(type<=1){
-				BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT],context);
+				wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT],threadID);
 			}
 			else{
-				BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT],context);
+				wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT],threadID);
 			}
 
 			for(Cullable* c : culledObjects){
@@ -2078,12 +1865,12 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 					(*lcb).enerdis=l->enerDis;
 					(*lcb).enerdis.w=sca;
 
-					UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT],lcb,context);
+					wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT],lcb,threadID);
 
 					if(type<=1)
-						Draw(108,context);
+						wiRenderer::graphicsDevice->Draw(108,threadID);
 					else
-						Draw(192,context);
+						wiRenderer::graphicsDevice->Draw(192,threadID);
 				}
 			}
 
@@ -2093,7 +1880,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, DeviceContext context)
 }
 
 
-void wiRenderer::DrawLensFlares(DeviceContext context){
+void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID){
 	
 		
 	CulledList culledObjects;
@@ -2122,26 +1909,26 @@ void wiRenderer::DrawLensFlares(DeviceContext context){
 			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetScreenWidth(),(float)GetScreenHeight(),0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
 
 			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
-				wiLensFlare::Draw(context,flarePos,l->lensFlareRimTextures);
+				wiLensFlare::Draw(threadID,flarePos,l->lensFlareRimTextures);
 
 		}
 
 	}
 }
-void wiRenderer::ClearShadowMaps(DeviceContext context){
+void wiRenderer::ClearShadowMaps(GRAPHICSTHREAD threadID){
 	if (GetGameSpeed())
 	{
-		UnbindTextures(TEXSLOT_SHADOW0, 1 + TEXSLOT_SHADOW_CUBE - TEXSLOT_SHADOW0, context);
+		wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_SHADOW0, 1 + TEXSLOT_SHADOW_CUBE - TEXSLOT_SHADOW0, threadID);
 
 		for (unsigned int index = 0; index < Light::shadowMaps_pointLight.size(); ++index) {
-			Light::shadowMaps_pointLight[index].Activate(context);
+			Light::shadowMaps_pointLight[index].Activate(threadID);
 		}
 		for (unsigned int index = 0; index < Light::shadowMaps_spotLight.size(); ++index) {
-			Light::shadowMaps_spotLight[index].Activate(context);
+			Light::shadowMaps_spotLight[index].Activate(threadID);
 		}
 	}
 }
-void wiRenderer::DrawForShadowMap(DeviceContext context)
+void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
 	if (GameSpeed) {
 
@@ -2152,17 +1939,17 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 		if (culledLights.size() > 0)
 		{
 
-			BindPrimitiveTopology(TRIANGLELIST, context);
-			BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], context);
+			wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST, threadID);
+			wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 
 
-			BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, context);
+			wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
 
-			BindBlendState(blendStates[BSTYPE_OPAQUE], context);
+			wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-			BindPS(pixelShaders[PSTYPE_SHADOW], context);
+			wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
 
-			BindVS(vertexShaders[VSTYPE_SHADOW], context);
+			wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
 
 
 			set<Light*, Cullable> orderedSpotLights;
@@ -2206,7 +1993,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, 0, true);
 						}
 
-						l->shadowMaps_dirLight[index].Activate(context);
+						l->shadowMaps_dirLight[index].Activate(threadID);
 
 						const float siz = l->shadowCam[index].size * 0.5f;
 						const float f = l->shadowCam[index].farplane;
@@ -2232,14 +2019,14 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									if (visibleInstances.size() && !mesh->isBillboarded) {
 
 										if (!mesh->doubleSided)
-											BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
+											wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
 										else
-											BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], context);
+											wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
 
-										//D3D11_MAPPED_SUBRESOURCE mappedResource;
+										//MAPPED_SUBRESOURCE mappedResource;
 										static thread_local ShadowCB* cb = new ShadowCB;
 										(*cb).mVP = l->shadowCam[index].getVP();
-										UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, context);
+										wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, threadID);
 
 
 										int k = 0;
@@ -2255,12 +2042,12 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 										if (k < 1)
 											continue;
 
-										Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
+										Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-										BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
-										BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
-										BindIndexBuffer(mesh->meshIndexBuff, context);
+										wiRenderer::graphicsDevice->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+										wiRenderer::graphicsDevice->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+										wiRenderer::graphicsDevice->BindIndexBuffer(mesh->meshIndexBuff, threadID);
 
 
 										int matsiz = mesh->materialIndices.size();
@@ -2268,17 +2055,17 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 										for (Material* iMat : mesh->materials) {
 
 											if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-												BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
+												wiRenderer::graphicsDevice->BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
 
 
 
 												static thread_local MaterialCB* mcb = new MaterialCB;
 												(*mcb).Create(*iMat, m);
 
-												UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
+												wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
 
 
-												DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
+												wiRenderer::graphicsDevice->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
 
 												m++;
 											}
@@ -2308,7 +2095,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 					CulledList culledObjects;
 					CulledCollection culledRenderer;
 
-					Light::shadowMaps_spotLight[i].Set(context);
+					Light::shadowMaps_spotLight[i].Set(threadID);
 					static thread_local Frustum frustum = Frustum();
 					XMFLOAT4X4 proj, view;
 					XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam[0].Projection));
@@ -2333,14 +2120,14 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 								if (visibleInstances.size() && !mesh->isBillboarded) {
 
 									if (!mesh->doubleSided)
-										BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
+										wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
 									else
-										BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], context);
+										wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
 
-									//D3D11_MAPPED_SUBRESOURCE mappedResource;
+									//MAPPED_SUBRESOURCE mappedResource;
 									static thread_local ShadowCB* cb = new ShadowCB;
 									(*cb).mVP = l->shadowCam[index].getVP();
-									UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, context);
+									wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, threadID);
 
 
 									int k = 0;
@@ -2356,12 +2143,12 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									if (k < 1)
 										continue;
 
-									Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
+									Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-									BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
-									BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
-									BindIndexBuffer(mesh->meshIndexBuff, context);
+									wiRenderer::graphicsDevice->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+									wiRenderer::graphicsDevice->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+									wiRenderer::graphicsDevice->BindIndexBuffer(mesh->meshIndexBuff, threadID);
 
 
 									int matsiz = mesh->materialIndices.size();
@@ -2369,17 +2156,17 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 									for (Material* iMat : mesh->materials) {
 
 										if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-											BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
+											wiRenderer::graphicsDevice->BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
 
 
 
 											static thread_local MaterialCB* mcb = new MaterialCB;
 											(*mcb).Create(*iMat, m);
 
-											UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
+											wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
 
 
-											DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
+											wiRenderer::graphicsDevice->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
 
 											m++;
 										}
@@ -2399,12 +2186,12 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 			//POINTLIGHTS
 			if(!orderedPointLights.empty())
 			{
-				BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], context);
-				BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], context);
-				BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], context);
+				wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
+				wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
+				wiRenderer::graphicsDevice->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
 
-				BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), context);
-				BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), context);
+				wiRenderer::graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
+				wiRenderer::graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 				int i = 0;
 				for (Light* l : orderedPointLights)
@@ -2414,19 +2201,19 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 					
 					l->shadowMap_index = i;
 
-					Light::shadowMaps_pointLight[i].Set(context);
+					Light::shadowMaps_pointLight[i].Set(threadID);
 
-					//D3D11_MAPPED_SUBRESOURCE mappedResource;
+					//MAPPED_SUBRESOURCE mappedResource;
 					static thread_local PointLightCB* lcb = new PointLightCB;
 					(*lcb).enerdis = l->enerDis;
 					(*lcb).pos = l->translation;
-					UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, context);
+					wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, threadID);
 
 					static thread_local CubeMapRenderCB* cb = new CubeMapRenderCB;
 					for (unsigned int shcam = 0; shcam < l->shadowCam.size(); ++shcam)
 						(*cb).mViewProjection[shcam] = l->shadowCam[shcam].getVP();
 
-					UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, context);
+					wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, threadID);
 
 					CulledList culledObjects;
 					CulledCollection culledRenderer;
@@ -2444,9 +2231,9 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 						if (!mesh->isBillboarded && !visibleInstances.empty()) {
 
 							if (!mesh->doubleSided)
-								BindRasterizerState(rasterizers[RSTYPE_SHADOW], context);
+								wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
 							else
-								BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], context);
+								wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
 
 
 
@@ -2463,26 +2250,26 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 							if (k < 1)
 								continue;
 
-							Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
+							Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-							BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
-							BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
-							BindIndexBuffer(mesh->meshIndexBuff, context);
+							wiRenderer::graphicsDevice->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+							wiRenderer::graphicsDevice->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+							wiRenderer::graphicsDevice->BindIndexBuffer(mesh->meshIndexBuff, threadID);
 
 
 							int matsiz = mesh->materialIndices.size();
 							int m = 0;
 							for (Material* iMat : mesh->materials) {
 								if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-									BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
+									wiRenderer::graphicsDevice->BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
 
 									static thread_local MaterialCB* mcb = new MaterialCB;
 									(*mcb).Create(*iMat, m);
 
-									UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
+									wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
 
-									DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
+									wiRenderer::graphicsDevice->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
 								}
 								m++;
 							}
@@ -2493,7 +2280,7 @@ void wiRenderer::DrawForShadowMap(DeviceContext context)
 					i++;
 				}
 
-				BindGS(nullptr, context);
+				wiRenderer::graphicsDevice->BindGS(nullptr, threadID);
 			}
 		}
 	}
@@ -2529,7 +2316,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 }
 
 
-void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContext context
+void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
 				  , bool BlackOut, bool isReflection, SHADERTYPE shaded
 				  , TextureView refRes, bool grass, GRAPHICSTHREAD thread)
 {
@@ -2581,9 +2368,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 		envProbeCB->mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
 		envProbeCB->mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
 		envProbeCB->mTransform = XMMatrixTranspose(envProbeCB->mTransform);
-		UpdateBuffer(constantBuffers[CBTYPE_MISC], envProbeCB, context);
-		BindTexturePS(envMaps[0], TEXSLOT_ENV0, context);
-		BindTexturePS(envMaps[1], TEXSLOT_ENV1, context);
+		wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MISC], envProbeCB, threadID);
+		wiRenderer::graphicsDevice->BindTexturePS(envMaps[0], TEXSLOT_ENV0, threadID);
+		wiRenderer::graphicsDevice->BindTexturePS(envMaps[1], TEXSLOT_ENV1, threadID);
 		
 
 
@@ -2591,67 +2378,67 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 			if(grass){
 				for(wiHairParticle* hair : ((Object*)object)->hParticleSystems){
-					hair->Draw(camera,context);
+					hair->Draw(camera,threadID);
 				}
 			}
 		}
 
 		if(DX11Eff && tessF) 
-			BindPrimitiveTopology(PATCHLIST,context);
+			wiRenderer::graphicsDevice->BindPrimitiveTopology(PATCHLIST,threadID);
 		else		
-			BindPrimitiveTopology(TRIANGLELIST,context);
-		BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],context);
+			wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST,threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],threadID);
 
 		if(DX11Eff && tessF)
-			BindVS(vertexShaders[VSTYPE_OBJECT],context);
+			wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_OBJECT],threadID);
 		else
 		{
 			if (isReflection)
 			{
-				BindVS(vertexShaders[VSTYPE_OBJECT_REFLECTION], context);
+				wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_OBJECT_REFLECTION], threadID);
 			}
 			else
 			{
-				BindVS(vertexShaders[VSTYPE_OBJECT10], context);
+				wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
 			}
 		}
 		if(DX11Eff && tessF)
-			BindHS(hullShaders[HSTYPE_OBJECT],context);
+			wiRenderer::graphicsDevice->BindHS(hullShaders[HSTYPE_OBJECT],threadID);
 		else
-			BindHS(nullptr,context);
+			wiRenderer::graphicsDevice->BindHS(nullptr,threadID);
 		if(DX11Eff && tessF) 
-			BindDS(domainShaders[DSTYPE_OBJECT],context);
+			wiRenderer::graphicsDevice->BindDS(domainShaders[DSTYPE_OBJECT],threadID);
 		else		
-			BindDS(nullptr,context);
+			wiRenderer::graphicsDevice->BindDS(nullptr,threadID);
 
 		if (wireRender)
-			BindPS(pixelShaders[PSTYPE_SIMPLEST], context);
+			wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
 		else
 			if (BlackOut)
-				BindPS(pixelShaders[PSTYPE_BLACKOUT], context);
+				wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_BLACKOUT], threadID);
 			else if (shaded == SHADERTYPE_NONE)
-				BindPS(pixelShaders[PSTYPE_TEXTUREONLY], context);
+				wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
 			else if (shaded == SHADERTYPE_DEFERRED)
-				BindPS(pixelShaders[PSTYPE_OBJECT], context);
+				wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_OBJECT], threadID);
 			else if (shaded == SHADERTYPE_FORWARD_SIMPLE)
-				BindPS(pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE], context);
+				wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE], threadID);
 			else
 				return;
 
 
-		BindBlendState(blendStates[BSTYPE_OPAQUE],context);
+			wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
 		if(!wireRender) {
 			if (enviroMap != nullptr)
 			{
-				BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
+				wiRenderer::graphicsDevice->BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 			}
 			else
 			{
-				UnbindTextures(TEXSLOT_ENV_GLOBAL, 1, context);
+				wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ENV_GLOBAL, 1, threadID);
 			}
 			if(refRes != nullptr) 
-				BindTexturePS(refRes,TEXSLOT_ONDEMAND5,context);
+				wiRenderer::graphicsDevice->BindTexturePS(refRes,TEXSLOT_ONDEMAND5,threadID);
 		}
 
 
@@ -2661,9 +2448,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 
 
 			if(!mesh->doubleSided)
-				BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_FRONT],context);
+				wiRenderer::graphicsDevice->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_FRONT],threadID);
 			else
-				BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_DOUBLESIDED],context);
+				wiRenderer::graphicsDevice->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_DOUBLESIDED],threadID);
 
 			int matsiz = mesh->materialIndices.size();
 
@@ -2680,12 +2467,12 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 			if(k<1)
 				continue;
 
-			Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
+			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 				
 				
-			BindIndexBuffer(mesh->meshIndexBuff,context);
-			BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
-			BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
+			wiRenderer::graphicsDevice->BindIndexBuffer(mesh->meshIndexBuff,threadID);
+			wiRenderer::graphicsDevice->BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),threadID);
+			wiRenderer::graphicsDevice->BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
 
 			int m=0;
 			for(Material* iMat : mesh->materials){
@@ -2693,27 +2480,27 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 				if(!iMat->IsTransparent() && !iMat->isSky && !iMat->water){
 					
 					if(iMat->shadeless)
-						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SHADELESS,context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SHADELESS,threadID);
 					if(iMat->subsurface_scattering)
-						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SKIN,context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SKIN,threadID);
 					else
-						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],mesh->stencilRef,context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],mesh->stencilRef,threadID);
 
 
 					static thread_local MaterialCB* mcb = new MaterialCB;
 					(*mcb).Create(*iMat, m);
 
-					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
+					wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
 					
 
-					if(!wireRender) BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0,context);
-					if(!wireRender) BindTexturePS(iMat->refMap, TEXSLOT_ONDEMAND1,context);
-					if(!wireRender) BindTexturePS(iMat->normalMap, TEXSLOT_ONDEMAND2,context);
-					if(!wireRender) BindTexturePS(iMat->specularMap, TEXSLOT_ONDEMAND3,context);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0,threadID);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->refMap, TEXSLOT_ONDEMAND1,threadID);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->normalMap, TEXSLOT_ONDEMAND2,threadID);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->specularMap, TEXSLOT_ONDEMAND3,threadID);
 					if(DX11Eff)
-						BindTextureDS(iMat->displacementMap, TEXSLOT_ONDEMAND4,context);
+						wiRenderer::graphicsDevice->BindTextureDS(iMat->displacementMap, TEXSLOT_ONDEMAND4,threadID);
 					
-					DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
+					wiRenderer::graphicsDevice->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),threadID);
 				}
 				m++;
 			}
@@ -2721,17 +2508,17 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, DeviceContex
 		}
 
 		
-		BindPS(nullptr,context);
-		BindVS(nullptr,context);
-		BindDS(nullptr,context);
-		BindHS(nullptr,context);
+		wiRenderer::graphicsDevice->BindPS(nullptr,threadID);
+		wiRenderer::graphicsDevice->BindVS(nullptr,threadID);
+		wiRenderer::graphicsDevice->BindDS(nullptr,threadID);
+		wiRenderer::graphicsDevice->BindHS(nullptr,threadID);
 
 	}
 
 }
 
 void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
-	, TextureView waterRippleNormals, DeviceContext context)
+	, TextureView waterRippleNormals, GRAPHICSTHREAD threadID)
 {
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -2760,9 +2547,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 		for(Cullable* object : culledObjects)
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 
-		BindPrimitiveTopology(TRIANGLELIST,context);
-		BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],context);
-		BindVS(vertexShaders[VSTYPE_OBJECT10],context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST,threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],threadID);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_OBJECT10],threadID);
 
 	
 		if (!wireRender)
@@ -2770,20 +2557,20 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 
 			if (enviroMap != nullptr)
 			{
-				BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
+				wiRenderer::graphicsDevice->BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 			}
 			else
 			{
-				UnbindTextures(TEXSLOT_ENV_GLOBAL, 1, context);
+				wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ENV_GLOBAL, 1, threadID);
 			}
-			BindTexturePS(refRes, TEXSLOT_ONDEMAND5,context);
-			BindTexturePS(refracRes, TEXSLOT_ONDEMAND6,context);
-			//BindTexturePS(depth,7,context);
-			BindTexturePS(waterRippleNormals, TEXSLOT_ONDEMAND7, context);
+			wiRenderer::graphicsDevice->BindTexturePS(refRes, TEXSLOT_ONDEMAND5,threadID);
+			wiRenderer::graphicsDevice->BindTexturePS(refracRes, TEXSLOT_ONDEMAND6,threadID);
+			//BindTexturePS(depth,7,threadID);
+			wiRenderer::graphicsDevice->BindTexturePS(waterRippleNormals, TEXSLOT_ONDEMAND7, threadID);
 		}
 
 
-		BindBlendState(blendStates[BSTYPE_OPAQUE],context);
+		wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 	
 		RENDERTYPE lastRenderType = RENDERTYPE_VOID;
 
@@ -2804,9 +2591,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 				continue;
 
 			if (!mesh->doubleSided)
-				BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], context);
+				wiRenderer::graphicsDevice->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
 			else
-				BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], context);
+				wiRenderer::graphicsDevice->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
 
 
 			int matsiz = mesh->materialIndices.size();
@@ -2826,12 +2613,12 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 			if (k<1)
 				continue;
 
-			Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
+			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 				
-			BindIndexBuffer(mesh->meshIndexBuff,context);
-			BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),context);
-			BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),context);
+			wiRenderer::graphicsDevice->BindIndexBuffer(mesh->meshIndexBuff,threadID);
+			wiRenderer::graphicsDevice->BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),threadID);
+			wiRenderer::graphicsDevice->BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
 				
 
 			int m=0;
@@ -2844,30 +2631,30 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 					static thread_local MaterialCB* mcb = new MaterialCB;
 					(*mcb).Create(*iMat, m);
 
-					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
+					wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
 
-					if(!wireRender) BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0,context);
-					if(!wireRender) BindTexturePS(iMat->refMap, TEXSLOT_ONDEMAND1,context);
-					if(!wireRender) BindTexturePS(iMat->normalMap, TEXSLOT_ONDEMAND2,context);
-					if(!wireRender) BindTexturePS(iMat->specularMap, TEXSLOT_ONDEMAND3,context);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0,threadID);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->refMap, TEXSLOT_ONDEMAND1,threadID);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->normalMap, TEXSLOT_ONDEMAND2,threadID);
+					if(!wireRender) wiRenderer::graphicsDevice->BindTexturePS(iMat->specularMap, TEXSLOT_ONDEMAND3,threadID);
 
 					if (iMat->IsTransparent() && lastRenderType != RENDERTYPE_TRANSPARENT)
 					{
 						lastRenderType = RENDERTYPE_TRANSPARENT;
 
-						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_TRANSPARENT, context);
-						BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_OBJECT_TRANSPARENT], context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_TRANSPARENT, threadID);
+						wiRenderer::graphicsDevice->BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_OBJECT_TRANSPARENT], threadID);
 					}
 					if (iMat->IsWater() && lastRenderType != RENDERTYPE_WATER)
 					{
 						lastRenderType = RENDERTYPE_WATER;
 
-						BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, context);
-						BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_WATER], context);
-						BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
+						wiRenderer::graphicsDevice->BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_WATER], threadID);
+						wiRenderer::graphicsDevice->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
 					}
 					
-					DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),context);
+					wiRenderer::graphicsDevice->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),threadID);
 				}
 				m++;
 			}
@@ -2877,49 +2664,49 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, Tex
 }
 
 
-void wiRenderer::DrawSky(DeviceContext context, bool isReflection)
+void wiRenderer::DrawSky(GRAPHICSTHREAD threadID, bool isReflection)
 {
 	if (enviroMap == nullptr)
 		return;
 
-	BindPrimitiveTopology(TRIANGLELIST,context);
-	BindRasterizerState(rasterizers[RSTYPE_BACK],context);
-	BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,context);
-	BindBlendState(blendStates[BSTYPE_OPAQUE],context);
+	wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST,threadID);
+	wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
+	wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,threadID);
+	wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 	
 	if (!isReflection)
 	{
-		BindVS(vertexShaders[VSTYPE_SKY], context);
-		BindPS(pixelShaders[PSTYPE_SKY], context);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_SKY], threadID);
+		wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_SKY], threadID);
 	}
 	else
 	{
-		BindVS(vertexShaders[VSTYPE_SKY_REFLECTION], context);
-		BindPS(pixelShaders[PSTYPE_SKY_REFLECTION], context);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_SKY_REFLECTION], threadID);
+		wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_SKY_REFLECTION], threadID);
 	}
 	
-	BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
+	wiRenderer::graphicsDevice->BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 
-	BindVertexBuffer(nullptr,0,0,context);
-	BindVertexLayout(nullptr, context);
-	Draw(240,context);
+	wiRenderer::graphicsDevice->BindVertexBuffer(nullptr,0,0,threadID);
+	wiRenderer::graphicsDevice->BindVertexLayout(nullptr, threadID);
+	wiRenderer::graphicsDevice->Draw(240,threadID);
 }
-void wiRenderer::DrawSun(DeviceContext context)
+void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 {
-	BindPrimitiveTopology(TRIANGLELIST, context);
-	BindRasterizerState(rasterizers[RSTYPE_BACK], context);
-	BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, context);
-	BindBlendState(blendStates[BSTYPE_ADDITIVE], context);
+	wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+	wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
+	wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 
-	BindVS(vertexShaders[VSTYPE_SKY], context);
-	BindPS(pixelShaders[PSTYPE_SUN], context);
+	wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_SKY], threadID);
+	wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_SUN], threadID);
 
-	BindVertexBuffer(nullptr, 0, 0, context);
-	BindVertexLayout(nullptr, context);
-	Draw(240, context);
+	wiRenderer::graphicsDevice->BindVertexBuffer(nullptr, 0, 0, threadID);
+	wiRenderer::graphicsDevice->BindVertexLayout(nullptr, threadID);
+	wiRenderer::graphicsDevice->Draw(240, threadID);
 }
 
-void wiRenderer::DrawDecals(Camera* camera, DeviceContext context)
+void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	bool boundCB = false;
 	for (Model* model : GetScene().models)
@@ -2930,28 +2717,28 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context)
 		if (!boundCB)
 		{
 			boundCB = true;
-			BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),context);
+			wiRenderer::graphicsDevice->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
 		}
 
-		//BindTexturePS(depth, 1, context);
-		BindVS(vertexShaders[VSTYPE_DECAL], context);
-		BindPS(pixelShaders[PSTYPE_DECAL], context);
-		BindRasterizerState(rasterizers[RSTYPE_BACK], context);
-		BindBlendState(blendStates[BSTYPE_TRANSPARENT], context);
-		BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD_MATCH], STENCILREF::STENCILREF_DEFAULT, context);
-		BindVertexLayout(nullptr, context);
-		BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, context);
+		//BindTexturePS(depth, 1, threadID);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_DECAL], threadID);
+		wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_DECAL], threadID);
+		wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+		wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD_MATCH], STENCILREF::STENCILREF_DEFAULT, threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(nullptr, threadID);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
 
 		for (Decal* decal : model->decals) {
 
 			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds.corners)) {
 
-				BindTexturePS(decal->texture, TEXSLOT_ONDEMAND0, context);
-				BindTexturePS(decal->normal, TEXSLOT_ONDEMAND1, context);
+				wiRenderer::graphicsDevice->BindTexturePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
+				wiRenderer::graphicsDevice->BindTexturePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
 
 				static thread_local MiscCB* dcbvs = new MiscCB;
 				(*dcbvs).mTransform =XMMatrixTranspose(XMLoadFloat4x4(&decal->world)*camera->GetViewProjection());
-				UpdateBuffer(constantBuffers[CBTYPE_MISC], dcbvs, context);
+				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MISC], dcbvs, threadID);
 
 				static thread_local DecalCB* dcbps = new DecalCB;
 				dcbps->mDecalVP =
@@ -2966,9 +2753,9 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context)
 				XMStoreFloat3(&dcbps->eye, camera->GetEye());
 				dcbps->opacity = wiMath::Clamp((decal->life <= -2 ? 1 : decal->life < decal->fadeStart ? decal->life / decal->fadeStart : 1), 0, 1);
 				dcbps->front = decal->front;
-				UpdateBuffer(constantBuffers[CBTYPE_DECAL], dcbps, context);
+				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_DECAL], dcbps, threadID);
 
-				Draw(36, context);
+				wiRenderer::graphicsDevice->Draw(36, threadID);
 
 			}
 
@@ -2976,7 +2763,7 @@ void wiRenderer::DrawDecals(Camera* camera, DeviceContext context)
 	}
 }
 
-void wiRenderer::UpdateWorldCB(DeviceContext context)
+void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 {
 	static thread_local WorldCB* cb = new WorldCB;
 
@@ -2989,9 +2776,9 @@ void wiRenderer::UpdateWorldCB(DeviceContext context)
 	XMStoreFloat4(&(*cb).mSun, GetSunPosition());
 	(*cb).mSunColor = GetSunColor();
 
-	UpdateBuffer(constantBuffers[CBTYPE_WORLD], cb, context);
+	wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_WORLD], cb, threadID);
 }
-void wiRenderer::UpdateFrameCB(DeviceContext context)
+void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
 	static thread_local FrameCB* cb = new FrameCB;
 
@@ -3001,9 +2788,9 @@ void wiRenderer::UpdateFrameCB(DeviceContext context)
 	(*cb).mWindWaveSize = wind.waveSize;
 	(*cb).mWindDirection = wind.direction;
 
-	UpdateBuffer(constantBuffers[CBTYPE_FRAME], cb, context);
+	wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_FRAME], cb, threadID);
 }
-void wiRenderer::UpdateCameraCB(DeviceContext context)
+void wiRenderer::UpdateCameraCB(GRAPHICSTHREAD threadID)
 {
 	static thread_local CameraCB* cb = new CameraCB;
 
@@ -3025,28 +2812,28 @@ void wiRenderer::UpdateCameraCB(DeviceContext context)
 	(*cb).mZNearP = camera->zNearP;
 	(*cb).mZFarP = camera->zFarP;
 
-	UpdateBuffer(constantBuffers[CBTYPE_CAMERA], cb, context);
+	wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], cb, threadID);
 }
-void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, DeviceContext context)
+void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID)
 {
-	UpdateBuffer(constantBuffers[CBTYPE_CLIPPLANE], &clipPlane, context);
+	wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_CLIPPLANE], &clipPlane, threadID);
 }
-void wiRenderer::UpdateGBuffer(vector<TextureView> gbuffer, DeviceContext context)
+void wiRenderer::UpdateGBuffer(vector<TextureView> gbuffer, GRAPHICSTHREAD threadID)
 {
 	for (unsigned int i = 0; i < gbuffer.size(); ++i)
 	{
-		BindTexturePS(gbuffer[i], TEXSLOT_GBUFFER0 + i, context);
+		wiRenderer::graphicsDevice->BindTexturePS(gbuffer[i], TEXSLOT_GBUFFER0 + i, threadID);
 	}
 }
-void wiRenderer::UpdateDepthBuffer(TextureView depth, TextureView linearDepth, DeviceContext context)
+void wiRenderer::UpdateDepthBuffer(TextureView depth, TextureView linearDepth, GRAPHICSTHREAD threadID)
 {
-	BindTexturePS(depth, TEXSLOT_DEPTH, context);
-	BindTextureVS(depth, TEXSLOT_DEPTH, context);
-	BindTextureGS(depth, TEXSLOT_DEPTH, context);
+	wiRenderer::graphicsDevice->BindTexturePS(depth, TEXSLOT_DEPTH, threadID);
+	wiRenderer::graphicsDevice->BindTextureVS(depth, TEXSLOT_DEPTH, threadID);
+	wiRenderer::graphicsDevice->BindTextureGS(depth, TEXSLOT_DEPTH, threadID);
 
-	BindTexturePS(linearDepth, TEXSLOT_LINEARDEPTH, context);
-	BindTextureVS(linearDepth, TEXSLOT_LINEARDEPTH, context);
-	BindTextureGS(linearDepth, TEXSLOT_LINEARDEPTH, context);
+	wiRenderer::graphicsDevice->BindTexturePS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	wiRenderer::graphicsDevice->BindTextureVS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	wiRenderer::graphicsDevice->BindTextureGS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
 }
 
 void wiRenderer::FinishLoading()
@@ -3264,8 +3051,8 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 			physicsEngine->registerObject(o);
 		}
 	}
-	
-	Lock();
+
+	wiRenderer::graphicsDevice->LOCK();
 
 	Update();
 
@@ -3293,7 +3080,7 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 	SetUpCubes();
 	SetUpBoneLines();
 
-	Unlock();
+	wiRenderer::graphicsDevice->UNLOCK();
 
 
 	LoadWorldInfo(dir, name);
@@ -3305,9 +3092,9 @@ void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
 {
 	LoadWiWorldInfo(dir, name+".wiw", GetScene().worldInfo, GetScene().wind);
 
-	Lock();
-	UpdateWorldCB(getImmediateContext());
-	Unlock();
+	wiRenderer::graphicsDevice->LOCK();
+	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::graphicsDevice->UNLOCK();
 }
 Scene& wiRenderer::GetScene()
 {
@@ -3395,21 +3182,21 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	probe->transform(position);
 	probe->cubeMap.InitializeCube(resolution, 1, true, DXGI_FORMAT_R16G16B16A16_FLOAT, 0);
 
-	Lock();
+	wiRenderer::graphicsDevice->LOCK();
 
-	DeviceContext context = getImmediateContext();
+	GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
 
-	probe->cubeMap.Activate(context, 0, 0, 0, 1);
+	probe->cubeMap.Activate(threadID, 0, 0, 0, 1);
 
-	BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], context);
-	BindPrimitiveTopology(TRIANGLELIST, context);
-	BindBlendState(blendStates[BSTYPE_OPAQUE], context);
+	wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+	wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-	BindPS(pixelShaders[PSTYPE_ENVMAP], context);
-	BindVS(vertexShaders[VSTYPE_ENVMAP], context);
-	BindGS(geometryShaders[GSTYPE_ENVMAP], context);
+	wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_ENVMAP], threadID);
+	wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
+	wiRenderer::graphicsDevice->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
 
-	BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), context);
+	wiRenderer::graphicsDevice->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 
 	vector<SHCAM> cameras;
@@ -3434,7 +3221,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 		(*cb).mViewProjection[i] = cameras[i].getVP();
 	}
 
-	UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, context);
+	wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, threadID);
 
 
 	CulledList culledObjects;
@@ -3455,9 +3242,9 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 		if (!mesh->isBillboarded && !visibleInstances.empty()) {
 
 			if (!mesh->doubleSided)
-				BindRasterizerState(rasterizers[RSTYPE_FRONT], context);
+				wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 			else
-				BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], context);
+				wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
 
 
 
@@ -3474,12 +3261,12 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 			if (k < 1)
 				continue;
 
-			Mesh::UpdateRenderableInstances(visibleInstances.size(), context);
+			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-			BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), context);
-			BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), context);
-			BindIndexBuffer(mesh->meshIndexBuff, context);
+			wiRenderer::graphicsDevice->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+			wiRenderer::graphicsDevice->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+			wiRenderer::graphicsDevice->BindIndexBuffer(mesh->meshIndexBuff, threadID);
 
 
 			int matsiz = mesh->materialIndices.size();
@@ -3488,20 +3275,20 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 				if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
 
 					if (iMat->shadeless)
-						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, threadID);
 					if (iMat->subsurface_scattering)
-						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
 					else
-						BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, context);
+						wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 
-					BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, context);
+					wiRenderer::graphicsDevice->BindTexturePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
 
 					static thread_local MaterialCB* mcb = new MaterialCB;
 					(*mcb).Create(*iMat, m);
 
-					UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, context);
+					wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
 
-					DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), context);
+					wiRenderer::graphicsDevice->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
 				}
 				m++;
 			}
@@ -3513,35 +3300,35 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 	// sky
 	{
-		BindPrimitiveTopology(TRIANGLELIST, context);
-		BindRasterizerState(rasterizers[RSTYPE_BACK], context);
-		BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, context);
-		BindBlendState(blendStates[BSTYPE_OPAQUE], context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLELIST, threadID);
+		wiRenderer::graphicsDevice->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
+		wiRenderer::graphicsDevice->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-		BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], context);
-		BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], context);
-		BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], context);
+		wiRenderer::graphicsDevice->BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], threadID);
+		wiRenderer::graphicsDevice->BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], threadID);
+		wiRenderer::graphicsDevice->BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], threadID);
 
-		BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, context);
+		wiRenderer::graphicsDevice->BindTexturePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 
-		BindVertexBuffer(nullptr, 0, 0, context);
-		BindVertexLayout(nullptr, context);
-		Draw(240, context);
+		wiRenderer::graphicsDevice->BindVertexBuffer(nullptr, 0, 0, threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(nullptr, threadID);
+		wiRenderer::graphicsDevice->Draw(240, threadID);
 	}
 
 
-	BindGS(nullptr, context);
+	wiRenderer::graphicsDevice->BindGS(nullptr, threadID);
 
 
-	probe->cubeMap.Deactivate(context);
+	probe->cubeMap.Deactivate(threadID);
 
-	GenerateMips(probe->cubeMap.shaderResource[0], context);
+	wiRenderer::graphicsDevice->GenerateMips(probe->cubeMap.shaderResource[0], threadID);
 
 	enviroMap = probe->cubeMap.shaderResource.front();
 
 	scene->environmentProbes.push_back(probe);
 
-	Unlock();
+	wiRenderer::graphicsDevice->UNLOCK();
 }
 
 void wiRenderer::MaterialCB::Create(const Material& mat,UINT materialIndex){

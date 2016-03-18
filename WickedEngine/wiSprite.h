@@ -22,9 +22,9 @@ public:
 
 	void Update(float);
 	void Update();
-	void Draw(TextureView refracRes, DeviceContext context);
+	void Draw(TextureView refracRes, GRAPHICSTHREAD threadID);
 	void Draw();
-	void DrawNormal(DeviceContext context);
+	void DrawNormal(GRAPHICSTHREAD threadID);
 
 	string name;
 

@@ -61,7 +61,7 @@ public:
 	void CleanUp();
 
 	void SetUpPatches();
-	void Draw(Camera* camera, ID3D11DeviceContext *context);
+	void Draw(Camera* camera, GRAPHICSTHREAD threadID);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();

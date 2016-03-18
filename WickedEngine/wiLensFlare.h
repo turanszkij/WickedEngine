@@ -33,7 +33,7 @@ private:
 public:
 	static void Initialize();
 	static void CleanUp();
-	static void Draw(DeviceContext context, const XMVECTOR& lightPos, vector<TextureView>& rims);
+	static void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<TextureView>& rims);
 };
 
 #endif

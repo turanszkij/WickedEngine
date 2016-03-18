@@ -64,15 +64,15 @@ protected:
 
 	vector<wiTaskThread*> workerThreads;
 
-	virtual void RenderFrameSetUp(DeviceContext context = wiRenderer::getImmediateContext());
-	virtual void RenderReflections(DeviceContext context = wiRenderer::getImmediateContext());
-	virtual void RenderShadows(DeviceContext context = wiRenderer::getImmediateContext());
-	virtual void RenderScene(DeviceContext context = wiRenderer::getImmediateContext()) = 0;
-	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, DeviceContext context = wiRenderer::getImmediateContext());
-	virtual void RenderBloom(DeviceContext context = wiRenderer::getImmediateContext());
-	virtual void RenderLightShafts(wiRenderTarget& mainRT, DeviceContext context = wiRenderer::getImmediateContext());
-	virtual void RenderComposition1(wiRenderTarget& shadedSceneRT, DeviceContext context = wiRenderer::getImmediateContext());
-	virtual void RenderComposition2(DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderReflections(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderShadows(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderBloom(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderLightShafts(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderComposition1(wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderComposition2(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderColorGradedComposition();
 public:
 	inline float getLightShaftQuality(){ return lightShaftQuality; }

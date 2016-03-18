@@ -44,13 +44,13 @@ void Cube::SetUpVertices()
 	verts[6].pos=max;
 	verts[7].pos=XMFLOAT3(max.x,min.y,max.z);
 
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( Vertex ) * 8;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
-	D3D11_SUBRESOURCE_DATA InitData;
+	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
@@ -66,9 +66,9 @@ void Cube::SetUpVertices()
 	};
 
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( unsigned int ) * 24;
-	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bd.BindFlags = BIND_INDEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = indices;

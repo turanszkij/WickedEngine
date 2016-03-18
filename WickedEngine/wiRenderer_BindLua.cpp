@@ -425,7 +425,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::VSYNC = wiLua::SGetBool(L, 1);
+			wiRenderer::graphicsDevice->SetVSyncEnabled(wiLua::SGetBool(L, 1));
 		}
 		return 0;
 	}

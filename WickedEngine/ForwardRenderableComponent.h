@@ -8,7 +8,7 @@ class ForwardRenderableComponent :
 protected:
 	wiRenderTarget rtMain;
 
-	virtual void RenderScene(DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 public:
 	ForwardRenderableComponent();
 	~ForwardRenderableComponent();

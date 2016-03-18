@@ -9,12 +9,14 @@ public:
 	DepthStencilView	depthTarget;
 	TextureView			shaderResource;
 
+	ShaderResourceViewDesc shaderResourceViewDesc;
+
 	wiDepthTarget();
 	~wiDepthTarget();
 	
 	void Initialize(int width, int height, UINT MSAAC, UINT MSAAQ);
 	void InitializeCube(int size);
-	void Clear(DeviceContext context);
-	void CopyFrom(const wiDepthTarget&, DeviceContext);
+	void Clear(GRAPHICSTHREAD threadID);
+	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);
 };
 

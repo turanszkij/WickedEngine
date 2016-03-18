@@ -14,12 +14,12 @@ wiTextureHelper::wiTextureHelperInstance::~wiTextureHelperInstance()
 {
 	for (int i = 0; i < HELPERTEXTURE_COUNT; ++i)
 	{
-		wiRenderer::SafeRelease(helperTextures[i]);
+		SAFE_RELEASE(helperTextures[i]);
 	}
 
 	for (auto& x : colorTextures)
 	{
-		wiRenderer::SafeRelease(x.second);
+		SAFE_RELEASE(x.second);
 	}
 }
 

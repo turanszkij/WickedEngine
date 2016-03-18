@@ -28,22 +28,22 @@ wiImage::wiImage()
 
 void wiImage::LoadBuffers()
 {
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ImageCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
 
 	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(PostProcessCB);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &processCb);
 
-	BindPersistentState(wiRenderer::getImmediateContext());
+	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 }
 
 void wiImage::LoadShaders()
@@ -75,9 +75,9 @@ void wiImage::SetUpStates()
 {
 
 	
-	D3D11_RASTERIZER_DESC rs;
-	rs.FillMode=D3D11_FILL_SOLID;
-	rs.CullMode=D3D11_CULL_BACK;
+	RasterizerDesc rs;
+	rs.FillMode=FILL_SOLID;
+	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=false;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -92,41 +92,41 @@ void wiImage::SetUpStates()
 
 
 	
-	D3D11_DEPTH_STENCIL_DESC dsd;
+	DepthStencilDesc dsd;
 	dsd.DepthEnable = false;
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = D3D11_COMPARISON_LESS;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_LESS;
 
 	dsd.StencilEnable = true;
-	dsd.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+	dsd.StencilReadMask = DEFAULT_STENCIL_READ_MASK;
 	dsd.StencilWriteMask = 0;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_LESS_EQUAL;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_LESS_EQUAL;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
 	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilStateLess);
 
 	
 	dsd.DepthEnable = false;
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = D3D11_COMPARISON_LESS;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_LESS;
 
 	dsd.StencilEnable = true;
-	dsd.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+	dsd.StencilReadMask = DEFAULT_STENCIL_READ_MASK;
 	dsd.StencilWriteMask = 0;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_GREATER;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_GREATER;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_GREATER;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_GREATER;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
 	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilStateGreater);
 	
@@ -134,101 +134,100 @@ void wiImage::SetUpStates()
 	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthNoStencilState);
 
 	
-	D3D11_BLEND_DESC bd;
+	BlendDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=true;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendState);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=false;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	//bd.IndependentBlendEnable=true;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateNoBlend);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	//bd.IndependentBlendEnable=true;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateAdd);
 	
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_COLOR;
-	bd.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_MAX;
-	bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_MAX;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_COLOR;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_MAX;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	//bd.IndependentBlendEnable=true;
 	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendStateAvg);
 }
 
-void wiImage::BindPersistentState(DeviceContext context)
+void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::Lock();
+	wiRenderer::graphicsDevice->LOCK();
 
-	wiRenderer::BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB), context);
-	wiRenderer::BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB), context);
+	wiRenderer::graphicsDevice->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+	wiRenderer::graphicsDevice->BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 
-	wiRenderer::BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), context);
+	wiRenderer::graphicsDevice->BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
 
-	wiRenderer::Unlock();
+	wiRenderer::graphicsDevice->LOCK();
 }
 
 void wiImage::Draw(TextureView texture, const wiImageEffects& effects){
-	Draw(texture,effects,wiRenderer::getImmediateContext());
+	Draw(texture,effects,GRAPHICSTHREAD_IMMEDIATE);
 }
-void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceContext context){
-	if(!context)
-		return;
+void wiImage::Draw(TextureView texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
+{
 
 	bool fullScreenEffect = false;
 
-	wiRenderer::BindVertexLayout(nullptr, context);
-	wiRenderer::BindVertexBuffer(nullptr, 0, 0, context);
-	wiRenderer::BindIndexBuffer(nullptr, context);
-	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, context);
-	wiRenderer::BindRasterizerState(rasterizerState, context);
+	wiRenderer::graphicsDevice->BindVertexLayout(nullptr, threadID);
+	wiRenderer::graphicsDevice->BindVertexBuffer(nullptr, 0, 0, threadID);
+	wiRenderer::graphicsDevice->BindIndexBuffer(nullptr, threadID);
+	wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
+	wiRenderer::graphicsDevice->BindRasterizerState(rasterizerState, threadID);
 
-	wiRenderer::BindTexturePS(texture, TEXSLOT_ONDEMAND0, context);
+	wiRenderer::graphicsDevice->BindTexturePS(texture, TEXSLOT_ONDEMAND0, threadID);
 
 	if (effects.blendFlag == BLENDMODE_ALPHA)
-		wiRenderer::BindBlendState(blendState, context);
+		wiRenderer::graphicsDevice->BindBlendState(blendState, threadID);
 	else if (effects.blendFlag == BLENDMODE_ADDITIVE)
-		wiRenderer::BindBlendState(blendStateAdd, context);
+		wiRenderer::graphicsDevice->BindBlendState(blendStateAdd, threadID);
 	else if (effects.blendFlag == BLENDMODE_OPAQUE)
-		wiRenderer::BindBlendState(blendStateNoBlend, context);
+		wiRenderer::graphicsDevice->BindBlendState(blendStateNoBlend, threadID);
 	else if (effects.blendFlag == BLENDMODE_MAX)
-		wiRenderer::BindBlendState(blendStateAvg, context);
+		wiRenderer::graphicsDevice->BindBlendState(blendStateAvg, threadID);
 	else
-		wiRenderer::BindBlendState(blendState, context);
+		wiRenderer::graphicsDevice->BindBlendState(blendState, threadID);
 
 	if (effects.presentFullScreen)
 	{
-		wiRenderer::BindVS(screenVS, context);
-		wiRenderer::BindPS(screenPS, context);
-		wiRenderer::Draw(3, context);
+		wiRenderer::graphicsDevice->BindVS(screenVS, threadID);
+		wiRenderer::graphicsDevice->BindPS(screenPS, threadID);
+		wiRenderer::graphicsDevice->Draw(3, threadID);
 		return;
 	}
 
@@ -237,14 +236,14 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 	{
 		switch (effects.stencilComp)
 		{
-		case D3D11_COMPARISON_LESS:
-			wiRenderer::BindDepthStencilState(depthStencilStateLess, effects.stencilRef, context);
+		case COMPARISON_LESS:
+			wiRenderer::graphicsDevice->BindDepthStencilState(depthStencilStateLess, effects.stencilRef, threadID);
 			break;
-		case D3D11_COMPARISON_GREATER:
-			wiRenderer::BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, context);
+		case COMPARISON_GREATER:
+			wiRenderer::graphicsDevice->BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, threadID);
 			break;
 		default:
-			wiRenderer::BindDepthStencilState(depthNoStencilState, effects.stencilRef, context);
+			wiRenderer::graphicsDevice->BindDepthStencilState(depthNoStencilState, effects.stencilRef, threadID);
 			break;
 		}
 	}
@@ -301,38 +300,38 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			(*cb).mNormalmapSeparate = normalmapmode;
 			(*cb).mMipLevel = effects.mipLevel;
 
-			wiRenderer::UpdateBuffer(constantBuffer,cb,context);
+			wiRenderer::graphicsDevice->UpdateBuffer(constantBuffer,cb,threadID);
 
-			wiRenderer::BindVS(vertexShader, context);
-			wiRenderer::BindPS(pixelShader, context);
+			wiRenderer::graphicsDevice->BindVS(vertexShader, threadID);
+			wiRenderer::graphicsDevice->BindPS(pixelShader, threadID);
 			fullScreenEffect = false;
 		}
 		else if(!effects.sunPos.x && !effects.sunPos.y){
-			wiRenderer::BindVS(screenVS, context);
+			wiRenderer::graphicsDevice->BindVS(screenVS, threadID);
 			fullScreenEffect = true;
 
 			if(effects.process.outline) 
-				wiRenderer::BindPS(outlinePS,context);
+				wiRenderer::graphicsDevice->BindPS(outlinePS,threadID);
 			else if(effects.process.motionBlur) 
-				wiRenderer::BindPS(motionBlurPS,context);
+				wiRenderer::graphicsDevice->BindPS(motionBlurPS,threadID);
 			else if(effects.process.dofStrength) 
-				wiRenderer::BindPS(dofPS,context);
+				wiRenderer::graphicsDevice->BindPS(dofPS,threadID);
 			else if(effects.process.fxaa) 
-				wiRenderer::BindPS(fxaaPS,context);
+				wiRenderer::graphicsDevice->BindPS(fxaaPS,threadID);
 			else if(effects.process.ssao)
-				wiRenderer::BindPS(ssaoPS,context);
+				wiRenderer::graphicsDevice->BindPS(ssaoPS,threadID);
 			else if(effects.process.linDepth) 
-				wiRenderer::BindPS(linDepthPS, context);
+				wiRenderer::graphicsDevice->BindPS(linDepthPS, threadID);
 			else if (effects.process.colorGrade)
-				wiRenderer::BindPS(colorGradePS, context);
+				wiRenderer::graphicsDevice->BindPS(colorGradePS, threadID);
 			else if (effects.process.ssr)
-				wiRenderer::BindPS(ssrPS, context);
+				wiRenderer::graphicsDevice->BindPS(ssrPS, threadID);
 			else if (effects.process.stereogram)
-				wiRenderer::BindPS(stereogramPS, context);
+				wiRenderer::graphicsDevice->BindPS(stereogramPS, threadID);
 			else if(effects.process.ssss.x + effects.process.ssss.y > 0)
-				wiRenderer::BindPS(ssssPS,context);
+				wiRenderer::graphicsDevice->BindPS(ssssPS,threadID);
 			else if(effects.bloom.separate)
-				wiRenderer::BindPS(bloomSeparatePS,context);
+				wiRenderer::graphicsDevice->BindPS(bloomSeparatePS,threadID);
 			else 
 				wiHelper::messageBox("Postprocess branch not implemented!");
 			
@@ -345,11 +344,11 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			(*prcb).params1[2] = effects.bloom.saturation;
 			(*prcb).params1[3] = effects.process.ssss.y;
 
-			wiRenderer::UpdateBuffer(processCb,prcb,context);
+			wiRenderer::graphicsDevice->UpdateBuffer(processCb,prcb,threadID);
 		}
 		else{ 
-			wiRenderer::BindVS(screenVS,context);
-			wiRenderer::BindPS(shaftPS,context);
+			wiRenderer::graphicsDevice->BindVS(screenVS,threadID);
+			wiRenderer::graphicsDevice->BindPS(shaftPS,threadID);
 			fullScreenEffect = true;
 
 			 //Density|Weight|Decay|Exposure
@@ -360,22 +359,22 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 			(*prcb).params1[0] = effects.sunPos.x;
 			(*prcb).params1[1] = effects.sunPos.y;
 
-			wiRenderer::UpdateBuffer(processCb,prcb,context);
+			wiRenderer::graphicsDevice->UpdateBuffer(processCb,prcb,threadID);
 		}
-		wiRenderer::BindTexturePS(effects.maskMap, TEXSLOT_ONDEMAND1, context);
-		wiRenderer::BindTexturePS(effects.distortionMap, TEXSLOT_ONDEMAND2, context);
-		wiRenderer::BindTexturePS(effects.refractionSource, TEXSLOT_ONDEMAND3, context);
+		wiRenderer::graphicsDevice->BindTexturePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
+		wiRenderer::graphicsDevice->BindTexturePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
+		wiRenderer::graphicsDevice->BindTexturePS(effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
 	}
 	else{ //BLUR
-		wiRenderer::BindVS(screenVS,context);
+		wiRenderer::graphicsDevice->BindVS(screenVS,threadID);
 		fullScreenEffect = true;
 		
 		if(effects.blurDir==0){
-			wiRenderer::BindPS(blurHPS,context);
+			wiRenderer::graphicsDevice->BindPS(blurHPS,threadID);
 			(*prcb).params1[3] = 1.0f / wiRenderer::GetScreenWidth();
 		}
 		else{
-			wiRenderer::BindPS(blurVPS,context);
+			wiRenderer::graphicsDevice->BindPS(blurVPS,threadID);
 			(*prcb).params1[3] = 1.0f / wiRenderer::GetScreenHeight();
 		}
 
@@ -393,64 +392,64 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,DeviceCont
 		(*prcb).params1[1] = effects.blur;
 		(*prcb).params1[2] = effects.mipLevel;
 
-		wiRenderer::UpdateBuffer(processCb,prcb,context);
+		wiRenderer::graphicsDevice->UpdateBuffer(processCb,prcb,threadID);
 
 	}
 
 
 	if(effects.quality==QUALITY_NEAREST){
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 	else if(effects.quality==QUALITY_BILINEAR){
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 	else if(effects.quality==QUALITY_ANISOTROPIC){
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			wiRenderer::BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, context);
+			wiRenderer::graphicsDevice->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 
 	
-	wiRenderer::Draw((fullScreenEffect ? 3 : 4), context);
+	wiRenderer::graphicsDevice->Draw((fullScreenEffect ? 3 : 4), threadID);
 }
 
 void wiImage::DrawDeferred(TextureView texture
 		, TextureView depth, TextureView lightmap, TextureView normal
-		, TextureView ao, DeviceContext context, int stencilRef){
+		, TextureView ao, GRAPHICSTHREAD threadID, int stencilRef){
 
-	wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,context);
-	wiRenderer::BindRasterizerState(rasterizerState,context);
-	wiRenderer::BindDepthStencilState(depthNoStencilState,stencilRef,context);
+	wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
+	wiRenderer::graphicsDevice->BindRasterizerState(rasterizerState,threadID);
+	wiRenderer::graphicsDevice->BindDepthStencilState(depthNoStencilState,stencilRef,threadID);
 
-	wiRenderer::BindVertexLayout(nullptr, context);
-	wiRenderer::BindVertexBuffer(nullptr, 0, 0, context);
-	wiRenderer::BindIndexBuffer(nullptr, context);
+	wiRenderer::graphicsDevice->BindVertexLayout(nullptr, threadID);
+	wiRenderer::graphicsDevice->BindVertexBuffer(nullptr, 0, 0, threadID);
+	wiRenderer::graphicsDevice->BindIndexBuffer(nullptr, threadID);
 
-	wiRenderer::BindVS(screenVS,context);
-	wiRenderer::BindPS(deferredPS,context);
+	wiRenderer::graphicsDevice->BindVS(screenVS,threadID);
+	wiRenderer::graphicsDevice->BindPS(deferredPS,threadID);
 	
-	//wiRenderer::BindTexturePS(depth,0,context);
-	//wiRenderer::BindTexturePS(normal,1,context);
-	//wiRenderer::BindTexturePS(texture,6,context);
-	wiRenderer::BindTexturePS(lightmap,TEXSLOT_ONDEMAND0,context);
-	wiRenderer::BindTexturePS(ao,TEXSLOT_ONDEMAND1,context);
+	//wiRenderer::graphicsDevice->BindTexturePS(depth,0,threadID);
+	//wiRenderer::graphicsDevice->BindTexturePS(normal,1,threadID);
+	//wiRenderer::graphicsDevice->BindTexturePS(texture,6,threadID);
+	wiRenderer::graphicsDevice->BindTexturePS(lightmap,TEXSLOT_ONDEMAND0,threadID);
+	wiRenderer::graphicsDevice->BindTexturePS(ao,TEXSLOT_ONDEMAND1,threadID);
 
-	wiRenderer::BindBlendState(blendStateNoBlend,context);
+	wiRenderer::graphicsDevice->BindBlendState(blendStateNoBlend,threadID);
 
-	wiRenderer::Draw(3,context);
+	wiRenderer::graphicsDevice->Draw(3,threadID);
 }
 
 
@@ -473,10 +472,10 @@ void wiImage::CleanUp()
 	if(outlinePS) outlinePS->Release();
 	if(fxaaPS) fxaaPS->Release();
 	if(deferredPS) deferredPS->Release();
-	wiRenderer::SafeRelease(colorGradePS);
-	wiRenderer::SafeRelease(ssrPS);
-	wiRenderer::SafeRelease(screenPS);
-	wiRenderer::SafeRelease(stereogramPS);
+	SAFE_RELEASE(colorGradePS);
+	SAFE_RELEASE(ssrPS);
+	SAFE_RELEASE(screenPS);
+	SAFE_RELEASE(stereogramPS);
 
 	if(constantBuffer) constantBuffer->Release();
 	if(processCb) processCb->Release();

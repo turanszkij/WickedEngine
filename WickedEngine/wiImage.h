@@ -57,7 +57,7 @@ protected:
 
 public:
 	static void LoadShaders();
-	static void BindPersistentState(DeviceContext context);
+	static void BindPersistentState(GRAPHICSTHREAD threadID);
 private:
 	static void LoadBuffers();
 	static void SetUpStates();
@@ -66,11 +66,11 @@ public:
 	wiImage();
 	
 	static void Draw(TextureView texture, const wiImageEffects& effects);
-	static void Draw(TextureView texture, const wiImageEffects& effects,DeviceContext context);
+	static void Draw(TextureView texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID);
 
 	static void DrawDeferred(TextureView texture
 		, TextureView depth, TextureView lightmap, TextureView normal
-		, TextureView ao, DeviceContext context, int stencilref = 0);
+		, TextureView ao, GRAPHICSTHREAD threadID, int stencilref = 0);
 
 	static void Load();
 	static void CleanUp();

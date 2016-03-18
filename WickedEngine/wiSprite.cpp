@@ -59,23 +59,23 @@ void wiSprite::CleanUp(){
 	ContentHolder->del(mask);
 }
 
-void wiSprite::Draw(TextureView refracRes, DeviceContext context){
+void wiSprite::Draw(TextureView refracRes, GRAPHICSTHREAD threadID){
 	if(effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE) ){
 		effects.setRefractionSource(refracRes);
-		wiImage::Draw(texturePointer,effects,context);
+		wiImage::Draw(texturePointer,effects,threadID);
 	}
 }
 void wiSprite::Draw(){
-	wiSprite::Draw(NULL,wiRenderer::getImmediateContext());
+	wiSprite::Draw(NULL,GRAPHICSTHREAD_IMMEDIATE);
 }
-void wiSprite::DrawNormal(DeviceContext context){
+void wiSprite::DrawNormal(GRAPHICSTHREAD threadID){
 	if(normalPointer && effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){
 		//effects.setRefractionMap(refracRes);
 
 		wiImageEffects effectsMod(effects);
 		effectsMod.blendFlag=BLENDMODE_ADDITIVE;
 		effectsMod.extractNormalMap=true;
-		wiImage::Draw(normalPointer,effectsMod,context);
+		wiImage::Draw(normalPointer,effectsMod,threadID);
 	}
 }
 

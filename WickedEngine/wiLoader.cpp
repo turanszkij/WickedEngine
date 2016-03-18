@@ -479,12 +479,12 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 	//	if(objects[i]->mesh){
 	//		if(objects[i]->mesh->trailInfo.base>=0 && objects[i]->mesh->trailInfo.tip>=0){
 	//			//objects[i]->trail.resize(MAX_RIBBONTRAILS);
-	//			D3D11_BUFFER_DESC bd;
+	//			BufferDesc bd;
 	//			ZeroMemory( &bd, sizeof(bd) );
-	//			bd.Usage = D3D11_USAGE_DYNAMIC;
+	//			bd.Usage = USAGE_DYNAMIC;
 	//			bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
-	//			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	//			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	//			bd.BindFlags = BIND_VERTEX_BUFFER;
+	//			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	//			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
 	//			objects[i]->trailTex = wiTextureHelper::getInstance()->getTransparent();
 	//			objects[i]->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
@@ -945,12 +945,12 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 
 		//for(MeshCollection::iterator iter=lightGwiRenderer.begin(); iter!=lightGwiRenderer.end(); ++iter){
 		//	Mesh* iMesh = iter->second;
-		//	D3D11_BUFFER_DESC bd;
+		//	BufferDesc bd;
 		//	ZeroMemory( &bd, sizeof(bd) );
-		//	bd.Usage = D3D11_USAGE_DYNAMIC;
+		//	bd.Usage = USAGE_DYNAMIC;
 		//	bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
-		//	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		//	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		//	bd.BindFlags = BIND_VERTEX_BUFFER;
+		//	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 		//	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
 		//}
 	}
@@ -1674,14 +1674,14 @@ void Mesh::Optimize()
 void Mesh::CreateBuffers(Object* object) {
 	if (!buffersComplete) {
 
-		D3D11_BUFFER_DESC bd;
+		BufferDesc bd;
 		if (meshInstanceBuffer == nullptr)
 		{
 			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = D3D11_USAGE_DYNAMIC;
+			bd.Usage = USAGE_DYNAMIC;
 			bd.ByteWidth = sizeof(Instance) * 2;
-			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 			wiRenderer::graphicsDevice->CreateBuffer(&bd, 0, &meshInstanceBuffer);
 		}
 
@@ -1695,19 +1695,19 @@ void Mesh::CreateBuffers(Object* object) {
 
 		ZeroMemory(&bd, sizeof(bd));
 #ifdef USE_GPU_SKINNING
-		bd.Usage = (softBody ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE);
-		bd.CPUAccessFlags = (softBody ? D3D11_CPU_ACCESS_WRITE : 0);
+		bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
+		bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
 		if (object->isArmatureDeformed() && !softBody)
 			bd.ByteWidth = sizeof(SkinnedVertex) * vertices.size();
 		else
 			bd.ByteWidth = sizeof(Vertex) * vertices.size();
 #else
-		bd.Usage = ((softBody || object->isArmatureDeformed()) ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE);
-		bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? D3D11_CPU_ACCESS_WRITE : 0);
+		bd.Usage = ((softBody || object->isArmatureDeformed()) ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
+		bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? CPU_ACCESS_WRITE : 0);
 		bd.ByteWidth = sizeof(Vertex) * vertices.size();
 #endif
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		D3D11_SUBRESOURCE_DATA InitData;
+		bd.BindFlags = BIND_VERTEX_BUFFER;
+		SubresourceData InitData;
 		ZeroMemory(&InitData, sizeof(InitData));
 		if (object->isArmatureDeformed() && !softBody)
 			InitData.pSysMem = vertices.data();
@@ -1717,9 +1717,9 @@ void Mesh::CreateBuffers(Object* object) {
 
 
 		ZeroMemory(&bd, sizeof(bd));
-		bd.Usage = D3D11_USAGE_IMMUTABLE;
+		bd.Usage = USAGE_IMMUTABLE;
 		bd.ByteWidth = sizeof(unsigned int) * indices.size();
-		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bd.BindFlags = BIND_INDEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		ZeroMemory(&InitData, sizeof(InitData));
 		InitData.pSysMem = indices.data();
@@ -1730,9 +1730,9 @@ void Mesh::CreateBuffers(Object* object) {
 
 			if (object->isArmatureDeformed() && !softBody) {
 				ZeroMemory(&bd, sizeof(bd));
-				bd.Usage = D3D11_USAGE_DEFAULT;
+				bd.Usage = USAGE_DEFAULT;
 				bd.ByteWidth = sizeof(Vertex) * vertices.size();
-				bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_VERTEX_BUFFER;
+				bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride = 0;
 				wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &sOutBuffer);
@@ -1781,9 +1781,9 @@ void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
 	}
 	instances[numerator] = instance;
 }
-void Mesh::UpdateRenderableInstances(int count, DeviceContext context)
+void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
-	wiRenderer::UpdateBuffer(meshInstanceBuffer, instances.data(), context, sizeof(Instance)*count);
+	wiRenderer::graphicsDevice->UpdateBuffer(meshInstanceBuffer, instances.data(), threadID, sizeof(Instance)*count);
 }
 #pragma endregion
 
@@ -1926,12 +1926,12 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		{
 			// Ribbon trails
 			if (x->mesh->trailInfo.base >= 0 && x->mesh->trailInfo.tip >= 0) {
-				D3D11_BUFFER_DESC bd;
+				BufferDesc bd;
 				ZeroMemory(&bd, sizeof(bd));
-				bd.Usage = D3D11_USAGE_DYNAMIC;
+				bd.Usage = USAGE_DYNAMIC;
 				bd.ByteWidth = sizeof(RibbonVertex) * 1000;
-				bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-				bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				bd.BindFlags = BIND_VERTEX_BUFFER;
+				bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 				wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &x->trailBuff);
 				x->trailTex = wiTextureHelper::getInstance()->getTransparent();
 				x->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
@@ -2162,13 +2162,13 @@ void HitSphere::SetUpStatic()
 		verts.push_back(XMFLOAT3A(XMFLOAT3A(0,0,0)));
 	}
 
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_IMMUTABLE;
+	bd.Usage = USAGE_IMMUTABLE;
 	bd.ByteWidth = sizeof( XMFLOAT3A )*verts.size();
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
-	D3D11_SUBRESOURCE_DATA InitData;
+	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts.data();
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );

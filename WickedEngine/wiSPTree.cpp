@@ -19,8 +19,8 @@ wiSPTree::~wiSPTree()
 }
 
 void wiSPTree::initialize(const vector<Cullable*>& objects){
-	initialize(objects,XMFLOAT3(D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX)
-		,XMFLOAT3(-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX));
+	initialize(objects,XMFLOAT3(FLOAT32_MAX,FLOAT32_MAX,FLOAT32_MAX)
+		,XMFLOAT3(-FLOAT32_MAX,-FLOAT32_MAX,-FLOAT32_MAX));
 }
 void wiSPTree::initialize(const vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax){
 	XMFLOAT3 min = newMin;

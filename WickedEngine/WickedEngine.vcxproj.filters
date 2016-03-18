@@ -815,6 +815,9 @@
     <ClCompile Include="RenderableComponent.cpp">
       <Filter>ComponentTemplates</Filter>
     </ClCompile>
+    <ClCompile Include="wiGraphicsAPI_DX11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="typelib.h">
@@ -1803,6 +1806,9 @@
     </ClInclude>
     <ClInclude Include="TextureMapping.h">
       <Filter>Resource Mapping</Filter>
+    </ClInclude>
+    <ClInclude Include="wiGraphicsAPI_DX11.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

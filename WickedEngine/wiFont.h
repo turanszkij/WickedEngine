@@ -67,7 +67,7 @@ protected:
 	static void SetUpCB();
 public:
 	static void LoadShaders();
-	static void BindPersistentState(DeviceContext context);
+	static void BindPersistentState(GRAPHICSTHREAD threadID);
 private:
 	static void LoadVertexBuffer();
 	static void LoadIndices();
@@ -92,7 +92,7 @@ private:
 	static vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(const wstring& text, wiFontProps props, int style, DeviceContext context = nullptr);
+	static void ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID);
 
 public:
 	static void Initialize();
@@ -108,7 +108,7 @@ public:
 	~wiFont();
 
 	
-	void Draw(DeviceContext context = nullptr);
+	void Draw(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
 
 	int textWidth();

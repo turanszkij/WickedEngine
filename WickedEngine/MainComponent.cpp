@@ -130,9 +130,9 @@ void MainComponent::Render()
 {
 	wiLua::GetGlobal()->Render();
 
-	wiRenderer::Lock();
+	wiRenderer::graphicsDevice->LOCK();
 	getActiveComponent()->Render();
-	wiRenderer::Unlock();
+	wiRenderer::graphicsDevice->UNLOCK();
 }
 
 void MainComponent::Compose()

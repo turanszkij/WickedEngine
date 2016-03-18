@@ -62,18 +62,19 @@ public:
 		textureDesc.Format = format;
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		textureDesc.Usage = USAGE_DEFAULT;
+		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
 		textureDesc.MiscFlags = 0;
 
-		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+		ShaderResourceViewDesc shaderResourceViewDesc;
 		shaderResourceViewDesc.Format = format;
-		shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-		shaderResourceViewDesc.Texture2D.MipLevels = 1;
+		shaderResourceViewDesc.ViewDimension = RESOURCE_DIMENSION_TEXTURE2D;
+		//shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+		//shaderResourceViewDesc.Texture2D.MipLevels = 1;
+		shaderResourceViewDesc.mipLevels = 1;
 
-		D3D11_SUBRESOURCE_DATA InitData;
+		SubresourceData InitData;
 		ZeroMemory(&InitData, sizeof(InitData));
 		InitData.pSysMem = data;
 		InitData.SysMemPitch = static_cast<UINT>(width * channelCount);
@@ -86,7 +87,7 @@ public:
 			return hr;
 		}
 		hr = wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &texture);
-		wiRenderer::SafeRelease(texture2D);
+		SAFE_RELEASE(texture2D);
 
 		return hr;
 	}

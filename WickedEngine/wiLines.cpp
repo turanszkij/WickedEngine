@@ -33,13 +33,13 @@ Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4& c)
 	verts[0].pos = XMFLOAT3(a.x,a.y,a.z);
 	verts[1].pos = XMFLOAT3(b.x,b.y,b.z);
 
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( Vertex ) * 2;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
-	D3D11_SUBRESOURCE_DATA InitData;
+	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
@@ -69,13 +69,13 @@ void Lines::SetUpVertices()
 	verts[0].pos = XMFLOAT3(0,0,0);
 	verts[1].pos = XMFLOAT3(0,0,desc.length);
 
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( Vertex ) * 2;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
-	D3D11_SUBRESOURCE_DATA InitData;
+	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
 	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );

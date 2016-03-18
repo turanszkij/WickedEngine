@@ -37,6 +37,7 @@ using namespace DirectX;
 using namespace std;
 
 #define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
+#define SAFE_INIT(a) a = nullptr;
 #define SAFE_RELEASE(a) if(a!=nullptr){a->Release();a=nullptr;}
 #define SAFE_DELETE(a) if(a!=nullptr){delete a;a=nullptr;}
 #define SAFE_DELETE_ARRAY(a) if(a!=nullptr){delete[]a;a=nullptr;}

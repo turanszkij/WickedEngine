@@ -45,27 +45,27 @@ namespace wiHelper
 
 	void screenshot(const string& name)
 	{
-#ifndef WINSTORE_SUPPORT
-		CreateDirectoryA("screenshots", 0);
-		stringstream ss("");
-		if (name.length() <= 0)
-			ss << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
-		else
-			ss << name;
-		wstringstream wss(L"");
-		wss << ss.str().c_str();
-		APIResource res = nullptr;
-		wiRenderer::renderTargetView->GetResource(&res);
-		HRESULT h = SaveWICTextureToFile(wiRenderer::immediateContext, res, GUID_ContainerFormatPng, wss.str().c_str());
-		if (FAILED(h))
-			wiBackLog::post("Screenshot failed");
-		else
-		{
-			ss << " Saved successfully!";
-			wiBackLog::post(ss.str().c_str());
-		}
-		res->Release();
-#endif
+//#ifndef WINSTORE_SUPPORT
+//		CreateDirectoryA("screenshots", 0);
+//		stringstream ss("");
+//		if (name.length() <= 0)
+//			ss << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
+//		else
+//			ss << name;
+//		wstringstream wss(L"");
+//		wss << ss.str().c_str();
+//		APIResource res = nullptr;
+//		wiRenderer::renderTargetView->GetResource(&res);
+//		HRESULT h = SaveWICTextureToFile(wiRenderer::immediateContext, res, GUID_ContainerFormatPng, wss.str().c_str());
+//		if (FAILED(h))
+//			wiBackLog::post("Screenshot failed");
+//		else
+//		{
+//			ss << " Saved successfully!";
+//			wiBackLog::post(ss.str().c_str());
+//		}
+//		res->Release();
+//#endif
 	}
 
 	string getCurrentDateTimeAsString()

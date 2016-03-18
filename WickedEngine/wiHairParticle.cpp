@@ -46,9 +46,9 @@ void wiHairParticle::CleanUp(){
 	for (unsigned int i = 0; i<patches.size(); ++i)
 		patches[i]->CleanUp();
 	patches.clear();
-	wiRenderer::SafeRelease(vb[0]);
-	wiRenderer::SafeRelease(vb[1]);
-	wiRenderer::SafeRelease(vb[2]);
+	SAFE_RELEASE(vb[0]);
+	SAFE_RELEASE(vb[1]);
+	SAFE_RELEASE(vb[2]);
 }
 
 void wiHairParticle::CleanUpStatic(){
@@ -71,9 +71,9 @@ void wiHairParticle::LoadShaders()
 
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -101,20 +101,20 @@ void wiHairParticle::SetUpStatic(){
 	LoadShaders();
 
 	
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ConstantBuffer);
-	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &cbgs );
 
 	
 
 	
-	D3D11_RASTERIZER_DESC rsd;
-	rsd.FillMode=D3D11_FILL_SOLID;
-	rsd.CullMode=D3D11_CULL_BACK;
+	RasterizerDesc rsd;
+	rsd.FillMode=FILL_SOLID;
+	rsd.CullMode=CULL_BACK;
 	rsd.FrontCounterClockwise=true;
 	rsd.DepthBias=0;
 	rsd.DepthBiasClamp=0;
@@ -124,8 +124,8 @@ void wiHairParticle::SetUpStatic(){
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
 	wiRenderer::graphicsDevice->CreateRasterizerState(&rsd,&rs);
-	rsd.FillMode=D3D11_FILL_SOLID;
-	rsd.CullMode=D3D11_CULL_NONE;
+	rsd.FillMode=FILL_SOLID;
+	rsd.CullMode=CULL_NONE;
 	rsd.FrontCounterClockwise=true;
 	rsd.DepthBias=0;
 	rsd.DepthBiasClamp=0;
@@ -137,35 +137,35 @@ void wiHairParticle::SetUpStatic(){
 	wiRenderer::graphicsDevice->CreateRasterizerState(&rsd,&ncrs);
 
 	
-	D3D11_DEPTH_STENCIL_DESC dsd;
+	DepthStencilDesc dsd;
 	dsd.DepthEnable = true;
-	dsd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	dsd.DepthFunc = D3D11_COMPARISON_LESS;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	dsd.DepthFunc = COMPARISON_LESS;
 
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_REPLACE;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
 	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &dss);
 
 	
-	D3D11_BLEND_DESC bld;
+	BlendDesc bld;
 	ZeroMemory(&bld, sizeof(bld));
 	bld.RenderTarget[0].BlendEnable=false;
-	bld.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-	bld.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-	bld.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	bld.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	bld.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	bld.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	bld.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bld.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bld.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bld.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bld.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bld.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bld.AlphaToCoverageEnable=false;
 	wiRenderer::graphicsDevice->CreateBlendState(&bld,&bs);
@@ -186,12 +186,12 @@ struct PatchHolder:public Cullable
 
 void wiHairParticle::SetUpPatches()
 {
-	D3D11_BUFFER_DESC bd;
+	BufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = D3D11_USAGE_DYNAMIC;
+	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(Point)*MAX_PARTICLES;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[0] );
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[1] );
     wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[2] );
@@ -352,7 +352,7 @@ void wiHairParticle::SetUpPatches()
 	GenerateSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),SPTREE_GENERATE_OCTREE);
 	return;
 }
-void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
+void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
 	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
@@ -389,19 +389,19 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 	{
 		TextureView texture = material->texture;
 
-		wiRenderer::BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,context);
-		wiRenderer::BindVertexLayout(il,context);
-		wiRenderer::BindPS(texture?qps:ps,context);
-		wiRenderer::BindVS(vs,context);
+		wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
+		wiRenderer::graphicsDevice->BindVertexLayout(il,threadID);
+		wiRenderer::graphicsDevice->BindPS(texture?qps:ps,threadID);
+		wiRenderer::graphicsDevice->BindVS(vs,threadID);
 
 		if(texture){
-			wiRenderer::BindTexturePS(texture,TEXSLOT_ONDEMAND0,context);
-			wiRenderer::BindTextureGS(texture,TEXSLOT_ONDEMAND0,context);
+			wiRenderer::graphicsDevice->BindTexturePS(texture,TEXSLOT_ONDEMAND0,threadID);
+			wiRenderer::graphicsDevice->BindTextureGS(texture,TEXSLOT_ONDEMAND0,threadID);
 
-			wiRenderer::BindBlendState(bs,context);
+			wiRenderer::graphicsDevice->BindBlendState(bs,threadID);
 		}
 		else
-			wiRenderer::BindRasterizerState(ncrs,context);
+			wiRenderer::graphicsDevice->BindRasterizerState(ncrs,threadID);
 
 
 		static thread_local ConstantBuffer* gcb = new ConstantBuffer;
@@ -409,10 +409,10 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 		(*gcb).color=material->diffuseColor;
 		(*gcb).drawdistance = (float)LOD[2];
 		
-		wiRenderer::UpdateBuffer(cbgs,gcb,context);
-		wiRenderer::BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),context);
+		wiRenderer::graphicsDevice->UpdateBuffer(cbgs,gcb,threadID);
+		wiRenderer::graphicsDevice->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		wiRenderer::BindDepthStencilState(dss,STENCILREF_DEFAULT,context);
+		wiRenderer::graphicsDevice->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
 
 
 		for(int i=0;i<3;++i){
@@ -420,11 +420,11 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 			renderPoints.reserve(MAX_PARTICLES);
 
 			if(texture){
-				wiRenderer::BindGS(i<2?qgs[0]:qgs[1],context);
-				wiRenderer::BindRasterizerState(i<2?ncrs:rs,context);
+				wiRenderer::graphicsDevice->BindGS(i<2?qgs[0]:qgs[1],threadID);
+				wiRenderer::graphicsDevice->BindRasterizerState(i<2?ncrs:rs,threadID);
 			}
 			else
-				wiRenderer::BindGS(gs[i],context);
+				wiRenderer::graphicsDevice->BindGS(gs[i],threadID);
 			CulledList::iterator iter = culledPatches.begin();
 			while(iter != culledPatches.end()){
 				Cullable* culled = *iter;
@@ -441,19 +441,19 @@ void wiHairParticle::Draw(Camera* camera, ID3D11DeviceContext *context)
 					++iter;
 			}
 
-			wiRenderer::UpdateBuffer(vb[i],renderPoints.data(),context,sizeof(Point)*renderPoints.size());
-			wiRenderer::BindVertexBuffer(vb[i],0,sizeof(Point),context);
-			wiRenderer::Draw(renderPoints.size(),context);
+			wiRenderer::graphicsDevice->UpdateBuffer(vb[i],renderPoints.data(),threadID,sizeof(Point)*renderPoints.size());
+			wiRenderer::graphicsDevice->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
+			wiRenderer::graphicsDevice->Draw(renderPoints.size(),threadID);
 		}
 
-		wiRenderer::BindGS(nullptr,context);
+		wiRenderer::graphicsDevice->BindGS(nullptr,threadID);
 	}
 }
 
 wiHairParticle::Patch::Patch(){
 	p.resize(0);
-	min=XMFLOAT3(D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX,D3D11_FLOAT32_MAX);
-	max=XMFLOAT3(-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX,-D3D11_FLOAT32_MAX);
+	min=XMFLOAT3(FLOAT32_MAX,FLOAT32_MAX,FLOAT32_MAX);
+	max=XMFLOAT3(-FLOAT32_MAX,-FLOAT32_MAX,-FLOAT32_MAX);
 	//vb=NULL;
 }
 void wiHairParticle::Patch::add(const Point& pp){

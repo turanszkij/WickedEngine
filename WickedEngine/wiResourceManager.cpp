@@ -2,8 +2,6 @@
 #include "wiRenderer.h"
 #include "wiSound.h"
 #include "wiHelper.h"
-#include "Utility/WicTextureLoader.h"
-#include "Utility/DDSTextureLoader.h"
 
 wiResourceManager::filetypes wiResourceManager::types;
 wiResourceManager* wiResourceManager::globalResources = nullptr;
@@ -92,20 +90,21 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 		case Data_Type::IMAGE:
 		{
 			TextureView image=nullptr;
-			if(
-					!ext.compare("jpg")
-				|| !ext.compare("JPG")
-				|| !ext.compare("png")
-				|| !ext.compare("PNG")
-				)
+			//if(
+			//		!ext.compare("jpg")
+			//	|| !ext.compare("JPG")
+			//	|| !ext.compare("png")
+			//	|| !ext.compare("PNG")
+			//	)
 			{
-				wiRenderer::Lock();
-				CreateWICTextureFromFile(true,wiRenderer::graphicsDevice,wiRenderer::getImmediateContext(),(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
-				wiRenderer::Unlock();
+				//wiRenderer::graphicsDevice->LOCK();
+				wiRenderer::graphicsDevice->CreateTextureFromFile(wstring(name.begin(), name.end()).c_str(), &image, true);
+				//CreateWICTextureFromFile(true,wiRenderer::graphicsDevice,context,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
+				//wiRenderer::graphicsDevice->UNLOCK();
 			}
-			else if(!ext.compare("dds")){
-				CreateDDSTextureFromFile(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
-			}
+			//else if(!ext.compare("dds")){
+			//	CreateDDSTextureFromFile(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),nullptr,&image);
+			//}
 
 			if(image)
 				success=image;
@@ -114,11 +113,12 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 		case Data_Type::IMAGE_STAGING:
 		{
 			APIResource image=nullptr;
-			if(!ext.compare("dds")){
-				CreateDDSTextureFromFileEx(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),0
-					,D3D11_USAGE_STAGING,0,D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE,0,false
-					,&image,nullptr);
-			}
+			//if(!ext.compare("dds")){
+			//	CreateDDSTextureFromFileEx(wiRenderer::graphicsDevice,(wchar_t*)(wstring(name.begin(),name.end()).c_str()),0
+			//		,USAGE_STAGING,0,CPU_ACCESS_READ | CPU_ACCESS_WRITE,0,false
+			//		,&image,nullptr);
+			//}
+			wiHelper::messageBox("IMAGE_STAGING texture loading not implemented in ResourceManager!", "Warning!");
 
 			if(image)
 				success=image;
@@ -176,7 +176,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 				wiRenderer::graphicsDevice->CreateGeometryShader(buffer, bufferSize, nullptr, &shader);
 				if (streamOutDecl != nullptr && elementCount > 0){
 					wiRenderer::graphicsDevice->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
-						elementCount, NULL, 0, shader ? 0 : D3D11_SO_NO_RASTERIZED_STREAM, NULL, &shader);
+						elementCount, NULL, 0, shader ? 0 : SO_NO_RASTERIZED_STREAM, NULL, &shader);
 				}
 				delete[] buffer;
 				success = shader;
@@ -260,30 +260,30 @@ bool wiResourceManager::del(const string& name, bool forceDelete)
 			switch(res->type){
 			case Data_Type::IMAGE:
 			case Data_Type::IMAGE_STAGING:
-				wiRenderer::SafeRelease(reinterpret_cast<TextureView&>(res->data));
+				SAFE_RELEASE(reinterpret_cast<TextureView&>(res->data));
 				break;
 			case Data_Type::VERTEXSHADER:
 				{
 					VertexShaderInfo* vsinfo = (VertexShaderInfo*)res->data;
-					wiRenderer::SafeRelease(vsinfo->vertexLayout);
-					wiRenderer::SafeRelease(vsinfo->vertexShader);
+					SAFE_RELEASE(vsinfo->vertexLayout);
+					SAFE_RELEASE(vsinfo->vertexShader);
 					delete vsinfo;
 				}
 				break;
 			case Data_Type::PIXELSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<PixelShader&>(res->data));
+				SAFE_RELEASE(reinterpret_cast<PixelShader&>(res->data));
 				break;
 			case Data_Type::GEOMETRYSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<GeometryShader&>(res->data));
+				SAFE_RELEASE(reinterpret_cast<GeometryShader&>(res->data));
 				break;
 			case Data_Type::HULLSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<HullShader&>(res->data));
+				SAFE_RELEASE(reinterpret_cast<HullShader&>(res->data));
 				break;
 			case Data_Type::DOMAINSHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<DomainShader&>(res->data));
+				SAFE_RELEASE(reinterpret_cast<DomainShader&>(res->data));
 				break;
 			case Data_Type::COMPUTESHADER:
-				wiRenderer::SafeRelease(reinterpret_cast<ComputeShader&>(res->data));
+				SAFE_RELEASE(reinterpret_cast<ComputeShader&>(res->data));
 				break;
 			case Data_Type::SOUND:
 			case Data_Type::MUSIC:

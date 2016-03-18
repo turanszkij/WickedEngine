@@ -8,7 +8,7 @@ class DeferredRenderableComponent :
 protected:
 	wiRenderTarget rtGBuffer, rtDeferred, rtLight;
 
-	virtual void RenderScene(DeviceContext context = wiRenderer::getImmediateContext());
+	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	wiRenderTarget& GetFinalRT();
 
 public:
