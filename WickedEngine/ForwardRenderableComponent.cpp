@@ -91,12 +91,12 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		fx.quality = QUALITY_NEAREST;
 		fx.process.setLinDepth(true);
 		//wiImage::BatchBegin(threadID);
-		wiImage::Draw(rtMain.depth->shaderResource, fx, threadID);
+		wiImage::Draw(rtMain.depth->GetTexture(), fx, threadID);
 	}
 	rtLinearDepth.Deactivate(threadID);
 	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
 
-	wiRenderer::UpdateDepthBuffer(dtDepthCopy.shaderResource, rtLinearDepth.shaderResource.front(), threadID);
+	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
 }
 
 

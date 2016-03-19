@@ -30,7 +30,7 @@ void wiLensFlare::CleanUp(){
 	if(blendState) blendState->Release(); blendState = NULL;
 	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
 }
-void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<TextureView>& rims){
+void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<Texture2D*>& rims){
 
 	if(!rims.empty()){
 
@@ -55,7 +55,7 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector
 		//wiRenderer::graphicsDevice->BindTextureGS(depthMap,0,threadID);
 
 		int i=0;
-		for(TextureView x : rims){
+		for(Texture2D* x : rims){
 			if(x!=nullptr){
 				wiRenderer::graphicsDevice->BindTexturePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
 				wiRenderer::graphicsDevice->BindTextureGS(x, TEXSLOT_ONDEMAND0 + i, threadID);

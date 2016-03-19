@@ -45,9 +45,9 @@ public:
 
 	static bool isActive(){return state==IDLE;}
 
-	static void setBackground(TextureView texture);
+	static void setBackground(Texture2D* texture);
 
-	static TextureView backgroundTex;
+	static Texture2D* backgroundTex;
 	static wiFont font;
 };
 

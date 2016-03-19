@@ -76,7 +76,7 @@ private:
 
 	struct wiFontStyle{
 		string name;
-		ID3D11ShaderResourceView *texture;
+		Texture2D* texture;
 		
 		struct LookUp{
 			int code;

@@ -9,7 +9,7 @@ class wiSprite : public wiImage
 {
 private:
 	string texture, mask, normal;
-	TextureView texturePointer,normalPointer,maskPointer;
+	Texture2D* texturePointer,*normalPointer,*maskPointer;
 	wiResourceManager* ContentHolder;
 public:
 	wiSprite(wiResourceManager* contentHolder = nullptr);
@@ -22,7 +22,7 @@ public:
 
 	void Update(float);
 	void Update();
-	void Draw(TextureView refracRes, GRAPHICSTHREAD threadID);
+	void Draw(Texture2D* refracRes, GRAPHICSTHREAD threadID);
 	void Draw();
 	void DrawNormal(GRAPHICSTHREAD threadID);
 
@@ -66,7 +66,7 @@ public:
 	};
 	Anim anim;
 	
-	TextureView getTexture(){return texturePointer;}
-	void setTexture(TextureView value){texturePointer=value;}
+	Texture2D* getTexture(){return texturePointer;}
+	void setTexture(Texture2D* value){texturePointer=value;}
 };
 

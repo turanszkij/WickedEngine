@@ -89,7 +89,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, tessellationQuality, threadID, false, false
-			, SHADERTYPE_DEFERRED, rtReflection.shaderResource.front(), true, GRAPHICSTHREAD_SCENE);
+			, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true, GRAPHICSTHREAD_SCENE);
 
 		wiRenderer::DrawSky(threadID);
 
@@ -101,7 +101,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
 		fx.process.setLinDepth(true);
-		wiImage::Draw(rtGBuffer.depth->shaderResource, fx, threadID);
+		wiImage::Draw(rtGBuffer.depth->GetTexture(), fx, threadID);
 		fx.process.clear();
 	}
 	rtLinearDepth.Deactivate(threadID);
@@ -110,7 +110,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 	wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 
-	wiRenderer::UpdateDepthBuffer(dtDepthCopy.shaderResource, rtLinearDepth.shaderResource.front(), threadID);
+	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
 
 	if (getStereogramEnabled())
 	{
@@ -124,7 +124,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 	}
 	rtGBuffer.Deactivate(threadID);
 
-	wiRenderer::UpdateGBuffer(rtGBuffer.shaderResource, threadID);
+	wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), nullptr, nullptr, threadID);
 
 	rtLight.Activate(threadID, rtGBuffer.depth); {
 		wiRenderer::DrawLights(wiRenderer::getCamera(), threadID);
@@ -149,13 +149,13 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 			fx.blur = getSSAOBlur();
 			fx.blurDir = 0;
 			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(rtSSAO[0].shaderResource.back(), fx, threadID);
+			wiImage::Draw(rtSSAO[0].GetTexture(), fx, threadID);
 		}
 		rtSSAO[2].Activate(threadID); {
 			fx.blur = getSSAOBlur();
 			fx.blurDir = 1;
 			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(rtSSAO[1].shaderResource.back(), fx, threadID);
+			wiImage::Draw(rtSSAO[1].GetTexture(), fx, threadID);
 			fx.blur = 0;
 		}
 		fx.stencilRef = 0;
@@ -164,9 +164,9 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 
 	rtDeferred.Activate(threadID); {
-		wiImage::DrawDeferred(rtGBuffer.shaderResource[0]
-			, rtLinearDepth.shaderResource.back(), rtLight.shaderResource.front(), rtGBuffer.shaderResource[1]
-			, getSSAOEnabled() ? rtSSAO.back().shaderResource.back() : wiTextureHelper::getInstance()->getWhite()
+		wiImage::DrawDeferred(rtGBuffer.GetTexture(0)
+			, rtLinearDepth.GetTexture(), rtLight.GetTexture(), rtGBuffer.GetTexture(1)
+			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
 			, threadID, 0);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
@@ -191,9 +191,9 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 				dir.y = stren;
 			fx.process.setSSSS(dir);
 			if (i == 0)
-				wiImage::Draw(rtDeferred.shaderResource.back(), fx, threadID);
+				wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 			else
-				wiImage::Draw(rtSSS[i - 1].shaderResource.back(), fx, threadID);
+				wiImage::Draw(rtSSS[i - 1].GetTexture(), fx, threadID);
 		}
 		fx.process.clear();
 		rtSSS.back().Activate(threadID, rtGBuffer.depth); {
@@ -204,10 +204,10 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.stencilRef = 0;
 			fx.stencilComp = 0;
-			wiImage::Draw(rtDeferred.shaderResource.front(), fx, threadID);
+			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = COMPARISON_LESS;
-			wiImage::Draw(rtSSS[rtSSS.size() - 2].shaderResource.back(), fx, threadID);
+			wiImage::Draw(rtSSS[rtSSS.size() - 2].GetTexture(), fx, threadID);
 		}
 
 		fx.stencilRef = 0;
@@ -216,16 +216,16 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 	if (getSSREnabled()){
 		rtSSR.Activate(threadID); {
-			wiRenderer::graphicsDevice->GenerateMips(rtDeferred.shaderResource[0], threadID);
+			wiRenderer::graphicsDevice->GenerateMips(rtDeferred.GetTexture(0), threadID);
 			fx.process.setSSR(true);
 			//fx.setDepthMap(dtDepthCopy.shaderResource);
 			//fx.setNormalMap(rtGBuffer.shaderResource[1]);
 			//fx.setVelocityMap(rtGBuffer.shaderResource[2]);
-			fx.setMaskMap(rtLinearDepth.shaderResource.front());
+			fx.setMaskMap(rtLinearDepth.GetTexture());
 			if (getSSSEnabled())
-				wiImage::Draw(rtSSS.back().shaderResource.front(), fx, threadID);
+				wiImage::Draw(rtSSS.back().GetTexture(), fx, threadID);
 			else
-				wiImage::Draw(rtDeferred.shaderResource.front(), fx, threadID);
+				wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 			fx.process.clear();
 		}
 	}
@@ -237,14 +237,14 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		if (getSSREnabled()){
-			wiImage::Draw(rtSSR.shaderResource.front(), fx, threadID);
+			wiImage::Draw(rtSSR.GetTexture(), fx, threadID);
 		}
 		else if (getSSSEnabled())
 		{
-			wiImage::Draw(rtSSS.back().shaderResource.front(), fx, threadID);
+			wiImage::Draw(rtSSS.back().GetTexture(), fx, threadID);
 		}
 		else{
-			wiImage::Draw(rtDeferred.shaderResource.front(), fx, threadID);
+			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 		}
 		fx.process.clear();
 	}

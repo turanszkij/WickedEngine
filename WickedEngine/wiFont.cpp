@@ -362,7 +362,7 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 	ss1<<"fonts/"<<name<<".dds";
 	std::ifstream file(ss.str());
 	if(file.is_open()){
-		texture = (TextureView)wiResourceManager::GetGlobal()->add(ss1.str());
+		texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss1.str());
 		file>>texWidth>>texHeight>>recSize>>charSize;
 		int i=0;
 		while(!file.eof()){
@@ -381,7 +381,7 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 	wiRenderer::graphicsDevice->UNLOCK();
 }
 void wiFont::wiFontStyle::CleanUp(){
-	SAFE_RELEASE(texture);
+	SAFE_DELETE(texture);
 }
 void wiFont::addFontStyle( const string& toAdd ){
 	for (auto& x : fontStyles)

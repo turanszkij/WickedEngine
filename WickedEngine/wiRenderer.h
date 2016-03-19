@@ -276,7 +276,7 @@ protected:
 	static bool	wireRender, debugSpheres, debugBoneLines, debugBoxes;
 
 
-	static TextureView enviroMap,colorGrading;
+	static Texture2D* enviroMap,*colorGrading;
 	static void LoadBuffers();
 	static void LoadBasicShaders();
 	static void LoadLineShaders();
@@ -327,10 +327,10 @@ public:
 	static void SetToDrawDebugBoxes(bool param){debugBoxes=param;}
 	static bool GetToDrawDebugSpheres(){return debugSpheres;};
 	static bool GetToDrawDebugBoxes(){return debugBoxes;};
-	static TextureView GetColorGrading(){return colorGrading;};
-	static void SetColorGrading(TextureView tex){colorGrading=tex;};
-	static void SetEnviromentMap(TextureView tex){ enviroMap = tex; }
-	static TextureView GetEnviromentMap(){ return enviroMap; }
+	static Texture2D* GetColorGrading(){return colorGrading;};
+	static void SetColorGrading(Texture2D* tex){colorGrading=tex;};
+	static void SetEnviromentMap(Texture2D* tex){ enviroMap = tex; }
+	static Texture2D* GetEnviromentMap(){ return enviroMap; }
 
 
 	static Transform* getTransformByName(const string& name);
@@ -357,28 +357,28 @@ public:
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	static void UpdateCameraCB(GRAPHICSTHREAD threadID);
 	static void SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID);
-	static void UpdateGBuffer(vector<TextureView> gbuffer, GRAPHICSTHREAD threadID);
-	static void UpdateDepthBuffer(TextureView depth, TextureView linearDepth, GRAPHICSTHREAD threadID);
+	static void UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID);
+	static void UpdateDepthBuffer(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 	
 	static void DrawSky(GRAPHICSTHREAD threadID, bool isReflection = false);
 	static void DrawSun(GRAPHICSTHREAD threadID);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
-		, bool BlackOut, bool isReflection, SHADERTYPE shaded, TextureView refRes, bool grass, GRAPHICSTHREAD thread);
+		, bool BlackOut, bool isReflection, SHADERTYPE shaded, Texture2D* refRes, bool grass, GRAPHICSTHREAD thread);
 	static void ClearShadowMaps(GRAPHICSTHREAD threadID);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);
-	static void DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
-		, TextureView waterRippleNormals, GRAPHICSTHREAD threadID);
+	static void DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Texture2D* refRes
+		, Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID);
 	void DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
-	static void DrawTrails(GRAPHICSTHREAD threadID, TextureView refracRes);
-	static void DrawImagesAdd(GRAPHICSTHREAD threadID, TextureView refracRes);
+	static void DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes);
+	static void DrawImagesAdd(GRAPHICSTHREAD threadID, Texture2D* refracRes);
 	//alpha-opaque
-	static void DrawImages(GRAPHICSTHREAD threadID, TextureView refracRes);
-	static void DrawImagesNormals(GRAPHICSTHREAD threadID, TextureView refracRes);
+	static void DrawImages(GRAPHICSTHREAD threadID, Texture2D* refracRes);
+	static void DrawImagesNormals(GRAPHICSTHREAD threadID, Texture2D* refracRes);
 	static void DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned int stencilRef = 2);
 	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);

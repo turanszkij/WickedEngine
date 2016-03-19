@@ -40,15 +40,15 @@ void wiSprite::Init(){
 void wiSprite::CreateReference(const string& newTexture, const string& newMask, const string& newNormal){
 	if(newTexture.length()) {
 		texture = newTexture;
-		texturePointer = (TextureView)ContentHolder->add(newTexture);
+		texturePointer = (Texture2D*)ContentHolder->add(newTexture);
 	}
 	if(newMask.length()) {
-		maskPointer = (TextureView)ContentHolder->add(newMask);
+		maskPointer = (Texture2D*)ContentHolder->add(newMask);
 		effects.setMaskMap( maskPointer );
 		mask = newMask;
 	}
 	if(newNormal.length()) {
-		normalPointer = (TextureView)ContentHolder->add(newNormal);
+		normalPointer = (Texture2D*)ContentHolder->add(newNormal);
 		//effects.setNormalMap( normalPointer );
 		normal = newNormal;
 	}
@@ -59,7 +59,7 @@ void wiSprite::CleanUp(){
 	ContentHolder->del(mask);
 }
 
-void wiSprite::Draw(TextureView refracRes, GRAPHICSTHREAD threadID){
+void wiSprite::Draw(Texture2D* refracRes, GRAPHICSTHREAD threadID){
 	if(effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE) ){
 		effects.setRefractionSource(refracRes);
 		wiImage::Draw(texturePointer,effects,threadID);

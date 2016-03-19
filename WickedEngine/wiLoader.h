@@ -99,25 +99,25 @@ struct Material
 
 	bool hasRefMap;
 	string refMapName;
-	TextureView refMap;
+	Texture2D* refMap;
 
 	bool hasTexture;
 	string textureName;
-	TextureView texture;
+	Texture2D* texture;
 	bool premultipliedTexture;
 	BLENDMODE blendFlag;
 		
 	bool hasNormalMap;
 	string normalMapName;
-	TextureView normalMap;
+	Texture2D* normalMap;
 
 	bool hasDisplacementMap;
 	string displacementMapName;
-	TextureView displacementMap;
+	Texture2D* displacementMap;
 
 	bool hasSpecularMap;
 	string specularMapName;
-	TextureView specularMap;
+	Texture2D* specularMap;
 
 	bool subsurface_scattering;
 	bool toonshading;
@@ -503,8 +503,8 @@ struct Object : public Streamable, public Transform
 	//RIBBON TRAIL
 	deque<RibbonVertex> trail;
 	BufferResource trailBuff;
-	TextureView trailDistortTex;
-	TextureView trailTex;
+	Texture2D* trailDistortTex;
+	Texture2D* trailTex;
 
 	int physicsObjectI;
 
@@ -785,7 +785,7 @@ struct Light : public Cullable , public Transform
 	XMFLOAT4 enerDis;
 	bool noHalo;
 	bool shadow;
-	vector<TextureView> lensFlareRimTextures;
+	vector<Texture2D*> lensFlareRimTextures;
 	vector<string> lensFlareNames;
 
 	//vector<wiRenderTarget> shadowMap;
@@ -826,7 +826,7 @@ struct Light : public Cullable , public Transform
 struct Decal : public Cullable, public Transform
 {
 	string texName,norName;
-	TextureView texture,normal;
+	Texture2D* texture,*normal;
 	XMFLOAT4X4 view,projection;
 	XMFLOAT3 front;
 	float life,fadeStart;

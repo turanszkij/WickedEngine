@@ -193,13 +193,13 @@ void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 
 	wiRenderer::graphicsDevice->BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
 
-	wiRenderer::graphicsDevice->LOCK();
+	wiRenderer::graphicsDevice->UNLOCK();
 }
 
-void wiImage::Draw(TextureView texture, const wiImageEffects& effects){
+void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects){
 	Draw(texture,effects,GRAPHICSTHREAD_IMMEDIATE);
 }
-void wiImage::Draw(TextureView texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
+void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
 {
 
 	bool fullScreenEffect = false;
@@ -426,9 +426,9 @@ void wiImage::Draw(TextureView texture, const wiImageEffects& effects,GRAPHICSTH
 	wiRenderer::graphicsDevice->Draw((fullScreenEffect ? 3 : 4), threadID);
 }
 
-void wiImage::DrawDeferred(TextureView texture
-		, TextureView depth, TextureView lightmap, TextureView normal
-		, TextureView ao, GRAPHICSTHREAD threadID, int stencilRef){
+void wiImage::DrawDeferred(Texture2D* texture
+		, Texture2D* depth, Texture2D* lightmap, Texture2D* normal
+		, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilRef){
 
 	wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 	wiRenderer::graphicsDevice->BindRasterizerState(rasterizerState,threadID);

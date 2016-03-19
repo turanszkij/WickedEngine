@@ -187,7 +187,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->refMapName=ss.str();
-						currentMat->refMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->refMap!=0)
 						currentMat->hasRefMap = true;
@@ -199,7 +199,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->normalMapName=ss.str();
-						currentMat->normalMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->normalMap!=0)
 						currentMat->hasNormalMap = true;
@@ -211,7 +211,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->textureName=ss.str();
-						currentMat->texture = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->texture!=0)
 						currentMat->hasTexture=true;
@@ -224,7 +224,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->displacementMapName=ss.str();
-						currentMat->displacementMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->displacementMap!=0)
 						currentMat->hasDisplacementMap=true;
@@ -236,7 +236,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
 						currentMat->specularMapName=ss.str();
-						currentMat->specularMap = (TextureView)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					if(currentMat->specularMap!=0)
 						currentMat->hasSpecularMap=true;
@@ -932,8 +932,8 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					file>>t;
 					stringstream rim("");
 					rim<<directory<<"rims/"<<t;
-					TextureView tex=nullptr;
-					if ((tex = (TextureView)wiResourceManager::GetGlobal()->add(rim.str())) != nullptr){
+					Texture2D* tex=nullptr;
+					if ((tex = (Texture2D*)wiResourceManager::GetGlobal()->add(rim.str())) != nullptr){
 						lights.back()->lensFlareRimTextures.push_back(tex);
 						lights.back()->lensFlareNames.push_back(rim.str());
 					}
@@ -2832,13 +2832,13 @@ Decal::~Decal() {
 void Decal::addTexture(const string& tex){
 	texName=tex;
 	if(!tex.empty()){
-		texture = (TextureView)wiResourceManager::GetGlobal()->add(tex);
+		texture = (Texture2D*)wiResourceManager::GetGlobal()->add(tex);
 	}
 }
 void Decal::addNormal(const string& nor){
 	norName=nor;
 	if(!nor.empty()){
-		normal = (TextureView)wiResourceManager::GetGlobal()->add(nor);
+		normal = (Texture2D*)wiResourceManager::GetGlobal()->add(nor);
 	}
 }
 void Decal::UpdateTransform()

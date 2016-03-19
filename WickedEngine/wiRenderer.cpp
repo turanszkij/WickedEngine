@@ -24,6 +24,8 @@
 #include "wiGraphicsAPI_DX11.h"
 
 #pragma region STATICS
+GraphicsDevice* wiRenderer::graphicsDevice = nullptr;
+
 Sampler wiRenderer::samplers[SSLOT_COUNT];
 
 BufferResource		wiRenderer::constantBuffers[CBTYPE_LAST];
@@ -42,7 +44,7 @@ int wiRenderer::SCREENWIDTH=1280,wiRenderer::SCREENHEIGHT=720,wiRenderer::SHADOW
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
 
-TextureView wiRenderer::enviroMap,wiRenderer::colorGrading;
+Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
@@ -1533,7 +1535,7 @@ void wiRenderer::DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID
 		e->DrawPremul(camera, threadID, dark);
 	}
 }
-void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, TextureView refracRes){
+void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 	wiRenderer::graphicsDevice->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
 	wiRenderer::graphicsDevice->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
 
@@ -1603,12 +1605,12 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, TextureView refracRes){
 		}
 	}
 }
-void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, TextureView refracRes){
+void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 	imagesRTAdd.Activate(threadID,0,0,0,1);
 	//wiImage::BatchBegin(threadID);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ADDITIVE){
-			/*TextureView nor = x->effects.normalMap;
+			/*Texture2D* nor = x->effects.normalMap;
 			x->effects.setNormalMap(nullptr);
 			bool changedBlend=false;
 			if(x->effects.blendFlag==BLENDMODE_OPAQUE && nor){
@@ -1622,12 +1624,12 @@ void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, TextureView refracRes){
 		}
 	}
 }
-void wiRenderer::DrawImages(GRAPHICSTHREAD threadID, TextureView refracRes){
+void wiRenderer::DrawImages(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 	imagesRT.Activate(threadID,0,0,0,0);
 	//wiImage::BatchBegin(threadID);
 	for(wiSprite* x : images){
 		if(x->effects.blendFlag==BLENDMODE_ALPHA || x->effects.blendFlag==BLENDMODE_OPAQUE){
-			/*TextureView nor = x->effects.normalMap;
+			/*Texture2D* nor = x->effects.normalMap;
 			x->effects.setNormalMap(nullptr);
 			bool changedBlend=false;
 			if(x->effects.blendFlag==BLENDMODE_OPAQUE && nor){
@@ -1641,7 +1643,7 @@ void wiRenderer::DrawImages(GRAPHICSTHREAD threadID, TextureView refracRes){
 		}
 	}
 }
-void wiRenderer::DrawImagesNormals(GRAPHICSTHREAD threadID, TextureView refracRes){
+void wiRenderer::DrawImagesNormals(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 	normalMapRT.Activate(threadID,0,0,0,0);
 	//wiImage::BatchBegin(threadID);
 	for(wiSprite* x : images){
@@ -1727,7 +1729,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
 					(*lcb).mShM[shmap]=l->shadowCam[shmap].getVP();
 					if(l->shadowMaps_dirLight[shmap].depth)
-						wiRenderer::graphicsDevice->BindTexturePS(l->shadowMaps_dirLight[shmap].depth->shaderResource,TEXSLOT_SHADOW0+shmap,threadID);
+						wiRenderer::graphicsDevice->BindTexturePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
 				}
 				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,threadID);
 
@@ -1745,7 +1747,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 				{
 					(*lcb).enerdis.w = 1.f;
 					if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
-						wiRenderer::graphicsDevice->BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW_CUBE, threadID);
+						wiRenderer::graphicsDevice->BindTexturePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
 				}
 				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, threadID);
 
@@ -1776,7 +1778,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 				{
 					(*lcb).mShM = l->shadowCam[0].getVP();
 					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
-						wiRenderer::graphicsDevice->BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->shaderResource, TEXSLOT_SHADOW0, threadID);
+						wiRenderer::graphicsDevice->BindTexturePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
 				}
 				wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], lcb, threadID);
 
@@ -2318,7 +2320,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 
 void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
 				  , bool BlackOut, bool isReflection, SHADERTYPE shaded
-				  , TextureView refRes, bool grass, GRAPHICSTHREAD thread)
+				  , Texture2D* refRes, bool grass, GRAPHICSTHREAD thread)
 {
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -2329,7 +2331,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 	if(!culledObjects.empty())
 	{
 
-		TextureView envMaps[] = { enviroMap, enviroMap };
+		Texture2D* envMaps[] = { enviroMap, enviroMap };
 		XMFLOAT3 envMapPositions[] = { XMFLOAT3(0,0,0),XMFLOAT3(0,0,0) };
 		if (!GetScene().environmentProbes.empty())
 		{
@@ -2360,7 +2362,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			}
 			for (unsigned int i = 0; i < min(sortedEnvProbes.size(), 2); ++i)
 			{
-				envMaps[i] = sortedEnvProbes[i]->cubeMap.shaderResource.front();
+				envMaps[i] = sortedEnvProbes[i]->cubeMap.GetTexture();
 				envMapPositions[i] = sortedEnvProbes[i]->translation;
 			}
 		}
@@ -2517,8 +2519,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 
 }
 
-void wiRenderer::DrawWorldTransparent(Camera* camera, TextureView refracRes, TextureView refRes
-	, TextureView waterRippleNormals, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Texture2D* refRes
+	, Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID)
 {
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -2818,14 +2820,15 @@ void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID)
 {
 	wiRenderer::graphicsDevice->UpdateBuffer(constantBuffers[CBTYPE_CLIPPLANE], &clipPlane, threadID);
 }
-void wiRenderer::UpdateGBuffer(vector<TextureView> gbuffer, GRAPHICSTHREAD threadID)
+void wiRenderer::UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
 {
-	for (unsigned int i = 0; i < gbuffer.size(); ++i)
-	{
-		wiRenderer::graphicsDevice->BindTexturePS(gbuffer[i], TEXSLOT_GBUFFER0 + i, threadID);
-	}
+	wiRenderer::graphicsDevice->BindTexturePS(slot0, TEXSLOT_GBUFFER0, threadID);
+	wiRenderer::graphicsDevice->BindTexturePS(slot1, TEXSLOT_GBUFFER1, threadID);
+	wiRenderer::graphicsDevice->BindTexturePS(slot2, TEXSLOT_GBUFFER2, threadID);
+	wiRenderer::graphicsDevice->BindTexturePS(slot3, TEXSLOT_GBUFFER3, threadID);
+	wiRenderer::graphicsDevice->BindTexturePS(slot4, TEXSLOT_GBUFFER4, threadID);
 }
-void wiRenderer::UpdateDepthBuffer(TextureView depth, TextureView linearDepth, GRAPHICSTHREAD threadID)
+void wiRenderer::UpdateDepthBuffer(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
 {
 	wiRenderer::graphicsDevice->BindTexturePS(depth, TEXSLOT_DEPTH, threadID);
 	wiRenderer::graphicsDevice->BindTextureVS(depth, TEXSLOT_DEPTH, threadID);
@@ -3322,9 +3325,9 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 	probe->cubeMap.Deactivate(threadID);
 
-	wiRenderer::graphicsDevice->GenerateMips(probe->cubeMap.shaderResource[0], threadID);
+	wiRenderer::graphicsDevice->GenerateMips(probe->cubeMap.GetTexture(), threadID);
 
-	enviroMap = probe->cubeMap.shaderResource.front();
+	enviroMap = probe->cubeMap.GetTexture();
 
 	scene->environmentProbes.push_back(probe);
 

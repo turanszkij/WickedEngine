@@ -387,7 +387,7 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 
 	if(!culledPatches.empty())
 	{
-		TextureView texture = material->texture;
+		Texture2D* texture = material->texture;
 
 		wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
 		wiRenderer::graphicsDevice->BindVertexLayout(il,threadID);

@@ -15,7 +15,7 @@ float wiBackLog::pos;
 int wiBackLog::scroll;
 stringstream wiBackLog::inputArea;
 int wiBackLog::historyPos=0;
-TextureView wiBackLog::backgroundTex = nullptr;
+Texture2D* wiBackLog::backgroundTex = nullptr;
 wiFont wiBackLog::font;
 
 void wiBackLog::Initialize(){
@@ -144,7 +144,7 @@ void wiBackLog::historyNext(){
 	}
 }
 
-void wiBackLog::setBackground(TextureView texture)
+void wiBackLog::setBackground(Texture2D* texture)
 {
 	backgroundTex = texture;
 }

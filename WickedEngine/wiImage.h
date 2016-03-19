@@ -65,12 +65,12 @@ private:
 public:
 	wiImage();
 	
-	static void Draw(TextureView texture, const wiImageEffects& effects);
-	static void Draw(TextureView texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID);
+	static void Draw(Texture2D* texture, const wiImageEffects& effects);
+	static void Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID);
 
-	static void DrawDeferred(TextureView texture
-		, TextureView depth, TextureView lightmap, TextureView normal
-		, TextureView ao, GRAPHICSTHREAD threadID, int stencilref = 0);
+	static void DrawDeferred(Texture2D* texture
+		, Texture2D* depth, Texture2D* lightmap, Texture2D* normal
+		, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilref = 0);
 
 	static void Load();
 	static void CleanUp();

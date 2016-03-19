@@ -103,7 +103,7 @@ void Renderable2DComponent::Compose()
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 	fx.presentFullScreen = true;
 
-	wiImage::Draw(rtFinal.shaderResource.back(), fx);
+	wiImage::Draw(rtFinal.GetTexture(), fx);
 
 	RenderableComponent::Compose();
 }

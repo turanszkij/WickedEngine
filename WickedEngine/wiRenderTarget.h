@@ -8,16 +8,19 @@ class wiRenderTarget
 {
 private:
 	int numViews;
-	bool retargetted;
-	vector<TextureView>	SAVEDshaderResource;
+	//bool retargetted;
+	//vector<Texture2D*>	SAVEDshaderResource;
 	void clear();
-	Texture2DDesc				textureDesc;
+	//Texture2DDesc				textureDesc;
+	vector<Texture2D*>	renderTargets;
+	vector<TextureCube*>	renderTargets_Cube;
+	bool isCube;
 public:
-	ViewPort						viewPort;
-	vector<Texture2D>			texture2D;
-	vector<RenderTargetView>		renderTarget;
-	vector<TextureView>	shaderResource;
-	wiDepthTarget*						depth;
+	//vector<Texture2D>			texture2D;
+	//vector<RenderTargetView>		renderTarget;
+	//vector<Texture2D*>	shaderResource;
+	ViewPort			viewPort;
+	wiDepthTarget*		depth;
 
 	wiRenderTarget();
 	wiRenderTarget(UINT width, UINT height, int numViews = 1, bool hasDepth = false, UINT MSAAC = 1, UINT MSAAQ = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1);
@@ -33,10 +36,11 @@ public:
 	void Deactivate(GRAPHICSTHREAD threadID);
 	void Set(GRAPHICSTHREAD threadID);
 	void Set(GRAPHICSTHREAD threadID, wiDepthTarget*);
-	void Retarget(TextureView resource);
-	void Restore();
+	//void Retarget(Texture2D* resource);
+	//void Restore();
 
-	Texture2DDesc GetDesc() const{ return textureDesc; }
+	Texture2D* GetTexture(int viewID = 0) const{ return (isCube ? renderTargets_Cube[viewID] : renderTargets[viewID]); }
+	Texture2DDesc GetDesc(int viewID = 0) const{ return GetTexture(viewID)->desc; }
 	UINT GetMipCount();
 };
 

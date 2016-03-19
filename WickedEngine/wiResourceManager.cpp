@@ -89,7 +89,7 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 		switch(type){
 		case Data_Type::IMAGE:
 		{
-			TextureView image=nullptr;
+			Texture2D* image=nullptr;
 			//if(
 			//		!ext.compare("jpg")
 			//	|| !ext.compare("JPG")
@@ -260,7 +260,7 @@ bool wiResourceManager::del(const string& name, bool forceDelete)
 			switch(res->type){
 			case Data_Type::IMAGE:
 			case Data_Type::IMAGE_STAGING:
-				SAFE_RELEASE(reinterpret_cast<TextureView&>(res->data));
+				SAFE_DELETE(reinterpret_cast<Texture2D*&>(res->data));
 				break;
 			case Data_Type::VERTEXSHADER:
 				{

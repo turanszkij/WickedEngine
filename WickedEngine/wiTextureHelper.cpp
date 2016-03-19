@@ -14,18 +14,18 @@ wiTextureHelper::wiTextureHelperInstance::~wiTextureHelperInstance()
 {
 	for (int i = 0; i < HELPERTEXTURE_COUNT; ++i)
 	{
-		SAFE_RELEASE(helperTextures[i]);
+		SAFE_DELETE(helperTextures[i]);
 	}
 
 	for (auto& x : colorTextures)
 	{
-		SAFE_RELEASE(x.second);
+		SAFE_DELETE(x.second);
 	}
 }
 
 
 
-TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64()
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getRandom64x64()
 {
 	if (helperTextures[HELPERTEXTURE_RANDOM64X64] != nullptr)
 	{
@@ -53,7 +53,7 @@ TextureView wiTextureHelper::wiTextureHelperInstance::getRandom64x64()
 	return helperTextures[HELPERTEXTURE_RANDOM64X64];
 }
 
-TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeDefault()
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getColorGradeDefault()
 {
 	if (helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT] != nullptr)
 	{
@@ -93,27 +93,27 @@ TextureView wiTextureHelper::wiTextureHelperInstance::getColorGradeDefault()
 	return helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
 }
 
-TextureView wiTextureHelper::wiTextureHelperInstance::getNormalMapDefault()
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getNormalMapDefault()
 {
 	return getColor(wiColor(127, 127, 255, 255));
 }
 
-TextureView wiTextureHelper::wiTextureHelperInstance::getWhite()
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getWhite()
 {
 	return getColor(wiColor(255, 255, 255, 255));
 }
 
-TextureView wiTextureHelper::wiTextureHelperInstance::getBlack()
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getBlack()
 {
 	return getColor(wiColor(0, 0, 0, 255));
 }
 
-TextureView wiTextureHelper::wiTextureHelperInstance::getTransparent()
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getTransparent()
 {
 	return getColor(wiColor(0, 0, 0, 0));
 }
 
-TextureView wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& color)
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& color)
 {
 	if (colorTextures.find(color.rgba) != colorTextures.end())
 	{
@@ -130,7 +130,7 @@ TextureView wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& co
 		data[i + 3] = color.a;
 	}
 
-	TextureView texture;
+	Texture2D* texture;
 	if (FAILED(CreateTexture(texture, data, 2, 2, 4)))
 	{
 		delete[] data;

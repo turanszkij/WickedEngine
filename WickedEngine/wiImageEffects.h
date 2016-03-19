@@ -94,13 +94,13 @@ public:
 	};
 	Processing process;
 	bool deferred;
-	TextureView maskMap, distortionMap, refractionSource;
+	Texture2D* maskMap, *distortionMap, *refractionSource;
 	// Generic texture
-	void setMaskMap(TextureView view) { maskMap = view; }
+	void setMaskMap(Texture2D* view) { maskMap = view; }
 	// The normalmap texture which should distort the refraction source
-	void setDistortionMap(TextureView view) { distortionMap = view; }
+	void setDistortionMap(Texture2D* view) { distortionMap = view; }
 	// The texture which should be distorted
-	void setRefractionSource(TextureView view) { refractionSource = view; }
+	void setRefractionSource(Texture2D* view) { refractionSource = view; }
 
 	void init() {
 		pos = XMFLOAT3(0, 0, 0);

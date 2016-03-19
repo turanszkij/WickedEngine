@@ -4,21 +4,26 @@
 
 wiDepthTarget::wiDepthTarget()
 {
-	texture2D = NULL;
-	depthTarget = NULL;
-	shaderResource = NULL;
+	//texture2D = NULL;
+	//depthTarget = NULL;
+	//shaderResource = NULL;
+	texture = nullptr;
+	isCube = false;
 }
 
 
 wiDepthTarget::~wiDepthTarget()
 {
-	if(texture2D) texture2D->Release(); texture2D = NULL;
-	if(depthTarget) depthTarget->Release(); depthTarget = NULL;
-	if(shaderResource) shaderResource->Release(); shaderResource = NULL;
+	//if(texture2D) texture2D->Release(); texture2D = NULL;
+	//if(depthTarget) depthTarget->Release(); depthTarget = NULL;
+	//if(shaderResource) shaderResource->Release(); shaderResource = NULL;
+	SAFE_DELETE(texture);
 }
 
 void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 {
+	isCube = false;
+
 	Texture2DDesc depthBufferDesc;
 	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
 
@@ -35,33 +40,37 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = 0;
 
-	HRESULT hr;
-	// Create the texture for the depth buffer using the filled out description.
-	hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, nullptr, &texture2D);
+	wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, nullptr, &texture);
 
-	DepthStencilViewDesc depthStencilViewDesc;
-	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthStencilViewDesc.ViewDimension = (MSAAQ==0 ? RESOURCE_DIMENSION_TEXTURE2D : RESOURCE_DIMENSION_TEXTURE2DMS);
-	//depthStencilViewDesc.Texture2D.MipSlice = 0;
-	depthStencilViewDesc.Flags = 0;
+	//HRESULT hr;
+	//// Create the texture for the depth buffer using the filled out description.
+	//hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, nullptr, &texture2D);
 
-	// Create the depth stencil view.
-	hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
+	//DepthStencilViewDesc depthStencilViewDesc;
+	//ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+	//depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	//depthStencilViewDesc.ViewDimension = (MSAAQ==0 ? RESOURCE_DIMENSION_TEXTURE2D : RESOURCE_DIMENSION_TEXTURE2DMS);
+	////depthStencilViewDesc.Texture2D.MipSlice = 0;
+	//depthStencilViewDesc.Flags = 0;
 
-	//Create Depth ShaderResource
-	//ShaderResourceViewDesc shaderResourceViewDesc;
-	ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
-	shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	shaderResourceViewDesc.ViewDimension = (MSAAQ==0 ? RESOURCE_DIMENSION_TEXTURE2D : RESOURCE_DIMENSION_TEXTURE2DMS);
-	//shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-	//shaderResourceViewDesc.Texture2D.MipLevels = 1;
-	shaderResourceViewDesc.mipLevels = 1;
+	//// Create the depth stencil view.
+	//hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
 
-	wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
+	////Create Depth ShaderResource
+	////ShaderResourceViewDesc shaderResourceViewDesc;
+	//ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
+	//shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	//shaderResourceViewDesc.ViewDimension = (MSAAQ==0 ? RESOURCE_DIMENSION_TEXTURE2D : RESOURCE_DIMENSION_TEXTURE2DMS);
+	////shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+	////shaderResourceViewDesc.Texture2D.MipLevels = 1;
+	//shaderResourceViewDesc.mipLevels = 1;
+
+	//wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
 }
 void wiDepthTarget::InitializeCube(int size)
 {
+	isCube = true;
+
 	Texture2DDesc depthBufferDesc;
 	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
 
@@ -78,45 +87,49 @@ void wiDepthTarget::InitializeCube(int size)
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
-	HRESULT hr;
-	// Create the texture for the depth buffer using the filled out description.
-	hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
+	wiRenderer::graphicsDevice->CreateTextureCube(&depthBufferDesc, nullptr, &textureCube);
 
-	DepthStencilViewDesc depthStencilViewDesc;
-	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-	depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
-	depthStencilViewDesc.ViewDimension = RESOURCE_DIMENSION_TEXTURE2DARRAY;
- //   depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
-	//depthStencilViewDesc.Texture2DArray.ArraySize = 6;
- //   depthStencilViewDesc.Texture2DArray.MipSlice = 0;
-	depthStencilViewDesc.ArraySize = 6;
-	depthStencilViewDesc.Flags = 0;
+	//HRESULT hr;
+	//// Create the texture for the depth buffer using the filled out description.
+	//hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
 
-	// Create the depth stencil view.
-	hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
+	//DepthStencilViewDesc depthStencilViewDesc;
+	//ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+	//depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	//depthStencilViewDesc.ViewDimension = RESOURCE_DIMENSION_TEXTURE2DARRAY;
+ ////   depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
+	////depthStencilViewDesc.Texture2DArray.ArraySize = 6;
+ ////   depthStencilViewDesc.Texture2DArray.MipSlice = 0;
+	//depthStencilViewDesc.ArraySize = 6;
+	//depthStencilViewDesc.Flags = 0;
 
-	//Create Depth ShaderResource
-	//ShaderResourceViewDesc shaderResourceViewDesc;
-	ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
-	shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	shaderResourceViewDesc.ViewDimension = RESOURCE_DIMENSION_TEXTURECUBE;
-	//shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-	//shaderResourceViewDesc.Texture2D.MipLevels = 1;
-	shaderResourceViewDesc.mipLevels = 1;
+	//// Create the depth stencil view.
+	//hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
 
-	wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
+	////Create Depth ShaderResource
+	////ShaderResourceViewDesc shaderResourceViewDesc;
+	//ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
+	//shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	//shaderResourceViewDesc.ViewDimension = RESOURCE_DIMENSION_TEXTURECUBE;
+	////shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+	////shaderResourceViewDesc.Texture2D.MipLevels = 1;
+	//shaderResourceViewDesc.mipLevels = 1;
+
+	//wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
 }
 
 void wiDepthTarget::Clear(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::graphicsDevice->ClearDepthStencil( depthTarget, CLEAR_DEPTH | CLEAR_STENCIL, 1.0f, 0);
+	wiRenderer::graphicsDevice->ClearDepthStencil( texture, CLEAR_DEPTH | CLEAR_STENCIL, 1.0f, 0);
 }
 void wiDepthTarget::CopyFrom(const wiDepthTarget& from, GRAPHICSTHREAD threadID)
 {
-	if(shaderResource) shaderResource->Release();
-	//static ShaderResourceViewDesc desc;
-	//from.shaderResource->GetDesc(&desc);
-	wiRenderer::graphicsDevice->CopyResource(texture2D,from.texture2D);
-	HRESULT r = wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D,&from.shaderResourceViewDesc,&shaderResource);
+	//if(shaderResource) shaderResource->Release();
+	////static ShaderResourceViewDesc desc;
+	////from.shaderResource->GetDesc(&desc);
+	//wiRenderer::graphicsDevice->CopyResource(texture2D,from.texture2D);
+	//HRESULT r = wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D,&from.shaderResourceViewDesc,&shaderResource);
+
+	wiRenderer::graphicsDevice->CopyTexture2D(GetTexture(), from.GetTexture(), threadID);
 }
 

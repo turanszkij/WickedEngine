@@ -4,12 +4,17 @@
 
 class wiDepthTarget
 {
+private:
+	Texture2D*		texture;
+	TextureCube*	textureCube;
+	bool isCube;
 public:
-	Texture2D			texture2D;
-	DepthStencilView	depthTarget;
-	TextureView			shaderResource;
+	//Texture2D			texture2D;
+	//DepthStencilView	depthTarget;
+	//Texture2D*			shaderResource;
 
-	ShaderResourceViewDesc shaderResourceViewDesc;
+	//ShaderResourceViewDesc shaderResourceViewDesc;
+
 
 	wiDepthTarget();
 	~wiDepthTarget();
@@ -18,5 +23,7 @@ public:
 	void InitializeCube(int size);
 	void Clear(GRAPHICSTHREAD threadID);
 	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);
+
+	Texture2D* GetTexture() const { return(isCube ? textureCube : texture); }
 };
 

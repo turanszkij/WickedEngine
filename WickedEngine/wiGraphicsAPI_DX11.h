@@ -20,12 +20,12 @@ public:
 
 	virtual HRESULT CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, BufferResource *ppBuffer);
 	virtual HRESULT CreateTexture1D();
-	virtual HRESULT CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D *ppTexture2D);
+	virtual HRESULT CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D);
 	virtual HRESULT CreateTexture3D();
-	virtual HRESULT CreateShaderResourceView(APIResource pResource, const ShaderResourceViewDesc* pDesc, TextureView *ppSRView);
-	virtual HRESULT CreateUnorderedAccessView();
-	virtual HRESULT CreateRenderTargetView(APIResource pResource, const RenderTargetViewDesc* pDesc, RenderTargetView *ppRTView);
-	virtual HRESULT CreateDepthStencilView(APIResource pResource, const DepthStencilViewDesc* pDesc, DepthStencilView *ppDepthStencilView);
+	virtual HRESULT CreateTextureCube(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, TextureCube **ppTextureCube);
+	virtual HRESULT CreateShaderResourceView(Texture2D* pTexture);
+	virtual HRESULT CreateRenderTargetView(Texture2D* pTexture);
+	virtual HRESULT CreateDepthStencilView(Texture2D* pTexture);
 	virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
 		const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *ppInputLayout);
 	virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, VertexShader *ppVertexShader);
@@ -36,26 +36,10 @@ public:
 	virtual HRESULT CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, HullShader *ppHullShader);
 	virtual HRESULT CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, DomainShader *ppDomainShader);
 	virtual HRESULT CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, ComputeShader *ppComputeShader);
-	virtual HRESULT CreateClassLinkage();
 	virtual HRESULT CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *ppBlendState);
 	virtual HRESULT CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *ppDepthStencilState);
 	virtual HRESULT CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *ppRasterizerState);
 	virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *ppSamplerState);
-	virtual HRESULT CreateQuery();
-	virtual HRESULT CreatePredicate();
-	virtual HRESULT CreateDeferredContext(UINT ContextFlags, DeviceContext *ppDeferredContext);
-	virtual HRESULT OpenSharedResource();
-	virtual HRESULT CheckFormatSupport();
-	virtual HRESULT CheckMultiSampleQualityLevels();
-	virtual HRESULT CheckCounterInfo();
-	virtual HRESULT CheckCounter();
-	virtual HRESULT CheckFeatureSupport();
-	virtual HRESULT GetPrivateData();
-	virtual HRESULT SetPrivateData();
-	virtual HRESULT SetPrivateDataInterface();
-	virtual UINT GetCreationFlags();
-	virtual HRESULT GetDeviceRemovedReason();
-	virtual DeviceContext GetImmediateContext();
 
 	virtual void PresentBegin();
 	virtual void PresentEnd();
@@ -63,8 +47,7 @@ public:
 	virtual void ExecuteDeferredContexts();
 	virtual void FinishCommandList(GRAPHICSTHREAD thread);
 
-	virtual bool GetMultithreadingSupport();
-	virtual DeviceContext GetDeferredContext(GRAPHICSTHREAD thread);
+	virtual bool GetMultithreadingSupport() { return DEFERREDCONTEXT_SUPPORT; }
 
 	virtual bool GetVSyncEnabled() { return VSYNC; }
 	virtual void SetVSyncEnabled(bool value) { VSYNC = value; }
@@ -87,69 +70,50 @@ public:
 			SAFE_DELETE_ARRAY(pd3dViewPorts);
 		}
 	}
-	virtual void BindRenderTargets(UINT NumViews, RenderTargetView const *ppRenderTargetViews, DepthStencilView pDepthStencilView, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+	virtual void BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr) {
-			deviceContexts[threadID]->OMSetRenderTargets(NumViews, ppRenderTargetViews, pDepthStencilView);
+			static thread_local RenderTargetView renderTargetViews[8];
+			for (UINT i = 0; i < min(NumViews, 8); ++i)
+			{
+				renderTargetViews[i] = ppRenderTargetViews[i]->renderTargetView;
+			}
+			deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews, 
+				(depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilView));
 		}
 	}
-	virtual void ClearRenderTarget(RenderTargetView pRenderTargetView, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
-		if (deviceContexts[threadID] != nullptr) {
-			deviceContexts[threadID]->ClearRenderTargetView(pRenderTargetView, ColorRGBA);
+	virtual void ClearRenderTarget(Texture2D* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+		if (deviceContexts[threadID] != nullptr && pTexture != nullptr && pTexture->renderTargetView != nullptr) {
+			deviceContexts[threadID]->ClearRenderTargetView(pTexture->renderTargetView, ColorRGBA);
 		}
 	}
-	virtual void ClearDepthStencil(DepthStencilView pDepthStencilView, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
-		if (deviceContexts[threadID] != nullptr) {
-			deviceContexts[threadID]->ClearDepthStencilView(pDepthStencilView, ClearFlags, Depth, Stencil);
+	virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+		if (deviceContexts[threadID] != nullptr && pTexture != nullptr && pTexture->depthStencilView != nullptr) {
+			deviceContexts[threadID]->ClearDepthStencilView(pTexture->depthStencilView, ClearFlags, Depth, Stencil);
 		}
 	}
-	virtual void BindTexturePS(TextureView texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+	virtual void BindTexturePS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr && texture != nullptr) {
-			deviceContexts[threadID]->PSSetShaderResources(slot, 1, &texture);
+			deviceContexts[threadID]->PSSetShaderResources(slot, 1, &texture->shaderResourceView);
 		}
 	}
-	virtual void BindTexturesPS(TextureView textures[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
-		if (deviceContexts[threadID] != nullptr && textures != nullptr) {
-			deviceContexts[threadID]->PSSetShaderResources(slot, num, textures);
-		}
-	}
-	virtual void BindTextureVS(TextureView texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+	virtual void BindTextureVS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr && texture != nullptr) {
-			deviceContexts[threadID]->VSSetShaderResources(slot, 1, &texture);
+			deviceContexts[threadID]->VSSetShaderResources(slot, 1, &texture->shaderResourceView);
 		}
 	}
-	virtual void BindTexturesVS(TextureView textures[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
-		if (deviceContexts[threadID] != nullptr && textures != nullptr) {
-			deviceContexts[threadID]->VSSetShaderResources(slot, num, textures);
-		}
-	}
-	virtual void BindTextureGS(TextureView texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+	virtual void BindTextureGS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr && texture != nullptr) {
-			deviceContexts[threadID]->GSSetShaderResources(slot, 1, &texture);
+			deviceContexts[threadID]->GSSetShaderResources(slot, 1, &texture->shaderResourceView);
 		}
 	}
-	virtual void BindTexturesGS(TextureView textures[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
-		if (deviceContexts[threadID] != nullptr && textures != nullptr) {
-			deviceContexts[threadID]->GSSetShaderResources(slot, num, textures);
-		}
-	}
-	virtual void BindTextureDS(TextureView texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+	virtual void BindTextureDS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr && texture != nullptr) {
-			deviceContexts[threadID]->DSSetShaderResources(slot, 1, &texture);
+			deviceContexts[threadID]->DSSetShaderResources(slot, 1, &texture->shaderResourceView);
 		}
 	}
-	virtual void BindTexturesDS(TextureView textures[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
-		if (deviceContexts[threadID] != nullptr && textures != nullptr) {
-			deviceContexts[threadID]->DSSetShaderResources(slot, num, textures);
-		}
-	}
-	virtual void BindTextureHS(TextureView texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+	virtual void BindTextureHS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr && texture != nullptr) {
-			deviceContexts[threadID]->HSSetShaderResources(slot, 1, &texture);
-		}
-	}
-	virtual void BindTexturesHS(TextureView textures[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
-		if (deviceContexts[threadID] != nullptr && textures != nullptr) {
-			deviceContexts[threadID]->HSSetShaderResources(slot, num, textures);
+			deviceContexts[threadID]->HSSetShaderResources(slot, 1, &texture->shaderResourceView);
 		}
 	}
 	virtual void UnbindTextures(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE)
@@ -157,7 +121,7 @@ public:
 		assert(num <= 32 && "UnbindTextures limit of 32 reached!");
 		if (deviceContexts[threadID] != nullptr)
 		{
-			static TextureView empties[32] = {
+			static ID3D11ShaderResourceView* empties[32] = {
 				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 				nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
@@ -358,13 +322,20 @@ public:
 			deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, 0, 0, 0);
 		}
 	}
-	virtual void GenerateMips(TextureView texture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE)
+	virtual void GenerateMips(Texture* texture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE)
 	{
-		deviceContexts[threadID]->GenerateMips(texture);
+		deviceContexts[threadID]->GenerateMips(texture->shaderResourceView);
 	}
-	virtual void CopyResource(APIResource pDstResource, APIResource pSrcResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+	virtual void CopyResource(APIResource pDstResource, const APIResource pSrcResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr) {
 			deviceContexts[threadID]->CopyResource(pDstResource, pSrcResource);
+		}
+	}
+	virtual void CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+		if (deviceContexts[threadID] != nullptr) {
+			SAFE_RELEASE(pDst->shaderResourceView);
+			deviceContexts[threadID]->CopyResource(pDst->texture2D, pSrc->texture2D);
+			CreateShaderResourceView(pDst);
 		}
 	}
 	virtual void UpdateBuffer(BufferResource& buffer, const void* data, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int dataSize = -1)
@@ -379,7 +350,7 @@ public:
 
 				BufferDesc desc;
 				desc.ByteWidth = d3dDesc.ByteWidth;
-				switch (desc.Usage)
+				switch (d3dDesc.Usage)
 				{
 				case D3D11_USAGE_DEFAULT:
 					desc.Usage = USAGE_DEFAULT;
@@ -415,7 +386,6 @@ public:
 		}
 	}
 
-
-	virtual HRESULT CreateTextureFromFile(const wstring& fileName, TextureView *ppShaderResourceView, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual HRESULT CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
 };
