@@ -278,15 +278,9 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 	if (FAILED(hr))
 		return hr;
 
-	hr = CreateRenderTargetView(*ppTexture2D);
-	if (FAILED(hr))
-		return hr;
-	hr = CreateShaderResourceView(*ppTexture2D);
-	if (FAILED(hr))
-		return hr;
-	hr = CreateDepthStencilView(*ppTexture2D);
-	if (FAILED(hr))
-		return hr;
+	CreateRenderTargetView(*ppTexture2D);
+	CreateShaderResourceView(*ppTexture2D);
+	CreateDepthStencilView(*ppTexture2D);
 
 	return hr;
 }
@@ -315,15 +309,9 @@ HRESULT GraphicsDevice_DX11::CreateTextureCube(const Texture2DDesc* pDesc, const
 	if (FAILED(hr))
 		return hr;
 
-	hr = CreateRenderTargetView(*ppTextureCube);
-	if (FAILED(hr))
-		return hr;
-	hr = CreateShaderResourceView(*ppTextureCube);
-	if (FAILED(hr))
-		return hr;
-	hr = CreateDepthStencilView(*ppTextureCube);
-	if (FAILED(hr))
-		return hr;
+	CreateRenderTargetView(*ppTextureCube);
+	CreateShaderResourceView(*ppTextureCube);
+	CreateDepthStencilView(*ppTextureCube);
 
 	return hr;
 }
@@ -336,6 +324,10 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
 			shaderResourceViewDesc.Format = pTexture->desc.Format;
+			if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
+			{
+				shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+			}
 			shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
 			shaderResourceViewDesc.TextureCube.MostDetailedMip = 0; //from most detailed...
 			shaderResourceViewDesc.TextureCube.MipLevels = -1; //...to least detailed
@@ -343,6 +335,10 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 		else
 		{
 			shaderResourceViewDesc.Format = pTexture->desc.Format;
+			if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
+			{
+				shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+			}
 			shaderResourceViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Quality == 0 ? D3D11_SRV_DIMENSION_TEXTURE2D : D3D11_SRV_DIMENSION_TEXTURE2DMS);
 			shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
 			shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed

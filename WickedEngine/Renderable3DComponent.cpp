@@ -284,7 +284,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawWaterRipples(threadID);
 	}
 
-	//wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	rtTransparent.Activate(threadID, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.GetTexture(), rtReflection.GetTexture()
 			, rtWaterRipple.GetTexture(), threadID);
@@ -352,7 +352,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, GRAPHICSTH
 
 	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
 
-	//wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	rtSun[0].Activate(threadID, mainRT.depth); {
 		wiRenderer::DrawSun(threadID);
 	}

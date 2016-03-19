@@ -3,38 +3,28 @@
 #include "wiDepthTarget.h"
 
 
-void wiRenderTarget::clear(){
-	//textureDesc = { 0 };
-	numViews = 0;
-	viewPort = ViewPort();
-	depth = nullptr;
-	//retargetted = false;
-	isCube = false;
-}
-
 wiRenderTarget::wiRenderTarget()
 {
-	clear();
+	numViews = 0;
+	depth = nullptr;
+	isCube = false;
 }
 wiRenderTarget::wiRenderTarget(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
 	, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
-	clear();
+	numViews = 0;
+	depth = nullptr;
+	isCube = false;
 	Initialize(width, height, numViews, hasDepth, MSAAC, MSAAQ, format, mipMapLevelCount);
 }
 
 
 wiRenderTarget::~wiRenderTarget()
 {
-	//for(int i=0;i<numViews;++i){
-	//	if(texture2D[i]) texture2D[i]->Release(); texture2D[i] = NULL;
-	//	if(renderTarget[i]) renderTarget[i]->Release(); renderTarget[i] = NULL;
-	//	if(SAVEDshaderResource[i]) SAVEDshaderResource[i]->Release(); SAVEDshaderResource[i]=NULL;
-	//	if(shaderResource[i] && !retargetted) shaderResource[i]->Release(); shaderResource[i] = NULL;
-	//}
-	//texture2D.clear();
-	//renderTarget.clear();
-	//shaderResource.clear();
+	clear();
+}
+
+void wiRenderTarget::clear() {
 	for (unsigned int i = 0; i < renderTargets.size(); ++i)
 	{
 		SAFE_DELETE(renderTargets[i]);
@@ -49,6 +39,8 @@ wiRenderTarget::~wiRenderTarget()
 void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
 	, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
+	clear();
+
 	isCube = false;
 
 	this->numViews = numViews;
@@ -113,6 +105,8 @@ void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasD
 }
 void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format, UINT mipMapLevelCount)
 {
+	clear();
+
 	isCube = true;
 
 	this->numViews = numViews;

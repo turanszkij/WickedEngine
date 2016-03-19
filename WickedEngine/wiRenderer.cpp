@@ -1988,8 +1988,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						CulledList culledObjects;
 						CulledCollection culledRenderer;
 
-						auto texDesc = l->shadowMaps_dirLight[index].GetDesc();
-						if (texDesc.Height != SHADOWMAPRES)
+						if (!l->shadowMaps_dirLight[index].IsInitialized() || l->shadowMaps_dirLight[index].depth->GetDesc().Height != SHADOWMAPRES)
 						{
 							// Create the shadow map
 							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, 0, true);

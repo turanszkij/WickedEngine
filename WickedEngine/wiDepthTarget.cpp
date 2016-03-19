@@ -8,20 +8,22 @@ wiDepthTarget::wiDepthTarget()
 	//depthTarget = NULL;
 	//shaderResource = NULL;
 	texture = nullptr;
+	textureCube = nullptr;
 	isCube = false;
 }
 
 
 wiDepthTarget::~wiDepthTarget()
 {
-	//if(texture2D) texture2D->Release(); texture2D = NULL;
-	//if(depthTarget) depthTarget->Release(); depthTarget = NULL;
-	//if(shaderResource) shaderResource->Release(); shaderResource = NULL;
 	SAFE_DELETE(texture);
+	SAFE_DELETE(textureCube);
 }
 
 void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 {
+	SAFE_DELETE(texture);
+	SAFE_DELETE(textureCube);
+
 	isCube = false;
 
 	Texture2DDesc depthBufferDesc;
@@ -69,6 +71,9 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 }
 void wiDepthTarget::InitializeCube(int size)
 {
+	SAFE_DELETE(texture);
+	SAFE_DELETE(textureCube);
+
 	isCube = true;
 
 	Texture2DDesc depthBufferDesc;
@@ -120,7 +125,7 @@ void wiDepthTarget::InitializeCube(int size)
 
 void wiDepthTarget::Clear(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::graphicsDevice->ClearDepthStencil( texture, CLEAR_DEPTH | CLEAR_STENCIL, 1.0f, 0);
+	wiRenderer::graphicsDevice->ClearDepthStencil(GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 1.0f, 0);
 }
 void wiDepthTarget::CopyFrom(const wiDepthTarget& from, GRAPHICSTHREAD threadID)
 {

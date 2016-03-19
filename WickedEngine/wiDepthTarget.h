@@ -25,5 +25,6 @@ public:
 	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);
 
 	Texture2D* GetTexture() const { return(isCube ? textureCube : texture); }
+	Texture2DDesc GetDesc() const { return GetTexture()->desc; }
 };
 

@@ -40,7 +40,8 @@ public:
 	//void Restore();
 
 	Texture2D* GetTexture(int viewID = 0) const{ return (isCube ? renderTargets_Cube[viewID] : renderTargets[viewID]); }
-	Texture2DDesc GetDesc(int viewID = 0) const{ return GetTexture(viewID)->desc; }
+	Texture2DDesc GetDesc(int viewID = 0) const { assert(viewID < numViews); return GetTexture(viewID)->desc; }
 	UINT GetMipCount();
+	bool IsInitialized() { return (numViews > 0 || depth != nullptr); }
 };
 
