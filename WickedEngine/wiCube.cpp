@@ -53,7 +53,7 @@ void Cube::SetUpVertices()
 	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
+	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &vertexBuffer );
 
 	if(verts){
 		delete[](verts);
@@ -72,7 +72,7 @@ void Cube::SetUpVertices()
 	bd.CPUAccessFlags = 0;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = indices;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
+	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &indexBuffer );
 }
 
 void Cube::Transform(const XMFLOAT4X4& mat)

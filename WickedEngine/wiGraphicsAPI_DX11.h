@@ -1,4 +1,5 @@
 #pragma once
+#include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 
 class GraphicsDevice_DX11 : public GraphicsDevice
@@ -7,15 +8,20 @@ private:
 	ID3D11Device*				device;
 	D3D_DRIVER_TYPE				driverType;
 	D3D_FEATURE_LEVEL			featureLevel;
-	SwapChain					swapChain;
-	RenderTargetView			renderTargetView;
+	IDXGISwapChain*				swapChain;
+	ID3D11RenderTargetView*		renderTargetView;
 	ViewPort					viewPort;
-	DeviceContext				deviceContexts[GRAPHICSTHREAD_COUNT];
-	CommandList					commandLists[GRAPHICSTHREAD_COUNT];
-	bool						DX11, VSYNC, DEFERREDCONTEXT_SUPPORT;
+	ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT];
+	ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
+	bool						DX11, DEFERREDCONTEXT_SUPPORT;
 
 public:
+#ifndef WINSTORE_SUPPORT
 	GraphicsDevice_DX11(HWND window, int screenW, int screenH, bool windowed);
+#else
+	GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window);
+#endif
+
 	~GraphicsDevice_DX11();
 
 	virtual HRESULT CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, BufferResource *ppBuffer);
@@ -49,8 +55,8 @@ public:
 
 	virtual bool GetMultithreadingSupport() { return DEFERREDCONTEXT_SUPPORT; }
 
-	virtual bool GetVSyncEnabled() { return VSYNC; }
-	virtual void SetVSyncEnabled(bool value) { VSYNC = value; }
+	virtual void SetScreenWidth(int value);
+	virtual void SetScreenHeight(int value);
 
 	///////////////Thread-sensitive////////////////////////
 
@@ -88,7 +94,12 @@ public:
 	}
 	virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 		if (deviceContexts[threadID] != nullptr && pTexture != nullptr && pTexture->depthStencilView != nullptr) {
-			deviceContexts[threadID]->ClearDepthStencilView(pTexture->depthStencilView, ClearFlags, Depth, Stencil);
+			UINT _flags = 0;
+			if (ClearFlags & CLEAR_DEPTH)
+				_flags |= D3D11_CLEAR_DEPTH;
+			if (ClearFlags & CLEAR_STENCIL)
+				_flags |= D3D11_CLEAR_STENCIL;
+			deviceContexts[threadID]->ClearDepthStencilView(pTexture->depthStencilView, _flags, Depth, Stencil);
 		}
 	}
 	virtual void BindTexturePS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
@@ -365,9 +376,23 @@ public:
 					desc.Usage = USAGE_STAGING;
 					break;
 				};
-				desc.BindFlags = d3dDesc.BindFlags;
-				desc.CPUAccessFlags = d3dDesc.CPUAccessFlags;
-				desc.MiscFlags = d3dDesc.MiscFlags;
+				desc.BindFlags = 0;
+				{
+					if (d3dDesc.BindFlags & D3D11_BIND_CONSTANT_BUFFER)
+						desc.BindFlags |= BIND_CONSTANT_BUFFER;
+					if (d3dDesc.BindFlags & D3D11_BIND_VERTEX_BUFFER)
+						desc.BindFlags |= BIND_VERTEX_BUFFER;
+					if (d3dDesc.BindFlags & D3D11_BIND_INDEX_BUFFER)
+						desc.BindFlags |= BIND_INDEX_BUFFER;
+				}
+				desc.CPUAccessFlags = 0;
+				{
+					if (d3dDesc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE)
+						desc.CPUAccessFlags |= CPU_ACCESS_WRITE;
+					if (d3dDesc.CPUAccessFlags & D3D11_CPU_ACCESS_READ)
+						desc.CPUAccessFlags |= CPU_ACCESS_READ;
+				}
+				desc.MiscFlags = 0;
 				desc.StructureByteStride = d3dDesc.StructureByteStride;
 
 				hr = CreateBuffer(&desc, nullptr, &buffer);

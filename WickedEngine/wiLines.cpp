@@ -42,7 +42,7 @@ Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4& c)
 	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
+	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &vertexBuffer );
 
 	if(verts){
 		delete[](verts);
@@ -78,7 +78,7 @@ void Lines::SetUpVertices()
 	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
+	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &vertexBuffer );
 
 	if(verts){
 		delete[](verts);

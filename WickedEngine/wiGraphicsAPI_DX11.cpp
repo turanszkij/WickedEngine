@@ -1,4 +1,3 @@
-#include "CommonInclude.h"
 #include "wiGraphicsAPI_DX11.h"
 #include "wiHelper.h"
 #include "TextureMapping.h"
@@ -6,7 +5,11 @@
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"
 
-GraphicsDevice_DX11::GraphicsDevice_DX11(HWND window, int screenW, int screenH, bool windowed)
+#ifndef WINSTORE_SUPPORT
+GraphicsDevice_DX11::GraphicsDevice_DX11(HWND window, int screenW, int screenH, bool windowed) : GraphicsDevice()
+#else
+GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
+#endif
 {
 	HRESULT hr = S_OK;
 
@@ -123,7 +126,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(HWND window, int screenW, int screenH, 
 
 
 	// Create a render target view
-	APITexture2D pBackBuffer = NULL;
+	ID3D11Texture2D* pBackBuffer = NULL;
 	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
 	if (FAILED(hr)) {
 		wiHelper::messageBox("BackBuffer creation Failed!", "Error!", nullptr);
@@ -145,6 +148,9 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(HWND window, int screenW, int screenH, 
 	viewPort.MaxDepth = 1.0f;
 	viewPort.TopLeftX = 0;
 	viewPort.TopLeftY = 0;
+
+	SCREENWIDTH = screenW;
+	SCREENHEIGHT = screenH;
 }
 GraphicsDevice_DX11::~GraphicsDevice_DX11()
 {
@@ -159,51 +165,443 @@ GraphicsDevice_DX11::~GraphicsDevice_DX11()
 	SAFE_RELEASE(device);
 }
 
+void GraphicsDevice_DX11::SetScreenWidth(int value)
+{
+	SCREENWIDTH = value;
+	// TODO: resize backbuffer
+}
+void GraphicsDevice_DX11::SetScreenHeight(int value)
+{
+	SCREENHEIGHT = value;
+	// TODO: resize backbuffer
+}
 
-// TODO!
+inline UINT _ParseBindFlags(UINT value)
+{
+	UINT _flag = 0;
+
+	if (value & BIND_VERTEX_BUFFER)
+		_flag |= D3D11_BIND_VERTEX_BUFFER;
+	if (value & BIND_INDEX_BUFFER)
+		_flag |= D3D11_BIND_INDEX_BUFFER;
+	if (value & BIND_CONSTANT_BUFFER)
+		_flag |= D3D11_BIND_CONSTANT_BUFFER;
+	if (value & BIND_SHADER_RESOURCE)
+		_flag |= D3D11_BIND_SHADER_RESOURCE;
+	if (value & BIND_STREAM_OUTPUT)
+		_flag |= D3D11_BIND_STREAM_OUTPUT;
+	if (value & BIND_RENDER_TARGET)
+		_flag |= D3D11_BIND_RENDER_TARGET;
+	if (value & BIND_DEPTH_STENCIL)
+		_flag |= D3D11_BIND_DEPTH_STENCIL;
+	if (value & BIND_UNORDERED_ACCESS)
+		_flag |= D3D11_BIND_UNORDERED_ACCESS;
+
+	return _flag;
+}
+inline UINT _ParseCPUAccessFlags(UINT value)
+{
+	UINT _flag = 0;
+
+	if (value & CPU_ACCESS_WRITE)
+		_flag |= D3D11_CPU_ACCESS_WRITE;
+	if (value & CPU_ACCESS_READ)
+		_flag |= D3D11_CPU_ACCESS_READ;
+
+	return _flag;
+}
+inline UINT _ParseResourceMiscFlags(UINT value)
+{
+	UINT _flag = 0;
+
+	if (value & RESOURCE_MISC_GENERATE_MIPS)
+		_flag |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	if (value & RESOURCE_MISC_SHARED)
+		_flag |= D3D11_RESOURCE_MISC_SHARED;
+	if (value & RESOURCE_MISC_TEXTURECUBE)
+		_flag |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (value & RESOURCE_MISC_BUFFER_STRUCTURED)
+		_flag |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+	if (value & RESOURCE_MISC_TILED)
+		_flag |= D3D11_RESOURCE_MISC_TILED;
+
+	return _flag;
+}
+
 inline D3D11_FILTER _ConvertFilter(FILTER value)
 {
-	return (D3D11_FILTER)value;
+	switch (value)
+	{
+	case FILTER_MIN_MAG_MIP_POINT:
+		return D3D11_FILTER_MIN_MAG_MIP_POINT;
+		break;
+	case FILTER_MIN_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_MIN_POINT_MAG_MIP_LINEAR:
+		return D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
+		break;
+	case FILTER_MIN_LINEAR_MAG_MIP_POINT:
+		return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+		break;
+	case FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_MIN_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_MIN_MAG_MIP_LINEAR:
+		return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		break;
+	case FILTER_ANISOTROPIC:
+		return D3D11_FILTER_ANISOTROPIC;
+		break;
+	case FILTER_COMPARISON_MIN_MAG_MIP_POINT:
+		return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+		break;
+	case FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR:
+		return D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR;
+		break;
+	case FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
+		return D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT;
+		break;
+	case FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
+		return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+		break;
+	case FILTER_COMPARISON_ANISOTROPIC:
+		return D3D11_FILTER_COMPARISON_ANISOTROPIC;
+		break;
+	case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
+		return D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT;
+		break;
+	case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+		return D3D11_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR;
+		break;
+	case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+		return D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT;
+		break;
+	case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
+		return D3D11_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
+		break;
+	case FILTER_MINIMUM_ANISOTROPIC:
+		return D3D11_FILTER_MINIMUM_ANISOTROPIC;
+		break;
+	case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
+		return D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT;
+		break;
+	case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
+		return D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR;
+		break;
+	case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+		return D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT;
+		break;
+	case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		return D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+		break;
+	case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
+		return D3D11_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT;
+		break;
+	case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
+		return D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR;
+		break;
+	case FILTER_MAXIMUM_ANISOTROPIC:
+		return D3D11_FILTER_MAXIMUM_ANISOTROPIC;
+		break;
+	default:
+		break;
+	}
+	return D3D11_FILTER_MIN_MAG_MIP_POINT;
 }
 inline D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 {
-	return (D3D11_TEXTURE_ADDRESS_MODE)value;
+	switch (value)
+	{
+	case TEXTURE_ADDRESS_WRAP:
+		return D3D11_TEXTURE_ADDRESS_WRAP;
+		break;
+	case TEXTURE_ADDRESS_MIRROR:
+		return D3D11_TEXTURE_ADDRESS_MIRROR;
+		break;
+	case TEXTURE_ADDRESS_CLAMP:
+		return D3D11_TEXTURE_ADDRESS_CLAMP;
+		break;
+	case TEXTURE_ADDRESS_BORDER:
+		return D3D11_TEXTURE_ADDRESS_BORDER;
+		break;
+	case TEXTURE_ADDRESS_MIRROR_ONCE:
+		return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+		break;
+	default:
+		break;
+	}
+	return D3D11_TEXTURE_ADDRESS_WRAP;
 }
 inline D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
 {
-	return (D3D11_COMPARISON_FUNC)value;
+	switch (value)
+	{
+	case COMPARISON_NEVER:
+		return D3D11_COMPARISON_NEVER;
+		break;
+	case COMPARISON_LESS:
+		return D3D11_COMPARISON_LESS;
+		break;
+	case COMPARISON_EQUAL:
+		return D3D11_COMPARISON_EQUAL;
+		break;
+	case COMPARISON_LESS_EQUAL:
+		return D3D11_COMPARISON_LESS_EQUAL;
+		break;
+	case COMPARISON_GREATER:
+		return D3D11_COMPARISON_GREATER;
+		break;
+	case COMPARISON_NOT_EQUAL:
+		return D3D11_COMPARISON_NOT_EQUAL;
+		break;
+	case COMPARISON_GREATER_EQUAL:
+		return D3D11_COMPARISON_GREATER_EQUAL;
+		break;
+	case COMPARISON_ALWAYS:
+		return D3D11_COMPARISON_ALWAYS;
+		break;
+	default:
+		break;
+	}
+	return D3D11_COMPARISON_NEVER;
 }
 inline D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
 {
-	return (D3D11_FILL_MODE)value;
+	switch (value)
+	{
+	case FILL_WIREFRAME:
+		return D3D11_FILL_WIREFRAME;
+		break;
+	case FILL_SOLID:
+		return D3D11_FILL_SOLID;
+		break;
+	default:
+		break;
+	}
+	return D3D11_FILL_WIREFRAME;
 }
 inline D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
 {
-	return (D3D11_CULL_MODE)value;
+	switch (value)
+	{
+	case CULL_NONE:
+		return D3D11_CULL_NONE;
+		break;
+	case CULL_FRONT:
+		return D3D11_CULL_FRONT;
+		break;
+	case CULL_BACK:
+		return D3D11_CULL_BACK;
+		break;
+	default:
+		break;
+	}
+	return D3D11_CULL_NONE;
 }
 inline D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
 {
-	return (D3D11_DEPTH_WRITE_MASK)value;
+	switch (value)
+	{
+	case DEPTH_WRITE_MASK_ZERO:
+		return D3D11_DEPTH_WRITE_MASK_ZERO;
+		break;
+	case DEPTH_WRITE_MASK_ALL:
+		return D3D11_DEPTH_WRITE_MASK_ALL;
+		break;
+	default:
+		break;
+	}
+	return D3D11_DEPTH_WRITE_MASK_ZERO;
 }
 inline D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
 {
-	return (D3D11_STENCIL_OP)value;
+	switch (value)
+	{
+	case STENCIL_OP_KEEP:
+		return D3D11_STENCIL_OP_KEEP;
+		break;
+	case STENCIL_OP_ZERO:
+		return D3D11_STENCIL_OP_ZERO;
+		break;
+	case STENCIL_OP_REPLACE:
+		return D3D11_STENCIL_OP_REPLACE;
+		break;
+	case STENCIL_OP_INCR_SAT:
+		return D3D11_STENCIL_OP_INCR_SAT;
+		break;
+	case STENCIL_OP_DECR_SAT:
+		return D3D11_STENCIL_OP_DECR_SAT;
+		break;
+	case STENCIL_OP_INVERT:
+		return D3D11_STENCIL_OP_INVERT;
+		break;
+	case STENCIL_OP_INCR:
+		return D3D11_STENCIL_OP_INCR;
+		break;
+	case STENCIL_OP_DECR:
+		return D3D11_STENCIL_OP_DECR;
+		break;
+	default:
+		break;
+	}
+	return D3D11_STENCIL_OP_KEEP;
 }
 inline D3D11_BLEND _ConvertBlend(BLEND value)
 {
-	return (D3D11_BLEND)value;
+	switch (value)
+	{
+	case BLEND_ZERO:
+		return D3D11_BLEND_ZERO;
+		break;
+	case BLEND_ONE:
+		return D3D11_BLEND_ONE;
+		break;
+	case BLEND_SRC_COLOR:
+		return D3D11_BLEND_SRC_COLOR;
+		break;
+	case BLEND_INV_SRC_COLOR:
+		return D3D11_BLEND_INV_SRC_COLOR;
+		break;
+	case BLEND_SRC_ALPHA:
+		return D3D11_BLEND_SRC_ALPHA;
+		break;
+	case BLEND_INV_SRC_ALPHA:
+		return D3D11_BLEND_INV_SRC_ALPHA;
+		break;
+	case BLEND_DEST_ALPHA:
+		return D3D11_BLEND_DEST_ALPHA;
+		break;
+	case BLEND_INV_DEST_ALPHA:
+		return D3D11_BLEND_INV_DEST_ALPHA;
+		break;
+	case BLEND_DEST_COLOR:
+		return D3D11_BLEND_DEST_COLOR;
+		break;
+	case BLEND_INV_DEST_COLOR:
+		return D3D11_BLEND_INV_DEST_COLOR;
+		break;
+	case BLEND_SRC_ALPHA_SAT:
+		return D3D11_BLEND_SRC_ALPHA_SAT;
+		break;
+	case BLEND_BLEND_FACTOR:
+		return D3D11_BLEND_BLEND_FACTOR;
+		break;
+	case BLEND_INV_BLEND_FACTOR:
+		return D3D11_BLEND_INV_BLEND_FACTOR;
+		break;
+	case BLEND_SRC1_COLOR:
+		return D3D11_BLEND_SRC1_COLOR;
+		break;
+	case BLEND_INV_SRC1_COLOR:
+		return D3D11_BLEND_INV_SRC1_COLOR;
+		break;
+	case BLEND_SRC1_ALPHA:
+		return D3D11_BLEND_SRC1_ALPHA;
+		break;
+	case BLEND_INV_SRC1_ALPHA:
+		return D3D11_BLEND_INV_SRC1_ALPHA;
+		break;
+	default:
+		break;
+	}
+	return D3D11_BLEND_ZERO;
 }
 inline D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
 {
-	return (D3D11_BLEND_OP)value;
+	switch (value)
+	{
+	case BLEND_OP_ADD:
+		return D3D11_BLEND_OP_ADD;
+		break;
+	case BLEND_OP_SUBTRACT:
+		return D3D11_BLEND_OP_SUBTRACT;
+		break;
+	case BLEND_OP_REV_SUBTRACT:
+		return D3D11_BLEND_OP_REV_SUBTRACT;
+		break;
+	case BLEND_OP_MIN:
+		return D3D11_BLEND_OP_MIN;
+		break;
+	case BLEND_OP_MAX:
+		return D3D11_BLEND_OP_MAX;
+		break;
+	default:
+		break;
+	}
+	return D3D11_BLEND_OP_ADD;
 }
 inline D3D11_USAGE _ConvertUsage(USAGE value)
 {
-	return (D3D11_USAGE)value;
+	switch (value)
+	{
+	case USAGE_DEFAULT:
+		return D3D11_USAGE_DEFAULT;
+		break;
+	case USAGE_IMMUTABLE:
+		return D3D11_USAGE_IMMUTABLE;
+		break;
+	case USAGE_DYNAMIC:
+		return D3D11_USAGE_DYNAMIC;
+		break;
+	case USAGE_STAGING:
+		return D3D11_USAGE_STAGING;
+		break;
+	default:
+		break;
+	}
+	return D3D11_USAGE_DEFAULT;
 }
 inline D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
 {
-	return (D3D11_INPUT_CLASSIFICATION)value;
+	switch (value)
+	{
+	case INPUT_PER_VERTEX_DATA:
+		return D3D11_INPUT_PER_VERTEX_DATA;
+		break;
+	case INPUT_PER_INSTANCE_DATA:
+		return D3D11_INPUT_PER_INSTANCE_DATA;
+		break;
+	default:
+		break;
+	}
+	return D3D11_INPUT_PER_VERTEX_DATA;
 }
 inline DXGI_FORMAT _ConvertFormat(DXGI_FORMAT value)
 {
@@ -224,9 +622,9 @@ inline D3D11_TEXTURE2D_DESC _ConvertTexture2DDesc(const Texture2DDesc* pDesc)
 	desc.Format = _ConvertFormat(pDesc->Format);
 	desc.SampleDesc = _ConvertSampleDesc(pDesc->SampleDesc);
 	desc.Usage = _ConvertUsage(pDesc->Usage);
-	desc.BindFlags = pDesc->BindFlags;
-	desc.CPUAccessFlags = pDesc->CPUAccessFlags;
-	desc.MiscFlags = pDesc->MiscFlags;
+	desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
+	desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
+	desc.MiscFlags = _ParseResourceMiscFlags(pDesc->MiscFlags);
 
 	return desc;
 }
@@ -249,9 +647,9 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const BufferDesc *pDesc, const Subreso
 	D3D11_BUFFER_DESC desc; 
 	desc.ByteWidth = pDesc->ByteWidth;
 	desc.Usage = _ConvertUsage(pDesc->Usage);
-	desc.BindFlags = pDesc->BindFlags;
-	desc.CPUAccessFlags = pDesc->CPUAccessFlags;
-	desc.MiscFlags = pDesc->MiscFlags;
+	desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
+	desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
+	desc.MiscFlags = _ParseResourceMiscFlags(pDesc->MiscFlags);
 	desc.StructureByteStride = pDesc->StructureByteStride;
 
 	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
@@ -300,9 +698,9 @@ HRESULT GraphicsDevice_DX11::CreateTextureCube(const Texture2DDesc* pDesc, const
 
 	HRESULT hr = S_OK;
 
-	if (!(desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE))
+	if (!(desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE))
 	{
-		desc.MiscFlags |= RESOURCE_MISC_TEXTURECUBE;
+		desc.MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
 	}
 
 	hr = device->CreateTexture2D(&desc, data, &((*ppTextureCube)->texture2D));
@@ -321,7 +719,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 	{
 		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
 		{
 			shaderResourceViewDesc.Format = pTexture->desc.Format;
 			if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
@@ -354,7 +752,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 	if (pTexture->desc.BindFlags & D3D11_BIND_RENDER_TARGET)
 	{
 		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
-		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
 		{
 			renderTargetViewDesc.Format = pTexture->desc.Format;
 			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
@@ -379,7 +777,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 	if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
 	{
 		D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
 		{
 			ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
 			depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
@@ -413,6 +811,8 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 		desc[i].Format = _ConvertFormat(pInputElementDescs[i].Format);
 		desc[i].InputSlot = pInputElementDescs[i].InputSlot;
 		desc[i].AlignedByteOffset = pInputElementDescs[i].AlignedByteOffset;
+		if (desc[i].AlignedByteOffset == APPEND_ALIGNED_ELEMENT)
+			desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 		desc[i].InputSlotClass = _ConvertInputClassification(pInputElementDescs[i].InputSlotClass);
 		desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
 	}
@@ -448,6 +848,9 @@ HRESULT GraphicsDevice_DX11::CreateGeometryShaderWithStreamOutput(const void *pS
 		decl[i].ComponentCount = pSODeclaration[i].ComponentCount;
 		decl[i].OutputSlot = pSODeclaration[i].OutputSlot;
 	}
+
+	if (RasterizedStream == SO_NO_RASTERIZED_STREAM)
+		RasterizedStream = D3D11_SO_NO_RASTERIZED_STREAM;
 
 	HRESULT hr = device->CreateGeometryShaderWithStreamOutput(pShaderBytecode, BytecodeLength, decl, NumEntries, pBufferStrides,
 		NumStrides, RasterizedStream, pClassLinkage, ppGeometryShader);
@@ -562,6 +965,8 @@ void GraphicsDevice_DX11::PresentEnd()
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->OMSetRenderTargets(0, nullptr, nullptr);
 
 	UnbindTextures(0, TEXSLOT_COUNT, GRAPHICSTHREAD_IMMEDIATE);
+
+	oddFrame = !oddFrame;
 
 	UNLOCK();
 }

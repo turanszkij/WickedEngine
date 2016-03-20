@@ -130,9 +130,9 @@ void MainComponent::Render()
 {
 	wiLua::GetGlobal()->Render();
 
-	wiRenderer::graphicsDevice->LOCK();
+	wiRenderer::GetDevice()->LOCK();
 	getActiveComponent()->Render();
-	wiRenderer::graphicsDevice->UNLOCK();
+	wiRenderer::GetDevice()->UNLOCK();
 }
 
 void MainComponent::Compose()
@@ -143,8 +143,8 @@ void MainComponent::Compose()
 	{
 		// display fade rect
 		static wiImageEffects fx;
-		fx.siz.x = (float)wiRenderer::GetScreenWidth();
-		fx.siz.y = (float)wiRenderer::GetScreenHeight();
+		fx.siz.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
+		fx.siz.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
 		fx.opacity = fadeManager.opacity;
 		wiImage::Draw(wiTextureHelper::getInstance()->getColor(fadeManager.color), fx);
 	}
@@ -159,7 +159,7 @@ void MainComponent::Compose()
 		}
 		if (infoDisplay.resolution)
 		{
-			ss << "Resolution: " << wiRenderer::GetScreenWidth() << " x " << wiRenderer::GetScreenHeight() << endl;
+			ss << "Resolution: " << wiRenderer::GetDevice()->GetScreenWidth() << " x " << wiRenderer::GetDevice()->GetScreenHeight() << endl;
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -198,11 +198,7 @@ bool MainComponent::setWindow(HWND hWnd, HINSTANCE hInst)
 		screenH = rect.bottom - rect.top;
 	}
 
-	if (FAILED(wiRenderer::InitDevice(window, screenW, screenH, !fullscreen)))
-	{
-		wiHelper::messageBox("Could not initialize D3D device!", "Fatal Error!", window);
-		return false;
-	}
+	wiRenderer::InitDevice(hWnd, screenW, screenH, !fullscreen);
 
 	return true;
 }
@@ -211,11 +207,7 @@ bool MainComponent::setWindow(Windows::UI::Core::CoreWindow^ window)
 {
 	screenW = (int)window->Bounds.Width;
 	screenH = (int)window->Bounds.Height;
-	if (FAILED(wiRenderer::InitDevice(window)))
-	{
-		wiHelper::messageBox("Could not initialize D3D device!", "Fatal Error!");
-		return false;
-	}
+	wiRenderer::InitDevice(window);
 
 	return true;
 }

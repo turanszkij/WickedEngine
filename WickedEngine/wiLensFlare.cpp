@@ -34,40 +34,40 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector
 
 	if(!rims.empty()){
 
-		wiRenderer::graphicsDevice->BindPrimitiveTopology(POINTLIST,threadID);
-		wiRenderer::graphicsDevice->BindVertexLayout(inputLayout,threadID);
-		wiRenderer::graphicsDevice->BindPS(pixelShader,threadID);
-		wiRenderer::graphicsDevice->BindVS(vertexShader,threadID);
-		wiRenderer::graphicsDevice->BindGS(geometryShader,threadID);
+		wiRenderer::GetDevice()->BindPrimitiveTopology(POINTLIST,threadID);
+		wiRenderer::GetDevice()->BindVertexLayout(inputLayout,threadID);
+		wiRenderer::GetDevice()->BindPS(pixelShader,threadID);
+		wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
+		wiRenderer::GetDevice()->BindGS(geometryShader,threadID);
 
 		static thread_local ConstantBuffer* cb = new ConstantBuffer;
-		(*cb).mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 1, 1);
-		(*cb).mScreen = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 0);
+		(*cb).mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
+		(*cb).mScreen = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
 
-		wiRenderer::graphicsDevice->UpdateBuffer(constantBuffer,cb,threadID);
-		wiRenderer::graphicsDevice->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,cb,threadID);
+		wiRenderer::GetDevice()->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 	
-		wiRenderer::graphicsDevice->BindRasterizerState(rasterizerState,threadID);
-		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencilState,1,threadID);
-		wiRenderer::graphicsDevice->BindBlendState(blendState,threadID);
+		wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
+		wiRenderer::GetDevice()->BindDepthStencilState(depthStencilState,1,threadID);
+		wiRenderer::GetDevice()->BindBlendState(blendState,threadID);
 
-		//wiRenderer::graphicsDevice->BindTextureGS(depthMap,0,threadID);
+		//wiRenderer::GetDevice()->BindTextureGS(depthMap,0,threadID);
 
 		int i=0;
 		for(Texture2D* x : rims){
 			if(x!=nullptr){
-				wiRenderer::graphicsDevice->BindTexturePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
-				wiRenderer::graphicsDevice->BindTextureGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				wiRenderer::GetDevice()->BindTexturePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				wiRenderer::GetDevice()->BindTextureGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
 				i++;
 			}
 		}
-		wiRenderer::graphicsDevice->Draw(i,threadID);
+		wiRenderer::GetDevice()->Draw(i,threadID);
 
 		
 
 
-		wiRenderer::graphicsDevice->BindGS(nullptr,threadID);
+		wiRenderer::GetDevice()->BindGS(nullptr,threadID);
 	}
 }
 
@@ -98,7 +98,7 @@ void wiLensFlare::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &constantBuffer );
 	
 }
 void wiLensFlare::SetUpStates()
@@ -114,7 +114,7 @@ void wiLensFlare::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	wiRenderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
 
 
 
@@ -142,7 +142,7 @@ void wiLensFlare::SetUpStates()
 	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
@@ -156,5 +156,5 @@ void wiLensFlare::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendState);
+	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendState);
 }

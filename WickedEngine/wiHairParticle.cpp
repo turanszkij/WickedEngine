@@ -107,7 +107,7 @@ void wiHairParticle::SetUpStatic(){
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &cbgs );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &cbgs );
 
 	
 
@@ -123,7 +123,7 @@ void wiHairParticle::SetUpStatic(){
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	wiRenderer::graphicsDevice->CreateRasterizerState(&rsd,&rs);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,&rs);
 	rsd.FillMode=FILL_SOLID;
 	rsd.CullMode=CULL_NONE;
 	rsd.FrontCounterClockwise=true;
@@ -134,7 +134,7 @@ void wiHairParticle::SetUpStatic(){
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	wiRenderer::graphicsDevice->CreateRasterizerState(&rsd,&ncrs);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,&ncrs);
 
 	
 	DepthStencilDesc dsd;
@@ -154,7 +154,7 @@ void wiHairParticle::SetUpStatic(){
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
-	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &dss);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss);
 
 	
 	BlendDesc bld;
@@ -168,7 +168,7 @@ void wiHairParticle::SetUpStatic(){
 	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bld.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bld.AlphaToCoverageEnable=false;
-	wiRenderer::graphicsDevice->CreateBlendState(&bld,&bs);
+	wiRenderer::GetDevice()->CreateBlendState(&bld,&bs);
 }
 void wiHairParticle::Settings(int l0,int l1,int l2)
 {
@@ -192,9 +192,9 @@ void wiHairParticle::SetUpPatches()
 	bd.ByteWidth = sizeof(Point)*MAX_PARTICLES;
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[0] );
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[1] );
-    wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vb[2] );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vb[0] );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vb[1] );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vb[2] );
 
 	const int triangleperpatch = 4;
 	int currentTris=0;
@@ -389,19 +389,19 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 	{
 		Texture2D* texture = material->texture;
 
-		wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
-		wiRenderer::graphicsDevice->BindVertexLayout(il,threadID);
-		wiRenderer::graphicsDevice->BindPS(texture?qps:ps,threadID);
-		wiRenderer::graphicsDevice->BindVS(vs,threadID);
+		wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
+		wiRenderer::GetDevice()->BindVertexLayout(il,threadID);
+		wiRenderer::GetDevice()->BindPS(texture?qps:ps,threadID);
+		wiRenderer::GetDevice()->BindVS(vs,threadID);
 
 		if(texture){
-			wiRenderer::graphicsDevice->BindTexturePS(texture,TEXSLOT_ONDEMAND0,threadID);
-			wiRenderer::graphicsDevice->BindTextureGS(texture,TEXSLOT_ONDEMAND0,threadID);
+			wiRenderer::GetDevice()->BindTexturePS(texture,TEXSLOT_ONDEMAND0,threadID);
+			wiRenderer::GetDevice()->BindTextureGS(texture,TEXSLOT_ONDEMAND0,threadID);
 
-			wiRenderer::graphicsDevice->BindBlendState(bs,threadID);
+			wiRenderer::GetDevice()->BindBlendState(bs,threadID);
 		}
 		else
-			wiRenderer::graphicsDevice->BindRasterizerState(ncrs,threadID);
+			wiRenderer::GetDevice()->BindRasterizerState(ncrs,threadID);
 
 
 		static thread_local ConstantBuffer* gcb = new ConstantBuffer;
@@ -409,10 +409,10 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 		(*gcb).color=material->diffuseColor;
 		(*gcb).drawdistance = (float)LOD[2];
 		
-		wiRenderer::graphicsDevice->UpdateBuffer(cbgs,gcb,threadID);
-		wiRenderer::graphicsDevice->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(cbgs,gcb,threadID);
+		wiRenderer::GetDevice()->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		wiRenderer::graphicsDevice->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
+		wiRenderer::GetDevice()->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
 
 
 		for(int i=0;i<3;++i){
@@ -420,11 +420,11 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 			renderPoints.reserve(MAX_PARTICLES);
 
 			if(texture){
-				wiRenderer::graphicsDevice->BindGS(i<2?qgs[0]:qgs[1],threadID);
-				wiRenderer::graphicsDevice->BindRasterizerState(i<2?ncrs:rs,threadID);
+				wiRenderer::GetDevice()->BindGS(i<2?qgs[0]:qgs[1],threadID);
+				wiRenderer::GetDevice()->BindRasterizerState(i<2?ncrs:rs,threadID);
 			}
 			else
-				wiRenderer::graphicsDevice->BindGS(gs[i],threadID);
+				wiRenderer::GetDevice()->BindGS(gs[i],threadID);
 			CulledList::iterator iter = culledPatches.begin();
 			while(iter != culledPatches.end()){
 				Cullable* culled = *iter;
@@ -441,12 +441,12 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 					++iter;
 			}
 
-			wiRenderer::graphicsDevice->UpdateBuffer(vb[i],renderPoints.data(),threadID,sizeof(Point)*renderPoints.size());
-			wiRenderer::graphicsDevice->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
-			wiRenderer::graphicsDevice->Draw(renderPoints.size(),threadID);
+			wiRenderer::GetDevice()->UpdateBuffer(vb[i],renderPoints.data(),threadID,sizeof(Point)*renderPoints.size());
+			wiRenderer::GetDevice()->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
+			wiRenderer::GetDevice()->Draw(renderPoints.size(),threadID);
 		}
 
-		wiRenderer::graphicsDevice->BindGS(nullptr,threadID);
+		wiRenderer::GetDevice()->BindGS(nullptr,threadID);
 	}
 }
 

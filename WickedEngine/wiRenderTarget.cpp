@@ -82,13 +82,13 @@ void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasD
 	//shaderResourceViewDesc.mipLevels = -1;
 
 	//for(int i=0;i<numViews;++i){
-	//	wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, nullptr, &texture2D[i]);
-	//	wiRenderer::graphicsDevice->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
-	//	wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[i]);
+	//	wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &texture2D[i]);
+	//	wiRenderer::GetDevice()->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
+	//	wiRenderer::GetDevice()->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[i]);
 	//}
 	for (int i = 0; i < numViews; ++i)
 	{
-		wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, nullptr, &renderTargets[i]);
+		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[i]);
 	}
 	
 	viewPort.Width = (FLOAT)width;
@@ -151,14 +151,14 @@ void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI
 	//shaderResourceViewDesc.mipLevels = -1;
 
 	//for(int i=0;i<numViews;++i){
-	//	wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
-	//	wiRenderer::graphicsDevice->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
-	//	wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[0]);
+	//	wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, NULL, &texture2D[i]);
+	//	wiRenderer::GetDevice()->CreateRenderTargetView(texture2D[i], &renderTargetViewDesc, &renderTarget[i]);
+	//	wiRenderer::GetDevice()->CreateShaderResourceView(texture2D[i], &shaderResourceViewDesc, &shaderResource[0]);
 	//}
 
 	for (int i = 0; i < numViews; ++i)
 	{
-		wiRenderer::graphicsDevice->CreateTextureCube(&textureDesc, nullptr, &renderTargets_Cube[i]);
+		wiRenderer::GetDevice()->CreateTextureCube(&textureDesc, nullptr, &renderTargets_Cube[i]);
 	}
 	
 	viewPort.Width = (FLOAT)size;
@@ -187,7 +187,7 @@ void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, float r, float g, float b
 	Set(threadID);
 	float ClearColor[4] = { r, g, b, a };
 	for(int i=0;i<numViews;++i)
-		wiRenderer::graphicsDevice->ClearRenderTarget(GetTexture(i), ClearColor);
+		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor);
 	if(depth) depth->Clear(threadID);
 }
 void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, float r, float g, float b, float a)
@@ -195,7 +195,7 @@ void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, 
 	Set(threadID,getDepth);
 	float ClearColor[4] = { r, g, b, a };
 	for(int i=0;i<numViews;++i)
-		wiRenderer::graphicsDevice->ClearRenderTarget(GetTexture(i), ClearColor);
+		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor);
 }
 void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth)
 {
@@ -203,18 +203,18 @@ void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth)
 }
 void wiRenderTarget::Deactivate(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::graphicsDevice->BindRenderTargets(0, nullptr, nullptr);
+	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, nullptr);
 }
 void wiRenderTarget::Set(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::graphicsDevice->BindViewports(1, &viewPort);
-	wiRenderer::graphicsDevice->BindRenderTargets(numViews, (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr));
+	wiRenderer::GetDevice()->BindViewports(1, &viewPort);
+	wiRenderer::GetDevice()->BindRenderTargets(numViews, (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr));
 }
 void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth)
 {
 	depth = getDepth;
-	wiRenderer::graphicsDevice->BindViewports(1, &viewPort);
-	wiRenderer::graphicsDevice->BindRenderTargets(numViews, (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr));
+	wiRenderer::GetDevice()->BindViewports(1, &viewPort);
+	wiRenderer::GetDevice()->BindRenderTargets(numViews, (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr));
 }
 //void wiRenderTarget::Retarget(Texture2D* resource)
 //{

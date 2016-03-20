@@ -56,7 +56,7 @@ void wiFont::SetUpStates()
 	rs.ScissorEnable=FALSE;
 	rs.MultisampleEnable=FALSE;
 	rs.AntialiasedLineEnable=FALSE;
-	wiRenderer::graphicsDevice->CreateRasterizerState(&rs,&rasterizerState);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
 
 
 
@@ -84,7 +84,7 @@ void wiFont::SetUpStates()
 	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	wiRenderer::graphicsDevice->CreateDepthStencilState(&dsd, &depthStencilState);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
@@ -98,7 +98,7 @@ void wiFont::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	wiRenderer::graphicsDevice->CreateBlendState(&bd,&blendState);
+	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendState);
 }
 void wiFont::SetUpCB()
 {
@@ -108,7 +108,7 @@ void wiFont::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &constantBuffer );
+	wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &constantBuffer );
 
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 }
@@ -159,11 +159,11 @@ void wiFont::CleanUpStatic()
 
 void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::graphicsDevice->LOCK();
+	wiRenderer::GetDevice()->LOCK();
 
-	wiRenderer::graphicsDevice->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer), threadID);
+	wiRenderer::GetDevice()->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer), threadID);
 
-	wiRenderer::graphicsDevice->UNLOCK();
+	wiRenderer::GetDevice()->UNLOCK();
 }
 
 
@@ -214,7 +214,7 @@ void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHI
 		}
 	}
 
-	wiRenderer::graphicsDevice->UpdateBuffer(vertexBuffer,vertexList.data(),threadID,sizeof(Vertex) * text.length() * 4);
+	wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer,vertexList.data(),threadID,sizeof(Vertex) * text.length() * 4);
 	
 }
 
@@ -226,7 +226,7 @@ void wiFont::LoadVertexBuffer()
 		bd.ByteWidth = sizeof( Vertex ) * MAX_TEXT * 4;
 		bd.BindFlags = BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &vertexBuffer );
+		wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vertexBuffer );
 }
 void wiFont::LoadIndices()
 {
@@ -250,7 +250,7 @@ void wiFont::LoadIndices()
 	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = indices.data();
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
+	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &indexBuffer );
 }
 
 void wiFont::Draw(GRAPHICSTHREAD threadID){
@@ -271,29 +271,29 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 
 	if(text.length()>0){
 	
-		wiRenderer::graphicsDevice->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-		wiRenderer::graphicsDevice->BindVertexLayout(vertexLayout,threadID);
-		wiRenderer::graphicsDevice->BindVS(vertexShader,threadID);
-		wiRenderer::graphicsDevice->BindPS(pixelShader,threadID);
+		wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
+		wiRenderer::GetDevice()->BindVertexLayout(vertexLayout,threadID);
+		wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
+		wiRenderer::GetDevice()->BindPS(pixelShader,threadID);
 
 
 		static thread_local ConstantBuffer* cb = new ConstantBuffer;
-		(*cb).mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetScreenWidth(),(float)wiRenderer::GetScreenHeight(),0,100) );
+		(*cb).mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetDevice()->GetScreenWidth(),(float)wiRenderer::GetDevice()->GetScreenHeight(),0,100) );
 		(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
-		(*cb).mDimensions = XMFLOAT4((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 0);
+		(*cb).mDimensions = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
 		
-		wiRenderer::graphicsDevice->UpdateBuffer(constantBuffer,cb,threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,cb,threadID);
 
 
-		wiRenderer::graphicsDevice->BindRasterizerState(rasterizerState,threadID);
-		wiRenderer::graphicsDevice->BindDepthStencilState(depthStencilState,1,threadID);
+		wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
+		wiRenderer::GetDevice()->BindDepthStencilState(depthStencilState,1,threadID);
 
-		wiRenderer::graphicsDevice->BindBlendState(blendState,threadID);
-		wiRenderer::graphicsDevice->BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),threadID);
-		wiRenderer::graphicsDevice->BindIndexBuffer(indexBuffer,threadID);
+		wiRenderer::GetDevice()->BindBlendState(blendState,threadID);
+		wiRenderer::GetDevice()->BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),threadID);
+		wiRenderer::GetDevice()->BindIndexBuffer(indexBuffer,threadID);
 
-		wiRenderer::graphicsDevice->BindTexturePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
-		wiRenderer::graphicsDevice->DrawIndexed(text.length()*6,threadID);
+		wiRenderer::GetDevice()->BindTexturePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
+		wiRenderer::GetDevice()->DrawIndexed(text.length()*6,threadID);
 	}
 }
 
@@ -351,7 +351,7 @@ string wiFont::GetTextA()
 
 wiFont::wiFontStyle::wiFontStyle(const string& newName){
 
-	wiRenderer::graphicsDevice->LOCK();
+	wiRenderer::GetDevice()->LOCK();
 
 	name=newName;
 
@@ -378,7 +378,7 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 		wiHelper::messageBox(name,"Could not load Font Data!"); 
 	}
 
-	wiRenderer::graphicsDevice->UNLOCK();
+	wiRenderer::GetDevice()->UNLOCK();
 }
 void wiFont::wiFontStyle::CleanUp(){
 	SAFE_DELETE(texture);

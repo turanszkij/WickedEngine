@@ -233,12 +233,12 @@ namespace wiRenderer_BindLua
 	}
 	int GetScreenWidth(lua_State* L)
 	{
-		wiLua::SSetInt(L, wiRenderer::SCREENWIDTH);
+		wiLua::SSetInt(L, wiRenderer::GetDevice()->GetScreenWidth());
 		return 1;
 	}
 	int GetScreenHeight(lua_State* L)
 	{
-		wiLua::SSetInt(L, wiRenderer::SCREENHEIGHT);
+		wiLua::SSetInt(L, wiRenderer::GetDevice()->GetScreenHeight());
 		return 1;
 	}
 	int GetCamera(lua_State* L)
@@ -425,7 +425,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::graphicsDevice->SetVSyncEnabled(wiLua::SGetBool(L, 1));
+			wiRenderer::GetDevice()->SetVSyncEnabled(wiLua::SGetBool(L, 1));
 		}
 		return 0;
 	}

@@ -42,11 +42,11 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = 0;
 
-	wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, nullptr, &texture);
+	wiRenderer::GetDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &texture);
 
 	//HRESULT hr;
 	//// Create the texture for the depth buffer using the filled out description.
-	//hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, nullptr, &texture2D);
+	//hr=wiRenderer::GetDevice()->CreateTexture2D(&depthBufferDesc, nullptr, &texture2D);
 
 	//DepthStencilViewDesc depthStencilViewDesc;
 	//ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
@@ -56,7 +56,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 	//depthStencilViewDesc.Flags = 0;
 
 	//// Create the depth stencil view.
-	//hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
+	//hr=wiRenderer::GetDevice()->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
 
 	////Create Depth ShaderResource
 	////ShaderResourceViewDesc shaderResourceViewDesc;
@@ -67,7 +67,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 	////shaderResourceViewDesc.Texture2D.MipLevels = 1;
 	//shaderResourceViewDesc.mipLevels = 1;
 
-	//wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
+	//wiRenderer::GetDevice()->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
 }
 void wiDepthTarget::InitializeCube(int size)
 {
@@ -92,11 +92,11 @@ void wiDepthTarget::InitializeCube(int size)
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
-	wiRenderer::graphicsDevice->CreateTextureCube(&depthBufferDesc, nullptr, &textureCube);
+	wiRenderer::GetDevice()->CreateTextureCube(&depthBufferDesc, nullptr, &textureCube);
 
 	//HRESULT hr;
 	//// Create the texture for the depth buffer using the filled out description.
-	//hr=wiRenderer::graphicsDevice->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
+	//hr=wiRenderer::GetDevice()->CreateTexture2D(&depthBufferDesc, NULL, &texture2D);
 
 	//DepthStencilViewDesc depthStencilViewDesc;
 	//ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
@@ -109,7 +109,7 @@ void wiDepthTarget::InitializeCube(int size)
 	//depthStencilViewDesc.Flags = 0;
 
 	//// Create the depth stencil view.
-	//hr=wiRenderer::graphicsDevice->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
+	//hr=wiRenderer::GetDevice()->CreateDepthStencilView(texture2D, &depthStencilViewDesc, &depthTarget);
 
 	////Create Depth ShaderResource
 	////ShaderResourceViewDesc shaderResourceViewDesc;
@@ -120,21 +120,21 @@ void wiDepthTarget::InitializeCube(int size)
 	////shaderResourceViewDesc.Texture2D.MipLevels = 1;
 	//shaderResourceViewDesc.mipLevels = 1;
 
-	//wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
+	//wiRenderer::GetDevice()->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &shaderResource);
 }
 
 void wiDepthTarget::Clear(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::graphicsDevice->ClearDepthStencil(GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 1.0f, 0);
+	wiRenderer::GetDevice()->ClearDepthStencil(GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 1.0f, 0);
 }
 void wiDepthTarget::CopyFrom(const wiDepthTarget& from, GRAPHICSTHREAD threadID)
 {
 	//if(shaderResource) shaderResource->Release();
 	////static ShaderResourceViewDesc desc;
 	////from.shaderResource->GetDesc(&desc);
-	//wiRenderer::graphicsDevice->CopyResource(texture2D,from.texture2D);
-	//HRESULT r = wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D,&from.shaderResourceViewDesc,&shaderResource);
+	//wiRenderer::GetDevice()->CopyResource(texture2D,from.texture2D);
+	//HRESULT r = wiRenderer::GetDevice()->CreateShaderResourceView(texture2D,&from.shaderResourceViewDesc,&shaderResource);
 
-	wiRenderer::graphicsDevice->CopyTexture2D(GetTexture(), from.GetTexture(), threadID);
+	wiRenderer::GetDevice()->CopyTexture2D(GetTexture(), from.GetTexture(), threadID);
 }
 

@@ -81,12 +81,12 @@ public:
 
 		//Texture2D* texture2D = nullptr;
 		HRESULT hr;
-		hr = wiRenderer::graphicsDevice->CreateTexture2D(&textureDesc, &InitData, &texture);
+		hr = wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, &InitData, &texture);
 		//if (FAILED(hr))
 		//{
 		//	return hr;
 		//}
-		//hr = wiRenderer::graphicsDevice->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &texture);
+		//hr = wiRenderer::GetDevice()->CreateShaderResourceView(texture2D, &shaderResourceViewDesc, &texture);
 		//SAFE_RELEASE(texture2D);
 
 		return hr;

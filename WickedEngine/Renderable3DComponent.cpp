@@ -63,98 +63,98 @@ void Renderable3DComponent::Initialize()
 	Renderable2DComponent::Initialize();
 
 	rtSSR.Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	rtMotionBlur.Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	rtLinearDepth.Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false, 1, 0, DXGI_FORMAT_R32_FLOAT
 		);
 	rtParticle.Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetScreenHeight()*getAlphaParticleDownSample())
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getAlphaParticleDownSample())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtParticleAdditive.Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*getAdditiveParticleDownSample()), (UINT)(wiRenderer::GetScreenHeight()*getAdditiveParticleDownSample())
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getAdditiveParticleDownSample()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getAdditiveParticleDownSample())
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtWaterRipple.Initialize(
-		wiRenderer::GetScreenWidth()
-		, wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth()
+		, wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false, 1, 0, DXGI_FORMAT_R8G8B8A8_SNORM
 		);
 	rtTransparent.Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtVolumeLight.Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false
 		);
 	rtReflection.Initialize(
-		(UINT)(wiRenderer::GetScreenWidth() * getReflectionQuality())
-		, (UINT)(wiRenderer::GetScreenHeight() * getReflectionQuality())
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
+		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
 		, 1, true, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
 		);
 	rtFinal[0].Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	rtFinal[1].Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false);
 
 	rtDof[0].Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetScreenHeight()*0.5f)
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
 		, 1, false);
 	rtDof[1].Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetScreenHeight()*0.5f)
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
 		, 1, false);
 	rtDof[2].Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false);
 
-	dtDepthCopy.Initialize(wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+	dtDepthCopy.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, 0
 		);
 
 	rtSSAO.resize(3);
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
 		rtSSAO[i].Initialize(
-			(UINT)(wiRenderer::GetScreenWidth()*getSSAOQuality()), (UINT)(wiRenderer::GetScreenHeight()*getSSAOQuality())
+			(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getSSAOQuality()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getSSAOQuality())
 			, 1, false, 1, 0, DXGI_FORMAT_R8_UNORM
 			);
 	rtSSS.resize(3);
 	for (int i = 0; i < 3; ++i)
 		rtSSS[i].Initialize(
-			(UINT)(wiRenderer::GetScreenWidth()), (UINT)(wiRenderer::GetScreenHeight())
+			(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
 			, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
 
 	rtSun.resize(2);
 	rtSun[0].Initialize(
-		wiRenderer::GetScreenWidth()
-		, wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth()
+		, wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, true
 		);
 	rtSun[1].Initialize(
-		(UINT)(wiRenderer::GetScreenWidth()*getLightShaftQuality())
-		, (UINT)(wiRenderer::GetScreenHeight()*getLightShaftQuality())
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getLightShaftQuality())
+		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getLightShaftQuality())
 		, 1, false
 		);
-	rtLensFlare.Initialize(wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight(), 1, false);
+	rtLensFlare.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), 1, false);
 
 	rtBloom.resize(3);
 	rtBloom[0].Initialize(
-		wiRenderer::GetScreenWidth()
-		, wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth()
+		, wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false, 1, 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0
 		);
 	for (unsigned int i = 1; i<rtBloom.size(); ++i)
 		rtBloom[i].Initialize(
-		(UINT)(wiRenderer::GetScreenWidth() / getBloomDownSample())
-		, (UINT)(wiRenderer::GetScreenHeight() / getBloomDownSample())
+		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() / getBloomDownSample())
+		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() / getBloomDownSample())
 		, 1, false
 		);
 }
@@ -266,7 +266,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	if (getVolumeLightsEnabled())
 	{
-		wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+		wiRenderer::GetDevice()->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 		rtVolumeLight.Activate(threadID, mainRT.depth);
 		wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
 	}
@@ -284,7 +284,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawWaterRipples(threadID);
 	}
 
-	wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::GetDevice()->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	rtTransparent.Activate(threadID, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.GetTexture(), rtReflection.GetTexture()
 			, rtWaterRipple.GetTexture(), threadID);
@@ -301,7 +301,7 @@ void Renderable3DComponent::RenderBloom(GRAPHICSTHREAD threadID)
 	}
 
 
-	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
 	rtBloom[0].Activate(threadID);
 	{
@@ -316,8 +316,8 @@ void Renderable3DComponent::RenderBloom(GRAPHICSTHREAD threadID)
 
 	rtBloom[1].Activate(threadID); //horizontal
 	{
-		wiRenderer::graphicsDevice->GenerateMips(rtBloom[0].GetTexture(), threadID);
-		//wiRenderer::graphicsDevice->GenerateMips(rtBloom[0].shaderResource[0], threadID);
+		wiRenderer::GetDevice()->GenerateMips(rtBloom[0].GetTexture(), threadID);
+		//wiRenderer::GetDevice()->GenerateMips(rtBloom[0].shaderResource[0], threadID);
 		fx.mipLevel = 5.32f;
 		fx.blur = getBloomStrength();
 		fx.blurDir = 0;
@@ -350,9 +350,9 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, GRAPHICSTH
 		return;
 	}
 
-	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
-	wiRenderer::graphicsDevice->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::GetDevice()->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	rtSun[0].Activate(threadID, mainRT.depth); {
 		wiRenderer::DrawSun(threadID);
 	}
@@ -360,7 +360,7 @@ void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, GRAPHICSTH
 	rtSun[1].Activate(threadID); {
 		wiImageEffects fxs = fx;
 		fxs.blendFlag = BLENDMODE_ADDITIVE;
-		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 		{
 			XMStoreFloat2(&fxs.sunPos, sunPos);
 			wiImage::Draw(rtSun[0].GetTexture(), fxs, threadID);
@@ -375,7 +375,7 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, GR
 		return;
 	}
 
-	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.presentFullScreen = true;
 
 	rtFinal[0].Activate(threadID);
@@ -411,7 +411,7 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 		return;
 	}
 
-	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 
 	if (getDepthOfFieldEnabled())
@@ -457,7 +457,7 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 }
 void Renderable3DComponent::RenderColorGradedComposition(){
 
-	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_NEAREST;
 

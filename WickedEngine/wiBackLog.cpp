@@ -19,7 +19,7 @@ Texture2D* wiBackLog::backgroundTex = nullptr;
 wiFont wiBackLog::font;
 
 void wiBackLog::Initialize(){
-	pos = (float)wiRenderer::GetScreenHeight();
+	pos = (float)wiRenderer::GetDevice()->GetScreenHeight();
 	scroll=0;
 	state=DISABLED;
 	deletefromline=500;
@@ -50,10 +50,10 @@ void wiBackLog::Update(){
 		pos+=speed;
 	else if(state==ACTIVATING) 
 		pos-=speed;
-	if (pos >= wiRenderer::GetScreenHeight()) 
+	if (pos >= wiRenderer::GetDevice()->GetScreenHeight()) 
 	{ 
 		state = DISABLED; 
-		pos = (float)wiRenderer::GetScreenHeight(); 
+		pos = (float)wiRenderer::GetDevice()->GetScreenHeight(); 
 	}
 	else if(pos<0) 
 	{
@@ -64,14 +64,14 @@ void wiBackLog::Update(){
 void wiBackLog::Draw(){
 	if(state!=DISABLED){
 		//wiImage::BatchBegin();
-		wiImageEffects fx = wiImageEffects((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+		wiImageEffects fx = wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 		fx.pos=XMFLOAT3(0,pos,0);
-		fx.opacity = wiMath::Lerp(1, 0, pos / wiRenderer::GetScreenHeight());
+		fx.opacity = wiMath::Lerp(1, 0, pos / wiRenderer::GetDevice()->GetScreenHeight());
 		wiImage::Draw(backgroundTex, fx);
 		font.SetText(getText());
-		font.props.posY = pos - wiRenderer::GetScreenHeight() + 75 + scroll;
+		font.props.posY = pos - wiRenderer::GetDevice()->GetScreenHeight() + 75 + scroll;
 		font.Draw();
-		wiFont(inputArea.str().c_str(), wiFontProps(5, -(float)wiRenderer::GetScreenHeight() + 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
+		wiFont(inputArea.str().c_str(), wiFontProps(5, -(float)wiRenderer::GetDevice()->GetScreenHeight() + 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
 		//wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
 		//wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}

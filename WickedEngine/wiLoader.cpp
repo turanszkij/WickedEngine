@@ -485,7 +485,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 	//			bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
 	//			bd.BindFlags = BIND_VERTEX_BUFFER;
 	//			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	//			wiRenderer::graphicsDevice->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
+	//			wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
 	//			objects[i]->trailTex = wiTextureHelper::getInstance()->getTransparent();
 	//			objects[i]->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
 	//		}
@@ -951,7 +951,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 		//	bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
 		//	bd.BindFlags = BIND_VERTEX_BUFFER;
 		//	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		//	wiRenderer::graphicsDevice->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
+		//	wiRenderer::GetDevice()->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
 		//}
 	}
 	file.close();
@@ -1682,7 +1682,7 @@ void Mesh::CreateBuffers(Object* object) {
 			bd.ByteWidth = sizeof(Instance) * 2;
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			wiRenderer::graphicsDevice->CreateBuffer(&bd, 0, &meshInstanceBuffer);
+			wiRenderer::GetDevice()->CreateBuffer(&bd, 0, &meshInstanceBuffer);
 		}
 
 
@@ -1713,7 +1713,7 @@ void Mesh::CreateBuffers(Object* object) {
 			InitData.pSysMem = vertices.data();
 		else
 			InitData.pSysMem = skinnedVertices.data();
-		wiRenderer::graphicsDevice->CreateBuffer(&bd, &InitData, &meshVertBuff);
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &meshVertBuff);
 
 
 		ZeroMemory(&bd, sizeof(bd));
@@ -1723,7 +1723,7 @@ void Mesh::CreateBuffers(Object* object) {
 		bd.CPUAccessFlags = 0;
 		ZeroMemory(&InitData, sizeof(InitData));
 		InitData.pSysMem = indices.data();
-		wiRenderer::graphicsDevice->CreateBuffer(&bd, &InitData, &meshIndexBuff);
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &meshIndexBuff);
 
 		if (renderable)
 		{
@@ -1735,7 +1735,7 @@ void Mesh::CreateBuffers(Object* object) {
 				bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride = 0;
-				wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &sOutBuffer);
+				wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, &sOutBuffer);
 			}
 
 			//PHYSICALMAPPING
@@ -1783,7 +1783,7 @@ void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
 }
 void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
-	wiRenderer::graphicsDevice->UpdateBuffer(meshInstanceBuffer, instances.data(), threadID, sizeof(Instance)*count);
+	wiRenderer::GetDevice()->UpdateBuffer(meshInstanceBuffer, instances.data(), threadID, sizeof(Instance)*count);
 }
 #pragma endregion
 
@@ -1932,7 +1932,7 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 				bd.ByteWidth = sizeof(RibbonVertex) * 1000;
 				bd.BindFlags = BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-				wiRenderer::graphicsDevice->CreateBuffer(&bd, NULL, &x->trailBuff);
+				wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, &x->trailBuff);
 				x->trailTex = wiTextureHelper::getInstance()->getTransparent();
 				x->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
 			}
@@ -2171,7 +2171,7 @@ void HitSphere::SetUpStatic()
 	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = verts.data();
-	wiRenderer::graphicsDevice->CreateBuffer( &bd, &InitData, &vertexBuffer );
+	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &vertexBuffer );
 }
 void HitSphere::CleanUpStatic()
 {
@@ -3001,10 +3001,10 @@ void Light::SetUp()
 		float lerp1 = 0.12f;
 		float lerp2 = 0.016f;
 		XMVECTOR a0, a, b0, b;
-		a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-		a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-		b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-		b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 		float size = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp), XMVectorLerp(a0, a, lerp))));
 		float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp1), XMVectorLerp(a0, a, lerp1))));
 		float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp2), XMVectorLerp(a0, a, lerp2))));
@@ -3042,8 +3042,8 @@ void Light::UpdateLight()
 		float lerp1 = 0.12f;//second slice distance from cam (percentage)
 		float lerp2 = 0.016f;//first slice distance from cam (percentage)
 		XMVECTOR c, d, e, e1, e2;
-		c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth() * 0.5f, (float)wiRenderer::GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-		d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetScreenWidth() * 0.5f, (float)wiRenderer::GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 
 		if (!shadowCam.empty()) {
 

@@ -21,7 +21,7 @@ Renderable2DComponent::~Renderable2DComponent()
 void Renderable2DComponent::Initialize()
 {
 	rtFinal.Initialize(
-		wiRenderer::GetScreenWidth(), wiRenderer::GetScreenHeight()
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false);
 
 	RenderableComponent::Initialize();
@@ -100,7 +100,7 @@ void Renderable2DComponent::Render()
 }
 void Renderable2DComponent::Compose()
 {
-	wiImageEffects fx((float)wiRenderer::GetScreenWidth(), (float)wiRenderer::GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.presentFullScreen = true;
 
 	wiImage::Draw(rtFinal.GetTexture(), fx);

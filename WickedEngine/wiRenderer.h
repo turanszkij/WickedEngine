@@ -48,28 +48,23 @@ typedef map<string, Material*> MaterialCollection;
 class wiRenderer
 {
 public:
+	static GraphicsDevice* graphicsDevice;
+	static GraphicsDevice* GetDevice() { return graphicsDevice; }
 
-	static GraphicsDevice*				graphicsDevice;
 #ifndef WINSTORE_SUPPORT
-	static HRESULT InitDevice(HWND window, int screenW, int screenH, bool windowed);
+	static void InitDevice(HWND window, int screenW, int screenH, bool windowed);
 #else
-	static HRESULT InitDevice(Windows::UI::Core::CoreWindow^ window);
+	static void InitDevice(Windows::UI::Core::CoreWindow^ window);
 #endif
-	static void DestroyDevice();
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
 
 	
 	static Sampler samplers[SSLOT_COUNT];
 
 	
-	static int SCREENWIDTH,SCREENHEIGHT;
 	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 
-	static int GetScreenWidth(){ return SCREENWIDTH; }
-	static int GetScreenHeight(){ return SCREENHEIGHT; }
-	static int SetScreenWidth(int value){ SCREENWIDTH = value; }
-	static int SetScreenHeight(int value){ SCREENHEIGHT = value; }
 	static void SetDirectionalLightShadowProps(int resolution, int softShadowQuality);
 	static void SetPointLightShadowProps(int shadowMapCount, int resolution);
 	static void SetSpotLightShadowProps(int count, int resolution);
