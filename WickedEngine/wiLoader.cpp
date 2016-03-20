@@ -10,6 +10,7 @@
 #include "wiTextureHelper.h"
 #include "wiPHYSICS.h"
 
+using namespace wiGraphicsTypes;
 
 void LoadWiArmatures(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures)
 {

@@ -2,6 +2,8 @@
 #include "wiRenderer.h"
 #include "wiDepthTarget.h"
 
+using namespace wiGraphicsTypes;
+
 
 wiRenderTarget::wiRenderTarget()
 {
@@ -10,7 +12,7 @@ wiRenderTarget::wiRenderTarget()
 	isCube = false;
 }
 wiRenderTarget::wiRenderTarget(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
-	, DXGI_FORMAT format, UINT mipMapLevelCount)
+	, FORMAT format, UINT mipMapLevelCount)
 {
 	numViews = 0;
 	depth = nullptr;
@@ -37,7 +39,7 @@ void wiRenderTarget::clear() {
 }
 
 void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
-	, DXGI_FORMAT format, UINT mipMapLevelCount)
+	, FORMAT format, UINT mipMapLevelCount)
 {
 	clear();
 
@@ -103,7 +105,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasD
 		depth->Initialize(width,height,MSAAC,MSAAQ);
 	}
 }
-void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI_FORMAT format, UINT mipMapLevelCount)
+void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, FORMAT format, UINT mipMapLevelCount)
 {
 	clear();
 
@@ -175,7 +177,7 @@ void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, DXGI
 }
 void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth)
 {
-	InitializeCube(size,numViews,hasDepth,DXGI_FORMAT_R8G8B8A8_UNORM);
+	InitializeCube(size,numViews,hasDepth,FORMAT_R8G8B8A8_UNORM);
 }
 
 void wiRenderTarget::Activate(GRAPHICSTHREAD threadID)

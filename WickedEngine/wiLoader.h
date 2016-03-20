@@ -99,25 +99,25 @@ struct Material
 
 	bool hasRefMap;
 	string refMapName;
-	Texture2D* refMap;
+	wiGraphicsTypes::Texture2D* refMap;
 
 	bool hasTexture;
 	string textureName;
-	Texture2D* texture;
+	wiGraphicsTypes::Texture2D* texture;
 	bool premultipliedTexture;
 	BLENDMODE blendFlag;
 		
 	bool hasNormalMap;
 	string normalMapName;
-	Texture2D* normalMap;
+	wiGraphicsTypes::Texture2D* normalMap;
 
 	bool hasDisplacementMap;
 	string displacementMapName;
-	Texture2D* displacementMap;
+	wiGraphicsTypes::Texture2D* displacementMap;
 
 	bool hasSpecularMap;
 	string specularMapName;
-	Texture2D* specularMap;
+	wiGraphicsTypes::Texture2D* specularMap;
 
 	bool subsurface_scattering;
 	bool toonshading;
@@ -290,10 +290,10 @@ struct Mesh{
 
 	static thread_local vector<Instance>		instances;
 
-	BufferResource meshVertBuff;
-	static BufferResource meshInstanceBuffer;
-	BufferResource meshIndexBuff;
-	BufferResource sOutBuffer;
+	wiGraphicsTypes::BufferResource meshVertBuff;
+	static wiGraphicsTypes::BufferResource meshInstanceBuffer;
+	wiGraphicsTypes::BufferResource meshIndexBuff;
+	wiGraphicsTypes::BufferResource sOutBuffer;
 
 	vector<string> materialNames;
 	vector<int> materialIndices;
@@ -502,9 +502,9 @@ struct Object : public Streamable, public Transform
 	
 	//RIBBON TRAIL
 	deque<RibbonVertex> trail;
-	BufferResource trailBuff;
-	Texture2D* trailDistortTex;
-	Texture2D* trailTex;
+	wiGraphicsTypes::BufferResource trailBuff;
+	wiGraphicsTypes::Texture2D* trailDistortTex;
+	wiGraphicsTypes::Texture2D* trailTex;
 
 	int physicsObjectI;
 
@@ -785,7 +785,7 @@ struct Light : public Cullable , public Transform
 	XMFLOAT4 enerDis;
 	bool noHalo;
 	bool shadow;
-	vector<Texture2D*> lensFlareRimTextures;
+	vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
 	vector<string> lensFlareNames;
 
 	//vector<wiRenderTarget> shadowMap;
@@ -826,7 +826,7 @@ struct Light : public Cullable , public Transform
 struct Decal : public Cullable, public Transform
 {
 	string texName,norName;
-	Texture2D* texture,*normal;
+	wiGraphicsTypes::Texture2D* texture,*normal;
 	XMFLOAT4X4 view,projection;
 	XMFLOAT3 front;
 	float life,fadeStart;
@@ -979,7 +979,7 @@ struct Camera:public Transform{
 };
 struct HitSphere:public SPHERE, public Transform{
 	float radius_saved, radius;
-	static BufferResource vertexBuffer;
+	static wiGraphicsTypes::BufferResource vertexBuffer;
 	enum HitSphereType{
 		HITTYPE,
 		ATKTYPE,

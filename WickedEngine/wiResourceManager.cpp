@@ -3,6 +3,8 @@
 #include "wiSound.h"
 #include "wiHelper.h"
 
+using namespace wiGraphicsTypes;
+
 wiResourceManager::filetypes wiResourceManager::types;
 wiResourceManager* wiResourceManager::globalResources = nullptr;
 

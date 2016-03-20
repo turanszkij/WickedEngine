@@ -49,15 +49,15 @@ private:
 
 		ALIGN_16
 	};
-	BufferResource		   vertexBuffer;
-	static VertexLayout   vertexLayout;
-	static VertexShader  vertexShader;
-	static PixelShader   pixelShader,simplestPS;
-	static GeometryShader geometryShader;
-	static BufferResource           constantBuffer;
-	static BlendState		blendStateAlpha,blendStateAdd;
-	static RasterizerState		rasterizerState,wireFrameRS;
-	static DepthStencilState	depthStencilState;
+	wiGraphicsTypes::BufferResource		   vertexBuffer;
+	static wiGraphicsTypes::VertexLayout   vertexLayout;
+	static wiGraphicsTypes::VertexShader  vertexShader;
+	static wiGraphicsTypes::PixelShader   pixelShader,simplestPS;
+	static wiGraphicsTypes::GeometryShader geometryShader;
+	static wiGraphicsTypes::BufferResource           constantBuffer;
+	static wiGraphicsTypes::BlendState		blendStateAlpha,blendStateAdd;
+	static wiGraphicsTypes::RasterizerState		rasterizerState,wireFrameRS;
+	static wiGraphicsTypes::DepthStencilState	depthStencilState;
 
 public:
 	static void LoadShaders();

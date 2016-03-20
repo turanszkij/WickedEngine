@@ -5,8 +5,8 @@
 class wiDepthTarget
 {
 private:
-	Texture2D*		texture;
-	TextureCube*	textureCube;
+	wiGraphicsTypes::Texture2D*		texture;
+	wiGraphicsTypes::TextureCube*	textureCube;
 	bool isCube;
 public:
 	//Texture2D			texture2D;
@@ -24,7 +24,7 @@ public:
 	void Clear(GRAPHICSTHREAD threadID);
 	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);
 
-	Texture2D* GetTexture() const { return(isCube ? textureCube : texture); }
-	Texture2DDesc GetDesc() const { return GetTexture()->desc; }
+	wiGraphicsTypes::Texture2D* GetTexture() const { return(isCube ? textureCube : texture); }
+	wiGraphicsTypes::Texture2DDesc GetDesc() const { return GetTexture()->desc; }
 };
 

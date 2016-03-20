@@ -94,13 +94,13 @@ public:
 	};
 	Processing process;
 	bool deferred;
-	Texture2D* maskMap, *distortionMap, *refractionSource;
+	wiGraphicsTypes::Texture2D* maskMap, *distortionMap, *refractionSource;
 	// Generic texture
-	void setMaskMap(Texture2D* view) { maskMap = view; }
+	void setMaskMap(wiGraphicsTypes::Texture2D* view) { maskMap = view; }
 	// The normalmap texture which should distort the refraction source
-	void setDistortionMap(Texture2D* view) { distortionMap = view; }
+	void setDistortionMap(wiGraphicsTypes::Texture2D* view) { distortionMap = view; }
 	// The texture which should be distorted
-	void setRefractionSource(Texture2D* view) { refractionSource = view; }
+	void setRefractionSource(wiGraphicsTypes::Texture2D* view) { refractionSource = view; }
 
 	void init() {
 		pos = XMFLOAT3(0, 0, 0);

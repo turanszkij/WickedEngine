@@ -41,14 +41,14 @@ private:
 
 		ALIGN_16
 	};
-	static VertexLayout il;
-	static VertexShader vs;
-	static PixelShader ps, qps;
-	static GeometryShader gs[3],qgs[2];
-	static BufferResource cbgs;
-	static DepthStencilState dss;
-	static RasterizerState rs,ncrs;
-	static BlendState bs;
+	static wiGraphicsTypes::VertexLayout il;
+	static wiGraphicsTypes::VertexShader vs;
+	static wiGraphicsTypes::PixelShader ps, qps;
+	static wiGraphicsTypes::GeometryShader gs[3],qgs[2];
+	static wiGraphicsTypes::BufferResource cbgs;
+	static wiGraphicsTypes::DepthStencilState dss;
+	static wiGraphicsTypes::RasterizerState rs,ncrs;
+	static wiGraphicsTypes::BlendState bs;
 	static int LOD[3];
 public:
 	static void LoadShaders();
@@ -71,6 +71,6 @@ public:
 	Object* object;
 	vector<Patch*> patches;
 	wiSPTree* spTree;
-	BufferResource vb[3];
+	wiGraphicsTypes::BufferResource vb[3];
 };
 

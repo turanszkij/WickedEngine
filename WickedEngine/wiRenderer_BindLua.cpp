@@ -12,6 +12,8 @@
 #include "wiHairParticle.h"
 #include "wiPHYSICS.h"
 
+using namespace wiGraphicsTypes;
+
 namespace wiRenderer_BindLua
 {
 

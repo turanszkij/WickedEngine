@@ -48,8 +48,8 @@ typedef map<string, Material*> MaterialCollection;
 class wiRenderer
 {
 public:
-	static GraphicsDevice* graphicsDevice;
-	static GraphicsDevice* GetDevice() { return graphicsDevice; }
+	static wiGraphicsTypes::GraphicsDevice* graphicsDevice;
+	static wiGraphicsTypes::GraphicsDevice* GetDevice() { return graphicsDevice; }
 
 #ifndef WINSTORE_SUPPORT
 	static void InitDevice(HWND window, int screenW, int screenH, bool windowed);
@@ -59,7 +59,7 @@ public:
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
 
 	
-	static Sampler samplers[SSLOT_COUNT];
+	static wiGraphicsTypes::Sampler samplers[SSLOT_COUNT];
 
 	
 	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
@@ -248,16 +248,16 @@ protected:
 	};
 
 
-	static BufferResource		constantBuffers[CBTYPE_LAST];
-	static VertexShader			vertexShaders[VSTYPE_LAST];
-	static PixelShader			pixelShaders[PSTYPE_LAST];
-	static GeometryShader		geometryShaders[GSTYPE_LAST];
-	static HullShader			hullShaders[HSTYPE_LAST];
-	static DomainShader			domainShaders[DSTYPE_LAST];
-	static RasterizerState		rasterizers[RSTYPE_LAST];
-	static DepthStencilState	depthStencils[DSSTYPE_LAST];
-	static VertexLayout			vertexLayouts[VLTYPE_LAST];
-	static BlendState			blendStates[BSTYPE_LAST];
+	static wiGraphicsTypes::BufferResource		constantBuffers[CBTYPE_LAST];
+	static wiGraphicsTypes::VertexShader		vertexShaders[VSTYPE_LAST];
+	static wiGraphicsTypes::PixelShader			pixelShaders[PSTYPE_LAST];
+	static wiGraphicsTypes::GeometryShader		geometryShaders[GSTYPE_LAST];
+	static wiGraphicsTypes::HullShader			hullShaders[HSTYPE_LAST];
+	static wiGraphicsTypes::DomainShader		domainShaders[DSTYPE_LAST];
+	static wiGraphicsTypes::RasterizerState		rasterizers[RSTYPE_LAST];
+	static wiGraphicsTypes::DepthStencilState	depthStencils[DSSTYPE_LAST];
+	static wiGraphicsTypes::VertexLayout		vertexLayouts[VLTYPE_LAST];
+	static wiGraphicsTypes::BlendState			blendStates[BSTYPE_LAST];
 
 
 	void UpdateSpheres();
@@ -271,7 +271,7 @@ protected:
 	static bool	wireRender, debugSpheres, debugBoneLines, debugBoxes;
 
 
-	static Texture2D* enviroMap,*colorGrading;
+	static wiGraphicsTypes::Texture2D* enviroMap,*colorGrading;
 	static void LoadBuffers();
 	static void LoadBasicShaders();
 	static void LoadLineShaders();
@@ -322,10 +322,10 @@ public:
 	static void SetToDrawDebugBoxes(bool param){debugBoxes=param;}
 	static bool GetToDrawDebugSpheres(){return debugSpheres;};
 	static bool GetToDrawDebugBoxes(){return debugBoxes;};
-	static Texture2D* GetColorGrading(){return colorGrading;};
-	static void SetColorGrading(Texture2D* tex){colorGrading=tex;};
-	static void SetEnviromentMap(Texture2D* tex){ enviroMap = tex; }
-	static Texture2D* GetEnviromentMap(){ return enviroMap; }
+	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
+	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
+	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }
+	static wiGraphicsTypes::Texture2D* GetEnviromentMap(){ return enviroMap; }
 
 
 	static Transform* getTransformByName(const string& name);
@@ -352,28 +352,28 @@ public:
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	static void UpdateCameraCB(GRAPHICSTHREAD threadID);
 	static void SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID);
-	static void UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID);
-	static void UpdateDepthBuffer(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID);
+	static void UpdateGBuffer(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);
+	static void UpdateDepthBuffer(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 	
 	static void DrawSky(GRAPHICSTHREAD threadID, bool isReflection = false);
 	static void DrawSun(GRAPHICSTHREAD threadID);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
-		, bool BlackOut, bool isReflection, SHADERTYPE shaded, Texture2D* refRes, bool grass, GRAPHICSTHREAD thread);
+		, bool BlackOut, bool isReflection, SHADERTYPE shaded, wiGraphicsTypes::Texture2D* refRes, bool grass, GRAPHICSTHREAD thread);
 	static void ClearShadowMaps(GRAPHICSTHREAD threadID);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);
-	static void DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Texture2D* refRes
-		, Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID);
+	static void DrawWorldTransparent(Camera* camera, wiGraphicsTypes::Texture2D* refracRes, wiGraphicsTypes::Texture2D* refRes
+		, wiGraphicsTypes::Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID);
 	void DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
-	static void DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes);
-	static void DrawImagesAdd(GRAPHICSTHREAD threadID, Texture2D* refracRes);
+	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
+	static void DrawImagesAdd(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	//alpha-opaque
-	static void DrawImages(GRAPHICSTHREAD threadID, Texture2D* refracRes);
-	static void DrawImagesNormals(GRAPHICSTHREAD threadID, Texture2D* refracRes);
+	static void DrawImages(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
+	static void DrawImagesNormals(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned int stencilRef = 2);
 	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);

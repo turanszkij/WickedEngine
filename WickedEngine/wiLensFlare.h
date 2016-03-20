@@ -6,14 +6,14 @@
 class wiLensFlare
 {
 private:
-	static BufferResource constantBuffer;
-	static PixelShader pixelShader;
-	static GeometryShader geometryShader;
-	static VertexShader vertexShader;
-	static VertexLayout inputLayout;
-	static RasterizerState rasterizerState;
-	static DepthStencilState depthStencilState;
-	static BlendState blendState;
+	static wiGraphicsTypes::BufferResource constantBuffer;
+	static wiGraphicsTypes::PixelShader pixelShader;
+	static wiGraphicsTypes::GeometryShader geometryShader;
+	static wiGraphicsTypes::VertexShader vertexShader;
+	static wiGraphicsTypes::VertexLayout inputLayout;
+	static wiGraphicsTypes::RasterizerState rasterizerState;
+	static wiGraphicsTypes::DepthStencilState depthStencilState;
+	static wiGraphicsTypes::BlendState blendState;
 
 	GFX_STRUCT ConstantBuffer
 	{
@@ -33,7 +33,7 @@ private:
 public:
 	static void Initialize();
 	static void CleanUp();
-	static void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<Texture2D*>& rims);
+	static void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<wiGraphicsTypes::Texture2D*>& rims);
 };
 
 #endif

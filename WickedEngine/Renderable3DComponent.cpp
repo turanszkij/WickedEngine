@@ -7,6 +7,8 @@
 #include "wiLoader.h"
 #include "TextureMapping.h"
 
+using namespace wiGraphicsTypes;
+
 Renderable3DComponent::Renderable3DComponent()
 {
 	_needToUpdateRenderData.store(true);
@@ -64,30 +66,30 @@ void Renderable3DComponent::Initialize()
 
 	rtSSR.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT);
 	rtMotionBlur.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT);
 	rtLinearDepth.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0, DXGI_FORMAT_R32_FLOAT
+		, 1, false, 1, 0, FORMAT_R32_FLOAT
 		);
 	rtParticle.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getAlphaParticleDownSample())
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
+		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT
 		);
 	rtParticleAdditive.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getAdditiveParticleDownSample()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getAdditiveParticleDownSample())
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
+		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT
 		);
 	rtWaterRipple.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth()
 		, wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0, DXGI_FORMAT_R8G8B8A8_SNORM
+		, 1, false, 1, 0, FORMAT_R8G8B8A8_SNORM
 		);
 	rtTransparent.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
+		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT
 		);
 	rtVolumeLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
@@ -96,11 +98,11 @@ void Renderable3DComponent::Initialize()
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
-		, 1, true, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT
+		, 1, true, 1, 0, FORMAT_R16G16B16A16_FLOAT
 		);
 	rtFinal[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT);
 	rtFinal[1].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false);
@@ -123,13 +125,13 @@ void Renderable3DComponent::Initialize()
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
 		rtSSAO[i].Initialize(
 			(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getSSAOQuality()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getSSAOQuality())
-			, 1, false, 1, 0, DXGI_FORMAT_R8_UNORM
+			, 1, false, 1, 0, FORMAT_R8_UNORM
 			);
 	rtSSS.resize(3);
 	for (int i = 0; i < 3; ++i)
 		rtSSS[i].Initialize(
 			(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
-			, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT);
+			, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT);
 
 
 	rtSun.resize(2);
@@ -149,7 +151,7 @@ void Renderable3DComponent::Initialize()
 	rtBloom[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth()
 		, wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0
+		, 1, false, 1, 0, FORMAT_R8G8B8A8_UNORM, 0
 		);
 	for (unsigned int i = 1; i<rtBloom.size(); ++i)
 		rtBloom[i].Initialize(

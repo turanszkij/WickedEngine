@@ -4,6 +4,8 @@
 #include "wiImageEffects.h"
 #include "wiHelper.h"
 
+using namespace wiGraphicsTypes;
+
 ForwardRenderableComponent::ForwardRenderableComponent(){
 	Renderable3DComponent::setProperties();
 

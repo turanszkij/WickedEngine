@@ -7,6 +7,8 @@
 #include "wiSprite.h"
 #include "TextureMapping.h"
 
+using namespace wiGraphicsTypes;
+
 DeferredRenderableComponent::DeferredRenderableComponent(){
 	Renderable3DComponent::setProperties();
 
@@ -24,15 +26,15 @@ void DeferredRenderableComponent::Initialize()
 	rtGBuffer.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 3, true, 1, 0
-		, DXGI_FORMAT_R16G16B16A16_FLOAT
+		, FORMAT_R16G16B16A16_FLOAT
 		);
 	rtDeferred.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0, DXGI_FORMAT_R16G16B16A16_FLOAT, 0);
+		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT, 0);
 	rtLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false, 1, 0
-		, DXGI_FORMAT_R11G11B10_FLOAT
+		, FORMAT_R11G11B10_FLOAT
 		);
 
 	Renderable2DComponent::Initialize();

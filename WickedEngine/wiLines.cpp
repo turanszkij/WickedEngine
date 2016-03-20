@@ -1,6 +1,8 @@
 #include "wiLines.h"
 #include "wiRenderer.h"
 
+using namespace wiGraphicsTypes;
+
 Lines::Lines()
 {
 	desc = Description();

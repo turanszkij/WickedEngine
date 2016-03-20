@@ -4,6 +4,7 @@
 #include "Texture_BindLua.h"
 #include "wiRenderer.h"
 
+using namespace wiGraphicsTypes;
 
 const char wiResourceManager_BindLua::className[] = "Resource";
 

@@ -4,6 +4,8 @@
 #include "wiImage.h"
 #include "wiRenderer.h"
 
+using namespace wiGraphicsTypes;
+
 
 wiSprite::wiSprite(wiResourceManager* contentHolder) :ContentHolder(contentHolder)
 {

@@ -7,6 +7,8 @@
 #include "SamplerMapping.h"
 #include "TextureMapping.h"
 
+using namespace wiGraphicsTypes;
+
 #pragma region STATICS
 BlendState		wiImage::blendState, wiImage::blendStateAdd, wiImage::blendStateNoBlend, wiImage::blendStateAvg;
 BufferResource           wiImage::constantBuffer,wiImage::processCb;

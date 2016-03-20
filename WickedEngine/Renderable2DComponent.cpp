@@ -4,6 +4,8 @@
 #include "wiFont.h"
 #include "wiRenderer.h"
 
+using namespace wiGraphicsTypes;
+
 Renderable2DComponent::Renderable2DComponent()
 {
 	setSpriteSpeed(1.f);

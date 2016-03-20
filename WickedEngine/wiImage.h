@@ -43,17 +43,17 @@ protected:
 		ALIGN_16
 	};
 	
-	static BlendState		blendState, blendStateAdd, blendStateNoBlend, blendStateAvg;
-	static BufferResource           constantBuffer,processCb;
+	static wiGraphicsTypes::BlendState		blendState, blendStateAdd, blendStateNoBlend, blendStateAvg;
+	static wiGraphicsTypes::BufferResource           constantBuffer,processCb;
 
-	static VertexShader     vertexShader,screenVS;
-	static PixelShader      pixelShader,blurHPS,blurVPS,shaftPS,outlinePS,dofPS,motionBlurPS,bloomSeparatePS
+	static wiGraphicsTypes::VertexShader     vertexShader,screenVS;
+	static wiGraphicsTypes::PixelShader      pixelShader,blurHPS,blurVPS,shaftPS,outlinePS,dofPS,motionBlurPS,bloomSeparatePS
 		,fxaaPS,ssaoPS,ssssPS,deferredPS,linDepthPS,colorGradePS,ssrPS, screenPS, stereogramPS;
 	
 
 	
-	static RasterizerState		rasterizerState;
-	static DepthStencilState	depthStencilStateGreater,depthStencilStateLess,depthNoStencilState;
+	static wiGraphicsTypes::RasterizerState		rasterizerState;
+	static wiGraphicsTypes::DepthStencilState	depthStencilStateGreater,depthStencilStateLess,depthNoStencilState;
 
 public:
 	static void LoadShaders();
@@ -65,12 +65,12 @@ private:
 public:
 	wiImage();
 	
-	static void Draw(Texture2D* texture, const wiImageEffects& effects);
-	static void Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID);
+	static void Draw(wiGraphicsTypes::Texture2D* texture, const wiImageEffects& effects);
+	static void Draw(wiGraphicsTypes::Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID);
 
-	static void DrawDeferred(Texture2D* texture
-		, Texture2D* depth, Texture2D* lightmap, Texture2D* normal
-		, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilref = 0);
+	static void DrawDeferred(wiGraphicsTypes::Texture2D* texture
+		, wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* lightmap, wiGraphicsTypes::Texture2D* normal
+		, wiGraphicsTypes::Texture2D* ao, GRAPHICSTHREAD threadID, int stencilref = 0);
 
 	static void Load();
 	static void CleanUp();

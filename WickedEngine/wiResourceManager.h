@@ -50,7 +50,7 @@ public:
 	const Resource* get(const string& name, bool IncRefCount = false);
 	//specify datatype for shaders
 	void* add(const string& name, Data_Type newType = Data_Type::DYNAMIC
-		, VertexLayoutDesc* vertexLayoutDesc = nullptr, UINT elementCount = 0, StreamOutDeclaration* streamOutDecl = nullptr);
+		, wiGraphicsTypes::VertexLayoutDesc* vertexLayoutDesc = nullptr, UINT elementCount = 0, wiGraphicsTypes::StreamOutDeclaration* streamOutDecl = nullptr);
 	bool del(const string& name, bool forceDelete = false);
 	bool CleanUp();
 };

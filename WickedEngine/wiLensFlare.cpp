@@ -3,6 +3,7 @@
 #include "wiResourceManager.h"
 #include "TextureMapping.h"
 
+using namespace wiGraphicsTypes;
 
 BufferResource wiLensFlare::constantBuffer;
 PixelShader wiLensFlare::pixelShader;
@@ -75,7 +76,7 @@ void wiLensFlare::LoadShaders(){
 
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));

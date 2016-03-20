@@ -53,15 +53,15 @@ protected:
 		
 		ALIGN_16
 	};
-	static BufferResource           vertexBuffer,indexBuffer;
+	static wiGraphicsTypes::BufferResource           vertexBuffer,indexBuffer;
 
-	static VertexLayout   vertexLayout;
-	static VertexShader  vertexShader;
-	static PixelShader   pixelShader;
-	static BlendState		blendState;
-	static BufferResource         constantBuffer;
-	static RasterizerState		rasterizerState;
-	static DepthStencilState	depthStencilState;
+	static wiGraphicsTypes::VertexLayout		vertexLayout;
+	static wiGraphicsTypes::VertexShader		vertexShader;
+	static wiGraphicsTypes::PixelShader			pixelShader;
+	static wiGraphicsTypes::BlendState			blendState;
+	static wiGraphicsTypes::BufferResource      constantBuffer;
+	static wiGraphicsTypes::RasterizerState		rasterizerState;
+	static wiGraphicsTypes::DepthStencilState	depthStencilState;
 	
 	static void SetUpStates();
 	static void SetUpCB();
@@ -76,7 +76,7 @@ private:
 
 	struct wiFontStyle{
 		string name;
-		Texture2D* texture;
+		wiGraphicsTypes::Texture2D* texture;
 		
 		struct LookUp{
 			int code;

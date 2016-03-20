@@ -1,6 +1,8 @@
 #include "wiCube.h"
 #include "wiRenderer.h"
 
+using namespace wiGraphicsTypes;
+
 BufferResource Cube::vertexBuffer;
 BufferResource Cube::indexBuffer;
 

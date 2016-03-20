@@ -1,5 +1,7 @@
 #include "Texture_BindLua.h"
 
+using namespace wiGraphicsTypes;
+
 const char Texture_BindLua::className[] = "Texture";
 
 Luna<Texture_BindLua>::FunctionType Texture_BindLua::methods[] = {

@@ -1,7 +1,7 @@
 #include "wiTextureHelper.h"
 #include "wiRandom.h"
 
-wiTextureHelper::wiTextureHelperInstance* wiTextureHelper::instance = nullptr;
+using namespace wiGraphicsTypes;
 
 wiTextureHelper::wiTextureHelperInstance::wiTextureHelperInstance()
 {
