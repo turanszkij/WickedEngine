@@ -21,7 +21,7 @@ public:
 	{
 		vector<Point> p;
 		XMFLOAT3 min, max;
-		//BufferResource vb;
+		//GPUBuffer vb;
 		Patch();
 		void add(const Point&);
 		void CleanUp();
@@ -41,14 +41,14 @@ private:
 
 		ALIGN_16
 	};
-	static wiGraphicsTypes::VertexLayout il;
-	static wiGraphicsTypes::VertexShader vs;
-	static wiGraphicsTypes::PixelShader ps, qps;
-	static wiGraphicsTypes::GeometryShader gs[3],qgs[2];
-	static wiGraphicsTypes::BufferResource cbgs;
-	static wiGraphicsTypes::DepthStencilState dss;
-	static wiGraphicsTypes::RasterizerState rs,ncrs;
-	static wiGraphicsTypes::BlendState bs;
+	static wiGraphicsTypes::VertexLayout *il;
+	static wiGraphicsTypes::VertexShader *vs;
+	static wiGraphicsTypes::PixelShader *ps, *qps;
+	static wiGraphicsTypes::GeometryShader *gs[3],*qgs[2];
+	static wiGraphicsTypes::GPUBuffer *cbgs;
+	static wiGraphicsTypes::DepthStencilState *dss;
+	static wiGraphicsTypes::RasterizerState *rs,*ncrs;
+	static wiGraphicsTypes::BlendState *bs;
 	static int LOD[3];
 public:
 	static void LoadShaders();
@@ -71,6 +71,6 @@ public:
 	Object* object;
 	vector<Patch*> patches;
 	wiSPTree* spTree;
-	wiGraphicsTypes::BufferResource vb[3];
+	wiGraphicsTypes::GPUBuffer *vb[3];
 };
 

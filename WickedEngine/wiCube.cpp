@@ -3,8 +3,8 @@
 
 using namespace wiGraphicsTypes;
 
-BufferResource Cube::vertexBuffer;
-BufferResource Cube::indexBuffer;
+GPUBuffer Cube::vertexBuffer;
+GPUBuffer Cube::indexBuffer;
 
 Cube::Cube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4& color)
 {
@@ -18,20 +18,11 @@ Cube::Cube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4& co
 
 void Cube::CleanUpStatic()
 {
-	if(vertexBuffer){
-		vertexBuffer->Release();
-		vertexBuffer = NULL;
-	}
-	if(indexBuffer){
-		indexBuffer->Release();
-		indexBuffer = NULL;
-	}
+	
 }
 
 void Cube::SetUpVertices()
 {
-	vertexBuffer=NULL;
-	indexBuffer=NULL;
 
 	Vertex* verts = new Vertex[8];
 

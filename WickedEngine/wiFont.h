@@ -53,15 +53,15 @@ protected:
 		
 		ALIGN_16
 	};
-	static wiGraphicsTypes::BufferResource           vertexBuffer,indexBuffer;
+	static wiGraphicsTypes::GPUBuffer           *vertexBuffer, *indexBuffer;
 
-	static wiGraphicsTypes::VertexLayout		vertexLayout;
-	static wiGraphicsTypes::VertexShader		vertexShader;
-	static wiGraphicsTypes::PixelShader			pixelShader;
-	static wiGraphicsTypes::BlendState			blendState;
-	static wiGraphicsTypes::BufferResource      constantBuffer;
-	static wiGraphicsTypes::RasterizerState		rasterizerState;
-	static wiGraphicsTypes::DepthStencilState	depthStencilState;
+	static wiGraphicsTypes::VertexLayout		*vertexLayout;
+	static wiGraphicsTypes::VertexShader		*vertexShader;
+	static wiGraphicsTypes::PixelShader			*pixelShader;
+	static wiGraphicsTypes::BlendState			*blendState;
+	static wiGraphicsTypes::GPUBuffer			*constantBuffer;
+	static wiGraphicsTypes::RasterizerState		*rasterizerState;
+	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
 	
 	static void SetUpStates();
 	static void SetUpCB();

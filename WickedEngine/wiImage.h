@@ -43,17 +43,17 @@ protected:
 		ALIGN_16
 	};
 	
-	static wiGraphicsTypes::BlendState		blendState, blendStateAdd, blendStateNoBlend, blendStateAvg;
-	static wiGraphicsTypes::BufferResource           constantBuffer,processCb;
+	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg;
+	static wiGraphicsTypes::GPUBuffer           *constantBuffer,*processCb;
 
-	static wiGraphicsTypes::VertexShader     vertexShader,screenVS;
-	static wiGraphicsTypes::PixelShader      pixelShader,blurHPS,blurVPS,shaftPS,outlinePS,dofPS,motionBlurPS,bloomSeparatePS
-		,fxaaPS,ssaoPS,ssssPS,deferredPS,linDepthPS,colorGradePS,ssrPS, screenPS, stereogramPS;
+	static wiGraphicsTypes::VertexShader     *vertexShader,*screenVS;
+	static wiGraphicsTypes::PixelShader      *pixelShader,*blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS
+		,*fxaaPS,*ssaoPS,*ssssPS,*deferredPS,*linDepthPS,*colorGradePS,*ssrPS, *screenPS, *stereogramPS;
 	
 
 	
-	static wiGraphicsTypes::RasterizerState		rasterizerState;
-	static wiGraphicsTypes::DepthStencilState	depthStencilStateGreater,depthStencilStateLess,depthNoStencilState;
+	static wiGraphicsTypes::RasterizerState		*rasterizerState;
+	static wiGraphicsTypes::DepthStencilState	*depthStencilStateGreater,*depthStencilStateLess,*depthNoStencilState;
 
 public:
 	static void LoadShaders();

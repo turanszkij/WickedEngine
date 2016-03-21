@@ -59,7 +59,7 @@ public:
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
 
 	
-	static wiGraphicsTypes::Sampler samplers[SSLOT_COUNT];
+	static wiGraphicsTypes::Sampler *samplers[SSLOT_COUNT];
 
 	
 	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
@@ -248,16 +248,16 @@ protected:
 	};
 
 
-	static wiGraphicsTypes::BufferResource		constantBuffers[CBTYPE_LAST];
-	static wiGraphicsTypes::VertexShader		vertexShaders[VSTYPE_LAST];
-	static wiGraphicsTypes::PixelShader			pixelShaders[PSTYPE_LAST];
-	static wiGraphicsTypes::GeometryShader		geometryShaders[GSTYPE_LAST];
-	static wiGraphicsTypes::HullShader			hullShaders[HSTYPE_LAST];
-	static wiGraphicsTypes::DomainShader		domainShaders[DSTYPE_LAST];
-	static wiGraphicsTypes::RasterizerState		rasterizers[RSTYPE_LAST];
-	static wiGraphicsTypes::DepthStencilState	depthStencils[DSSTYPE_LAST];
-	static wiGraphicsTypes::VertexLayout		vertexLayouts[VLTYPE_LAST];
-	static wiGraphicsTypes::BlendState			blendStates[BSTYPE_LAST];
+	static wiGraphicsTypes::VertexShader		*vertexShaders[VSTYPE_LAST];
+	static wiGraphicsTypes::PixelShader			*pixelShaders[PSTYPE_LAST];
+	static wiGraphicsTypes::GeometryShader		*geometryShaders[GSTYPE_LAST];
+	static wiGraphicsTypes::HullShader			*hullShaders[HSTYPE_LAST];
+	static wiGraphicsTypes::DomainShader		*domainShaders[DSTYPE_LAST];
+	static wiGraphicsTypes::VertexLayout		*vertexLayouts[VLTYPE_LAST];
+	static wiGraphicsTypes::RasterizerState		*rasterizers[RSTYPE_LAST];
+	static wiGraphicsTypes::DepthStencilState	*depthStencils[DSSTYPE_LAST];
+	static wiGraphicsTypes::BlendState			*blendStates[BSTYPE_LAST];
+	static wiGraphicsTypes::GPUBuffer			*constantBuffers[CBTYPE_LAST];
 
 
 	void UpdateSpheres();

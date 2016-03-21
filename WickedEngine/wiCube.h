@@ -41,8 +41,8 @@ public:
 
 	Description desc;
 	
-	static wiGraphicsTypes::BufferResource vertexBuffer;
-	static wiGraphicsTypes::BufferResource indexBuffer;
+	static wiGraphicsTypes::GPUBuffer vertexBuffer;
+	static wiGraphicsTypes::GPUBuffer indexBuffer;
 	static void LoadStatic();
 	static void CleanUpStatic();
 

@@ -27,18 +27,18 @@ using namespace wiGraphicsTypes;
 
 #pragma region STATICS
 GraphicsDevice* wiRenderer::graphicsDevice = nullptr;
-Sampler wiRenderer::samplers[SSLOT_COUNT];
+Sampler				*wiRenderer::samplers[SSLOT_COUNT];
 
-BufferResource		wiRenderer::constantBuffers[CBTYPE_LAST];
-VertexShader		wiRenderer::vertexShaders[VSTYPE_LAST];
-PixelShader			wiRenderer::pixelShaders[PSTYPE_LAST];
-GeometryShader		wiRenderer::geometryShaders[GSTYPE_LAST];
-HullShader			wiRenderer::hullShaders[HSTYPE_LAST];
-DomainShader		wiRenderer::domainShaders[DSTYPE_LAST];
-RasterizerState		wiRenderer::rasterizers[RSTYPE_LAST];
-DepthStencilState	wiRenderer::depthStencils[DSSTYPE_LAST];
-VertexLayout		wiRenderer::vertexLayouts[VLTYPE_LAST];
-BlendState			wiRenderer::blendStates[BSTYPE_LAST];
+VertexShader		*wiRenderer::vertexShaders[VSTYPE_LAST];
+PixelShader			*wiRenderer::pixelShaders[PSTYPE_LAST];
+GeometryShader		*wiRenderer::geometryShaders[GSTYPE_LAST];
+HullShader			*wiRenderer::hullShaders[HSTYPE_LAST];
+DomainShader		*wiRenderer::domainShaders[DSTYPE_LAST];
+VertexLayout		*wiRenderer::vertexLayouts[VLTYPE_LAST];
+RasterizerState		*wiRenderer::rasterizers[RSTYPE_LAST];
+DepthStencilState	*wiRenderer::depthStencils[DSSTYPE_LAST];
+BlendState			*wiRenderer::blendStates[BSTYPE_LAST];
+GPUBuffer			*wiRenderer::constantBuffers[CBTYPE_LAST];
 
 int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
@@ -123,10 +123,6 @@ void wiRenderer::CleanUp()
 
 void wiRenderer::SetUpStaticComponents()
 {
-	for (int i = 0; i < CBTYPE_LAST; ++i)
-	{
-		SAFE_INIT(constantBuffers[i]);
-	}
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
 		SAFE_INIT(vertexShaders[i]);
@@ -147,21 +143,29 @@ void wiRenderer::SetUpStaticComponents()
 	{
 		SAFE_INIT(domainShaders[i]);
 	}
-	for (int i = 0; i < RSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(rasterizers[i]);
-	}
-	for (int i = 0; i < DSSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(depthStencils[i]);
-	}
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
 		SAFE_INIT(vertexLayouts[i]);
 	}
+	for (int i = 0; i < RSTYPE_LAST; ++i)
+	{
+		SAFE_INIT(rasterizers[i]);
+		//rasterizers[i] = new RasterizerState;
+	}
+	for (int i = 0; i < DSSTYPE_LAST; ++i)
+	{
+		SAFE_INIT(depthStencils[i]);
+		//depthStencils[i] = new DepthStencilState;
+	}
+	for (int i = 0; i < CBTYPE_LAST; ++i)
+	{
+		SAFE_INIT(constantBuffers[i]);
+		//constantBuffers[i] = new GPUBuffer;
+	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
 		SAFE_INIT(samplers[i]);
+		//samplers[i] = new Sampler;
 	}
 
 	//thread t1(LoadBasicShaders);
@@ -253,49 +257,49 @@ void wiRenderer::CleanUpStatic()
 	HitSphere::CleanUpStatic();
 
 
-	for (int i = 0; i < CBTYPE_LAST; ++i)
-	{
-		SAFE_RELEASE(constantBuffers[i]);
-	}
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
-		SAFE_RELEASE(vertexShaders[i]);
+		SAFE_DELETE(vertexShaders[i]);
 	}
 	for (int i = 0; i < PSTYPE_LAST; ++i)
 	{
-		SAFE_RELEASE(pixelShaders[i]);
+		SAFE_DELETE(pixelShaders[i]);
 	}
 	for (int i = 0; i < GSTYPE_LAST; ++i)
 	{
-		SAFE_RELEASE(geometryShaders[i]);
+		SAFE_DELETE(geometryShaders[i]);
 	}
 	for (int i = 0; i < HSTYPE_LAST; ++i)
 	{
-		SAFE_RELEASE(hullShaders[i]);
+		SAFE_DELETE(hullShaders[i]);
 	}
 	for (int i = 0; i < DSTYPE_LAST; ++i)
 	{
-		SAFE_RELEASE(domainShaders[i]);
-	}
-	for (int i = 0; i < RSTYPE_LAST; ++i)
-	{
-		SAFE_RELEASE(rasterizers[i]);
-	}
-	for (int i = 0; i < DSSTYPE_LAST; ++i)
-	{
-		SAFE_RELEASE(depthStencils[i]);
+		SAFE_DELETE(domainShaders[i]);
 	}
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
-		SAFE_RELEASE(vertexLayouts[i]);
+		SAFE_DELETE(vertexLayouts[i]);
+	}
+	for (int i = 0; i < RSTYPE_LAST; ++i)
+	{
+		SAFE_DELETE(rasterizers[i]);
+	}
+	for (int i = 0; i < DSSTYPE_LAST; ++i)
+	{
+		SAFE_DELETE(depthStencils[i]);
 	}
 	for (int i = 0; i < BSTYPE_LAST; ++i)
 	{
-		SAFE_RELEASE(blendStates[i]);
+		SAFE_DELETE(blendStates[i]);
+	}
+	for (int i = 0; i < CBTYPE_LAST; ++i)
+	{
+		SAFE_DELETE(constantBuffers[i]);
 	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
-		SAFE_RELEASE(samplers[i]);
+		SAFE_DELETE(samplers[i]);
 	}
 
 	if (physicsEngine) physicsEngine->CleanUp();
@@ -487,7 +491,7 @@ void wiRenderer::LoadBuffers()
 {
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
-		constantBuffers[i] = nullptr;
+		constantBuffers[i] = new GPUBuffer;
 	}
 
     BufferDesc bd;
@@ -498,48 +502,48 @@ void wiRenderer::LoadBuffers()
 
 	//Persistent buffers...
 	bd.ByteWidth = sizeof(WorldCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_WORLD]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_WORLD]);
 
 	bd.ByteWidth = sizeof(FrameCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_FRAME]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_FRAME]);
 
 	bd.ByteWidth = sizeof(CameraCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CAMERA]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CAMERA]);
 
 	bd.ByteWidth = sizeof(MaterialCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_MATERIAL]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MATERIAL]);
 
 	bd.ByteWidth = sizeof(DirectionalLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_DIRLIGHT]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_DIRLIGHT]);
 
 	bd.ByteWidth = sizeof(MiscCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_MISC]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MISC]);
 
 	bd.ByteWidth = sizeof(ShadowCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_SHADOW]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_SHADOW]);
 
 	bd.ByteWidth = sizeof(APICB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CLIPPLANE]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CLIPPLANE]);
 
 
 	// On demand buffers...
 	bd.ByteWidth = sizeof(PointLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_POINTLIGHT]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_POINTLIGHT]);
 
 	bd.ByteWidth = sizeof(SpotLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_SPOTLIGHT]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_SPOTLIGHT]);
 
 	bd.ByteWidth = sizeof(VolumeLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_VOLUMELIGHT]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_VOLUMELIGHT]);
 
 	bd.ByteWidth = sizeof(DecalCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_DECAL]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_DECAL]);
 
 	bd.ByteWidth = sizeof(CubeMapRenderCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_CUBEMAPRENDER]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CUBEMAPRENDER]);
 
 	bd.ByteWidth = sizeof(BoneCB);
-	GetDevice()->CreateBuffer(&bd, NULL, &constantBuffers[CBTYPE_BONEBUFFER]);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_BONEBUFFER]);
 
 }
 
@@ -596,7 +600,7 @@ void wiRenderer::LoadBasicShaders()
 			{ 0, "TEXCOORD", 1, 0, 4, 0 },     // output the first 2 texture coordinates
 		};
 
-		geometryShaders[GSTYPE_STREAMOUT] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
+		geometryShaders[GSTYPE_STREAMOUT] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
 	}
 
 
@@ -611,23 +615,23 @@ void wiRenderer::LoadBasicShaders()
 	vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	pixelShaders[PSTYPE_OBJECT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TRANSPARENT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_transparent.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forwardSimple.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_ENVMAP_SKY] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_transparent.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forwardSimple.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVMAP_SKY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
-	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiRenderer::LoadLineShaders()
@@ -645,22 +649,22 @@ void wiRenderer::LoadLineShaders()
 	}
 
 
-	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadTessShaders()
 {
-	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
-	domainShaders[DSTYPE_OBJECT] = static_cast<DomainShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectDS.cso", wiResourceManager::DOMAINSHADER));
+	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
+	domainShaders[DSTYPE_OBJECT] = static_cast<DomainShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectDS.cso", wiResourceManager::DOMAINSHADER));
 
 }
 void wiRenderer::LoadSkyShaders()
 {
 	vertexShaders[VSTYPE_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	pixelShaders[PSTYPE_SKY] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SKY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
 	vertexShaders[VSTYPE_SKY_REFLECTION] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	pixelShaders[PSTYPE_SKY_REFLECTION] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_reflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SUN] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SKY_REFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_reflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiRenderer::LoadShadowShaders()
 {
@@ -668,17 +672,17 @@ void wiRenderer::LoadShadowShaders()
 	vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	pixelShaders[PSTYPE_SHADOW] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOW] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiRenderer::LoadWaterShaders()
 {
 
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	pixelShaders[PSTYPE_WATER]= static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_WATER]= static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadTrailShaders(){
@@ -697,7 +701,7 @@ void wiRenderer::LoadTrailShaders(){
 	}
 
 
-	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 
@@ -731,6 +735,11 @@ void wiRenderer::ReloadShaders(const string& path)
 
 void wiRenderer::SetUpStates()
 {
+	for (int i = 0; i < SSLOT_COUNT; ++i)
+	{
+		samplers[i] = new Sampler;
+	}
+
 	SamplerDesc samplerDesc;
 	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
@@ -745,57 +754,57 @@ void wiRenderer::SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLOAT32_MAX;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_CLAMP]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_WRAP]);
 	
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_MIRROR]);
 	
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_WRAP]);
 	
 	
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_CLAMP]);
 	
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MaxAnisotropy = 16;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_CLAMP]);
 	
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_WRAP]);
 	
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_MIRROR]);
 
 	ZeroMemory( &samplerDesc, sizeof(SamplerDesc) );
 	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
@@ -805,7 +814,13 @@ void wiRenderer::SetUpStates()
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 16;
 	samplerDesc.ComparisonFunc = COMPARISON_LESS_EQUAL;
-	GetDevice()->CreateSamplerState(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_CMP_DEPTH]);
+
+
+	for (int i = 0; i < RSTYPE_LAST; ++i)
+	{
+		rasterizers[i] = new RasterizerState;
+	}
 	
 	RasterizerDesc rs;
 	rs.FillMode=FILL_SOLID;
@@ -818,7 +833,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,&rasterizers[RSTYPE_FRONT]);
+	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_FRONT]);
 
 	
 	rs.FillMode=FILL_SOLID;
@@ -831,7 +846,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,&rasterizers[RSTYPE_SHADOW]);
+	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_SHADOW]);
 
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_NONE;
@@ -843,7 +858,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,&rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
+	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
 	rs.FillMode=FILL_WIREFRAME;
 	rs.CullMode=CULL_BACK;
@@ -855,7 +870,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,&rasterizers[RSTYPE_WIRE]);
+	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_WIRE]);
 	
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_NONE;
@@ -867,7 +882,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,&rasterizers[RSTYPE_DOUBLESIDED]);
+	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_DOUBLESIDED]);
 	
 	rs.FillMode=FILL_WIREFRAME;
 	rs.CullMode=CULL_NONE;
@@ -879,7 +894,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,&rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
+	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
 	
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_FRONT;
@@ -891,7 +906,12 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,&rasterizers[RSTYPE_BACK]);
+	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_BACK]);
+
+	for (int i = 0; i < DSSTYPE_LAST; ++i)
+	{
+		depthStencils[i] = new DepthStencilState;
+	}
 
 	DepthStencilDesc dsd;
 	dsd.DepthEnable = true;
@@ -910,7 +930,7 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
-	GetDevice()->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFAULT]);
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEFAULT]);
 
 	
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -927,7 +947,7 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
-	GetDevice()->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD]);
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_STENCILREAD]);
 
 	
 	dsd.DepthEnable = false;
@@ -942,19 +962,24 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	GetDevice()->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD_MATCH]);
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_STENCILREAD_MATCH]);
 
 
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
-	GetDevice()->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEPTHREAD]);
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
 	dsd.StencilEnable=false;
-	GetDevice()->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_XRAY]);
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_XRAY]);
 
+
+	for (int i = 0; i < BSTYPE_LAST; ++i)
+	{
+		blendStates[i] = new BlendState;
+	}
 	
 	BlendDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
@@ -967,7 +992,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.AlphaToCoverageEnable=false;
-	GetDevice()->CreateBlendState(&bd,&blendStates[BSTYPE_OPAQUE]);
+	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_OPAQUE]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -978,7 +1003,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.AlphaToCoverageEnable=false;
-	GetDevice()->CreateBlendState(&bd,&blendStates[BSTYPE_TRANSPARENT]);
+	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_TRANSPARENT]);
 
 
 	bd.RenderTarget[0].BlendEnable=true;
@@ -990,7 +1015,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
 	bd.IndependentBlendEnable=true,
 	bd.AlphaToCoverageEnable=false;
-	GetDevice()->CreateBlendState(&bd,&blendStates[BSTYPE_ADDITIVE]);
+	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_ADDITIVE]);
 }
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -999,8 +1024,8 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
-		if (samplers[i] == nullptr)
-			continue;
+		//if (samplers[i] == nullptr)
+		//	continue;
 		GetDevice()->BindSamplerPS(samplers[i], i, threadID);
 		GetDevice()->BindSamplerVS(samplers[i], i, threadID);
 		GetDevice()->BindSamplerGS(samplers[i], i, threadID);
@@ -1267,7 +1292,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				Mesh* mesh = iter->second;
 
 				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices.empty()
-					&& mesh->sOutBuffer != nullptr && mesh->meshVertBuff != nullptr)
+					&& mesh->sOutBuffer.IsValid() && mesh->meshVertBuff.IsValid())
 				{
 #ifdef USE_GPU_SKINNING
 					if (!streamOutSetUp)
@@ -1292,8 +1317,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 
 					// Do the skinning
-					GetDevice()->BindVertexBuffer(mesh->meshVertBuff, 0, sizeof(SkinnedVertex), threadID);
-					GetDevice()->BindStreamOutTarget(mesh->sOutBuffer, threadID);
+					GetDevice()->BindVertexBuffer(&mesh->meshVertBuff, 0, sizeof(SkinnedVertex), threadID);
+					GetDevice()->BindStreamOutTarget(&mesh->sOutBuffer, threadID);
 					GetDevice()->Draw(mesh->vertices.size(), threadID);
 #else
 					// Doing skinning on the CPU
@@ -1311,7 +1336,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (mesh->softBody || mesh->hasArmature())
 #endif
 				{
-					GetDevice()->UpdateBuffer(mesh->meshVertBuff, mesh->skinnedVertices.data(), threadID, sizeof(Vertex)*mesh->skinnedVertices.size());
+					GetDevice()->UpdateBuffer(&mesh->meshVertBuff, mesh->skinnedVertices.data(), threadID, sizeof(Vertex)*mesh->skinnedVertices.size());
 				}
 			}
 		}
@@ -1443,7 +1468,7 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, threadID);
 
-			GetDevice()->BindVertexBuffer(boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
+			GetDevice()->BindVertexBuffer(&boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
 			GetDevice()->Draw(2, threadID);
 		}
 	}
@@ -1471,7 +1496,7 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, threadID);
 
-		GetDevice()->BindVertexBuffer(linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
+		GetDevice()->BindVertexBuffer(&linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
 		GetDevice()->Draw(2, threadID);
 	}
 
@@ -1493,8 +1518,8 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 		
-		GetDevice()->BindVertexBuffer(Cube::vertexBuffer,0,sizeof(XMFLOAT3A),threadID);
-		GetDevice()->BindIndexBuffer(Cube::indexBuffer,threadID);
+		GetDevice()->BindVertexBuffer(&Cube::vertexBuffer,0,sizeof(XMFLOAT3A),threadID);
+		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
 
 		static thread_local MiscCB* sb = new MiscCB;
 		for (unsigned int i = 0; i<cubes.size(); i++){
@@ -1549,7 +1574,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 
 	for (Object* o : objectsWithTrails)
 	{
-		if(o->trailBuff && o->trail.size()>=4){
+		if(o->trailBuff.IsValid() && o->trail.size()>=4){
 
 			GetDevice()->BindTexturePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
 			GetDevice()->BindTexturePS(o->trailTex, TEXSLOT_ONDEMAND2, threadID);
@@ -1594,9 +1619,9 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 				}
 			}
 			if(!trails.empty()){
-				GetDevice()->UpdateBuffer(o->trailBuff,trails.data(),threadID,sizeof(RibbonVertex)*trails.size());
+				GetDevice()->UpdateBuffer(&o->trailBuff,trails.data(),threadID,sizeof(RibbonVertex)*trails.size());
 
-				GetDevice()->BindVertexBuffer(o->trailBuff,0,sizeof(RibbonVertex),threadID);
+				GetDevice()->BindVertexBuffer(&o->trailBuff,0,sizeof(RibbonVertex),threadID);
 				GetDevice()->Draw(trails.size(),threadID);
 
 				trails.clear();
@@ -2045,9 +2070,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-										GetDevice()->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-										GetDevice()->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-										GetDevice()->BindIndexBuffer(mesh->meshIndexBuff, threadID);
+										GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+										GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+										GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
 
 
 										int matsiz = mesh->materialIndices.size();
@@ -2146,9 +2171,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-									GetDevice()->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-									GetDevice()->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-									GetDevice()->BindIndexBuffer(mesh->meshIndexBuff, threadID);
+									GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+									GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+									GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
 
 
 									int matsiz = mesh->materialIndices.size();
@@ -2253,9 +2278,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-							GetDevice()->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-							GetDevice()->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-							GetDevice()->BindIndexBuffer(mesh->meshIndexBuff, threadID);
+							GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+							GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+							GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
 
 
 							int matsiz = mesh->materialIndices.size();
@@ -2470,9 +2495,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 				
 				
-			GetDevice()->BindIndexBuffer(mesh->meshIndexBuff,threadID);
-			GetDevice()->BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),threadID);
-			GetDevice()->BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
+			GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff,threadID);
+			GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid()?&mesh->sOutBuffer:&mesh->meshVertBuff),0,sizeof(Vertex),threadID);
+			GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
 
 			int m=0;
 			for(Material* iMat : mesh->materials){
@@ -2616,9 +2641,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 				
-			GetDevice()->BindIndexBuffer(mesh->meshIndexBuff,threadID);
-			GetDevice()->BindVertexBuffer((mesh->sOutBuffer?mesh->sOutBuffer:mesh->meshVertBuff),0,sizeof(Vertex),threadID);
-			GetDevice()->BindVertexBuffer(mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
+			GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff,threadID);
+			GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid()?&mesh->sOutBuffer:&mesh->meshVertBuff),0,sizeof(Vertex),threadID);
+			GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
 				
 
 			int m=0;
@@ -3265,9 +3290,9 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
 
-			GetDevice()->BindVertexBuffer((mesh->sOutBuffer ? mesh->sOutBuffer : mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer(mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-			GetDevice()->BindIndexBuffer(mesh->meshIndexBuff, threadID);
+			GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
+			GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
 
 
 			int matsiz = mesh->materialIndices.size();

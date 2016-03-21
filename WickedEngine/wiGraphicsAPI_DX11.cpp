@@ -998,7 +998,7 @@ inline D3D11_SUBRESOURCE_DATA* _ConvertSubresourceData(const SubresourceData* pI
 }
 
 
-HRESULT GraphicsDevice_DX11::CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, BufferResource *ppBuffer)
+HRESULT GraphicsDevice_DX11::CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
 {
 	D3D11_BUFFER_DESC desc; 
 	desc.ByteWidth = pDesc->ByteWidth;
@@ -1010,7 +1010,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const BufferDesc *pDesc, const Subreso
 
 	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
 
-	return device->CreateBuffer(&desc, data, ppBuffer);
+	return device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateTexture1D()
 {
@@ -1028,7 +1028,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 
 	HRESULT hr = S_OK;
 	
-	hr = device->CreateTexture2D(&desc, data, &((*ppTexture2D)->texture2D));
+	hr = device->CreateTexture2D(&desc, data, &((*ppTexture2D)->texture2D_DX11));
 	if (FAILED(hr))
 		return hr;
 
@@ -1059,7 +1059,7 @@ HRESULT GraphicsDevice_DX11::CreateTextureCube(const Texture2DDesc* pDesc, const
 		desc.MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
 	}
 
-	hr = device->CreateTexture2D(&desc, data, &((*ppTextureCube)->texture2D));
+	hr = device->CreateTexture2D(&desc, data, &((*ppTextureCube)->texture2D_DX11));
 	if (FAILED(hr))
 		return hr;
 
@@ -1098,7 +1098,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 			shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 		}
 
-		hr = device->CreateShaderResourceView(pTexture->texture2D, &shaderResourceViewDesc, &pTexture->shaderResourceView);
+		hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
 	}
 	return hr;
 }
@@ -1123,7 +1123,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 			renderTargetViewDesc.Texture2D.MipSlice = 0;
 		}
 
-		hr = device->CreateRenderTargetView(pTexture->texture2D, &renderTargetViewDesc, &pTexture->renderTargetView);
+		hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetView_DX11);
 	}
 	return hr;
 }
@@ -1152,12 +1152,12 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 			depthStencilViewDesc.Flags = 0;
 		}
 
-		hr = device->CreateDepthStencilView(pTexture->texture2D, &depthStencilViewDesc, &pTexture->depthStencilView);
+		hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilView_DX11);
 	}
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
-	const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *ppInputLayout)
+	const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
 {
 	D3D11_INPUT_ELEMENT_DESC* desc = new D3D11_INPUT_ELEMENT_DESC[NumElements];
 	for (UINT i = 0; i < NumElements; ++i)
@@ -1173,26 +1173,26 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 		desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
 	}
 
-	HRESULT hr = device->CreateInputLayout(desc, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, ppInputLayout);
+	HRESULT hr = device->CreateInputLayout(desc, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, &pInputLayout->resource_DX11);
 
 	SAFE_DELETE_ARRAY(desc);
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, VertexShader *ppVertexShader)
+HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, VertexShader *pVertexShader)
 {
-	return device->CreateVertexShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppVertexShader);
+	return device->CreateVertexShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pVertexShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, PixelShader *ppPixelShader)
+HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, PixelShader *pPixelShader)
 {
-	return device->CreatePixelShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppPixelShader);
+	return device->CreatePixelShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pPixelShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, GeometryShader *ppGeometryShader)
+HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, GeometryShader *pGeometryShader)
 {
-	return device->CreateGeometryShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppGeometryShader);
+	return device->CreateGeometryShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pGeometryShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateGeometryShaderWithStreamOutput(const void *pShaderBytecode, SIZE_T BytecodeLength, const StreamOutDeclaration *pSODeclaration,
-	UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, ClassLinkage pClassLinkage, GeometryShader *ppGeometryShader)
+	UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, ClassLinkage* pClassLinkage, GeometryShader *pGeometryShader)
 {
 	D3D11_SO_DECLARATION_ENTRY* decl = new D3D11_SO_DECLARATION_ENTRY[NumEntries];
 	for (UINT i = 0; i < NumEntries; ++i)
@@ -1209,25 +1209,25 @@ HRESULT GraphicsDevice_DX11::CreateGeometryShaderWithStreamOutput(const void *pS
 		RasterizedStream = D3D11_SO_NO_RASTERIZED_STREAM;
 
 	HRESULT hr = device->CreateGeometryShaderWithStreamOutput(pShaderBytecode, BytecodeLength, decl, NumEntries, pBufferStrides,
-		NumStrides, RasterizedStream, pClassLinkage, ppGeometryShader);
+		NumStrides, RasterizedStream, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pGeometryShader->resource_DX11);
 
 	SAFE_DELETE_ARRAY(decl);
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, HullShader *ppHullShader)
+HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, HullShader *pHullShader)
 {
-	return device->CreateHullShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppHullShader);
+	return device->CreateHullShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pHullShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, DomainShader *ppDomainShader)
+HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, DomainShader *pDomainShader)
 {
-	return device->CreateDomainShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppDomainShader);
+	return device->CreateDomainShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pDomainShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, ComputeShader *ppComputeShader)
+HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, ComputeShader *pComputeShader)
 {
-	return device->CreateComputeShader(pShaderBytecode, BytecodeLength, pClassLinkage, ppComputeShader);
+	return device->CreateComputeShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pComputeShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *ppBlendState)
+HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *pBlendState)
 {
 	D3D11_BLEND_DESC desc;
 	desc.AlphaToCoverageEnable = pBlendStateDesc->AlphaToCoverageEnable;
@@ -1244,9 +1244,9 @@ HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendDesc *pBlendStateDesc, 
 		desc.RenderTarget[i].RenderTargetWriteMask = pBlendStateDesc->RenderTarget[i].RenderTargetWriteMask;
 	}
 
-	return device->CreateBlendState(&desc, ppBlendState);
+	return device->CreateBlendState(&desc, &pBlendState->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *ppDepthStencilState)
+HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *pDepthStencilState)
 {
 	D3D11_DEPTH_STENCIL_DESC desc;
 	desc.DepthEnable = pDepthStencilDesc->DepthEnable;
@@ -1264,9 +1264,9 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilDesc *pDe
 	desc.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilDesc->BackFace.StencilFunc);
 	desc.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilDesc->BackFace.StencilPassOp);
 
-	return device->CreateDepthStencilState(&desc, ppDepthStencilState);
+	return device->CreateDepthStencilState(&desc, &pDepthStencilState->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *ppRasterizerState)
+HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *pRasterizerState)
 {
 	D3D11_RASTERIZER_DESC desc;
 	desc.FillMode = _ConvertFillMode(pRasterizerDesc->FillMode);
@@ -1280,9 +1280,9 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerDesc *pRaster
 	desc.MultisampleEnable = pRasterizerDesc->MultisampleEnable;
 	desc.AntialiasedLineEnable = pRasterizerDesc->AntialiasedLineEnable;
 
-	return device->CreateRasterizerState(&desc, ppRasterizerState);
+	return device->CreateRasterizerState(&desc, &pRasterizerState->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *ppSamplerState)
+HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {
 	D3D11_SAMPLER_DESC desc;
 	desc.Filter = _ConvertFilter(pSamplerDesc->Filter);
@@ -1299,7 +1299,7 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 	desc.MinLOD = pSamplerDesc->MinLOD;
 	desc.MaxLOD = pSamplerDesc->MaxLOD;
 
-	return device->CreateSamplerState(&desc, ppSamplerState);
+	return device->CreateSamplerState(&desc, &pSamplerState->resource_DX11);
 }
 
 
@@ -1357,14 +1357,14 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const wstring& fileName, Text
 	if (!fileName.substr(fileName.length() - 4).compare(wstring(L".dds")))
 	{
 		// Load dds
-		hr = CreateDDSTextureFromFile(device, fileName.c_str(), nullptr, &(*ppTexture)->shaderResourceView);
+		hr = CreateDDSTextureFromFile(device, fileName.c_str(), nullptr, &(*ppTexture)->shaderResourceView_DX11);
 	}
 	else
 	{
 		// Load WIC
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			LOCK();
-		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], fileName.c_str(), nullptr, &(*ppTexture)->shaderResourceView);
+		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], fileName.c_str(), nullptr, &(*ppTexture)->shaderResourceView_DX11);
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			UNLOCK();
 	}

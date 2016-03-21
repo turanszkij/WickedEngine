@@ -6,14 +6,14 @@
 class wiLensFlare
 {
 private:
-	static wiGraphicsTypes::BufferResource constantBuffer;
-	static wiGraphicsTypes::PixelShader pixelShader;
-	static wiGraphicsTypes::GeometryShader geometryShader;
-	static wiGraphicsTypes::VertexShader vertexShader;
-	static wiGraphicsTypes::VertexLayout inputLayout;
-	static wiGraphicsTypes::RasterizerState rasterizerState;
-	static wiGraphicsTypes::DepthStencilState depthStencilState;
-	static wiGraphicsTypes::BlendState blendState;
+	static wiGraphicsTypes::GPUBuffer			*constantBuffer;
+	static wiGraphicsTypes::PixelShader			*pixelShader;
+	static wiGraphicsTypes::GeometryShader		*geometryShader;
+	static wiGraphicsTypes::VertexShader		*vertexShader;
+	static wiGraphicsTypes::VertexLayout		*inputLayout;
+	static wiGraphicsTypes::RasterizerState		*rasterizerState;
+	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
+	static wiGraphicsTypes::BlendState			*blendState;
 
 	GFX_STRUCT ConstantBuffer
 	{

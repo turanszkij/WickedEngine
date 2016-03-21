@@ -290,10 +290,10 @@ struct Mesh{
 
 	static thread_local vector<Instance>		instances;
 
-	wiGraphicsTypes::BufferResource meshVertBuff;
-	static wiGraphicsTypes::BufferResource meshInstanceBuffer;
-	wiGraphicsTypes::BufferResource meshIndexBuff;
-	wiGraphicsTypes::BufferResource sOutBuffer;
+	wiGraphicsTypes::GPUBuffer meshVertBuff;
+	static wiGraphicsTypes::GPUBuffer meshInstanceBuffer;
+	wiGraphicsTypes::GPUBuffer meshIndexBuff;
+	wiGraphicsTypes::GPUBuffer sOutBuffer;
 
 	vector<string> materialNames;
 	vector<int> materialIndices;
@@ -328,10 +328,6 @@ struct Mesh{
 		init();
 	}
 	~Mesh(){
-		if(meshVertBuff) {meshVertBuff->Release(); meshVertBuff=NULL; }
-		if(meshInstanceBuffer) {meshInstanceBuffer->Release(); meshInstanceBuffer=NULL;}
-		if(meshIndexBuff) {meshIndexBuff->Release(); meshIndexBuff=NULL; }
-		if(sOutBuffer) {sOutBuffer->Release(); sOutBuffer=NULL; }
 		vertices.clear();
 		skinnedVertices.clear();
 		indices.clear();
@@ -353,10 +349,6 @@ struct Mesh{
 		vertices.resize(0);
 		skinnedVertices.resize(0);
 		indices.resize(0);
-		meshVertBuff=NULL;
-		meshInstanceBuffer=NULL;
-		meshIndexBuff=NULL;
-		sOutBuffer=NULL;
 		materialNames.resize(0);
 		materialIndices.resize(0);
 		renderable=false;
@@ -502,7 +494,7 @@ struct Object : public Streamable, public Transform
 	
 	//RIBBON TRAIL
 	deque<RibbonVertex> trail;
-	wiGraphicsTypes::BufferResource trailBuff;
+	wiGraphicsTypes::GPUBuffer trailBuff;
 	wiGraphicsTypes::Texture2D* trailDistortTex;
 	wiGraphicsTypes::Texture2D* trailTex;
 
@@ -525,7 +517,6 @@ struct Object : public Streamable, public Transform
 		XMStoreFloat4x4( &world,XMMatrixIdentity() );
 		XMStoreFloat4x4( &worldPrev,XMMatrixIdentity() );
 		trail.resize(0);
-		trailBuff=NULL;
 		emitterType = NO_EMITTER;
 		eParticleSystems.resize(0);
 		hParticleSystems.resize(0);
@@ -979,7 +970,7 @@ struct Camera:public Transform{
 };
 struct HitSphere:public SPHERE, public Transform{
 	float radius_saved, radius;
-	static wiGraphicsTypes::BufferResource vertexBuffer;
+	static wiGraphicsTypes::GPUBuffer vertexBuffer;
 	enum HitSphereType{
 		HITTYPE,
 		ATKTYPE,

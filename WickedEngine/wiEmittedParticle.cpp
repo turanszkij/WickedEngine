@@ -10,14 +10,14 @@
 using namespace wiGraphicsTypes;
 
 //ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
-VertexLayout	wiEmittedParticle::vertexLayout;
-VertexShader  wiEmittedParticle::vertexShader;
-PixelShader   wiEmittedParticle::pixelShader,wiEmittedParticle::simplestPS;
-GeometryShader		wiEmittedParticle::geometryShader;
-BufferResource           wiEmittedParticle::constantBuffer;
-BlendState		wiEmittedParticle::blendStateAlpha,wiEmittedParticle::blendStateAdd;
-RasterizerState		wiEmittedParticle::rasterizerState,wiEmittedParticle::wireFrameRS;
-DepthStencilState	wiEmittedParticle::depthStencilState;
+VertexLayout	*wiEmittedParticle::vertexLayout = nullptr;
+VertexShader  *wiEmittedParticle::vertexShader = nullptr;
+PixelShader   *wiEmittedParticle::pixelShader = nullptr,*wiEmittedParticle::simplestPS = nullptr;
+GeometryShader		*wiEmittedParticle::geometryShader = nullptr;
+GPUBuffer           *wiEmittedParticle::constantBuffer = nullptr;
+BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
+RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
+DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
 set<wiEmittedParticle*> wiEmittedParticle::systems;
 
 wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
@@ -292,7 +292,7 @@ void wiEmittedParticle::CleanUp()
 
 	points.clear();
 
-	if(vertexBuffer) vertexBuffer->Release(); vertexBuffer=NULL;
+	SAFE_DELETE(vertexBuffer);
 
 	systems.erase(this);
 
@@ -322,10 +322,10 @@ void wiEmittedParticle::LoadShaders()
 	}
 
 
-	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS.cso", wiResourceManager::PIXELSHADER));
-	simplestPS = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS.cso", wiResourceManager::PIXELSHADER));
+	simplestPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 
@@ -338,7 +338,8 @@ void wiEmittedParticle::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &constantBuffer );
+	constantBuffer = new GPUBuffer;
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, constantBuffer );
 }
 void wiEmittedParticle::SetUpStates()
 {
@@ -353,7 +354,8 @@ void wiEmittedParticle::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
+	rasterizerState = new RasterizerState;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,rasterizerState);
 
 	
 	rs.FillMode=FILL_WIREFRAME;
@@ -366,7 +368,8 @@ void wiEmittedParticle::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&wireFrameRS);
+	wireFrameRS = new RasterizerState;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,wireFrameRS);
 
 
 
@@ -394,7 +397,8 @@ void wiEmittedParticle::SetUpStates()
 	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
+	depthStencilState = new DepthStencilState;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilState);
 
 
 	
@@ -409,7 +413,8 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=true;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendStateAlpha);
+	blendStateAlpha = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAlpha);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
@@ -421,7 +426,8 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=true;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendStateAdd);
+	blendStateAdd = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAdd);
 }
 void wiEmittedParticle::LoadVertexBuffer()
 {
@@ -433,20 +439,11 @@ void wiEmittedParticle::LoadVertexBuffer()
 	bd.ByteWidth = sizeof( Point ) * MAX_PARTICLES;
     bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vertexBuffer );
+	vertexBuffer = new GPUBuffer;
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vertexBuffer );
 }
 void wiEmittedParticle::SetUpStatic()
 {
-	vertexShader = NULL;
-	pixelShader = NULL;
-	geometryShader = NULL;
-	vertexLayout = NULL;
-	constantBuffer = NULL;
-	rasterizerState = NULL;
-	blendStateAdd = NULL;
-	blendStateAlpha = NULL;
-	depthStencilState = NULL;
-
 	LoadShaders();
 	SetUpCB();
 	SetUpStates();
@@ -455,20 +452,7 @@ void wiEmittedParticle::SetUpStatic()
 }
 void wiEmittedParticle::CleanUpStatic()
 {
-	//if(vertexBuffer) vertexBuffer->Release(); vertexBuffer=NULL;
-	if(vertexShader) vertexShader->Release(); vertexShader = NULL;
-	if(pixelShader) pixelShader->Release(); pixelShader = NULL;
-	if(simplestPS) simplestPS->Release(); simplestPS = NULL;
-	if(geometryShader) geometryShader->Release(); geometryShader = NULL;
-	if(vertexLayout) vertexLayout->Release(); vertexLayout = NULL;
-
-	if(constantBuffer) constantBuffer->Release(); constantBuffer = NULL;
-
-	if(rasterizerState) rasterizerState->Release(); rasterizerState = NULL;
-	if(wireFrameRS) wireFrameRS->Release(); wireFrameRS = NULL;
-	if(blendStateAdd) blendStateAdd->Release(); blendStateAdd = NULL;
-	if(blendStateAlpha) blendStateAlpha->Release(); blendStateAlpha = NULL;
-	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
+	//TODO
 }
 long wiEmittedParticle::getNumParticles()
 {

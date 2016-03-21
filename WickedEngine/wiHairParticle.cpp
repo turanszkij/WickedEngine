@@ -9,14 +9,14 @@
 
 using namespace wiGraphicsTypes;
 
-VertexLayout wiHairParticle::il;
-VertexShader wiHairParticle::vs;
-PixelShader wiHairParticle::ps,wiHairParticle::qps;
-GeometryShader wiHairParticle::gs[],wiHairParticle::qgs[];
-BufferResource wiHairParticle::cbgs;
-DepthStencilState wiHairParticle::dss;
-RasterizerState wiHairParticle::rs, wiHairParticle::ncrs;
-BlendState wiHairParticle::bs;
+VertexLayout *wiHairParticle::il;
+VertexShader *wiHairParticle::vs;
+PixelShader *wiHairParticle::ps,*wiHairParticle::qps;
+GeometryShader *wiHairParticle::gs[],*wiHairParticle::qgs[];
+GPUBuffer *wiHairParticle::cbgs;
+DepthStencilState *wiHairParticle::dss;
+RasterizerState *wiHairParticle::rs, *wiHairParticle::ncrs;
+BlendState *wiHairParticle::bs;
 int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
@@ -48,24 +48,13 @@ void wiHairParticle::CleanUp(){
 	for (unsigned int i = 0; i<patches.size(); ++i)
 		patches[i]->CleanUp();
 	patches.clear();
-	SAFE_RELEASE(vb[0]);
-	SAFE_RELEASE(vb[1]);
-	SAFE_RELEASE(vb[2]);
+	SAFE_DELETE(vb[0]);
+	SAFE_DELETE(vb[1]);
+	SAFE_DELETE(vb[2]);
 }
 
 void wiHairParticle::CleanUpStatic(){
-	if(il) il->Release(); il=NULL;
-	if(vs) vs->Release(); vs=NULL;
-	for(int i=0;i<3;++i){
-		if(gs[i]) gs[i]->Release(); gs[i]=NULL;}
-	for(int i=0;i<2;++i){
-		if(qgs[i]) qgs[i]->Release(); qgs[i]=NULL;}
-	if(ps) ps->Release(); ps=NULL;
-	if(qps) qps->Release(); qps=NULL;
-	if(cbgs) cbgs->Release(); cbgs=NULL;
-	if(bs) bs->Release(); bs=NULL;
-	if(rs) rs->Release(); rs=NULL;
-	if(ncrs) ncrs->Release(); ncrs=NULL;
+	//TODO
 	
 }
 void wiHairParticle::LoadShaders()
@@ -86,15 +75,15 @@ void wiHairParticle::LoadShaders()
 
 
 
-	ps = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS.cso", wiResourceManager::PIXELSHADER));
-	qps = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS.cso", wiResourceManager::PIXELSHADER));
+	ps = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS.cso", wiResourceManager::PIXELSHADER));
+	qps = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS.cso", wiResourceManager::PIXELSHADER));
 
-	gs[0] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL0GS.cso", wiResourceManager::GEOMETRYSHADER));
-	gs[1] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL1GS.cso", wiResourceManager::GEOMETRYSHADER));
-	gs[2] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL2GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[0] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL0GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[1] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL1GS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs[2] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL2GS.cso", wiResourceManager::GEOMETRYSHADER));
 
-	qgs[0] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLCloseGS.cso", wiResourceManager::GEOMETRYSHADER));
-	qgs[1] = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLDistGS.cso", wiResourceManager::GEOMETRYSHADER));
+	qgs[0] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLCloseGS.cso", wiResourceManager::GEOMETRYSHADER));
+	qgs[1] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLDistGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiHairParticle::SetUpStatic(){
@@ -109,7 +98,8 @@ void wiHairParticle::SetUpStatic(){
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &cbgs );
+	cbgs = new GPUBuffer;
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, cbgs );
 
 	
 
@@ -125,7 +115,9 @@ void wiHairParticle::SetUpStatic(){
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,&rs);
+	rs = new RasterizerState;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,rs);
+
 	rsd.FillMode=FILL_SOLID;
 	rsd.CullMode=CULL_NONE;
 	rsd.FrontCounterClockwise=true;
@@ -136,7 +128,8 @@ void wiHairParticle::SetUpStatic(){
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,&ncrs);
+	ncrs = new RasterizerState;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,ncrs);
 
 	
 	DepthStencilDesc dsd;
@@ -156,7 +149,8 @@ void wiHairParticle::SetUpStatic(){
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	// Create the depth stencil state.
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss);
+	dss = new DepthStencilState;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, dss);
 
 	
 	BlendDesc bld;
@@ -170,7 +164,8 @@ void wiHairParticle::SetUpStatic(){
 	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bld.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bld.AlphaToCoverageEnable=false;
-	wiRenderer::GetDevice()->CreateBlendState(&bld,&bs);
+	bs = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bld,bs);
 }
 void wiHairParticle::Settings(int l0,int l1,int l2)
 {
@@ -194,9 +189,12 @@ void wiHairParticle::SetUpPatches()
 	bd.ByteWidth = sizeof(Point)*MAX_PARTICLES;
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vb[0] );
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vb[1] );
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vb[2] );
+	vb[0] = new GPUBuffer;
+	vb[1] = new GPUBuffer;
+	vb[2] = new GPUBuffer;
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vb[0] );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vb[1] );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vb[2] );
 
 	const int triangleperpatch = 4;
 	int currentTris=0;

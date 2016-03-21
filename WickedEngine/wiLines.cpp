@@ -58,10 +58,7 @@ Lines::~Lines()
 
 void Lines::CleanUp()
 {
-	if(vertexBuffer){
-		vertexBuffer->Release();
-		vertexBuffer = NULL;
-	}
+	
 }
 
 void Lines::SetUpVertices()

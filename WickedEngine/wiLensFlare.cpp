@@ -5,14 +5,14 @@
 
 using namespace wiGraphicsTypes;
 
-BufferResource wiLensFlare::constantBuffer;
-PixelShader wiLensFlare::pixelShader;
-GeometryShader wiLensFlare::geometryShader;
-VertexShader wiLensFlare::vertexShader;
-VertexLayout wiLensFlare::inputLayout;
-RasterizerState wiLensFlare::rasterizerState;
-DepthStencilState wiLensFlare::depthStencilState;
-BlendState wiLensFlare::blendState;
+GPUBuffer *wiLensFlare::constantBuffer = nullptr;
+PixelShader *wiLensFlare::pixelShader = nullptr;
+GeometryShader *wiLensFlare::geometryShader = nullptr;
+VertexShader *wiLensFlare::vertexShader = nullptr;
+VertexLayout *wiLensFlare::inputLayout = nullptr;
+RasterizerState *wiLensFlare::rasterizerState = nullptr;
+DepthStencilState *wiLensFlare::depthStencilState = nullptr;
+BlendState *wiLensFlare::blendState = nullptr;
 
 void wiLensFlare::Initialize(){
 	LoadShaders();
@@ -20,16 +20,7 @@ void wiLensFlare::Initialize(){
 	SetUpStates();
 }
 void wiLensFlare::CleanUp(){
-	if(vertexShader) vertexShader->Release(); vertexShader = NULL;
-	if(pixelShader) pixelShader->Release(); pixelShader = NULL;
-	if(geometryShader) geometryShader->Release(); geometryShader = NULL;
-	if(inputLayout) inputLayout->Release(); inputLayout = NULL;
-
-	if(constantBuffer) constantBuffer->Release(); constantBuffer = NULL;
-
-	if(rasterizerState) rasterizerState->Release(); rasterizerState = NULL;
-	if(blendState) blendState->Release(); blendState = NULL;
-	if(depthStencilState) depthStencilState->Release(); depthStencilState = NULL;
+	//TODO
 }
 void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<Texture2D*>& rims){
 
@@ -86,9 +77,9 @@ void wiLensFlare::LoadShaders(){
 	}
 
 
-	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
-	geometryShader = static_cast<GeometryShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
 void wiLensFlare::SetUpCB()
@@ -99,7 +90,8 @@ void wiLensFlare::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &constantBuffer );
+	constantBuffer = new GPUBuffer;
+    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, constantBuffer );
 	
 }
 void wiLensFlare::SetUpStates()
@@ -115,7 +107,8 @@ void wiLensFlare::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
+	rasterizerState = new RasterizerState;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,rasterizerState);
 
 
 
@@ -143,7 +136,8 @@ void wiLensFlare::SetUpStates()
 	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
+	depthStencilState = new DepthStencilState;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilState);
 
 
 	
@@ -157,5 +151,6 @@ void wiLensFlare::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendState);
+	blendState = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
 }

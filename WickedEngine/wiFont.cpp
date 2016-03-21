@@ -8,14 +8,14 @@
 using namespace wiGraphicsTypes;
 
 
-BufferResource		wiFont::vertexBuffer,wiFont::indexBuffer;
-VertexLayout   wiFont::vertexLayout;
-VertexShader  wiFont::vertexShader;
-PixelShader   wiFont::pixelShader;
-BlendState		wiFont::blendState;
-BufferResource           wiFont::constantBuffer;
-RasterizerState		wiFont::rasterizerState;
-DepthStencilState	wiFont::depthStencilState;
+GPUBuffer			*wiFont::vertexBuffer = nullptr, *wiFont::indexBuffer = nullptr;
+VertexLayout		*wiFont::vertexLayout = nullptr;
+VertexShader		*wiFont::vertexShader = nullptr;
+PixelShader			*wiFont::pixelShader = nullptr;
+BlendState			*wiFont::blendState = nullptr;
+GPUBuffer           *wiFont::constantBuffer = nullptr;
+RasterizerState		*wiFont::rasterizerState = nullptr;
+DepthStencilState	*wiFont::depthStencilState = nullptr;
 vector<wiFont::Vertex> wiFont::vertexList;
 vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
@@ -34,15 +34,6 @@ wiFont::~wiFont()
 
 void wiFont::Initialize()
 {
-	indexBuffer=NULL;
-	vertexBuffer=NULL;
-	vertexLayout=NULL;
-	vertexShader=NULL;
-	pixelShader=NULL;
-	blendState=NULL;
-	constantBuffer=NULL;
-	rasterizerState=NULL;
-	depthStencilState=NULL;
 }
 
 void wiFont::SetUpStates()
@@ -58,7 +49,8 @@ void wiFont::SetUpStates()
 	rs.ScissorEnable=FALSE;
 	rs.MultisampleEnable=FALSE;
 	rs.AntialiasedLineEnable=FALSE;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
+	rasterizerState = new RasterizerState;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,rasterizerState);
 
 
 
@@ -86,7 +78,8 @@ void wiFont::SetUpStates()
 	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
+	depthStencilState = new DepthStencilState;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilState);
 
 
 	
@@ -100,7 +93,8 @@ void wiFont::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendState);
+	blendState = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
 }
 void wiFont::SetUpCB()
 {
@@ -110,7 +104,8 @@ void wiFont::SetUpCB()
 	bd.ByteWidth = sizeof(ConstantBuffer);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &constantBuffer );
+	constantBuffer = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, constantBuffer );
 
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 }
@@ -130,7 +125,7 @@ void wiFont::LoadShaders()
 	}
 
 
-	pixelShader = static_cast<PixelShader>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiFont::SetUpStaticComponents()
@@ -148,15 +143,8 @@ void wiFont::CleanUpStatic()
 	fontStyles.clear();
 
 	vertexList.clear();
-	if(vertexBuffer) vertexBuffer->Release();	vertexBuffer=NULL;
-	if(indexBuffer) indexBuffer->Release();		indexBuffer=NULL;
-	if(vertexShader) vertexShader->Release();	vertexShader=NULL;
-	if(pixelShader) pixelShader->Release();		pixelShader=NULL;
-	if(vertexLayout) vertexLayout->Release();	vertexLayout=NULL;
-	if(constantBuffer) constantBuffer->Release();	constantBuffer=NULL;
-	if(rasterizerState) rasterizerState->Release();	rasterizerState=NULL;
-	if(blendState) blendState->Release();		blendState=NULL;
-	if(depthStencilState) depthStencilState->Release();	depthStencilState=NULL;
+	
+	//TODO
 }
 
 void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -228,7 +216,8 @@ void wiFont::LoadVertexBuffer()
 		bd.ByteWidth = sizeof( Vertex ) * MAX_TEXT * 4;
 		bd.BindFlags = BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &vertexBuffer );
+		vertexBuffer = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vertexBuffer );
 }
 void wiFont::LoadIndices()
 {
@@ -252,7 +241,8 @@ void wiFont::LoadIndices()
 	SubresourceData InitData;
 	ZeroMemory( &InitData, sizeof(InitData) );
 	InitData.pSysMem = indices.data();
-	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &indexBuffer );
+	indexBuffer = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, indexBuffer );
 }
 
 void wiFont::Draw(GRAPHICSTHREAD threadID){

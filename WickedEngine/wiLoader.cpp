@@ -1368,8 +1368,7 @@ Material::~Material() {
 #pragma region MESH
 
 thread_local vector<Instance>		Mesh::instances;
-BufferResource Mesh::meshInstanceBuffer = nullptr;
-
+GPUBuffer Mesh::meshInstanceBuffer;
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
 	, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier) {
@@ -1676,7 +1675,7 @@ void Mesh::CreateBuffers(Object* object) {
 	if (!buffersComplete) {
 
 		BufferDesc bd;
-		if (meshInstanceBuffer == nullptr)
+		if (!meshInstanceBuffer.IsValid())
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DYNAMIC;
@@ -1784,7 +1783,7 @@ void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
 }
 void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->UpdateBuffer(meshInstanceBuffer, instances.data(), threadID, sizeof(Instance)*count);
+	wiRenderer::GetDevice()->UpdateBuffer(&meshInstanceBuffer, instances.data(), threadID, sizeof(Instance)*count);
 }
 #pragma endregion
 
@@ -2151,7 +2150,7 @@ bool RAY::intersects(const AABB& box) const{
 #pragma endregion
 
 #pragma region HITSPHERE
-BufferResource HitSphere::vertexBuffer=nullptr;
+GPUBuffer HitSphere::vertexBuffer;
 void HitSphere::SetUpStatic()
 {
 	const int numVert = (RESOLUTION+1)*2;
@@ -2176,10 +2175,7 @@ void HitSphere::SetUpStatic()
 }
 void HitSphere::CleanUpStatic()
 {
-	if(vertexBuffer){
-		vertexBuffer->Release();
-		vertexBuffer=NULL;
-	}
+	
 }
 void HitSphere::UpdateTransform()
 {
@@ -2880,7 +2876,6 @@ void Camera::UpdateTransform()
 
 #pragma region OBJECT
 Object::~Object() {
-	SAFE_RELEASE(trailBuff);
 }
 void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 	if (mesh != nullptr)

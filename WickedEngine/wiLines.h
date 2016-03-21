@@ -41,7 +41,7 @@ public:
 	Description desc;
 	int parentArmature,parentBone;
 	
-	wiGraphicsTypes::BufferResource vertexBuffer;
+	wiGraphicsTypes::GPUBuffer vertexBuffer;
 
 	ALIGN_16
 };

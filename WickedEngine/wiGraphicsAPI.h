@@ -11,28 +11,6 @@
 
 namespace wiGraphicsTypes
 {
-
-	typedef ID3D11RenderTargetView*		RenderTargetView;
-	typedef ID3D11ShaderResourceView*	ShaderResourceView;
-	typedef ID3D11Texture2D*			APITexture2D;
-	typedef ID3D11SamplerState*			Sampler;
-	typedef ID3D11Resource*				APIResource;
-	typedef ID3D11Buffer*				BufferResource;
-	typedef ID3D11VertexShader*			VertexShader;
-	typedef ID3D11PixelShader*			PixelShader;
-	typedef ID3D11GeometryShader*		GeometryShader;
-	typedef ID3D11HullShader*			HullShader;
-	typedef ID3D11DomainShader*			DomainShader;
-	typedef ID3D11ComputeShader*		ComputeShader;
-	typedef ID3D11InputLayout*			VertexLayout;
-	typedef ID3D11BlendState*			BlendState;
-	typedef ID3D11DepthStencilState*	DepthStencilState;
-	typedef ID3D11DepthStencilView*		DepthStencilView;
-	typedef ID3D11RasterizerState*		RasterizerState;
-	typedef ID3D11ClassLinkage*			ClassLinkage;
-
-
-
 	enum PRIMITIVETOPOLOGY
 	{
 		TRIANGLELIST,
@@ -448,45 +426,256 @@ namespace wiGraphicsTypes
 		UINT SysMemSlicePitch;
 	};
 
+
+
+
+	class GraphicsDevice;
+	class GraphicsDevice_DX11;
+
+	class VertexShader
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11VertexShader*		resource_DX11;
+	public:
+		VertexShader() :resource_DX11(nullptr) {}
+		~VertexShader()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class PixelShader
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11PixelShader*		resource_DX11;
+	public:
+		PixelShader() :resource_DX11(nullptr) {}
+		~PixelShader()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class GeometryShader
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11GeometryShader*	resource_DX11;
+	public:
+		GeometryShader() :resource_DX11(nullptr) {}
+		~GeometryShader()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class HullShader
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11HullShader*		resource_DX11;
+	public:
+		HullShader() :resource_DX11(nullptr) {}
+		~HullShader()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class DomainShader
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11DomainShader*		resource_DX11;
+	public:
+		DomainShader() :resource_DX11(nullptr) {}
+		~DomainShader()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class ComputeShader
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11ComputeShader*	resource_DX11;
+	public:
+		ComputeShader() :resource_DX11(nullptr) {}
+		~ComputeShader()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class Sampler
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11SamplerState*	resource_DX11;
+	public:
+		Sampler() :resource_DX11(nullptr) {}
+		~Sampler()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class GPUBuffer
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11Buffer*	resource_DX11;
+	public:
+		GPUBuffer() :resource_DX11(nullptr) {}
+		~GPUBuffer()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class VertexLayout
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11InputLayout*	resource_DX11;
+	public:
+		VertexLayout() :resource_DX11(nullptr) {}
+		~VertexLayout()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class BlendState
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11BlendState*	resource_DX11;
+	public:
+		BlendState() :resource_DX11(nullptr) {}
+		~BlendState()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class DepthStencilState
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11DepthStencilState*	resource_DX11;
+	public:
+		DepthStencilState() :resource_DX11(nullptr) {}
+		~DepthStencilState()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class RasterizerState
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11RasterizerState*	resource_DX11;
+	public:
+		RasterizerState() :resource_DX11(nullptr) {}
+		~RasterizerState()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
+	class ClassLinkage
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11ClassLinkage*	resource_DX11;
+	public:
+		ClassLinkage() :resource_DX11(nullptr) {}
+		~ClassLinkage()
+		{
+			SAFE_RELEASE(resource_DX11);
+		}
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+	};
+
 	struct VertexShaderInfo {
-		VertexShader vertexShader;
-		VertexLayout vertexLayout;
+		VertexShader* vertexShader;
+		VertexLayout* vertexLayout;
 
 		VertexShaderInfo() {
 			vertexShader = nullptr;
-			vertexLayout = VertexLayout();
+			vertexLayout = nullptr;
+		}
+		~VertexShaderInfo()
+		{
+			SAFE_DELETE(vertexShader);
+			SAFE_DELETE(vertexLayout);
 		}
 	};
 
 	class Texture
 	{
+		friend class GraphicsDevice_DX11;
+	private: 
+		ID3D11ShaderResourceView*	shaderResourceView_DX11;
+		ID3D11RenderTargetView*		renderTargetView_DX11;
+		ID3D11DepthStencilView*		depthStencilView_DX11;
 	public:
-		ShaderResourceView	shaderResourceView;
-		RenderTargetView	renderTargetView;
-		DepthStencilView	depthStencilView;
 
-		Texture() :shaderResourceView(nullptr), renderTargetView(nullptr), depthStencilView(nullptr) {}
+		Texture() :shaderResourceView_DX11(nullptr), renderTargetView_DX11(nullptr), depthStencilView_DX11(nullptr) {}
 		virtual ~Texture()
 		{
-			SAFE_RELEASE(shaderResourceView);
-			SAFE_RELEASE(renderTargetView);
-			SAFE_RELEASE(depthStencilView);
+			SAFE_RELEASE(shaderResourceView_DX11);
+			SAFE_RELEASE(renderTargetView_DX11);
+			SAFE_RELEASE(depthStencilView_DX11);
 		}
 	};
 	class Texture2D : public Texture
 	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11Texture2D*			texture2D_DX11;
 	public:
-		APITexture2D		texture2D;
 		Texture2DDesc		desc;
 
-		Texture2D() :Texture(), texture2D(nullptr) {}
+		Texture2D() :Texture(), texture2D_DX11(nullptr) {}
 		virtual ~Texture2D()
 		{
-			SAFE_RELEASE(texture2D);
+			SAFE_RELEASE(texture2D_DX11);
 		}
 	};
 	class TextureCube : public Texture2D
 	{
+		friend class GraphicsDevice_DX11;
 	public:
 		TextureCube() :Texture2D() {}
 		virtual ~TextureCube() {}
@@ -501,7 +690,7 @@ namespace wiGraphicsTypes
 	public:
 		GraphicsDevice() :oddFrame(false), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0) {}
 
-		virtual HRESULT CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, BufferResource *ppBuffer) = 0;
+		virtual HRESULT CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) = 0;
 		virtual HRESULT CreateTexture1D() = 0;
 		virtual HRESULT CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D) = 0;
 		virtual HRESULT CreateTexture3D() = 0;
@@ -510,19 +699,19 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateRenderTargetView(Texture2D* pTexture) = 0;
 		virtual HRESULT CreateDepthStencilView(Texture2D* pTexture) = 0;
 		virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
-			const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *ppInputLayout) = 0;
-		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, VertexShader *ppVertexShader) = 0;
-		virtual HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, PixelShader *ppPixelShader) = 0;
-		virtual HRESULT CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, GeometryShader *ppGeometryShader) = 0;
+			const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout) = 0;
+		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, VertexShader *pVertexShader) = 0;
+		virtual HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, PixelShader *pPixelShader) = 0;
+		virtual HRESULT CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, GeometryShader *pGeometryShader) = 0;
 		virtual HRESULT CreateGeometryShaderWithStreamOutput(const void *pShaderBytecode, SIZE_T BytecodeLength, const StreamOutDeclaration *pSODeclaration,
-			UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, ClassLinkage pClassLinkage, GeometryShader *ppGeometryShader) = 0;
-		virtual HRESULT CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, HullShader *ppHullShader) = 0;
-		virtual HRESULT CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, DomainShader *ppDomainShader) = 0;
-		virtual HRESULT CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage pClassLinkage, ComputeShader *ppComputeShader) = 0;
-		virtual HRESULT CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *ppBlendState) = 0;
-		virtual HRESULT CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *ppDepthStencilState) = 0;
-		virtual HRESULT CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *ppRasterizerState) = 0;
-		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *ppSamplerState) = 0;
+			UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, ClassLinkage* pClassLinkage, GeometryShader *pGeometryShader) = 0;
+		virtual HRESULT CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, HullShader *pHullShader) = 0;
+		virtual HRESULT CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, DomainShader *pDomainShader) = 0;
+		virtual HRESULT CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, ComputeShader *pComputeShader) = 0;
+		virtual HRESULT CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *pBlendState) = 0;
+		virtual HRESULT CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *pDepthStencilState) = 0;
+		virtual HRESULT CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *pRasterizerState) = 0;
+		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) = 0;
 
 		virtual void PresentBegin() = 0;
 		virtual void PresentEnd() = 0;
@@ -553,43 +742,37 @@ namespace wiGraphicsTypes
 		virtual void BindTextureDS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void BindTextureHS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void UnbindTextures(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplerPS(Sampler sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplersPS(Sampler samplers[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplerVS(Sampler sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplersVS(Sampler samplers[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplerGS(Sampler sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplersGS(Sampler samplers[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplerHS(Sampler sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplersHS(Sampler samplers[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplerDS(Sampler sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindSamplersDS(Sampler samplers[], int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindConstantBufferPS(BufferResource buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindConstantBufferVS(BufferResource buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindConstantBufferGS(BufferResource buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindConstantBufferDS(BufferResource buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindConstantBufferHS(BufferResource buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindVertexBuffer(BufferResource vertexBuffer, int slot, UINT stride, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindIndexBuffer(BufferResource indexBuffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindSamplerPS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindSamplerVS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindSamplerGS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindSamplerHS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindSamplerDS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindConstantBufferPS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindConstantBufferVS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindConstantBufferGS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindConstantBufferDS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindVertexBuffer(const GPUBuffer* vertexBuffer, int slot, UINT stride, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindVertexLayout(VertexLayout layout, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindBlendState(BlendState state, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindBlendStateEx(BlendState state, const XMFLOAT4& blendFactor = XMFLOAT4(1, 1, 1, 1), UINT sampleMask = 0xffffffff,
+		virtual void BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor = XMFLOAT4(1, 1, 1, 1), UINT sampleMask = 0xffffffff,
 			GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindDepthStencilState(DepthStencilState state, UINT stencilRef, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindRasterizerState(RasterizerState state, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindStreamOutTarget(BufferResource buffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindPS(PixelShader shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindVS(VertexShader shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindGS(GeometryShader shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindHS(HullShader shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindDS(DomainShader shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindHS(const HullShader* shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void Draw(int vertexCount, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void DrawIndexed(int indexCount, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void DrawIndexedInstanced(int indexCount, int instanceCount, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void GenerateMips(Texture* texture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void CopyResource(APIResource pDstResource, const APIResource pSrcResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void UpdateBuffer(BufferResource& buffer, const void* data, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int dataSize = -1) = 0;
+		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int dataSize = -1) = 0;
 
 		virtual HRESULT CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
