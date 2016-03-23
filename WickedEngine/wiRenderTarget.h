@@ -41,7 +41,7 @@ public:
 	//void Restore();
 
 	wiGraphicsTypes::Texture2D* GetTexture(int viewID = 0) const{ return (isCube ? renderTargets_Cube[viewID] : renderTargets[viewID]); }
-	wiGraphicsTypes::Texture2DDesc GetDesc(int viewID = 0) const { assert(viewID < numViews); return GetTexture(viewID)->desc; }
+	wiGraphicsTypes::Texture2DDesc GetDesc(int viewID = 0) const { assert(viewID < numViews); return GetTexture(viewID)->GetDesc(); }
 	UINT GetMipCount();
 	bool IsInitialized() { return (numViews > 0 || depth != nullptr); }
 };

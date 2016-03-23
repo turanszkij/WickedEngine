@@ -92,7 +92,7 @@ void wiHairParticle::SetUpStatic(){
 	LoadShaders();
 
 	
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ConstantBuffer);
@@ -104,7 +104,7 @@ void wiHairParticle::SetUpStatic(){
 	
 
 	
-	RasterizerDesc rsd;
+	RasterizerStateDesc rsd;
 	rsd.FillMode=FILL_SOLID;
 	rsd.CullMode=CULL_BACK;
 	rsd.FrontCounterClockwise=true;
@@ -132,7 +132,7 @@ void wiHairParticle::SetUpStatic(){
 	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,ncrs);
 
 	
-	DepthStencilDesc dsd;
+	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_LESS;
@@ -153,7 +153,7 @@ void wiHairParticle::SetUpStatic(){
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, dss);
 
 	
-	BlendDesc bld;
+	BlendStateDesc bld;
 	ZeroMemory(&bld, sizeof(bld));
 	bld.RenderTarget[0].BlendEnable=false;
 	bld.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
@@ -183,7 +183,7 @@ struct PatchHolder:public Cullable
 
 void wiHairParticle::SetUpPatches()
 {
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(Point)*MAX_PARTICLES;

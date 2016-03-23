@@ -25,6 +25,6 @@ public:
 	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);
 
 	wiGraphicsTypes::Texture2D* GetTexture() const { return(isCube ? textureCube : texture); }
-	wiGraphicsTypes::Texture2DDesc GetDesc() const { return GetTexture()->desc; }
+	wiGraphicsTypes::Texture2DDesc GetDesc() const { return GetTexture()->GetDesc(); }
 };
 

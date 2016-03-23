@@ -31,7 +31,7 @@ wiImage::wiImage()
 void wiImage::LoadBuffers()
 {
 
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ImageCB);
@@ -79,7 +79,7 @@ void wiImage::LoadShaders()
 void wiImage::SetUpStates()
 {
 	
-	RasterizerDesc rs;
+	RasterizerStateDesc rs;
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=false;
@@ -97,7 +97,7 @@ void wiImage::SetUpStates()
 
 
 	
-	DepthStencilDesc dsd;
+	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_LESS;
@@ -142,7 +142,7 @@ void wiImage::SetUpStates()
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthNoStencilState);
 
 	
-	BlendDesc bd;
+	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;

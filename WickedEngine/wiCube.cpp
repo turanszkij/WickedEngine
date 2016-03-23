@@ -37,7 +37,7 @@ void Cube::SetUpVertices()
 	verts[6].pos=max;
 	verts[7].pos=XMFLOAT3(max.x,min.y,max.z);
 
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( Vertex ) * 8;

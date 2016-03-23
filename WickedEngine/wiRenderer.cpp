@@ -494,7 +494,7 @@ void wiRenderer::LoadBuffers()
 		constantBuffers[i] = new GPUBuffer;
 	}
 
-    BufferDesc bd;
+    GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
@@ -822,7 +822,7 @@ void wiRenderer::SetUpStates()
 		rasterizers[i] = new RasterizerState;
 	}
 	
-	RasterizerDesc rs;
+	RasterizerStateDesc rs;
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=true;
@@ -913,7 +913,7 @@ void wiRenderer::SetUpStates()
 		depthStencils[i] = new DepthStencilState;
 	}
 
-	DepthStencilDesc dsd;
+	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
@@ -981,7 +981,7 @@ void wiRenderer::SetUpStates()
 		blendStates[i] = new BlendState;
 	}
 	
-	BlendDesc bd;
+	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=false;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;

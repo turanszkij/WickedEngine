@@ -480,7 +480,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 	//	if(objects[i]->mesh){
 	//		if(objects[i]->mesh->trailInfo.base>=0 && objects[i]->mesh->trailInfo.tip>=0){
 	//			//objects[i]->trail.resize(MAX_RIBBONTRAILS);
-	//			BufferDesc bd;
+	//			GPUBufferDesc bd;
 	//			ZeroMemory( &bd, sizeof(bd) );
 	//			bd.Usage = USAGE_DYNAMIC;
 	//			bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
@@ -946,7 +946,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 
 		//for(MeshCollection::iterator iter=lightGwiRenderer.begin(); iter!=lightGwiRenderer.end(); ++iter){
 		//	Mesh* iMesh = iter->second;
-		//	BufferDesc bd;
+		//	GPUBufferDesc bd;
 		//	ZeroMemory( &bd, sizeof(bd) );
 		//	bd.Usage = USAGE_DYNAMIC;
 		//	bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
@@ -1674,7 +1674,7 @@ void Mesh::Optimize()
 void Mesh::CreateBuffers(Object* object) {
 	if (!buffersComplete) {
 
-		BufferDesc bd;
+		GPUBufferDesc bd;
 		if (!meshInstanceBuffer.IsValid())
 		{
 			ZeroMemory(&bd, sizeof(bd));
@@ -1926,7 +1926,7 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		{
 			// Ribbon trails
 			if (x->mesh->trailInfo.base >= 0 && x->mesh->trailInfo.tip >= 0) {
-				BufferDesc bd;
+				GPUBufferDesc bd;
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = USAGE_DYNAMIC;
 				bd.ByteWidth = sizeof(RibbonVertex) * 1000;
@@ -2162,7 +2162,7 @@ void HitSphere::SetUpStatic()
 		verts.push_back(XMFLOAT3A(XMFLOAT3A(0,0,0)));
 	}
 
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_IMMUTABLE;
 	bd.ByteWidth = sizeof( XMFLOAT3A )*verts.size();

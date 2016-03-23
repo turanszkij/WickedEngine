@@ -35,7 +35,7 @@ Lines::Lines(const XMFLOAT3& a, const XMFLOAT3& b, const XMFLOAT4& c)
 	verts[0].pos = XMFLOAT3(a.x,a.y,a.z);
 	verts[1].pos = XMFLOAT3(b.x,b.y,b.z);
 
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( Vertex ) * 2;
@@ -68,7 +68,7 @@ void Lines::SetUpVertices()
 	verts[0].pos = XMFLOAT3(0,0,0);
 	verts[1].pos = XMFLOAT3(0,0,desc.length);
 
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( Vertex ) * 2;

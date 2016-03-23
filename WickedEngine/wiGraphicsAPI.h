@@ -362,7 +362,7 @@ namespace wiGraphicsTypes
 		FLOAT MinLOD;
 		FLOAT MaxLOD;
 	};
-	struct RasterizerDesc
+	struct RasterizerStateDesc
 	{
 		FILL_MODE FillMode;
 		CULL_MODE CullMode;
@@ -382,7 +382,7 @@ namespace wiGraphicsTypes
 		STENCIL_OP StencilPassOp;
 		COMPARISON_FUNC StencilFunc;
 	};
-	struct DepthStencilDesc
+	struct DepthStencilStateDesc
 	{
 		BOOL DepthEnable;
 		DEPTH_WRITE_MASK DepthWriteMask;
@@ -393,7 +393,7 @@ namespace wiGraphicsTypes
 		DepthStencilOpDesc FrontFace;
 		DepthStencilOpDesc BackFace;
 	};
-	struct RenderTargetBlendDesc
+	struct RenderTargetBlendStateDesc
 	{
 		BOOL BlendEnable;
 		BLEND SrcBlend;
@@ -404,13 +404,13 @@ namespace wiGraphicsTypes
 		BLEND_OP BlendOpAlpha;
 		UINT8 RenderTargetWriteMask;
 	};
-	struct BlendDesc
+	struct BlendStateDesc
 	{
 		BOOL AlphaToCoverageEnable;
 		BOOL IndependentBlendEnable;
-		RenderTargetBlendDesc RenderTarget[8];
+		RenderTargetBlendStateDesc RenderTarget[8];
 	};
-	struct BufferDesc
+	struct GPUBufferDesc
 	{
 		UINT ByteWidth;
 		USAGE Usage;
@@ -527,6 +527,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11SamplerState*	resource_DX11;
+		SamplerDesc desc;
 	public:
 		Sampler() :resource_DX11(nullptr) {}
 		~Sampler()
@@ -535,21 +536,31 @@ namespace wiGraphicsTypes
 		}
 
 		bool IsValid() { return resource_DX11 != nullptr; }
+		SamplerDesc GetDesc() { return desc; }
 	};
 
 	class GPUBuffer
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		ID3D11Buffer*	resource_DX11;
+		ID3D11Buffer* resource_DX11[2]; // double buffer
+		GPUBufferDesc desc;
+		int activeBuffer;
 	public:
-		GPUBuffer() :resource_DX11(nullptr) {}
+		GPUBuffer() 
+		{
+			activeBuffer = 0;
+			SAFE_INIT(resource_DX11[0]);
+			SAFE_INIT(resource_DX11[1]);
+		}
 		~GPUBuffer()
 		{
-			SAFE_RELEASE(resource_DX11);
+			SAFE_RELEASE(resource_DX11[0]);
+			SAFE_RELEASE(resource_DX11[1]);
 		}
 
-		bool IsValid() { return resource_DX11 != nullptr; }
+		bool IsValid() { return resource_DX11[activeBuffer] != nullptr; }
+		GPUBufferDesc GetDesc() { return desc; }
 	};
 
 	class VertexLayout
@@ -572,6 +583,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11BlendState*	resource_DX11;
+		BlendStateDesc desc;
 	public:
 		BlendState() :resource_DX11(nullptr) {}
 		~BlendState()
@@ -580,6 +592,7 @@ namespace wiGraphicsTypes
 		}
 
 		bool IsValid() { return resource_DX11 != nullptr; }
+		BlendStateDesc GetDesc() { return desc; }
 	};
 
 	class DepthStencilState
@@ -587,6 +600,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11DepthStencilState*	resource_DX11;
+		DepthStencilStateDesc desc;
 	public:
 		DepthStencilState() :resource_DX11(nullptr) {}
 		~DepthStencilState()
@@ -595,6 +609,7 @@ namespace wiGraphicsTypes
 		}
 
 		bool IsValid() { return resource_DX11 != nullptr; }
+		DepthStencilStateDesc GetDesc() { return desc; }
 	};
 
 	class RasterizerState
@@ -602,6 +617,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11RasterizerState*	resource_DX11;
+		RasterizerStateDesc desc;
 	public:
 		RasterizerState() :resource_DX11(nullptr) {}
 		~RasterizerState()
@@ -610,6 +626,7 @@ namespace wiGraphicsTypes
 		}
 
 		bool IsValid() { return resource_DX11 != nullptr; }
+		RasterizerStateDesc GetDesc() { return desc; }
 	};
 
 	class ClassLinkage
@@ -664,14 +681,15 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11Texture2D*			texture2D_DX11;
+		Texture2DDesc				desc;
 	public:
-		Texture2DDesc		desc;
-
 		Texture2D() :Texture(), texture2D_DX11(nullptr) {}
 		virtual ~Texture2D()
 		{
 			SAFE_RELEASE(texture2D_DX11);
 		}
+
+		Texture2DDesc GetDesc() { return desc; }
 	};
 	class TextureCube : public Texture2D
 	{
@@ -684,13 +702,13 @@ namespace wiGraphicsTypes
 	class GraphicsDevice : public wiThreadSafeManager
 	{
 	protected:
-		bool oddFrame;
+		long FRAMECOUNT;
 		bool VSYNC;
 		int SCREENWIDTH, SCREENHEIGHT;
 	public:
-		GraphicsDevice() :oddFrame(false), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0) {}
+		GraphicsDevice() :FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0) {}
 
-		virtual HRESULT CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) = 0;
+		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) = 0;
 		virtual HRESULT CreateTexture1D() = 0;
 		virtual HRESULT CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D) = 0;
 		virtual HRESULT CreateTexture3D() = 0;
@@ -708,9 +726,9 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, HullShader *pHullShader) = 0;
 		virtual HRESULT CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, DomainShader *pDomainShader) = 0;
 		virtual HRESULT CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, ComputeShader *pComputeShader) = 0;
-		virtual HRESULT CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *pBlendState) = 0;
-		virtual HRESULT CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *pDepthStencilState) = 0;
-		virtual HRESULT CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *pRasterizerState) = 0;
+		virtual HRESULT CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState) = 0;
+		virtual HRESULT CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) = 0;
+		virtual HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) = 0;
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) = 0;
 
 		virtual void PresentBegin() = 0;
@@ -723,6 +741,7 @@ namespace wiGraphicsTypes
 
 		bool GetVSyncEnabled() { return VSYNC; }
 		void SetVSyncEnabled(bool value) { VSYNC = value; }
+		long GetFrameCount() { return FRAMECOUNT; }
 
 		int GetScreenWidth() { return SCREENWIDTH; }
 		int GetScreenHeight() { return SCREENHEIGHT; }

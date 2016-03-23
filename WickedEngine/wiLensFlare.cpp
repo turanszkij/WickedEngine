@@ -84,7 +84,7 @@ void wiLensFlare::LoadShaders(){
 }
 void wiLensFlare::SetUpCB()
 {
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ConstantBuffer);
@@ -96,7 +96,7 @@ void wiLensFlare::SetUpCB()
 }
 void wiLensFlare::SetUpStates()
 {
-	RasterizerDesc rs;
+	RasterizerStateDesc rs;
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=true;
@@ -114,7 +114,7 @@ void wiLensFlare::SetUpStates()
 
 
 	
-	DepthStencilDesc dsd;
+	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_LESS;
@@ -141,7 +141,7 @@ void wiLensFlare::SetUpStates()
 
 
 	
-	BlendDesc bd;
+	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;

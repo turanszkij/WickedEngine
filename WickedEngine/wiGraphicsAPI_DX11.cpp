@@ -998,7 +998,7 @@ inline D3D11_SUBRESOURCE_DATA* _ConvertSubresourceData(const SubresourceData* pI
 }
 
 
-HRESULT GraphicsDevice_DX11::CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
+HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
 {
 	D3D11_BUFFER_DESC desc; 
 	desc.ByteWidth = pDesc->ByteWidth;
@@ -1010,7 +1010,15 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const BufferDesc *pDesc, const Subreso
 
 	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
 
-	return device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11);
+	ppBuffer->desc = *pDesc;
+	HRESULT hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11[0]);
+	assert(SUCCEEDED(hr) && "GPUBuffer Creation failed!");
+	if (desc.Usage != USAGE_IMMUTABLE)
+	{
+		hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11[1]);
+		assert(SUCCEEDED(hr) && "GPUBuffer Creation failed!");
+	}
+	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateTexture1D()
 {
@@ -1227,7 +1235,7 @@ HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SI
 {
 	return device->CreateComputeShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pComputeShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *pBlendState)
+HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 {
 	D3D11_BLEND_DESC desc;
 	desc.AlphaToCoverageEnable = pBlendStateDesc->AlphaToCoverageEnable;
@@ -1244,42 +1252,45 @@ HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendDesc *pBlendStateDesc, 
 		desc.RenderTarget[i].RenderTargetWriteMask = pBlendStateDesc->RenderTarget[i].RenderTargetWriteMask;
 	}
 
+	pBlendState->desc = *pBlendStateDesc;
 	return device->CreateBlendState(&desc, &pBlendState->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *pDepthStencilState)
+HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 {
 	D3D11_DEPTH_STENCIL_DESC desc;
-	desc.DepthEnable = pDepthStencilDesc->DepthEnable;
-	desc.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilDesc->DepthWriteMask);
-	desc.DepthFunc = _ConvertComparisonFunc(pDepthStencilDesc->DepthFunc);
-	desc.StencilEnable = pDepthStencilDesc->StencilEnable;
-	desc.StencilReadMask = pDepthStencilDesc->StencilReadMask;
-	desc.StencilWriteMask = pDepthStencilDesc->StencilWriteMask;
-	desc.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilDesc->FrontFace.StencilDepthFailOp);
-	desc.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilDesc->FrontFace.StencilFailOp);
-	desc.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilDesc->FrontFace.StencilFunc);
-	desc.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilDesc->FrontFace.StencilPassOp);
-	desc.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilDesc->BackFace.StencilDepthFailOp);
-	desc.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilDesc->BackFace.StencilFailOp);
-	desc.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilDesc->BackFace.StencilFunc);
-	desc.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilDesc->BackFace.StencilPassOp);
+	desc.DepthEnable = pDepthStencilStateDesc->DepthEnable;
+	desc.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc->DepthWriteMask);
+	desc.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->DepthFunc);
+	desc.StencilEnable = pDepthStencilStateDesc->StencilEnable;
+	desc.StencilReadMask = pDepthStencilStateDesc->StencilReadMask;
+	desc.StencilWriteMask = pDepthStencilStateDesc->StencilWriteMask;
+	desc.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilDepthFailOp);
+	desc.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilFailOp);
+	desc.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->FrontFace.StencilFunc);
+	desc.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilPassOp);
+	desc.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilDepthFailOp);
+	desc.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilFailOp);
+	desc.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->BackFace.StencilFunc);
+	desc.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilPassOp);
 
+	pDepthStencilState->desc = *pDepthStencilStateDesc;
 	return device->CreateDepthStencilState(&desc, &pDepthStencilState->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *pRasterizerState)
+HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
 	D3D11_RASTERIZER_DESC desc;
-	desc.FillMode = _ConvertFillMode(pRasterizerDesc->FillMode);
-	desc.CullMode = _ConvertCullMode(pRasterizerDesc->CullMode);
-	desc.FrontCounterClockwise = pRasterizerDesc->FrontCounterClockwise;
-	desc.DepthBias = pRasterizerDesc->DepthBias;
-	desc.DepthBiasClamp = pRasterizerDesc->DepthBiasClamp;
-	desc.SlopeScaledDepthBias = pRasterizerDesc->SlopeScaledDepthBias;
-	desc.DepthClipEnable = pRasterizerDesc->DepthClipEnable;
-	desc.ScissorEnable = pRasterizerDesc->ScissorEnable;
-	desc.MultisampleEnable = pRasterizerDesc->MultisampleEnable;
-	desc.AntialiasedLineEnable = pRasterizerDesc->AntialiasedLineEnable;
+	desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
+	desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
+	desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
+	desc.DepthBias = pRasterizerStateDesc->DepthBias;
+	desc.DepthBiasClamp = pRasterizerStateDesc->DepthBiasClamp;
+	desc.SlopeScaledDepthBias = pRasterizerStateDesc->SlopeScaledDepthBias;
+	desc.DepthClipEnable = pRasterizerStateDesc->DepthClipEnable;
+	desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
+	desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
+	desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
 
+	pRasterizerState->desc = *pRasterizerStateDesc;
 	return device->CreateRasterizerState(&desc, &pRasterizerState->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
@@ -1299,6 +1310,7 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 	desc.MinLOD = pSamplerDesc->MinLOD;
 	desc.MaxLOD = pSamplerDesc->MaxLOD;
 
+	pSamplerState->desc = *pSamplerDesc;
 	return device->CreateSamplerState(&desc, &pSamplerState->resource_DX11);
 }
 
@@ -1322,7 +1334,7 @@ void GraphicsDevice_DX11::PresentEnd()
 
 	UnbindTextures(0, TEXSLOT_COUNT, GRAPHICSTHREAD_IMMEDIATE);
 
-	oddFrame = !oddFrame;
+	FRAMECOUNT++;
 
 	UNLOCK();
 }
@@ -1357,14 +1369,14 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const wstring& fileName, Text
 	if (!fileName.substr(fileName.length() - 4).compare(wstring(L".dds")))
 	{
 		// Load dds
-		hr = CreateDDSTextureFromFile(device, fileName.c_str(), nullptr, &(*ppTexture)->shaderResourceView_DX11);
+		hr = CreateDDSTextureFromFile(device, fileName.c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
 	}
 	else
 	{
 		// Load WIC
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			LOCK();
-		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], fileName.c_str(), nullptr, &(*ppTexture)->shaderResourceView_DX11);
+		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], fileName.c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			UNLOCK();
 	}

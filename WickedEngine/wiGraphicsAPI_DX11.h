@@ -27,7 +27,7 @@ namespace wiGraphicsTypes
 
 		~GraphicsDevice_DX11();
 
-		virtual HRESULT CreateBuffer(const BufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer);
+		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer);
 		virtual HRESULT CreateTexture1D();
 		virtual HRESULT CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D);
 		virtual HRESULT CreateTexture3D();
@@ -45,9 +45,9 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, HullShader *pHullShader);
 		virtual HRESULT CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, DomainShader *pDomainShader);
 		virtual HRESULT CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, ComputeShader *pComputeShader);
-		virtual HRESULT CreateBlendState(const BlendDesc *pBlendStateDesc, BlendState *pBlendState);
-		virtual HRESULT CreateDepthStencilState(const DepthStencilDesc *pDepthStencilDesc, DepthStencilState *pDepthStencilState);
-		virtual HRESULT CreateRasterizerState(const RasterizerDesc *pRasterizerDesc, RasterizerState *pRasterizerState);
+		virtual HRESULT CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState);
+		virtual HRESULT CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState);
+		virtual HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState);
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState);
 
 		virtual void PresentBegin();
@@ -175,45 +175,45 @@ namespace wiGraphicsTypes
 		}
 		virtual void BindConstantBufferPS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->PSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindConstantBufferVS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->VSSetConstantBuffers(slot, 1, &res);
 
 			}
 		}
 		virtual void BindConstantBufferGS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->GSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindConstantBufferDS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->DSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->HSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindVertexBuffer(const GPUBuffer* vertexBuffer, int slot, UINT stride, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
 				UINT offset = 0;
-				ID3D11Buffer* res = vertexBuffer ? vertexBuffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = vertexBuffer ? vertexBuffer->resource_DX11[vertexBuffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->IASetVertexBuffers(slot, 1, &res, &stride, &offset);
 			}
 		}
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = indexBuffer ? indexBuffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = indexBuffer ? indexBuffer->resource_DX11[indexBuffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->IASetIndexBuffer(res, DXGI_FORMAT_R32_UINT, 0);
 			}
 		}
@@ -276,7 +276,7 @@ namespace wiGraphicsTypes
 		virtual void BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
 				UINT offsetSO[1] = { 0 };
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
 				deviceContexts[threadID]->SOSetTargets(1, &res, offsetSO);
 			}
 		}
@@ -338,62 +338,26 @@ namespace wiGraphicsTypes
 		}
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int dataSize = -1)
 		{
-			if (buffer != nullptr && buffer->resource_DX11 != nullptr && data != nullptr && deviceContexts[threadID] != nullptr) {
-				static thread_local D3D11_BUFFER_DESC d3dDesc;
-				buffer->resource_DX11->GetDesc(&d3dDesc);
+			if (buffer != nullptr && buffer->resource_DX11[0] != nullptr && buffer->resource_DX11[1] != nullptr && data != nullptr 
+				&& deviceContexts[threadID] != nullptr) 
+			{
+				assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 				HRESULT hr;
-				if (dataSize > (int)d3dDesc.ByteWidth) { //recreate the buffer if new datasize exceeds buffer size
-					buffer->resource_DX11->Release();
-					d3dDesc.ByteWidth = dataSize * 2;
-
-					BufferDesc desc;
-					desc.ByteWidth = d3dDesc.ByteWidth;
-					switch (d3dDesc.Usage)
-					{
-					case D3D11_USAGE_DEFAULT:
-						desc.Usage = USAGE_DEFAULT;
-						break;
-					case D3D11_USAGE_IMMUTABLE:
-						desc.Usage = USAGE_IMMUTABLE;
-						break;
-					case D3D11_USAGE_DYNAMIC:
-						desc.Usage = USAGE_DYNAMIC;
-						break;
-					case D3D11_USAGE_STAGING:
-						desc.Usage = USAGE_STAGING;
-						break;
-					};
-					desc.BindFlags = 0;
-					{
-						if (d3dDesc.BindFlags & D3D11_BIND_CONSTANT_BUFFER)
-							desc.BindFlags |= BIND_CONSTANT_BUFFER;
-						if (d3dDesc.BindFlags & D3D11_BIND_VERTEX_BUFFER)
-							desc.BindFlags |= BIND_VERTEX_BUFFER;
-						if (d3dDesc.BindFlags & D3D11_BIND_INDEX_BUFFER)
-							desc.BindFlags |= BIND_INDEX_BUFFER;
-					}
-					desc.CPUAccessFlags = 0;
-					{
-						if (d3dDesc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE)
-							desc.CPUAccessFlags |= CPU_ACCESS_WRITE;
-						if (d3dDesc.CPUAccessFlags & D3D11_CPU_ACCESS_READ)
-							desc.CPUAccessFlags |= CPU_ACCESS_READ;
-					}
-					desc.MiscFlags = 0;
-					desc.StructureByteStride = d3dDesc.StructureByteStride;
-
-					hr = CreateBuffer(&desc, nullptr, buffer);
+				if (dataSize > (int)buffer->desc.ByteWidth) { //recreate the buffer if new datasize exceeds buffer size
+					buffer->resource_DX11[buffer->activeBuffer]->Release();
+					buffer->desc.ByteWidth = dataSize * 2;
+					hr = CreateBuffer(&buffer->desc, nullptr, buffer);
 				}
-				if (d3dDesc.Usage == D3D11_USAGE_DYNAMIC) {
+				if (buffer->desc.Usage == USAGE_DYNAMIC) {
 					static thread_local D3D11_MAPPED_SUBRESOURCE mappedResource;
 					void* dataPtr;
-					deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+					deviceContexts[threadID]->Map(buffer->resource_DX11[buffer->activeBuffer], 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 					dataPtr = (void*)mappedResource.pData;
-					memcpy(dataPtr, data, (dataSize >= 0 ? dataSize : d3dDesc.ByteWidth));
-					deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
+					memcpy(dataPtr, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
+					deviceContexts[threadID]->Unmap(buffer->resource_DX11[buffer->activeBuffer], 0);
 				}
 				else {
-					deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, nullptr, data, 0, 0);
+					deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11[buffer->activeBuffer], 0, nullptr, data, 0, 0);
 				}
 			}
 		}

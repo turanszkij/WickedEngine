@@ -38,7 +38,7 @@ void wiFont::Initialize()
 
 void wiFont::SetUpStates()
 {
-	RasterizerDesc rs;
+	RasterizerStateDesc rs;
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=TRUE;
@@ -56,7 +56,7 @@ void wiFont::SetUpStates()
 
 
 	
-	DepthStencilDesc dsd;
+	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_LESS;
@@ -83,7 +83,7 @@ void wiFont::SetUpStates()
 
 
 	
-	BlendDesc bd;
+	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable = TRUE;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
@@ -98,7 +98,7 @@ void wiFont::SetUpStates()
 }
 void wiFont::SetUpCB()
 {
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(ConstantBuffer);
@@ -210,7 +210,7 @@ void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHI
 
 void wiFont::LoadVertexBuffer()
 {
-		BufferDesc bd;
+		GPUBufferDesc bd;
 		ZeroMemory( &bd, sizeof(bd) );
 		bd.Usage = USAGE_DYNAMIC;
 		bd.ByteWidth = sizeof( Vertex ) * MAX_TEXT * 4;
@@ -232,7 +232,7 @@ void wiFont::LoadIndices()
 		indices[i/4*6+5]=i/4*4+3;
 	}
 	
-	BufferDesc bd;
+	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
     bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof( unsigned long ) * MAX_TEXT * 6;
