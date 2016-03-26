@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
+#include "ConstantBufferMapping.h"
 
 class wiImageEffects;
 enum BLENDMODE;

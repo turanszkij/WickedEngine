@@ -213,6 +213,9 @@ float wiSoundEffect::GetVolume(){
 }
 HRESULT wiSoundEffect::Initialize()
 {
+	if (INITIALIZED)
+		return S_OK;
+
 	HRESULT hr;
 	pXAudio2 = nullptr;
 	if(FAILED( hr = XAudio2Create( &pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR ) ))
@@ -287,6 +290,9 @@ float wiMusic::GetVolume(){
 }
 HRESULT wiMusic::Initialize()
 {
+	if (INITIALIZED)
+		return S_OK;
+
 	HRESULT hr;
 	pXAudio2 = nullptr;
 	if(FAILED( hr = XAudio2Create( &pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR ) ))

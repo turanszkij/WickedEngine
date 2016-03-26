@@ -1,5 +1,6 @@
 #pragma once
 #include "wiParticle.h"
+#include "ConstantBufferMapping.h"
 
 struct Material;
 struct AABB;

@@ -2,6 +2,7 @@
 #define LENSFLARE
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
+#include "ConstantBufferMapping.h"
 
 class wiLensFlare
 {

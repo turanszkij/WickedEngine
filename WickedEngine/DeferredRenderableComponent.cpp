@@ -110,7 +110,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 	dtDepthCopy.CopyFrom(*rtGBuffer.depth, threadID);
 
 
-	wiRenderer::GetDevice()->UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 
 	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
 
@@ -177,7 +177,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 	if (getSSSEnabled())
 	{
-		//wiRenderer::UnbindTextures(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+		//wiRenderer::UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;

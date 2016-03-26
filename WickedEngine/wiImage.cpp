@@ -222,7 +222,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 	wiRenderer::GetDevice()->BindRasterizerState(rasterizerState, threadID);
 
-	wiRenderer::GetDevice()->BindTexturePS(texture, TEXSLOT_ONDEMAND0, threadID);
+	wiRenderer::GetDevice()->BindResourcePS(texture, TEXSLOT_ONDEMAND0, threadID);
 
 	if (effects.blendFlag == BLENDMODE_ALPHA)
 		wiRenderer::GetDevice()->BindBlendState(blendState, threadID);
@@ -373,9 +373,9 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 			wiRenderer::GetDevice()->UpdateBuffer(processCb,prcb,threadID);
 		}
-		wiRenderer::GetDevice()->BindTexturePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
-		wiRenderer::GetDevice()->BindTexturePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
-		wiRenderer::GetDevice()->BindTexturePS(effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
+		wiRenderer::GetDevice()->BindResourcePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
+		wiRenderer::GetDevice()->BindResourcePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
+		wiRenderer::GetDevice()->BindResourcePS(effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
 	}
 	else{ //BLUR
 		wiRenderer::GetDevice()->BindVS(screenVS,threadID);
@@ -453,11 +453,11 @@ void wiImage::DrawDeferred(Texture2D* texture
 	wiRenderer::GetDevice()->BindVS(screenVS,threadID);
 	wiRenderer::GetDevice()->BindPS(deferredPS,threadID);
 	
-	//wiRenderer::GetDevice()->BindTexturePS(depth,0,threadID);
-	//wiRenderer::GetDevice()->BindTexturePS(normal,1,threadID);
-	//wiRenderer::GetDevice()->BindTexturePS(texture,6,threadID);
-	wiRenderer::GetDevice()->BindTexturePS(lightmap,TEXSLOT_ONDEMAND0,threadID);
-	wiRenderer::GetDevice()->BindTexturePS(ao,TEXSLOT_ONDEMAND1,threadID);
+	//wiRenderer::GetDevice()->BindResourcePS(depth,0,threadID);
+	//wiRenderer::GetDevice()->BindResourcePS(normal,1,threadID);
+	//wiRenderer::GetDevice()->BindResourcePS(texture,6,threadID);
+	wiRenderer::GetDevice()->BindResourcePS(lightmap,TEXSLOT_ONDEMAND0,threadID);
+	wiRenderer::GetDevice()->BindResourcePS(ao,TEXSLOT_ONDEMAND1,threadID);
 
 	wiRenderer::GetDevice()->BindBlendState(blendStateNoBlend,threadID);
 

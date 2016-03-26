@@ -395,8 +395,8 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->BindVS(vs,threadID);
 
 		if(texture){
-			wiRenderer::GetDevice()->BindTexturePS(texture,TEXSLOT_ONDEMAND0,threadID);
-			wiRenderer::GetDevice()->BindTextureGS(texture,TEXSLOT_ONDEMAND0,threadID);
+			wiRenderer::GetDevice()->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
+			wiRenderer::GetDevice()->BindResourceGS(texture,TEXSLOT_ONDEMAND0,threadID);
 
 			wiRenderer::GetDevice()->BindBlendState(bs,threadID);
 		}

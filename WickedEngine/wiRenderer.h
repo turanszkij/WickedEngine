@@ -4,6 +4,7 @@
 #include "wiGraphicsAPI.h"
 #include "skinningDEF.h"
 #include "SamplerMapping.h"
+#include "ConstantBufferMapping.h"
 #include "wiSPTree.h"
 
 struct Transform;

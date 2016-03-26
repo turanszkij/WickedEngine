@@ -1,6 +1,7 @@
 #pragma once 
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
+#include "ConstantBufferMapping.h"
 #define MAX_TEXT 20000
 
 // Do not alter order because it is bound to lua manually

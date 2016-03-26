@@ -6,8 +6,6 @@
 #include <d3d11_2.h>
 #include <DXGI1_2.h>
 
-#include "ConstantBufferMapping.h"
-
 
 namespace wiGraphicsTypes
 {
@@ -263,6 +261,14 @@ namespace wiGraphicsTypes
 		FORMAT_A8P8,
 		FORMAT_B4G4R4A4_UNORM,
 		FORMAT_FORCE_UINT = 0xffffffff,
+	}; 
+	enum MAP
+	{
+		MAP_READ,
+		MAP_WRITE,
+		MAP_READ_WRITE,
+		MAP_WRITE_DISCARD,
+		MAP_WRITE_NO_OVERWRITE
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -292,6 +298,7 @@ namespace wiGraphicsTypes
 		RESOURCE_MISC_GENERATE_MIPS = 0x1L,
 		RESOURCE_MISC_SHARED = 0x2L,
 		RESOURCE_MISC_TEXTURECUBE = 0x4L,
+		RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 0x20L,
 		RESOURCE_MISC_BUFFER_STRUCTURED = 0x40L,
 		RESOURCE_MISC_TILED = 0x40000L,
 	};
@@ -425,6 +432,12 @@ namespace wiGraphicsTypes
 		UINT SysMemPitch;
 		UINT SysMemSlicePitch;
 	};
+	struct MappedSubresource
+	{
+		void *pData;
+		UINT RowPitch;
+		UINT DepthPitch;
+	};
 
 
 
@@ -539,20 +552,57 @@ namespace wiGraphicsTypes
 		SamplerDesc GetDesc() { return desc; }
 	};
 
-	class GPUBuffer
+	class GPUResource
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		ID3D11Buffer* resource_DX11;
+		ID3D11ShaderResourceView*	shaderResourceView_DX11;
+
+	protected:
+		GPUResource()
+		{
+			SAFE_INIT(shaderResourceView_DX11);
+		}
+		virtual ~GPUResource()
+		{
+			SAFE_RELEASE(shaderResourceView_DX11);
+		}
+	};
+
+	class GPUUnorderedResource
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11UnorderedAccessView*	unorderedAccessView_DX11;
+
+	protected:
+		GPUUnorderedResource()
+		{
+			SAFE_INIT(unorderedAccessView_DX11);
+		}
+		virtual ~GPUUnorderedResource()
+		{
+			SAFE_RELEASE(unorderedAccessView_DX11);
+		}
+	};
+
+	class GPUBuffer : public GPUResource, public GPUUnorderedResource
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11Buffer*				resource_DX11;
+		ID3D11UnorderedAccessView*	unorderedAccessView_DX11;
 		GPUBufferDesc desc;
 	public:
-		GPUBuffer() 
+		GPUBuffer() : GPUResource(), GPUUnorderedResource()
 		{
 			SAFE_INIT(resource_DX11);
+			SAFE_INIT(unorderedAccessView_DX11);
 		}
-		~GPUBuffer()
+		virtual ~GPUBuffer()
 		{
 			SAFE_RELEASE(resource_DX11);
+			SAFE_RELEASE(unorderedAccessView_DX11);
 		}
 
 		bool IsValid() { return resource_DX11 != nullptr; }
@@ -655,19 +705,21 @@ namespace wiGraphicsTypes
 		}
 	};
 
-	class Texture
+	class Texture : public GPUResource, public GPUUnorderedResource
 	{
 		friend class GraphicsDevice_DX11;
-	private: 
-		ID3D11ShaderResourceView*	shaderResourceView_DX11;
+	private:
 		ID3D11RenderTargetView*		renderTargetView_DX11;
 		ID3D11DepthStencilView*		depthStencilView_DX11;
 	public:
 
-		Texture() :shaderResourceView_DX11(nullptr), renderTargetView_DX11(nullptr), depthStencilView_DX11(nullptr) {}
+		Texture() : GPUResource(), GPUUnorderedResource()
+		{
+			SAFE_INIT(renderTargetView_DX11);
+			SAFE_INIT(depthStencilView_DX11);
+		}
 		virtual ~Texture()
 		{
-			SAFE_RELEASE(shaderResourceView_DX11);
 			SAFE_RELEASE(renderTargetView_DX11);
 			SAFE_RELEASE(depthStencilView_DX11);
 		}
@@ -751,13 +803,15 @@ namespace wiGraphicsTypes
 		virtual void BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void ClearRenderTarget(Texture2D* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindTexturePS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindTextureVS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindTextureGS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindTextureDS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindTextureHS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void BindTextureCS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void UnbindTextures(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindResourceVS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindResourceGS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindResourceDS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindResourceHS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void BindUnorderedAccessResourceCS(const GPUUnorderedResource* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void UnBindResources(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void BindSamplerPS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void BindSamplerVS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void BindSamplerGS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
@@ -793,6 +847,9 @@ namespace wiGraphicsTypes
 		virtual void GenerateMips(Texture* texture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int dataSize = -1) = 0;
+		virtual GPUBuffer* DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void Map(GPUBuffer* resource, UINT subResource, MAP mapType, UINT mapFlags, MappedSubresource* mappedResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void Unmap(GPUBuffer* resource, UINT subResource = 0, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
 		virtual HRESULT CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 

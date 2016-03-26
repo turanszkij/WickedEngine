@@ -284,7 +284,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 		wiRenderer::GetDevice()->BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),threadID);
 		wiRenderer::GetDevice()->BindIndexBuffer(indexBuffer,threadID);
 
-		wiRenderer::GetDevice()->BindTexturePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
+		wiRenderer::GetDevice()->BindResourcePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
 		wiRenderer::GetDevice()->DrawIndexed(text.length()*6,threadID);
 	}
 }

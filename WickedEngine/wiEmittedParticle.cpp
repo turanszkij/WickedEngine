@@ -250,7 +250,7 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 			wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
 			wiRenderer::GetDevice()->BindGS(geometryShader,threadID);
 		
-			//wiRenderer::GetDevice()->BindTexturePS(depth,1,threadID);
+			//wiRenderer::GetDevice()->BindResourcePS(depth,1,threadID);
 
 			static thread_local ConstantBuffer* cb = new ConstantBuffer;
 			(*cb).mAdd.x = additive;
@@ -269,7 +269,7 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 			wiRenderer::GetDevice()->BindVertexBuffer(vertexBuffer,0,sizeof(Point),threadID);
 
 			if(!wireRender && material->texture) 
-				wiRenderer::GetDevice()->BindTexturePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
+				wiRenderer::GetDevice()->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
 			wiRenderer::GetDevice()->Draw(renderPoints.size(),threadID);
 
 

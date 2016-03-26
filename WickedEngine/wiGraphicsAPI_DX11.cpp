@@ -223,6 +223,8 @@ inline UINT _ParseResourceMiscFlags(UINT value)
 		_flag |= D3D11_RESOURCE_MISC_SHARED;
 	if (value & RESOURCE_MISC_TEXTURECUBE)
 		_flag |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (value & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+		_flag |= D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	if (value & RESOURCE_MISC_BUFFER_STRUCTURED)
 		_flag |= D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	if (value & RESOURCE_MISC_TILED)
@@ -1013,6 +1015,67 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 	ppBuffer->desc = *pDesc;
 	HRESULT hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11);
 	assert(SUCCEEDED(hr) && "GPUBuffer Creation failed!");
+
+	if (SUCCEEDED(hr))
+	{
+		// Create resource views if needed
+		if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+		{
+
+			D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+			ZeroMemory(&srv_desc, sizeof(srv_desc));
+			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+			srv_desc.BufferEx.FirstElement = 0;
+
+			if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+			{
+				// This is a Raw Buffer
+
+				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+				srv_desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
+				srv_desc.BufferEx.NumElements = desc.ByteWidth / 4;
+			}
+			else if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
+			{
+				// This is a Structured Buffer
+
+				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+				srv_desc.BufferEx.NumElements = desc.ByteWidth / desc.StructureByteStride;
+			}
+
+			hr = device->CreateShaderResourceView(ppBuffer->resource_DX11, &srv_desc, &ppBuffer->shaderResourceView_DX11);
+
+			assert(SUCCEEDED(hr) && "ShaderResourceView of the GPUBuffer could not be created!");
+		}
+		if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+		{
+			D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+			ZeroMemory(&uav_desc, sizeof(uav_desc));
+			uav_desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+			uav_desc.Buffer.FirstElement = 0;
+
+			if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
+			{
+				// This is a Raw Buffer
+
+				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS; // Format must be DXGI_FORMAT_R32_TYPELESS, when creating Raw Unordered Access View
+				uav_desc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
+				uav_desc.Buffer.NumElements = desc.ByteWidth / 4;
+			}
+			else if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
+			{
+				// This is a Structured Buffer
+
+				uav_desc.Format = DXGI_FORMAT_UNKNOWN;      // Format must be must be DXGI_FORMAT_UNKNOWN, when creating a View of a Structured Buffer
+				uav_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
+			}
+
+			hr = device->CreateUnorderedAccessView(ppBuffer->resource_DX11, &uav_desc, &ppBuffer->unorderedAccessView_DX11);
+
+			assert(SUCCEEDED(hr) && "UnorderedAccessView of the GPUBuffer could not be created!");
+		}
+	}
+
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateTexture1D()
@@ -1035,9 +1098,24 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 	if (FAILED(hr))
 		return hr;
 
-	CreateRenderTargetView(*ppTexture2D);
-	CreateShaderResourceView(*ppTexture2D);
-	CreateDepthStencilView(*ppTexture2D);
+	hr = CreateRenderTargetView(*ppTexture2D);
+	hr = CreateShaderResourceView(*ppTexture2D);
+	hr = CreateDepthStencilView(*ppTexture2D);
+
+
+	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+	{
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+		ZeroMemory(&uav_desc, sizeof(uav_desc));
+		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+		uav_desc.Buffer.FirstElement = 0;
+		uav_desc.Format = desc.Format;
+		uav_desc.Buffer.NumElements = desc.Width * desc.Height;
+
+		hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->unorderedAccessView_DX11);
+
+		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+	}
 
 	return hr;
 }
@@ -1066,9 +1144,9 @@ HRESULT GraphicsDevice_DX11::CreateTextureCube(const Texture2DDesc* pDesc, const
 	if (FAILED(hr))
 		return hr;
 
-	CreateRenderTargetView(*ppTextureCube);
-	CreateShaderResourceView(*ppTextureCube);
-	CreateDepthStencilView(*ppTextureCube);
+	hr = CreateRenderTargetView(*ppTextureCube);
+	hr = CreateShaderResourceView(*ppTextureCube);
+	hr = CreateDepthStencilView(*ppTextureCube);
 
 	return hr;
 }
@@ -1327,7 +1405,7 @@ void GraphicsDevice_DX11::PresentEnd()
 
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->OMSetRenderTargets(0, nullptr, nullptr);
 
-	UnbindTextures(0, TEXSLOT_COUNT, GRAPHICSTHREAD_IMMEDIATE);
+	UnBindResources(0, TEXSLOT_COUNT, GRAPHICSTHREAD_IMMEDIATE);
 
 	FRAMECOUNT++;
 
@@ -1344,7 +1422,7 @@ void GraphicsDevice_DX11::ExecuteDeferredContexts()
 			commandLists[i]->Release();
 			commandLists[i] = nullptr;
 
-			UnbindTextures(0, TEXSLOT_COUNT, (GRAPHICSTHREAD)i);
+			UnBindResources(0, TEXSLOT_COUNT, (GRAPHICSTHREAD)i);
 		}
 	}
 }

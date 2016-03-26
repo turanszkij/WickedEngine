@@ -44,13 +44,13 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector
 		wiRenderer::GetDevice()->BindDepthStencilState(depthStencilState,1,threadID);
 		wiRenderer::GetDevice()->BindBlendState(blendState,threadID);
 
-		//wiRenderer::GetDevice()->BindTextureGS(depthMap,0,threadID);
+		//wiRenderer::GetDevice()->BindResourceGS(depthMap,0,threadID);
 
 		int i=0;
 		for(Texture2D* x : rims){
 			if(x!=nullptr){
-				wiRenderer::GetDevice()->BindTexturePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
-				wiRenderer::GetDevice()->BindTextureGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				wiRenderer::GetDevice()->BindResourcePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				wiRenderer::GetDevice()->BindResourceGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
 				i++;
 			}
 		}
