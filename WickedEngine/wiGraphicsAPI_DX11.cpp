@@ -1011,13 +1011,8 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
 
 	ppBuffer->desc = *pDesc;
-	HRESULT hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11[0]);
+	HRESULT hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11);
 	assert(SUCCEEDED(hr) && "GPUBuffer Creation failed!");
-	if (desc.Usage != USAGE_IMMUTABLE)
-	{
-		hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11[1]);
-		assert(SUCCEEDED(hr) && "GPUBuffer Creation failed!");
-	}
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateTexture1D()

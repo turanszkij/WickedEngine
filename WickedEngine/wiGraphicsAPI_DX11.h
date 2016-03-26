@@ -130,6 +130,11 @@ namespace wiGraphicsTypes
 				deviceContexts[threadID]->HSSetShaderResources(slot, 1, &texture->shaderResourceView_DX11);
 			}
 		}
+		virtual void BindTextureCS(const Texture* texture, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+			if (deviceContexts[threadID] != nullptr && texture != nullptr) {
+				deviceContexts[threadID]->CSSetShaderResources(slot, 1, &texture->shaderResourceView_DX11);
+			}
+		}
 		virtual void UnbindTextures(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE)
 		{
 			assert(num <= 32 && "UnbindTextures limit of 32 reached!");
@@ -146,6 +151,7 @@ namespace wiGraphicsTypes
 				deviceContexts[threadID]->GSSetShaderResources(slot, num, empties);
 				deviceContexts[threadID]->HSSetShaderResources(slot, num, empties);
 				deviceContexts[threadID]->DSSetShaderResources(slot, num, empties);
+				deviceContexts[threadID]->CSSetShaderResources(slot, num, empties);
 			}
 		}
 		virtual void BindSamplerPS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
@@ -173,47 +179,58 @@ namespace wiGraphicsTypes
 				deviceContexts[threadID]->DSSetSamplers(slot, 1, &sampler->resource_DX11);
 			}
 		}
+		virtual void BindSamplerCS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+			if (deviceContexts[threadID] != nullptr && sampler != nullptr && sampler->resource_DX11 != nullptr) {
+				deviceContexts[threadID]->CSSetSamplers(slot, 1, &sampler->resource_DX11);
+			}
+		}
 		virtual void BindConstantBufferPS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->PSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindConstantBufferVS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->VSSetConstantBuffers(slot, 1, &res);
 
 			}
 		}
 		virtual void BindConstantBufferGS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->GSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindConstantBufferDS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->DSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->HSSetConstantBuffers(slot, 1, &res);
+			}
+		}
+		virtual void BindConstantBufferCS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+			if (deviceContexts[threadID] != nullptr) {
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
+				deviceContexts[threadID]->CSSetConstantBuffers(slot, 1, &res);
 			}
 		}
 		virtual void BindVertexBuffer(const GPUBuffer* vertexBuffer, int slot, UINT stride, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
 				UINT offset = 0;
-				ID3D11Buffer* res = vertexBuffer ? vertexBuffer->resource_DX11[vertexBuffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = vertexBuffer ? vertexBuffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->IASetVertexBuffers(slot, 1, &res, &stride, &offset);
 			}
 		}
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
-				ID3D11Buffer* res = indexBuffer ? indexBuffer->resource_DX11[indexBuffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = indexBuffer ? indexBuffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->IASetIndexBuffer(res, DXGI_FORMAT_R32_UINT, 0);
 			}
 		}
@@ -276,7 +293,7 @@ namespace wiGraphicsTypes
 		virtual void BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
 				UINT offsetSO[1] = { 0 };
-				ID3D11Buffer* res = buffer ? buffer->resource_DX11[buffer->activeBuffer] : nullptr;
+				ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
 				deviceContexts[threadID]->SOSetTargets(1, &res, offsetSO);
 			}
 		}
@@ -310,6 +327,12 @@ namespace wiGraphicsTypes
 				deviceContexts[threadID]->DSSetShader(res, nullptr, 0);
 			}
 		}
+		virtual void BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+			if (deviceContexts[threadID] != nullptr) {
+				ID3D11ComputeShader* res = shader ? shader->resource_DX11 : nullptr;
+				deviceContexts[threadID]->CSSetShader(res, nullptr, 0);
+			}
+		}
 		virtual void Draw(int vertexCount, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
 			if (deviceContexts[threadID] != nullptr) {
 				deviceContexts[threadID]->Draw(vertexCount, 0);
@@ -325,6 +348,11 @@ namespace wiGraphicsTypes
 				deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, 0, 0, 0);
 			}
 		}
+		virtual void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) {
+			if (deviceContexts[threadID] != nullptr) {
+				deviceContexts[threadID]->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+			}
+		}
 		virtual void GenerateMips(Texture* texture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE)
 		{
 			deviceContexts[threadID]->GenerateMips(texture->shaderResourceView_DX11);
@@ -338,26 +366,33 @@ namespace wiGraphicsTypes
 		}
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int dataSize = -1)
 		{
-			if (buffer != nullptr && buffer->resource_DX11[0] != nullptr && buffer->resource_DX11[1] != nullptr && data != nullptr 
+			if (buffer != nullptr && buffer->resource_DX11 != nullptr && data != nullptr 
 				&& deviceContexts[threadID] != nullptr) 
 			{
 				assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 				HRESULT hr;
-				if (dataSize > (int)buffer->desc.ByteWidth) { //recreate the buffer if new datasize exceeds buffer size
-					buffer->resource_DX11[buffer->activeBuffer]->Release();
+				if (dataSize > (int)buffer->desc.ByteWidth) { 
+					// recreate the buffer if new datasize exceeds buffer size with double capacity
+					buffer->resource_DX11->Release();
 					buffer->desc.ByteWidth = dataSize * 2;
-					hr = CreateBuffer(&buffer->desc, nullptr, buffer);
+					SubresourceData InitData;
+					ZeroMemory(&InitData, sizeof(InitData));
+					InitData.pSysMem = data;
+					hr = CreateBuffer(&buffer->desc, &InitData, buffer);
 				}
-				if (buffer->desc.Usage == USAGE_DYNAMIC) {
-					static thread_local D3D11_MAPPED_SUBRESOURCE mappedResource;
-					void* dataPtr;
-					deviceContexts[threadID]->Map(buffer->resource_DX11[buffer->activeBuffer], 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-					dataPtr = (void*)mappedResource.pData;
-					memcpy(dataPtr, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
-					deviceContexts[threadID]->Unmap(buffer->resource_DX11[buffer->activeBuffer], 0);
-				}
-				else {
-					deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11[buffer->activeBuffer], 0, nullptr, data, 0, 0);
+				else
+				{
+					if (buffer->desc.Usage == USAGE_DYNAMIC) {
+						static thread_local D3D11_MAPPED_SUBRESOURCE mappedResource;
+						void* dataPtr;
+						hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+						dataPtr = (void*)mappedResource.pData;
+						memcpy(dataPtr, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
+						deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
+					}
+					else {
+						deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, nullptr, data, 0, 0);
+					}
 				}
 			}
 		}

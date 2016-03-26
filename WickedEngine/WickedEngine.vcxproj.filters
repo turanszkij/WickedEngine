@@ -69,6 +69,9 @@
     <Filter Include="shaders\object">
       <UniqueIdentifier>{9ddbb33a-3546-4849-930c-65c71e4def34}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\compute">
+      <UniqueIdentifier>{c4bad71a-103c-4d22-8c54-9622544b8595}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -2186,6 +2189,9 @@
     </FxCompile>
     <FxCompile Include="stereogramPS.hlsl">
       <Filter>shaders\image</Filter>
+    </FxCompile>
+    <FxCompile Include="computeCS.hlsl">
+      <Filter>shaders\compute</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

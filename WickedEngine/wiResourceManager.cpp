@@ -223,8 +223,17 @@ void* wiResourceManager::add(const string& name, Data_Type newType
 		break;
 		case Data_Type::COMPUTESHADER:
 		{
-			//TODO
-			success = nullptr;
+			BYTE* buffer;
+			size_t bufferSize;
+			if (wiHelper::readByteData(name, &buffer, bufferSize)) {
+				ComputeShader* shader = new ComputeShader;
+				wiRenderer::GetDevice()->CreateComputeShader(buffer, bufferSize, nullptr, shader);
+				delete[] buffer;
+				success = shader;
+			}
+			else {
+				success = nullptr;
+			}
 		}
 		break;
 		default:
