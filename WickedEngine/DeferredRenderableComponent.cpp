@@ -5,7 +5,7 @@
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiSprite.h"
-#include "TextureMapping.h"
+#include "ResourceMapping.h"
 
 using namespace wiGraphicsTypes;
 

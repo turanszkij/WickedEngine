@@ -1,5 +1,4 @@
 #include "wiRenderer.h"
-#include "skinningDEF.h"
 #include "wiFrameRate.h"
 #include "wiHairParticle.h"
 #include "wiEmittedParticle.h"
@@ -20,7 +19,7 @@
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
-#include "TextureMapping.h"
+#include "ResourceMapping.h"
 #include "wiGraphicsAPI_DX11.h"
 
 using namespace wiGraphicsTypes;
@@ -39,6 +38,7 @@ RasterizerState		*wiRenderer::rasterizers[RSTYPE_LAST];
 DepthStencilState	*wiRenderer::depthStencils[DSSTYPE_LAST];
 BlendState			*wiRenderer::blendStates[BSTYPE_LAST];
 GPUBuffer			*wiRenderer::constantBuffers[CBTYPE_LAST];
+GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 
 int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
@@ -160,6 +160,11 @@ void wiRenderer::SetUpStaticComponents()
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
 		SAFE_INIT(constantBuffers[i]);
+		//constantBuffers[i] = new GPUBuffer;
+	}
+	for (int i = 0; i < RBTYPE_LAST; ++i)
+	{
+		SAFE_INIT(resourceBuffers[i]);
 		//constantBuffers[i] = new GPUBuffer;
 	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
@@ -296,6 +301,10 @@ void wiRenderer::CleanUpStatic()
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
 		SAFE_DELETE(constantBuffers[i]);
+	}
+	for (int i = 0; i < RBTYPE_LAST; ++i)
+	{
+		SAFE_DELETE(resourceBuffers[i]);
 	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
@@ -487,6 +496,7 @@ void wiRenderer::UpdateSPTree(wiSPTree*& tree){
 	}
 }
 
+
 void wiRenderer::LoadBuffers()
 {
 	for (int i = 0; i < CBTYPE_LAST; ++i)
@@ -542,8 +552,22 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(CubeMapRenderCB);
 	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CUBEMAPRENDER]);
 
-	bd.ByteWidth = sizeof(BoneCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_BONEBUFFER]);
+
+
+
+
+	// Resource Buffers:
+
+	for (int i = 0; i < RBTYPE_LAST; ++i)
+	{
+		resourceBuffers[i] = new GPUBuffer;
+	}
+
+	bd.ByteWidth = sizeof(ShaderBoneType) * 100;
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(ShaderBoneType);
+	GetDevice()->CreateBuffer(&bd, NULL, resourceBuffers[RBTYPE_BONE]);
 
 }
 
@@ -1303,18 +1327,23 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						GetDevice()->BindVS(vertexShaders[VSTYPE_STREAMOUT], threadID);
 						GetDevice()->BindGS(geometryShaders[GSTYPE_STREAMOUT], threadID);
 						GetDevice()->BindPS(nullptr, threadID);
-						GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), threadID);
-						GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_BONEBUFFER], CB_GETBINDSLOT(BoneCB), threadID);
+						GetDevice()->BindResourceVS(resourceBuffers[RBTYPE_BONE], STRUCTUREDBUFFER_GETBINDSLOT(ShaderBoneType), threadID);
 					}
 
 					// Upload bones for skinning to shader
-					static thread_local BoneCB* bonebuf = new BoneCB;
-					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
-						bonebuf->pose[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativity));
-						bonebuf->prev[k] = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativityPrev));
+					static thread_local unsigned int maxBoneCount = 100;
+					static thread_local ShaderBoneType *bonebuf = new ShaderBoneType[maxBoneCount];
+					if (mesh->armature->boneCollection.size() > maxBoneCount)
+					{
+						maxBoneCount = mesh->armature->boneCollection.size() * 2;
+						SAFE_DELETE_ARRAY(bonebuf);
+						bonebuf = new ShaderBoneType[maxBoneCount];
 					}
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_BONEBUFFER], bonebuf, threadID);
-
+					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
+						bonebuf[k].pose = mesh->armature->boneCollection[k]->boneRelativity;
+						bonebuf[k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
+					}
+					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf, threadID, sizeof(ShaderBoneType) * mesh->armature->boneCollection.size());
 
 					// Do the skinning
 					GetDevice()->BindVertexBuffer(&mesh->meshVertBuff, 0, sizeof(SkinnedVertex), threadID);

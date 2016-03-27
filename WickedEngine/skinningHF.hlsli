@@ -1,16 +1,21 @@
-#include "skinningDEF.h"
 #include "globals.hlsli"
 
-#ifdef USE_GPU_SKINNING
 #define SKINNING_ON
 
 typedef matrix<float,4,4> bonetype;
 
-CBUFFER(BoneCB, CBSLOT_RENDERER_BONEBUFFER)
+//CBUFFER(BoneCB, CBSLOT_RENDERER_BONEBUFFER)
+//{
+//	bonetype pose[MAXBONECOUNT];
+//	bonetype prev[MAXBONECOUNT];
+//}
+
+struct Bone
 {
-	bonetype pose[MAXBONECOUNT];
-	bonetype prev[MAXBONECOUNT];
-}
+	bonetype pose, prev;
+};
+
+StructuredBuffer<Bone> boneBuffer:register(t0);
 
 inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 inNor, inout float4 inBon, inout float4 inWei)
 {
@@ -20,8 +25,8 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 inNor,
 		inWei=normalize(inWei);
 		for(uint i=0;i<4;i++){
 			sumw += inWei[i];
-			sump += pose[(uint)inBon[i]] * inWei[i];
-			sumpPrev += prev[(uint)inBon[i]] * inWei[i];
+			sump += boneBuffer.Load((uint)inBon[i]).pose * inWei[i];
+			sumpPrev += boneBuffer.Load((uint)inBon[i]).prev * inWei[i];
 		}
 		sump/=sumw;
 		sumpPrev/=sumw;
@@ -30,34 +35,3 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 inNor,
 		inNor.xyz = mul(inNor.xyz,(float3x3)sump);
 	}
 }
-inline void Skinning(inout float4 pos, inout float4 inNor, inout float4 inBon, inout float4 inWei)
-{
-	[branch]if(inWei.x || inWei.y || inWei.z || inWei.w){
-		bonetype sump=0;
-		float sumw = 0.0f;
-		inWei=normalize(inWei);
-		for(uint i=0;i<4;i++){
-			sumw += inWei[i];
-			sump += pose[(uint)inBon[i]] * inWei[i];
-		}
-		sump/=sumw;
-		pos = mul(pos,sump);
-		inNor.xyz = mul(inNor.xyz,(float3x3)sump);
-	}
-}
-inline void Skinning(inout float4 pos, inout float4 inBon, inout float4 inWei)
-{
-	[branch]if(inWei.x || inWei.y || inWei.z || inWei.w){
-		bonetype sump=0;
-		float sumw = 0.0f;
-		inWei=normalize(inWei);
-		for(uint i=0;i<4;i++){
-			sumw += inWei[i];
-			sump += pose[(uint)inBon[i]] * inWei[i];
-		}
-		sump/=sumw;
-		pos = mul(pos,sump);
-	}
-}
-
-#endif

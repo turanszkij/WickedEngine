@@ -61,11 +61,18 @@ enum CBTYPES
 	CBTYPE_VOLUMELIGHT,
 	CBTYPE_DECAL,
 	CBTYPE_CUBEMAPRENDER,
-	CBTYPE_BONEBUFFER,
 	CBTYPE_SHADOW,
 	CBTYPE_CLIPPLANE,
 	CBTYPE_LAST
 };
+
+// resource buffers (StructuredBuffer, Buffer, etc.)
+enum RBTYPES
+{
+	RBTYPE_BONE,
+	RBTYPE_LAST
+};
+
 // vertex shaders
 enum VSTYPES
 {

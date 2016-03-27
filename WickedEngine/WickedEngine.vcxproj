@@ -503,8 +503,8 @@
     <ClInclude Include="ConstantBufferMapping.h" />
     <ClInclude Include="DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="ForwardRenderableComponent_BindLua.h" />
+    <ClInclude Include="ResourceMapping.h" />
     <ClInclude Include="SamplerMapping.h" />
-    <ClInclude Include="TextureMapping.h" />
     <ClInclude Include="wiGraphicsAPI.h" />
     <ClInclude Include="LoadingScreenComponent_BindLua.h" />
     <ClInclude Include="MainComponent_BindLua.h" />
@@ -809,7 +809,6 @@
     <ClInclude Include="wiRenderTarget.h" />
     <ClInclude Include="wiResourceManager.h" />
     <ClInclude Include="wiServer.h" />
-    <ClInclude Include="skinningDEF.h" />
     <ClInclude Include="wiSound.h" />
     <ClInclude Include="wiSPTree.h" />
     <ClInclude Include="wiTaskThread.h" />

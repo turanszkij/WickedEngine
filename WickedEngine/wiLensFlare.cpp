@@ -1,7 +1,7 @@
 #include "wiLensFlare.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "TextureMapping.h"
+#include "ResourceMapping.h"
 
 using namespace wiGraphicsTypes;
 

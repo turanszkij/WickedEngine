@@ -2,9 +2,9 @@
 #include "CommonInclude.h"
 #include "wiEnums.h"
 #include "wiGraphicsAPI.h"
-#include "skinningDEF.h"
 #include "SamplerMapping.h"
 #include "ConstantBufferMapping.h"
+#include "ResourceMapping.h"
 #include "wiSPTree.h"
 
 struct Transform;
@@ -45,6 +45,8 @@ class  wiWaterPlane;
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string, Material*> MaterialCollection;
 
+#define USE_GPU_SKINNING
+
 
 class wiRenderer
 {
@@ -72,6 +74,7 @@ public:
 
 protected:
 
+	// Constant Buffers:
 	// Persistent buffers:
 	GFX_STRUCT WorldCB
 	{
@@ -230,15 +233,6 @@ protected:
 
 		ALIGN_16
 	};
-	GFX_STRUCT BoneCB
-	{
-		XMMATRIX pose[MAXBONECOUNT];
-		XMMATRIX prev[MAXBONECOUNT];
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_BONEBUFFER)
-
-		ALIGN_16
-	};
 	GFX_STRUCT APICB
 	{
 		XMFLOAT4 clipPlane;
@@ -246,6 +240,14 @@ protected:
 		CB_SETBINDSLOT(CBSLOT_API)
 
 		ALIGN_16
+	};
+
+	// Resource Buffers:
+	struct ShaderBoneType
+	{
+		XMFLOAT4X4 pose, prev;
+
+		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_BONE)
 	};
 
 
@@ -259,6 +261,7 @@ protected:
 	static wiGraphicsTypes::DepthStencilState	*depthStencils[DSSTYPE_LAST];
 	static wiGraphicsTypes::BlendState			*blendStates[BSTYPE_LAST];
 	static wiGraphicsTypes::GPUBuffer			*constantBuffers[CBTYPE_LAST];
+	static wiGraphicsTypes::GPUBuffer			*resourceBuffers[RBTYPE_LAST];
 
 
 	void UpdateSpheres();

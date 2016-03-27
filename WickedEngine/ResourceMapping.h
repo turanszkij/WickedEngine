@@ -1,5 +1,15 @@
-#ifndef _TEXTUREMAPPING_H_
-#define _TEXTUREMAPPING_H_
+#ifndef _RESOURCEBUFFER_MAPPING_H_
+#define _RESOURCEBUFFER_MAPPING_H_
+
+// Slot matchings:
+////////////////////////////////////////////////////
+
+// Structured Buffers (t slot):
+
+#define SBSLOT_BONE			0
+
+
+// Textures (t slot):
 
 #define TEXSLOT_DEPTH		0
 #define TEXSLOT_LINEARDEPTH	1
@@ -39,14 +49,29 @@
 // Helpers:
 ///////////////////////////
 
+// CPP:
+/////////
+
+#define STRUCTUREDBUFFER_BINDSLOT __StructuredBuffer_BindSlot__
+// Add this to a struct to match that with a bind slot:
+#define STRUCTUREDBUFFER_SETBINDSLOT(slot) static const int STRUCTUREDBUFFER_BINDSLOT = (slot);
+// Get bindslot from a struct which is matched with a bind slot:
+#define STRUCTUREDBUFFER_GETBINDSLOT(structname) structname::STRUCTUREDBUFFER_BINDSLOT
+
+
+
 // Shader:
 //////////
 
-// Automatically binds textures on the shader side:
-// Needs macro expansion
+// Automatically binds resources on the shader side:
+
+#define STRUCTUREDBUFFER_X(name, type, slot) StructuredBuffer< type > name : register(t ## slot)
+#define STRUCTUREDBUFFER(name, slot) STRUCTUREDBUFFER_X(name, type, slot)
+
 #define TEXTURE2D_X(name, type, slot) Texture2D< type > name : register(t ## slot);
 #define TEXTURE2D(name, type, slot) TEXTURE2D_X(name, type, slot)
 #define TEXTURECUBE_X(name, type, slot) TextureCube< type > name : register(t ## slot);
 #define TEXTURECUBE(name, type, slot) TEXTURECUBE_X(name, type, slot)
 
-#endif // _TEXTUREMAPPING_H_
+
+#endif // _RESOURCEBUFFER_MAPPING_H_

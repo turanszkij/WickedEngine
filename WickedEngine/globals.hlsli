@@ -2,7 +2,7 @@
 #define _SHADER_GLOBALS_
 #include "ConstantBufferMapping.h"
 #include "SamplerMapping.h"
-#include "TextureMapping.h"
+#include "ResourceMapping.h"
 
 TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH)
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH)

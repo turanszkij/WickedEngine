@@ -1,6 +1,6 @@
 #include "wiGraphicsAPI_DX11.h"
 #include "wiHelper.h"
-#include "TextureMapping.h"
+#include "ResourceMapping.h"
 
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"

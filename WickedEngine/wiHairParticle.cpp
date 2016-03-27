@@ -5,7 +5,7 @@
 #include "wiMath.h"
 #include "wiFrustum.h"
 #include "wiRandom.h"
-#include "TextureMapping.h"
+#include "ResourceMapping.h"
 
 using namespace wiGraphicsTypes;
 

@@ -1,7 +1,6 @@
 #ifndef _MESH_INPUT_LAYOUT_HF_
 #define _MESH_INPUT_LAYOUT_HF_
 
-#include "skinningDEF.h"
 
 struct Input{
 	uint id: SV_VertexID;

@@ -826,9 +826,6 @@
     <ClInclude Include="typelib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="skinningDEF.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Utility\dds.h">
       <Filter>Utility</Filter>
     </ClInclude>
@@ -1807,11 +1804,11 @@
     <ClInclude Include="SamplerMapping.h">
       <Filter>Resource Mapping</Filter>
     </ClInclude>
-    <ClInclude Include="TextureMapping.h">
-      <Filter>Resource Mapping</Filter>
-    </ClInclude>
     <ClInclude Include="wiGraphicsAPI_DX11.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceMapping.h">
+      <Filter>Resource Mapping</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
