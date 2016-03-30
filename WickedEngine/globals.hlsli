@@ -119,7 +119,7 @@ CBUFFER(APICB, CBSLOT_API)
 
 
 #define ALPHATEST(x)	clip((x)-0.1);
-static const float g_GammaValue = 2.2;
+static const float g_GammaValue = 1.1;
 #define DEGAMMA(x)		pow(abs(x),1.0/g_GammaValue)
 #define GAMMA(x)		pow(abs(x),g_GammaValue)
 

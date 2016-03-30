@@ -71,7 +71,7 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float
 
 inline void SpecularMapping(in float2 UV, inout float4 specularColor)
 {
-	specularColor = lerp(specularColor, xSpecularMap.Sample(sampler_aniso_wrap, UV).r, g_xMat_hasSpe);
+	specularColor = lerp(specularColor, specularColor * xSpecularMap.Sample(sampler_aniso_wrap, UV).r, g_xMat_hasSpe);
 }
 
 inline void PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, inout float4 baseColor)
