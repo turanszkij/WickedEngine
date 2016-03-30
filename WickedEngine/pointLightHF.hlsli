@@ -25,7 +25,7 @@ inline float pointLight(in float3 pos3D, in float3 normal, out float3 lightDir, 
 		lightint *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth,lv,length(lv)/lightEnerdis.y-bias ).r;
 	}
 
-	return saturate(attenuation*lightint);
+	return max(attenuation*lightint,0);
 }
 
 #endif // _POINTLIGHT_HF_

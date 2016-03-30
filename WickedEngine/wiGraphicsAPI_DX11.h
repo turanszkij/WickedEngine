@@ -394,12 +394,13 @@ namespace wiGraphicsTypes
 					// recreate the buffer if new datasize exceeds buffer size with double capacity
 					buffer->resource_DX11->Release();
 					buffer->desc.ByteWidth = dataSize * 2;
-					SubresourceData InitData;
-					ZeroMemory(&InitData, sizeof(InitData));
-					InitData.pSysMem = data;
-					hr = CreateBuffer(&buffer->desc, &InitData, buffer);
+					//SubresourceData InitData;
+					//ZeroMemory(&InitData, sizeof(InitData));
+					//InitData.pSysMem = data;
+					//hr = CreateBuffer(&buffer->desc, &InitData, buffer);
+					hr = CreateBuffer(&buffer->desc, nullptr, buffer);
 				}
-				else
+				//else
 				{
 					if (buffer->desc.Usage == USAGE_DYNAMIC) {
 						static thread_local D3D11_MAPPED_SUBRESOURCE mappedResource;

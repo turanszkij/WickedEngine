@@ -1852,9 +1852,6 @@
     <None Include="fogHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
-    <None Include="gammaHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
     <None Include="globalsHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
@@ -1883,9 +1880,6 @@
       <Filter>shaders\headers</Filter>
     </None>
     <None Include="tangentComputeHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="toonHF.hlsli">
       <Filter>shaders\headers</Filter>
     </None>
     <None Include="windHF.hlsli">
@@ -2187,8 +2181,14 @@
     <FxCompile Include="stereogramPS.hlsl">
       <Filter>shaders\image</Filter>
     </FxCompile>
-    <FxCompile Include="computeCS.hlsl">
+    <FxCompile Include="luminancePass1CS.hlsl">
       <Filter>shaders\compute</Filter>
+    </FxCompile>
+    <FxCompile Include="luminancePass2CS.hlsl">
+      <Filter>shaders\compute</Filter>
+    </FxCompile>
+    <FxCompile Include="toneMapPS.hlsl">
+      <Filter>shaders\image</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -595,7 +595,10 @@ namespace wiRenderer_BindLua
 		{
 			wiRenderer::ReloadShaders(wiLua::SGetString(L, 1));
 		}
-		wiRenderer::ReloadShaders();
+		else 
+		{
+			wiRenderer::ReloadShaders();
+		}
 		return 0;
 	}
 

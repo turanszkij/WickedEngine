@@ -62,7 +62,19 @@ public:
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
 
 	
-	static wiGraphicsTypes::Sampler *samplers[SSLOT_COUNT];
+	static wiGraphicsTypes::Sampler				*samplers[SSLOT_COUNT];
+	static wiGraphicsTypes::VertexShader		*vertexShaders[VSTYPE_LAST];
+	static wiGraphicsTypes::PixelShader			*pixelShaders[PSTYPE_LAST];
+	static wiGraphicsTypes::GeometryShader		*geometryShaders[GSTYPE_LAST];
+	static wiGraphicsTypes::HullShader			*hullShaders[HSTYPE_LAST];
+	static wiGraphicsTypes::DomainShader		*domainShaders[DSTYPE_LAST];
+	static wiGraphicsTypes::ComputeShader		*computeShaders[CSTYPE_LAST];
+	static wiGraphicsTypes::VertexLayout		*vertexLayouts[VLTYPE_LAST];
+	static wiGraphicsTypes::RasterizerState		*rasterizers[RSTYPE_LAST];
+	static wiGraphicsTypes::DepthStencilState	*depthStencils[DSSTYPE_LAST];
+	static wiGraphicsTypes::BlendState			*blendStates[BSTYPE_LAST];
+	static wiGraphicsTypes::GPUBuffer			*constantBuffers[CBTYPE_LAST];
+	static wiGraphicsTypes::GPUBuffer			*resourceBuffers[RBTYPE_LAST];
 
 	
 	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
@@ -251,19 +263,6 @@ protected:
 	};
 
 
-	static wiGraphicsTypes::VertexShader		*vertexShaders[VSTYPE_LAST];
-	static wiGraphicsTypes::PixelShader			*pixelShaders[PSTYPE_LAST];
-	static wiGraphicsTypes::GeometryShader		*geometryShaders[GSTYPE_LAST];
-	static wiGraphicsTypes::HullShader			*hullShaders[HSTYPE_LAST];
-	static wiGraphicsTypes::DomainShader		*domainShaders[DSTYPE_LAST];
-	static wiGraphicsTypes::VertexLayout		*vertexLayouts[VLTYPE_LAST];
-	static wiGraphicsTypes::RasterizerState		*rasterizers[RSTYPE_LAST];
-	static wiGraphicsTypes::DepthStencilState	*depthStencils[DSSTYPE_LAST];
-	static wiGraphicsTypes::BlendState			*blendStates[BSTYPE_LAST];
-	static wiGraphicsTypes::GPUBuffer			*constantBuffers[CBTYPE_LAST];
-	static wiGraphicsTypes::GPUBuffer			*resourceBuffers[RBTYPE_LAST];
-
-
 	void UpdateSpheres();
 	static void SetUpBoneLines();
 	static void UpdateBoneLines();
@@ -330,6 +329,7 @@ public:
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }
 	static wiGraphicsTypes::Texture2D* GetEnviromentMap(){ return enviroMap; }
+	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
 
 	static Transform* getTransformByName(const string& name);

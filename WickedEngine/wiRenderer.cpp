@@ -27,12 +27,12 @@ using namespace wiGraphicsTypes;
 #pragma region STATICS
 GraphicsDevice* wiRenderer::graphicsDevice = nullptr;
 Sampler				*wiRenderer::samplers[SSLOT_COUNT];
-
 VertexShader		*wiRenderer::vertexShaders[VSTYPE_LAST];
 PixelShader			*wiRenderer::pixelShaders[PSTYPE_LAST];
 GeometryShader		*wiRenderer::geometryShaders[GSTYPE_LAST];
 HullShader			*wiRenderer::hullShaders[HSTYPE_LAST];
 DomainShader		*wiRenderer::domainShaders[DSTYPE_LAST];
+ComputeShader		*wiRenderer::computeShaders[CSTYPE_LAST];
 VertexLayout		*wiRenderer::vertexLayouts[VLTYPE_LAST];
 RasterizerState		*wiRenderer::rasterizers[RSTYPE_LAST];
 DepthStencilState	*wiRenderer::depthStencils[DSSTYPE_LAST];
@@ -142,6 +142,10 @@ void wiRenderer::SetUpStaticComponents()
 	for (int i = 0; i < DSTYPE_LAST; ++i)
 	{
 		SAFE_INIT(domainShaders[i]);
+	}
+	for (int i = 0; i < CSTYPE_LAST; ++i)
+	{
+		SAFE_INIT(computeShaders[i]);
 	}
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
@@ -281,6 +285,10 @@ void wiRenderer::CleanUpStatic()
 	for (int i = 0; i < DSTYPE_LAST; ++i)
 	{
 		SAFE_DELETE(domainShaders[i]);
+	}
+	for (int i = 0; i < CSTYPE_LAST; ++i)
+	{
+		SAFE_DELETE(computeShaders[i]);
 	}
 	for (int i = 0; i < VLTYPE_LAST; ++i)
 	{
@@ -657,6 +665,8 @@ void wiRenderer::LoadBasicShaders()
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
 
+	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
 }
 void wiRenderer::LoadLineShaders()
 {
@@ -1063,18 +1073,21 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
 	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
 	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
 
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
@@ -1090,6 +1103,7 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB), threadID);
 
@@ -2879,21 +2893,75 @@ void wiRenderer::UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* sl
 	GetDevice()->BindResourcePS(slot2, TEXSLOT_GBUFFER2, threadID);
 	GetDevice()->BindResourcePS(slot3, TEXSLOT_GBUFFER3, threadID);
 	GetDevice()->BindResourcePS(slot4, TEXSLOT_GBUFFER4, threadID);
+
+	GetDevice()->BindResourceCS(slot0, TEXSLOT_GBUFFER0, threadID);
+	GetDevice()->BindResourceCS(slot1, TEXSLOT_GBUFFER1, threadID);
+	GetDevice()->BindResourceCS(slot2, TEXSLOT_GBUFFER2, threadID);
+	GetDevice()->BindResourceCS(slot3, TEXSLOT_GBUFFER3, threadID);
+	GetDevice()->BindResourceCS(slot4, TEXSLOT_GBUFFER4, threadID);
 }
 void wiRenderer::UpdateDepthBuffer(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->BindResourcePS(depth, TEXSLOT_DEPTH, threadID);
 	GetDevice()->BindResourceVS(depth, TEXSLOT_DEPTH, threadID);
 	GetDevice()->BindResourceGS(depth, TEXSLOT_DEPTH, threadID);
+	GetDevice()->BindResourceCS(depth, TEXSLOT_DEPTH, threadID);
 
 	GetDevice()->BindResourcePS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
 	GetDevice()->BindResourceVS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
 	GetDevice()->BindResourceGS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	GetDevice()->BindResourceCS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
 }
 
 void wiRenderer::FinishLoading()
 {
 	// Kept for backwards compatibility
+}
+
+Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
+{
+	// This function expects a threadcount of [16,16,1] in luminancePass1CS shader
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	static Texture2D* uav = nullptr;
+	if (uav == nullptr || uav->GetDesc().Width != device->GetScreenWidth() / 16 || uav->GetDesc().Height != device->GetScreenHeight() / 16)
+	{
+		SAFE_DELETE(uav);
+
+		Texture2DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = device->GetScreenWidth() / 16;
+		desc.Height = device->GetScreenHeight() / 16;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = FORMAT_R32_FLOAT;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
+
+		device->CreateTexture2D(&desc, nullptr, &uav);
+	}
+	if (uav != nullptr)
+	{
+		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS1], threadID);
+		device->BindResourceCS(sourceImage, TEXSLOT_ONDEMAND0, threadID);
+		device->BindUnorderedAccessResourceCS(uav, 0, threadID);
+		device->Dispatch(device->GetScreenWidth() / 16, device->GetScreenHeight() / 16, 1, threadID);
+
+		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
+		device->Dispatch(1, 1, 1, threadID);
+
+		device->BindCS(nullptr, threadID);
+		device->UnBindUnorderedAccessResources(0, 1, threadID);
+
+		return uav;
+	}
+
+	return nullptr;
 }
 
 wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,

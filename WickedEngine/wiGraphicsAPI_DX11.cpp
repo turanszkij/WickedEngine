@@ -1098,9 +1098,9 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 	if (FAILED(hr))
 		return hr;
 
-	hr = CreateRenderTargetView(*ppTexture2D);
-	hr = CreateShaderResourceView(*ppTexture2D);
-	hr = CreateDepthStencilView(*ppTexture2D);
+	CreateRenderTargetView(*ppTexture2D);
+	CreateShaderResourceView(*ppTexture2D);
+	CreateDepthStencilView(*ppTexture2D);
 
 
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
@@ -1144,9 +1144,9 @@ HRESULT GraphicsDevice_DX11::CreateTextureCube(const Texture2DDesc* pDesc, const
 	if (FAILED(hr))
 		return hr;
 
-	hr = CreateRenderTargetView(*ppTextureCube);
-	hr = CreateShaderResourceView(*ppTextureCube);
-	hr = CreateDepthStencilView(*ppTextureCube);
+	CreateRenderTargetView(*ppTextureCube);
+	CreateShaderResourceView(*ppTextureCube);
+	CreateDepthStencilView(*ppTextureCube);
 
 	return hr;
 }

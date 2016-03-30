@@ -34,7 +34,7 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	return retVal;
 }
 
-inline float spotLight(in float3 pos3D, in float3 normal, out float attenuation, out float3 lightToPixel, in bool toonshaded = false)
+inline float spotLight(in float3 pos3D, in float3 normal, out float attenuation, out float3 lightToPixel)
 {
 	float3 lightPos = float3( lightWorld._41,lightWorld._42,lightWorld._43 );
 	
@@ -47,8 +47,7 @@ inline float spotLight(in float3 pos3D, in float3 normal, out float attenuation,
 	attenuation=0;
 	[branch]if (SpotFactor > spotCutOff){
 
-		l=saturate(dot(normalize(lightDir.xyz),normalize(normal)))*lightEnerDisCone.x;
-		[branch]if(toonshaded) toon(l);
+		l=max(dot(normalize(lightDir.xyz),normalize(normal)),0)*lightEnerDisCone.x;
 
 		float4 ShPos = mul(float4(pos3D,1),xShMat);
 		float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f,-0.5f) + float2(0.5f,0.5f);

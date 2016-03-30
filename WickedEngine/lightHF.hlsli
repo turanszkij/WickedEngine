@@ -1,7 +1,6 @@
 #ifndef _LIGHTHF_
 #define _LIGHTHF_
 #include "specularHF.hlsli"
-#include "toonHF.hlsli"
 #include "globalsHF.hlsli"
 #include "globals.hlsli"
 
@@ -27,19 +26,18 @@ static const float specularMaximumIntensity = 1;
 #define DEFERREDLIGHT_MAKEPARAMS(C)													\
 	float4 color = float4(C.rgb,1);													\
 	float2 screenPos = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;	\
-	float depth = texture_depth.SampleLevel(sampler_point_clamp, screenPos, 0);			\
-	float4 norU = texture_gbuffer1.SampleLevel(sampler_point_clamp,screenPos,0);			\
+	float depth = texture_depth.SampleLevel(sampler_point_clamp, screenPos, 0);		\
+	float4 norU = texture_gbuffer1.SampleLevel(sampler_point_clamp,screenPos,0);	\
 	bool unshaded = isUnshaded(norU.w);												\
-	float4 material = texture_gbuffer2.SampleLevel(sampler_point_clamp,screenPos,0);		\
+	float4 material = texture_gbuffer2.SampleLevel(sampler_point_clamp,screenPos,0);\
 	float specular = material.w*specularMaximumIntensity;							\
 	uint specular_power = material.z;												\
-	float3 N = norU.xyz;														\
-	bool toonshaded = isToon(norU.w);												\
-	float3 P = getPosition(screenPos, depth);									\
+	float3 N = norU.xyz;															\
+	float3 P = getPosition(screenPos, depth);										\
 	float3 V = normalize(P - g_xCamera_CamPos);
 
 #define DEFERREDLIGHT_RETURN	\
-	return max(unshaded? 1 : color, 0.0f);
+	return (unshaded? 1 : max(color, 0.0f));
 
 
 

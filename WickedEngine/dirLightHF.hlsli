@@ -1,7 +1,6 @@
 #ifndef _DIRLIGHT_HF_
 #define _DIRLIGHT_HF_
 
-#include "toonHF.hlsli"
 
 // dir light constant buffer is global
 
@@ -47,10 +46,9 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	return retVal;
 }
 
-inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color, in bool toonshaded=false)
+inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color)
 {
-	float difLight=saturate(dot(normal.xyz, g_xDirLight_direction.xyz));
-	[branch]if(toonshaded) toon(difLight);
+	float difLight=max(dot(normal.xyz, g_xDirLight_direction.xyz),0);
 	float4 ShPos[3];
 		ShPos[0] = mul(float4(pos3D,1),g_xDirLight_ShM[0]);
 		ShPos[1] = mul(float4(pos3D,1),g_xDirLight_ShM[1]);
@@ -88,8 +86,8 @@ inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color, in 
 // MACROS
 
 #define DEFERRED_DIRLIGHT_MAIN																										\
-	float lighting = dirLight(P,N,color,toonshaded);																		\
+	float lighting = dirLight(P,N,color);																		\
 	color.rgb *= lighting;																											\
-	applySpecular(color, color*lighting, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular, toonshaded);
+	applySpecular(color, color*lighting, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular);
 
 #endif // _DIRLIGHT_HF_

@@ -8,9 +8,9 @@ float4 main(VertexToPixel PSIn) : SV_TARGET
 
 	float attenuation;
 	float3 lightToPixel;
-	float lightInt = spotLight(P, N, attenuation, lightToPixel, toonshaded);
+	float lightInt = spotLight(P, N, attenuation, lightToPixel);
 	color *= lightInt;
-	applySpecular(color, color * lightInt, N, V, lightToPixel, 1, specular_power, specular, toonshaded);
+	applySpecular(color, color * lightInt, N, V, lightToPixel, 1, specular_power, specular);
 	color *= attenuation;
 
 	DEFERREDLIGHT_RETURN

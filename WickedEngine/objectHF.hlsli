@@ -5,8 +5,6 @@
 #include "windHF.hlsli"
 #include "ditherHF.hlsli"
 #include "tangentComputeHF.hlsli"
-#include "gammaHF.hlsli"
-#include "toonHF.hlsli"
 #include "specularHF.hlsli"
 #include "depthConvertHF.hlsli"
 #include "fogHF.hlsli"
@@ -125,10 +123,10 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 
 inline void DirectionalLight(in float3 P, in float3 N, in float3 V, in float4 specularColor, inout float4 baseColor)
 {
-	float3 light = saturate(dot(g_xWorld_SunDir.xyz, N));
+	float3 light = max(dot(g_xWorld_SunDir.xyz, N),0);
 	light = clamp(light, g_xWorld_Ambient.rgb, 1);
 	baseColor.rgb *= light*g_xWorld_SunColor.rgb;
-	applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a, 0);
+	applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a);
 	//float3 light;
 	////light = dirLight(P, N, baseColor);
 	//light = saturate(dot(N, g_xDirLight_direction.xyz));
@@ -182,10 +180,7 @@ inline void DirectionalLight(in float3 P, in float3 N, in float3 V, in float4 sp
 	Refraction(ScreenCoord, input.nor2D, bumpColor, baseColor);
 
 #define OBJECT_PS_DEGAMMA																							\
-	baseColor = pow(abs(baseColor), GAMMA);
-
-#define OBJECT_PS_GAMMA																								\
-	baseColor = pow(abs(baseColor*(1 + g_xMat_emissive)), INV_GAMMA);
+	baseColor = DEGAMMA(baseColor);
 
 #define OBJECT_PS_FOG																								\
 	baseColor.rgb = applyFog(baseColor.rgb, getFog(getLinearDepth(depth)));

@@ -118,6 +118,9 @@ CBUFFER(APICB, CBSLOT_API)
 };
 
 
-#define ALPHATEST(x) clip((x)-0.1);
+#define ALPHATEST(x)	clip((x)-0.1);
+static const float g_GammaValue = 2.2;
+#define DEGAMMA(x)		pow(abs(x),1.0/g_GammaValue)
+#define GAMMA(x)		pow(abs(x),g_GammaValue)
 
 #endif // _SHADER_GLOBALS_

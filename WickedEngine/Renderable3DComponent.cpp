@@ -442,8 +442,9 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 	}
 
 	rtFinal[1].Activate(threadID);
-
-	fx.process.setFXAA(getFXAAEnabled());
+	fx.process.setToneMap(true);
+	fx.setMaskMap(wiRenderer::GetLuminance(rtFinal[0].GetTexture(), threadID));
+	//fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
 	else

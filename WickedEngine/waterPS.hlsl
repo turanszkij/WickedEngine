@@ -1,13 +1,14 @@
 #include "objectHF.hlsli"
 #include "depthConvertHF.hlsli"
 #include "fogHF.hlsli"
-#include "gammaHF.hlsli"
 #include "specularHF.hlsli"
 #include "globals.hlsli"
 
 float4 main(PixelInputType input) : SV_TARGET
 {
 	OBJECT_PS_MAKE
+
+	OBJECT_PS_DEGAMMA
 
 	OBJECT_PS_SPECULARMAPPING
 
@@ -54,12 +55,8 @@ float4 main(PixelInputType input) : SV_TARGET
 	float fade = saturate(0.3* abs(refDepth- lineardepth));
 	baseColor.a*=fade;
 
-
-	OBJECT_PS_DEGAMMA
 		
 	OBJECT_PS_DIRECTIONALLIGHT
-		
-	OBJECT_PS_GAMMA
 
 	OBJECT_PS_FOG
 
