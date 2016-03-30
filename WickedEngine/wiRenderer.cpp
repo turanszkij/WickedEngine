@@ -667,6 +667,8 @@ void wiRenderer::LoadBasicShaders()
 
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_LUMINANCE_ACCUMULATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminanceAccumulatorCS.cso", wiResourceManager::COMPUTESHADER));
+
 }
 void wiRenderer::LoadLineShaders()
 {
@@ -2925,6 +2927,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	static Texture2D* uav = nullptr;
+	static Texture2D* adaption_accumulator = nullptr;
 	if (uav == nullptr || uav->GetDesc().Width != device->GetScreenWidth() / 16 || uav->GetDesc().Height != device->GetScreenHeight() / 16)
 	{
 		SAFE_DELETE(uav);
@@ -2944,6 +2947,11 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		desc.MiscFlags = 0;
 
 		device->CreateTexture2D(&desc, nullptr, &uav);
+
+		desc.Width = 1;
+		desc.Height = 1;
+
+		device->CreateTexture2D(&desc, nullptr, &adaption_accumulator);
 	}
 	if (uav != nullptr)
 	{
@@ -2955,10 +2963,15 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
 		device->Dispatch(1, 1, 1, threadID);
 
+		device->BindCS(computeShaders[CSTYPE_LUMINANCE_ACCUMULATOR], threadID);
+		device->BindUnorderedAccessResourceCS(adaption_accumulator, 0, threadID);
+		device->BindResourceCS(uav, TEXSLOT_ONDEMAND0, threadID);
+		device->Dispatch(1, 1, 1, threadID);
+
 		device->BindCS(nullptr, threadID);
 		device->UnBindUnorderedAccessResources(0, 1, threadID);
 
-		return uav;
+		return adaption_accumulator;
 	}
 
 	return nullptr;

@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 
-RWTexture2D<float> tex;
+RWTexture2D<float> tex : register(u0);
 
 
 #define SIZEX 16

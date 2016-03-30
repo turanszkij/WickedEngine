@@ -106,6 +106,9 @@ void Renderable3DComponent::Initialize()
 	rtFinal[1].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, 1, false);
+	rtFinal[2].Initialize(
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		, 1, false);
 
 	rtDof[0].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
@@ -416,13 +419,21 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 
+	rtFinal[1].Activate(threadID);
+	fx.process.setToneMap(true);
+	fx.setMaskMap(wiRenderer::GetLuminance(rtFinal[0].GetTexture(), threadID));
+	//fx.process.setFXAA(getFXAAEnabled());
+	wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+	fx.process.clear();
+
+
 	if (getDepthOfFieldEnabled())
 	{
 		// downsample + blur
 		rtDof[0].Activate(threadID);
 		fx.blur = getDepthOfFieldStrength();
 		fx.blurDir = 0;
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		wiImage::Draw(rtFinal[1].GetTexture(), fx, threadID);
 
 		rtDof[1].Activate(threadID);
 		fx.blurDir = 1;
@@ -435,21 +446,18 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 		fx.process.setDOF(getDepthOfFieldFocus());
 		fx.setMaskMap(rtDof[1].GetTexture());
 		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		wiImage::Draw(rtFinal[1].GetTexture(), fx, threadID);
 		fx.setMaskMap(nullptr);
 		//fx.setDepthMap(nullptr);
 		fx.process.clear();
 	}
 
-	rtFinal[1].Activate(threadID);
-	fx.process.setToneMap(true);
-	fx.setMaskMap(wiRenderer::GetLuminance(rtFinal[0].GetTexture(), threadID));
-	//fx.process.setFXAA(getFXAAEnabled());
+	rtFinal[2].Activate(threadID);
+	fx.process.setFXAA(true);
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
 	else
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
-	fx.process.clear();
+		wiImage::Draw(rtFinal[1].GetTexture(), fx, threadID);
 
 	if (getBloomEnabled())
 	{
@@ -491,7 +499,7 @@ void Renderable3DComponent::RenderColorGradedComposition(){
 		fx.presentFullScreen = true;
 	}
 
-	wiImage::Draw(rtFinal[1].GetTexture(), fx);
+	wiImage::Draw(rtFinal[2].GetTexture(), fx);
 }
 
 

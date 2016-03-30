@@ -56,7 +56,7 @@ protected:
 		, rtParticle
 		, rtParticleAdditive
 		, rtLensFlare
-		, rtFinal[2]
+		, rtFinal[3]
 		, rtDof[3]
 		;
 	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO, rtSSS;

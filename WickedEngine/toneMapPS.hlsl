@@ -1,7 +1,6 @@
 #include "postProcessHF.hlsli"
 
 
-
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float4 hdr = xTexture.Load(uint3(PSIn.pos.xy,0));
