@@ -88,6 +88,6 @@ inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color)
 #define DEFERRED_DIRLIGHT_MAIN																										\
 	float lighting = dirLight(P,N,color);																		\
 	color.rgb *= lighting;																											\
-	applySpecular(color, color*lighting, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular);
+	applySpecular(color, (color*lighting).rgb, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular);
 
 #endif // _DIRLIGHT_HF_

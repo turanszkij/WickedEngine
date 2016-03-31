@@ -1,5 +1,6 @@
 #include "postProcessHF.hlsli"
 
+static const float strength = 0.85;
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
@@ -11,7 +12,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	float luminance = dot(hdr.rgb, float3(0.2126, 0.7152, 0.0722));
 	luminance = (luminance * (1 + luminance)) / (1 + luminance); // Reinhard
-	luminance *= 1 / average_luminance; // adaption
+	luminance *= strength / average_luminance; // adaption
 
 	//luminance = 1;
 

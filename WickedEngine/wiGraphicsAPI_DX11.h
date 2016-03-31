@@ -13,6 +13,7 @@ namespace wiGraphicsTypes
 		D3D_FEATURE_LEVEL			featureLevel;
 		IDXGISwapChain*				swapChain;
 		ID3D11RenderTargetView*		renderTargetView;
+		ID3D11Texture2D*			backBuffer;
 		ViewPort					viewPort;
 		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT];
 		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
@@ -60,6 +61,8 @@ namespace wiGraphicsTypes
 
 		virtual void SetScreenWidth(int value);
 		virtual void SetScreenHeight(int value);
+
+		virtual Texture2D GetBackBuffer();
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -470,6 +473,8 @@ namespace wiGraphicsTypes
 		}
 
 		virtual HRESULT CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+		virtual HRESULT SaveTexturePNG(const wstring& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+		virtual HRESULT SaveTextureDDS(const wstring& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
 	};
 

@@ -2190,9 +2190,6 @@
     <FxCompile Include="toneMapPS.hlsl">
       <Filter>shaders\image</Filter>
     </FxCompile>
-    <FxCompile Include="luminanceAccumulatorCS.hlsl">
-      <Filter>shaders\compute</Filter>
-    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="fonts\basic.dds">

@@ -667,8 +667,7 @@ void wiRenderer::LoadBasicShaders()
 
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_LUMINANCE_ACCUMULATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminanceAccumulatorCS.cso", wiResourceManager::COMPUTESHADER));
-
+	
 }
 void wiRenderer::LoadLineShaders()
 {
@@ -2961,15 +2960,13 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		device->Dispatch(device->GetScreenWidth() / 16, device->GetScreenHeight() / 16, 1, threadID);
 
 		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
-		device->Dispatch(1, 1, 1, threadID);
-
-		device->BindCS(computeShaders[CSTYPE_LUMINANCE_ACCUMULATOR], threadID);
 		device->BindUnorderedAccessResourceCS(adaption_accumulator, 0, threadID);
 		device->BindResourceCS(uav, TEXSLOT_ONDEMAND0, threadID);
 		device->Dispatch(1, 1, 1, threadID);
 
+
 		device->BindCS(nullptr, threadID);
-		device->UnBindUnorderedAccessResources(0, 1, threadID);
+		device->UnBindUnorderedAccessResources(0, 2, threadID);
 
 		return adaption_accumulator;
 	}

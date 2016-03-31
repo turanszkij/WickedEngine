@@ -124,15 +124,9 @@ inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in floa
 inline void DirectionalLight(in float3 P, in float3 N, in float3 V, in float4 specularColor, inout float4 baseColor)
 {
 	float3 light = max(dot(g_xWorld_SunDir.xyz, N),0);
-	light = clamp(light, g_xWorld_Ambient.rgb, 1);
-	baseColor.rgb *= light*g_xWorld_SunColor.rgb;
-	applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a);
-	//float3 light;
-	////light = dirLight(P, N, baseColor);
-	//light = saturate(dot(N, g_xDirLight_direction.xyz));
-	//light = clamp(light, g_xWorld_Ambient.rgb, 1);
-	//baseColor.rgb *= g_xWorld_SunColor.rgb * light;
-	//applySpecular(baseColor, g_xWorld_SunColor, N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a, 0);
+	light += GetAmbientColor();
+	baseColor.rgb *= light*GetSunColor();
+	applySpecular(baseColor, GetSunColor(), N, V, g_xWorld_SunDir.xyz, 1, g_xMat_specular_power, specularColor.a);
 }
 
 

@@ -797,6 +797,8 @@ namespace wiGraphicsTypes
 		virtual void SetScreenWidth(int value) = 0;
 		virtual void SetScreenHeight(int value) = 0;
 
+		virtual Texture2D GetBackBuffer() = 0;
+
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
@@ -852,6 +854,8 @@ namespace wiGraphicsTypes
 		virtual void Unmap(GPUBuffer* resource, UINT subResource = 0, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
 		virtual HRESULT CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual HRESULT SaveTexturePNG(const wstring& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual HRESULT SaveTextureDDS(const wstring& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
 	};
 

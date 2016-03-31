@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 
-RWTexture2D<float> tex : register(u0);
+RWTexture2D<float> tex_accumulator : register(u0);
 
 
 #define SIZEX 64
@@ -16,7 +16,7 @@ void main(
 	uint groupIndex : SV_GroupIndex)
 {
 	float2 dim = g_xWorld_ScreenWidthHeight / float2(16, 16);
-	accumulator[groupIndex] = groupIndex > asuint(dim.x*dim.y) ? 0.0f : tex.Load(dispatchThreadId.xy); //bounds check
+	accumulator[groupIndex] = groupIndex > asuint(dim.x*dim.y) ? 0.0f : texture_0.Load(uint3(dispatchThreadId.xy,0)).r; //bounds check
 	GroupMemoryBarrierWithGroupSync();
 
 	[unroll]
@@ -28,5 +28,5 @@ void main(
 	}
 	if (groupIndex != 0) { return; }
 
-	tex[uint2(0,0)] = accumulator[0];
+	tex_accumulator[uint2(0,0)] = lerp(tex_accumulator.Load(uint2(0,0)), accumulator[0], 0.04f);
 }

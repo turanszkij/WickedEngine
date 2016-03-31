@@ -4,6 +4,7 @@
 
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"
+#include "Utility/ScreenGrab.h"
 
 namespace wiGraphicsTypes
 {
@@ -129,14 +130,14 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 
 
 	// Create a render target view
-	ID3D11Texture2D* pBackBuffer = NULL;
-	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
+	backBuffer = NULL;
+	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
 	if (FAILED(hr)) {
 		wiHelper::messageBox("BackBuffer creation Failed!", "Error!", nullptr);
 		exit(0);
 	}
 
-	hr = device->CreateRenderTargetView(pBackBuffer, NULL, &renderTargetView);
+	hr = device->CreateRenderTargetView(backBuffer, NULL, &renderTargetView);
 	//pBackBuffer->Release();
 	if (FAILED(hr)) {
 		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!", nullptr);
@@ -177,6 +178,14 @@ void GraphicsDevice_DX11::SetScreenHeight(int value)
 {
 	SCREENHEIGHT = value;
 	// TODO: resize backbuffer
+}
+
+Texture2D GraphicsDevice_DX11::GetBackBuffer()
+{
+	Texture2D result;
+	result.texture2D_DX11 = backBuffer;
+	backBuffer->AddRef();
+	return result;
 }
 
 inline UINT _ParseBindFlags(UINT value)
@@ -1458,6 +1467,19 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const wstring& fileName, Text
 		SAFE_DELETE(*ppTexture);
 
 	return hr;
+}
+HRESULT GraphicsDevice_DX11::SaveTexturePNG(const wstring& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
+{
+	return SaveWICTextureToFile(deviceContexts[threadID], pTexture->texture2D_DX11, GUID_ContainerFormatPng, fileName.c_str());
+}
+HRESULT GraphicsDevice_DX11::SaveTextureDDS(const wstring& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
+{
+	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
+	if (tex2D != nullptr)
+	{
+		return SaveDDSTextureToFile(deviceContexts[threadID], tex2D->texture2D_DX11, fileName.c_str());
+	}
+	return E_FAIL;
 }
 
 }

@@ -44,7 +44,7 @@ void main(
 	// reduction
 
 	//Load pixel into local memory buffer.
-	float3 color = texture_0.Load(uint3(dispatchThreadId.xy, 0)).rgb;
+	float4 color = texture_0.Load(uint3(dispatchThreadId.xy, 0));
 	accumulator[groupIndex] = dot(color.rgb, float3(0.2126, 0.7152, 0.0722));
 
 	//Wait for all

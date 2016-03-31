@@ -56,6 +56,7 @@ void Renderable3DComponent::setProperties()
 	setSSSEnabled(true);
 	setDepthOfFieldEnabled(false);
 	setStereogramEnabled(false);
+	setEyeAdaptionEnabled(false);
 
 	setPreferredThreadingCount(0);
 }
@@ -421,8 +422,14 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 
 	rtFinal[1].Activate(threadID);
 	fx.process.setToneMap(true);
-	fx.setMaskMap(wiRenderer::GetLuminance(rtFinal[0].GetTexture(), threadID));
-	//fx.process.setFXAA(getFXAAEnabled());
+	if (getEyeAdaptionEnabled())
+	{
+		fx.setMaskMap(wiRenderer::GetLuminance(rtFinal[0].GetTexture(), threadID));
+	}
+	else
+	{
+		fx.setMaskMap(wiTextureHelper::getInstance()->getColor(wiColor::Gray));
+	}
 	wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
 	fx.process.clear();
 

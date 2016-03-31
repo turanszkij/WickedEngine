@@ -47,6 +47,7 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(Renderable3DComponent_BindLua, SetSSSEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetStereogramEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetEyeAdaptionEnabled),
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),

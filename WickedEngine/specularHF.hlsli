@@ -2,7 +2,7 @@
 #define _SPECULAR_HF_
 
 
-inline void applySpecular(inout float4 color, in float4 lightColor, in float3 N, in float3 V, in float3 lightDir
+inline void applySpecular(inout float4 color, in float3 lightColor, in float3 N, in float3 V, in float3 lightDir
 						  , in float fresnelValue, in int specular_power, in float intensity)
 {
 	if(specular_power){

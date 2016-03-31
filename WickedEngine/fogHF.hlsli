@@ -9,7 +9,7 @@ inline float getFog(float depth){
 	return saturate((depth - g_xWorld_Fog.x) / (g_xWorld_Fog.y - g_xWorld_Fog.x));
 }
 inline float3 applyFog(float3 color, float fog){
-	return lerp(color, g_xWorld_Horizon,saturate(fog));
+	return lerp(color, GetHorizonColor(),saturate(fog));
 }
 
 #endif // _FOGHF_

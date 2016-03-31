@@ -43,6 +43,7 @@ private:
 	bool sssEnabled;
 	bool depthOfFieldEnabled;
 	bool stereogramEnabled;
+	bool eyeAdaptionEnabled;
 
 protected:
 	wiRenderTarget
@@ -107,6 +108,7 @@ public:
 	inline bool getSSSEnabled(){ return sssEnabled; }
 	inline bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
 	inline bool getStereogramEnabled() { return stereogramEnabled; }
+	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
 
 	inline unsigned int getThreadingCount(){ return (unsigned int)workerThreads.size(); }
 
@@ -142,6 +144,7 @@ public:
 	inline void setSSSEnabled(bool value){ sssEnabled = value; }
 	inline void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
 	inline void setStereogramEnabled(bool value) { stereogramEnabled = value; }
+	inline void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

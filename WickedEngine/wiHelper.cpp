@@ -1,7 +1,6 @@
 #include "wiHelper.h"
 #include "wiRenderer.h"
 #include "wiBackLog.h"
-#include "Utility/ScreenGrab.h"
 
 namespace wiHelper
 {
@@ -66,6 +65,23 @@ namespace wiHelper
 //		}
 //		res->Release();
 //#endif
+		CreateDirectoryA("screenshots", 0);
+		stringstream ss("");
+		if (name.length() <= 0)
+			ss << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
+		else
+			ss << name;
+		wstringstream wss(L"");
+		wss << ss.str().c_str();
+		if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(wss.str(), &wiRenderer::GetDevice()->GetBackBuffer())))
+		{
+			ss << " Saved successfully!";
+			wiBackLog::post(ss.str().c_str());
+		}
+		else
+		{
+			wiBackLog::post("Screenshot failed");
+		}
 	}
 
 	string getCurrentDateTimeAsString()
