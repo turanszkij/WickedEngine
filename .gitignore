@@ -189,3 +189,12 @@ FakesAssemblies/
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
+/WickedEngine.VC.db
+/WinRT/WickedEngine
+/WickedEngine/WinRT
+/WickedEngine/StoreTest
+/WickedEngine/shaders
+/WickedEngine/Release_Store/WickedEngine.tlog
+/WickedEngine/Release_RT
+/WickedEngine/Debug_RT
+/Debug_RT/WickedEngine

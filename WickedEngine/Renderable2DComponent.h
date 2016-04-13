@@ -1,5 +1,6 @@
 #pragma once
 #include "RenderableComponent.h"
+#include "wiGUI.h"
 
 class wiSprite;
 class wiFont;
@@ -44,6 +45,7 @@ class Renderable2DComponent :
 private:
 	float m_spriteSpeed;
 	wiRenderTarget rtFinal;
+	wiGUI GUI;
 public:
 	Renderable2DComponent();
 	~Renderable2DComponent();

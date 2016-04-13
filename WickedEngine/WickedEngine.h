@@ -43,6 +43,8 @@
 #include "wiLua.h"
 #include "wiLuna.h"
 #include "wiGraphicsAPI.h"
+#include "wiGUI.h"
+#include "wiWidget.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

@@ -72,6 +72,9 @@
     <Filter Include="shaders\compute">
       <UniqueIdentifier>{c4bad71a-103c-4d22-8c54-9622544b8595}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GUI">
+      <UniqueIdentifier>{e197fec5-c72a-4cab-9fd8-4f020db3efab}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility\DDSTextureLoader.cpp">
@@ -821,11 +824,14 @@
     <ClCompile Include="wiGraphicsAPI_DX11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wiGUI.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="wiWidget.cpp">
+      <Filter>GUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="typelib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Utility\dds.h">
       <Filter>Utility</Filter>
     </ClInclude>
@@ -1809,6 +1815,12 @@
     </ClInclude>
     <ClInclude Include="ResourceMapping.h">
       <Filter>Resource Mapping</Filter>
+    </ClInclude>
+    <ClInclude Include="wiGUI.h">
+      <Filter>GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="wiWidget.h">
+      <Filter>GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
