@@ -40,11 +40,14 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 
 #ifndef WINSTORE_SUPPORT
+	SCREENWIDTH = screenW;
+	SCREENHEIGHT = screenH;
+
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
 	sd.BufferCount = 2;
-	sd.BufferDesc.Width = screenW;
-	sd.BufferDesc.Height = screenH;
+	sd.BufferDesc.Width = SCREENWIDTH;
+	sd.BufferDesc.Height = SCREENHEIGHT;
 	sd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
@@ -62,8 +65,8 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 		hr = D3D11CreateDeviceAndSwapChain(NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
 			D3D11_SDK_VERSION, &sd, &swapChain, &device, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
 #else
-		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, SDK_VERSION, &graphicsDevice
-			, &featureLevel, &immediateContext);
+		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
+			, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
 #endif
 
 		if (SUCCEEDED(hr))
@@ -95,7 +98,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
 	IDXGIDevice2 * pDXGIDevice;
-	hr = graphicsDevice->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
+	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
 
 	IDXGIAdapter * pDXGIAdapter;
 	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void **)&pDXGIAdapter);
@@ -104,7 +107,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&pIDXGIFactory);
 
 
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(graphicsDevice, reinterpret_cast<APIInterface>(window), &sd
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device, reinterpret_cast<IUnknown*>(window), &sd
 		, nullptr, &swapChain);
 
 	if (FAILED(hr)) {
@@ -146,15 +149,13 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 
 
 	// Setup the main viewport
-	viewPort.Width = (FLOAT)screenW;
-	viewPort.Height = (FLOAT)screenH;
+	viewPort.Width = (FLOAT)SCREENWIDTH;
+	viewPort.Height = (FLOAT)SCREENHEIGHT;
 	viewPort.MinDepth = 0.0f;
 	viewPort.MaxDepth = 1.0f;
 	viewPort.TopLeftX = 0;
 	viewPort.TopLeftY = 0;
 
-	SCREENWIDTH = screenW;
-	SCREENHEIGHT = screenH;
 }
 GraphicsDevice_DX11::~GraphicsDevice_DX11()
 {
