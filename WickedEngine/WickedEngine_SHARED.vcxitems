@@ -504,7 +504,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)DirectInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp" />
@@ -614,12 +613,18 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)XInput.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)fonts\basic.dds" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)..\licenses.txt" />
     <Text Include="$(MSBuildThisFileDirectory)fonts\basic.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />
+    <None Include="$(MSBuildThisFileDirectory)..\README.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\ScriptingAPI-Documentation.md" />
   </ItemGroup>
 </Project>

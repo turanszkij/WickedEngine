@@ -28,6 +28,9 @@
     <Filter Include="ENGINE\Common">
       <UniqueIdentifier>{3c39405f-ec30-4b72-9c32-68aefb4fb7a5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ENGINE\GUI">
+      <UniqueIdentifier>{a637b1af-3cc6-48c3-89b4-8b931a1eb23e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletCollisionCommon.h">
@@ -828,22 +831,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
@@ -859,12 +847,6 @@
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceMapping.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
@@ -897,9 +879,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
@@ -907,15 +886,6 @@
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h">
@@ -927,31 +897,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBULLET.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h">
@@ -963,25 +915,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiClient.h">
@@ -996,34 +936,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiMath.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h">
@@ -1038,23 +954,110 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h">
       <Filter>ENGINE\Common</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h">
       <Filter>ENGINE\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
+      <Filter>ENGINE\ResourceMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h">
+      <Filter>ENGINE\ResourceMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceMapping.h">
+      <Filter>ENGINE\ResourceMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
+      <Filter>ENGINE\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h">
+      <Filter>ENGINE\GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1607,15 +1610,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btVoronoiSimplexSolver.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1625,25 +1619,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp">
@@ -1676,25 +1655,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSPTree.cpp">
@@ -1706,40 +1670,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFrustum.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCVars.cpp">
@@ -1751,15 +1685,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1769,16 +1694,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp">
@@ -1796,9 +1712,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFrameRate.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1814,12 +1727,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DirectInput.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)XInput.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1828,6 +1735,96 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
       <Filter>ENGINE</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp">
+      <Filter>ENGINE\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp">
+      <Filter>ENGINE\GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1839,5 +1836,12 @@
     <Text Include="$(MSBuildThisFileDirectory)fonts\basic.txt">
       <Filter>fonts</Filter>
     </Text>
+    <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)..\licenses.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\README.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\ScriptingAPI-Documentation.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />
   </ItemGroup>
 </Project>
