@@ -12,7 +12,7 @@
         "func=detail&aid=22795",
     "category": "Import-Export"}
     
-EXPORTER_VERSION=1000
+EXPORTER_VERSION=1001
     
 export_objects = True
 export_armatures = True
@@ -211,6 +211,10 @@ for object in bpy.data.objects:
             m.calc_normals()
             #try: out.write("b " + m.get("billboard") + "\n")
             #except: pass
+            if m.show_double_sided:
+                outB.write(struct.pack('i',1))
+            else:
+                outB.write(struct.pack('i',0))
             if m.get("billboard"):
                 outB.write(struct.pack('i1s',1,bytes(m.get("billboard"),'ascii')))
             else:
@@ -571,7 +575,9 @@ for object in bpy.data.objects:
             outL.write("d " + str(lamp.distance) + "\n")
             for texslot in lamp.texture_slots:
                 if texslot:
-                    outL.write("l "+texslot.texture.image.name+"\n")
+                    try:
+                        outL.write("l "+texslot.texture.image.name+"\n")
+                    except: pass
                 
     elif object.type=='EMPTY':
         if object.field:
@@ -588,27 +594,29 @@ for mat in bpy.data.materials:
     outM.write("d " + str(mat.diffuse_color.r) + " " + str(mat.diffuse_color.g) + " " + str(mat.diffuse_color.b) + "\n") #DIFFUSE COLOR
     if mat.use_shadeless: 
         outM.write("h\n")
+    outM.write("i "+str(mat.emit)+"\n")
     #TEXTURES
     for texslot in mat.texture_slots:
         if texslot:
-            #imgname=os.path.basename(texslot.texture.image.filepath)
-            imgname=texslot.texture.image.name
-            if len(imgname):
-                if texslot.use_map_displacement:
-                    outM.write("D " + imgname + "\n") #DISPLACEMENTMAP
-                if texslot.use_map_mirror:
-                    outM.write("r " + imgname + "\n") #REFLECTIONMAP
-                if texslot.use_map_normal: 
-                    outM.write("n " + imgname + "\n") #NORMALMAP
-                if texslot.use_map_specular:
-                    outM.write("S " + imgname + "\n") #SPECULARMAP
-                if texslot.use_map_color_diffuse:
-                    outM.write("t " + imgname) #TEXTURE
-                    if texslot.texture.image.alpha_mode=='PREMUL':
-                        outM.write(" 1\n")
-                    else: 
-                        outM.write(" 0\n")
-                    outM.write("b "+texslot.blend_type+"\n")
+            try:
+                imgname=texslot.texture.image.name
+                if len(imgname):
+                    if texslot.use_map_displacement:
+                        outM.write("D " + imgname + "\n") #DISPLACEMENTMAP
+                    if texslot.use_map_mirror:
+                        outM.write("r " + imgname + "\n") #REFLECTIONMAP
+                    if texslot.use_map_normal: 
+                        outM.write("n " + imgname + "\n") #NORMALMAP
+                    if texslot.use_map_specular:
+                        outM.write("S " + imgname + "\n") #SPECULARMAP
+                    if texslot.use_map_color_diffuse:
+                        outM.write("t " + imgname) #TEXTURE
+                        if texslot.texture.image.alpha_mode=='PREMUL':
+                            outM.write(" 1\n")
+                        else: 
+                            outM.write(" 0\n")
+                        outM.write("b "+texslot.blend_type+"\n")
+            except:pass
     #TRANSPARENCY
     if mat.use_transparency :
         outM.write("a " + str(mat.alpha) + "\n")
