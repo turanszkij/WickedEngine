@@ -1,405 +1,129 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="shaders">
-      <UniqueIdentifier>{3a55a1ad-37ca-440e-9960-9961dce1b892}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\grass">
-      <UniqueIdentifier>{f0cc1425-468a-46ac-8a4c-72824834bffb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\headers">
-      <UniqueIdentifier>{31dcc720-85f7-4ff2-93ef-2e3a3c87ac2c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\image">
-      <UniqueIdentifier>{e2ae60eb-2bc6-4a14-93aa-3cfb42f616c9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\lighting">
-      <UniqueIdentifier>{2d73238a-46e7-4b1a-8cd1-ade427f5cf0e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\streamOutput">
-      <UniqueIdentifier>{46b1aef4-530c-4684-b232-f3d20a80f2e1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\shadow">
-      <UniqueIdentifier>{9e75f922-3622-48b9-a141-4a3f2145bb07}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\envmap">
-      <UniqueIdentifier>{d6c7ec29-b644-43ae-b23d-3d3f3f33a12e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\object">
-      <UniqueIdentifier>{a29f241a-ee8e-4961-9f98-75463a84f7a8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\compute">
-      <UniqueIdentifier>{4e7511f9-dce5-4bd3-8d1b-745cb5aae8ba}</UniqueIdentifier>
-    </Filter>
+    <None Include="dirLightHF.hlsli" />
+    <None Include="specularHF.hlsli" />
+    <None Include="globals.hlsli" />
+    <None Include="objectHF.hlsli" />
+    <None Include="skyHF.hlsli" />
+    <None Include="fogHF.hlsli" />
+    <None Include="pointLightHF.hlsli" />
+    <None Include="spotLightHF.hlsli" />
+    <None Include="lightHF.hlsli" />
+    <None Include="skinningHF.hlsli" />
+    <None Include="objectInputLayoutHF.hlsli" />
+    <None Include="postProcessHF.hlsli" />
+    <None Include="imageHF.hlsli" />
+    <None Include="envMapHF.hlsli" />
+    <None Include="fullScreenTriangleHF.hlsli" />
+    <None Include="reconstructPositionHF.hlsli" />
+    <None Include="volumeLightHF.hlsli" />
+    <None Include="depthConvertHF.hlsli" />
+    <None Include="grassHF_GS.hlsli" />
+    <None Include="globalsHF.hlsli" />
+    <None Include="windHF.hlsli" />
+    <None Include="circle.hlsli" />
+    <None Include="cone.hlsli" />
+    <None Include="cube.hlsli" />
+    <None Include="ditherHF.hlsli" />
+    <None Include="fxaa.hlsli" />
+    <None Include="grassHF_PS.hlsli" />
+    <None Include="icosphere.hlsli" />
+    <None Include="normalsCompressHF.hlsli" />
+    <None Include="packHF.hlsli" />
+    <None Include="quad.hlsli" />
+    <None Include="sOHF.hlsli" />
+    <None Include="tangentComputeHF.hlsli" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\circleGS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\circlePS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\circleVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\decalPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\decalVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\fontPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\fontVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\lensFlareGS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\lensFlarePS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\lensFlareVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\linesPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\linesVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\pointspriteGS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\pointspritePS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\pointspritePS_simplest.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\pointspriteVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\skyPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\skyPS_reflection.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\skyVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\skyVS_reflection.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\sunPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\trailPS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\trailVS.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\grassL0GS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\grassL1GS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\grassL2GS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\grassPS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\grassVS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\qGrassLCloseGS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\qGrassLDistGS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\qGrassPS.hlsl">
-      <Filter>shaders\grass</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\bloomSeparatePS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\colorGradePS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\deferredPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\depthofFieldPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\fxaa.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\horizontalBlurPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\imagePS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\imageVS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\lightShaftPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\linDepthPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\motionBlurPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\outlinePS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\screenPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\screenVS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\ssao.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\ssr.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\ssss.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\stereogramPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\toneMapPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\verticalBlurPS.hlsl">
-      <Filter>shaders\image</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\dirLightPS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\dirLightSoftPS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\dirLightVS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\pointLightPS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\pointLightVS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\spotLightPS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\spotLightVS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\volumeLightPS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\vPointLightVS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\vSpotLightVS.hlsl">
-      <Filter>shaders\lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\sOGS.hlsl">
-      <Filter>shaders\streamOutput</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\sOVS.hlsl">
-      <Filter>shaders\streamOutput</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\cubeShadowGS.hlsl">
-      <Filter>shaders\shadow</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\cubeShadowPS.hlsl">
-      <Filter>shaders\shadow</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\cubeShadowVS.hlsl">
-      <Filter>shaders\shadow</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\shadowPS.hlsl">
-      <Filter>shaders\shadow</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\shadowVS.hlsl">
-      <Filter>shaders\shadow</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\envMapGS.hlsl">
-      <Filter>shaders\envmap</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\envMapPS.hlsl">
-      <Filter>shaders\envmap</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\envMapVS.hlsl">
-      <Filter>shaders\envmap</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\envMap_skyGS.hlsl">
-      <Filter>shaders\envmap</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\envMap_skyPS.hlsl">
-      <Filter>shaders\envmap</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\envMap_skyVS.hlsl">
-      <Filter>shaders\envmap</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectDS.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectHS.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectPS.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectPS_blackout.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectPS_forwardSimple.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectPS_simplest.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectPS_textureonly.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectPS_transparent.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectVS.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectVS10.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\objectVS_reflection.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\waterPS.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\waterVS.hlsl">
-      <Filter>shaders\object</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\luminancePass1CS.hlsl">
-      <Filter>shaders\compute</Filter>
-    </FxCompile>
-    <FxCompile Include="C:\Users\TJJJ\AppData\Local\Temp\luminancePass2CS.hlsl">
-      <Filter>shaders\compute</Filter>
-    </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\globals.hlsli">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\skyHF.hlsli">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\grassHF_GS.hlsli">
-      <Filter>shaders\grass</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\grassHF_PS.hlsli">
-      <Filter>shaders\grass</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\circle.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\cone.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\fullScreenTriangleHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\cube.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\depthConvertHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\ditherHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\fogHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\globalsHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\icosphere.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\imageHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\normalsCompressHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\packHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\postProcessHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\quad.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\reconstructPositionHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\skinningHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\specularHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\tangentComputeHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\windHF.hlsli">
-      <Filter>shaders\headers</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\fxaa.hlsli">
-      <Filter>shaders\image</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\dirLightHF.hlsli">
-      <Filter>shaders\lighting</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\lightHF.hlsli">
-      <Filter>shaders\lighting</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\pointLightHF.hlsli">
-      <Filter>shaders\lighting</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\spotLightHF.hlsli">
-      <Filter>shaders\lighting</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\volumeLightHF.hlsli">
-      <Filter>shaders\lighting</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\sOHF.hlsli">
-      <Filter>shaders\streamOutput</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\envMapHF.hlsli">
-      <Filter>shaders\envmap</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\objectInputLayoutHF.hlsli">
-      <Filter>shaders\object</Filter>
-    </None>
-    <None Include="C:\Users\TJJJ\AppData\Local\Temp\objectHF.hlsli">
-      <Filter>shaders\object</Filter>
-    </None>
+    <FxCompile Include="pointLightPS.hlsl" />
+    <FxCompile Include="spotLightPS.hlsl" />
+    <FxCompile Include="sunPS.hlsl" />
+    <FxCompile Include="toneMapPS.hlsl" />
+    <FxCompile Include="deferredPS.hlsl" />
+    <FxCompile Include="luminancePass2CS.hlsl" />
+    <FxCompile Include="luminancePass1CS.hlsl" />
+    <FxCompile Include="envMapPS.hlsl" />
+    <FxCompile Include="objectPS_forwardSimple.hlsl" />
+    <FxCompile Include="objectPS_textureonly.hlsl" />
+    <FxCompile Include="objectPS_transparent.hlsl" />
+    <FxCompile Include="waterPS.hlsl" />
+    <FxCompile Include="qGrassPS.hlsl" />
+    <FxCompile Include="objectPS.hlsl" />
+    <FxCompile Include="stereogramPS.hlsl" />
+    <FxCompile Include="objectPS_blackout.hlsl" />
+    <FxCompile Include="objectVS10.hlsl" />
+    <FxCompile Include="objectVS_reflection.hlsl" />
+    <FxCompile Include="objectPS_simplest.hlsl" />
+    <FxCompile Include="waterVS.hlsl" />
+    <FxCompile Include="shadowVS.hlsl" />
+    <FxCompile Include="envMapVS.hlsl" />
+    <FxCompile Include="cubeShadowVS.hlsl" />
+    <FxCompile Include="objectDS.hlsl" />
+    <FxCompile Include="objectVS.hlsl" />
+    <FxCompile Include="imagePS.hlsl" />
+    <FxCompile Include="ssr.hlsl" />
+    <FxCompile Include="depthofFieldPS.hlsl" />
+    <FxCompile Include="ssao.hlsl" />
+    <FxCompile Include="outlinePS.hlsl" />
+    <FxCompile Include="ssss.hlsl" />
+    <FxCompile Include="pointspritePS.hlsl" />
+    <FxCompile Include="cubeShadowPS.hlsl" />
+    <FxCompile Include="shadowPS.hlsl" />
+    <FxCompile Include="motionBlurPS.hlsl" />
+    <FxCompile Include="bloomSeparatePS.hlsl" />
+    <FxCompile Include="fontPS.hlsl" />
+    <FxCompile Include="qGrassLDistGS.hlsl" />
+    <FxCompile Include="qGrassLCloseGS.hlsl" />
+    <FxCompile Include="lensFlareGS.hlsl" />
+    <FxCompile Include="lensFlarePS.hlsl" />
+    <FxCompile Include="trailPS.hlsl" />
+    <FxCompile Include="decalPS.hlsl" />
+    <FxCompile Include="envMapGS.hlsl" />
+    <FxCompile Include="envMap_skyVS.hlsl" />
+    <FxCompile Include="envMap_skyGS.hlsl" />
+    <FxCompile Include="envMap_skyPS.hlsl" />
+    <FxCompile Include="dirLightPS.hlsl" />
+    <FxCompile Include="dirLightSoftPS.hlsl" />
+    <FxCompile Include="screenPS.hlsl" />
+    <FxCompile Include="lensFlareVS.hlsl" />
+    <FxCompile Include="screenVS.hlsl" />
+    <FxCompile Include="dirLightVS.hlsl" />
+    <FxCompile Include="skyPS.hlsl" />
+    <FxCompile Include="imageVS.hlsl" />
+    <FxCompile Include="skyVS.hlsl" />
+    <FxCompile Include="skyVS_reflection.hlsl" />
+    <FxCompile Include="skyPS_reflection.hlsl" />
+    <FxCompile Include="verticalBlurPS.hlsl" />
+    <FxCompile Include="horizontalBlurPS.hlsl" />
+    <FxCompile Include="lightShaftPS.hlsl" />
+    <FxCompile Include="linDepthPS.hlsl" />
+    <FxCompile Include="colorGradePS.hlsl" />
+    <FxCompile Include="fxaa.hlsl" />
+    <FxCompile Include="linesVS.hlsl" />
+    <FxCompile Include="cubeShadowGS.hlsl" />
+    <FxCompile Include="circleGS.hlsl" />
+    <FxCompile Include="pointspriteGS.hlsl" />
+    <FxCompile Include="decalVS.hlsl" />
+    <FxCompile Include="trailVS.hlsl" />
+    <FxCompile Include="spotLightVS.hlsl" />
+    <FxCompile Include="pointLightVS.hlsl" />
+    <FxCompile Include="grassL2GS.hlsl" />
+    <FxCompile Include="grassL1GS.hlsl" />
+    <FxCompile Include="grassL0GS.hlsl" />
+    <FxCompile Include="vPointLightVS.hlsl" />
+    <FxCompile Include="vSpotLightVS.hlsl" />
+    <FxCompile Include="fontVS.hlsl" />
+    <FxCompile Include="circlePS.hlsl" />
+    <FxCompile Include="circleVS.hlsl" />
+    <FxCompile Include="grassPS.hlsl" />
+    <FxCompile Include="grassVS.hlsl" />
+    <FxCompile Include="linesPS.hlsl" />
+    <FxCompile Include="objectHS.hlsl" />
+    <FxCompile Include="pointspritePS_simplest.hlsl" />
+    <FxCompile Include="pointspriteVS.hlsl" />
+    <FxCompile Include="sOGS.hlsl" />
+    <FxCompile Include="sOVS.hlsl" />
+    <FxCompile Include="volumeLightPS.hlsl" />
   </ItemGroup>
 </Project>
