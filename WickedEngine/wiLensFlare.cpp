@@ -32,11 +32,11 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector
 		wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
 		wiRenderer::GetDevice()->BindGS(geometryShader,threadID);
 
-		static thread_local ConstantBuffer* cb = new ConstantBuffer;
-		(*cb).mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
-		(*cb).mScreen = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
+		static thread_local ConstantBuffer cb;
+		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
+		cb.mScreen = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
 
-		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,cb,threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
 		wiRenderer::GetDevice()->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 	
