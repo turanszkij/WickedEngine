@@ -399,10 +399,6 @@ protected:
 		return find(key);
 	}
 
-	const Value* operator[](const Key& key) const {
-		return find(key);
-	}
-
 	const Value*	find(const Key& key) const
 	{
 		int index = findIndex(key);

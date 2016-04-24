@@ -151,7 +151,7 @@ public:
 	virtual void	removeCollisionObject(btCollisionObject* collisionObject);
 
 
-	virtual void	debugDrawConstraint(btTypedConstraint* constraint);
+	void	debugDrawConstraint(btTypedConstraint* constraint);
 
 	virtual void	debugDrawWorld();
 

@@ -117,7 +117,6 @@ public:
 	///fills the dataBuffer and returns the struct name (and 0 on failure)
 	virtual	const char*	serialize(void* dataBuffer, btSerializer* serializer) const;
 
-	SIMD_FORCE_INLINE	void	deSerializeFloat(struct btCapsuleShapeData* dataBuffer);
 
 };
 
@@ -180,15 +179,6 @@ SIMD_FORCE_INLINE	const char*	btCapsuleShape::serialize(void* dataBuffer, btSeri
 	shapeData->m_upAxis = m_upAxis;
 	
 	return "btCapsuleShapeData";
-}
-
-SIMD_FORCE_INLINE	void	btCapsuleShape::deSerializeFloat(btCapsuleShapeData* dataBuffer)
-{
-	m_implicitShapeDimensions.deSerializeFloat(dataBuffer->m_convexInternalShapeData.m_implicitShapeDimensions);
-	m_collisionMargin = dataBuffer->m_convexInternalShapeData.m_collisionMargin;
-	m_localScaling.deSerializeFloat(dataBuffer->m_convexInternalShapeData.m_localScaling);
-	//it is best to already pre-allocate the matching btCapsuleShape*(X/Z) version to match m_upAxis
-	m_upAxis = dataBuffer->m_upAxis;
 }
 
 #endif //BT_CAPSULE_SHAPE_H

@@ -94,6 +94,7 @@ class btHashedOverlappingPairCache : public btOverlappingPairCache
 {
 	btBroadphasePairArray	m_overlappingPairArray;
 	btOverlapFilterCallback* m_overlapFilterCallback;
+	bool		m_blockedForChanges;
 
 protected:
 	

@@ -58,6 +58,8 @@ public:
 		};
 private:
 
+	btScalar	m_tau;
+	btScalar	m_damping;
 	btVehicleRaycaster*	m_vehicleRaycaster;
 	btScalar		m_pitchControl;
 	btScalar	m_steeringValue; 

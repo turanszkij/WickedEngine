@@ -20,7 +20,7 @@ subject to the following restrictions:
 
 #include "LinearMath/btVector3.h"
 #include "btTypedConstraint.h"
-#include "btGeneric6DofSpring2Constraint.h"
+#include "btGeneric6DofSpringConstraint.h"
 
 
 
@@ -29,7 +29,7 @@ subject to the following restrictions:
 // 2 rotational degrees of freedom, similar to Euler rotations around Z (axis 1) and X (axis 2)
 // 1 translational (along axis Z) with suspension spring
 
-ATTRIBUTE_ALIGNED16(class) btHinge2Constraint : public btGeneric6DofSpring2Constraint
+ATTRIBUTE_ALIGNED16(class) btHinge2Constraint : public btGeneric6DofSpringConstraint
 {
 protected:
 	btVector3	m_anchor;

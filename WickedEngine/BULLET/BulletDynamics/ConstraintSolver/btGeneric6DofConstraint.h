@@ -111,14 +111,14 @@ public:
 
 
 	//! Is limited
-    bool isLimited() const
+    bool isLimited()
     {
     	if(m_loLimit > m_hiLimit) return false;
     	return true;
     }
 
 	//! Need apply correction
-    bool needApplyTorques() const
+    bool needApplyTorques()
     {
     	if(m_currentLimit == 0 && m_enableMotor == false) return false;
     	return true;
@@ -207,11 +207,11 @@ public:
     - limited means upper > lower
     - limitIndex: first 3 are linear, next 3 are angular
     */
-    inline bool	isLimited(int limitIndex) const
+    inline bool	isLimited(int limitIndex)
     {
        return (m_upperLimit[limitIndex] >= m_lowerLimit[limitIndex]);
     }
-    inline bool needApplyForce(int limitIndex) const
+    inline bool needApplyForce(int limitIndex)
     {
     	if(m_currentLimit[limitIndex] == 0 && m_enableMotor[limitIndex] == false) return false;
     	return true;
@@ -457,7 +457,7 @@ public:
     	m_linearLimits.m_lowerLimit = linearLower;
     }
 
-	void	getLinearLowerLimit(btVector3& linearLower) const
+	void	getLinearLowerLimit(btVector3& linearLower)
 	{
 		linearLower = m_linearLimits.m_lowerLimit;
 	}
@@ -467,7 +467,7 @@ public:
 		m_linearLimits.m_upperLimit = linearUpper;
 	}
 
-	void	getLinearUpperLimit(btVector3& linearUpper) const
+	void	getLinearUpperLimit(btVector3& linearUpper)
 	{
 		linearUpper = m_linearLimits.m_upperLimit;
 	}
@@ -478,7 +478,7 @@ public:
 			m_angularLimits[i].m_loLimit = btNormalizeAngle(angularLower[i]);
     }
 
-	void	getAngularLowerLimit(btVector3& angularLower) const
+	void	getAngularLowerLimit(btVector3& angularLower)
 	{
 		for(int i = 0; i < 3; i++) 
 			angularLower[i] = m_angularLimits[i].m_loLimit;
@@ -490,7 +490,7 @@ public:
 			m_angularLimits[i].m_hiLimit = btNormalizeAngle(angularUpper[i]);
     }
 
-	void	getAngularUpperLimit(btVector3& angularUpper) const
+	void	getAngularUpperLimit(btVector3& angularUpper)
 	{
 		for(int i = 0; i < 3; i++)
 			angularUpper[i] = m_angularLimits[i].m_hiLimit;
@@ -532,7 +532,7 @@ public:
     - limited means upper > lower
     - limitIndex: first 3 are linear, next 3 are angular
     */
-    bool	isLimited(int limitIndex) const
+    bool	isLimited(int limitIndex)
     {
     	if(limitIndex<3)
     	{
@@ -549,11 +549,8 @@ public:
 								btConstraintInfo2 *info, int row, btVector3& ax1, int rotational, int rotAllowed = false);
 
 	// access for UseFrameOffset
-	bool getUseFrameOffset() const { return m_useOffsetForConstraintFrame; }
+	bool getUseFrameOffset() { return m_useOffsetForConstraintFrame; }
 	void setUseFrameOffset(bool frameOffsetOnOff) { m_useOffsetForConstraintFrame = frameOffsetOnOff; }
-	
-	bool getUseLinearReferenceFrameA() const { return m_useLinearReferenceFrameA; }
-	void setUseLinearReferenceFrameA(bool linearReferenceFrameA) { m_useLinearReferenceFrameA = linearReferenceFrameA; }
 
 	///override the default global value of a parameter (such as ERP or CFM), optionally provide the axis (0..5). 
 	///If no axis is provided, it uses the default axis for this constraint.
@@ -563,10 +560,6 @@ public:
 
 	void setAxis( const btVector3& axis1, const btVector3& axis2);
 
-    	virtual	int getFlags() const
-    	{
-        	return m_flags;
-	}
 
 	virtual	int	calculateSerializeBufferSize() const;
 

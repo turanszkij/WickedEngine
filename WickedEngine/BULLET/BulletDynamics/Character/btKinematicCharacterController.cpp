@@ -29,10 +29,9 @@ subject to the following restrictions:
 static btVector3
 getNormalizedVector(const btVector3& v)
 {
-	btVector3 n(0, 0, 0);
-
-	if (v.length() > SIMD_EPSILON) {
-		n = v.normalized();
+	btVector3 n = v.normalized();
+	if (n.length() < SIMD_EPSILON) {
+		n.setValue(0, 0, 0);
 	}
 	return n;
 }
@@ -381,8 +380,8 @@ void btKinematicCharacterController::stepForwardAndStrafe ( btCollisionWorld* co
 		if (callback.hasHit())
 		{	
 			// we moved only a fraction
-			//btScalar hitDistance;
-			//hitDistance = (callback.m_hitPointWorld - m_currentPosition).length();
+			btScalar hitDistance;
+			hitDistance = (callback.m_hitPointWorld - m_currentPosition).length();
 
 //			m_currentPosition.setInterpolate3 (m_currentPosition, m_targetPosition, callback.m_closestHitFraction);
 
@@ -636,7 +635,7 @@ void btKinematicCharacterController::playerStep (  btCollisionWorld* collisionWo
 //	printf("  dt = %f", dt);
 
 	// quick check...
-	if (!m_useWalkDirection && (m_velocityTimeInterval <= 0.0 || m_walkDirection.fuzzyZero())) {
+	if (!m_useWalkDirection && m_velocityTimeInterval <= 0.0) {
 //		printf("\n");
 		return;		// no motion
 	}

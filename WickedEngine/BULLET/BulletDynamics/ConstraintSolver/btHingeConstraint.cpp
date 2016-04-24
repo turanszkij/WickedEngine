@@ -45,11 +45,7 @@ btHingeConstraint::btHingeConstraint(btRigidBody& rbA,btRigidBody& rbB, const bt
 									 m_useSolveConstraintObsolete(HINGE_USE_OBSOLETE_SOLVER),
 									 m_useOffsetForConstraintFrame(HINGE_USE_FRAME_OFFSET),
 									 m_useReferenceFrameA(useReferenceFrameA),
-									 m_flags(0),
-									 m_normalCFM(0),
-									 m_normalERP(0),
-									 m_stopCFM(0),
-									 m_stopERP(0)
+									 m_flags(0)
 {
 	m_rbAFrame.getOrigin() = pivotInA;
 	
@@ -105,11 +101,7 @@ m_angularOnly(false), m_enableAngularMotor(false),
 m_useSolveConstraintObsolete(HINGE_USE_OBSOLETE_SOLVER),
 m_useOffsetForConstraintFrame(HINGE_USE_FRAME_OFFSET),
 m_useReferenceFrameA(useReferenceFrameA),
-m_flags(0),
-m_normalCFM(0),
-m_normalERP(0),
-m_stopCFM(0),
-m_stopERP(0)
+m_flags(0)
 {
 
 	// since no frame is given, assume this to be zero angle and just pick rb transform axis
@@ -159,11 +151,7 @@ m_enableAngularMotor(false),
 m_useSolveConstraintObsolete(HINGE_USE_OBSOLETE_SOLVER),
 m_useOffsetForConstraintFrame(HINGE_USE_FRAME_OFFSET),
 m_useReferenceFrameA(useReferenceFrameA),
-m_flags(0),
-m_normalCFM(0),
-m_normalERP(0),
-m_stopCFM(0),
-m_stopERP(0)
+m_flags(0)
 {
 #ifndef	_BT_USE_CENTER_LIMIT_
 	//start with free
@@ -189,11 +177,7 @@ m_enableAngularMotor(false),
 m_useSolveConstraintObsolete(HINGE_USE_OBSOLETE_SOLVER),
 m_useOffsetForConstraintFrame(HINGE_USE_FRAME_OFFSET),
 m_useReferenceFrameA(useReferenceFrameA),
-m_flags(0),
-m_normalCFM(0),
-m_normalERP(0),
-m_stopCFM(0),
-m_stopERP(0)
+m_flags(0)
 {
 	///not providing rigidbody B means implicitly using worldspace for body B
 
@@ -301,60 +285,8 @@ void	btHingeConstraint::buildJacobian()
 #endif //__SPU__
 
 
-static inline btScalar btNormalizeAnglePositive(btScalar angle)
-{
-  return btFmod(btFmod(angle, btScalar(2.0*SIMD_PI)) + btScalar(2.0*SIMD_PI), btScalar(2.0*SIMD_PI));
-}
-
-
-
-static btScalar btShortestAngularDistance(btScalar accAngle, btScalar curAngle)
-{
-	btScalar result = btNormalizeAngle(btNormalizeAnglePositive(btNormalizeAnglePositive(curAngle) -
-	btNormalizeAnglePositive(accAngle)));
-	return result;
-}
-
-static btScalar btShortestAngleUpdate(btScalar accAngle, btScalar curAngle)
-{
-	btScalar tol(0.3);
-	btScalar result = btShortestAngularDistance(accAngle, curAngle);
-
-	  if (btFabs(result) > tol)
-		return curAngle;
-	  else
-		return accAngle + result;
-
-	return curAngle;
-}
-
-
-btScalar btHingeAccumulatedAngleConstraint::getAccumulatedHingeAngle()
-{
-	btScalar hingeAngle = getHingeAngle();
-	m_accumulatedAngle = btShortestAngleUpdate(m_accumulatedAngle,hingeAngle);
-	return m_accumulatedAngle;
-}
-void	btHingeAccumulatedAngleConstraint::setAccumulatedHingeAngle(btScalar accAngle)
-{
-	m_accumulatedAngle  = accAngle;
-}
-
-void btHingeAccumulatedAngleConstraint::getInfo1(btConstraintInfo1* info)
-{
-	//update m_accumulatedAngle
-	btScalar curHingeAngle = getHingeAngle();
-	m_accumulatedAngle = btShortestAngleUpdate(m_accumulatedAngle,curHingeAngle);
-
-	btHingeConstraint::getInfo1(info);
-	
-}
-
-
 void btHingeConstraint::getInfo1(btConstraintInfo1* info)
 {
-
-
 	if (m_useSolveConstraintObsolete)
 	{
 		info->m_numConstraintRows = 0;
@@ -481,9 +413,7 @@ void btHingeConstraint::getInfo2Internal(btConstraintInfo2* info, const btTransf
 		a2.getSkewSymmetricMatrix(angular0,angular1,angular2);
 	}
 	// linear RHS
-	btScalar normalErp = (m_flags & BT_HINGE_FLAGS_ERP_NORM) ? m_normalERP : info->erp;
-
-    btScalar k = info->fps * normalErp;
+    btScalar k = info->fps * info->erp;
 	if (!m_angularOnly)
 	{
 		for(i = 0; i < 3; i++)
@@ -580,7 +510,7 @@ void btHingeConstraint::getInfo2Internal(btConstraintInfo2* info, const btTransf
 			powered = 0;
 		}
 		info->m_constraintError[srow] = btScalar(0.0f);
-		btScalar currERP = (m_flags & BT_HINGE_FLAGS_ERP_STOP) ? m_stopERP : normalErp;
+		btScalar currERP = (m_flags & BT_HINGE_FLAGS_ERP_STOP) ? m_stopERP : info->erp;
 		if(powered)
 		{
 			if(m_flags & BT_HINGE_FLAGS_CFM_NORM)
@@ -674,8 +604,6 @@ void	btHingeConstraint::updateRHS(btScalar	timeStep)
 	(void)timeStep;
 
 }
-
-
 
 
 btScalar btHingeConstraint::getHingeAngle()
@@ -870,8 +798,7 @@ void btHingeConstraint::getInfo2InternalUsingFrameOffset(btConstraintInfo2* info
 	for (i=0; i<3; i++) info->m_J1angularAxis[s2+i] = tmpA[i];
     for (i=0; i<3; i++) info->m_J2angularAxis[s2+i] = -tmpB[i];
 
-	btScalar normalErp = (m_flags & BT_HINGE_FLAGS_ERP_NORM)? m_normalERP : info->erp;
-	btScalar k = info->fps * normalErp;
+	btScalar k = info->fps * info->erp;
 
 	if (!m_angularOnly)
 	{
@@ -929,8 +856,7 @@ void btHingeConstraint::getInfo2InternalUsingFrameOffset(btConstraintInfo2* info
 	//    angular_velocity  = (erp*fps) * (ax1 x ax2)
 	// ax1 x ax2 is in the plane space of ax1, so we project the angular
 	// velocity to p and q to find the right hand side.
-	k = info->fps * normalErp;//??
-
+	k = info->fps * info->erp;
 	btVector3 u = ax1A.cross(ax1B);
 	info->m_constraintError[s3] = k * u.dot(p);
 	info->m_constraintError[s4] = k * u.dot(q);
@@ -975,7 +901,7 @@ void btHingeConstraint::getInfo2InternalUsingFrameOffset(btConstraintInfo2* info
 			powered = 0;
 		}
 		info->m_constraintError[srow] = btScalar(0.0f);
-		btScalar currERP = (m_flags & BT_HINGE_FLAGS_ERP_STOP) ? m_stopERP : normalErp;
+		btScalar currERP = (m_flags & BT_HINGE_FLAGS_ERP_STOP) ? m_stopERP : info->erp;
 		if(powered)
 		{
 			if(m_flags & BT_HINGE_FLAGS_CFM_NORM)
@@ -1076,10 +1002,6 @@ void btHingeConstraint::setParam(int num, btScalar value, int axis)
 				m_normalCFM = value;
 				m_flags |= BT_HINGE_FLAGS_CFM_NORM;
 				break;
-			case BT_CONSTRAINT_ERP:
-				m_normalERP = value;
-				m_flags |= BT_HINGE_FLAGS_ERP_NORM;
-				break;
 			default : 
 				btAssertConstrParams(0);
 		}
@@ -1109,10 +1031,6 @@ btScalar btHingeConstraint::getParam(int num, int axis) const
 			case BT_CONSTRAINT_CFM :
 				btAssertConstrParams(m_flags & BT_HINGE_FLAGS_CFM_NORM);
 				retVal = m_normalCFM;
-				break;
-			case BT_CONSTRAINT_ERP:
-				btAssertConstrParams(m_flags & BT_HINGE_FLAGS_ERP_NORM);
-				retVal = m_normalERP;
 				break;
 			default : 
 				btAssertConstrParams(0);

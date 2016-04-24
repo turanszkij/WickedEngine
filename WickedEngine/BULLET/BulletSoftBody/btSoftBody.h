@@ -171,7 +171,6 @@ public:
 	/* ImplicitFn	*/ 
 	struct	ImplicitFn
 	{
-		virtual ~ImplicitFn() {}
 		virtual btScalar	Eval(const btVector3& x)=0;
 	};
 
@@ -529,7 +528,6 @@ public:
 	{
 		struct IControl
 		{
-			virtual ~IControl() {}
 			virtual void			Prepare(AJoint*)				{}
 			virtual btScalar		Speed(AJoint*,btScalar current) { return(current); }
 			static IControl*		Default()						{ static IControl def;return(&def); }

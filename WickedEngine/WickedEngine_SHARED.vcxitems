@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletCollisionCommon.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletDynamicsCommon.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\Bullet-C-Api.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btBroadphaseInterface.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btBroadphaseProxy.h" />
@@ -38,7 +39,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionObject.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionObjectWrapper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorld.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorldImporter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCompoundCollisionAlgorithm.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCompoundCompoundCollisionAlgorithm.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btConvex2dConvex2dAlgorithm.h" />
@@ -125,20 +125,16 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\Gimpact\gim_memory.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\Gimpact\gim_radixsort.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\Gimpact\gim_tri_collision.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btComputeGjkEpaPenetration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btContinuousConvexCollision.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btConvexCast.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btConvexPenetrationDepthSolver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btDiscreteCollisionDetectorInterface.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkCollisionDescription.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkConvexCast.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkEpa2.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkEpa3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkEpaPenetrationDepthSolver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkPairDetector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btManifoldPoint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btMinkowskiPenetrationDepthSolver.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btMprPenetration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btPersistentManifold.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btPointCollector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btPolyhedralContactClipping.h" />
@@ -155,12 +151,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btFixedConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGearConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHinge2Constraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHingeConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btJacobianEntry.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSequentialImpulseConstraintSolver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSliderConstraint.h" />
@@ -178,7 +172,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraintSolver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyDynamicsWorld.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointFeedback.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointLimitConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointMotor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyLink.h" />
@@ -187,8 +180,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodySolverConstraint.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigLCP.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigSolver.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeSolver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolverInterface.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btPATHSolver.h" />
@@ -214,7 +205,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedObjectArray.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btCpuFeatureUtility.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btDefaultMotionState.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGrahamScan2dConvexHull.h" />
@@ -233,7 +223,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btRandom.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btScalar.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSpatialAlgebra.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btStackAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransform.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h" />
@@ -374,7 +363,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionDispatcher.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionObject.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorld.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorldImporter.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCompoundCollisionAlgorithm.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCompoundCompoundCollisionAlgorithm.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btConvex2dConvex2dAlgorithm.cpp" />
@@ -458,11 +446,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btFixedConstraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGearConstraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHinge2Constraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHingeConstraint.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSequentialImpulseConstraintSolver.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSliderConstraint.cpp" />
@@ -472,6 +458,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDiscreteDynamicsWorld.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btRigidBody.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btSimpleDynamicsWorld.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\Bullet-C-API.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBody.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraintSolver.cpp" />
@@ -480,7 +467,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointMotor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyPoint2Point.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigLCP.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btRaycastVehicle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp" />

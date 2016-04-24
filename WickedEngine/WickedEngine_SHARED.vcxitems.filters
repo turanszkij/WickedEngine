@@ -29,7 +29,7 @@
       <UniqueIdentifier>{a637b1af-3cc6-48c3-89b4-8b931a1eb23e}</UniqueIdentifier>
     </Filter>
     <Filter Include="BULLET">
-      <UniqueIdentifier>{1d29e28d-55e4-45e0-b14b-bfa786747c1a}</UniqueIdentifier>
+      <UniqueIdentifier>{d6f94528-ce59-4fa3-a0b9-d5c04994ac71}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -384,10 +384,133 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h">
       <Filter>ENGINE\GUI</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyData.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyInternals.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolvers.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolverVertexBuffer.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSparseSDF.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAabbUtil2.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedObjectArray.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btDefaultMotionState.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGrahamScan2dConvexHull.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btHashMap.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btIDebugDraw.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btList.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrix3x3.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrixX.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMinMax.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMotionState.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPoolAllocator.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuadWord.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuaternion.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btRandom.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btScalar.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btStackAlloc.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransform.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletCollisionCommon.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletDynamicsCommon.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\Bullet-C-Api.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.h">
@@ -454,9 +577,6 @@
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorld.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorldImporter.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCompoundCollisionAlgorithm.h">
@@ -717,9 +837,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\Gimpact\gim_tri_collision.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btComputeGjkEpaPenetration.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btContinuousConvexCollision.h">
       <Filter>BULLET</Filter>
     </ClInclude>
@@ -732,16 +849,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btDiscreteCollisionDetectorInterface.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkCollisionDescription.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkConvexCast.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkEpa2.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkEpa3.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btGjkEpaPenetrationDepthSolver.h">
@@ -754,9 +865,6 @@
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btMinkowskiPenetrationDepthSolver.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btMprPenetration.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btPersistentManifold.h">
@@ -807,9 +915,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.h">
       <Filter>BULLET</Filter>
     </ClInclude>
@@ -820,9 +925,6 @@
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btJacobianEntry.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.h">
@@ -876,9 +978,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyDynamicsWorld.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointFeedback.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointLimitConstraint.h">
       <Filter>BULLET</Filter>
     </ClInclude>
@@ -903,12 +1002,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigSolver.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeSolver.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.h">
       <Filter>BULLET</Filter>
     </ClInclude>
@@ -928,132 +1021,6 @@
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyData.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyInternals.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolvers.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolverVertexBuffer.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSparseSDF.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAabbUtil2.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedObjectArray.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btCpuFeatureUtility.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btDefaultMotionState.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGrahamScan2dConvexHull.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btHashMap.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btIDebugDraw.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btList.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrix3x3.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrixX.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMinMax.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMotionState.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPoolAllocator.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuadWord.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuaternion.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btRandom.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btScalar.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSpatialAlgebra.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btStackAlloc.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransform.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h">
       <Filter>BULLET</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1391,6 +1358,54 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp">
       <Filter>ENGINE\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
@@ -1440,9 +1455,6 @@
       <Filter>BULLET</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorld.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCollisionWorldImporter.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\CollisionDispatch\btCompoundCollisionAlgorithm.cpp">
@@ -1694,9 +1706,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
@@ -1704,9 +1713,6 @@
       <Filter>BULLET</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHingeConstraint.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.cpp">
@@ -1736,6 +1742,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btSimpleDynamicsWorld.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\Bullet-C-API.cpp">
+      <Filter>BULLET</Filter>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBody.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
@@ -1760,9 +1769,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigLCP.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
@@ -1770,54 +1776,6 @@
       <Filter>BULLET</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.cpp">
-      <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
   </ItemGroup>

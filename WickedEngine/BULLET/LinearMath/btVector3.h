@@ -297,7 +297,7 @@ public:
 	SIMD_FORCE_INLINE btVector3& normalize() 
 	{
 		
-		btAssert(!fuzzyZero());
+		btAssert(length() != btScalar(0));
 
 #if defined(BT_USE_SSE_IN_API) && defined (BT_USE_SSE)		
         // dot product first
@@ -501,10 +501,10 @@ public:
 		__m128 tmp3 = _mm_add_ps(r0,r1);
 		mVec128 = tmp3;
 #elif defined(BT_USE_NEON)
-		float32x4_t vl = vsubq_f32(v1.mVec128, v0.mVec128);
-		vl = vmulq_n_f32(vl, rt);
-		mVec128 = vaddq_f32(vl, v0.mVec128);
-#else
+		mVec128 = vsubq_f32(v1.mVec128, v0.mVec128);
+		mVec128 = vmulq_n_f32(mVec128, rt);
+		mVec128 = vaddq_f32(mVec128, v0.mVec128);
+#else	
 		btScalar s = btScalar(1.0) - rt;
 		m_floats[0] = s * v0.m_floats[0] + rt * v1.m_floats[0];
 		m_floats[1] = s * v0.m_floats[1] + rt * v1.m_floats[1];
@@ -685,10 +685,9 @@ public:
 		return m_floats[0] == btScalar(0) && m_floats[1] == btScalar(0) && m_floats[2] == btScalar(0);
 	}
 
-
 	SIMD_FORCE_INLINE bool fuzzyZero() const 
 	{
-		return length2() < SIMD_EPSILON*SIMD_EPSILON;
+		return length2() < SIMD_EPSILON;
 	}
 
 	SIMD_FORCE_INLINE	void	serialize(struct	btVector3Data& dataOut) const;
@@ -951,9 +950,9 @@ SIMD_FORCE_INLINE btScalar btVector3::distance(const btVector3& v) const
 
 SIMD_FORCE_INLINE btVector3 btVector3::normalized() const
 {
-	btVector3 nrm = *this;
+	btVector3 norm = *this;
 
-	return nrm.normalize();
+	return norm.normalize();
 } 
 
 SIMD_FORCE_INLINE btVector3 btVector3::rotate( const btVector3& wAxis, const btScalar _angle ) const
@@ -1011,21 +1010,21 @@ SIMD_FORCE_INLINE   long    btVector3::maxDot( const btVector3 *array, long arra
     if( array_count < scalar_cutoff )	
 #endif
     {
-        btScalar maxDot1 = -SIMD_INFINITY;
+        btScalar maxDot = -SIMD_INFINITY;
         int i = 0;
         int ptIndex = -1;
         for( i = 0; i < array_count; i++ )
         {
             btScalar dot = array[i].dot(*this);
             
-            if( dot > maxDot1 )
+            if( dot > maxDot )
             {
-                maxDot1 = dot;
+                maxDot = dot;
                 ptIndex = i;
             }
         }
         
-        dotOut = maxDot1;
+        dotOut = maxDot;
         return ptIndex;
     }
 #if (defined BT_USE_SSE && defined BT_USE_SIMD_VECTOR3 && defined BT_USE_SSE_IN_API) || defined (BT_USE_NEON)
