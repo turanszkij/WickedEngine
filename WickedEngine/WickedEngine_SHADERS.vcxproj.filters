@@ -1,129 +1,396 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <None Include="dirLightHF.hlsli" />
-    <None Include="specularHF.hlsli" />
-    <None Include="globals.hlsli" />
-    <None Include="objectHF.hlsli" />
-    <None Include="skyHF.hlsli" />
-    <None Include="fogHF.hlsli" />
-    <None Include="pointLightHF.hlsli" />
-    <None Include="spotLightHF.hlsli" />
-    <None Include="lightHF.hlsli" />
-    <None Include="skinningHF.hlsli" />
-    <None Include="objectInputLayoutHF.hlsli" />
-    <None Include="postProcessHF.hlsli" />
-    <None Include="imageHF.hlsli" />
-    <None Include="envMapHF.hlsli" />
-    <None Include="fullScreenTriangleHF.hlsli" />
-    <None Include="reconstructPositionHF.hlsli" />
-    <None Include="volumeLightHF.hlsli" />
-    <None Include="depthConvertHF.hlsli" />
-    <None Include="grassHF_GS.hlsli" />
-    <None Include="globalsHF.hlsli" />
-    <None Include="windHF.hlsli" />
-    <None Include="circle.hlsli" />
-    <None Include="cone.hlsli" />
-    <None Include="cube.hlsli" />
-    <None Include="ditherHF.hlsli" />
-    <None Include="fxaa.hlsli" />
-    <None Include="grassHF_PS.hlsli" />
-    <None Include="icosphere.hlsli" />
-    <None Include="normalsCompressHF.hlsli" />
-    <None Include="packHF.hlsli" />
-    <None Include="quad.hlsli" />
-    <None Include="sOHF.hlsli" />
-    <None Include="tangentComputeHF.hlsli" />
+    <None Include="circle.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="cone.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="cube.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="depthConvertHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="dirLightHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="ditherHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="envMapHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="fogHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="fullScreenTriangleHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="fxaa.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="globals.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="globalsHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="grassHF_GS.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="grassHF_PS.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="icosphere.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="lightHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="normalsCompressHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="objectHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="objectInputLayoutHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="packHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="pointLightHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="postProcessHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="quad.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="reconstructPositionHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="skinningHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="skyHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="sOHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="specularHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="spotLightHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="tangentComputeHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="volumeLightHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="windHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="imageHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="pointLightPS.hlsl" />
-    <FxCompile Include="spotLightPS.hlsl" />
-    <FxCompile Include="sunPS.hlsl" />
-    <FxCompile Include="toneMapPS.hlsl" />
-    <FxCompile Include="deferredPS.hlsl" />
-    <FxCompile Include="luminancePass2CS.hlsl" />
-    <FxCompile Include="luminancePass1CS.hlsl" />
-    <FxCompile Include="envMapPS.hlsl" />
-    <FxCompile Include="objectPS_forwardSimple.hlsl" />
-    <FxCompile Include="objectPS_textureonly.hlsl" />
-    <FxCompile Include="objectPS_transparent.hlsl" />
-    <FxCompile Include="waterPS.hlsl" />
-    <FxCompile Include="qGrassPS.hlsl" />
-    <FxCompile Include="objectPS.hlsl" />
-    <FxCompile Include="stereogramPS.hlsl" />
-    <FxCompile Include="objectPS_blackout.hlsl" />
-    <FxCompile Include="objectVS10.hlsl" />
-    <FxCompile Include="objectVS_reflection.hlsl" />
-    <FxCompile Include="objectPS_simplest.hlsl" />
-    <FxCompile Include="waterVS.hlsl" />
-    <FxCompile Include="shadowVS.hlsl" />
-    <FxCompile Include="envMapVS.hlsl" />
-    <FxCompile Include="cubeShadowVS.hlsl" />
-    <FxCompile Include="objectDS.hlsl" />
-    <FxCompile Include="objectVS.hlsl" />
-    <FxCompile Include="imagePS.hlsl" />
-    <FxCompile Include="ssr.hlsl" />
-    <FxCompile Include="depthofFieldPS.hlsl" />
-    <FxCompile Include="ssao.hlsl" />
-    <FxCompile Include="outlinePS.hlsl" />
-    <FxCompile Include="ssss.hlsl" />
-    <FxCompile Include="pointspritePS.hlsl" />
-    <FxCompile Include="cubeShadowPS.hlsl" />
-    <FxCompile Include="shadowPS.hlsl" />
-    <FxCompile Include="motionBlurPS.hlsl" />
-    <FxCompile Include="bloomSeparatePS.hlsl" />
-    <FxCompile Include="fontPS.hlsl" />
-    <FxCompile Include="qGrassLDistGS.hlsl" />
-    <FxCompile Include="qGrassLCloseGS.hlsl" />
-    <FxCompile Include="lensFlareGS.hlsl" />
-    <FxCompile Include="lensFlarePS.hlsl" />
-    <FxCompile Include="trailPS.hlsl" />
-    <FxCompile Include="decalPS.hlsl" />
-    <FxCompile Include="envMapGS.hlsl" />
-    <FxCompile Include="envMap_skyVS.hlsl" />
-    <FxCompile Include="envMap_skyGS.hlsl" />
-    <FxCompile Include="envMap_skyPS.hlsl" />
-    <FxCompile Include="dirLightPS.hlsl" />
-    <FxCompile Include="dirLightSoftPS.hlsl" />
-    <FxCompile Include="screenPS.hlsl" />
-    <FxCompile Include="lensFlareVS.hlsl" />
-    <FxCompile Include="screenVS.hlsl" />
-    <FxCompile Include="dirLightVS.hlsl" />
-    <FxCompile Include="skyPS.hlsl" />
-    <FxCompile Include="imageVS.hlsl" />
-    <FxCompile Include="skyVS.hlsl" />
-    <FxCompile Include="skyVS_reflection.hlsl" />
-    <FxCompile Include="skyPS_reflection.hlsl" />
-    <FxCompile Include="verticalBlurPS.hlsl" />
-    <FxCompile Include="horizontalBlurPS.hlsl" />
-    <FxCompile Include="lightShaftPS.hlsl" />
-    <FxCompile Include="linDepthPS.hlsl" />
-    <FxCompile Include="colorGradePS.hlsl" />
-    <FxCompile Include="fxaa.hlsl" />
-    <FxCompile Include="linesVS.hlsl" />
-    <FxCompile Include="cubeShadowGS.hlsl" />
-    <FxCompile Include="circleGS.hlsl" />
-    <FxCompile Include="pointspriteGS.hlsl" />
-    <FxCompile Include="decalVS.hlsl" />
-    <FxCompile Include="trailVS.hlsl" />
-    <FxCompile Include="spotLightVS.hlsl" />
-    <FxCompile Include="pointLightVS.hlsl" />
-    <FxCompile Include="grassL2GS.hlsl" />
-    <FxCompile Include="grassL1GS.hlsl" />
-    <FxCompile Include="grassL0GS.hlsl" />
-    <FxCompile Include="vPointLightVS.hlsl" />
-    <FxCompile Include="vSpotLightVS.hlsl" />
-    <FxCompile Include="fontVS.hlsl" />
-    <FxCompile Include="circlePS.hlsl" />
-    <FxCompile Include="circleVS.hlsl" />
-    <FxCompile Include="grassPS.hlsl" />
-    <FxCompile Include="grassVS.hlsl" />
-    <FxCompile Include="linesPS.hlsl" />
-    <FxCompile Include="objectHS.hlsl" />
-    <FxCompile Include="pointspritePS_simplest.hlsl" />
-    <FxCompile Include="pointspriteVS.hlsl" />
-    <FxCompile Include="sOGS.hlsl" />
-    <FxCompile Include="sOVS.hlsl" />
-    <FxCompile Include="volumeLightPS.hlsl" />
+    <FxCompile Include="objectHS.hlsl">
+      <Filter>HS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectDS.hlsl">
+      <Filter>DS</Filter>
+    </FxCompile>
+    <FxCompile Include="luminancePass1CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="luminancePass2CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="circleGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMap_skyGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMapGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassL0GS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassL1GS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassL2GS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="lensFlareGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspriteGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassLCloseGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassLDistGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="sOGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="bloomSeparatePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="circlePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="colorGradePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="decalPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="deferredPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthofFieldPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="dirLightPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="dirLightSoftPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMap_skyPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMapPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="fontPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="horizontalBlurPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="lensFlarePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightShaftPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="linDepthPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="linesPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="motionBlurPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_blackout.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forwardSimple.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_simplest.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_textureonly.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_transparent.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="outlinePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="pointLightPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspritePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspritePS_simplest.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="screenPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="shadowPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="skyPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="skyPS_reflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="spotLightPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssao.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssr.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssss.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="stereogramPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="sunPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="toneMapPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="trailPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="verticalBlurPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="volumeLightPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="waterPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="fxaa.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="waterVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="circleVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="decalVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="dirLightVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMap_skyVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMapVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="fontVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="imageVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="lensFlareVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="linesVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS_reflection.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS10.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="pointLightVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="pointspriteVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="screenVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="shadowVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="skyVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="skyVS_reflection.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="sOVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="spotLightVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="trailVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="vPointLightVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="vSpotLightVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="PS">
+      <UniqueIdentifier>{3b8f0b04-f10f-4fa9-a4a8-ecebbf8c5bf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VS">
+      <UniqueIdentifier>{a87f55f5-69fc-4930-ad9e-1567cba6127c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GS">
+      <UniqueIdentifier>{37d4229d-560f-453c-943a-0ed2998cafb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CS">
+      <UniqueIdentifier>{66b37341-6805-468d-8e86-e44158c7df67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HS">
+      <UniqueIdentifier>{6dab5a5d-0b2d-494b-920d-7fa21ca8b857}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DS">
+      <UniqueIdentifier>{d2178be7-2efa-4aea-a36b-d6d1e98f4b43}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HF">
+      <UniqueIdentifier>{12396e21-0254-42fa-a88b-805f0703eca5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
