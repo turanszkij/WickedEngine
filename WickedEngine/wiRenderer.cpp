@@ -1347,16 +1347,20 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					// Upload bones for skinning to shader
 					static thread_local unsigned int maxBoneCount = 100;
-					static thread_local ShaderBoneType *bonebuf = new ShaderBoneType[maxBoneCount];
+					static ShaderBoneType *bonebuf[GRAPHICSTHREAD_COUNT] = { 0 };
+					if (bonebuf[threadID] == nullptr)
+					{
+						bonebuf[threadID] = new ShaderBoneType[maxBoneCount];
+					}
 					if (mesh->armature->boneCollection.size() > maxBoneCount)
 					{
 						maxBoneCount = mesh->armature->boneCollection.size() * 2;
-						SAFE_DELETE_ARRAY(bonebuf);
-						bonebuf = new ShaderBoneType[maxBoneCount];
+						SAFE_DELETE_ARRAY(bonebuf[threadID]);
+						bonebuf[threadID] = new ShaderBoneType[maxBoneCount];
 					}
 					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
-						bonebuf[k].pose = mesh->armature->boneCollection[k]->boneRelativity;
-						bonebuf[k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
+						bonebuf[threadID][k].pose = mesh->armature->boneCollection[k]->boneRelativity;
+						bonebuf[threadID][k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
 					}
 					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf, threadID, sizeof(ShaderBoneType) * mesh->armature->boneCollection.size());
 
@@ -1505,12 +1509,12 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 
-		static thread_local MiscCB* sb = new MiscCB;
+		MiscCB sb;
 		for (unsigned int i = 0; i<boneLines.size(); i++){
-			(*sb).mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
-			(*sb).mColor = boneLines[i]->desc.color;
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
+			sb.mColor = boneLines[i]->desc.color;
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, threadID);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			GetDevice()->BindVertexBuffer(&boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
 			GetDevice()->Draw(2, threadID);
@@ -1533,12 +1537,12 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE], threadID);
 	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE], threadID);
 
-	static thread_local MiscCB* sb = new MiscCB;
+	MiscCB sb;
 	for (unsigned int i = 0; i<linesTemp.size(); i++){
-		(*sb).mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
-		(*sb).mColor = linesTemp[i]->desc.color;
+		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
+		sb.mColor = linesTemp[i]->desc.color;
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], sb, threadID);
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 		GetDevice()->BindVertexBuffer(&linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
 		GetDevice()->Draw(2, threadID);
@@ -1565,12 +1569,12 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexBuffer(&Cube::vertexBuffer,0,sizeof(XMFLOAT3A),threadID);
 		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
 
-		static thread_local MiscCB* sb = new MiscCB;
+		MiscCB sb;
 		for (unsigned int i = 0; i<cubes.size(); i++){
-			(*sb).mTransform =XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*camera->GetViewProjection());
-			(*sb).mColor=cubes[i].desc.color;
+			sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*camera->GetViewProjection());
+			sb.mColor=cubes[i].desc.color;
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC],sb,threadID);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			GetDevice()->DrawIndexed(24,threadID);
 		}
@@ -1718,10 +1722,9 @@ void wiRenderer::DrawImagesNormals(GRAPHICSTHREAD threadID, Texture2D* refracRes
 		x->DrawNormal(threadID);
 	}
 }
-void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned int stencilRef){
-
-	
-	static thread_local Frustum frustum = Frustum();
+void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned int stencilRef)
+{
+	Frustum frustum;
 	frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y),camera->Projection,camera->View);
 	
 	CulledList culledObjects;
@@ -1788,42 +1791,42 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 			
 			if(type==0) //dir
 			{
-				static thread_local DirectionalLightCB* lcb = new DirectionalLightCB;
-				(*lcb).direction=XMVector3Normalize(
+				DirectionalLightCB lcb;
+				lcb.direction=XMVector3Normalize(
 					-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
 					);
-				(*lcb).col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-				(*lcb).mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
+				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
-					(*lcb).mShM[shmap]=l->shadowCam[shmap].getVP();
+					lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
 					if(l->shadowMaps_dirLight[shmap].depth)
 						GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
 				}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],lcb,threadID);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
 
 				GetDevice()->Draw(3, threadID);
 			}
 			else if(type==1) //point
 			{
-				static thread_local PointLightCB* lcb = new PointLightCB;
-				(*lcb).pos=l->translation;
-				(*lcb).col=l->color;
-				(*lcb).enerdis=l->enerDis;
-				(*lcb).enerdis.w = 0.f;
+				PointLightCB lcb;
+				lcb.pos=l->translation;
+				lcb.col=l->color;
+				lcb.enerdis=l->enerDis;
+				lcb.enerdis.w = 0.f;
 
 				if (l->shadow && l->shadowMap_index>=0)
 				{
-					(*lcb).enerdis.w = 1.f;
+					lcb.enerdis.w = 1.f;
 					if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
 						GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
 				}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, threadID);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
 
 				GetDevice()->Draw(240, threadID);
 			}
 			else if(type==2) //spot
 			{
-				static thread_local SpotLightCB* lcb = new SpotLightCB;
+				SpotLightCB lcb;
 				const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
 				XMMATRIX world,rot;
 				world = XMMatrixTranspose(
@@ -1832,23 +1835,23 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 						XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
 						);
 				rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
-				(*lcb).direction=XMVector3Normalize(
+				lcb.direction=XMVector3Normalize(
 					-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
 					);
-				(*lcb).world=world;
-				(*lcb).mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
-				(*lcb).mShM = XMMatrixIdentity();
-				(*lcb).col=l->color;
-				(*lcb).enerdis=l->enerDis;
-				(*lcb).enerdis.z=(float)cos(l->enerDis.z/2.0);
+				lcb.world=world;
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
+				lcb.mShM = XMMatrixIdentity();
+				lcb.col=l->color;
+				lcb.enerdis=l->enerDis;
+				lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
 
 				if (l->shadow && l->shadowMap_index>=0)
 				{
-					(*lcb).mShM = l->shadowCam[0].getVP();
+					lcb.mShM = l->shadowCam[0].getVP();
 					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
 						GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
 				}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], lcb, threadID);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
 
 				GetDevice()->Draw(192, threadID);
 			}
@@ -1861,8 +1864,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 }
 void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	
-	static thread_local Frustum frustum = Frustum();
+	Frustum frustum;
 	frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
 
 		
@@ -1902,7 +1904,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 				Light* l = (Light*)c;
 				if(l->type==type && l->noHalo==false){
 
-					static thread_local VolumeLightCB* lcb = new VolumeLightCB;
+					VolumeLightCB lcb;
 					XMMATRIX world;
 					float sca=1;
 					//if(type<1){ //sun
@@ -1930,12 +1932,12 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 							XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
 							);
 					}
-					(*lcb).world=world;
-					(*lcb).col=l->color;
-					(*lcb).enerdis=l->enerDis;
-					(*lcb).enerdis.w=sca;
+					lcb.world=world;
+					lcb.col=l->color;
+					lcb.enerdis=l->enerDis;
+					lcb.enerdis.w=sca;
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT],lcb,threadID);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT],&lcb,threadID);
 
 					if(type<=1)
 						GetDevice()->Draw(108,threadID);
@@ -2093,18 +2095,18 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 											GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
 
 										//MAPPED_SUBRESOURCE mappedResource;
-										static thread_local ShadowCB* cb = new ShadowCB;
-										(*cb).mVP = l->shadowCam[index].getVP();
-										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, threadID);
+										ShadowCB cb;
+										cb.mVP = l->shadowCam[index].getVP();
+										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 
 										int k = 0;
 										for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 											if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 												if (mesh->softBody || (*viter)->isArmatureDeformed())
-													Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
+													Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
 												else
-													Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
+													Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
 												++k;
 											}
 										}
@@ -2128,10 +2130,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 
 
-												static thread_local MaterialCB* mcb = new MaterialCB;
-												(*mcb).Create(*iMat, m);
+												MaterialCB mcb;
+												mcb.Create(*iMat, m);
 
-												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
+												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 
 												GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
@@ -2165,7 +2167,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					CulledCollection culledRenderer;
 
 					Light::shadowMaps_spotLight[i].Set(threadID);
-					static thread_local Frustum frustum = Frustum();
+					Frustum frustum;
 					XMFLOAT4X4 proj, view;
 					XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam[0].Projection));
 					XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam[0].View));
@@ -2194,18 +2196,18 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
 
 									//MAPPED_SUBRESOURCE mappedResource;
-									static thread_local ShadowCB* cb = new ShadowCB;
-									(*cb).mVP = l->shadowCam[index].getVP();
-									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], cb, threadID);
+									ShadowCB cb;
+									cb.mVP = l->shadowCam[index].getVP();
+									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 
 									int k = 0;
 									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 										if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 											if (mesh->softBody || (*viter)->isArmatureDeformed())
-												Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
+												Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
 											else
-												Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
+												Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
 											++k;
 										}
 									}
@@ -2229,10 +2231,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 
 
-											static thread_local MaterialCB* mcb = new MaterialCB;
-											(*mcb).Create(*iMat, m);
+											MaterialCB mcb;
+											mcb.Create(*iMat, m);
 
-											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
+											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 
 											GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
@@ -2273,16 +2275,16 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					Light::shadowMaps_pointLight[i].Set(threadID);
 
 					//MAPPED_SUBRESOURCE mappedResource;
-					static thread_local PointLightCB* lcb = new PointLightCB;
-					(*lcb).enerdis = l->enerDis;
-					(*lcb).pos = l->translation;
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], lcb, threadID);
+					PointLightCB lcb;
+					lcb.enerdis = l->enerDis;
+					lcb.pos = l->translation;
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
 
-					static thread_local CubeMapRenderCB* cb = new CubeMapRenderCB;
+					CubeMapRenderCB cb;
 					for (unsigned int shcam = 0; shcam < l->shadowCam.size(); ++shcam)
-						(*cb).mViewProjection[shcam] = l->shadowCam[shcam].getVP();
+						cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, threadID);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
 					CulledList culledObjects;
 					CulledCollection culledRenderer;
@@ -2310,9 +2312,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 								if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 									if (mesh->softBody || (*viter)->isArmatureDeformed())
-										Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
+										Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
 									else
-										Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
+										Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
 									++k;
 								}
 							}
@@ -2333,10 +2335,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
 									GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
 
-									static thread_local MaterialCB* mcb = new MaterialCB;
-									(*mcb).Create(*iMat, m);
+									MaterialCB mcb;
+									mcb.Create(*iMat, m);
 
-									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
+									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 									GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
 								}
@@ -2433,11 +2435,11 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 				envMapPositions[i] = sortedEnvProbes[i]->translation;
 			}
 		}
-		static thread_local MiscCB* envProbeCB = new MiscCB;
-		envProbeCB->mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
-		envProbeCB->mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
-		envProbeCB->mTransform = XMMatrixTranspose(envProbeCB->mTransform);
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], envProbeCB, threadID);
+		MiscCB envProbeCB;
+		envProbeCB.mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
+		envProbeCB.mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
+		envProbeCB.mTransform = XMMatrixTranspose(envProbeCB.mTransform);
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &envProbeCB, threadID);
 		GetDevice()->BindResourcePS(envMaps[0], TEXSLOT_ENV0, threadID);
 		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
 		
@@ -2527,9 +2529,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
 				if((*viter)->emitterType !=Object::EmitterType::EMITTER_INVISIBLE){
 					if (mesh->softBody || (*viter)->isArmatureDeformed())
-						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k);
+						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k, threadID);
 					else 
-						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k);
+						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k, threadID);
 					++k;
 				}
 			}
@@ -2556,10 +2558,10 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],mesh->stencilRef,threadID);
 
 
-					static thread_local MaterialCB* mcb = new MaterialCB;
-					(*mcb).Create(*iMat, m);
+					MaterialCB mcb;
+					mcb.Create(*iMat, m);
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 					
 
 					if(!wireRender) GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0,threadID);
@@ -2673,9 +2675,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter){
 				if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE){
 					if (mesh->softBody || (*viter)->isArmatureDeformed())
-						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k);
+						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency, (*viter)->color), k, threadID);
 					else
-						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k);
+						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k, threadID);
 					++k;
 				}
 			}
@@ -2697,10 +2699,10 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 
 				if(iMat->IsTransparent() || iMat->IsWater())
 				{
-					static thread_local MaterialCB* mcb = new MaterialCB;
-					(*mcb).Create(*iMat, m);
+					MaterialCB mcb;
+					mcb.Create(*iMat, m);
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					if(!wireRender) GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0,threadID);
 					if(!wireRender) GetDevice()->BindResourcePS(iMat->refMap, TEXSLOT_ONDEMAND1,threadID);
@@ -2805,24 +2807,24 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 				GetDevice()->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
 				GetDevice()->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
 
-				static thread_local MiscCB* dcbvs = new MiscCB;
-				(*dcbvs).mTransform =XMMatrixTranspose(XMLoadFloat4x4(&decal->world)*camera->GetViewProjection());
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], dcbvs, threadID);
+				MiscCB dcbvs;
+				dcbvs.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&decal->world)*camera->GetViewProjection());
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
-				static thread_local DecalCB* dcbps = new DecalCB;
-				dcbps->mDecalVP =
+				DecalCB dcbps;
+				dcbps.mDecalVP =
 					XMMatrixTranspose(
 						XMLoadFloat4x4(&decal->view)*XMLoadFloat4x4(&decal->projection)
 						);
-				dcbps->hasTexNor = 0;
+				dcbps.hasTexNor = 0;
 				if (decal->texture != nullptr)
-					dcbps->hasTexNor |= 0x0000001;
+					dcbps.hasTexNor |= 0x0000001;
 				if (decal->normal != nullptr)
-					dcbps->hasTexNor |= 0x0000010;
-				XMStoreFloat3(&dcbps->eye, camera->GetEye());
-				dcbps->opacity = wiMath::Clamp((decal->life <= -2 ? 1 : decal->life < decal->fadeStart ? decal->life / decal->fadeStart : 1), 0, 1);
-				dcbps->front = decal->front;
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DECAL], dcbps, threadID);
+					dcbps.hasTexNor |= 0x0000010;
+				XMStoreFloat3(&dcbps.eye, camera->GetEye());
+				dcbps.opacity = wiMath::Clamp((decal->life <= -2 ? 1 : decal->life < decal->fadeStart ? decal->life / decal->fadeStart : 1), 0, 1);
+				dcbps.front = decal->front;
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
 
 				GetDevice()->Draw(36, threadID);
 
@@ -2834,54 +2836,54 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 {
-	static thread_local WorldCB* cb = new WorldCB;
+	WorldCB cb;
 
 	auto& world = GetScene().worldInfo;
-	(*cb).mAmbient = world.ambient;
-	(*cb).mFog = world.fogSEH;
-	(*cb).mHorizon = world.horizon;
-	(*cb).mZenith = world.zenith;
-	(*cb).mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
-	XMStoreFloat4(&(*cb).mSun, GetSunPosition());
-	(*cb).mSunColor = GetSunColor();
+	cb.mAmbient = world.ambient;
+	cb.mFog = world.fogSEH;
+	cb.mHorizon = world.horizon;
+	cb.mZenith = world.zenith;
+	cb.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
+	XMStoreFloat4(&cb.mSun, GetSunPosition());
+	cb.mSunColor = GetSunColor();
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], cb, threadID);
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &cb, threadID);
 }
 void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
-	static thread_local FrameCB* cb = new FrameCB;
+	FrameCB cb;
 
 	auto& wind = GetScene().wind;
-	(*cb).mWindTime = wind.time;
-	(*cb).mWindRandomness = wind.randomness;
-	(*cb).mWindWaveSize = wind.waveSize;
-	(*cb).mWindDirection = wind.direction;
+	cb.mWindTime = wind.time;
+	cb.mWindRandomness = wind.randomness;
+	cb.mWindWaveSize = wind.waveSize;
+	cb.mWindDirection = wind.direction;
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], cb, threadID);
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }
 void wiRenderer::UpdateCameraCB(GRAPHICSTHREAD threadID)
 {
-	static thread_local CameraCB* cb = new CameraCB;
+	CameraCB cb;
 
 	auto camera = getCamera();
 	auto prevCam = prevFrameCam;
 	auto reflCam = getRefCamera();
 
-	(*cb).mView = XMMatrixTranspose(camera->GetView());
-	(*cb).mProj = XMMatrixTranspose(camera->GetProjection());
-	(*cb).mVP = XMMatrixTranspose(camera->GetViewProjection());
-	(*cb).mPrevV = XMMatrixTranspose(prevCam->GetView());
-	(*cb).mPrevP = XMMatrixTranspose(prevCam->GetProjection());
-	(*cb).mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
-	(*cb).mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
-	(*cb).mInvP = XMMatrixInverse(nullptr, (*cb).mVP);
-	(*cb).mCamPos = camera->translation;
-	(*cb).mAt = camera->At;
-	(*cb).mUp = camera->Up;
-	(*cb).mZNearP = camera->zNearP;
-	(*cb).mZFarP = camera->zFarP;
+	cb.mView = XMMatrixTranspose(camera->GetView());
+	cb.mProj = XMMatrixTranspose(camera->GetProjection());
+	cb.mVP = XMMatrixTranspose(camera->GetViewProjection());
+	cb.mPrevV = XMMatrixTranspose(prevCam->GetView());
+	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
+	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
+	cb.mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
+	cb.mInvP = XMMatrixInverse(nullptr, cb.mVP);
+	cb.mCamPos = camera->translation;
+	cb.mAt = camera->At;
+	cb.mUp = camera->Up;
+	cb.mZNearP = camera->zNearP;
+	cb.mZFarP = camera->zFarP;
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], cb, threadID);
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 }
 void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID)
 {
@@ -3347,14 +3349,14 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	}
 
 
-	static thread_local CubeMapRenderCB* cb = new CubeMapRenderCB;
+	CubeMapRenderCB cb;
 	for (unsigned int i = 0; i < cameras.size(); ++i)
 	{
 		cameras[i].Update(XMLoadFloat3(&position));
-		(*cb).mViewProjection[i] = cameras[i].getVP();
+		cb.mViewProjection[i] = cameras[i].getVP();
 	}
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], cb, threadID);
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
 
 	CulledList culledObjects;
@@ -3385,9 +3387,9 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 				if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 					if (mesh->softBody || (*viter)->isArmatureDeformed())
-						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k);
+						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
 					else
-						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k);
+						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
 					++k;
 				}
 			}
@@ -3416,10 +3418,10 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 					GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
 
-					static thread_local MaterialCB* mcb = new MaterialCB;
-					(*mcb).Create(*iMat, m);
+					MaterialCB mcb;
+					mcb.Create(*iMat, m);
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], mcb, threadID);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
 				}

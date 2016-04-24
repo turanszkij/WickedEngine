@@ -59,8 +59,14 @@
 #include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
 
+#ifdef _WIN32
+#ifdef WINSTORE_SUPPORT
+#pragma comment(lib,"WickedEngine_UWP.lib")
+#else
+#pragma comment(lib,"WickedEngine_Windows.lib")
+#endif // WINSTORE_SUPPORT
+#endif // _WIN32
 
-#pragma comment(lib,"WickedEngine.lib")
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"ws2_32.lib")

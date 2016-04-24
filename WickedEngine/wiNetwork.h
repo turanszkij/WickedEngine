@@ -9,10 +9,17 @@
 #include <sstream>
 
 
-#ifndef WINSTORE_SUPPORT
 
 class wiNetwork
 {
+public:
+	static const int PORT = 65000;
+
+	static const int PACKET_TYPE_CHANGENAME = 0;
+	static const int PACKET_TYPE_TEXTMESSAGE = 1;
+	static const int PACKET_TYPE_OTHER = 2;
+
+#ifndef WINSTORE_SUPPORT
 protected:
 	
 #define SCK_VERSION2            0x0202
@@ -24,12 +31,6 @@ protected:
 	std::string name;
 
 public:
-	
-	static const int PORT = 65000;
-
-	static const int PACKET_TYPE_CHANGENAME = 0;
-	static const int PACKET_TYPE_TEXTMESSAGE = 1;
-	static const int PACKET_TYPE_OTHER = 2;
 	bool success;
 
 	wiNetwork(void);
@@ -83,9 +84,10 @@ public:
 		}
 		return false;
 	}
+#endif // WINSTORE_SUPPORT
+
 };
 
-#endif //FAMILY
 
 #endif
 

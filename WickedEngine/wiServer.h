@@ -2,7 +2,6 @@
 #define SERVER_H
 
 
-#ifndef WINSTORE_SUPPORT
 
 #include "wiNetwork.h"
 #include <ctime>
@@ -11,6 +10,7 @@
 
 class wiServer : public wiNetwork
 {
+#ifndef WINSTORE_SUPPORT
 private:
 	map<SOCKET,string> clients;
 public:
@@ -150,10 +150,16 @@ public:
 
 
 	vector<string> listClients();
-	
+
+#else
+public:
+	wiServer(const string& newName = "SERVER", const string& ipaddress = "0.0.0.0", int port = PORT) {}
+	template<typename T>
+	void Poll(T& data) {}
+
+#endif // WINSTORE_SUPPORT
 
 };
 
-#endif //FAMILY
 
 #endif

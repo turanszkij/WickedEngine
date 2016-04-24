@@ -269,12 +269,12 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 		wiRenderer::GetDevice()->BindPS(pixelShader,threadID);
 
 
-		static thread_local ConstantBuffer* cb = new ConstantBuffer;
-		(*cb).mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetDevice()->GetScreenWidth(),(float)wiRenderer::GetDevice()->GetScreenHeight(),0,100) );
-		(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
-		(*cb).mDimensions = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
+		ConstantBuffer cb;
+		cb.mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetDevice()->GetScreenWidth(),(float)wiRenderer::GetDevice()->GetScreenHeight(),0,100) );
+		cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
+		cb.mDimensions = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
 		
-		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,cb,threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
 
 
 		wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);

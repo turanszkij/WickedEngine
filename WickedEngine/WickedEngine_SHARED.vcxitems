@@ -506,41 +506,111 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lauxlib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lbaselib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lbitlib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lcode.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lcorolib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lctype.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldblib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldebug.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldo.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldump.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lfunc.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lgc.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\linit.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\liolib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\llex.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lmathlib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lmem.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\loadlib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lobject.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lopcodes.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\loslib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lparser.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lstate.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lstring.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lstrlib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ltable.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ltablib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ltm.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lua.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\luac.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lundump.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lutf8lib.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lvm.c" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lzio.c" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lauxlib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lbaselib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lbitlib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lcode.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lcorolib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lctype.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldblib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldebug.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldo.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ldump.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lfunc.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lgc.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\linit.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\liolib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\llex.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lmathlib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lmem.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\loadlib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lobject.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lopcodes.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\loslib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lparser.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lstate.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lstring.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lstrlib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ltable.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ltablib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\ltm.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lua.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\luac.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lundump.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lutf8lib.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lvm.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lzio.c">
+      <CompileAsWinRT>false</CompileAsWinRT>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp" />

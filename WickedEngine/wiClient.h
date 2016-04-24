@@ -3,10 +3,10 @@
 
 #include "wiNetwork.h"
 
-#ifndef WINSTORE_SUPPORT
 
 class wiClient : public wiNetwork
 {
+#ifndef WINSTORE_SUPPORT
 public:
 	wiClient(const string& newName = "CLIENT", const string& ipaddress = "127.0.0.1", int port = PORT);
 	~wiClient(void);
@@ -139,9 +139,15 @@ public:
 
 	} 
 
+#else
+public:
+	wiClient(const string& newName = "CLIENT", const string& ipaddress = "127.0.0.1", int port = PORT) {}
+	template<typename T>
+	void Poll(T& data) {}
+
+#endif // WINSTORE_SUPPORT
 
 };
 
-#endif //FAMILY
 
 #endif

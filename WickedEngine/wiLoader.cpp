@@ -1367,7 +1367,6 @@ Material::~Material() {
 
 #pragma region MESH
 
-thread_local vector<Instance>		Mesh::instances;
 GPUBuffer Mesh::meshInstanceBuffer;
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
@@ -1773,17 +1772,19 @@ void Mesh::CreateVertexArrays()
 		}
 	}
 }
-void Mesh::AddRenderableInstance(const Instance& instance, int numerator)
+
+vector<Instance> meshInstances[GRAPHICSTHREAD_COUNT];
+void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID)
 {
-	if (numerator >= (int)instances.size())
+	if (numerator >= (int)meshInstances[threadID].size())
 	{
-		instances.resize((instances.size() + 1) * 2);
+		meshInstances[threadID].resize((meshInstances[threadID].size() + 1) * 2);
 	}
-	instances[numerator] = instance;
+	meshInstances[threadID][numerator] = instance;
 }
 void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->UpdateBuffer(&meshInstanceBuffer, instances.data(), threadID, sizeof(Instance)*count);
+	wiRenderer::GetDevice()->UpdateBuffer(&meshInstanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
 }
 #pragma endregion
 

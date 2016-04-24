@@ -252,13 +252,13 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 		
 			//wiRenderer::GetDevice()->BindResourcePS(depth,1,threadID);
 
-			static thread_local ConstantBuffer* cb = new ConstantBuffer;
-			(*cb).mAdd.x = additive;
-			(*cb).mAdd.y = (FLAG==DRAW_DARK?true:false);
-			(*cb).mMotionBlurAmount = motionBlurAmount;
+			ConstantBuffer cb;
+			cb.mAdd.x = additive;
+			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
+			cb.mMotionBlurAmount = motionBlurAmount;
 		
 
-			wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,cb,threadID);
+			wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
 			wiRenderer::GetDevice()->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 			wiRenderer::GetDevice()->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);

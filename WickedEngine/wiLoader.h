@@ -288,8 +288,6 @@ struct Mesh{
 	vector<unsigned int>	physicsindices;
 	vector<int>				physicalmapGP;
 
-	static thread_local vector<Instance>		instances;
-
 	wiGraphicsTypes::GPUBuffer meshVertBuff;
 	static wiGraphicsTypes::GPUBuffer meshInstanceBuffer;
 	wiGraphicsTypes::GPUBuffer meshIndexBuff;
@@ -342,7 +340,7 @@ struct Mesh{
 	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
 	void CreateBuffers(Object* object);
 	void CreateVertexArrays();
-	static void AddRenderableInstance(const Instance& instance, int numerator);
+	static void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
 	static void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
 	void init(){
 		parent="";
@@ -868,7 +866,7 @@ struct Camera:public Transform{
 	}
 	void SetUp(int newWidth, int newHeight, float newNear, float newFar)
 	{
-		XMMATRIX View;
+		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
 
 		zNearP = newNear;
@@ -887,7 +885,7 @@ struct Camera:public Transform{
 	}
 	void UpdateProps()
 	{
-		XMMATRIX View;
+		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye = this->GetEye();
 
 		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));

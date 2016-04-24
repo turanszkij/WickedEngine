@@ -245,8 +245,8 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		return;
 	}
 
-	static thread_local ImageCB* cb = new ImageCB;
-	static thread_local PostProcessCB* prcb = new PostProcessCB;
+	ImageCB cb;
+	PostProcessCB prcb;
 	{
 		switch (effects.stencilComp)
 		{
@@ -265,13 +265,13 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	if(!effects.blur){
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			if(effects.typeFlag==SCREEN){
-				(*cb).mViewProjection = XMMatrixTranspose(XMMatrixOrthographicLH((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 100));
-				(*cb).mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::GetDevice()->GetScreenWidth() / 2 - effects.siz.x / 2, -wiRenderer::GetDevice()->GetScreenHeight() / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
+				cb.mViewProjection = XMMatrixTranspose(XMMatrixOrthographicLH((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 100));
+				cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::GetDevice()->GetScreenWidth() / 2 - effects.siz.x / 2, -wiRenderer::GetDevice()->GetScreenHeight() / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(-wiRenderer::GetDevice()->GetScreenWidth() / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::GetDevice()->GetScreenHeight() / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
-				(*cb).mDimensions = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), effects.siz.x, effects.siz.y);
+				cb.mDimensions = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), effects.siz.x, effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
-				(*cb).mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection() );
+				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection() );
 				XMMATRIX faceRot = XMMatrixIdentity();
 				if(effects.lookAt.w){
 					XMVECTOR vvv = (effects.lookAt.x==1 && !effects.lookAt.y && !effects.lookAt.z)?XMVectorSet(0,1,0,0):XMVectorSet(1,0,0,0);
@@ -286,35 +286,35 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				}
 				else
 					faceRot=XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
-				(*cb).mTrans = XMMatrixTranspose(
+				cb.mTrans = XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x,effects.scale.y,1)
 					*XMMatrixRotationZ(effects.rotation)
 					*faceRot
 					*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
 					);
-				(*cb).mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
+				cb.mDimensions = XMFLOAT4(0,0,effects.siz.x,effects.siz.y);
 			}
 	
-			(*cb).mDrawRec = effects.drawRec;
-			(*cb).mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
-			(*cb).mOffsetX = effects.offset.x;
-			(*cb).mOffsetY = effects.offset.y;
-			(*cb).mPivot = (UINT)effects.pivotFlag;
-			(*cb).mFade = effects.fade;
-			(*cb).mOpacity = effects.opacity;
-			(*cb).mMask = effects.maskMap != nullptr;
-			(*cb).mDistort = effects.distortionMap != nullptr; 
-			(*cb).mMirror = effects.mirror;
+			cb.mDrawRec = effects.drawRec;
+			cb.mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
+			cb.mOffsetX = effects.offset.x;
+			cb.mOffsetY = effects.offset.y;
+			cb.mPivot = (UINT)effects.pivotFlag;
+			cb.mFade = effects.fade;
+			cb.mOpacity = effects.opacity;
+			cb.mMask = effects.maskMap != nullptr;
+			cb.mDistort = effects.distortionMap != nullptr; 
+			cb.mMirror = effects.mirror;
 			
 			int normalmapmode = 0;
 			if(effects.distortionMap && effects.refractionSource)
 				normalmapmode=1;
 			if(effects.extractNormalMap==true)
 				normalmapmode=2;
-			(*cb).mNormalmapSeparate = normalmapmode;
-			(*cb).mMipLevel = effects.mipLevel;
+			cb.mNormalmapSeparate = normalmapmode;
+			cb.mMipLevel = effects.mipLevel;
 
-			wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,cb,threadID);
+			wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
 
 			wiRenderer::GetDevice()->BindVS(vertexShader, threadID);
 			wiRenderer::GetDevice()->BindPS(pixelShader, threadID);
@@ -351,16 +351,16 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			else 
 				wiHelper::messageBox("Postprocess branch not implemented!");
 			
-			(*prcb).params0[0] = effects.process.motionBlur; 
-			(*prcb).params0[1] = effects.process.outline;
-			(*prcb).params0[2] = effects.process.dofStrength;
-			(*prcb).params0[3] = effects.process.ssss.x;
-			(*prcb).params1[0] = effects.bloom.separate;
-			(*prcb).params1[1] = effects.bloom.threshold;
-			(*prcb).params1[2] = effects.bloom.saturation;
-			(*prcb).params1[3] = effects.process.ssss.y;
+			prcb.params0[0] = effects.process.motionBlur; 
+			prcb.params0[1] = effects.process.outline;
+			prcb.params0[2] = effects.process.dofStrength;
+			prcb.params0[3] = effects.process.ssss.x;
+			prcb.params1[0] = effects.bloom.separate;
+			prcb.params1[1] = effects.bloom.threshold;
+			prcb.params1[2] = effects.bloom.saturation;
+			prcb.params1[3] = effects.process.ssss.y;
 
-			wiRenderer::GetDevice()->UpdateBuffer(processCb,prcb,threadID);
+			wiRenderer::GetDevice()->UpdateBuffer(processCb, &prcb, threadID);
 		}
 		else{ 
 			wiRenderer::GetDevice()->BindVS(screenVS,threadID);
@@ -368,14 +368,14 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			fullScreenEffect = true;
 
 			 //Density|Weight|Decay|Exposure
-			(*prcb).params0[0] = 0.65f;
-			(*prcb).params0[1] = 0.25f;
-			(*prcb).params0[2] = 0.945f;
-			(*prcb).params0[3] = 0.2f;
-			(*prcb).params1[0] = effects.sunPos.x;
-			(*prcb).params1[1] = effects.sunPos.y;
+			prcb.params0[0] = 0.65f;
+			prcb.params0[1] = 0.25f;
+			prcb.params0[2] = 0.945f;
+			prcb.params0[3] = 0.2f;
+			prcb.params1[0] = effects.sunPos.x;
+			prcb.params1[1] = effects.sunPos.y;
 
-			wiRenderer::GetDevice()->UpdateBuffer(processCb,prcb,threadID);
+			wiRenderer::GetDevice()->UpdateBuffer(processCb,&prcb,threadID);
 		}
 		wiRenderer::GetDevice()->BindResourcePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
 		wiRenderer::GetDevice()->BindResourcePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
@@ -387,11 +387,11 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		
 		if(effects.blurDir==0){
 			wiRenderer::GetDevice()->BindPS(blurHPS,threadID);
-			(*prcb).params1[3] = 1.0f / wiRenderer::GetDevice()->GetScreenWidth();
+			prcb.params1[3] = 1.0f / wiRenderer::GetDevice()->GetScreenWidth();
 		}
 		else{
 			wiRenderer::GetDevice()->BindPS(blurVPS,threadID);
-			(*prcb).params1[3] = 1.0f / wiRenderer::GetDevice()->GetScreenHeight();
+			prcb.params1[3] = 1.0f / wiRenderer::GetDevice()->GetScreenHeight();
 		}
 
 		static float weight0 = 1.0f;
@@ -400,15 +400,15 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		static float weight3 = 0.18f;
 		static float weight4 = 0.1f;
 		const float normalization = 1.0f / (weight0 + 2.0f * (weight1 + weight2 + weight3 + weight4));
-		(*prcb).params0[0] = weight0 * normalization;
-		(*prcb).params0[1] = weight1 * normalization;
-		(*prcb).params0[2] = weight2 * normalization;
-		(*prcb).params0[3] = weight3 * normalization;
-		(*prcb).params1[0] = weight4 * normalization;
-		(*prcb).params1[1] = effects.blur;
-		(*prcb).params1[2] = effects.mipLevel;
+		prcb.params0[0] = weight0 * normalization;
+		prcb.params0[1] = weight1 * normalization;
+		prcb.params0[2] = weight2 * normalization;
+		prcb.params0[3] = weight3 * normalization;
+		prcb.params1[0] = weight4 * normalization;
+		prcb.params1[1] = effects.blur;
+		prcb.params1[2] = effects.mipLevel;
 
-		wiRenderer::GetDevice()->UpdateBuffer(processCb,prcb,threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(processCb, &prcb, threadID);
 
 	}
 

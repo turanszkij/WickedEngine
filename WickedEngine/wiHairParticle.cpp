@@ -358,7 +358,7 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
 	XMMATRIX inverseRenderMat = XMMatrixInverse(nullptr, renderMatrix);
 
-	static thread_local Frustum frustum = Frustum();
+	Frustum frustum;
 
 	// Culling camera needs to be transformed according to hair ps transform (inverse) 
 	XMFLOAT4X4 cull_View;
@@ -404,12 +404,12 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 			wiRenderer::GetDevice()->BindRasterizerState(ncrs,threadID);
 
 
-		static thread_local ConstantBuffer* gcb = new ConstantBuffer;
-		(*gcb).mWorld = XMMatrixTranspose(renderMatrix);
-		(*gcb).color=material->diffuseColor;
-		(*gcb).drawdistance = (float)LOD[2];
+		ConstantBuffer gcb;
+		gcb.mWorld = XMMatrixTranspose(renderMatrix);
+		gcb.color=material->diffuseColor;
+		gcb.drawdistance = (float)LOD[2];
 		
-		wiRenderer::GetDevice()->UpdateBuffer(cbgs,gcb,threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(cbgs,&gcb,threadID);
 		wiRenderer::GetDevice()->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 		wiRenderer::GetDevice()->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
