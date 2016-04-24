@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="BULLET">
-      <UniqueIdentifier>{4fbbf62b-a1a0-4e97-95c8-6dde3eef56e7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="LUA">
       <UniqueIdentifier>{1a296465-57df-45aa-b06b-e16451c607a3}</UniqueIdentifier>
     </Filter>
@@ -31,17 +28,11 @@
     <Filter Include="ENGINE\GUI">
       <UniqueIdentifier>{a637b1af-3cc6-48c3-89b4-8b931a1eb23e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BULLET">
+      <UniqueIdentifier>{1d29e28d-55e4-45e0-b14b-bfa786747c1a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletCollisionCommon.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletDynamicsCommon.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\Bullet-C-Api.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
       <Filter>LUA</Filter>
     </ClInclude>
@@ -138,280 +129,265 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WicTextureLoader.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Character\btCharacterControllerInterface.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Character\btKinematicCharacterController.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btConeTwistConstraint.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btConstraintSolver.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btContactConstraint.h">
-      <Filter>BULLET</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btContactSolverInfo.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLuna.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btFixedConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiCVars.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGearConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFrameRate.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTaskThread.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHinge2Constraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiWaterPlane.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHingeConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiHitbox2D.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btJacobianEntry.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSequentialImpulseConstraintSolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSliderConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolve2LinearConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolverBody.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolverConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btTypedConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btUniversalConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btActionInterface.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDynamicsWorld.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btRigidBody.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btSimpleDynamicsWorld.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBody.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraintSolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyDynamicsWorld.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointFeedback.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointLimitConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointMotor.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyLink.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBULLET.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyLinkCollider.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyPoint2Point.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodySolverConstraint.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigLCP.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigSolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeSolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolverInterface.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btPATHSolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiClient.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btSolveProjectedGaussSeidel.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiServer.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btRaycastVehicle.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btVehicleRaycaster.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiMath.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiCpuInfo.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyData.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h">
+      <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyInternals.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h">
+      <Filter>ENGINE\Common</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h">
+      <Filter>ENGINE\Common</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolvers.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
+      <Filter>ENGINE\ResourceMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolverVertexBuffer.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSparseSDF.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAabbUtil2.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedObjectArray.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btCpuFeatureUtility.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btDefaultMotionState.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGrahamScan2dConvexHull.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btHashMap.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btIDebugDraw.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btList.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrix3x3.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrixX.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMinMax.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h">
+      <Filter>ENGINE\ResourceMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMotionState.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceMapping.h">
+      <Filter>ENGINE\ResourceMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPoolAllocator.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuadWord.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuaternion.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btRandom.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btScalar.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSpatialAlgebra.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h">
+      <Filter>ENGINE\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btStackAlloc.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
+      <Filter>ENGINE\GUI</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransform.h">
-      <Filter>BULLET</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h">
+      <Filter>ENGINE\GUI</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletCollisionCommon.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletDynamicsCommon.h">
       <Filter>BULLET</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.h">
@@ -804,260 +780,281 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btVoronoiSimplexSolver.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLuna.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Character\btCharacterControllerInterface.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCVars.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Character\btKinematicCharacterController.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFrameRate.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btConeTwistConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btConstraintSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTaskThread.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btContactConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btContactSolverInfo.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWaterPlane.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btFixedConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHitbox2D.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGearConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHinge2Constraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHingeConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btJacobianEntry.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSequentialImpulseConstraintSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSliderConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolve2LinearConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolverBody.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolverConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btTypedConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btUniversalConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btActionInterface.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDiscreteDynamicsWorld.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDynamicsWorld.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btRigidBody.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btSimpleDynamicsWorld.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBody.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBULLET.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraintSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyDynamicsWorld.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointFeedback.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointLimitConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointMotor.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyLink.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyLinkCollider.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyPoint2Point.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodySolverConstraint.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigLCP.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiClient.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiServer.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolverInterface.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiMath.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btPATHSolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btSolveProjectedGaussSeidel.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCpuInfo.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btRaycastVehicle.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btVehicleRaycaster.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h">
-      <Filter>ENGINE</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h">
-      <Filter>ENGINE\Common</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h">
-      <Filter>ENGINE\Common</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
-      <Filter>ENGINE\ResourceMapping</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyData.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h">
-      <Filter>ENGINE\Components</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyInternals.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
-      <Filter>ENGINE\Components</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent.h">
-      <Filter>ENGINE\Components</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolvers.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent.h">
-      <Filter>ENGINE\Components</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodySolverVertexBuffer.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSparseSDF.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAabbUtil2.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedObjectArray.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btCpuFeatureUtility.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btDefaultMotionState.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGrahamScan2dConvexHull.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h">
-      <Filter>ENGINE\ResourceMapping</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btHashMap.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ResourceMapping.h">
-      <Filter>ENGINE\ResourceMapping</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btIDebugDraw.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btList.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrix3x3.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMatrixX.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMinMax.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btMotionState.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPoolAllocator.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuadWord.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h">
-      <Filter>ENGINE\LuaBindings</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuaternion.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
-      <Filter>ENGINE\GUI</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h">
-      <Filter>ENGINE\GUI</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btRandom.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btScalar.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSpatialAlgebra.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btStackAlloc.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransform.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h">
+      <Filter>BULLET</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h">
+      <Filter>BULLET</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1178,152 +1175,221 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WicTextureLoader.cpp">
       <Filter>UTILITY</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Character\btKinematicCharacterController.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btConeTwistConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btContactConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btFixedConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGearConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHinge2Constraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHingeConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSequentialImpulseConstraintSolver.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSliderConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolve2LinearConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btTypedConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btUniversalConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDiscreteDynamicsWorld.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSPTree.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btRigidBody.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBULLET.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btSimpleDynamicsWorld.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFrustum.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\Bullet-C-API.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBody.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiCVars.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraintSolver.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyDynamicsWorld.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointLimitConstraint.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointMotor.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiClient.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyPoint2Point.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigLCP.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btRaycastVehicle.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFrameRate.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiHitbox2D.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiParticle.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
+      <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp">
-      <Filter>BULLET</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp">
+      <Filter>ENGINE\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp">
+      <Filter>ENGINE\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp">
+      <Filter>ENGINE\GUI</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.cpp">
       <Filter>BULLET</Filter>
@@ -1610,221 +1676,149 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\NarrowPhaseCollision\btVoronoiSimplexSolver.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Character\btKinematicCharacterController.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btConeTwistConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btContactConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btFixedConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGearConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpring2Constraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btGeneric6DofSpringConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHinge2Constraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btHingeConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btNNCGConstraintSolver.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btPoint2PointConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSequentialImpulseConstraintSolver.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSliderConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btSolve2LinearConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btTypedConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\ConstraintSolver\btUniversalConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSPTree.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDiscreteDynamicsWorld.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBULLET.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btRigidBody.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFrustum.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btSimpleDynamicsWorld.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBody.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCVars.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraintSolver.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyDynamicsWorld.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointLimitConstraint.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyJointMotor.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiClient.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyPoint2Point.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btDantzigLCP.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btLemkeAlgorithm.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\MLCPSolvers\btMLCPSolver.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btRaycastVehicle.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBody.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFrameRate.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyConcaveCollisionAlgorithm.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyHelpers.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHitbox2D.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftBodyRigidBodyCollisionConfiguration.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiParticle.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidCollisionAlgorithm.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftRigidDynamicsWorld.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btSoftSoftCollisionAlgorithm.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btAlignedAllocator.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
-      <Filter>ENGINE</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHull.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btConvexHullComputer.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btGeometryUtil.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btPolarDecomposition.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btQuickprof.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btSerializer.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp">
-      <Filter>ENGINE\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp">
-      <Filter>ENGINE\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp">
-      <Filter>ENGINE\GUI</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.cpp">
+      <Filter>BULLET</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

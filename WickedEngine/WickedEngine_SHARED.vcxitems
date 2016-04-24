@@ -16,7 +16,6 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletCollisionCommon.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\btBulletDynamicsCommon.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\Bullet-C-Api.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btAxisSweep3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btBroadphaseInterface.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletCollision\BroadphaseCollision\btBroadphaseProxy.h" />
@@ -473,7 +472,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btDiscreteDynamicsWorld.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btRigidBody.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\btSimpleDynamicsWorld.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Dynamics\Bullet-C-API.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBody.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraint.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Featherstone\btMultiBodyConstraintSolver.cpp" />
