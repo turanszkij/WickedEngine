@@ -94,7 +94,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	sd.BufferCount = 2; // Use double-buffering to minimize latency.
 	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
 	sd.Flags = 0;
-	sd.Scaling = DXGI_SCALING_NONE;
+	sd.Scaling = DXGI_SCALING_STRETCH;
 	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
 	IDXGIDevice2 * pDXGIDevice;

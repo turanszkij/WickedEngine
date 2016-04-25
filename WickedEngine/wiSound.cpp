@@ -255,6 +255,8 @@ wiSoundEffect::~wiSoundEffect()
 }
 HRESULT wiSoundEffect::PlaySoundEffect()
 {
+	if (!INITIALIZED)
+		return E_FAIL;
 
 	HRESULT hr;
 	pSourceVoice = nullptr;
@@ -272,6 +274,9 @@ HRESULT wiSoundEffect::PlaySoundEffect()
 }
 void wiSoundEffect::StopSoundEffect()
 {
+	if (!INITIALIZED)
+		return;
+
 	if(pSourceVoice!=nullptr){
 		pSourceVoice->Stop();
 	}
@@ -332,6 +337,8 @@ wiMusic::~wiMusic()
 }
 HRESULT wiMusic::PlaySoundEffect()
 {
+	if (!INITIALIZED)
+		return E_FAIL;
 
 	HRESULT hr;
 	pSourceVoice = nullptr;
@@ -349,6 +356,9 @@ HRESULT wiMusic::PlaySoundEffect()
 }
 void wiMusic::StopSoundEffect()
 {
+	if (!INITIALIZED)
+		return;
+
 	if(pSourceVoice!=nullptr){
 		pSourceVoice->Stop();
 	}

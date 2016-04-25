@@ -1362,7 +1362,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						bonebuf[threadID][k].pose = mesh->armature->boneCollection[k]->boneRelativity;
 						bonebuf[threadID][k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
 					}
-					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf, threadID, sizeof(ShaderBoneType) * mesh->armature->boneCollection.size());
+					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf[threadID], threadID, sizeof(ShaderBoneType) * mesh->armature->boneCollection.size());
 
 					// Do the skinning
 					GetDevice()->BindVertexBuffer(&mesh->meshVertBuff, 0, sizeof(SkinnedVertex), threadID);
