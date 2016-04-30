@@ -742,9 +742,9 @@ void wiBULLET::registerObject(Object* object){
 	}
 }
 
-void wiBULLET::Update(){
-	if(rigidBodyPhysicsEnabled || softBodyPhysicsEnabled)
-		dynamicsWorld->stepSimulation((1.f/60.f));
+void wiBULLET::Update(float dt){
+	if (rigidBodyPhysicsEnabled || softBodyPhysicsEnabled)
+		dynamicsWorld->stepSimulation(dt, 6);
 }
 void wiBULLET::MarkForRead(){
 

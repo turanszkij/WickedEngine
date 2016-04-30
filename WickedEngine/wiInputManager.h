@@ -61,5 +61,23 @@ public:
 	//hide pointer
 	static void hidepointer(bool value);
 
+	struct Touch
+	{
+		enum TouchState
+		{
+			TOUCHSTATE_PRESSED,
+			TOUCHSTATE_RELEASED,
+			TOUCHSTATE_MOVED,
+			TOUCHSTATE_COUNT,
+		} state;
+		// current position of touch
+		XMFLOAT2 pos;
+		// velocity of swipe
+		XMFLOAT2 delta;
+		// true if two touches occured in a rapid succession in the same spot
+		bool doubleClick;
+	};
+	static Touch touch();
+
 };
 

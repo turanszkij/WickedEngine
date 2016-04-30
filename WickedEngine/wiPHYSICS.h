@@ -31,7 +31,7 @@ public:
 	void NextRunWorld(){firstRunWorld=false;}
 	int getObjectCount(){return registeredObjects+1;}
 
-	virtual void Update()=0;
+	virtual void Update(float dt)=0;
 	virtual void MarkForRead()=0;
 	virtual void UnMarkForRead()=0;
 	virtual void MarkForWrite()=0;

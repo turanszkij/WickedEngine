@@ -114,6 +114,10 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 		wiHelper::messageBox("Swap chain creation failed!", "Error!");
 		exit(1);
 	}
+
+	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
+	// ensures that the application will only render after each VSync, minimizing power consumption.
+	hr = pDXGIDevice->SetMaximumFrameLatency(1);
 #endif
 
 	DEFERREDCONTEXT_SUPPORT = false;

@@ -61,7 +61,7 @@ public:
 
 	void registerObject(Object* object);
 
-	void Update();
+	void Update(float dt);
 	void MarkForRead();
 	void UnMarkForRead();
 	void MarkForWrite();

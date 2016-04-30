@@ -8,16 +8,16 @@ class ForwardRenderableComponent :
 protected:
 	wiRenderTarget rtMain;
 
-	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 public:
 	ForwardRenderableComponent();
 	~ForwardRenderableComponent();
 
-	virtual void setPreferredThreadingCount(unsigned short value);
+	virtual void setPreferredThreadingCount(unsigned short value) override;
 
-	virtual void Initialize();
-	virtual void Load();
-	virtual void Start();
-	virtual void Render();
+	virtual void Initialize() override;
+	virtual void Load() override;
+	virtual void Start() override;
+	virtual void Render() override;
 };
 

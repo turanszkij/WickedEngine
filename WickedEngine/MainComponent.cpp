@@ -101,6 +101,8 @@ void MainComponent::run()
 		Update();
 	}
 
+	getActiveComponent()->FixedUpdate(elapsedTime);
+
 	Render();
 
 	wiRenderer::Present(bind(&MainComponent::Compose, this));

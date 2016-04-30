@@ -442,7 +442,7 @@ public:
 	static void CalculateVertexAO(Object* object);
 
 	static PHYSICS* physicsEngine;
-	static void SychronizeWithPhysicsEngine();
+	static void SynchronizeWithPhysicsEngine(float dt = 1.0f / 60.0f);
 
 	static Model* LoadModel(const string& dir, const string& name, const XMMATRIX& transform = XMMatrixIdentity(), const string& ident = "common");
 	static void LoadWorldInfo(const string& dir, const string& name);

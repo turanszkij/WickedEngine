@@ -11,8 +11,6 @@ using namespace wiGraphicsTypes;
 
 Renderable3DComponent::Renderable3DComponent()
 {
-	_needToUpdateRenderData.store(true);
-
 	Renderable2DComponent();
 }
 Renderable3DComponent::~Renderable3DComponent()
@@ -180,13 +178,15 @@ void Renderable3DComponent::Start()
 
 void Renderable3DComponent::Update(){
 	wiRenderer::Update();
-	wiRenderer::SychronizeWithPhysicsEngine();
 	wiRenderer::UpdateImages();
 
-	_needToUpdateRenderData.store(true);
-
-
 	Renderable2DComponent::Update();
+}
+
+void Renderable3DComponent::FixedUpdate(float dt) {
+	wiRenderer::SynchronizeWithPhysicsEngine(dt);
+
+	Renderable2DComponent::FixedUpdate(dt);
 }
 
 void Renderable3DComponent::Compose(){
@@ -199,14 +199,7 @@ void Renderable3DComponent::Compose(){
 
 void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 {
-	if (!_needToUpdateRenderData.load())
-	{
-		return;
-	}
-
 	wiRenderer::UpdateRenderData(threadID);
-
-	_needToUpdateRenderData.store(false);
 }
 void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 {

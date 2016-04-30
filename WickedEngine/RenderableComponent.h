@@ -17,23 +17,25 @@ public:
 	RenderableComponent(){}
 	~RenderableComponent(){}
 
-	//initialize component
-	virtual void Initialize(){};
-	//load (graphics) resources
-	virtual void Load(){};
-	//delete resources
-	virtual void Unload(){};
-	//start component, load temporary resources
+	// initialize component
+	virtual void Initialize() {}
+	// load (graphics) resources
+	virtual void Load() {}
+	// delete resources
+	virtual void Unload() {}
+	// start component, load temporary resources
 	virtual void Start();
-	//unload temporary resources
+	// unload temporary resources
 	virtual void Stop();
-	//update logic
-	virtual void Update(){};
-	//Render to layers, rendertargets, etc
-	//This will be rendered offscreen
-	virtual void Render(){};
-	//Compose the rendered layers (for example blend the layers together as Images)
-	//This will be rendered to the backbuffer
-	virtual void Compose(){};
+	// update logic
+	virtual void Update() {}
+	// update physics
+	virtual void FixedUpdate(float dt) {}
+	// Render to layers, rendertargets, etc
+	// This will be rendered offscreen
+	virtual void Render() {}
+	// Compose the rendered layers (for example blend the layers together as Images)
+	// This will be rendered to the backbuffer
+	virtual void Compose() {}
 };
 

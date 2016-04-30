@@ -3240,7 +3240,7 @@ Scene& wiRenderer::GetScene()
 	return *scene;
 }
 
-void wiRenderer::SychronizeWithPhysicsEngine()
+void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 {
 	if (physicsEngine && GetGameSpeed()){
 
@@ -3285,7 +3285,7 @@ void wiRenderer::SychronizeWithPhysicsEngine()
 			}
 		}
 
-		physicsEngine->Update();
+		physicsEngine->Update(dt);
 
 		for (Model* model : GetScene().models)
 		{

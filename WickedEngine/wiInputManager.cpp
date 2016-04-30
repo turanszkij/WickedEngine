@@ -12,8 +12,8 @@ wiInputManager::InputCollection wiInputManager::inputs;
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
 #else
-#define KEY_DOWN(vk_code) (false)
-#define KEY_TOGGLE(vk_code) (false)
+#define KEY_DOWN(vk_code) ((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) < 0)
+#define KEY_TOGGLE(vk_code) (((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
 #endif //WINSTORE_SUPPORT
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
@@ -133,8 +133,10 @@ XMFLOAT4 wiInputManager::getpointer()
 	POINT p;
 	GetCursorPos(&p);
 	return XMFLOAT4((float)p.x, (float)p.y, 0, 0);
+#else
+	auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
+	return XMFLOAT4(p.X, p.Y, 0, 0);
 #endif
-	return XMFLOAT4(0, 0, 0, 0);
 }
 void wiInputManager::setpointer(const XMFLOAT4& props)
 {
@@ -149,3 +151,41 @@ void wiInputManager::hidepointer(bool value)
 #endif
 }
 
+
+#ifdef WINSTORE_SUPPORT
+using namespace Windows::ApplicationModel;
+using namespace Windows::ApplicationModel::Core;
+using namespace Windows::ApplicationModel::Activation;
+using namespace Windows::UI::Core;
+using namespace Windows::UI::Input;
+using namespace Windows::System;
+using namespace Windows::Foundation;
+
+void _OnPointerPressed(CoreWindow^ window, PointerEventArgs^ pointer)
+{
+	auto p = pointer->CurrentPoint;
+}
+void _OnPointerReleased(CoreWindow^ window, PointerEventArgs^ pointer)
+{
+	auto p = pointer->CurrentPoint;
+}
+void _OnPointerMoved(CoreWindow^ window, PointerEventArgs^ pointer)
+{
+	auto p = pointer->CurrentPoint;
+}
+#endif // WINSTORE_SUPPORT
+
+wiInputManager::Touch wiInputManager::touch()
+{
+	static bool isRegisteredTouch = false;
+	if (!isRegisteredTouch)
+	{
+#ifdef WINSTORE_SUPPORT
+		auto window = CoreWindow::GetForCurrentThread();
+
+		window->PointerPressed += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerPressed);
+		window->PointerReleased += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerReleased);
+		window->PointerMoved += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerMoved);
+#endif // WINSTORE_SUPPORT
+	}
+}

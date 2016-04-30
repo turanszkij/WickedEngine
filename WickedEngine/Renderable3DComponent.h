@@ -9,8 +9,6 @@ class Renderable3DComponent :
 	public Renderable2DComponent
 {
 private:
-	atomic_bool  _needToUpdateRenderData;
-
 	float lightShaftQuality;
 	float bloomDownSample;
 	float bloomStren;
@@ -153,10 +151,11 @@ public:
 	Renderable3DComponent();
 	~Renderable3DComponent();
 
-	virtual void Initialize();
-	virtual void Load();
-	virtual void Start();
-	virtual void Update();
-	virtual void Compose();
+	virtual void Initialize() override;
+	virtual void Load() override;
+	virtual void Start() override;
+	virtual void Update() override;
+	virtual void FixedUpdate(float dt) override;
+	virtual void Compose() override;
 };
 
