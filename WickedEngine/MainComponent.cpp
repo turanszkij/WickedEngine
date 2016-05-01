@@ -101,7 +101,7 @@ void MainComponent::run()
 		Update();
 	}
 
-	getActiveComponent()->FixedUpdate(elapsedTime);
+	getActiveComponent()->FixedUpdate((float)elapsedTime);
 
 	Render();
 
@@ -112,6 +112,8 @@ void MainComponent::run()
 		wiLua::GetGlobal()->RunFile("startup.lua");
 		startupScriptProcessed = true;
 	}
+
+	wiInputManager::ManageTouches();
 }
 
 void MainComponent::Update()
@@ -210,6 +212,8 @@ bool MainComponent::setWindow(Windows::UI::Core::CoreWindow^ window)
 	screenW = (int)window->Bounds.Width;
 	screenH = (int)window->Bounds.Height;
 	wiRenderer::InitDevice(window);
+
+	this->window = window;
 
 	return true;
 }

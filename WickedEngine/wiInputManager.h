@@ -72,12 +72,14 @@ public:
 		} state;
 		// current position of touch
 		XMFLOAT2 pos;
-		// velocity of swipe
-		XMFLOAT2 delta;
-		// true if two touches occured in a rapid succession in the same spot
-		bool doubleClick;
 	};
-	static Touch touch();
+	static vector<Touch> getTouches();
+	static void ManageTouches();
+
+private:
+	static vector<Touch> touches;
+
+	friend void AddTouch(const wiInputManager::Touch& touch);
 
 };
 

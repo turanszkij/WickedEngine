@@ -19,7 +19,9 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 
 	UINT createDeviceFlags = 0;
 #ifdef _DEBUG
+#ifndef WINSTORE_SUPPORT
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
 #endif
 
 	D3D_DRIVER_TYPE driverTypes[] =

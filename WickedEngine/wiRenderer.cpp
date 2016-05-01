@@ -3041,7 +3041,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 	}
 
 	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
-	XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
+	XMVECTOR& rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
 	for (Cullable* culled : culledObjects){
 		Object* object = (Object*)culled;
@@ -3072,23 +3072,28 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 
 		Mesh* mesh = object->mesh;
 		XMMATRIX& objectMat = XMLoadFloat4x4(&object->world);
+		XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+
+		XMVECTOR& rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+		XMVECTOR& rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
 		for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
 			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-			Vertex& v0 = mesh->skinnedVertices[i0], v1 = mesh->skinnedVertices[i1], v2 = mesh->skinnedVertices[i2];
-			XMVECTOR& V0 =
-				XMVector4Transform(XMLoadFloat4(&v0.pos), objectMat)
-				, V1 = XMVector4Transform(XMLoadFloat4(&v1.pos), objectMat)
-				, V2 = XMVector4Transform(XMLoadFloat4(&v2.pos), objectMat);
+			Vertex& v0 = mesh->skinnedVertices[i0]; 
+			Vertex& v1 = mesh->skinnedVertices[i1];
+			Vertex& v2 = mesh->skinnedVertices[i2];
+			XMVECTOR& V0 = XMLoadFloat4(&v0.pos);
+			XMVECTOR& V1 = XMLoadFloat4(&v1.pos);
+			XMVECTOR& V2 = XMLoadFloat4(&v2.pos);
 			float distance = 0;
-			if (TriangleTests::Intersects(rayOrigin, rayDirection, V0, V1, V2, distance)){
-				XMVECTOR& pos = XMVectorAdd(rayOrigin, rayDirection*distance);
-				XMVECTOR& nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0)));
+			if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, V0, V1, V2, distance)){
+				XMVECTOR& pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+				XMVECTOR& nor = XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0))), objectMat);
 				Picked picked = Picked();
 				picked.object = object;
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
-				picked.distance = distance;
+				picked.distance = wiMath::Distance(pos, rayOrigin);
 				points.push_back(picked);
 			}
 		}

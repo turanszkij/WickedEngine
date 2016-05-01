@@ -525,11 +525,29 @@ A TCP client which provides features to communicate with other clients over the 
 
 ### Input Handling
 These provide functions to check the state of the input devices.
+
+#### InputManager
+Query input devices
 - [outer]input : InputManager
 - [void-constructor]InputManager()
 - Down(int code, opt int type = KEYBOARD)
 - Press(int code, opt int type = KEYBOARD)
 - Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = KEYBOARD)
+- GetPointer() : Vector result
+- SetPointer(Vector pos)
+- HidePointer(bool visible)
+- GetTouches() : Touch result[]
+
+#### Touch
+Describes a touch contact point
+- [constructor]Touch()
+- GetState() : TOUCHSTATE result
+- GetPos() : Vector result
+
+#### TOUCHSTATE
+- [outer]TOUCHSTATE_PRESSED : int
+- [outer]TOUCHSTATE_RELEASED : int
+- [outer]TOUCHSTATE_MOVED : int
 
 #### Input types
 - [outer]DIRECTINPUT_JOYPAD : int

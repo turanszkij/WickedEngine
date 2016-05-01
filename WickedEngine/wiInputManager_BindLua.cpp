@@ -1,5 +1,4 @@
 #include "wiInputManager_BindLua.h"
-#include "wiInputManager.h"
 #include "Vector_BindLua.h"
 
 const char wiInputManager_BindLua::className[] = "InputManager";
@@ -11,12 +10,12 @@ Luna<wiInputManager_BindLua>::FunctionType wiInputManager_BindLua::methods[] = {
 	lunamethod(wiInputManager_BindLua, GetPointer),
 	lunamethod(wiInputManager_BindLua, SetPointer),
 	lunamethod(wiInputManager_BindLua, HidePointer),
+	lunamethod(wiInputManager_BindLua, GetTouches),
 	{ NULL, NULL }
 };
 Luna<wiInputManager_BindLua>::PropertyType wiInputManager_BindLua::properties[] = {
 	{ NULL, NULL }
 };
-
 
 int wiInputManager_BindLua::Down(lua_State* L)
 {
@@ -117,6 +116,15 @@ int wiInputManager_BindLua::HidePointer(lua_State* L)
 		wiLua::SError(L, "HidePointer(bool value) not enough arguments!");
 	return 0;
 }
+int wiInputManager_BindLua::GetTouches(lua_State* L)
+{
+	auto& touches = wiInputManager::getTouches();
+	for (auto& touch : touches)
+	{
+		Luna<Touch_BindLua>::push(L, new Touch_BindLua(touch));
+	}
+	return touches.size();
+}
 
 void wiInputManager_BindLua::Bind()
 {
@@ -159,5 +167,50 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("VK_LBUTTON		= 0x01");
 		wiLua::GetGlobal()->RunText("VK_MBUTTON		= 0x04");
 		wiLua::GetGlobal()->RunText("VK_RBUTTON		= 0x02");
+
+		//Touch
+		wiLua::GetGlobal()->RunText("TOUCHSTATE_PRESSED		= 0");
+		wiLua::GetGlobal()->RunText("TOUCHSTATE_RELEASED	= 1");
+		wiLua::GetGlobal()->RunText("TOUCHSTATE_MOVED		= 2");
+	}
+
+	Touch_BindLua::Bind();
+}
+
+
+
+
+
+
+
+const char Touch_BindLua::className[] = "Touch";
+
+Luna<Touch_BindLua>::FunctionType Touch_BindLua::methods[] = {
+	lunamethod(Touch_BindLua, GetState),
+	lunamethod(Touch_BindLua, GetPos),
+	{ NULL, NULL }
+};
+Luna<Touch_BindLua>::PropertyType Touch_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+int Touch_BindLua::GetState(lua_State* L)
+{
+	wiLua::SSetInt(L, (int)touch.state);
+	return 1;
+}
+int Touch_BindLua::GetPos(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&touch.pos)));
+	return 1;
+}
+
+void Touch_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Touch_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

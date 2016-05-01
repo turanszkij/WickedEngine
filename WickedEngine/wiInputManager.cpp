@@ -7,6 +7,7 @@ wiXInput* wiInputManager::xinput = nullptr;
 wiDirectInput* wiInputManager::dinput = nullptr;
 wiRawInput* wiInputManager::rawinput = nullptr;
 wiInputManager::InputCollection wiInputManager::inputs;
+vector<wiInputManager::Touch> wiInputManager::touches;
 
 #ifndef WINSTORE_SUPPORT
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
@@ -159,23 +160,43 @@ using namespace Windows::ApplicationModel::Activation;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Input;
 using namespace Windows::System;
-using namespace Windows::Foundation;
+using namespace Windows::Foundation; 
+
+void AddTouch(const wiInputManager::Touch& touch)
+{
+	wiInputManager::touches.push_back(touch);
+}
 
 void _OnPointerPressed(CoreWindow^ window, PointerEventArgs^ pointer)
 {
 	auto p = pointer->CurrentPoint;
+
+	wiInputManager::Touch touch;
+	touch.state = wiInputManager::Touch::TOUCHSTATE_PRESSED;
+	touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
+	AddTouch(touch);
 }
 void _OnPointerReleased(CoreWindow^ window, PointerEventArgs^ pointer)
 {
 	auto p = pointer->CurrentPoint;
+
+	wiInputManager::Touch touch;
+	touch.state = wiInputManager::Touch::TOUCHSTATE_RELEASED;
+	touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
+	AddTouch(touch);
 }
 void _OnPointerMoved(CoreWindow^ window, PointerEventArgs^ pointer)
 {
 	auto p = pointer->CurrentPoint;
+
+	wiInputManager::Touch touch;
+	touch.state = wiInputManager::Touch::TOUCHSTATE_MOVED;
+	touch.pos = XMFLOAT2(p->Position.X, p->Position.Y);
+	AddTouch(touch);
 }
 #endif // WINSTORE_SUPPORT
 
-wiInputManager::Touch wiInputManager::touch()
+vector<wiInputManager::Touch> wiInputManager::getTouches()
 {
 	static bool isRegisteredTouch = false;
 	if (!isRegisteredTouch)
@@ -187,5 +208,14 @@ wiInputManager::Touch wiInputManager::touch()
 		window->PointerReleased += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerReleased);
 		window->PointerMoved += ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(_OnPointerMoved);
 #endif // WINSTORE_SUPPORT
+
+		isRegisteredTouch = true;
 	}
+
+	return touches;
+}
+
+void wiInputManager::ManageTouches()
+{
+	touches.clear();
 }

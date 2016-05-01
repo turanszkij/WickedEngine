@@ -28,5 +28,5 @@ void main(
 	}
 	if (groupIndex != 0) { return; }
 
-	tex_accumulator[uint2(0,0)] = lerp(tex_accumulator.Load(uint2(0,0)), accumulator[0], 0.04f);
+	tex_accumulator[uint2(0,0)] = lerp(tex_accumulator.Load(uint2(0,0)), accumulator[0], 0.08f);
 }
