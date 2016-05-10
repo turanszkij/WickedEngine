@@ -153,6 +153,11 @@ void wiInputManager::hidepointer(bool value)
 }
 
 
+void AddTouch(const wiInputManager::Touch& touch)
+{
+	wiInputManager::touches.push_back(touch);
+}
+
 #ifdef WINSTORE_SUPPORT
 using namespace Windows::ApplicationModel;
 using namespace Windows::ApplicationModel::Core;
@@ -161,11 +166,6 @@ using namespace Windows::UI::Core;
 using namespace Windows::UI::Input;
 using namespace Windows::System;
 using namespace Windows::Foundation; 
-
-void AddTouch(const wiInputManager::Touch& touch)
-{
-	wiInputManager::touches.push_back(touch);
-}
 
 void _OnPointerPressed(CoreWindow^ window, PointerEventArgs^ pointer)
 {

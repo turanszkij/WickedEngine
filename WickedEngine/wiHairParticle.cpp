@@ -54,8 +54,20 @@ void wiHairParticle::CleanUp(){
 }
 
 void wiHairParticle::CleanUpStatic(){
-	//TODO
-	
+	SAFE_DELETE(il);
+	SAFE_DELETE(vs);
+	SAFE_DELETE(ps);
+	SAFE_DELETE(qps);
+	SAFE_DELETE(gs[0]);
+	SAFE_DELETE(gs[1]);
+	SAFE_DELETE(gs[2]);
+	SAFE_DELETE(qgs[0]);
+	SAFE_DELETE(qgs[1]);
+	SAFE_DELETE(cbgs);
+	SAFE_DELETE(dss);
+	SAFE_DELETE(rs);
+	SAFE_DELETE(ncrs);
+	SAFE_DELETE(bs);
 }
 void wiHairParticle::LoadShaders()
 {

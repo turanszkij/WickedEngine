@@ -5,7 +5,7 @@
 
 inline float4 GetSkyColor(in float3 normal)
 {
-	static const float overBright = 1.005f;
+	static const float overBright = 1.02f;
 
 	normal = normalize(normal) * overBright;
 

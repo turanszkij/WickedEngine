@@ -508,4 +508,5 @@ void wiImage::CleanUp()
 	SAFE_DELETE(ssrPS);
 	SAFE_DELETE(screenPS);
 	SAFE_DELETE(stereogramPS);
+	SAFE_DELETE(tonemapPS);
 }

@@ -20,7 +20,14 @@ void wiLensFlare::Initialize(){
 	SetUpStates();
 }
 void wiLensFlare::CleanUp(){
-	//TODO
+	SAFE_DELETE(constantBuffer);
+	SAFE_DELETE(pixelShader);
+	SAFE_DELETE(geometryShader);
+	SAFE_DELETE(vertexShader);
+	SAFE_DELETE(inputLayout);
+	SAFE_DELETE(rasterizerState);
+	SAFE_DELETE(depthStencilState);
+	SAFE_DELETE(blendState);
 }
 void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<Texture2D*>& rims){
 
@@ -32,7 +39,7 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector
 		wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
 		wiRenderer::GetDevice()->BindGS(geometryShader,threadID);
 
-		static thread_local ConstantBuffer cb;
+		ConstantBuffer cb;
 		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
 		cb.mScreen = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
 

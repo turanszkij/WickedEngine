@@ -9,7 +9,6 @@
 
 using namespace wiGraphicsTypes;
 
-//ID3D11Buffer		*wiEmittedParticle::vertexBuffer;
 VertexLayout	*wiEmittedParticle::vertexLayout = nullptr;
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader = nullptr,*wiEmittedParticle::simplestPS = nullptr;
@@ -452,7 +451,17 @@ void wiEmittedParticle::SetUpStatic()
 }
 void wiEmittedParticle::CleanUpStatic()
 {
-	//TODO
+	SAFE_DELETE(vertexLayout);
+	SAFE_DELETE(vertexShader);
+	SAFE_DELETE(pixelShader);
+	SAFE_DELETE(simplestPS);
+	SAFE_DELETE(geometryShader);
+	SAFE_DELETE(constantBuffer);
+	SAFE_DELETE(blendStateAlpha);
+	SAFE_DELETE(blendStateAdd);
+	SAFE_DELETE(rasterizerState);
+	SAFE_DELETE(wireFrameRS);
+	SAFE_DELETE(depthStencilState);
 }
 long wiEmittedParticle::getNumParticles()
 {
