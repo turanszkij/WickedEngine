@@ -38,33 +38,14 @@ namespace wiHelper
 #ifndef WINSTORE_SUPPORT
 		MessageBoxA(hWnd, msg.c_str(), caption.c_str(), 0);
 #else
-		//Windows::UI::Popups::MessageDialog("ASD").ShowAsync();
+		wstring wmsg(msg.begin(), msg.end());
+		wstring wcaption(caption.begin(), caption.end());
+		Windows::UI::Popups::MessageDialog(ref new Platform::String(wmsg.c_str()), ref new Platform::String(wcaption.c_str())).ShowAsync();
 #endif
 	}
 
 	void screenshot(const string& name)
 	{
-//#ifndef WINSTORE_SUPPORT
-//		CreateDirectoryA("screenshots", 0);
-//		stringstream ss("");
-//		if (name.length() <= 0)
-//			ss << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
-//		else
-//			ss << name;
-//		wstringstream wss(L"");
-//		wss << ss.str().c_str();
-//		APIResource res = nullptr;
-//		wiRenderer::renderTargetView->GetResource(&res);
-//		HRESULT h = SaveWICTextureToFile(wiRenderer::immediateContext, res, GUID_ContainerFormatPng, wss.str().c_str());
-//		if (FAILED(h))
-//			wiBackLog::post("Screenshot failed");
-//		else
-//		{
-//			ss << " Saved successfully!";
-//			wiBackLog::post(ss.str().c_str());
-//		}
-//		res->Release();
-//#endif
 		CreateDirectoryA("screenshots", 0);
 		stringstream ss("");
 		if (name.length() <= 0)
