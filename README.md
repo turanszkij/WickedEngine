@@ -3,10 +3,14 @@
 
 ### Overview:
 
-Wicked Engine is an open-source game engine written in C++ for Windows PC. For list of features, see features.txt.
+Wicked Engine is an open-source game engine written in C++. For list of features, see features.txt.
 Demos are available at: https://github.com/turanszkij/WickedEngineDemos
 From now on you can easily set up a game project by using the component templates. (see the demos for examples)
 
+
+### Platforms:
+- Windows PC Desktop (tested for version 0.7.6)
+- Universal Windows (tested for version 0.7.6)
 
 ### Requirements:
 
@@ -43,7 +47,7 @@ Editor: Use Blender 2.72 as the editor of this engine. Set up your scene and exp
 
 Windows 7 support: define _WIN32_WINNT=0x0601 preprocessor on the whole project
 
-Windows 8.1 Store support: define WINSTORE_SUPPORT preprocessor for the whole project (incomplete)
+Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole project
 
 
 ### Contents:
