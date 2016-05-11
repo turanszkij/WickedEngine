@@ -8,6 +8,9 @@ wiAudioEngine* wiMusic::audioEngine = nullptr;
 
 wiAudioEngine::wiAudioEngine()
 {
+	INITIALIZED = false;
+	pXAudio2 = nullptr;
+	pMasterVoice = nullptr;
 	Initialize();
 }
 wiAudioEngine::~wiAudioEngine()
