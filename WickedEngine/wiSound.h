@@ -1,15 +1,13 @@
-#ifndef XAUDIO2
-#define XAUDIO2
+#ifndef _XAUDIO2_H_
+#define _XAUDIO2_H_
 
-//#include <xaudio2.h>
-////#include <xaudio2fx.h>
-
-
+#include "CommonInclude.h"
 
 #if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
 #include <xaudio2.h>
 #pragma comment(lib,"xaudio2.lib")
 #else
+// WINDOWS 7 compatibility (needs DirectX June 2010 redist installed!)
 #include "Xaudio2_7/comdecl.h"
 #include "Xaudio2_7/xaudio2.h"
 #endif
@@ -36,6 +34,22 @@
 #define fourccDPDS 'sdpd'
 #endif
 
+class wiAudioEngine
+{
+public:
+	wiAudioEngine();
+	~wiAudioEngine();
+
+	IXAudio2MasteringVoice* pMasterVoice;
+	IXAudio2* pXAudio2;
+	bool INITIALIZED;
+
+	void SetVolume(float);
+	float GetVolume();
+
+	HRESULT Initialize();
+};
+
 class wiSound
 {
 protected:
@@ -46,62 +60,51 @@ protected:
 	HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWORD & dwChunkDataPosition);
 	HRESULT ReadChunkData(HANDLE hFile, void * buffer, DWORD buffersize, DWORD bufferoffset);
 	HRESULT OpenFile(TCHAR*);
-	virtual HRESULT PlaySoundEffect()=0;
-	virtual void StopSoundEffect()=0;
+
+	HRESULT PlaySound(wiAudioEngine* engine);
+	void StopSound();
 public:
+	wiSound();
+	virtual ~wiSound();
+	virtual void Initialize();
 	
 	HRESULT Load(std::wstring);
 	HRESULT Load(std::string);
-	HRESULT Play(DWORD delay = 0);
+	virtual HRESULT Play(DWORD delay = 0) = 0;
 	void Stop();
-
-private:
-	static void DelayHelper(wiSound* sound, DWORD delay);
 };
 
 class wiSoundEffect : public wiSound
 {
 private:
-	static IXAudio2MasteringVoice* pMasterVoice;
-	static IXAudio2* pXAudio2;
-	static bool INITIALIZED;
-	HRESULT PlaySoundEffect();
-	void StopSoundEffect();
-
+	static wiAudioEngine* audioEngine;
 public:
 	wiSoundEffect();
 	wiSoundEffect(std::wstring);
 	wiSoundEffect(std::string);
 	~wiSoundEffect();
-
 	static HRESULT Initialize();
-	static void CleanUp();
 
 	static void SetVolume(float);
 	static float GetVolume();
+	HRESULT Play(DWORD delay = 0) override;
 };
 
 class wiMusic : public wiSound
 {
 private:
-	static IXAudio2MasteringVoice* pMasterVoice;
-	static IXAudio2* pXAudio2;
-	static bool INITIALIZED;
-	HRESULT PlaySoundEffect();
-	void StopSoundEffect();
-
+	static wiAudioEngine* audioEngine;
 public:
 	wiMusic();
 	wiMusic(std::wstring);
 	wiMusic(std::string);
 	~wiMusic();
-	
 	static HRESULT Initialize();
-	static void CleanUp();
 
 	static void SetVolume(float);
 	static float GetVolume();
+	HRESULT Play(DWORD delay = 0) override;
 };
 
-#endif
+#endif // _XAUDIO2_H_
 

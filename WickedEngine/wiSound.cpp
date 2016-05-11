@@ -1,17 +1,67 @@
 #include "wiSound.h"
 
-IXAudio2* wiSoundEffect::pXAudio2;
-IXAudio2MasteringVoice* wiSoundEffect::pMasterVoice;
-bool wiSoundEffect::INITIALIZED = false;
-
-IXAudio2* wiMusic::pXAudio2;
-IXAudio2MasteringVoice* wiMusic::pMasterVoice;
-bool wiMusic::INITIALIZED = false;
-
 using namespace std;
 
+wiAudioEngine* wiSoundEffect::audioEngine = nullptr;
+wiAudioEngine* wiMusic::audioEngine = nullptr;
 
 
+wiAudioEngine::wiAudioEngine()
+{
+	Initialize();
+}
+wiAudioEngine::~wiAudioEngine()
+{
+	if (pMasterVoice != nullptr) pMasterVoice->DestroyVoice();
+	if (pXAudio2 != nullptr) pXAudio2->Release();
+	SAFE_DELETE(pMasterVoice);
+	SAFE_DELETE(pXAudio2);
+	INITIALIZED = false;
+}
+HRESULT wiAudioEngine::Initialize()
+{
+	if (INITIALIZED)
+		return S_OK;
+
+	CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	HRESULT hr;
+	pXAudio2 = nullptr;
+	if (FAILED(hr = XAudio2Create(&pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR)))
+		return hr;
+	pMasterVoice = nullptr;
+	if (FAILED(hr = pXAudio2->CreateMasteringVoice(&pMasterVoice)))
+		return hr;
+
+	INITIALIZED = true;
+	return EXIT_SUCCESS;
+}
+void wiAudioEngine::SetVolume(float vol) {
+	if (INITIALIZED && pMasterVoice != nullptr)
+		pMasterVoice->SetVolume(vol);
+}
+float wiAudioEngine::GetVolume() {
+	float vol;
+	if (pMasterVoice != nullptr)
+		pMasterVoice->GetVolume(&vol);
+	return vol;
+}
+
+
+
+
+
+
+
+wiSound::wiSound()
+{
+	pSourceVoice = nullptr;
+}
+wiSound::~wiSound()
+{
+	//if (pSourceVoice != nullptr) pSourceVoice->DestroyVoice();
+	//SAFE_DELETE(pSourceVoice);
+}
 
 HRESULT wiSound::FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWORD & dwChunkDataPosition)
 {
@@ -172,9 +222,6 @@ HRESULT wiSound::OpenFile(TCHAR* strFileName)
 
 	return EXIT_SUCCESS;
 }
-
-
-
 HRESULT wiSound::Load(wstring filename)
 {
 	return OpenFile(filename._Myptr());
@@ -183,183 +230,135 @@ HRESULT wiSound::Load(string filename)
 {
 	return OpenFile(wstring(filename.begin(),filename.end())._Myptr());
 }
-void wiSound::DelayHelper(wiSound* sound, DWORD delay){
-	Sleep(delay);
-	sound->Play();
-}
-HRESULT wiSound::Play(DWORD delay)
-{
-	if(delay>0){
-		thread(DelayHelper,this,delay).detach();
-		return EXIT_SUCCESS;
-	}
-	return PlaySoundEffect();
-}
 void wiSound::Stop(){
-	StopSoundEffect();
+	StopSound();
 }
-
-
-
-void wiSoundEffect::SetVolume(float vol){
-	if(INITIALIZED && pMasterVoice != nullptr)
-		pMasterVoice->SetVolume(vol);
-}
-float wiSoundEffect::GetVolume(){
-	float vol;
-	if(pMasterVoice != nullptr)
-		pMasterVoice->GetVolume(&vol);
-	return vol;
-}
-HRESULT wiSoundEffect::Initialize()
+void wiSound::Initialize()
 {
-	if (INITIALIZED)
-		return S_OK;
+	pSourceVoice = nullptr;
+}
+HRESULT wiSound::PlaySound(wiAudioEngine* engine)
+{
+	if (engine == nullptr)
+		return E_FAIL;
+
+	if (!engine->INITIALIZED)
+		return E_FAIL;
 
 	HRESULT hr;
-	pXAudio2 = nullptr;
-	if(FAILED( hr = XAudio2Create( &pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR ) ))
-		return hr;
-	pMasterVoice = nullptr;
-	if(FAILED( hr = pXAudio2->CreateMasteringVoice( &pMasterVoice ) ))
+	pSourceVoice = nullptr;
+
+	if (FAILED(hr = engine->pXAudio2->CreateSourceVoice(&pSourceVoice, (WAVEFORMATEX*)&wfx)))
 		return hr;
 
-	INITIALIZED=true;
+	if (FAILED(hr = pSourceVoice->SubmitSourceBuffer(&buffer)))
+		return hr;
+
+	if (FAILED(hr = pSourceVoice->Start(0)))
+		return hr;
+
 	return EXIT_SUCCESS;
 }
-void wiSoundEffect::CleanUp()
+void wiSound::StopSound()
 {
-	if(pMasterVoice!=nullptr) pMasterVoice->DestroyVoice();
-	if(pXAudio2!=nullptr) pXAudio2->Release();
-	pMasterVoice=nullptr;
-	pXAudio2=nullptr;
-	INITIALIZED=false;
+	if (pSourceVoice != nullptr) {
+		pSourceVoice->Stop();
+	}
+}
+
+
+void wiSoundEffect::SetVolume(float vol) {
+	if (audioEngine == nullptr)
+		return;
+	audioEngine->SetVolume(vol);
+}
+float wiSoundEffect::GetVolume() {
+	if (audioEngine == nullptr)
+		return 0;
+	return audioEngine->GetVolume();
 }
 wiSoundEffect::wiSoundEffect()
 {
-	pSourceVoice=nullptr;
-	if(!INITIALIZED) Initialize();
+	wiSound::Initialize();
 }
 wiSoundEffect::wiSoundEffect(wstring filename)
 {
-	if(!INITIALIZED) Initialize();
+	wiSound::Initialize();
 	Load(filename);
 }
 wiSoundEffect::wiSoundEffect(string filename)
 {
-	if(!INITIALIZED) Initialize();
+	wiSound::Initialize();
 	Load(filename);
 }
 wiSoundEffect::~wiSoundEffect()
 {
 }
-HRESULT wiSoundEffect::PlaySoundEffect()
+HRESULT wiSoundEffect::Initialize()
 {
-	if (!INITIALIZED)
-		return E_FAIL;
-
-	HRESULT hr;
-	pSourceVoice = nullptr;
-
-	if( FAILED(hr = pXAudio2->CreateSourceVoice( &pSourceVoice, (WAVEFORMATEX*)&wfx ) ) ) 
-		return hr;
-
-	if( FAILED(hr = pSourceVoice->SubmitSourceBuffer( &buffer ) ) )
-		return hr;
-
-	if ( FAILED(hr = pSourceVoice->Start( 0 ) ) )
-		return hr;
-
-	return EXIT_SUCCESS;
-}
-void wiSoundEffect::StopSoundEffect()
-{
-	if (!INITIALIZED)
-		return;
-
-	if(pSourceVoice!=nullptr){
-		pSourceVoice->Stop();
+	if (audioEngine == nullptr)
+	{
+		audioEngine = new wiAudioEngine;
 	}
+	return audioEngine->INITIALIZED ? S_OK : E_FAIL;
+}
+HRESULT wiSoundEffect::Play(DWORD delay)
+{
+	if (delay > 0) {
+		thread([=] {
+			Sleep(delay);
+			PlaySound(audioEngine);
+		}).detach();
+		return S_OK;
+	}
+	return PlaySound(audioEngine);
 }
 
 
 void wiMusic::SetVolume(float vol){
-	if(INITIALIZED && pMasterVoice != nullptr)
-		pMasterVoice->SetVolume(vol);
+	if (audioEngine == nullptr)
+		return;
+	audioEngine->SetVolume(vol);
 }
 float wiMusic::GetVolume(){
-	float vol;
-	if(pMasterVoice != nullptr)
-		pMasterVoice->GetVolume(&vol);
-	return vol;
-}
-HRESULT wiMusic::Initialize()
-{
-	if (INITIALIZED)
-		return S_OK;
-
-	HRESULT hr;
-	pXAudio2 = nullptr;
-	if(FAILED( hr = XAudio2Create( &pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR ) ))
-		return hr;
-	pMasterVoice = nullptr;
-	if(FAILED( hr = pXAudio2->CreateMasteringVoice( &pMasterVoice ) ))
-		return hr;
-
-	INITIALIZED=true;
-	return EXIT_SUCCESS;
-}
-void wiMusic::CleanUp()
-{
-	if(pMasterVoice!=nullptr) pMasterVoice->DestroyVoice();
-	if(pXAudio2!=nullptr) pXAudio2->Release();
-	pMasterVoice=nullptr;
-	pXAudio2=nullptr;
-	INITIALIZED=false;
+	if (audioEngine == nullptr)
+		return 0;
+	return audioEngine->GetVolume();
 }
 wiMusic::wiMusic()
 {
-	pSourceVoice=nullptr;
-	if(!INITIALIZED) Initialize();
+	wiSound::Initialize();
+	pSourceVoice = nullptr;
 }
 wiMusic::wiMusic(wstring filename)
 {
-	if(!INITIALIZED) Initialize();
+	wiSound::Initialize();
 	Load(filename);
 }
 wiMusic::wiMusic(string filename)
 {
-	if(!INITIALIZED) Initialize();
+	wiSound::Initialize();
 	Load(filename);
 }
 wiMusic::~wiMusic()
 {
 }
-HRESULT wiMusic::PlaySoundEffect()
+HRESULT wiMusic::Initialize()
 {
-	if (!INITIALIZED)
-		return E_FAIL;
-
-	HRESULT hr;
-	pSourceVoice = nullptr;
-
-	if( FAILED(hr = pXAudio2->CreateSourceVoice( &pSourceVoice, (WAVEFORMATEX*)&wfx ) ) ) 
-		return hr;
-
-	if( FAILED(hr = pSourceVoice->SubmitSourceBuffer( &buffer ) ) )
-		return hr;
-
-	if ( FAILED(hr = pSourceVoice->Start( 0 ) ) )
-		return hr;
-
-	return EXIT_SUCCESS;
-}
-void wiMusic::StopSoundEffect()
-{
-	if (!INITIALIZED)
-		return;
-
-	if(pSourceVoice!=nullptr){
-		pSourceVoice->Stop();
+	if (audioEngine == nullptr)
+	{
+		audioEngine = new wiAudioEngine;
 	}
+	return audioEngine->INITIALIZED ? S_OK : E_FAIL;
+}
+HRESULT wiMusic::Play(DWORD delay)
+{
+	if (delay > 0) {
+		thread([=] {
+			Sleep(delay);
+			PlaySound(audioEngine);
+		}).detach();
+		return S_OK;
+	}
+	return PlaySound(audioEngine);
 }
