@@ -139,8 +139,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		fx.stencilComp = COMPARISON_LESS;
 		rtSSAO[0].Activate(threadID); {
 			fx.process.setSSAO(true);
-			//fx.setDepthMap(rtLinearDepth.shaderResource.back());
-			//fx.setNormalMap(rtGBuffer.shaderResource[1]);
 			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
 			fx.quality = QUALITY_BILINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
@@ -166,8 +164,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 
 	rtDeferred.Activate(threadID); {
-		wiImage::DrawDeferred(rtGBuffer.GetTexture(0)
-			, rtLinearDepth.GetTexture(), rtLight.GetTexture(), rtGBuffer.GetTexture(1)
+		wiImage::DrawDeferred(rtLight.GetTexture()
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
 			, threadID, 0);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
@@ -177,12 +174,10 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 	if (getSSSEnabled())
 	{
-		//wiRenderer::UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
 		for (unsigned int i = 0; i<rtSSS.size() - 1; ++i){
 			rtSSS[i].Activate(threadID, rtGBuffer.depth);
 			XMFLOAT2 dir = XMFLOAT2(0, 0);
@@ -200,7 +195,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		fx.process.clear();
 		rtSSS.back().Activate(threadID, rtGBuffer.depth); {
 			fx.setMaskMap(nullptr);
-			//fx.setNormalMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			fx.blendFlag = BLENDMODE_OPAQUE;
@@ -220,10 +214,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		rtSSR.Activate(threadID); {
 			wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
 			fx.process.setSSR(true);
-			//fx.setDepthMap(dtDepthCopy.shaderResource);
-			//fx.setNormalMap(rtGBuffer.shaderResource[1]);
-			//fx.setVelocityMap(rtGBuffer.shaderResource[2]);
-			fx.setMaskMap(rtLinearDepth.GetTexture());
+			fx.setMaskMap(nullptr);
 			if (getSSSEnabled())
 				wiImage::Draw(rtSSS.back().GetTexture(), fx, threadID);
 			else

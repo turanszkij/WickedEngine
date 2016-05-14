@@ -442,9 +442,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	wiRenderer::GetDevice()->Draw((fullScreenEffect ? 3 : 4), threadID);
 }
 
-void wiImage::DrawDeferred(Texture2D* texture
-		, Texture2D* depth, Texture2D* lightmap, Texture2D* normal
-		, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilRef){
+void wiImage::DrawDeferred(Texture2D* lightmap, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilRef){
 
 	wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 	wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
@@ -456,10 +454,7 @@ void wiImage::DrawDeferred(Texture2D* texture
 
 	wiRenderer::GetDevice()->BindVS(screenVS,threadID);
 	wiRenderer::GetDevice()->BindPS(deferredPS,threadID);
-	
-	//wiRenderer::GetDevice()->BindResourcePS(depth,0,threadID);
-	//wiRenderer::GetDevice()->BindResourcePS(normal,1,threadID);
-	//wiRenderer::GetDevice()->BindResourcePS(texture,6,threadID);
+
 	wiRenderer::GetDevice()->BindResourcePS(lightmap,TEXSLOT_ONDEMAND0,threadID);
 	wiRenderer::GetDevice()->BindResourcePS(ao,TEXSLOT_ONDEMAND1,threadID);
 

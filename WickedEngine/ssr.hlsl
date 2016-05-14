@@ -33,7 +33,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		fDepth = loadMask(vProjectedCoord.xy).r; //contains linearDepth!
+		fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
 		float fDepthDiff = vHitCoord.z - fDepth;
 
 		if (fDepthDiff <= 0.0f)
@@ -47,7 +47,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 	vProjectedCoord.xy /= vProjectedCoord.w;
 	vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-	fDepth = loadMask(vProjectedCoord.xy).r; //contains linearDepth!
+	fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
 	float fDepthDiff = vHitCoord.z - fDepth;
 
 	return float4(vProjectedCoord.xy, fDepth, abs(fDepthDiff) < g_fRayhitThreshold ? 1.0f : 0.0f);
@@ -65,7 +65,7 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		fDepth = loadMask(vProjectedCoord.xy).r; //contains linearDepth!
+		fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
 
 		float fDepthDiff = vHitCoord.z - fDepth;
 
@@ -85,8 +85,8 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 	float4 o = 1;
 
 	float4 vNormZ;
-	vNormZ.rgb = loadNormal(input.tex).rgb;
-	vNormZ.a = loadDepth(input.tex);
+	vNormZ.rgb = texture_gbuffer1.Load(int3(input.pos.xy, 0)).rgb;
+	vNormZ.a = texture_depth.Load(int3(input.pos.xy, 0));
 
 	float2 vRougnessSpec = loadVelocity(input.tex).zw; //specular_power,specular intensity
 													   //float fSpecularModifier = (1 - clamp(vRougnessSpec.x, 0, 256) / 256.f)*vRougnessSpec.y;
@@ -105,11 +105,11 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 
 	float4 vCoords = SSRRayMarch(vReflectDir /** max( g_fMinRayStep, vViewPos.z )*/, vHitPos);
 
-	float2 vCoordsEdgeFact = float2(1, 1) - pow(saturate(abs(vCoords.xy - float2(0.5f, 0.5f)) * 2), 0.5f);
+	float2 vCoordsEdgeFact = float2(1, 1) - pow(saturate(abs(vCoords.xy - float2(0.5f, 0.5f)) * 2), 8);
 	float fScreenEdgeFactor = saturate(min(vCoordsEdgeFact.x, vCoordsEdgeFact.y));
 
-	if (!bInsideScreen(vCoords.xy))
-		fScreenEdgeFactor = 0;
+	//if (!bInsideScreen(vCoords.xy))
+	//	fScreenEdgeFactor = 0;
 
 
 	//Color
@@ -118,13 +118,13 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 			pow(vRougnessSpec.y, 2) *															//specular fade
 			fScreenEdgeFactor *																	// screen fade
 			saturate(vReflectDir.z)																// camera facing fade
-			* saturate((g_fSearchDist - distance(vViewPos, vHitPos)) * g_fSearchDistInv)	// reflected object distance fade
+			//* saturate((g_fSearchDist - distance(vViewPos, vHitPos)) * g_fSearchDistInv)	// reflected object distance fade
 			* vCoords.w																			// rayhit binary fade
 			);
 
 
-	float3 vReflectionColor = xTexture.SampleLevel(Sampler, vCoords.xy, 3).rgb;
-	float3 vSceneColor = xTexture.Load(int3(input.pos.x,input.pos.y,0)).rgb;
+	float3 vReflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
+	float3 vSceneColor = xTexture.Load(int3(input.pos.xy,0)).rgb;
 
 	o = float4(lerp(vSceneColor, vReflectionColor, fReflectionIntensity), 1);
 
