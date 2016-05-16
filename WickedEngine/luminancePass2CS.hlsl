@@ -1,12 +1,13 @@
 #include "globals.hlsli"
+// Calculate average luminance by reduction
 
-RWTexture2D<float> tex_accumulator : register(u0);
+RWTexture2D<float> tex : register(u0);
 
 
-#define SIZEX 64
+#define SIZEX 16
 #define SIZEY 16
 #define GROUPSIZE SIZEX*SIZEY
-groupshared float accumulator[SIZEX* SIZEY];
+groupshared float accumulator[GROUPSIZE];
 
 [numthreads(SIZEX, SIZEY, 1)]
 void main(
@@ -15,18 +16,19 @@ void main(
 	uint3 dispatchThreadId : SV_DispatchThreadID, // 
 	uint groupIndex : SV_GroupIndex)
 {
-	float2 dim = g_xWorld_ScreenWidthHeight / float2(16, 16);
-	accumulator[groupIndex] = groupIndex > asuint(dim.x*dim.y) ? 0.0f : texture_0.Load(uint3(dispatchThreadId.xy,0)).r; //bounds check
+	uint2 dim;
+	texture_0.GetDimensions(dim.x, dim.y);
+	accumulator[groupIndex] = (dispatchThreadId.x > dim.x || dispatchThreadId.y > dim.y)? 0.5: texture_0.Load(uint3(dispatchThreadId.xy,0)).r;
 	GroupMemoryBarrierWithGroupSync();
 
 	[unroll]
 	for (uint iy = GROUPSIZE >> 1; iy > 0; iy = iy >> 1) {
 		if (groupIndex < iy) {
-			accumulator[groupIndex] = (accumulator[groupIndex] + accumulator[groupIndex + iy]) * .5;
+			accumulator[groupIndex] += accumulator[groupIndex + iy];
 		}
 		GroupMemoryBarrierWithGroupSync();
 	}
 	if (groupIndex != 0) { return; }
 
-	tex_accumulator[uint2(0,0)] = lerp(tex_accumulator.Load(uint2(0,0)), accumulator[0], 0.08f);
+	tex[groupId.xy] = lerp(tex[groupId.xy], accumulator[0] / (GROUPSIZE), 0.08);
 }

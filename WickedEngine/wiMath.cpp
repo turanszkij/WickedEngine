@@ -53,7 +53,7 @@ namespace wiMath
 		return XMFLOAT3((a.x + b.x)*0.5f, (a.y + b.y)*0.5f, (a.z + b.z)*0.5f);
 	}
 
-	bool Collision(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
+	bool Collision2D(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
 	{
 		if (hitBox1Pos.x + hitBox1Siz.x<hitBox2Pos.x)
 			return false;
@@ -66,7 +66,16 @@ namespace wiMath
 		else
 			return true;
 	}
-
+	UINT GetNextPowerOfTwo(UINT x)
+	{
+		--x;
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		return ++x;
+	}
 
 
 	float Lerp(float value1, float value2, float amount)

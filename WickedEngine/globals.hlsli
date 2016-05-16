@@ -127,5 +127,9 @@ inline float3 GetSunColor() { return GAMMA(g_xWorld_SunColor.rgb); }
 inline float3 GetHorizonColor() { return GAMMA(g_xWorld_Horizon.rgb); }
 inline float3 GetZenithColor() { return GAMMA(g_xWorld_Zenith.rgb); }
 inline float3 GetAmbientColor() { return GAMMA(g_xWorld_Ambient.rgb); }
+inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
+inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
+inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
+inline float GetTime() { return g_xFrame_WindTime; }
 
 #endif // _SHADER_GLOBALS_

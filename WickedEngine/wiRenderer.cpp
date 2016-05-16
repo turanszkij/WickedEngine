@@ -2923,20 +2923,26 @@ void wiRenderer::FinishLoading()
 
 Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 {
-	// This function expects a threadcount of [16,16,1] in luminancePass1CS shader
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	static Texture2D* uav = nullptr;
-	static Texture2D* adaption_accumulator = nullptr;
-	if (uav == nullptr || uav->GetDesc().Width != device->GetScreenWidth() / 16 || uav->GetDesc().Height != device->GetScreenHeight() / 16)
+	static Texture2D* luminance_map = nullptr;
+	static vector<Texture2D*> luminance_avg(0);
+	if (luminance_map == nullptr)
 	{
-		SAFE_DELETE(uav);
+		SAFE_DELETE(luminance_map);
+		for (auto& x : luminance_avg)
+		{
+			SAFE_DELETE(x);
+		}
+		luminance_avg.clear();
+
+		// lower power of two
+		//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
 
 		Texture2DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = device->GetScreenWidth() / 16;
-		desc.Height = device->GetScreenHeight() / 16;
+		desc.Width = 256;
+		desc.Height = desc.Width;
 		desc.MipLevels = 1;
 		desc.ArraySize = 1;
 		desc.Format = FORMAT_R32_FLOAT;
@@ -2947,30 +2953,51 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		device->CreateTexture2D(&desc, nullptr, &uav);
+		device->CreateTexture2D(&desc, nullptr, &luminance_map);
 
-		desc.Width = 1;
-		desc.Height = 1;
+		while (desc.Width > 1)
+		{
+			desc.Width = max(desc.Width / 16, 1);
+			desc.Height = desc.Width;
 
-		device->CreateTexture2D(&desc, nullptr, &adaption_accumulator);
+			Texture2D* tex = nullptr;
+			device->CreateTexture2D(&desc, nullptr, &tex);
+
+			luminance_avg.push_back(tex);
+		}
 	}
-	if (uav != nullptr)
+	if (luminance_map != nullptr)
 	{
+		// Pass 1 : Create luminance map from scene tex
+		Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS1], threadID);
 		device->BindResourceCS(sourceImage, TEXSLOT_ONDEMAND0, threadID);
-		device->BindUnorderedAccessResourceCS(uav, 0, threadID);
-		device->Dispatch(device->GetScreenWidth() / 16, device->GetScreenHeight() / 16, 1, threadID);
+		device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
+		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
-		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
-		device->BindUnorderedAccessResourceCS(adaption_accumulator, 0, threadID);
-		device->BindResourceCS(uav, TEXSLOT_ONDEMAND0, threadID);
-		device->Dispatch(1, 1, 1, threadID);
+		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
+		Texture2DDesc luminance_avg_desc;
+		for (size_t i = 0; i < luminance_avg.size(); ++i)
+		{
+			luminance_avg_desc = luminance_avg[i]->GetDesc();
+			device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
+			device->BindUnorderedAccessResourceCS(luminance_avg[i], 0, threadID);
+			if (i > 0)
+			{
+				device->BindResourceCS(luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
+			}
+			else
+			{
+				device->BindResourceCS(luminance_map, TEXSLOT_ONDEMAND0, threadID);
+			}
+			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
+		}
 
 
 		device->BindCS(nullptr, threadID);
-		device->UnBindUnorderedAccessResources(0, 2, threadID);
+		device->UnBindUnorderedAccessResources(0, 1, threadID);
 
-		return adaption_accumulator;
+		return luminance_avg.back();
 	}
 
 	return nullptr;
