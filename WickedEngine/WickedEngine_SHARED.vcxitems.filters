@@ -31,6 +31,9 @@
     <Filter Include="BULLET">
       <UniqueIdentifier>{d6f94528-ce59-4fa3-a0b9-d5c04994ac71}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ENGINE\Graphics">
+      <UniqueIdentifier>{3d5f1098-95e6-4baa-9e39-864be28a5b64}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -153,46 +156,19 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHitbox2D.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h">
@@ -210,9 +186,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
@@ -223,9 +196,6 @@
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h">
@@ -1023,6 +993,39 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.h">
       <Filter>BULLET</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1154,16 +1157,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp">
@@ -1179,15 +1173,6 @@
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp">
@@ -1253,19 +1238,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHitbox2D.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiParticle.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
@@ -1777,6 +1750,36 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp">
       <Filter>BULLET</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiParticle.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite.cpp">
+      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

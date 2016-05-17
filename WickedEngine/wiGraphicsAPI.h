@@ -799,6 +799,10 @@ namespace wiGraphicsTypes
 
 		virtual Texture2D GetBackBuffer() = 0;
 
+		virtual void EventBegin(const wchar_t* name) = 0;
+		virtual void EventEnd() = 0;
+		virtual void SetMarker(const wchar_t* name) = 0;
+
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;

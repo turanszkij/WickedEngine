@@ -2454,6 +2454,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			}
 		}
 
+		wiRenderer::GetDevice()->EventBegin(L"Draw Models");
+
 		if(DX11Eff && tessF) 
 			GetDevice()->BindPrimitiveTopology(PATCHLIST,threadID);
 		else		
@@ -2584,6 +2586,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 		GetDevice()->BindDS(nullptr,threadID);
 		GetDevice()->BindHS(nullptr,threadID);
 
+		wiRenderer::GetDevice()->EventEnd();
 	}
 
 }

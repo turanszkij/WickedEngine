@@ -22,6 +22,7 @@ namespace wiGraphicsTypes
 		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT];
 		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
 		bool						DX11, DEFERREDCONTEXT_SUPPORT;
+		ID3DUserDefinedAnnotation*	userDefinedAnnotation;
 
 	public:
 #ifndef WINSTORE_SUPPORT
@@ -67,6 +68,10 @@ namespace wiGraphicsTypes
 		virtual void SetScreenHeight(int value);
 
 		virtual Texture2D GetBackBuffer();
+
+		virtual void EventBegin(const wchar_t* name);
+		virtual void EventEnd();
+		virtual void SetMarker(const wchar_t* name);
 
 		///////////////Thread-sensitive////////////////////////
 

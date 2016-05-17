@@ -137,6 +137,8 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 		DEFERREDCONTEXT_SUPPORT = false;
 	}
 
+	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotation), 
+		reinterpret_cast<void**>(&userDefinedAnnotation));
 
 	// Create a render target view
 	backBuffer = NULL;
@@ -1449,6 +1451,18 @@ void GraphicsDevice_DX11::FinishCommandList(GRAPHICSTHREAD thread)
 	deviceContexts[thread]->FinishCommandList(true, &commandLists[thread]);
 }
 
+void GraphicsDevice_DX11::EventBegin(const wchar_t* name)
+{
+	userDefinedAnnotation->BeginEvent(name);
+}
+void GraphicsDevice_DX11::EventEnd()
+{
+	userDefinedAnnotation->EndEvent();
+}
+void GraphicsDevice_DX11::SetMarker(const wchar_t* name)
+{
+	userDefinedAnnotation->SetMarker(name);
+}
 
 HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
 {
