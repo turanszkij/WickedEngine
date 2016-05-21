@@ -400,7 +400,7 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 	if(!culledPatches.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin(L"HairParticle");
+		device->EventBegin(L"HairParticle", threadID);
 
 		Texture2D* texture = material->texture;
 
@@ -463,7 +463,7 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 
 		device->BindGS(nullptr,threadID);
 
-		device->EventEnd();
+		device->EventEnd(threadID);
 	}
 }
 

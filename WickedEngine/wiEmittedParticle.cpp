@@ -239,7 +239,7 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 		if(camera->frustum.CheckBox(bounding_box->corners))
 		{
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			device->EventBegin(L"EmittedParticle");
+			device->EventBegin(L"EmittedParticle", threadID);
 			
 			vector<Point> renderPoints=vector<Point>(points.begin(),points.end());
 			device->UpdateBuffer(vertexBuffer,renderPoints.data(),threadID,sizeof(Point)* renderPoints.size());
@@ -276,7 +276,7 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 
 
 			device->BindGS(nullptr,threadID);
-			device->EventEnd();
+			device->EventEnd(threadID);
 		}
 	}
 }

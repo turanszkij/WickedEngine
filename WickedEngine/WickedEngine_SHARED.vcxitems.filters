@@ -165,9 +165,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
@@ -1038,6 +1035,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1176,9 +1176,6 @@
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp">
@@ -1798,6 +1795,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp">
       <Filter>ENGINE</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
+      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

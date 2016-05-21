@@ -49,7 +49,9 @@ void wiImage::LoadBuffers()
 	processCb = new GPUBuffer;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, processCb);
 
+	wiRenderer::GetDevice()->LOCK();
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->UNLOCK();
 }
 
 void wiImage::LoadShaders()
@@ -200,20 +202,16 @@ void wiImage::SetUpStates()
 
 void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->LOCK();
-
 	wiRenderer::GetDevice()->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 	wiRenderer::GetDevice()->BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 
 	wiRenderer::GetDevice()->BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
-
-	wiRenderer::GetDevice()->UNLOCK();
 }
 
 void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin(L"Image");
+	device->EventBegin(L"Image", threadID);
 
 	bool fullScreenEffect = false;
 
@@ -241,7 +239,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		device->BindVS(screenVS, threadID);
 		device->BindPS(screenPS, threadID);
 		device->Draw(3, threadID);
-		device->EventEnd();
+		device->EventEnd(threadID);
 		return;
 	}
 
@@ -441,7 +439,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	
 	device->Draw((fullScreenEffect ? 3 : 4), threadID);
 
-	device->EventEnd();
+	device->EventEnd(threadID);
 }
 
 void wiImage::DrawDeferred(Texture2D* lightmap, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilRef){

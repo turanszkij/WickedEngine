@@ -158,6 +158,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
 			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
 			RenderLightShafts(rtMain, GRAPHICSTHREAD_MISC1);
 			RenderComposition1(rtMain, GRAPHICSTHREAD_MISC1);
@@ -190,6 +191,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
 			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
 			RenderLightShafts(rtMain, GRAPHICSTHREAD_MISC1);
 			RenderComposition1(rtMain, GRAPHICSTHREAD_MISC1);
@@ -197,6 +199,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC2);
 			RenderBloom(GRAPHICSTHREAD_MISC2);
 			RenderComposition2(GRAPHICSTHREAD_MISC2);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);

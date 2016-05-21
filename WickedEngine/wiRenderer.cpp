@@ -246,7 +246,9 @@ void wiRenderer::SetUpStaticComponents()
 	SetPointLightShadowProps(2, 512);
 	SetSpotLightShadowProps(2, 512);
 
+	GetDevice()->LOCK();
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	GetDevice()->UNLOCK();
 
 	//t1.join();
 	//t2.join();
@@ -1055,12 +1057,8 @@ void wiRenderer::SetUpStates()
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->LOCK();
-
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
-		//if (samplers[i] == nullptr)
-		//	continue;
 		GetDevice()->BindSamplerPS(samplers[i], i, threadID);
 		GetDevice()->BindSamplerVS(samplers[i], i, threadID);
 		GetDevice()->BindSamplerGS(samplers[i], i, threadID);
@@ -1109,8 +1107,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB), threadID);
 
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB), threadID);
-
-	GetDevice()->UNLOCK();
 }
 void wiRenderer::RebindPersistentState(GRAPHICSTHREAD threadID)
 {
@@ -1334,7 +1330,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					&& mesh->sOutBuffer.IsValid() && mesh->meshVertBuff.IsValid())
 				{
 #ifdef USE_GPU_SKINNING
-					GetDevice()->EventBegin(L"Skinning");
+					GetDevice()->EventBegin(L"Skinning", threadID);
 
 					if (!streamOutSetUp)
 					{
@@ -1371,7 +1367,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->BindStreamOutTarget(&mesh->sOutBuffer, threadID);
 					GetDevice()->Draw(mesh->vertices.size(), threadID);
 
-					GetDevice()->EventEnd();
+					GetDevice()->EventEnd(threadID);
 #else
 					// Doing skinning on the CPU
 					for (int vi = 0; vi < mesh->skinnedVertices.size(); ++vi)
@@ -1502,7 +1498,7 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
 void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugBoneLines){
-		GetDevice()->EventBegin(L"DebugBoneLines");
+		GetDevice()->EventBegin(L"DebugBoneLines", threadID);
 
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
@@ -1526,7 +1522,7 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 			GetDevice()->Draw(2, threadID);
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 }
 void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
@@ -1534,7 +1530,7 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 	if (linesTemp.empty())
 		return;
 
-	GetDevice()->EventBegin(L"DebugLines");
+	GetDevice()->EventBegin(L"DebugLines", threadID);
 
 	GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
@@ -1562,12 +1558,12 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 		delete x;
 	linesTemp.clear();
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugBoxes){
-		GetDevice()->EventBegin(L"DebugBoxes");
+		GetDevice()->EventBegin(L"DebugBoxes", threadID);
 
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
@@ -1593,7 +1589,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 			GetDevice()->DrawIndexed(24,threadID);
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 }
 
@@ -1629,7 +1625,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 		return;
 	}
 
-	GetDevice()->EventBegin(L"RibbonTrails");
+	GetDevice()->EventBegin(L"RibbonTrails", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
@@ -1700,7 +1696,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 		}
 	}
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 	imagesRTAdd.Activate(threadID,0,0,0,1);
@@ -1758,7 +1754,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 
 	if(!culledObjects.empty())
 	{
-		GetDevice()->EventBegin(L"Light Render");
+		GetDevice()->EventBegin(L"Light Render", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
@@ -1880,7 +1876,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 
 
 		}
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 }
 void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
@@ -1895,7 +1891,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 	if(!culledObjects.empty())
 	{
-		GetDevice()->EventBegin(L"Light Volume Render");
+		GetDevice()->EventBegin(L"Light Volume Render", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 		GetDevice()->BindVertexLayout(nullptr);
@@ -1970,7 +1966,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 }
 
@@ -2026,7 +2022,7 @@ void wiRenderer::ClearShadowMaps(GRAPHICSTHREAD threadID){
 void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
 	if (GameSpeed) {
-		GetDevice()->EventBegin(L"ShadowMap Render");
+		GetDevice()->EventBegin(L"ShadowMap Render", threadID);
 
 		CulledList culledLights;
 		if (spTree_lights)
@@ -2379,7 +2375,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 			}
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 
 }
@@ -2480,7 +2476,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			}
 		}
 
-		GetDevice()->EventBegin(L"DrawWorld");
+		GetDevice()->EventBegin(L"DrawWorld", threadID);
 
 		if(DX11Eff && tessF) 
 			GetDevice()->BindPrimitiveTopology(PATCHLIST,threadID);
@@ -2612,7 +2608,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 		GetDevice()->BindDS(nullptr,threadID);
 		GetDevice()->BindHS(nullptr,threadID);
 
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 }
@@ -2643,7 +2639,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 		//	}
 		//}
 
-		GetDevice()->EventBegin(L"DrawWorld Transparent");
+		GetDevice()->EventBegin(L"DrawWorld Transparent", threadID);
 
 		for(Cullable* object : culledObjects)
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
@@ -2761,7 +2757,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 			}
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 	
 }
@@ -2817,7 +2813,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 		if (model->decals.empty())
 			continue;
 
-		GetDevice()->EventBegin(L"Decals");
+		GetDevice()->EventBegin(L"Decals", threadID);
 
 		if (!boundCB)
 		{
@@ -2866,7 +2862,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 }
 

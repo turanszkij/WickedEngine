@@ -61,10 +61,6 @@ namespace wiGraphicsTypes
 
 		virtual Texture2D GetBackBuffer() = 0;
 
-		virtual void EventBegin(const wchar_t* name) = 0;
-		virtual void EventEnd() = 0;
-		virtual void SetMarker(const wchar_t* name) = 0;
-
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
@@ -122,6 +118,9 @@ namespace wiGraphicsTypes
 		virtual HRESULT SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual HRESULT SaveTextureDDS(const string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
+		virtual void EventBegin(const wchar_t* name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void EventEnd(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void SetMarker(const wchar_t* name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 	};
 
 }

@@ -107,7 +107,9 @@ void wiFont::SetUpCB()
 	constantBuffer = new GPUBuffer;
 	wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, constantBuffer );
 
+	wiRenderer::GetDevice()->LOCK();
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->UNLOCK();
 }
 void wiFont::LoadShaders()
 {
@@ -149,11 +151,7 @@ void wiFont::CleanUpStatic()
 
 void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->LOCK();
-
 	wiRenderer::GetDevice()->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer), threadID);
-
-	wiRenderer::GetDevice()->UNLOCK();
 }
 
 
@@ -264,7 +262,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 	if(text.length()>0)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin(L"Font");
+		device->EventBegin(L"Font", threadID);
 	
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 		device->BindVertexLayout(vertexLayout,threadID);
@@ -290,7 +288,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 		device->BindResourcePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
 		device->DrawIndexed(text.length()*6,threadID);
 
-		device->EventEnd();
+		device->EventEnd(threadID);
 	}
 }
 

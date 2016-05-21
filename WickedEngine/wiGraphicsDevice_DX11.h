@@ -33,7 +33,7 @@ namespace wiGraphicsTypes
 		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT];
 		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
 		bool						DX11, DEFERREDCONTEXT_SUPPORT;
-		ID3DUserDefinedAnnotation*	userDefinedAnnotation;
+		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT];
 
 	public:
 #ifndef WINSTORE_SUPPORT
@@ -79,10 +79,6 @@ namespace wiGraphicsTypes
 		virtual void SetScreenHeight(int value);
 
 		virtual Texture2D GetBackBuffer();
-
-		virtual void EventBegin(const wchar_t* name);
-		virtual void EventEnd();
-		virtual void SetMarker(const wchar_t* name);
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -141,6 +137,9 @@ namespace wiGraphicsTypes
 		virtual HRESULT SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 		virtual HRESULT SaveTextureDDS(const string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
+		virtual void EventBegin(const wchar_t* name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+		virtual void EventEnd(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+		virtual void SetMarker(const wchar_t* name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	};
 
 }

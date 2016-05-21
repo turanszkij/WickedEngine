@@ -20,6 +20,11 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 {
 	HRESULT hr = S_OK;
 
+	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
+		SAFE_INIT(commandLists[i]);
+		SAFE_INIT(deviceContexts[i]);
+	}
+
 	UINT createDeviceFlags = 0;
 #ifdef _DEBUG
 #ifndef WINSTORE_SUPPORT
@@ -125,6 +130,9 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	hr = pDXGIDevice->SetMaximumFrameLatency(1);
 #endif
 
+	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]),
+		reinterpret_cast<void**>(&userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]));
+
 	DEFERREDCONTEXT_SUPPORT = false;
 	D3D11_FEATURE_DATA_THREADING threadingFeature;
 	device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
@@ -133,15 +141,15 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
 			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
 				continue;
-			device->CreateDeferredContext(0, &deviceContexts[i]);
+			hr = device->CreateDeferredContext(0, &deviceContexts[i]);
+			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
+				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
 		}
 	}
 	else {
 		DEFERREDCONTEXT_SUPPORT = false;
 	}
 
-	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotation), 
-		reinterpret_cast<void**>(&userDefinedAnnotation));
 
 	// Create a render target view
 	backBuffer = NULL;
@@ -1437,7 +1445,7 @@ void GraphicsDevice_DX11::ExecuteDeferredContexts()
 {
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
 	{
-		if (i != (GRAPHICSTHREAD)GRAPHICSTHREAD_IMMEDIATE &&commandLists[i])
+		if (i != GRAPHICSTHREAD_IMMEDIATE && commandLists[i] != nullptr)
 		{
 			deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ExecuteCommandList(commandLists[i], true);
 			commandLists[i]->Release();
@@ -1452,19 +1460,6 @@ void GraphicsDevice_DX11::FinishCommandList(GRAPHICSTHREAD thread)
 	if (thread == GRAPHICSTHREAD_IMMEDIATE)
 		return;
 	deviceContexts[thread]->FinishCommandList(true, &commandLists[thread]);
-}
-
-void GraphicsDevice_DX11::EventBegin(const wchar_t* name)
-{
-	userDefinedAnnotation->BeginEvent(name);
-}
-void GraphicsDevice_DX11::EventEnd()
-{
-	userDefinedAnnotation->EndEvent();
-}
-void GraphicsDevice_DX11::SetMarker(const wchar_t* name)
-{
-	userDefinedAnnotation->SetMarker(name);
 }
 
 void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) {
@@ -1549,7 +1544,7 @@ void GraphicsDevice_DX11::UnBindResources(int slot, int num, GRAPHICSTHREAD thre
 	assert(num <= 32 && "UnBindResources limit of 32 reached!");
 	if (deviceContexts[threadID] != nullptr)
 	{
-		static ID3D11ShaderResourceView* empties[32] = {
+		ID3D11ShaderResourceView* empties[32] = {
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
@@ -1565,10 +1560,10 @@ void GraphicsDevice_DX11::UnBindResources(int slot, int num, GRAPHICSTHREAD thre
 }
 void GraphicsDevice_DX11::UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID)
 {
-	assert(num <= 32 && "UnBindResources limit of 32 reached!");
+	assert(num <= 32 && "UnBindUnorderedAccessResources limit of 32 reached!");
 	if (deviceContexts[threadID] != nullptr)
 	{
-		static ID3D11UnorderedAccessView* empties[32] = {
+		ID3D11UnorderedAccessView* empties[32] = {
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
 			nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,
@@ -1797,16 +1792,12 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 			// recreate the buffer if new datasize exceeds buffer size with double capacity
 			buffer->resource_DX11->Release();
 			buffer->desc.ByteWidth = dataSize * 2;
-			//SubresourceData InitData;
-			//ZeroMemory(&InitData, sizeof(InitData));
-			//InitData.pSysMem = data;
-			//hr = CreateBuffer(&buffer->desc, &InitData, buffer);
 			hr = CreateBuffer(&buffer->desc, nullptr, buffer);
 		}
 		//else
 		{
 			if (buffer->desc.Usage == USAGE_DYNAMIC) {
-				static thread_local D3D11_MAPPED_SUBRESOURCE mappedResource;
+				D3D11_MAPPED_SUBRESOURCE mappedResource;
 				hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 				memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
 				deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
@@ -1915,6 +1906,28 @@ HRESULT GraphicsDevice_DX11::SaveTextureDDS(const string& fileName, Texture *pTe
 		return SaveDDSTextureToFile(deviceContexts[threadID], tex2D->texture2D_DX11, wstring(fileName.begin(), fileName.end()).c_str());
 	}
 	return E_FAIL;
+}
+
+void GraphicsDevice_DX11::EventBegin(const wchar_t* name, GRAPHICSTHREAD threadID)
+{
+	if (userDefinedAnnotations[threadID] != nullptr)
+	{
+		userDefinedAnnotations[threadID]->BeginEvent(name);
+	}
+}
+void GraphicsDevice_DX11::EventEnd(GRAPHICSTHREAD threadID)
+{
+	if (userDefinedAnnotations[threadID] != nullptr)
+	{
+		userDefinedAnnotations[threadID]->EndEvent();
+	}
+}
+void GraphicsDevice_DX11::SetMarker(const wchar_t* name, GRAPHICSTHREAD threadID)
+{
+	if (userDefinedAnnotations[threadID] != nullptr)
+	{
+		userDefinedAnnotations[threadID]->SetMarker(name);
+	}
 }
 
 }
