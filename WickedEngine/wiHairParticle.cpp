@@ -399,21 +399,24 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 
 	if(!culledPatches.empty())
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin(L"HairParticle");
+
 		Texture2D* texture = material->texture;
 
-		wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
-		wiRenderer::GetDevice()->BindVertexLayout(il,threadID);
-		wiRenderer::GetDevice()->BindPS(texture?qps:ps,threadID);
-		wiRenderer::GetDevice()->BindVS(vs,threadID);
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
+		device->BindVertexLayout(il,threadID);
+		device->BindPS(texture?qps:ps,threadID);
+		device->BindVS(vs,threadID);
 
 		if(texture){
-			wiRenderer::GetDevice()->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
-			wiRenderer::GetDevice()->BindResourceGS(texture,TEXSLOT_ONDEMAND0,threadID);
+			device->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
+			device->BindResourceGS(texture,TEXSLOT_ONDEMAND0,threadID);
 
-			wiRenderer::GetDevice()->BindBlendState(bs,threadID);
+			device->BindBlendState(bs,threadID);
 		}
 		else
-			wiRenderer::GetDevice()->BindRasterizerState(ncrs,threadID);
+			device->BindRasterizerState(ncrs,threadID);
 
 
 		ConstantBuffer gcb;
@@ -421,10 +424,10 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 		gcb.color=material->diffuseColor;
 		gcb.drawdistance = (float)LOD[2];
 		
-		wiRenderer::GetDevice()->UpdateBuffer(cbgs,&gcb,threadID);
-		wiRenderer::GetDevice()->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->UpdateBuffer(cbgs,&gcb,threadID);
+		device->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		wiRenderer::GetDevice()->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
+		device->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
 
 
 		for(int i=0;i<3;++i){
@@ -432,11 +435,11 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 			renderPoints.reserve(MAX_PARTICLES);
 
 			if(texture){
-				wiRenderer::GetDevice()->BindGS(i<2?qgs[0]:qgs[1],threadID);
-				wiRenderer::GetDevice()->BindRasterizerState(i<2?ncrs:rs,threadID);
+				device->BindGS(i<2?qgs[0]:qgs[1],threadID);
+				device->BindRasterizerState(i<2?ncrs:rs,threadID);
 			}
 			else
-				wiRenderer::GetDevice()->BindGS(gs[i],threadID);
+				device->BindGS(gs[i],threadID);
 			CulledList::iterator iter = culledPatches.begin();
 			while(iter != culledPatches.end()){
 				Cullable* culled = *iter;
@@ -453,12 +456,14 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 					++iter;
 			}
 
-			wiRenderer::GetDevice()->UpdateBuffer(vb[i],renderPoints.data(),threadID,sizeof(Point)*renderPoints.size());
-			wiRenderer::GetDevice()->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
-			wiRenderer::GetDevice()->Draw(renderPoints.size(),threadID);
+			device->UpdateBuffer(vb[i],renderPoints.data(),threadID,sizeof(Point)*renderPoints.size());
+			device->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
+			device->Draw(renderPoints.size(),threadID);
 		}
 
-		wiRenderer::GetDevice()->BindGS(nullptr,threadID);
+		device->BindGS(nullptr,threadID);
+
+		device->EventEnd();
 	}
 }
 

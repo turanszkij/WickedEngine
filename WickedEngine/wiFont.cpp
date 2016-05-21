@@ -261,31 +261,36 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 	
 	ModifyGeo(text, newProps, style, threadID);
 
-	if(text.length()>0){
+	if(text.length()>0)
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin(L"Font");
 	
-		wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-		wiRenderer::GetDevice()->BindVertexLayout(vertexLayout,threadID);
-		wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
-		wiRenderer::GetDevice()->BindPS(pixelShader,threadID);
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
+		device->BindVertexLayout(vertexLayout,threadID);
+		device->BindVS(vertexShader,threadID);
+		device->BindPS(pixelShader,threadID);
 
 
 		ConstantBuffer cb;
-		cb.mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)wiRenderer::GetDevice()->GetScreenWidth(),(float)wiRenderer::GetDevice()->GetScreenHeight(),0,100) );
+		cb.mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)device->GetScreenWidth(),(float)device->GetScreenHeight(),0,100) );
 		cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
-		cb.mDimensions = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
+		cb.mDimensions = XMFLOAT4((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, 0);
 		
-		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
+		device->UpdateBuffer(constantBuffer,&cb,threadID);
 
 
-		wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
-		wiRenderer::GetDevice()->BindDepthStencilState(depthStencilState,1,threadID);
+		device->BindRasterizerState(rasterizerState,threadID);
+		device->BindDepthStencilState(depthStencilState,1,threadID);
 
-		wiRenderer::GetDevice()->BindBlendState(blendState,threadID);
-		wiRenderer::GetDevice()->BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),threadID);
-		wiRenderer::GetDevice()->BindIndexBuffer(indexBuffer,threadID);
+		device->BindBlendState(blendState,threadID);
+		device->BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),threadID);
+		device->BindIndexBuffer(indexBuffer,threadID);
 
-		wiRenderer::GetDevice()->BindResourcePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
-		wiRenderer::GetDevice()->DrawIndexed(text.length()*6,threadID);
+		device->BindResourcePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
+		device->DrawIndexed(text.length()*6,threadID);
+
+		device->EventEnd();
 	}
 }
 

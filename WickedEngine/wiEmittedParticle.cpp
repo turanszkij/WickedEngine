@@ -236,20 +236,23 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 	if(!points.empty()){
 		
 
-		if(camera->frustum.CheckBox(bounding_box->corners)){
+		if(camera->frustum.CheckBox(bounding_box->corners))
+		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
+			device->EventBegin(L"EmittedParticle");
 			
 			vector<Point> renderPoints=vector<Point>(points.begin(),points.end());
-			wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer,renderPoints.data(),threadID,sizeof(Point)* renderPoints.size());
+			device->UpdateBuffer(vertexBuffer,renderPoints.data(),threadID,sizeof(Point)* renderPoints.size());
 
 			bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
-			wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
-			wiRenderer::GetDevice()->BindVertexLayout(vertexLayout,threadID);
-			wiRenderer::GetDevice()->BindPS(wireRender?simplestPS:pixelShader,threadID);
-			wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
-			wiRenderer::GetDevice()->BindGS(geometryShader,threadID);
+			device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
+			device->BindVertexLayout(vertexLayout,threadID);
+			device->BindPS(wireRender?simplestPS:pixelShader,threadID);
+			device->BindVS(vertexShader,threadID);
+			device->BindGS(geometryShader,threadID);
 		
-			//wiRenderer::GetDevice()->BindResourcePS(depth,1,threadID);
+			//device->BindResourcePS(depth,1,threadID);
 
 			ConstantBuffer cb;
 			cb.mAdd.x = additive;
@@ -257,22 +260,23 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 			cb.mMotionBlurAmount = motionBlurAmount;
 		
 
-			wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
-			wiRenderer::GetDevice()->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+			device->UpdateBuffer(constantBuffer,&cb,threadID);
+			device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-			wiRenderer::GetDevice()->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);
-			wiRenderer::GetDevice()->BindDepthStencilState(depthStencilState,1,threadID);
+			device->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);
+			device->BindDepthStencilState(depthStencilState,1,threadID);
 	
-			wiRenderer::GetDevice()->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
+			device->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
 
-			wiRenderer::GetDevice()->BindVertexBuffer(vertexBuffer,0,sizeof(Point),threadID);
+			device->BindVertexBuffer(vertexBuffer,0,sizeof(Point),threadID);
 
 			if(!wireRender && material->texture) 
-				wiRenderer::GetDevice()->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
-			wiRenderer::GetDevice()->Draw(renderPoints.size(),threadID);
+				device->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
+			device->Draw(renderPoints.size(),threadID);
 
 
-			wiRenderer::GetDevice()->BindGS(nullptr,threadID);
+			device->BindGS(nullptr,threadID);
+			device->EventEnd();
 		}
 	}
 }

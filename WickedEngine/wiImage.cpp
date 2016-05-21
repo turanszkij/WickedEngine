@@ -210,38 +210,38 @@ void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 	wiRenderer::GetDevice()->UNLOCK();
 }
 
-void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects){
-	Draw(texture,effects,GRAPHICSTHREAD_IMMEDIATE);
-}
 void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	device->EventBegin(L"Image");
 
 	bool fullScreenEffect = false;
 
-	wiRenderer::GetDevice()->BindVertexLayout(nullptr, threadID);
-	wiRenderer::GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
-	wiRenderer::GetDevice()->BindIndexBuffer(nullptr, threadID);
-	wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
-	wiRenderer::GetDevice()->BindRasterizerState(rasterizerState, threadID);
+	device->BindVertexLayout(nullptr, threadID);
+	device->BindVertexBuffer(nullptr, 0, 0, threadID);
+	device->BindIndexBuffer(nullptr, threadID);
+	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
+	device->BindRasterizerState(rasterizerState, threadID);
 
-	wiRenderer::GetDevice()->BindResourcePS(texture, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResourcePS(texture, TEXSLOT_ONDEMAND0, threadID);
 
 	if (effects.blendFlag == BLENDMODE_ALPHA)
-		wiRenderer::GetDevice()->BindBlendState(blendState, threadID);
+		device->BindBlendState(blendState, threadID);
 	else if (effects.blendFlag == BLENDMODE_ADDITIVE)
-		wiRenderer::GetDevice()->BindBlendState(blendStateAdd, threadID);
+		device->BindBlendState(blendStateAdd, threadID);
 	else if (effects.blendFlag == BLENDMODE_OPAQUE)
-		wiRenderer::GetDevice()->BindBlendState(blendStateNoBlend, threadID);
+		device->BindBlendState(blendStateNoBlend, threadID);
 	else if (effects.blendFlag == BLENDMODE_MAX)
-		wiRenderer::GetDevice()->BindBlendState(blendStateAvg, threadID);
+		device->BindBlendState(blendStateAvg, threadID);
 	else
-		wiRenderer::GetDevice()->BindBlendState(blendState, threadID);
+		device->BindBlendState(blendState, threadID);
 
 	if (effects.presentFullScreen)
 	{
-		wiRenderer::GetDevice()->BindVS(screenVS, threadID);
-		wiRenderer::GetDevice()->BindPS(screenPS, threadID);
-		wiRenderer::GetDevice()->Draw(3, threadID);
+		device->BindVS(screenVS, threadID);
+		device->BindPS(screenPS, threadID);
+		device->Draw(3, threadID);
+		device->EventEnd();
 		return;
 	}
 
@@ -251,13 +251,13 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		switch (effects.stencilComp)
 		{
 		case COMPARISON_LESS:
-			wiRenderer::GetDevice()->BindDepthStencilState(depthStencilStateLess, effects.stencilRef, threadID);
+			device->BindDepthStencilState(depthStencilStateLess, effects.stencilRef, threadID);
 			break;
 		case COMPARISON_GREATER:
-			wiRenderer::GetDevice()->BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, threadID);
+			device->BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, threadID);
 			break;
 		default:
-			wiRenderer::GetDevice()->BindDepthStencilState(depthNoStencilState, effects.stencilRef, threadID);
+			device->BindDepthStencilState(depthNoStencilState, effects.stencilRef, threadID);
 			break;
 		}
 	}
@@ -265,10 +265,10 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	if(!effects.blur){
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			if(effects.typeFlag==SCREEN){
-				cb.mViewProjection = XMMatrixTranspose(XMMatrixOrthographicLH((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 100));
-				cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(wiRenderer::GetDevice()->GetScreenWidth() / 2 - effects.siz.x / 2, -wiRenderer::GetDevice()->GetScreenHeight() / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
-					* XMMatrixTranslation(-wiRenderer::GetDevice()->GetScreenWidth() / 2 + effects.pos.x + effects.siz.x*0.5f, wiRenderer::GetDevice()->GetScreenHeight() / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
-				cb.mDimensions = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), effects.siz.x, effects.siz.y);
+				cb.mViewProjection = XMMatrixTranspose(XMMatrixOrthographicLH((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, 100));
+				cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(device->GetScreenWidth() / 2 - effects.siz.x / 2, -device->GetScreenHeight() / 2 + effects.siz.y / 2, 0) * XMMatrixRotationZ(effects.rotation)
+					* XMMatrixTranslation(-device->GetScreenWidth() / 2 + effects.pos.x + effects.siz.x*0.5f, device->GetScreenHeight() / 2 + effects.pos.y - effects.siz.y*0.5f, 0)); //AUTO ORIGIN CORRECTION APPLIED! NO FURTHER TRANSLATIONS NEEDED!
+				cb.mDimensions = XMFLOAT4((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), effects.siz.x, effects.siz.y);
 			}
 			else if(effects.typeFlag==WORLD){
 				cb.mViewProjection = XMMatrixTranspose( wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection() );
@@ -314,40 +314,40 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			cb.mNormalmapSeparate = normalmapmode;
 			cb.mMipLevel = effects.mipLevel;
 
-			wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
+			device->UpdateBuffer(constantBuffer,&cb,threadID);
 
-			wiRenderer::GetDevice()->BindVS(vertexShader, threadID);
-			wiRenderer::GetDevice()->BindPS(pixelShader, threadID);
+			device->BindVS(vertexShader, threadID);
+			device->BindPS(pixelShader, threadID);
 			fullScreenEffect = false;
 		}
 		else if(!effects.sunPos.x && !effects.sunPos.y){
-			wiRenderer::GetDevice()->BindVS(screenVS, threadID);
+			device->BindVS(screenVS, threadID);
 			fullScreenEffect = true;
 
 			if(effects.process.outline) 
-				wiRenderer::GetDevice()->BindPS(outlinePS,threadID);
+				device->BindPS(outlinePS,threadID);
 			else if(effects.process.motionBlur) 
-				wiRenderer::GetDevice()->BindPS(motionBlurPS,threadID);
+				device->BindPS(motionBlurPS,threadID);
 			else if(effects.process.dofStrength) 
-				wiRenderer::GetDevice()->BindPS(dofPS,threadID);
+				device->BindPS(dofPS,threadID);
 			else if(effects.process.fxaa) 
-				wiRenderer::GetDevice()->BindPS(fxaaPS,threadID);
+				device->BindPS(fxaaPS,threadID);
 			else if(effects.process.ssao)
-				wiRenderer::GetDevice()->BindPS(ssaoPS,threadID);
+				device->BindPS(ssaoPS,threadID);
 			else if(effects.process.linDepth) 
-				wiRenderer::GetDevice()->BindPS(linDepthPS, threadID);
+				device->BindPS(linDepthPS, threadID);
 			else if (effects.process.colorGrade)
-				wiRenderer::GetDevice()->BindPS(colorGradePS, threadID);
+				device->BindPS(colorGradePS, threadID);
 			else if (effects.process.ssr)
-				wiRenderer::GetDevice()->BindPS(ssrPS, threadID);
+				device->BindPS(ssrPS, threadID);
 			else if (effects.process.stereogram)
-				wiRenderer::GetDevice()->BindPS(stereogramPS, threadID);
+				device->BindPS(stereogramPS, threadID);
 			else if (effects.process.tonemap)
-				wiRenderer::GetDevice()->BindPS(tonemapPS, threadID);
+				device->BindPS(tonemapPS, threadID);
 			else if(effects.process.ssss.x + effects.process.ssss.y > 0)
-				wiRenderer::GetDevice()->BindPS(ssssPS,threadID);
+				device->BindPS(ssssPS,threadID);
 			else if(effects.bloom.separate)
-				wiRenderer::GetDevice()->BindPS(bloomSeparatePS,threadID);
+				device->BindPS(bloomSeparatePS,threadID);
 			else 
 				wiHelper::messageBox("Postprocess branch not implemented!");
 			
@@ -360,11 +360,11 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			prcb.params1[2] = effects.bloom.saturation;
 			prcb.params1[3] = effects.process.ssss.y;
 
-			wiRenderer::GetDevice()->UpdateBuffer(processCb, &prcb, threadID);
+			device->UpdateBuffer(processCb, &prcb, threadID);
 		}
 		else{ 
-			wiRenderer::GetDevice()->BindVS(screenVS,threadID);
-			wiRenderer::GetDevice()->BindPS(shaftPS,threadID);
+			device->BindVS(screenVS,threadID);
+			device->BindPS(shaftPS,threadID);
 			fullScreenEffect = true;
 
 			 //Density|Weight|Decay|Exposure
@@ -375,23 +375,23 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			prcb.params1[0] = effects.sunPos.x;
 			prcb.params1[1] = effects.sunPos.y;
 
-			wiRenderer::GetDevice()->UpdateBuffer(processCb,&prcb,threadID);
+			device->UpdateBuffer(processCb,&prcb,threadID);
 		}
-		wiRenderer::GetDevice()->BindResourcePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
-		wiRenderer::GetDevice()->BindResourcePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
-		wiRenderer::GetDevice()->BindResourcePS(effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
+		device->BindResourcePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
+		device->BindResourcePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
+		device->BindResourcePS(effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
 	}
 	else{ //BLUR
-		wiRenderer::GetDevice()->BindVS(screenVS,threadID);
+		device->BindVS(screenVS,threadID);
 		fullScreenEffect = true;
 		
 		if(effects.blurDir==0){
-			wiRenderer::GetDevice()->BindPS(blurHPS,threadID);
-			prcb.params1[3] = 1.0f / wiRenderer::GetDevice()->GetScreenWidth();
+			device->BindPS(blurHPS,threadID);
+			prcb.params1[3] = 1.0f / device->GetScreenWidth();
 		}
 		else{
-			wiRenderer::GetDevice()->BindPS(blurVPS,threadID);
-			prcb.params1[3] = 1.0f / wiRenderer::GetDevice()->GetScreenHeight();
+			device->BindPS(blurVPS,threadID);
+			prcb.params1[3] = 1.0f / device->GetScreenHeight();
 		}
 
 		static float weight0 = 1.0f;
@@ -408,38 +408,40 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		prcb.params1[1] = effects.blur;
 		prcb.params1[2] = effects.mipLevel;
 
-		wiRenderer::GetDevice()->UpdateBuffer(processCb, &prcb, threadID);
+		device->UpdateBuffer(processCb, &prcb, threadID);
 
 	}
 
 
 	if(effects.quality==QUALITY_NEAREST){
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 	else if(effects.quality==QUALITY_BILINEAR){
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 	else if(effects.quality==QUALITY_ANISOTROPIC){
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			wiRenderer::GetDevice()->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 
 	
-	wiRenderer::GetDevice()->Draw((fullScreenEffect ? 3 : 4), threadID);
+	device->Draw((fullScreenEffect ? 3 : 4), threadID);
+
+	device->EventEnd();
 }
 
 void wiImage::DrawDeferred(Texture2D* lightmap, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilRef){

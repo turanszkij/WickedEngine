@@ -1334,6 +1334,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					&& mesh->sOutBuffer.IsValid() && mesh->meshVertBuff.IsValid())
 				{
 #ifdef USE_GPU_SKINNING
+					GetDevice()->EventBegin(L"Skinning");
+
 					if (!streamOutSetUp)
 					{
 						streamOutSetUp = true;
@@ -1368,6 +1370,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->BindVertexBuffer(&mesh->meshVertBuff, 0, sizeof(SkinnedVertex), threadID);
 					GetDevice()->BindStreamOutTarget(&mesh->sOutBuffer, threadID);
 					GetDevice()->Draw(mesh->vertices.size(), threadID);
+
+					GetDevice()->EventEnd();
 #else
 					// Doing skinning on the CPU
 					for (int vi = 0; vi < mesh->skinnedVertices.size(); ++vi)
@@ -1498,6 +1502,8 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
 void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugBoneLines){
+		GetDevice()->EventBegin(L"DebugBoneLines");
+
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 	
@@ -1519,12 +1525,16 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 			GetDevice()->BindVertexBuffer(&boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
 			GetDevice()->Draw(2, threadID);
 		}
+
+		GetDevice()->EventEnd();
 	}
 }
 void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if (linesTemp.empty())
 		return;
+
+	GetDevice()->EventBegin(L"DebugLines");
 
 	GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
@@ -1551,10 +1561,14 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 	for (Lines* x : linesTemp)
 		delete x;
 	linesTemp.clear();
+
+	GetDevice()->EventEnd();
 }
 void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugBoxes){
+		GetDevice()->EventBegin(L"DebugBoxes");
+
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
@@ -1579,6 +1593,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 			GetDevice()->DrawIndexed(24,threadID);
 		}
 
+		GetDevice()->EventEnd();
 	}
 }
 
@@ -1607,7 +1622,15 @@ void wiRenderer::DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID
 		e->DrawPremul(camera, threadID, dark);
 	}
 }
-void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes){
+void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
+{
+	if (objectsWithTrails.empty())
+	{
+		return;
+	}
+
+	GetDevice()->EventBegin(L"RibbonTrails");
+
 	GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
 
@@ -1676,6 +1699,8 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 			}
 		}
 	}
+
+	GetDevice()->EventEnd();
 }
 void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 	imagesRTAdd.Activate(threadID,0,0,0,1);
@@ -1733,133 +1758,129 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned in
 
 	if(!culledObjects.empty())
 	{
-
+		GetDevice()->EventBegin(L"Light Render");
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-	
-	//BindResourcePS(depth,0,threadID);
-	//BindResourcePS(normal,1,threadID);
-	//BindResourcePS(material,2,threadID);
 
 	
-	GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
-	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD],stencilRef,threadID);
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD],stencilRef,threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
 
-	GetDevice()->BindVertexLayout(nullptr, threadID);
-	GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
-	GetDevice()->BindIndexBuffer(nullptr, threadID);
+		GetDevice()->BindVertexLayout(nullptr, threadID);
+		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
+		GetDevice()->BindIndexBuffer(nullptr, threadID);
 
-	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
+		GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
+		GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
 
-	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
+		GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
+		GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
 
-	for(int type=0;type<3;++type){
+		for(int type=0;type<3;++type){
 
 			
-		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],threadID);
+			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],threadID);
 
-		switch (type)
-		{
-		case 0:
-			if (SOFTSHADOW)
+			switch (type)
 			{
-				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
-			}
-			else
-			{
-				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT], threadID);
-			}
-			break;
-		case 1:
-			GetDevice()->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
-			break;
-		case 2:
-			GetDevice()->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
-			break;
-		default:
-			break;
-		}
-
-
-		for(Cullable* c : culledObjects){
-			Light* l = (Light*)c;
-			if (l->type != type)
-				continue;
-			
-			if(type==0) //dir
-			{
-				DirectionalLightCB lcb;
-				lcb.direction=XMVector3Normalize(
-					-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
-					);
-				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
-				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
-					lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
-					if(l->shadowMaps_dirLight[shmap].depth)
-						GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
-				}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
-
-				GetDevice()->Draw(3, threadID);
-			}
-			else if(type==1) //point
-			{
-				PointLightCB lcb;
-				lcb.pos=l->translation;
-				lcb.col=l->color;
-				lcb.enerdis=l->enerDis;
-				lcb.enerdis.w = 0.f;
-
-				if (l->shadow && l->shadowMap_index>=0)
+			case 0:
+				if (SOFTSHADOW)
 				{
-					lcb.enerdis.w = 1.f;
-					if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
-						GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
+					GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
 				}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
-
-				GetDevice()->Draw(240, threadID);
+				else
+				{
+					GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT], threadID);
+				}
+				break;
+			case 1:
+				GetDevice()->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
+				break;
+			case 2:
+				GetDevice()->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
+				break;
+			default:
+				break;
 			}
-			else if(type==2) //spot
-			{
-				SpotLightCB lcb;
-				const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
-				XMMATRIX world,rot;
-				world = XMMatrixTranspose(
-						XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
-						XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
-						XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
+
+
+			for(Cullable* c : culledObjects){
+				Light* l = (Light*)c;
+				if (l->type != type)
+					continue;
+			
+				if(type==0) //dir
+				{
+					DirectionalLightCB lcb;
+					lcb.direction=XMVector3Normalize(
+						-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
 						);
-				rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
-				lcb.direction=XMVector3Normalize(
-					-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
-					);
-				lcb.world=world;
-				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
-				lcb.mShM = XMMatrixIdentity();
-				lcb.col=l->color;
-				lcb.enerdis=l->enerDis;
-				lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
+					lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
+					lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
+					for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
+						lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
+						if(l->shadowMaps_dirLight[shmap].depth)
+							GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
+					}
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
 
-				if (l->shadow && l->shadowMap_index>=0)
-				{
-					lcb.mShM = l->shadowCam[0].getVP();
-					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
-						GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
+					GetDevice()->Draw(3, threadID);
 				}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
+				else if(type==1) //point
+				{
+					PointLightCB lcb;
+					lcb.pos=l->translation;
+					lcb.col=l->color;
+					lcb.enerdis=l->enerDis;
+					lcb.enerdis.w = 0.f;
 
-				GetDevice()->Draw(192, threadID);
+					if (l->shadow && l->shadowMap_index>=0)
+					{
+						lcb.enerdis.w = 1.f;
+						if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
+							GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
+					}
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
+
+					GetDevice()->Draw(240, threadID);
+				}
+				else if(type==2) //spot
+				{
+					SpotLightCB lcb;
+					const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
+					XMMATRIX world,rot;
+					world = XMMatrixTranspose(
+							XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
+							XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
+							XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
+							);
+					rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
+					lcb.direction=XMVector3Normalize(
+						-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
+						);
+					lcb.world=world;
+					lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
+					lcb.mShM = XMMatrixIdentity();
+					lcb.col=l->color;
+					lcb.enerdis=l->enerDis;
+					lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
+
+					if (l->shadow && l->shadowMap_index>=0)
+					{
+						lcb.mShM = l->shadowCam[0].getVP();
+						if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
+							GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
+					}
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
+
+					GetDevice()->Draw(192, threadID);
+				}
 			}
+
+
 		}
-
-
-	}
-
+		GetDevice()->EventEnd();
 	}
 }
 void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
@@ -1868,12 +1889,13 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 	frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
 
 		
-		CulledList culledObjects;
-		if(spTree_lights)
-			wiSPTree::getVisible(spTree_lights->root,frustum,culledObjects);
+	CulledList culledObjects;
+	if(spTree_lights)
+		wiSPTree::getVisible(spTree_lights->root,frustum,culledObjects);
 
-		if(!culledObjects.empty())
-		{
+	if(!culledObjects.empty())
+	{
+		GetDevice()->EventBegin(L"Light Volume Render");
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 		GetDevice()->BindVertexLayout(nullptr);
@@ -1948,6 +1970,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 		}
 
+		GetDevice()->EventEnd();
 	}
 }
 
@@ -2003,6 +2026,7 @@ void wiRenderer::ClearShadowMaps(GRAPHICSTHREAD threadID){
 void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
 	if (GameSpeed) {
+		GetDevice()->EventBegin(L"ShadowMap Render");
 
 		CulledList culledLights;
 		if (spTree_lights)
@@ -2354,6 +2378,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 				GetDevice()->BindGS(nullptr, threadID);
 			}
 		}
+
+		GetDevice()->EventEnd();
 	}
 
 }
@@ -2454,7 +2480,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			}
 		}
 
-		wiRenderer::GetDevice()->EventBegin(L"Draw Models");
+		GetDevice()->EventBegin(L"DrawWorld");
 
 		if(DX11Eff && tessF) 
 			GetDevice()->BindPrimitiveTopology(PATCHLIST,threadID);
@@ -2617,6 +2643,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 		//	}
 		//}
 
+		GetDevice()->EventBegin(L"DrawWorld Transparent");
 
 		for(Cullable* object : culledObjects)
 			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
@@ -2733,6 +2760,8 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 				m++;
 			}
 		}
+
+		GetDevice()->EventEnd();
 	}
 	
 }
@@ -2788,6 +2817,8 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 		if (model->decals.empty())
 			continue;
 
+		GetDevice()->EventBegin(L"Decals");
+
 		if (!boundCB)
 		{
 			boundCB = true;
@@ -2834,6 +2865,8 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 			}
 
 		}
+
+		GetDevice()->EventEnd();
 	}
 }
 

@@ -66,8 +66,7 @@ private:
 public:
 	wiImage();
 	
-	static void Draw(wiGraphicsTypes::Texture2D* texture, const wiImageEffects& effects);
-	static void Draw(wiGraphicsTypes::Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID);
+	static void Draw(wiGraphicsTypes::Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
 	static void DrawDeferred(wiGraphicsTypes::Texture2D* lightmap, wiGraphicsTypes::Texture2D* ao, GRAPHICSTHREAD threadID, int stencilref = 0);
 

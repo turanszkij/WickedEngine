@@ -31,42 +31,47 @@ void wiLensFlare::CleanUp(){
 }
 void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<Texture2D*>& rims){
 
-	if(!rims.empty()){
+	if(!rims.empty())
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin(L"LensFlare");
 
-		wiRenderer::GetDevice()->BindPrimitiveTopology(POINTLIST,threadID);
-		wiRenderer::GetDevice()->BindVertexLayout(inputLayout,threadID);
-		wiRenderer::GetDevice()->BindPS(pixelShader,threadID);
-		wiRenderer::GetDevice()->BindVS(vertexShader,threadID);
-		wiRenderer::GetDevice()->BindGS(geometryShader,threadID);
+		device->BindPrimitiveTopology(POINTLIST,threadID);
+		device->BindVertexLayout(inputLayout,threadID);
+		device->BindPS(pixelShader,threadID);
+		device->BindVS(vertexShader,threadID);
+		device->BindGS(geometryShader,threadID);
 
 		ConstantBuffer cb;
-		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
-		cb.mScreen = XMFLOAT4((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 0);
+		cb.mSunPos = lightPos / XMVectorSet((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 1, 1);
+		cb.mScreen = XMFLOAT4((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, 0);
 
-		wiRenderer::GetDevice()->UpdateBuffer(constantBuffer,&cb,threadID);
-		wiRenderer::GetDevice()->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->UpdateBuffer(constantBuffer,&cb,threadID);
+		device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 	
-		wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
-		wiRenderer::GetDevice()->BindDepthStencilState(depthStencilState,1,threadID);
-		wiRenderer::GetDevice()->BindBlendState(blendState,threadID);
+		device->BindRasterizerState(rasterizerState,threadID);
+		device->BindDepthStencilState(depthStencilState,1,threadID);
+		device->BindBlendState(blendState,threadID);
 
-		//wiRenderer::GetDevice()->BindResourceGS(depthMap,0,threadID);
+		//device->BindResourceGS(depthMap,0,threadID);
 
 		int i=0;
 		for(Texture2D* x : rims){
 			if(x!=nullptr){
-				wiRenderer::GetDevice()->BindResourcePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
-				wiRenderer::GetDevice()->BindResourceGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				device->BindResourcePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				device->BindResourceGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
 				i++;
 			}
 		}
-		wiRenderer::GetDevice()->Draw(i,threadID);
+		device->Draw(i,threadID);
 
 		
 
 
-		wiRenderer::GetDevice()->BindGS(nullptr,threadID);
+		device->BindGS(nullptr,threadID);
+
+		device->EventEnd();
 	}
 }
 
