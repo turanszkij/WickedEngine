@@ -20,7 +20,7 @@
 #include "wiRandom.h"
 #include "wiFont.h"
 #include "ResourceMapping.h"
-#include "wiGraphicsAPI_DX11.h"
+#include "wiGraphicsDevice_DX11.h"
 
 using namespace wiGraphicsTypes;
 

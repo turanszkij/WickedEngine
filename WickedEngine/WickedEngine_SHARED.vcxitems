@@ -300,7 +300,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFrameRate.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsResource.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h" />
@@ -629,7 +632,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFrameRate.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFrustum.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp" />

@@ -993,9 +993,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -1024,6 +1021,18 @@
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsResource.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1748,9 +1757,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp">
       <Filter>BULLET</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsAPI_DX11.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
@@ -1779,6 +1785,12 @@
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
