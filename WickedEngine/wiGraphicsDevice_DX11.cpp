@@ -1873,22 +1873,22 @@ void GraphicsDevice_DX11::Unmap(GPUBuffer* resource, UINT subResource, GRAPHICST
 }
 
 
-HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
+HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
 {
 	HRESULT hr = E_FAIL;
 	(*ppTexture) = new Texture2D();
 
-	if (!fileName.substr(fileName.length() - 4).compare(wstring(L".dds")))
+	if (!fileName.substr(fileName.length() - 4).compare(string(".dds")))
 	{
 		// Load dds
-		hr = CreateDDSTextureFromFile(device, fileName.c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
+		hr = CreateDDSTextureFromFile(device, wstring(fileName.begin(),fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
 	}
 	else
 	{
 		// Load WIC
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			LOCK();
-		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], fileName.c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
+		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], wstring(fileName.begin(), fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			UNLOCK();
 	}
@@ -1898,16 +1898,21 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const wstring& fileName, Text
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::SaveTexturePNG(const wstring& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
-{
-	return SaveWICTextureToFile(deviceContexts[threadID], pTexture->texture2D_DX11, GUID_ContainerFormatPng, fileName.c_str());
-}
-HRESULT GraphicsDevice_DX11::SaveTextureDDS(const wstring& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
+HRESULT GraphicsDevice_DX11::SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
 {
 	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
 	if (tex2D != nullptr)
 	{
-		return SaveDDSTextureToFile(deviceContexts[threadID], tex2D->texture2D_DX11, fileName.c_str());
+		return SaveWICTextureToFile(deviceContexts[threadID], pTexture->texture2D_DX11, GUID_ContainerFormatPng, wstring(fileName.begin(), fileName.end()).c_str());
+	}
+	return E_FAIL;
+}
+HRESULT GraphicsDevice_DX11::SaveTextureDDS(const string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
+{
+	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
+	if (tex2D != nullptr)
+	{
+		return SaveDDSTextureToFile(deviceContexts[threadID], tex2D->texture2D_DX11, wstring(fileName.begin(), fileName.end()).c_str());
 	}
 	return E_FAIL;
 }

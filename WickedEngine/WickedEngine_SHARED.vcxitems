@@ -233,6 +233,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h" />
@@ -493,6 +494,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

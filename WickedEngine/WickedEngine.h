@@ -45,6 +45,7 @@
 #include "wiGraphicsAPI.h"
 #include "wiGUI.h"
 #include "wiWidget.h"
+#include "wiHashString.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

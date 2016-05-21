@@ -132,7 +132,7 @@ int wiResourceManager_BindLua::List(lua_State *L)
 	stringstream ss("");
 	for (auto x : resources->resources)
 	{
-		ss << x.first << endl;
+		ss << x.first.GetString() << endl;
 	}
 	wiLua::SSetString(L, ss.str());
 	return 1;

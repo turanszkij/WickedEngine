@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiThreadSafeManager.h"
 #include "wiGraphicsAPI.h"
+#include "wiHashString.h"
 
 class wiSound;
 
@@ -31,7 +32,7 @@ public:
 			refCount = 1;
 		};
 	};
-	typedef unordered_map<string, Resource*> container;
+	typedef unordered_map<wiHashString, Resource*> container;
 	container resources;
 
 protected:
@@ -47,11 +48,11 @@ public:
 	static wiResourceManager* GetGlobal();
 	static wiResourceManager* GetShaderManager();
 
-	const Resource* get(const string& name, bool IncRefCount = false);
+	const Resource* get(const wiHashString& name, bool IncRefCount = false);
 	//specify datatype for shaders
-	void* add(const string& name, Data_Type newType = Data_Type::DYNAMIC
+	void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC
 		, wiGraphicsTypes::VertexLayoutDesc* vertexLayoutDesc = nullptr, UINT elementCount = 0, wiGraphicsTypes::StreamOutDeclaration* streamOutDecl = nullptr);
-	bool del(const string& name, bool forceDelete = false);
+	bool del(const wiHashString& name, bool forceDelete = false);
 	bool CleanUp();
 };
 

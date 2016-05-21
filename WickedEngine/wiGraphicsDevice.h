@@ -118,9 +118,9 @@ namespace wiGraphicsTypes
 		virtual void Map(GPUBuffer* resource, UINT subResource, MAP mapType, UINT mapFlags, MappedSubresource* mappedResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void Unmap(GPUBuffer* resource, UINT subResource = 0, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
-		virtual HRESULT CreateTextureFromFile(const wstring& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual HRESULT SaveTexturePNG(const wstring& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual HRESULT SaveTextureDDS(const wstring& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual HRESULT CreateTextureFromFile(const string& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual HRESULT SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual HRESULT SaveTextureDDS(const string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
 	};
 
