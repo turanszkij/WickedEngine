@@ -1,4 +1,4 @@
-![Logo](WickedEngine/logo/logo.PNG)
+![Logo](WickedEngine/logo/logo.png)
 
 # Wicked Engine
 ## Created by Turánszki János
