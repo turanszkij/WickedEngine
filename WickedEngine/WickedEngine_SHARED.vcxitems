@@ -675,12 +675,19 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)fonts\basic.dds" />
+    <Image Include="$(MSBuildThisFileDirectory)fonts\basic.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)logo\logo.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\licenses.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)fonts\basic.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)fonts\basic.txt">
+      <DeploymentContent>true</DeploymentContent>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />

@@ -34,6 +34,9 @@
     <Filter Include="ENGINE\Graphics">
       <UniqueIdentifier>{3d5f1098-95e6-4baa-9e39-864be28a5b64}</UniqueIdentifier>
     </Filter>
+    <Filter Include="logo">
+      <UniqueIdentifier>{49cc37cb-b047-44fb-8389-032d76692a1b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -1803,6 +1806,9 @@
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)fonts\basic.dds">
       <Filter>fonts</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)logo\logo.png">
+      <Filter>logo</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
