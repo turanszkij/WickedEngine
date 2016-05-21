@@ -1480,7 +1480,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 }
 void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID) {
 	if (deviceContexts[threadID] != nullptr) {
-		static thread_local ID3D11RenderTargetView* renderTargetViews[8];
+		ID3D11RenderTargetView* renderTargetViews[8];
 		for (UINT i = 0; i < min(NumViews, 8); ++i)
 		{
 			renderTargetViews[i] = ppRenderTargetViews[i]->renderTargetView_DX11;
