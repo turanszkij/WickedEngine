@@ -10,7 +10,7 @@ namespace wiHelper
 
 	bool readByteData(const string& fileName, BYTE** data, size_t& dataSize);
 
-	void messageBox(const string& msg, const string& caption = "Warning!", HWND hWnd = nullptr);
+	void messageBox(const string& msg, const string& caption = "Warning!");
 
 	void screenshot(const string& name = "");
 

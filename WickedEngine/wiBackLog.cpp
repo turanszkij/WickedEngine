@@ -21,7 +21,7 @@ Texture2D* wiBackLog::backgroundTex = nullptr;
 wiFont wiBackLog::font;
 
 void wiBackLog::Initialize(){
-	pos = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	pos = -(float)wiRenderer::GetDevice()->GetScreenHeight();
 	scroll=0;
 	state=DISABLED;
 	deletefromline=500;
@@ -49,15 +49,15 @@ void wiBackLog::Scroll(int dir){
 }
 void wiBackLog::Update(){
 	if(state==DEACTIVATING) 
-		pos+=speed;
-	else if(state==ACTIVATING) 
 		pos-=speed;
-	if (pos >= wiRenderer::GetDevice()->GetScreenHeight()) 
+	else if(state==ACTIVATING) 
+		pos+=speed;
+	if (pos <= -wiRenderer::GetDevice()->GetScreenHeight()) 
 	{ 
 		state = DISABLED; 
-		pos = (float)wiRenderer::GetDevice()->GetScreenHeight(); 
+		pos = -(float)wiRenderer::GetDevice()->GetScreenHeight(); 
 	}
-	else if(pos<0) 
+	else if(pos>0) 
 	{
 		state=IDLE; 
 		pos=0;
@@ -68,7 +68,7 @@ void wiBackLog::Draw(){
 		//wiImage::BatchBegin();
 		wiImageEffects fx = wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 		fx.pos=XMFLOAT3(0,pos,0);
-		fx.opacity = wiMath::Lerp(1, 0, pos / wiRenderer::GetDevice()->GetScreenHeight());
+		fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
 		wiImage::Draw(backgroundTex, fx);
 		font.SetText(getText());
 		font.props.posY = pos - wiRenderer::GetDevice()->GetScreenHeight() + 75 + scroll;

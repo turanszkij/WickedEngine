@@ -6,6 +6,7 @@
 #include "ConstantBufferMapping.h"
 #include "ResourceMapping.h"
 #include "wiSPTree.h"
+#include "wiWindowRegistration.h"
 
 struct Transform;
 struct Vertex;
@@ -38,7 +39,6 @@ class  wiSPTree;
 class  TaskThread;
 struct Cullable;
 class  PHYSICS;
-//class  Camera;
 class  wiRenderTarget;
 class  wiWaterPlane;
 
@@ -54,11 +54,8 @@ public:
 	static wiGraphicsTypes::GraphicsDevice* graphicsDevice;
 	static wiGraphicsTypes::GraphicsDevice* GetDevice() { return graphicsDevice; }
 
-#ifndef WINSTORE_SUPPORT
-	static void InitDevice(HWND window, int screenW, int screenH, bool windowed);
-#else
-	static void InitDevice(Windows::UI::Core::CoreWindow^ window);
-#endif
+
+	static void InitDevice(wiWindowRegistration::window_type window, bool fullscreen = false);
 	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
 
 	

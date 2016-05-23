@@ -2,6 +2,7 @@
 #include "wiXInput.h"
 #include "wiDirectInput.h"
 #include "wiRawInput.h"
+#include "wiWindowRegistration.h"
 
 wiXInput* wiInputManager::xinput = nullptr;
 wiDirectInput* wiInputManager::dinput = nullptr;
@@ -133,6 +134,7 @@ XMFLOAT4 wiInputManager::getpointer()
 #ifndef WINSTORE_SUPPORT
 	POINT p;
 	GetCursorPos(&p);
+	ScreenToClient(wiWindowRegistration::GetInstance()->GetRegisteredWindow(), &p);
 	return XMFLOAT4((float)p.x, (float)p.y, 0, 0);
 #else
 	auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;

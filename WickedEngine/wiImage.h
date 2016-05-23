@@ -11,24 +11,27 @@ class wiImage
 private:
 	//static mutex MUTEX;
 protected:
-	GFX_STRUCT ImageCB
+	GFX_STRUCT ImageCB_VS
 	{
-		XMMATRIX	mViewProjection;
-		XMMATRIX	mTrans;
-		XMFLOAT4	mDimensions;
-		XMFLOAT4	mDrawRec;
+		XMMATRIX	mTransform;
 		XMFLOAT4	mTexMulAdd;
-		UINT		mPivot;
+		XMFLOAT2	mPivot;
+		UINT		mMirror;
+		float		pad[1];
+
+		CB_SETBINDSLOT(CBSLOT_IMAGE_IMAGE)
+
+		ALIGN_16
+	};
+	GFX_STRUCT ImageCB_PS
+	{
 		UINT		mMask;
 		UINT		mDistort;
 		UINT		mNormalmapSeparate;
-		float		mOffsetX;
-		float		mOffsetY;
-		float		mMirror;
+		float		mMipLevel;
 		float		mFade;
 		float		mOpacity;
-		float		mMipLevel;
-		float pad[2];
+		float		pad[2];
 
 		CB_SETBINDSLOT(CBSLOT_IMAGE_IMAGE)
 
@@ -45,7 +48,7 @@ protected:
 	};
 	
 	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg;
-	static wiGraphicsTypes::GPUBuffer           *constantBuffer,*processCb;
+	static wiGraphicsTypes::GPUBuffer       *constantBufferVS, *constantBufferPS, *processCb;
 
 	static wiGraphicsTypes::VertexShader     *vertexShader,*screenVS;
 	static wiGraphicsTypes::PixelShader      *pixelShader,*blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS

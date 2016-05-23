@@ -1,10 +1,10 @@
 #include "wiGUI.h"
 #include "wiWidget.h"
+#include "wiHashString.h"
 
 
-wiGUI::wiGUI()
+wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr)
 {
-	activeWidget = nullptr;
 }
 
 
@@ -34,11 +34,11 @@ void wiGUI::AddWidget(wiWidget* widget)
 	widgets.push_back(widget);
 }
 
-wiWidget* wiGUI::GetWidget(const string& name)
+wiWidget* wiGUI::GetWidget(const wiHashString& name)
 {
 	for (auto& x : widgets)
 	{
-		if (!x->GetName().compare(name))
+		if (x->GetName() == name)
 		{
 			return x;
 		}

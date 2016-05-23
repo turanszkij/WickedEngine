@@ -12,12 +12,10 @@
 namespace wiGraphicsTypes
 {
 
-#ifndef WINSTORE_SUPPORT
-GraphicsDevice_DX11::GraphicsDevice_DX11(HWND window, int screenW, int screenH, bool windowed) : GraphicsDevice()
-#else
-GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
-#endif
+GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
 {
+	FULLSCREEN = fullscreen;
+
 	HRESULT hr = S_OK;
 
 	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
@@ -50,8 +48,10 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 
 #ifndef WINSTORE_SUPPORT
-	SCREENWIDTH = screenW;
-	SCREENHEIGHT = screenH;
+	RECT rect = RECT();
+	GetClientRect(window, &rect);
+	SCREENWIDTH = rect.right - rect.left;
+	SCREENHEIGHT = rect.bottom - rect.top;
 
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
@@ -65,7 +65,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	sd.OutputWindow = window;
 	sd.SampleDesc.Count = 1;
 	sd.SampleDesc.Quality = 0;
-	sd.Windowed = windowed;
+	sd.Windowed = !fullscreen;
 #endif
 
 	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
@@ -83,7 +83,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 			break;
 	}
 	if (FAILED(hr)) {
-		wiHelper::messageBox("SwapChain Creation Failed!", "Error!", nullptr);
+		wiHelper::messageBox("SwapChain Creation Failed!", "Error!");
 #ifdef BACKLOG
 		wiBackLog::post("SwapChain Creation Failed!");
 #endif
@@ -155,14 +155,14 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window)
 	backBuffer = NULL;
 	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
 	if (FAILED(hr)) {
-		wiHelper::messageBox("BackBuffer creation Failed!", "Error!", nullptr);
+		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
 		exit(0);
 	}
 
 	hr = device->CreateRenderTargetView(backBuffer, NULL, &renderTargetView);
 	//pBackBuffer->Release();
 	if (FAILED(hr)) {
-		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!", nullptr);
+		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
 		exit(0);
 	}
 

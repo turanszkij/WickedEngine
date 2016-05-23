@@ -22,10 +22,6 @@ enum ImageType{
 	SCREEN,
 	WORLD,
 };
-enum Pivot{
-	UPPERLEFT,
-	CENTER,
-};
 
 class wiImageEffects {
 public:
@@ -34,10 +30,13 @@ public:
 	XMFLOAT2 scale;
 	XMFLOAT4 drawRec;
 	XMFLOAT2 texOffset;
-	XMFLOAT2 offset;
 	XMFLOAT2 sunPos;
-	XMFLOAT4 lookAt; //.w is for enabled
-	float mirror;
+	//(x,y,z) : direction, (w) :isenabled?
+	XMFLOAT4 lookAt;
+	// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
+	XMFLOAT2 pivot;
+	// mirror horizontally
+	bool mirror;
 	float blur, blurDir;
 	float fade;
 	float opacity;
@@ -54,7 +53,6 @@ public:
 	ImageType typeFlag;
 	SAMPLEMODE sampleFlag;
 	QUALITY quality;
-	Pivot pivotFlag;
 
 	struct Bloom {
 		bool  separate;
@@ -110,10 +108,10 @@ public:
 		scale = XMFLOAT2(1, 1);
 		drawRec = XMFLOAT4(0, 0, 0, 0);
 		texOffset = XMFLOAT2(0, 0);
-		offset = XMFLOAT2(0, 0);
 		sunPos = XMFLOAT2(0, 0);
 		lookAt = XMFLOAT4(0, 0, 0, 0);
-		mirror = 1.0f;
+		pivot = XMFLOAT2(0, 0);
+		mirror = false;
 		blur = blurDir = fade = rotation = 0.0f;
 		opacity = 1.0f;
 		extractNormalMap = false;
@@ -125,7 +123,6 @@ public:
 		typeFlag = SCREEN;
 		sampleFlag = SAMPLEMODE_MIRROR;
 		quality = QUALITY_BILINEAR;
-		pivotFlag = UPPERLEFT;
 		bloom = Bloom();
 		process = Processing();
 		deferred = false;

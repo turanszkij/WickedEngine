@@ -347,6 +347,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWaterPlane.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiWindowRegistration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />
   </ItemGroup>
   <ItemGroup>

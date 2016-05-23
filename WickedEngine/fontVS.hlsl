@@ -2,9 +2,7 @@
 
 CBUFFER(FontCB, CBSLOT_FONT_FONT)
 {
-	float4x4 xProjection;
-	float4x4 xTrans;
-	float4	 xDimensions;
+	float4x4 xTransform;
 }
 
 struct VertextoPixel
@@ -17,10 +15,7 @@ VertextoPixel main(float2 inPos : POSITION, float2 inTex : TEXCOORD0)
 {
 	VertextoPixel Out = (VertextoPixel)0;
 
-	inPos.x-=xDimensions.x*0.5f;
-	inPos.y+=xDimensions.y*0.5f;
-
-	Out.pos = mul(float4(inPos,0,1),mul(xTrans,xProjection));
+	Out.pos = mul(float4(inPos, 0, 1), xTransform);
 	
 	Out.tex=inTex;
 

@@ -10,6 +10,7 @@ Renderable2DComponent::Renderable2DComponent()
 {
 	setSpriteSpeed(1.f);
 	addLayer(DEFAULT_RENDERLAYER);
+	GUI = wiGUI(GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderableComponent();
 }
@@ -76,6 +77,8 @@ void Renderable2DComponent::Update()
 		}
 	}
 
+	GetGUI().Update();
+
 	RenderableComponent::Update();
 }
 void Renderable2DComponent::Render()
@@ -97,6 +100,8 @@ void Renderable2DComponent::Render()
 			}
 		}
 	}
+
+	GetGUI().Render();
 
 	RenderableComponent::Render();
 }

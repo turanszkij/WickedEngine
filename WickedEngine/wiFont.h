@@ -46,9 +46,7 @@ protected:
 	static vector<Vertex> vertexList;
 	GFX_STRUCT ConstantBuffer
 	{
-		XMMATRIX mProjection;
-		XMMATRIX mTrans;
-		XMFLOAT4 mDimensions;
+		XMMATRIX mTransform;
 
 		CB_SETBINDSLOT(CBSLOT_FONT_FONT)
 		

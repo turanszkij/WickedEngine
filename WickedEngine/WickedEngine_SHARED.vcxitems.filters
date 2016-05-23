@@ -37,6 +37,9 @@
     <Filter Include="logo">
       <UniqueIdentifier>{49cc37cb-b047-44fb-8389-032d76692a1b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ENGINE\Helpers">
+      <UniqueIdentifier>{4342ecc7-471b-4218-9acb-2b5b8e2e10f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -147,34 +150,16 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTaskThread.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWaterPlane.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHitbox2D.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h">
@@ -210,9 +195,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
@@ -222,16 +204,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiServer.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiMath.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h">
@@ -1035,11 +1011,41 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h">
-      <Filter>ENGINE</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
       <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiMath.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTaskThread.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiWindowRegistration.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h">
+      <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1163,15 +1169,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1208,9 +1205,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1226,9 +1220,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1239,9 +1230,6 @@
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFrameRate.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHitbox2D.cpp">
@@ -1796,11 +1784,29 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp">
-      <Filter>ENGINE</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
       <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
+      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

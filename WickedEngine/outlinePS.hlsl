@@ -98,7 +98,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	texture_lineardepth.GetDimensions(depthMapSize.x,depthMapSize.y);
 	color = texture_lineardepth.Load(int3(depthMapSize.xy*PSIn.tex,0));*/
 	
-	color.rgb*=edgeValueDepth(PSIn.tex, xDimensions.xy,OUTLINEWIDTHDEPTH,OUTLINETHRESHOLDDEPTH);
+	color.rgb*=edgeValueDepth(PSIn.tex, GetScreenResolution(),OUTLINEWIDTHDEPTH,OUTLINETHRESHOLDDEPTH);
 	//color.rgb*=edgeValueNormal(PSIn.tex,xDimension.xy,OUTLINEWIDTHNORMAL,OUTLINETHRESHOLDNORMAL);
 
 	return color/numSampling;

@@ -4,6 +4,7 @@
 #include "wiCVars.h"
 #include "wiColor.h"
 #include "wiFadeManager.h"
+#include "wiWindowRegistration.h"
 
 class RenderableComponent;
 
@@ -44,14 +45,13 @@ public:
 	virtual void Render();
 	virtual void Compose();
 
+	wiWindowRegistration::window_type window;
 
 #ifndef WINSTORE_SUPPORT
-	HWND window;
 	HINSTANCE instance;
-	bool setWindow(HWND hWnd, HINSTANCE hInst);
+	bool setWindow(wiWindowRegistration::window_type window, HINSTANCE hInst);
 #else
-	Windows::UI::Core::CoreWindow^ window;
-	bool setWindow(Windows::UI::Core::CoreWindow^ window);
+	bool setWindow(wiWindowRegistration::window_type window);
 #endif
 
 

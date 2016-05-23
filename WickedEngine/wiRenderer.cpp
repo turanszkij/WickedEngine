@@ -79,18 +79,11 @@ wiRenderer::wiRenderer()
 {
 }
 
-#ifndef WINSTORE_SUPPORT
-void wiRenderer::InitDevice(HWND window, int screenW, int screenH, bool windowed)
+void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fullscreen)
 {
 	SAFE_DELETE(graphicsDevice);
-	graphicsDevice = new GraphicsDevice_DX11(window, screenW, screenH, windowed);
+	graphicsDevice = new GraphicsDevice_DX11(window, fullscreen);
 }
-#else
-void wiRenderer::InitDevice(Windows::UI::Core::CoreWindow^ window)
-{
-	graphicsDevice = new GraphicsDevice_DX11(window);
-}
-#endif
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
 {
@@ -1434,7 +1427,7 @@ void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const 
 	img->effects.siz=XMFLOAT2(1,1);
 	img->effects.typeFlag=WORLD;
 	img->effects.quality=QUALITY_ANISOTROPIC;
-	img->effects.pivotFlag=Pivot::CENTER;
+	img->effects.pivot = XMFLOAT2(0.5f, 0.5f);
 	img->effects.lookAt=waterPlane.getXMFLOAT4();
 	img->effects.lookAt.w=1;
 	waterRipples.push_back(img);

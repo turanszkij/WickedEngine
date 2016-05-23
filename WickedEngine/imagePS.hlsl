@@ -1,10 +1,21 @@
 #include "imageHF.hlsli"
 
+CBUFFER(ImageCB_PS, CBSLOT_IMAGE_IMAGE)
+{
+	uint		xMask;
+	uint		xDistort;
+	uint		xNormalmapSeparate;
+	float		xMipLevel;
+	float		xFade;
+	float		xOpacity;
+	float		xPadding_ImageCB_PS[2];
+};
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
 	float4 color = float4(0,0,0,0);
 
+	//return float4(PSIn.tex, 0, 1);
 		
 	[branch]if(xDistort==1){
 		float2 distortionCo;
@@ -14,7 +25,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 		PSIn.tex.xy=distortionCo+distort;
 	}
 
-	color += xTexture.SampleLevel(Sampler, PSIn.tex.xy * xTexMulAdd.xy + xTexMulAdd.zw, xMipLevel);
+	color += xTexture.SampleLevel(Sampler, PSIn.tex.xy, xMipLevel);
 	[branch]if(xMask==1)
 		color *= xMaskTex.SampleLevel(Sampler, PSIn.tex.xy, xMipLevel).a;
 	[branch]if(xNormalmapSeparate==2)

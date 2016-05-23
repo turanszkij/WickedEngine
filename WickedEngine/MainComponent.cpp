@@ -189,31 +189,32 @@ void MainComponent::Compose()
 }
 
 #ifndef WINSTORE_SUPPORT
-bool MainComponent::setWindow(HWND hWnd, HINSTANCE hInst)
+bool MainComponent::setWindow(wiWindowRegistration::window_type window, HINSTANCE hInst)
 {
-	window = hWnd;
-	instance = hInst;
+	this->window = window;
+	this->instance = hInst;
 
-	if (screenH == 0 && screenW == 0)
-	{
-		RECT rect = RECT();
-		GetClientRect(hWnd, &rect);
-		screenW = rect.right - rect.left;
-		screenH = rect.bottom - rect.top;
-	}
+	RECT rect = RECT();
+	GetClientRect(window, &rect);
+	screenW = rect.right - rect.left;
+	screenH = rect.bottom - rect.top;
 
-	wiRenderer::InitDevice(hWnd, screenW, screenH, !fullscreen);
+	wiRenderer::InitDevice(window, fullscreen);
+
+	wiWindowRegistration::GetInstance()->RegisterWindow(window);
 
 	return true;
 }
 #else
-bool MainComponent::setWindow(Windows::UI::Core::CoreWindow^ window)
+bool MainComponent::setWindow(wiWindowRegistration::window_type window)
 {
 	screenW = (int)window->Bounds.Width;
 	screenH = (int)window->Bounds.Height;
-	wiRenderer::InitDevice(window);
+	wiRenderer::InitDevice(window, fullscreen);
 
 	this->window = window;
+
+	wiWindowRegistration::GetInstance()->RegisterWindow(window);
 
 	return true;
 }

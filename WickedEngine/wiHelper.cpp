@@ -1,11 +1,12 @@
 #include "wiHelper.h"
 #include "wiRenderer.h"
 #include "wiBackLog.h"
+#include "wiWindowRegistration.h"
 
 namespace wiHelper
 {
 
-	std::string toUpper(const std::string& s)
+	string toUpper(const std::string& s)
 	{
 		std::string result;
 		std::locale loc;
@@ -34,9 +35,9 @@ namespace wiHelper
 		return false;
 	}
 
-	void messageBox(const string& msg, const string& caption, HWND hWnd){
+	void messageBox(const string& msg, const string& caption){
 #ifndef WINSTORE_SUPPORT
-		MessageBoxA(hWnd, msg.c_str(), caption.c_str(), 0);
+		MessageBoxA(wiWindowRegistration::GetInstance()->GetRegisteredWindow(), msg.c_str(), caption.c_str(), 0);
 #else
 		wstring wmsg(msg.begin(), msg.end());
 		wstring wcaption(caption.begin(), caption.end());

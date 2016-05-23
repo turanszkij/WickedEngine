@@ -15,8 +15,9 @@ namespace wiGraphicsTypes
 		long FRAMECOUNT;
 		bool VSYNC;
 		int SCREENWIDTH, SCREENHEIGHT;
+		bool FULLSCREEN;
 	public:
-		GraphicsDevice() :FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0) {}
+		GraphicsDevice() :FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0), FULLSCREEN(false) {}
 
 		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) = 0;
 		virtual HRESULT CreateTexture1D() = 0;

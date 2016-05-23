@@ -3,6 +3,7 @@
 
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
+#include "wiWindowRegistration.h"
 
 interface ID3D11Device;
 interface IDXGISwapChain;
@@ -36,11 +37,7 @@ namespace wiGraphicsTypes
 		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT];
 
 	public:
-#ifndef WINSTORE_SUPPORT
-		GraphicsDevice_DX11(HWND window, int screenW, int screenH, bool windowed);
-#else
-		GraphicsDevice_DX11(Windows::UI::Core::CoreWindow^ window);
-#endif
+		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false);
 
 		~GraphicsDevice_DX11();
 

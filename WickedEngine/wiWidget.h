@@ -1,34 +1,48 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiLoader.h"
+#include "wiHashString.h"
+#include "wiHitBox2D.h"
 
 class wiGUI;
 
-class wiWidget
+struct wiEventArgs
 {
-private:
-	string name;
+	XMFLOAT2 clickPos;
+};
+
+class wiWidget : public Transform
+{
+protected:
+	wiHashString fastName;
+	string text;
 public:
 	wiWidget();
-	~wiWidget();
+	virtual ~wiWidget();
 
-	string GetName();
-	void SetName(const string& newName);
+	wiHashString GetName();
+	void SetName(const string& value);
+	string GetText();
+	void SetText(const string& value);
+	void SetPos(const XMFLOAT2& value);
+	void SetSize(const XMFLOAT2& value);
 
-	virtual void Update(wiGUI* gui) = 0;
+	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;
 };
 
 class wiButton : public wiWidget
 {
-private:
-	function<void()> onClick;
+protected:
+	function<void(wiEventArgs args)> onClick;
+	Hitbox2D hitBox;
 public:
-	wiButton(const string& newName);
-	~wiButton();
+	wiButton(const string& newName = "Button_Unnamed");
+	virtual ~wiButton();
 
-	virtual void Update(wiGUI* gui);
-	virtual void Render(wiGUI* gui);
+	virtual void Update(wiGUI* gui) override;
+	virtual void Render(wiGUI* gui) override;
 
-	void OnClick(function<void()> func);
+	void OnClick(function<void(wiEventArgs args)> func);
 };
 

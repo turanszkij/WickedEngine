@@ -77,5 +77,7 @@ public:
 	void SetFontOrder(wiFont* font, int order);
 	void SortLayers();
 	void CleanLayers();
+
+	wiGUI& GetGUI() { return GUI; }
 };
 

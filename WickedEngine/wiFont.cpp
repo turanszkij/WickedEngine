@@ -40,7 +40,7 @@ void wiFont::SetUpStates()
 {
 	RasterizerStateDesc rs;
 	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_BACK;
+	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=TRUE;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -193,10 +193,15 @@ void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHI
 			upperY /= (float)fontStyles[style].texHeight;
 			lowerY /= (float)fontStyles[style].texHeight;
 
-			vertexList[i].Pos = XMFLOAT2(pos + 0 - props.size*0.5f, 0 - line + props.size*0.5f); vertexList[i].Tex = XMFLOAT2(leftX, upperY);
-			vertexList[i + 1].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f, 0 - line + props.size*0.5f); vertexList[i + 1].Tex = XMFLOAT2(rightX, upperY);
-			vertexList[i + 2].Pos = XMFLOAT2(pos + 0 - props.size*0.5f, -fontStyles[style].recSize - line - props.size*0.5f); vertexList[i + 2].Tex = XMFLOAT2(leftX, lowerY);
-			vertexList[i + 3].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f, -fontStyles[style].recSize - line - props.size*0.5f); vertexList[i + 3].Tex = XMFLOAT2(rightX, lowerY);
+			vertexList[i + 0].Pos =	XMFLOAT2(pos + 0 - props.size*0.5f							, line - props.size*0.5f); 
+			vertexList[i + 1].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f	, line - props.size*0.5f); 
+			vertexList[i + 2].Pos = XMFLOAT2(pos + 0 - props.size*0.5f							, fontStyles[style].recSize + line + props.size*0.5f); 
+			vertexList[i + 3].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f	, fontStyles[style].recSize + line + props.size*0.5f); 
+
+			vertexList[i + 0].Tex = XMFLOAT2(leftX, upperY);
+			vertexList[i + 1].Tex = XMFLOAT2(rightX, upperY);
+			vertexList[i + 2].Tex = XMFLOAT2(leftX, lowerY);
+			vertexList[i + 3].Tex = XMFLOAT2(rightX, lowerY);
 
 			pos += (short)(fontStyles[style].recSize + props.size + props.spacingX);
 		}
@@ -252,9 +257,9 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 	else if(props.h_align==WIFALIGN_RIGHT)
 		newProps.posX -= textWidth();
 	if (props.v_align == WIFALIGN_CENTER || props.h_align == WIFALIGN_MID)
-		newProps.posY += textHeight()*0.5f;
+		newProps.posY -= textHeight()*0.5f;
 	else if(props.v_align==WIFALIGN_BOTTOM)
-		newProps.posY += textHeight();
+		newProps.posY -= textHeight();
 
 	
 	ModifyGeo(text, newProps, style, threadID);
@@ -271,9 +276,10 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 
 
 		ConstantBuffer cb;
-		cb.mProjection = XMMatrixTranspose( XMMatrixOrthographicLH((float)device->GetScreenWidth(),(float)device->GetScreenHeight(),0,100) );
-		cb.mTrans = XMMatrixTranspose(XMMatrixTranslation(newProps.posX, newProps.posY, 0));
-		cb.mDimensions = XMFLOAT4((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, 0);
+		cb.mTransform = XMMatrixTranspose(
+			XMMatrixTranslation(newProps.posX, newProps.posY, 0)
+			* XMMatrixOrthographicOffCenterLH(0, (float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, -1, 1)
+		);
 		
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
 
