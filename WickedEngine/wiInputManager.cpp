@@ -144,7 +144,11 @@ XMFLOAT4 wiInputManager::getpointer()
 void wiInputManager::setpointer(const XMFLOAT4& props)
 {
 #ifndef WINSTORE_SUPPORT
-	SetCursorPos((int)props.x, (int)props.y);
+	POINT p;
+	p.x = (LONG)props.x;
+	p.y = (LONG)props.y;
+	ClientToScreen(wiWindowRegistration::GetInstance()->GetRegisteredWindow(), &p);
+	SetCursorPos(p.x, p.y);
 #endif
 }
 void wiInputManager::hidepointer(bool value)
