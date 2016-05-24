@@ -20,6 +20,8 @@ void wiWidget::Update(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 	Transform::UpdateTransform();
+
+	state = IDLE;
 }
 
 wiHashString wiWidget::GetName()
@@ -55,12 +57,18 @@ void wiWidget::SetSize(const XMFLOAT2& value)
 	Transform::scale_rest.y = value.y;
 }
 
+wiWidget::WIDGETSTATE wiWidget::GetState()
+{
+	return state;
+}
+
 
 
 
 wiButton::wiButton(const string& newName)
 {
 	SetName(newName);
+	state = IDLE;
 }
 wiButton::~wiButton()
 {
@@ -80,11 +88,13 @@ void wiButton::Update(wiGUI* gui)
 
 	if (pointerHitbox.intersects(hitBox))
 	{
+		state = HOVERED;
 		if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 		{
 			wiEventArgs args;
 			args.clickPos = pointerHitbox.pos;
 			onClick(args);
+			state = ACTIVE;
 		}
 	}
 
@@ -92,9 +102,21 @@ void wiButton::Update(wiGUI* gui)
 void wiButton::Render(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(127,127,127,127))
+
+	wiColor buttonColor = wiColor(127, 127, 127, 127);
+	if (state == HOVERED)
+	{
+		buttonColor = wiColor::Gray;
+	}
+	else if (state == ACTIVE)
+	{
+		buttonColor = wiColor::White;
+	}
+
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(buttonColor)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
-	wiFont(text, wiFontProps(translation.x, translation.y)).Draw(gui->GetGraphicsThread());
+
+	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, 0, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
 }
 
 void wiButton::OnClick(function<void(wiEventArgs args)> func)

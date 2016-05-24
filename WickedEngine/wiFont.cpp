@@ -40,7 +40,7 @@ void wiFont::SetUpStates()
 {
 	RasterizerStateDesc rs;
 	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_NONE;
+	rs.CullMode=CULL_BACK;
 	rs.FrontCounterClockwise=TRUE;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;

@@ -16,6 +16,13 @@ class wiWidget : public Transform
 protected:
 	wiHashString fastName;
 	string text;
+
+	enum WIDGETSTATE
+	{
+		IDLE,
+		HOVERED,
+		ACTIVE,
+	} state;
 public:
 	wiWidget();
 	virtual ~wiWidget();
@@ -26,6 +33,7 @@ public:
 	void SetText(const string& value);
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
+	WIDGETSTATE GetState();
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;

@@ -55,16 +55,16 @@ namespace wiMath
 
 	bool Collision2D(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
 	{
-		if (hitBox1Pos.x + hitBox1Siz.x<hitBox2Pos.x)
+		if (hitBox1Pos.x + hitBox1Siz.x < hitBox2Pos.x)
 			return false;
-		else if (hitBox1Pos.x>hitBox2Pos.x + hitBox2Siz.x)
+		else if (hitBox1Pos.x > hitBox2Pos.x + hitBox2Siz.x)
 			return false;
-		else if (hitBox1Pos.y - hitBox1Siz.y > hitBox2Pos.y)
+		else if (hitBox1Pos.y + hitBox1Siz.y < hitBox2Pos.y)
 			return false;
-		else if (hitBox1Pos.y < hitBox2Pos.y - hitBox2Siz.y)
+		else if (hitBox1Pos.y > hitBox2Pos.y + hitBox2Siz.y)
 			return false;
-		else
-			return true;
+		
+		return true;
 	}
 	UINT GetNextPowerOfTwo(UINT x)
 	{
