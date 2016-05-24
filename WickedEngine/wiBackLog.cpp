@@ -73,7 +73,7 @@ void wiBackLog::Draw(){
 		font.SetText(getText());
 		font.props.posY = pos - wiRenderer::GetDevice()->GetScreenHeight() + 75 + scroll;
 		font.Draw();
-		wiFont(inputArea.str().c_str(), wiFontProps(5, -(float)wiRenderer::GetDevice()->GetScreenHeight() + 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
+		wiFont(inputArea.str().c_str(), wiFontProps(5, (float)wiRenderer::GetDevice()->GetScreenHeight() - 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
 		//wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
 		//wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
 	}

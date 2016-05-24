@@ -78,6 +78,10 @@ namespace wiMath
 	}
 
 
+	float InverseLerp(float value1, float value2, float pos)
+	{
+		return (pos - value1) / (value2 - value1);
+	}
 	float Lerp(float value1, float value2, float amount)
 	{
 		return value1 + (value2 - value1) * amount;

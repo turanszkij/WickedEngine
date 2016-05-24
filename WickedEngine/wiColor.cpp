@@ -41,4 +41,5 @@ wiColor wiColor::Purple				= wiColor(255, 0, 255, 255);
 wiColor wiColor::Cyan				= wiColor(0, 255, 255, 255);
 wiColor wiColor::Transparent		= wiColor(0, 0, 0, 0);
 wiColor wiColor::Gray				= wiColor(127, 127, 127, 255);
+wiColor wiColor::Ghost				= wiColor(127, 127, 127, 127);
 

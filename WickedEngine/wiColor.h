@@ -26,6 +26,7 @@ public:
 	static wiColor Cyan;
 	static wiColor Transparent;
 	static wiColor Gray;
+	static wiColor Ghost;
 };
 
 

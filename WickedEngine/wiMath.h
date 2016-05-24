@@ -11,6 +11,7 @@ namespace wiMath
 	float DistanceEstimated(const XMVECTOR& v1, const XMVECTOR& v2);
 	XMFLOAT3 getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b);
 	bool Collision2D(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz);
+	float InverseLerp(float value1, float value2, float pos);
 	float Lerp(float value1, float value2, float amount);
 	XMFLOAT2 Lerp(const XMFLOAT2&,const XMFLOAT2&, float);
 	XMFLOAT3 Lerp(const XMFLOAT3&,const XMFLOAT3&, float);
