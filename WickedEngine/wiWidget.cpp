@@ -88,7 +88,7 @@ void wiButton::Update(wiGUI* gui)
 
 	if (pointerHitbox.intersects(hitBox))
 	{
-		state = HOVERED;
+		state = FOCUS;
 		if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 		{
 			wiEventArgs args;
@@ -104,7 +104,7 @@ void wiButton::Render(wiGUI* gui)
 	assert(gui != nullptr && "Ivalid GUI!");
 
 	wiColor buttonColor = wiColor(127, 127, 127, 127);
-	if (state == HOVERED)
+	if (state == FOCUS)
 	{
 		buttonColor = wiColor::Gray;
 	}

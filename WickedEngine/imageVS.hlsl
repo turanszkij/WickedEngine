@@ -1,15 +1,6 @@
 #include "globals.hlsli"
 #include "imageHF.hlsli"
 
-CBUFFER(ImageCB_VS, CBSLOT_IMAGE_IMAGE)
-{
-	float4x4	xTransform;
-	float4		xTexMulAdd;
-	float2		xPivot;
-	uint		xMirror;
-	float		xPadding_ImageCB_VS[1];
-};
-
 VertextoPixel main(uint vI : SV_VERTEXID)
 {
 	VertextoPixel Out = (VertextoPixel)0;

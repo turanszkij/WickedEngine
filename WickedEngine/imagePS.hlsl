@@ -1,16 +1,5 @@
 #include "imageHF.hlsli"
 
-CBUFFER(ImageCB_PS, CBSLOT_IMAGE_IMAGE)
-{
-	uint		xMask;
-	uint		xDistort;
-	uint		xNormalmapSeparate;
-	float		xMipLevel;
-	float		xFade;
-	float		xOpacity;
-	float		xPadding_ImageCB_PS[2];
-};
-
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
 	float4 color = float4(0,0,0,0);

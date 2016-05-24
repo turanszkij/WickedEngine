@@ -19,8 +19,11 @@ protected:
 
 	enum WIDGETSTATE
 	{
+		// widget is doing nothing
 		IDLE,
-		HOVERED,
+		// widget got pointer dragged on or selected
+		FOCUS,
+		// widget is interacted with right now
 		ACTIVE,
 	} state;
 public:

@@ -11,7 +11,7 @@ using namespace wiGraphicsTypes;
 
 #pragma region STATICS
 BlendState		*wiImage::blendState = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateNoBlend = nullptr, *wiImage::blendStateAvg = nullptr;
-GPUBuffer       *wiImage::constantBufferVS = nullptr, *wiImage::constantBufferPS = nullptr, *wiImage::processCb = nullptr;
+GPUBuffer       *wiImage::constantBuffer = nullptr, *wiImage::processCb = nullptr;
 
 VertexShader     *wiImage::vertexShader = nullptr,*wiImage::screenVS = nullptr;
 PixelShader      *wiImage::pixelShader = nullptr, *wiImage::blurHPS = nullptr, *wiImage::blurVPS = nullptr, *wiImage::shaftPS = nullptr, *wiImage::outlinePS = nullptr
@@ -35,19 +35,11 @@ void wiImage::LoadBuffers()
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ImageCB_VS);
+	bd.ByteWidth = sizeof(ImageCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	constantBufferVS = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, constantBufferVS);
-
-	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ImageCB_PS);
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	constantBufferPS = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, constantBufferPS);
+	constantBuffer = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, constantBuffer);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DYNAMIC;
@@ -210,8 +202,8 @@ void wiImage::SetUpStates()
 
 void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->BindConstantBufferVS(constantBufferVS, CB_GETBINDSLOT(ImageCB_VS), threadID);
-	wiRenderer::GetDevice()->BindConstantBufferPS(constantBufferPS, CB_GETBINDSLOT(ImageCB_PS), threadID);
+	wiRenderer::GetDevice()->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+	wiRenderer::GetDevice()->BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 
 	wiRenderer::GetDevice()->BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
 }
@@ -251,8 +243,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		return;
 	}
 
-	ImageCB_VS vscb;
-	ImageCB_PS pscb;
+	ImageCB cb;
 	PostProcessCB prcb;
 	{
 		switch (effects.stencilComp)
@@ -273,7 +264,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	{
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			if(effects.typeFlag==SCREEN){
-				vscb.mTransform = XMMatrixTranspose(
+				cb.mTransform = XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x*effects.siz.x, effects.scale.y*effects.siz.y, 1)
 					* XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(effects.pos.x, effects.pos.y, 0)
@@ -296,7 +287,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				else
 					faceRot=XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
 
-				vscb.mTransform = XMMatrixTranspose(
+				cb.mTransform = XMMatrixTranspose(
 						XMMatrixScaling(effects.scale.x*effects.siz.x,effects.scale.y*effects.siz.y,1)
 						*XMMatrixRotationZ(effects.rotation)
 						*faceRot
@@ -307,10 +298,10 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 			// todo: effects.drawRec -> texmuladd!
 
-			vscb.mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
-			vscb.mPivot = effects.pivot;
-			vscb.mMirror = effects.mirror;
-			vscb.mPivot = effects.pivot;
+			cb.mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
+			cb.mPivot = effects.pivot;
+			cb.mMirror = effects.mirror;
+			cb.mPivot = effects.pivot;
 			
 
 			int normalmapmode = 0;
@@ -318,15 +309,14 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				normalmapmode=1;
 			if(effects.extractNormalMap==true)
 				normalmapmode=2;
-			pscb.mNormalmapSeparate = normalmapmode;
-			pscb.mMipLevel = effects.mipLevel;
-			pscb.mFade = effects.fade;
-			pscb.mOpacity = effects.opacity;
-			pscb.mMask = effects.maskMap != nullptr;
-			pscb.mDistort = effects.distortionMap != nullptr;
+			cb.mNormalmapSeparate = normalmapmode;
+			cb.mMipLevel = effects.mipLevel;
+			cb.mFade = effects.fade;
+			cb.mOpacity = effects.opacity;
+			cb.mMask = effects.maskMap != nullptr;
+			cb.mDistort = effects.distortionMap != nullptr;
 
-			device->UpdateBuffer(constantBufferVS, &vscb, threadID);
-			device->UpdateBuffer(constantBufferPS, &pscb, threadID);
+			device->UpdateBuffer(constantBuffer, &cb, threadID);
 
 			device->BindVS(vertexShader, threadID);
 			device->BindPS(pixelShader, threadID);
@@ -490,8 +480,7 @@ void wiImage::CleanUp()
 	SAFE_DELETE(blendStateNoBlend);
 	SAFE_DELETE(blendStateAvg);
 
-	SAFE_DELETE(constantBufferVS);
-	SAFE_DELETE(constantBufferPS);
+	SAFE_DELETE(constantBuffer);
 	SAFE_DELETE(processCb);
 
 	SAFE_DELETE(rasterizerState);
