@@ -45,3 +45,25 @@ wiWidget* wiGUI::GetWidget(const wiHashString& name)
 	}
 	return nullptr;
 }
+
+void wiGUI::ActivateWidget(wiWidget* widget)
+{
+	activeWidget = widget;
+	activeWidget->Activate();
+}
+void wiGUI::DeactivateWidget(wiWidget* widget)
+{
+	widget->Deactivate();
+	if (activeWidget == widget)
+	{
+		activeWidget = nullptr;
+	}
+}
+wiWidget* wiGUI::GetActiveWidget()
+{
+	return activeWidget;
+}
+bool wiGUI::IsWidgetDisabled(wiWidget* widget)
+{
+	return (activeWidget != nullptr && activeWidget != widget);
+}

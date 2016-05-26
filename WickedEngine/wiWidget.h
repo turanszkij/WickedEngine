@@ -14,9 +14,12 @@ struct wiEventArgs
 
 class wiWidget : public Transform
 {
+	friend class wiGUI;
 protected:
 	wiHashString fastName;
 	string text;
+	bool enabled;
+	bool visible;
 
 	enum WIDGETSTATE
 	{
@@ -29,6 +32,8 @@ protected:
 		// widget has last been active but no more interactions are occuring
 		DEACTIVATING,
 	} state;
+	void Activate();
+	void Deactivate();
 public:
 	wiWidget();
 	virtual ~wiWidget();
@@ -40,6 +45,10 @@ public:
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState();
+	void SetEnabled(bool val) { enabled = val; }
+	bool IsEnabled() { return enabled; }
+	void SetVisible(bool val) { visible = val; }
+	bool IsVisible() { return visible; }
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;

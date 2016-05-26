@@ -11,6 +11,8 @@
 wiWidget::wiWidget():Transform()
 {
 	state = IDLE;
+	enabled = true;
+	visible = true;
 }
 
 
@@ -71,13 +73,21 @@ wiWidget::WIDGETSTATE wiWidget::GetState()
 	return state;
 }
 
+void wiWidget::Activate()
+{
+	state = ACTIVE;
+}
 
+void wiWidget::Deactivate()
+{
+	state = DEACTIVATING;
+}
 
 
 wiButton::wiButton(const string& name)
 {
 	SetName(name);
-	SetText(name);
+	SetText(fastName.GetString());
 	OnClick([](wiEventArgs args) {});
 }
 wiButton::~wiButton()
@@ -87,6 +97,16 @@ wiButton::~wiButton()
 void wiButton::Update(wiGUI* gui)
 {
 	wiWidget::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
 
 	if (state == FOCUS)
 	{
@@ -98,7 +118,7 @@ void wiButton::Update(wiGUI* gui)
 	}
 	if (state == ACTIVE)
 	{
-		state = DEACTIVATING;
+		gui->DeactivateWidget(this);
 	}
 
 	hitBox.pos.x = Transform::translation.x;
@@ -142,13 +162,18 @@ void wiButton::Update(wiGUI* gui)
 		wiEventArgs args;
 		args.clickPos = pointerHitbox.pos;
 		onClick(args);
-		state = ACTIVE;
+		gui->ActivateWidget(this);
 	}
 
 }
 void wiButton::Render(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
 
 	wiColor color = wiColor::Ghost;
 	switch (state)
@@ -162,6 +187,10 @@ void wiButton::Render(wiGUI* gui)
 		break;
 	default:
 		break;
+	}
+	if (!IsEnabled())
+	{
+		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
 	}
 
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
@@ -180,7 +209,7 @@ void wiButton::OnClick(function<void(wiEventArgs args)> func)
 wiLabel::wiLabel(const string& name)
 {
 	SetName(name);
-	SetText(name);
+	SetText(fastName.GetString());
 }
 wiLabel::~wiLabel()
 {
@@ -189,12 +218,31 @@ wiLabel::~wiLabel()
 void wiLabel::Update(wiGUI* gui)
 {
 	wiWidget::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
 }
 void wiLabel::Render(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
+	if (!IsVisible())
+	{
+		return;
+	}
+
 	wiColor color = wiColor::Ghost;
+	if (!IsEnabled())
+	{
+		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
+	}
 
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
@@ -209,7 +257,7 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 	:start(start), end(end), value(defaultValue), step(max(step, 1))
 {
 	SetName(name);
-	SetText(name);
+	SetText(fastName.GetString());
 	OnSlide([](wiEventArgs args) {});
 }
 wiSlider::~wiSlider()
@@ -226,6 +274,16 @@ float wiSlider::GetValue()
 void wiSlider::Update(wiGUI* gui)
 {
 	wiWidget::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
 
 	if (state == DEACTIVATING)
 	{
@@ -281,17 +339,22 @@ void wiSlider::Update(wiGUI* gui)
 		value = wiMath::Lerp(start, end, value);
 		args.fValue = value;
 		onSlide(args);
-		state = ACTIVE;
+		gui->ActivateWidget(this);
 	}
 	else if(state != IDLE)
 	{
-		state = DEACTIVATING;
+		gui->DeactivateWidget(this);
 	}
 
 }
 void wiSlider::Render(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
 
 	wiColor color = wiColor::Ghost;
 	switch (state)
@@ -305,6 +368,10 @@ void wiSlider::Render(wiGUI* gui)
 		break;
 	default:
 		break;
+	}
+	if (!IsEnabled())
+	{
+		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
 	}
 
 	float headWidth = scale.x*0.05f;

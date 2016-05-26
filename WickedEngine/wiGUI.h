@@ -23,6 +23,12 @@ public:
 	void AddWidget(wiWidget* widget);
 	wiWidget* GetWidget(const wiHashString& name);
 
+	void ActivateWidget(wiWidget* widget);
+	void DeactivateWidget(wiWidget* widget);
+	wiWidget* GetActiveWidget();
+	// true if another widget is currently active
+	bool IsWidgetDisabled(wiWidget* widget);
+
 	GRAPHICSTHREAD GetGraphicsThread() { return threadID; }
 };
 
