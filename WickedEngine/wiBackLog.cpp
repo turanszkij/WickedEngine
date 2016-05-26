@@ -68,10 +68,10 @@ void wiBackLog::Draw(){
 		//wiImage::BatchBegin();
 		wiImageEffects fx = wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 		fx.pos=XMFLOAT3(0,pos,0);
-		fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
+		fx.opacity = wiMath::Lerp(1, 0, pos / wiRenderer::GetDevice()->GetScreenHeight());
 		wiImage::Draw(backgroundTex, fx);
 		font.SetText(getText());
-		font.props.posY = pos - wiRenderer::GetDevice()->GetScreenHeight() + 75 + scroll;
+		font.props.posY = wiRenderer::GetDevice()->GetScreenHeight() - 75 - pos + scroll;
 		font.Draw();
 		wiFont(inputArea.str().c_str(), wiFontProps(5, (float)wiRenderer::GetDevice()->GetScreenHeight() - 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
 		//wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
