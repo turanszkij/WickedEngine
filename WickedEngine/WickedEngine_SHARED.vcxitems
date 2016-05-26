@@ -344,6 +344,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTransform.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWaterPlane.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h" />
@@ -671,6 +672,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTransform.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />

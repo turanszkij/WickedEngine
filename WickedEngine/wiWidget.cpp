@@ -77,6 +77,7 @@ wiWidget::WIDGETSTATE wiWidget::GetState()
 wiButton::wiButton(const string& name)
 {
 	SetName(name);
+	SetText(name);
 	OnClick([](wiEventArgs args) {});
 }
 wiButton::~wiButton()
@@ -87,11 +88,15 @@ void wiButton::Update(wiGUI* gui)
 {
 	wiWidget::Update(gui);
 
+	if (state == FOCUS)
+	{
+		state = IDLE;
+	}
 	if (state == DEACTIVATING)
 	{
 		state = IDLE;
 	}
-	if (state == ACTIVE || state == FOCUS)
+	if (state == ACTIVE)
 	{
 		state = DEACTIVATING;
 	}
@@ -101,18 +106,34 @@ void wiButton::Update(wiGUI* gui)
 	hitBox.siz.x = Transform::scale.x;
 	hitBox.siz.y = Transform::scale.y;
 
-	XMFLOAT4 pointerPos = wiInputManager::getpointer();
+	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
 	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointerPos.x, pointerPos.y), XMFLOAT2(1, 1));
 
 	bool clicked = false;
-	// click on the button
+	// hover the button
 	if (pointerHitbox.intersects(hitBox))
 	{
-		state = FOCUS;
-
-		if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
+		if (state == IDLE)
 		{
+			state = FOCUS;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == FOCUS)
+		{
+			// activate
 			clicked = true;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == DEACTIVATING)
+		{
+			// Keep pressed until mouse is released
+			state = ACTIVE;
 		}
 	}
 
@@ -159,6 +180,7 @@ void wiButton::OnClick(function<void(wiEventArgs args)> func)
 wiLabel::wiLabel(const string& name)
 {
 	SetName(name);
+	SetText(name);
 }
 wiLabel::~wiLabel()
 {
@@ -184,9 +206,10 @@ void wiLabel::Render(wiGUI* gui)
 
 
 wiSlider::wiSlider(float start, float end, float defaultValue, float step, const string& name)
-	:start(start), end(end), value(defaultValue), step(step)
+	:start(start), end(end), value(defaultValue), step(max(step, 1))
 {
 	SetName(name);
+	SetText(name);
 	OnSlide([](wiEventArgs args) {});
 }
 wiSlider::~wiSlider()
@@ -214,26 +237,34 @@ void wiSlider::Update(wiGUI* gui)
 	hitBox.siz.x = Transform::scale.x;
 	hitBox.siz.y = Transform::scale.y;
 
-	XMFLOAT4 pointerPos = wiInputManager::getpointer();
+	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
 	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointerPos.x, pointerPos.y), XMFLOAT2(1, 1));
 
 	bool dragged = false;
-	// click on the slider
+
 	if (pointerHitbox.intersects(hitBox))
 	{
-		state = FOCUS;
-
-		if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
+		// hover the slider
+		if (state == IDLE)
 		{
+			state = FOCUS;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == FOCUS)
+		{
+			// activate
 			dragged = true;
 		}
 	}
 
-	// continue drag if already grabbed wheter it is intersecting or not
-	if (state == ACTIVE)
+	if(wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
-		if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
+		if (state == ACTIVE)
 		{
+			// continue drag if already grabbed wheter it is intersecting or not
 			dragged = true;
 		}
 	}
@@ -244,7 +275,11 @@ void wiSlider::Update(wiGUI* gui)
 		args.clickPos = pointerHitbox.pos;
 		value = wiMath::InverseLerp(translation.x, translation.x + scale.x, args.clickPos.x);
 		value = wiMath::Clamp(value, 0, 1);
+		value *= step;
+		value = floorf(value);
+		value /= step;
 		value = wiMath::Lerp(start, end, value);
+		args.fValue = value;
 		onSlide(args);
 		state = ACTIVE;
 	}
@@ -278,7 +313,7 @@ void wiSlider::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x - headWidth*0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), gui->GetGraphicsThread());
 	// head
-	float headPosX = wiMath::Lerp(translation.x, translation.x + scale.x, wiMath::Lerp(start, end, value));
+	float headPosX = wiMath::Lerp(translation.x, translation.x + scale.x, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 

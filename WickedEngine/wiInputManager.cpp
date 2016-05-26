@@ -4,12 +4,6 @@
 #include "wiRawInput.h"
 #include "wiWindowRegistration.h"
 
-wiXInput* wiInputManager::xinput = nullptr;
-wiDirectInput* wiInputManager::dinput = nullptr;
-wiRawInput* wiInputManager::rawinput = nullptr;
-wiInputManager::InputCollection wiInputManager::inputs;
-vector<wiInputManager::Touch> wiInputManager::touches;
-
 #ifndef WINSTORE_SUPPORT
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
@@ -18,6 +12,36 @@ vector<wiInputManager::Touch> wiInputManager::touches;
 #define KEY_TOGGLE(vk_code) (((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
 #endif //WINSTORE_SUPPORT
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
+
+wiInputManager::wiInputManager()
+{
+	xinput = nullptr;
+	dinput = nullptr;
+	rawinput = nullptr;
+	
+	thread([&] {
+
+		while (true)
+		{
+			Update();
+			Sleep(10);
+		}
+
+	}).detach();
+}
+wiInputManager::~wiInputManager()
+{
+}
+
+wiInputManager* wiInputManager::GetInstance()
+{
+	static wiInputManager* instance = nullptr;
+	if (instance == nullptr)
+	{
+		instance = new wiInputManager();
+	}
+	return instance;
+}
 
 
 void wiInputManager::addXInput(wiXInput* input){
@@ -31,14 +55,15 @@ void wiInputManager::addRawInput(wiRawInput* input){
 }
 
 void wiInputManager::CleanUp(){
-	xinput->CleanUp();
-	xinput=nullptr;
-
-	dinput->Shutdown();
-	dinput=nullptr;
+	SAFE_DELETE(xinput);
+	SAFE_DELETE(dinput);
+	SAFE_DELETE(rawinput);
 }
 
-void wiInputManager::Update(){
+void wiInputManager::Update()
+{
+	LOCK();
+
 	if(dinput){
 		dinput->Frame();
 	}
@@ -72,6 +97,10 @@ void wiInputManager::Update(){
 			++iter;
 		}
 	}
+
+	touches.clear();
+
+	UNLOCK();
 }
 
 bool wiInputManager::down(DWORD button, InputType inputType, short playerindex)
@@ -103,11 +132,19 @@ bool wiInputManager::press(DWORD button, InputType inputType, short playerindex)
 	input.button=button;
 	input.type=inputType;
 	input.playerIndex = playerindex;
+	LOCK();
 	InputCollection::iterator iter = inputs.find(input);
 	if(iter==inputs.end()){
 		inputs.insert(InputCollection::value_type(input,0));
+		UNLOCK();
 		return true;
 	}
+	if (iter->second <= 0) 
+	{
+		UNLOCK();
+		return true;
+	}
+	UNLOCK();
 	return false;
 }
 bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType inputType, short playerIndex){
@@ -119,14 +156,19 @@ bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType
 	input.button=button;
 	input.type=inputType;
 	input.playerIndex=playerIndex;
+	LOCK();
 	InputCollection::iterator iter = inputs.find(input);
 	if(iter==inputs.end()){
 		inputs.insert(pair<Input,DWORD>(input,0));
+		UNLOCK();
 		return false;
 	}
-	else if ((!continuous && iter->second == frames) || (continuous && iter->second >= frames)){
+	else if ((!continuous && iter->second == frames) || (continuous && iter->second >= frames))
+	{
+		UNLOCK();
 		return true;
 	}
+	UNLOCK();
 	return false;
 }
 XMFLOAT4 wiInputManager::getpointer()
@@ -161,7 +203,9 @@ void wiInputManager::hidepointer(bool value)
 
 void AddTouch(const wiInputManager::Touch& touch)
 {
-	wiInputManager::touches.push_back(touch);
+	wiInputManager::GetInstance()->LOCK();
+	wiInputManager::GetInstance()->touches.push_back(touch);
+	wiInputManager::GetInstance()->UNLOCK();
 }
 
 #ifdef WINSTORE_SUPPORT
@@ -221,7 +265,3 @@ vector<wiInputManager::Touch> wiInputManager::getTouches()
 	return touches;
 }
 
-void wiInputManager::ManageTouches()
-{
-	touches.clear();
-}

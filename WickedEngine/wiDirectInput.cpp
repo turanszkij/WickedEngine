@@ -126,7 +126,10 @@ wiDirectInput::wiDirectInput(HINSTANCE hinstance, HWND hwnd)
 	}
 	Initialize(hinstance, hwnd);
 }
-
+wiDirectInput::~wiDirectInput()
+{
+	Shutdown();
+}
 
 IDirectInputDevice8* m_keyboard = 0;
 IDirectInputDevice8* joystick[2] = {0,0};

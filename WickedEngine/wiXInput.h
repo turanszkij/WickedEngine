@@ -25,6 +25,7 @@ private:
 
 public:
 	wiXInput();
+	~wiXInput();
 	HRESULT UpdateControllerState();
 	DWORD	GetButtons(SHORT);
 	DWORD	GetDirections(short);

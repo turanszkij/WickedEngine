@@ -112,13 +112,10 @@ void MainComponent::run()
 		wiLua::GetGlobal()->RunFile("startup.lua");
 		startupScriptProcessed = true;
 	}
-
-	wiInputManager::ManageTouches();
 }
 
 void MainComponent::Update()
 {
-	wiInputManager::Update();
 	wiCpuInfo::Frame();
 	wiBackLog::Update();
 

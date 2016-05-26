@@ -10,6 +10,10 @@ wiXInput::wiXInput()
 		controllers[i].bConnected=false;
 	}
 }
+wiXInput::~wiXInput()
+{
+	CleanUp();
+}
 
 HRESULT wiXInput::UpdateControllerState()
 {

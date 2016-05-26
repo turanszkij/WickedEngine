@@ -1,23 +1,29 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiThreadSafeManager.h"
 
 class wiXInput;
 class wiDirectInput;
 class wiRawInput;
 
-class wiInputManager
+class wiInputManager : public wiThreadSafeManager
 {
 public:
-	static wiXInput* xinput;
-	static wiDirectInput* dinput;
-	static wiRawInput* rawinput;
+	wiInputManager();
+	~wiInputManager();
 
-	static void addXInput(wiXInput* input);
-	static void addDirectInput(wiDirectInput* input);
-	static void addRawInput(wiRawInput* input);
+	static wiInputManager* GetInstance();
 
-	static void Update();
-	static void CleanUp();
+	wiXInput* xinput;
+	wiDirectInput* dinput;
+	wiRawInput* rawinput;
+
+	void addXInput(wiXInput* input);
+	void addDirectInput(wiDirectInput* input);
+	void addRawInput(wiRawInput* input);
+
+	void Update();
+	void CleanUp();
 
 	enum InputType{
 		DIRECTINPUT_JOYPAD,
@@ -46,20 +52,20 @@ public:
 		};
 	};
 	typedef map<Input,DWORD,Input::LessComparer> InputCollection;
-	static InputCollection inputs;
+	InputCollection inputs;
 	
 	//check if a button is down
-	static bool down(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
+	bool down(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
 	//check if a button is pressed once
-	static bool press(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
+	bool press(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
 	//check if a button is held down
-	static bool hold(DWORD button, DWORD frames = 30, bool continuous = false, InputType inputType = InputType::KEYBOARD, short playerIndex = 0);
+	bool hold(DWORD button, DWORD frames = 30, bool continuous = false, InputType inputType = InputType::KEYBOARD, short playerIndex = 0);
 	//get pointer position (eg. mouse pointer) + 2 unused
-	static XMFLOAT4 getpointer();
+	XMFLOAT4 getpointer();
 	//set pointer position (eg. mouse pointer)
-	static void setpointer(const XMFLOAT4& props);
+	void setpointer(const XMFLOAT4& props);
 	//hide pointer
-	static void hidepointer(bool value);
+	void hidepointer(bool value);
 
 	struct Touch
 	{
@@ -73,11 +79,10 @@ public:
 		// current position of touch
 		XMFLOAT2 pos;
 	};
-	static vector<Touch> getTouches();
-	static void ManageTouches();
+	vector<Touch> getTouches();
 
 private:
-	static vector<Touch> touches;
+	vector<Touch> touches;
 
 	friend void AddTouch(const wiInputManager::Touch& touch);
 

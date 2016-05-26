@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiLoader.h"
+#include "wiTransform.h"
 #include "wiHashString.h"
 #include "wiHitBox2D.h"
 
@@ -9,6 +9,7 @@ class wiGUI;
 struct wiEventArgs
 {
 	XMFLOAT2 clickPos;
+	float fValue;
 };
 
 class wiWidget : public Transform

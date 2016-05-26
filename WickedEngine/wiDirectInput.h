@@ -26,6 +26,7 @@ class wiDirectInput
 	friend BOOL CALLBACK enumAxesCallback(const DIDEVICEOBJECTINSTANCE* instance, VOID* context);
 public:
 	wiDirectInput(HINSTANCE, HWND);
+	~wiDirectInput();
 
 	void Shutdown();
 	bool Frame();
