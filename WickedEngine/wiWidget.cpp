@@ -3,7 +3,6 @@
 #include "wiInputManager.h"
 #include "wiImage.h"
 #include "wiTextureHelper.h"
-#include "wiColor.h"
 #include "wiFont.h"
 #include "wiMath.h"
 
@@ -13,24 +12,23 @@ wiWidget::wiWidget():Transform()
 	state = IDLE;
 	enabled = true;
 	visible = true;
+	colors[IDLE] = wiColor::Ghost;
+	colors[FOCUS] = wiColor::Gray;
+	colors[ACTIVE] = wiColor::White;
+	colors[DEACTIVATING] = wiColor::Gray;
 }
-
-
 wiWidget::~wiWidget()
 {
 }
-
 void wiWidget::Update(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 	Transform::UpdateTransform();
 }
-
 wiHashString wiWidget::GetName()
 {
 	return fastName;
 }
-
 void wiWidget::SetName(const string& value)
 {
 	name = value;
@@ -45,50 +43,52 @@ void wiWidget::SetName(const string& value)
 
 	fastName = wiHashString(name);
 }
-
 string wiWidget::GetText()
 {
 	return name;
 }
-
 void wiWidget::SetText(const string& value)
 {
 	text = value;
 }
-
 void wiWidget::SetPos(const XMFLOAT2& value)
 {
 	Transform::translation_rest.x = value.x;
 	Transform::translation_rest.y = value.y;
 }
-
 void wiWidget::SetSize(const XMFLOAT2& value)
 {
 	Transform::scale_rest.x = value.x;
 	Transform::scale_rest.y = value.y;
 }
-
 wiWidget::WIDGETSTATE wiWidget::GetState()
 {
 	return state;
 }
-
 void wiWidget::Activate()
 {
 	state = ACTIVE;
 }
-
 void wiWidget::Deactivate()
 {
 	state = DEACTIVATING;
 }
+void wiWidget::SetColor(const wiColor& color, WIDGETSTATE state)
+{
+	colors[state] = color;
+}
+wiColor wiWidget::GetColor()
+{
+	return colors[GetState()];
+}
 
 
-wiButton::wiButton(const string& name)
+wiButton::wiButton(const string& name) :wiWidget()
 {
 	SetName(name);
 	SetText(fastName.GetString());
 	OnClick([](wiEventArgs args) {});
+	SetSize(XMFLOAT2(100, 30));
 }
 wiButton::~wiButton()
 {
@@ -175,19 +175,7 @@ void wiButton::Render(wiGUI* gui)
 		return;
 	}
 
-	wiColor color = wiColor::Ghost;
-	switch (state)
-	{
-	case wiWidget::FOCUS:
-	case wiWidget::DEACTIVATING:
-		color = wiColor::Gray;
-		break;
-	case wiWidget::ACTIVE:
-		color = wiColor::White;
-		break;
-	default:
-		break;
-	}
+	wiColor color = GetColor();
 	if (!IsEnabled())
 	{
 		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
@@ -206,10 +194,11 @@ void wiButton::OnClick(function<void(wiEventArgs args)> func)
 
 
 
-wiLabel::wiLabel(const string& name)
+wiLabel::wiLabel(const string& name) :wiWidget()
 {
 	SetName(name);
 	SetText(fastName.GetString());
+	SetSize(XMFLOAT2(100, 20));
 }
 wiLabel::~wiLabel()
 {
@@ -238,7 +227,7 @@ void wiLabel::Render(wiGUI* gui)
 		return;
 	}
 
-	wiColor color = wiColor::Ghost;
+	wiColor color = GetColor();
 	if (!IsEnabled())
 	{
 		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
@@ -253,12 +242,13 @@ void wiLabel::Render(wiGUI* gui)
 
 
 
-wiSlider::wiSlider(float start, float end, float defaultValue, float step, const string& name)
-	:start(start), end(end), value(defaultValue), step(max(step, 1))
+wiSlider::wiSlider(float start, float end, float defaultValue, float step, const string& name) :wiWidget()
+	,start(start), end(end), value(defaultValue), step(max(step, 1))
 {
 	SetName(name);
 	SetText(fastName.GetString());
 	OnSlide([](wiEventArgs args) {});
+	SetSize(XMFLOAT2(200, 40));
 }
 wiSlider::~wiSlider()
 {
@@ -356,19 +346,7 @@ void wiSlider::Render(wiGUI* gui)
 		return;
 	}
 
-	wiColor color = wiColor::Ghost;
-	switch (state)
-	{
-	case wiWidget::FOCUS:
-	case wiWidget::DEACTIVATING:
-		color = wiColor::Gray;
-		break;
-	case wiWidget::ACTIVE:
-		color = wiColor::White;
-		break;
-	default:
-		break;
-	}
+	wiColor color = GetColor();
 	if (!IsEnabled())
 	{
 		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
@@ -391,8 +369,139 @@ void wiSlider::Render(wiGUI* gui)
 	ss << value;
 	wiFont(ss.str(), wiFontProps(translation.x + scale.x + headWidth * 0.5f, translation.y + scale.y*0.5f, 0, WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
 }
-
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
 	onSlide = move(func);
 }
+
+
+
+
+
+wiCheckBox::wiCheckBox(const string& name) :wiWidget()
+{
+	SetName(name);
+	SetText(fastName.GetString());
+	OnClick([](wiEventArgs args) {});
+	SetSize(XMFLOAT2(20,20));
+}
+wiCheckBox::~wiCheckBox()
+{
+
+}
+void wiCheckBox::Update(wiGUI* gui)
+{
+	wiWidget::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
+
+	if (state == FOCUS)
+	{
+		state = IDLE;
+	}
+	if (state == DEACTIVATING)
+	{
+		state = IDLE;
+	}
+	if (state == ACTIVE)
+	{
+		gui->DeactivateWidget(this);
+	}
+
+	hitBox.pos.x = Transform::translation.x;
+	hitBox.pos.y = Transform::translation.y;
+	hitBox.siz.x = Transform::scale.x;
+	hitBox.siz.y = Transform::scale.y;
+
+	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
+	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointerPos.x, pointerPos.y), XMFLOAT2(1, 1));
+
+	bool clicked = false;
+	// hover the button
+	if (pointerHitbox.intersects(hitBox))
+	{
+		if (state == IDLE)
+		{
+			state = FOCUS;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == FOCUS)
+		{
+			// activate
+			clicked = true;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == DEACTIVATING)
+		{
+			// Keep pressed until mouse is released
+			state = ACTIVE;
+		}
+	}
+
+	if (clicked)
+	{
+		SetCheck(!GetCheck());
+		wiEventArgs args;
+		args.clickPos = pointerHitbox.pos;
+		args.bValue = GetCheck();
+		onClick(args);
+		gui->ActivateWidget(this);
+	}
+
+}
+void wiCheckBox::Render(wiGUI* gui)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
+	wiColor color = GetColor();
+	if (!IsEnabled())
+	{
+		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
+	}
+
+	// control
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+
+	// check
+	if (GetCheck())
+	{
+		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor::lerp(color, wiColor::White, 0.8f))
+			, wiImageEffects(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
+			, gui->GetGraphicsThread());
+	}
+
+	wiFont(text, wiFontProps(translation.x, translation.y + scale.y*0.5f, 0, WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+}
+void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
+{
+	onClick = move(func);
+}
+void wiCheckBox::SetCheck(bool value)
+{
+	checked = value;
+}
+bool wiCheckBox::GetCheck()
+{
+	return checked;
+}
+

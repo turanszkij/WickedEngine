@@ -3,6 +3,7 @@
 #include "wiTransform.h"
 #include "wiHashString.h"
 #include "wiHitBox2D.h"
+#include "wiColor.h"
 
 class wiGUI;
 
@@ -10,6 +11,7 @@ struct wiEventArgs
 {
 	XMFLOAT2 clickPos;
 	float fValue;
+	bool bValue;
 };
 
 class wiWidget : public Transform
@@ -31,9 +33,11 @@ protected:
 		ACTIVE,
 		// widget has last been active but no more interactions are occuring
 		DEACTIVATING,
+		WIDGETSTATE_COUNT,
 	} state;
 	void Activate();
 	void Deactivate();
+	wiColor colors[WIDGETSTATE_COUNT];
 public:
 	wiWidget();
 	virtual ~wiWidget();
@@ -49,6 +53,8 @@ public:
 	bool IsEnabled() { return enabled; }
 	void SetVisible(bool val) { visible = val; }
 	bool IsVisible() { return visible; }
+	void SetColor(const wiColor& color, WIDGETSTATE state);
+	wiColor GetColor();
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;
@@ -103,5 +109,24 @@ public:
 	virtual void Render(wiGUI* gui) override;
 
 	void OnSlide(function<void(wiEventArgs args)> func);
+};
+
+class wiCheckBox :public wiWidget
+{
+protected:
+	function<void(wiEventArgs args)> onClick;
+	Hitbox2D hitBox;
+	bool checked;
+public:
+	wiCheckBox(const string& name = "");
+	virtual ~wiCheckBox();
+
+	void SetCheck(bool value);
+	bool GetCheck();
+
+	virtual void Update(wiGUI* gui) override;
+	virtual void Render(wiGUI* gui) override;
+
+	void OnClick(function<void(wiEventArgs args)> func);
 };
 
