@@ -379,6 +379,7 @@ void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 
 
 wiCheckBox::wiCheckBox(const string& name) :wiWidget()
+	,checked(false)
 {
 	SetName(name);
 	SetText(fastName.GetString());
