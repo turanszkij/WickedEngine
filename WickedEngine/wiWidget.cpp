@@ -23,7 +23,13 @@ wiWidget::~wiWidget()
 void wiWidget::Update(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
-	Transform::UpdateTransform();
+
+	// Only do the updatetransform if it has no parent because if it has, its transform
+	// will be updated down the chain anyway
+	if (Transform::parent == nullptr)
+	{
+		Transform::UpdateTransform();
+	}
 }
 wiHashString wiWidget::GetName()
 {
@@ -55,15 +61,33 @@ void wiWidget::SetPos(const XMFLOAT2& value)
 {
 	Transform::translation_rest.x = value.x;
 	Transform::translation_rest.y = value.y;
+	Transform::UpdateTransform();
 }
 void wiWidget::SetSize(const XMFLOAT2& value)
 {
 	Transform::scale_rest.x = value.x;
 	Transform::scale_rest.y = value.y;
+	Transform::UpdateTransform();
 }
 wiWidget::WIDGETSTATE wiWidget::GetState()
 {
 	return state;
+}
+void wiWidget::SetEnabled(bool val) 
+{ 
+	enabled = val; 
+}
+bool wiWidget::IsEnabled() 
+{ 
+	return enabled && visible; 
+}
+void wiWidget::SetVisible(bool val)
+{ 
+	visible = val;
+}
+bool wiWidget::IsVisible() 
+{ 
+	return visible;
 }
 void wiWidget::Activate()
 {
@@ -506,3 +530,104 @@ bool wiCheckBox::GetCheck()
 	return checked;
 }
 
+
+
+
+
+
+wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
+	, gui(gui)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	SetName(name);
+	SetText(fastName.GetString());
+	SetSize(XMFLOAT2(640, 480));
+
+	SAFE_INIT(closeButton);
+}
+wiWindow::~wiWindow()
+{
+	SAFE_DELETE(closeButton);
+}
+void wiWindow::AddWidget(wiWidget* widget)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	gui->AddWidget(widget);
+	widget->attachTo(this);
+
+	children.push_back(widget);
+}
+void wiWindow::RemoveWidget(wiWidget* widget)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	gui->RemoveWidget(widget);
+	widget->detach();
+
+	children.remove(widget);
+}
+void wiWindow::AddCloseButton()
+{
+	closeButton = new wiButton(name + "_close_button");
+	closeButton->SetText("x");
+	closeButton->SetSize(XMFLOAT2(20, 20));
+	closeButton->SetPos(XMFLOAT2(translation.x + scale.x - 20, translation.y));
+	closeButton->OnClick([this](wiEventArgs args) {
+		this->SetVisible(false);
+	});
+	gui->AddWidget(closeButton);
+	closeButton->attachTo(this);
+}
+void wiWindow::Update(wiGUI* gui)
+{
+	wiWidget::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
+}
+void wiWindow::Render(wiGUI* gui)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
+	wiColor color = GetColor();
+	if (!IsEnabled())
+	{
+		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
+	}
+
+	// body
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+
+	// head
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		, wiImageEffects(translation.x, translation.y, scale.x, 20), gui->GetGraphicsThread());
+
+	wiFont(text, wiFontProps(translation.x, translation.y, 0, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
+}
+void wiWindow::SetVisible(bool value)
+{
+	wiWidget::SetVisible(value);
+	if (closeButton != nullptr)
+	{
+		closeButton->SetVisible(value);
+	}
+	for (auto& x : children)
+	{
+		x->SetVisible(value);
+	}
+}

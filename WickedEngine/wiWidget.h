@@ -49,10 +49,10 @@ public:
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState();
-	void SetEnabled(bool val) { enabled = val; }
-	bool IsEnabled() { return enabled; }
-	void SetVisible(bool val) { visible = val; }
-	bool IsVisible() { return visible; }
+	void SetEnabled(bool val);
+	bool IsEnabled();
+	virtual void SetVisible(bool val);
+	bool IsVisible();
 	void SetColor(const wiColor& color, WIDGETSTATE state);
 	wiColor GetColor();
 
@@ -60,6 +60,7 @@ public:
 	virtual void Render(wiGUI* gui) = 0;
 };
 
+// Clickable box
 class wiButton : public wiWidget
 {
 protected:
@@ -75,6 +76,7 @@ public:
 	void OnClick(function<void(wiEventArgs args)> func);
 };
 
+// Static box that holds text
 class wiLabel : public wiWidget
 {
 protected:
@@ -86,6 +88,7 @@ public:
 	virtual void Render(wiGUI* gui) override;
 };
 
+// Define an interval and slide the control along it
 class wiSlider : public wiWidget
 {
 protected:
@@ -95,10 +98,10 @@ protected:
 	float step;
 	float value;
 public:
-	// start		: slider minimum value
-	// end			: slider maximum value
-	// defaultValue	: slider default Value
-	// step			: slider step size
+	// start : slider minimum value
+	// end : slider maximum value
+	// defaultValue : slider default Value
+	// step : slider step size
 	wiSlider(float start = 0.0f, float end = 1.0f, float defaultValue = 0.5f, float step = 1000.0f, const string& name = "");
 	virtual ~wiSlider();
 
@@ -111,6 +114,7 @@ public:
 	void OnSlide(function<void(wiEventArgs args)> func);
 };
 
+// Two-state clickable box
 class wiCheckBox :public wiWidget
 {
 protected:
@@ -128,5 +132,26 @@ public:
 	virtual void Render(wiGUI* gui) override;
 
 	void OnClick(function<void(wiEventArgs args)> func);
+};
+
+// Widget container
+class wiWindow :public wiWidget
+{
+protected:
+	wiGUI* gui;
+	wiButton* closeButton;
+	list<wiWidget*> children;
+public:
+	wiWindow(wiGUI* gui, const string& name = "");
+	virtual ~wiWindow();
+
+	void AddWidget(wiWidget* widget);
+	void RemoveWidget(wiWidget* widget);
+	void AddCloseButton();
+
+	virtual void Update(wiGUI* gui) override;
+	virtual void Render(wiGUI* gui) override;
+
+	virtual void SetVisible(bool value) override;
 };
 

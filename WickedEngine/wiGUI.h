@@ -21,6 +21,7 @@ public:
 	void Render();
 
 	void AddWidget(wiWidget* widget);
+	void RemoveWidget(wiWidget* widget);
 	wiWidget* GetWidget(const wiHashString& name);
 
 	void ActivateWidget(wiWidget* widget);
