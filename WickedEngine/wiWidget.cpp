@@ -166,6 +166,12 @@ void wiButton::Update(wiGUI* gui)
 		args.clickPos = pointerHitbox.pos;
 		onDragEnd(args);
 
+		if (pointerHitbox.intersects(hitBox))
+		{
+			// Click occurs when the button is released within the bounds
+			onClick(args);
+		}
+
 		state = IDLE;
 	}
 	if (state == ACTIVE)
@@ -217,7 +223,6 @@ void wiButton::Update(wiGUI* gui)
 		dragStart = args.clickPos;
 		args.startPos = dragStart;
 		onDragStart(args);
-		onClick(args);
 		gui->ActivateWidget(this);
 	}
 
@@ -581,7 +586,7 @@ bool wiCheckBox::GetCheck()
 
 
 wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
-	, gui(gui)
+, gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -589,10 +594,67 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	SetText(fastName.GetString());
 	SetSize(XMFLOAT2(640, 480));
 
+	// Add controls
+
 	SAFE_INIT(closeButton);
 	SAFE_INIT(moveDragger);
 	SAFE_INIT(resizeDragger_BottomRight);
 	SAFE_INIT(resizeDragger_UpperLeft);
+
+	static const float controlSize = 20.0f;
+
+
+	// Add a grabber onto the title bar
+	moveDragger = new wiButton(name + "move_dragger");
+	moveDragger->SetText("");
+	moveDragger->SetSize(XMFLOAT2(scale.x - controlSize * 2, controlSize));
+	moveDragger->SetPos(XMFLOAT2(controlSize, 0));
+	moveDragger->OnDrag([this](wiEventArgs args) {
+		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+	});
+	gui->AddWidget(moveDragger);
+	moveDragger->attachTo(this);
+
+
+	// Add close button to the top right corner
+	closeButton = new wiButton(name + "_close_button");
+	closeButton->SetText("x");
+	closeButton->SetSize(XMFLOAT2(controlSize, controlSize));
+	closeButton->SetPos(XMFLOAT2(translation.x + scale.x - controlSize, translation.y));
+	closeButton->OnClick([this](wiEventArgs args) {
+		this->SetVisible(false);
+	});
+	gui->AddWidget(closeButton);
+	closeButton->attachTo(this);
+
+	// Add a resizer control to the upperleft corner
+	resizeDragger_UpperLeft = new wiButton(name + "resize_dragger_upper_left");
+	resizeDragger_UpperLeft->SetText("");
+	resizeDragger_UpperLeft->SetSize(XMFLOAT2(controlSize, controlSize));
+	resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
+	resizeDragger_UpperLeft->OnDrag([this](wiEventArgs args) {
+		XMFLOAT2 scaleDiff;
+		scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
+		scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
+		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+	});
+	gui->AddWidget(resizeDragger_UpperLeft);
+	resizeDragger_UpperLeft->attachTo(this);
+
+	// Add a resizer control to the bottom right corner
+	resizeDragger_BottomRight = new wiButton(name + "resize_dragger_bottom_right");
+	resizeDragger_BottomRight->SetText("");
+	resizeDragger_BottomRight->SetSize(XMFLOAT2(controlSize, controlSize));
+	resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - controlSize, translation.y + scale.y - controlSize));
+	resizeDragger_BottomRight->OnDrag([this](wiEventArgs args) {
+		XMFLOAT2 scaleDiff;
+		scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
+		scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
+		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+	});
+	gui->AddWidget(resizeDragger_BottomRight);
+	resizeDragger_BottomRight->attachTo(this);
 }
 wiWindow::~wiWindow()
 {
@@ -618,93 +680,6 @@ void wiWindow::RemoveWidget(wiWidget* widget)
 	widget->detach();
 
 	children.remove(widget);
-}
-void wiWindow::AddControls()
-{
-	static const float controlSize = 20.0f;
-
-	if (moveDragger == nullptr)
-	{
-		moveDragger = new wiButton(name + "move_dragger");
-		moveDragger->SetText("");
-		moveDragger->SetSize(XMFLOAT2(scale.x - controlSize * 2, controlSize));
-		moveDragger->SetPos(XMFLOAT2(controlSize, 0));
-		moveDragger->OnDragStart([this](wiEventArgs args) {
-
-		});
-		moveDragger->OnDrag([this](wiEventArgs args) {
-			//this->moveDragger->detach();
-			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
-			//this->moveDragger->attachTo(this);
-		});
-		moveDragger->OnDragEnd([this](wiEventArgs args) {
-
-		});
-		gui->AddWidget(moveDragger);
-		moveDragger->attachTo(this);
-	}
-
-	if(closeButton==nullptr)
-	{
-		closeButton = new wiButton(name + "_close_button");
-		closeButton->SetText("x");
-		closeButton->SetSize(XMFLOAT2(controlSize, controlSize));
-		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - controlSize, translation.y));
-		closeButton->OnClick([this](wiEventArgs args) {
-			this->SetVisible(false);
-		});
-		gui->AddWidget(closeButton);
-		closeButton->attachTo(this);
-	}
-
-	if (resizeDragger_UpperLeft == nullptr)
-	{
-		resizeDragger_UpperLeft = new wiButton(name + "resize_dragger_upper_left");
-		resizeDragger_UpperLeft->SetText("");
-		resizeDragger_UpperLeft->SetSize(XMFLOAT2(controlSize, controlSize));
-		resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
-		resizeDragger_UpperLeft->OnDragStart([this](wiEventArgs args) {
-
-		});
-		resizeDragger_UpperLeft->OnDrag([this](wiEventArgs args) {
-			XMFLOAT2 scaleDiff;
-			scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
-			scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
-			//this->resizeDragger_UpperLeft->detach();
-			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
-			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-			//this->resizeDragger_UpperLeft->attachTo(this);
-		});
-		resizeDragger_UpperLeft->OnDragEnd([this](wiEventArgs args) {
-
-		});
-		gui->AddWidget(resizeDragger_UpperLeft);
-		resizeDragger_UpperLeft->attachTo(this);
-	}
-
-	if (resizeDragger_BottomRight == nullptr)
-	{
-		resizeDragger_BottomRight = new wiButton(name + "resize_dragger_bottom_right");
-		resizeDragger_BottomRight->SetText("");
-		resizeDragger_BottomRight->SetSize(XMFLOAT2(controlSize, controlSize));
-		resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - controlSize, translation.y + scale.y - controlSize));
-		resizeDragger_BottomRight->OnDragStart([this](wiEventArgs args) {
-
-		});
-		resizeDragger_BottomRight->OnDrag([this](wiEventArgs args) {
-			XMFLOAT2 scaleDiff;
-			scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
-			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
-			//this->resizeDragger_BottomRight->detach();
-			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-			//this->resizeDragger_BottomRight->attachTo(this);
-		});
-		resizeDragger_BottomRight->OnDragEnd([this](wiEventArgs args) {
-
-		});
-		gui->AddWidget(resizeDragger_BottomRight);
-		resizeDragger_BottomRight->attachTo(this);
-	}
 }
 void wiWindow::Update(wiGUI* gui)
 {

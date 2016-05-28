@@ -166,8 +166,6 @@ public:
 
 	void AddWidget(wiWidget* widget);
 	void RemoveWidget(wiWidget* widget);
-	// adds move bar + close button
-	void AddControls();
 
 	virtual void Update(wiGUI* gui) override;
 	virtual void Render(wiGUI* gui) override;
