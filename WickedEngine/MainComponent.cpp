@@ -191,10 +191,13 @@ bool MainComponent::setWindow(wiWindowRegistration::window_type window, HINSTANC
 	this->window = window;
 	this->instance = hInst;
 
-	RECT rect = RECT();
-	GetClientRect(window, &rect);
-	screenW = rect.right - rect.left;
-	screenH = rect.bottom - rect.top;
+	if (screenW == 0 || screenH == 0)
+	{
+		RECT rect = RECT();
+		GetClientRect(window, &rect);
+		screenW = rect.right - rect.left;
+		screenH = rect.bottom - rect.top;
+	}
 
 	wiRenderer::InitDevice(window, fullscreen);
 
