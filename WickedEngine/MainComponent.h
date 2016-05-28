@@ -71,7 +71,7 @@ public:
 		float size;
 
 		InfoDisplayer() :active(false), watermark(true), fpsinfo(true), cpuinfo(true), 
-			resolution(false), size(10.f)
+			resolution(false), size(12.f)
 		{}
 	};
 	// display all-time engine information text

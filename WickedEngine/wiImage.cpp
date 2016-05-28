@@ -279,7 +279,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 						XMMatrixLookAtLH(XMVectorSet(0,0,0,0)
 							,XMLoadFloat4(&effects.lookAt)
 							,XMVector3Cross(
-								XMLoadFloat4(&effects.lookAt),vvv
+								vvv, XMLoadFloat4(&effects.lookAt)
 							)
 						)
 					;
