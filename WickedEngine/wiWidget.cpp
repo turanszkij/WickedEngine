@@ -177,7 +177,7 @@ void wiButton::Update(wiGUI* gui)
 		if (state == DEACTIVATING)
 		{
 			// Keep pressed until mouse is released
-			state = ACTIVE;
+			gui->ActivateWidget(this);
 		}
 	}
 
@@ -473,7 +473,7 @@ void wiCheckBox::Update(wiGUI* gui)
 		if (state == DEACTIVATING)
 		{
 			// Keep pressed until mouse is released
-			state = ACTIVE;
+			gui->ActivateWidget(this);
 		}
 	}
 
@@ -534,6 +534,153 @@ bool wiCheckBox::GetCheck()
 
 
 
+wiDragger::wiDragger(const string& name) :wiWidget()
+{
+	SetName(name);
+	SetText(fastName.GetString());
+	OnDragStart([](wiEventArgs args) {});
+	OnDrag([](wiEventArgs args) {});
+	OnDragEnd([](wiEventArgs args) {});
+	SetSize(XMFLOAT2(30, 30));
+}
+wiDragger::~wiDragger()
+{
+
+}
+void wiDragger::Update(wiGUI* gui)
+{
+	wiWidget::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
+
+	hitBox.pos.x = Transform::translation.x;
+	hitBox.pos.y = Transform::translation.y;
+	hitBox.siz.x = Transform::scale.x;
+	hitBox.siz.y = Transform::scale.y;
+
+	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
+	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointerPos.x, pointerPos.y), XMFLOAT2(1, 1));
+
+	if (state == FOCUS)
+	{
+		state = IDLE;
+	}
+	if (state == DEACTIVATING)
+	{
+		wiEventArgs args;
+		args.clickPos = pointerHitbox.pos;
+		onDragEnd(args);
+
+		state = IDLE;
+	}
+	if (state == ACTIVE)
+	{
+		gui->DeactivateWidget(this);
+	}
+
+	bool clicked = false;
+	// hover the button
+	if (pointerHitbox.intersects(hitBox))
+	{
+		if (state == IDLE)
+		{
+			state = FOCUS;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == FOCUS)
+		{
+			// activate
+			clicked = true;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == DEACTIVATING)
+		{
+			// Keep pressed until mouse is released
+			gui->ActivateWidget(this);
+
+			wiEventArgs args;
+			args.clickPos = pointerHitbox.pos;
+			XMFLOAT3 posDelta;
+			posDelta.x = pointerHitbox.pos.x - prevPos.x;
+			posDelta.y = pointerHitbox.pos.y - prevPos.y;
+			posDelta.z = 0;
+			args.deltaPos = XMFLOAT2(posDelta.x, posDelta.y);
+			Transform* savedParent = Transform::parent;
+			Transform::detach();
+			Transform::Translate(posDelta);
+			Transform::attachTo(savedParent);
+			onDrag(args);
+		}
+	}
+
+	if (clicked)
+	{
+		wiEventArgs args;
+		args.clickPos = pointerHitbox.pos;
+
+		// just clicked
+		dragStart = args.clickPos;
+		args.startPos = dragStart;
+		onDragStart(args);
+
+		gui->ActivateWidget(this);
+	}
+
+	prevPos.x = pointerHitbox.pos.x;
+	prevPos.y = pointerHitbox.pos.y;
+
+}
+void wiDragger::Render(wiGUI* gui)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
+	wiColor color = GetColor();
+	if (!IsEnabled())
+	{
+		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
+	}
+
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+
+	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, 0, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+}
+void wiDragger::OnDragStart(function<void(wiEventArgs args)> func)
+{
+	onDragStart = move(func);
+}
+void wiDragger::OnDrag(function<void(wiEventArgs args)> func)
+{
+	onDrag = move(func);
+}
+void wiDragger::OnDragEnd(function<void(wiEventArgs args)> func)
+{
+	onDragEnd = move(func);
+}
+
+
+
+
+
 
 wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	, gui(gui)
@@ -545,10 +692,14 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	SetSize(XMFLOAT2(640, 480));
 
 	SAFE_INIT(closeButton);
+	SAFE_INIT(moveDragger);
+	SAFE_INIT(resizeDragger);
 }
 wiWindow::~wiWindow()
 {
 	SAFE_DELETE(closeButton);
+	SAFE_DELETE(moveDragger);
+	SAFE_DELETE(resizeDragger);
 }
 void wiWindow::AddWidget(wiWidget* widget)
 {
@@ -568,17 +719,65 @@ void wiWindow::RemoveWidget(wiWidget* widget)
 
 	children.remove(widget);
 }
-void wiWindow::AddCloseButton()
+void wiWindow::AddControls()
 {
-	closeButton = new wiButton(name + "_close_button");
-	closeButton->SetText("x");
-	closeButton->SetSize(XMFLOAT2(20, 20));
-	closeButton->SetPos(XMFLOAT2(translation.x + scale.x - 20, translation.y));
-	closeButton->OnClick([this](wiEventArgs args) {
-		this->SetVisible(false);
-	});
-	gui->AddWidget(closeButton);
-	closeButton->attachTo(this);
+	if (moveDragger == nullptr)
+	{
+		moveDragger = new wiDragger(name + "move_dragger");
+		moveDragger->SetText("");
+		moveDragger->SetSize(XMFLOAT2(scale.x - 20, 20));
+		moveDragger->SetPos(XMFLOAT2(0, 0));
+		moveDragger->OnDragStart([this](wiEventArgs args) {
+
+		});
+		moveDragger->OnDrag([this](wiEventArgs args) {
+			this->moveDragger->detach();
+			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+			this->moveDragger->attachTo(this);
+		});
+		moveDragger->OnDragEnd([this](wiEventArgs args) {
+
+		});
+		gui->AddWidget(moveDragger);
+		moveDragger->attachTo(this);
+	}
+
+	if(closeButton==nullptr)
+	{
+		closeButton = new wiButton(name + "_close_button");
+		closeButton->SetText("x");
+		closeButton->SetSize(XMFLOAT2(20, 20));
+		closeButton->SetPos(XMFLOAT2(translation.x + scale.x - 20, translation.y));
+		closeButton->OnClick([this](wiEventArgs args) {
+			this->SetVisible(false);
+		});
+		gui->AddWidget(closeButton);
+		closeButton->attachTo(this);
+	}
+
+	if (resizeDragger == nullptr)
+	{
+		resizeDragger = new wiDragger(name + "resize_dragger");
+		resizeDragger->SetText("");
+		resizeDragger->SetSize(XMFLOAT2(20, 20));
+		resizeDragger->SetPos(XMFLOAT2(translation.x + scale.x - 20, translation.y + scale.y - 20));
+		resizeDragger->OnDragStart([this](wiEventArgs args) {
+
+		});
+		resizeDragger->OnDrag([this](wiEventArgs args) {
+			XMFLOAT2 scaleDiff;
+			scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
+			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
+			this->resizeDragger->detach();
+			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 0));
+			this->resizeDragger->attachTo(this);
+		});
+		resizeDragger->OnDragEnd([this](wiEventArgs args) {
+
+		});
+		gui->AddWidget(resizeDragger);
+		resizeDragger->attachTo(this);
+	}
 }
 void wiWindow::Update(wiGUI* gui)
 {
@@ -613,10 +812,6 @@ void wiWindow::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	// head
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, 20), gui->GetGraphicsThread());
-
 	wiFont(text, wiFontProps(translation.x, translation.y, 0, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
 }
 void wiWindow::SetVisible(bool value)
@@ -625,6 +820,14 @@ void wiWindow::SetVisible(bool value)
 	if (closeButton != nullptr)
 	{
 		closeButton->SetVisible(value);
+	}
+	if (moveDragger != nullptr)
+	{
+		moveDragger->SetVisible(value);
+	}
+	if (resizeDragger != nullptr)
+	{
+		resizeDragger->SetVisible(value);
 	}
 	for (auto& x : children)
 	{
