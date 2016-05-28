@@ -68,11 +68,16 @@ public:
 	virtual void Render(wiGUI* gui) = 0;
 };
 
-// Clickable box
+// Clickable, draggable box
 class wiButton : public wiWidget
 {
 protected:
 	function<void(wiEventArgs args)> onClick;
+	function<void(wiEventArgs args)> onDragStart;
+	function<void(wiEventArgs args)> onDrag;
+	function<void(wiEventArgs args)> onDragEnd;
+	XMFLOAT2 dragStart;
+	XMFLOAT2 prevPos;
 	Hitbox2D hitBox;
 public:
 	wiButton(const string& name = "");
@@ -82,6 +87,9 @@ public:
 	virtual void Render(wiGUI* gui) override;
 
 	void OnClick(function<void(wiEventArgs args)> func);
+	void OnDragStart(function<void(wiEventArgs args)> func);
+	void OnDrag(function<void(wiEventArgs args)> func);
+	void OnDragEnd(function<void(wiEventArgs args)> func);
 };
 
 // Static box that holds text
@@ -142,37 +150,15 @@ public:
 	void OnClick(function<void(wiEventArgs args)> func);
 };
 
-// Draggable control box
-class wiDragger : public wiWidget
-{
-protected:
-	function<void(wiEventArgs args)> onDragStart;
-	function<void(wiEventArgs args)> onDrag;
-	function<void(wiEventArgs args)> onDragEnd;
-	Hitbox2D hitBox;
-	XMFLOAT2 dragStart;
-	XMFLOAT2 prevPos;
-public:
-	wiDragger(const string& name = "");
-	virtual ~wiDragger();
-
-	virtual void Update(wiGUI* gui) override;
-	virtual void Render(wiGUI* gui) override;
-
-	void OnDragStart(function<void(wiEventArgs args)> func);
-	void OnDrag(function<void(wiEventArgs args)> func);
-	void OnDragEnd(function<void(wiEventArgs args)> func);
-};
-
 // Widget container
 class wiWindow :public wiWidget
 {
 protected:
 	wiGUI* gui;
 	wiButton* closeButton;
-	wiDragger* resizeDragger_UpperLeft;
-	wiDragger* resizeDragger_BottomRight;
-	wiDragger* moveDragger;
+	wiButton* resizeDragger_UpperLeft;
+	wiButton* resizeDragger_BottomRight;
+	wiButton* moveDragger;
 	list<wiWidget*> children;
 public:
 	wiWindow(wiGUI* gui, const string& name = "");
