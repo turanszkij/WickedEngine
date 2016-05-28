@@ -129,6 +129,7 @@ namespace wiGraphicsTypes
 		virtual GPUBuffer* DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 		virtual void Map(GPUBuffer* resource, UINT subResource, MAP mapType, UINT mapFlags, MappedSubresource* mappedResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 		virtual void Unmap(GPUBuffer* resource, UINT subResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+		virtual void SetScissorRects(UINT numRects, const Rect* rects = nullptr, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
 		virtual HRESULT CreateTextureFromFile(const string& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 		virtual HRESULT SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);

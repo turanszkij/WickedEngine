@@ -15,6 +15,7 @@ PixelShader			*wiFont::pixelShader = nullptr;
 BlendState			*wiFont::blendState = nullptr;
 GPUBuffer           *wiFont::constantBuffer = nullptr;
 RasterizerState		*wiFont::rasterizerState = nullptr;
+RasterizerState		*wiFont::rasterizerState_Scissor = nullptr;
 DepthStencilState	*wiFont::depthStencilState = nullptr;
 vector<wiFont::Vertex> wiFont::vertexList;
 vector<wiFont::wiFontStyle> wiFont::fontStyles;
@@ -46,11 +47,14 @@ void wiFont::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=FALSE;
-	rs.ScissorEnable=FALSE;
+	rs.ScissorEnable=TRUE;
 	rs.MultisampleEnable=FALSE;
 	rs.AntialiasedLineEnable=FALSE;
 	rasterizerState = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,rasterizerState);
+	rasterizerState_Scissor = new RasterizerState;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs, rasterizerState_Scissor);
+	rs.ScissorEnable = FALSE;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs, rasterizerState);
 
 
 
@@ -153,6 +157,7 @@ void wiFont::CleanUpStatic()
 	SAFE_DELETE(pixelShader);
 	SAFE_DELETE(blendState);
 	SAFE_DELETE(constantBuffer);
+	SAFE_DELETE(rasterizerState_Scissor);
 	SAFE_DELETE(rasterizerState);
 	SAFE_DELETE(depthStencilState);
 	SAFE_DELETE(vertexBuffer);
@@ -269,7 +274,7 @@ void wiFont::LoadIndices()
 	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, indexBuffer );
 }
 
-void wiFont::Draw(GRAPHICSTHREAD threadID){
+void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest){
 
 	wiFontProps newProps = props;
 
@@ -305,7 +310,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID){
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
 
 
-		device->BindRasterizerState(rasterizerState,threadID);
+		device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
 		device->BindDepthStencilState(depthStencilState,1,threadID);
 
 		device->BindBlendState(blendState,threadID);

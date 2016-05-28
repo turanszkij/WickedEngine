@@ -4,6 +4,7 @@
 #include "wiHashString.h"
 #include "wiHitBox2D.h"
 #include "wiColor.h"
+#include "wiGraphicsDescriptors.h"
 
 class wiGUI;
 
@@ -44,6 +45,7 @@ protected:
 	void Deactivate();
 	wiColor colors[WIDGETSTATE_COUNT];
 	float GetScaledFontSize();
+	wiGraphicsTypes::Rect scissorRect;
 public:
 	wiWidget();
 	virtual ~wiWidget();
@@ -63,6 +65,7 @@ public:
 	wiColor GetColor();
 	void SetFontScaling(float val);
 	float GetFontScaling();
+	void SetScissorRect(const wiGraphicsTypes::Rect& rect);
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;
@@ -159,7 +162,7 @@ protected:
 	wiButton* resizeDragger_UpperLeft;
 	wiButton* resizeDragger_BottomRight;
 	wiButton* moveDragger;
-	list<wiWidget*> children;
+	list<wiWidget*> childrenWidgets;
 public:
 	wiWindow(wiGUI* gui, const string& name = "");
 	virtual ~wiWindow();

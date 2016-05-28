@@ -2322,6 +2322,28 @@ void GraphicsDevice_DX11::Unmap(GPUBuffer* resource, UINT subResource, GRAPHICST
 		deviceContexts[threadID]->Unmap(resource->resource_DX11, subResource);
 	}
 }
+void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
+{
+	if (deviceContexts[threadID] != nullptr) {
+		if (rects != nullptr)
+		{
+			D3D11_RECT* pRects = new D3D11_RECT[numRects];
+			for (UINT i = 0; i < numRects; ++i)
+			{
+				pRects[i].bottom = rects[i].bottom;
+				pRects[i].left = rects[i].left;
+				pRects[i].right = rects[i].right;
+				pRects[i].top = rects[i].top;
+			}
+			deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
+			SAFE_DELETE(pRects);
+		}
+		else
+		{
+			deviceContexts[threadID]->RSSetScissorRects(numRects, nullptr);
+		}
+	}
+}
 
 
 HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)

@@ -118,6 +118,10 @@ float wiWidget::GetFontScaling()
 {
 	return fontScaling;
 }
+void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
+{
+	scissorRect = rect;
+}
 
 
 wiButton::wiButton(const string& name) :wiWidget()
@@ -248,7 +252,15 @@ void wiButton::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+
+
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
+	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), true);
+
 }
 void wiButton::OnClick(function<void(wiEventArgs args)> func)
 {
@@ -312,7 +324,13 @@ void wiLabel::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	wiFont(text, wiFontProps(translation.x, translation.y, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
+
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
+	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x, translation.y, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
 }
 
 
@@ -438,12 +456,16 @@ void wiSlider::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 
+	if (parent != nullptr)
+	{
+		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	}
 	// text
-	wiFont(text, wiFontProps(translation.x - headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x - headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
 	// value
 	stringstream ss("");
 	ss << value;
-	wiFont(ss.str(), wiFontProps(translation.x + scale.x + headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	wiFont(ss.str(), wiFontProps(translation.x + scale.x + headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
 }
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
@@ -567,7 +589,11 @@ void wiCheckBox::Render(wiGUI* gui)
 			, gui->GetGraphicsThread());
 	}
 
-	wiFont(text, wiFontProps(translation.x, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	if (parent != nullptr)
+	{
+		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	}
+	wiFont(text, wiFontProps(translation.x, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
 }
 void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
 {
@@ -670,7 +696,7 @@ void wiWindow::AddWidget(wiWidget* widget)
 	gui->AddWidget(widget);
 	widget->attachTo(this);
 
-	children.push_back(widget);
+	childrenWidgets.push_back(widget);
 }
 void wiWindow::RemoveWidget(wiWidget* widget)
 {
@@ -679,7 +705,7 @@ void wiWindow::RemoveWidget(wiWidget* widget)
 	gui->RemoveWidget(widget);
 	widget->detach();
 
-	children.remove(widget);
+	childrenWidgets.remove(widget);
 }
 void wiWindow::Update(wiGUI* gui)
 {
@@ -688,6 +714,11 @@ void wiWindow::Update(wiGUI* gui)
 	if (!IsEnabled())
 	{
 		return;
+	}
+
+	for (auto& x : childrenWidgets)
+	{
+		x->SetScissorRect(scissorRect);
 	}
 
 	if (gui->IsWidgetDisabled(this))
@@ -714,7 +745,13 @@ void wiWindow::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	wiFont(text, wiFontProps(translation.x, translation.y, moveDragger->scale.y, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
+
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
+	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x, translation.y, moveDragger->scale.y, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(),true);
 }
 void wiWindow::SetVisible(bool value)
 {
@@ -735,7 +772,7 @@ void wiWindow::SetVisible(bool value)
 	{
 		resizeDragger_UpperLeft->SetVisible(value);
 	}
-	for (auto& x : children)
+	for (auto& x : childrenWidgets)
 	{
 		x->SetVisible(value);
 	}

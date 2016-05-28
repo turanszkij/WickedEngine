@@ -1,6 +1,7 @@
 #include "wiGUI.h"
 #include "wiWidget.h"
 #include "wiHashString.h"
+#include "wiRenderer.h"
 
 
 wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr)
@@ -36,6 +37,13 @@ void wiGUI::Render()
 	{
 		x->Render(this);
 	}
+
+	wiGraphicsTypes::Rect scissor[1];
+	scissor[0].bottom = (LONG)(wiRenderer::GetDevice()->GetScreenHeight());
+	scissor[0].left = (LONG)(0);
+	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());
+	scissor[0].top = (LONG)(0);
+	wiRenderer::GetDevice()->SetScissorRects(1, scissor, GetGraphicsThread());
 }
 
 void wiGUI::AddWidget(wiWidget* widget)

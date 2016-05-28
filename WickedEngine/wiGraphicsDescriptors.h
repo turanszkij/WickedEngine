@@ -434,6 +434,13 @@ namespace wiGraphicsTypes
 		UINT RowPitch;
 		UINT DepthPitch;
 	};
+	struct Rect
+	{
+		LONG left;
+		LONG top;
+		LONG right;
+		LONG bottom;
+	};
 
 }
 
