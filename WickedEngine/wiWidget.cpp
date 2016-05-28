@@ -9,6 +9,7 @@
 
 wiWidget::wiWidget():Transform()
 {
+	SetFontScaling(0.5f);
 	state = IDLE;
 	enabled = true;
 	visible = true;
@@ -104,6 +105,18 @@ void wiWidget::SetColor(const wiColor& color, WIDGETSTATE state)
 wiColor wiWidget::GetColor()
 {
 	return colors[GetState()];
+}
+float wiWidget::GetScaledFontSize()
+{
+	return GetFontScaling() * min(scale.x, scale.y);
+}
+void wiWidget::SetFontScaling(float val)
+{
+	fontScaling = val;
+}
+float wiWidget::GetFontScaling()
+{
+	return fontScaling;
 }
 
 
@@ -208,7 +221,7 @@ void wiButton::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, 0, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
 }
 void wiButton::OnClick(function<void(wiEventArgs args)> func)
 {
@@ -260,7 +273,7 @@ void wiLabel::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	wiFont(text, wiFontProps(translation.x, translation.y, 0, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x, translation.y, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
 }
 
 
@@ -387,11 +400,11 @@ void wiSlider::Render(wiGUI* gui)
 		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 
 	// text
-	wiFont(text, wiFontProps(translation.x - headWidth * 0.5f, translation.y + scale.y*0.5f, 0, WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x - headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
 	// value
 	stringstream ss("");
 	ss << value;
-	wiFont(ss.str(), wiFontProps(translation.x + scale.x + headWidth * 0.5f, translation.y + scale.y*0.5f, 0, WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	wiFont(ss.str(), wiFontProps(translation.x + scale.x + headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
 }
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
@@ -515,7 +528,7 @@ void wiCheckBox::Render(wiGUI* gui)
 			, gui->GetGraphicsThread());
 	}
 
-	wiFont(text, wiFontProps(translation.x, translation.y + scale.y*0.5f, 0, WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
 }
 void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
 {
@@ -662,7 +675,7 @@ void wiDragger::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, 0, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread());
 }
 void wiDragger::OnDragStart(function<void(wiEventArgs args)> func)
 {
@@ -841,7 +854,7 @@ void wiWindow::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
-	wiFont(text, wiFontProps(translation.x, translation.y, 0, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps(translation.x, translation.y, moveDragger->scale.y, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread());
 }
 void wiWindow::SetVisible(bool value)
 {

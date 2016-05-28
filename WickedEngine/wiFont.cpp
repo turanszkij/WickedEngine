@@ -145,8 +145,20 @@ void wiFont::CleanUpStatic()
 	fontStyles.clear();
 
 	vertexList.clear();
-	
-	//TODO
+
+	SAFE_DELETE(vertexBuffer);
+	SAFE_DELETE(indexBuffer);
+	SAFE_DELETE(vertexLayout);
+	SAFE_DELETE(vertexShader);
+	SAFE_DELETE(pixelShader);
+	SAFE_DELETE(blendState);
+	SAFE_DELETE(constantBuffer);
+	SAFE_DELETE(rasterizerState);
+	SAFE_DELETE(depthStencilState);
+	SAFE_DELETE(vertexBuffer);
+	SAFE_DELETE(vertexBuffer);
+	SAFE_DELETE(vertexBuffer);
+	SAFE_DELETE(vertexBuffer);
 }
 
 void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -157,57 +169,66 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 
 void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID)
 {
-	int line = 0, pos = 0;
-	vertexList.resize(text.length()*4);
-	for(unsigned int i=0;i<vertexList.size();i++){
-		vertexList[i].Pos=XMFLOAT2(0,0);
-		vertexList[i].Tex=XMFLOAT2(0,0);
-	}
+	const float fontSize = (props.size < 0 ? fontStyles[style].recSize : props.size);
+
+	float line = 0, pos = 0;
+	vertexList.resize(text.length() * 4);
 	for (unsigned int i = 0; i<vertexList.size(); i += 4){
 
-		float leftX=0.0f,rightX=(float)fontStyles[style].charSize,upperY=0.0f,lowerY=(float)fontStyles[style].charSize;
-		bool compatible=FALSE;
+		float leftX = 0.0f, rightX = (float)fontStyles[style].charSize, upperY = 0.0f, lowerY = (float)fontStyles[style].charSize;
+		bool compatible = false;
 		
 		
-		if (text[i / 4] == '\n'){
-			line += (short)(fontStyles[style].recSize + props.size + props.spacingY);
+		if (text[i / 4] == '\n') {
+			line += fontSize + props.spacingY;
 			pos = 0;
 		}
-		else if (text[i / 4] == ' '){
-			pos += (short)(fontStyles[style].recSize + props.size + props.spacingX);
+		else if (text[i / 4] == ' ') {
+			pos += fontSize + props.spacingX;
 		}
-		else if (text[i / 4] == '\t'){
-			pos += (short)((fontStyles[style].recSize + props.size + props.spacingX) * 5);
+		else if (text[i / 4] == '\t') {
+			pos += (fontSize + props.spacingX) * 5;
 		}
-		else if(text[i / 4] < ARRAYSIZE(fontStyles[style].lookup) && fontStyles[style].lookup[text[i/4]].code==text[i/4]){
+		else if (text[i / 4] < ARRAYSIZE(fontStyles[style].lookup) && fontStyles[style].lookup[text[i / 4]].code == text[i / 4]) {
 			leftX += fontStyles[style].lookup[text[i / 4]].offX*(float)fontStyles[style].charSize;
 			rightX += fontStyles[style].lookup[text[i / 4]].offX*(float)fontStyles[style].charSize;
 			upperY += fontStyles[style].lookup[text[i / 4]].offY*(float)fontStyles[style].charSize;
 			lowerY += fontStyles[style].lookup[text[i / 4]].offY*(float)fontStyles[style].charSize;
-			compatible=TRUE;
+			compatible = true;
 		}
 
-		if(compatible){
+		if (compatible) {
 			leftX /= (float)fontStyles[style].texWidth;
 			rightX /= (float)fontStyles[style].texWidth;
 			upperY /= (float)fontStyles[style].texHeight;
 			lowerY /= (float)fontStyles[style].texHeight;
 
-			vertexList[i + 0].Pos =	XMFLOAT2(pos + 0 - props.size*0.5f							, line - props.size*0.5f); 
-			vertexList[i + 1].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f	, line - props.size*0.5f); 
-			vertexList[i + 2].Pos = XMFLOAT2(pos + 0 - props.size*0.5f							, fontStyles[style].recSize + line + props.size*0.5f); 
-			vertexList[i + 3].Pos = XMFLOAT2(pos + fontStyles[style].recSize + props.size*0.5f	, fontStyles[style].recSize + line + props.size*0.5f); 
+			vertexList[i + 0].Pos = XMFLOAT2(pos, line);
+			vertexList[i + 1].Pos = XMFLOAT2(pos + fontSize, line);
+			vertexList[i + 2].Pos = XMFLOAT2(pos, line + fontSize);
+			vertexList[i + 3].Pos = XMFLOAT2(pos + fontSize, line + fontSize);
 
 			vertexList[i + 0].Tex = XMFLOAT2(leftX, upperY);
 			vertexList[i + 1].Tex = XMFLOAT2(rightX, upperY);
 			vertexList[i + 2].Tex = XMFLOAT2(leftX, lowerY);
 			vertexList[i + 3].Tex = XMFLOAT2(rightX, lowerY);
 
-			pos += (short)(fontStyles[style].recSize + props.size + props.spacingX);
+			pos += fontSize + props.spacingX;
+		}
+		else
+		{
+			vertexList[i + 0].Pos = XMFLOAT2(0, 0);
+			vertexList[i + 0].Tex = XMFLOAT2(0, 0);
+			vertexList[i + 1].Pos = XMFLOAT2(0, 0);
+			vertexList[i + 1].Tex = XMFLOAT2(0, 0);
+			vertexList[i + 2].Pos = XMFLOAT2(0, 0);
+			vertexList[i + 2].Tex = XMFLOAT2(0, 0);
+			vertexList[i + 3].Pos = XMFLOAT2(0, 0);
+			vertexList[i + 3].Tex = XMFLOAT2(0, 0);
 		}
 	}
 
-	wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer,vertexList.data(),threadID,sizeof(Vertex) * text.length() * 4);
+	wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer, vertexList.data(), threadID, sizeof(Vertex) * text.length() * 4);
 	
 }
 
@@ -306,16 +327,20 @@ int wiFont::textWidth()
 	int max=0,lineW=0;
 	int len=text.length();
 	while(i<len){
-		if(text[i]==10) {//ENDLINE
+		if(text[i]=='\n') {
 			if(max<lineW) max=lineW;
 			lineW=0;
+		}
+		else if (text[i] == '\t') {
+			lineW += 5;
 		}
 		else lineW++;
 		i++;
 	}
 	if(max==0) max=lineW;
 
-	return (int)(max*(fontStyles[style].recSize+props.spacingX));
+	const float fontSize = (props.size < 0 ? fontStyles[style].recSize : props.size);
+	return (int)(max*(fontSize+props.spacingX));
 }
 int wiFont::textHeight()
 {
@@ -323,13 +348,14 @@ int wiFont::textHeight()
 	int lines=1;
 	int len=text.length();
 	while(i<len){
-		if(text[i]==10) {//ENDLINE
+		if(text[i]=='\n') {
 			lines++;
 		}
 		i++;
 	}
 
-	return (int)(lines*(fontStyles[style].recSize+props.size));
+	const float fontSize = (props.size < 0 ? fontStyles[style].recSize : props.size);
+	return (int)(lines*(fontSize+props.spacingY));
 }
 
 
@@ -350,21 +376,21 @@ string wiFont::GetTextA()
 	return string(text.begin(),text.end());
 }
 
-wiFont::wiFontStyle::wiFontStyle(const string& newName){
-
-	wiRenderer::GetDevice()->LOCK();
-
+wiFont::wiFontStyle::wiFontStyle(const string& newName)
+{
 	name=newName;
 
 	for(short i=0;i<127;i++) lookup[i].code=lookup[i].offX=lookup[i].offY=0;
 
 	std::stringstream ss(""),ss1("");
-	ss<<"fonts/"<<name<<".txt";
+	ss<<"fonts/"<<name<<".wifont";
 	ss1<<"fonts/"<<name<<".dds";
 	std::ifstream file(ss.str());
 	if(file.is_open()){
 		texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss1.str());
-		file>>texWidth>>texHeight>>recSize>>charSize;
+		texWidth = texture->GetDesc().Width;
+		texHeight = texture->GetDesc().Height;
+		file>>recSize>>charSize;
 		int i=0;
 		while(!file.eof()){
 			i++;
@@ -376,10 +402,8 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName){
 		file.close();
 	}
 	else {
-		wiHelper::messageBox(name,"Could not load Font Data!"); 
+		wiHelper::messageBox(name, "Could not load Font Data: " + ss.str());
 	}
-
-	wiRenderer::GetDevice()->UNLOCK();
 }
 void wiFont::wiFontStyle::CleanUp(){
 	SAFE_DELETE(texture);

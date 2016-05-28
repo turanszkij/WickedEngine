@@ -20,6 +20,8 @@ struct wiEventArgs
 class wiWidget : public Transform
 {
 	friend class wiGUI;
+private:
+	float fontScaling;
 protected:
 	wiHashString fastName;
 	string text;
@@ -41,6 +43,7 @@ protected:
 	void Activate();
 	void Deactivate();
 	wiColor colors[WIDGETSTATE_COUNT];
+	float GetScaledFontSize();
 public:
 	wiWidget();
 	virtual ~wiWidget();
@@ -58,6 +61,8 @@ public:
 	bool IsVisible();
 	void SetColor(const wiColor& color, WIDGETSTATE state);
 	wiColor GetColor();
+	void SetFontScaling(float val);
+	float GetFontScaling();
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;

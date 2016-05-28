@@ -688,8 +688,9 @@
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\licenses.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)fonts\basic.txt">
+    <Text Include="$(MSBuildThisFileDirectory)fonts\basic.wifont">
       <DeploymentContent>true</DeploymentContent>
+      <FileType>Document</FileType>
     </Text>
   </ItemGroup>
   <ItemGroup>

@@ -28,7 +28,7 @@ void wiBackLog::Initialize(){
 	inputArea=stringstream("");
 	const unsigned char colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
 	wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2, 4);
-	font = wiFont(L"", wiFontProps(5, 0, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8));
+	font = wiFont("", wiFontProps(5, 0, 11, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8));
 }
 void wiBackLog::CleanUp(){
 	stream.clear();
@@ -73,9 +73,7 @@ void wiBackLog::Draw(){
 		font.SetText(getText());
 		font.props.posY = wiRenderer::GetDevice()->GetScreenHeight() - 75 - pos - scroll;
 		font.Draw();
-		wiFont(inputArea.str().c_str(), wiFontProps(5, (float)wiRenderer::GetDevice()->GetScreenHeight() - 10, 0, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
-		//wiFont::Draw(wiBackLog::getText(), "01", XMFLOAT4(5, pos - wiRenderer::RENDERHEIGHT + 75 + scroll, 0, -8), "left", "bottom");
-		//wiFont::Draw(inputArea.str().c_str(), "01", XMFLOAT4(5, -(float)wiRenderer::RENDERHEIGHT + 10, 0, -8), "left", "bottom");
+		wiFont(inputArea.str().c_str(), wiFontProps(5, (float)wiRenderer::GetDevice()->GetScreenHeight() - 10, 14, WIFALIGN_LEFT, WIFALIGN_BOTTOM, -8)).Draw();
 	}
 }
 

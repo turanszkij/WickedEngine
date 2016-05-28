@@ -8,9 +8,9 @@
 enum wiFontAlign
 {
 	WIFALIGN_LEFT,
-	//same as mid
+	// same as mid
 	WIFALIGN_CENTER,
-	//same as center
+	// same as center
 	WIFALIGN_MID,
 	WIFALIGN_RIGHT,
 	WIFALIGN_TOP,
@@ -26,8 +26,7 @@ public:
 	float posX, posY;
 	wiFontAlign h_align, v_align;
 
-	//zero-based properties: add or subtract from values
-	wiFontProps(float posX = 0, float posY = 0, float size = 0, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
+	wiFontProps(float posX = 0, float posY = 0, float size = 11, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
 		, float spacingX = 0, float spacingY = 0)
 		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY)
 	{}

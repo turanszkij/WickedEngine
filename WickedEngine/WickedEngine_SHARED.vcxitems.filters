@@ -1842,11 +1842,11 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="$(MSBuildThisFileDirectory)fonts\basic.txt">
-      <Filter>fonts</Filter>
-    </Text>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\licenses.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)fonts\basic.wifont">
+      <Filter>fonts</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
