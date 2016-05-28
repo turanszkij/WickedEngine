@@ -165,7 +165,8 @@ class wiWindow :public wiWidget
 protected:
 	wiGUI* gui;
 	wiButton* closeButton;
-	wiDragger* resizeDragger;
+	wiDragger* resizeDragger_UpperLeft;
+	wiDragger* resizeDragger_BottomRight;
 	wiDragger* moveDragger;
 	list<wiWidget*> children;
 public:
