@@ -98,25 +98,20 @@ struct Material
 	string name;
 	XMFLOAT3 diffuseColor;
 
-	bool hasRefMap;
 	string refMapName;
 	wiGraphicsTypes::Texture2D* refMap;
 
-	bool hasTexture;
 	string textureName;
 	wiGraphicsTypes::Texture2D* texture;
 	bool premultipliedTexture;
 	BLENDMODE blendFlag;
 		
-	bool hasNormalMap;
 	string normalMapName;
 	wiGraphicsTypes::Texture2D* normalMap;
 
-	bool hasDisplacementMap;
 	string displacementMapName;
 	wiGraphicsTypes::Texture2D* displacementMap;
 
-	bool hasSpecularMap;
 	string specularMapName;
 	wiGraphicsTypes::Texture2D* specularMap;
 
@@ -144,28 +139,22 @@ struct Material
 		name=newName;
 		diffuseColor = XMFLOAT3(1,1,1);
 
-		hasRefMap=false;
 		refMapName="";
-		refMap=0;
+		refMap = nullptr;
 
-		hasTexture=false;
 		textureName="";
-		texture=0;
+		texture = nullptr;
 		premultipliedTexture=false;
 		blendFlag=BLENDMODE::BLENDMODE_ALPHA;
 
-		hasNormalMap=false;
 		normalMapName="";
-		normalMap=0;
+		normalMap = nullptr;
 
-		hasDisplacementMap=false;
 		displacementMapName="";
-		displacementMap=0;
+		displacementMap = nullptr;
 
-		
-		hasSpecularMap=false;
 		specularMapName="";
-		specularMap=0;
+		specularMap = nullptr;
 
 		subsurface_scattering=toonshading=water=false;
 		alpha=1.0f;

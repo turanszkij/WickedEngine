@@ -190,8 +190,6 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						currentMat->refMapName=ss.str();
 						currentMat->refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
-					if(currentMat->refMap!=0)
-						currentMat->hasRefMap = true;
 					break;
 				case 'n':
 					{
@@ -202,8 +200,6 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						currentMat->normalMapName=ss.str();
 						currentMat->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
-					if(currentMat->normalMap!=0)
-						currentMat->hasNormalMap = true;
 					break;
 				case 't':
 					{
@@ -214,8 +210,6 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						currentMat->textureName=ss.str();
 						currentMat->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
-					if(currentMat->texture!=0)
-						currentMat->hasTexture=true;
 					file>>currentMat->premultipliedTexture;
 					break;
 				case 'D':
@@ -227,8 +221,6 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						currentMat->displacementMapName=ss.str();
 						currentMat->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
-					if(currentMat->displacementMap!=0)
-						currentMat->hasDisplacementMap=true;
 					break;
 				case 'S':
 					{
@@ -239,8 +231,6 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 						currentMat->specularMapName=ss.str();
 						currentMat->specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
-					if(currentMat->specularMap!=0)
-						currentMat->hasSpecularMap=true;
 					break;
 				case 'a':
 					file>>currentMat->alpha;
