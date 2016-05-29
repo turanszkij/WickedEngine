@@ -3288,6 +3288,30 @@ void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
 	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	GetDevice()->UNLOCK();
 }
+void wiRenderer::LoadDefaultLighting()
+{
+	Light* defaultLight = new Light();
+	defaultLight->name = "_WickedEngine_DefaultLight_";
+	defaultLight->type = Light::DIRECTIONAL;
+	defaultLight->color = XMFLOAT4(1, 1, 1, 1);
+	defaultLight->enerDis = XMFLOAT4(1, 0, 0, 0);
+	XMStoreFloat4(&defaultLight->rotation_rest, XMQuaternionRotationRollPitchYaw(0, -XM_PIDIV4, XM_PIDIV4));
+	defaultLight->UpdateTransform();
+	defaultLight->UpdateLight();
+
+	Model* model = new Model;
+	model->name = "_WickedEngine_DefaultLight_Holder_";
+	model->lights.push_back(defaultLight);
+	GetScene().models.push_back(model);
+
+	if (spTree_lights) {
+		spTree_lights->AddObjects(spTree_lights->root, vector<Cullable*>(model->lights.begin(), model->lights.end()));
+	}
+	else
+	{
+		GenerateSPTree(spTree_lights, vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
+	}
+}
 Scene& wiRenderer::GetScene()
 {
 	if (scene == nullptr)
@@ -3348,7 +3372,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 		{
 			for (Object* object : model->objects) {
 				int pI = object->physicsObjectI;
-				if (pI >= 0 && !object->kinematic && object->rigidBody) {
+				if (pI >= 0 && !object->kinematic && (object->rigidBody || object->mesh->softBody)) {
 					PHYSICS::PhysicsTransform* transform(physicsEngine->getObject(pI));
 					object->translation_rest = transform->position;
 					object->rotation_rest = transform->rotation;

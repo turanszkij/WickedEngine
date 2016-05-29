@@ -104,7 +104,11 @@ void wiWidget::SetColor(const wiColor& color, WIDGETSTATE state)
 }
 wiColor wiWidget::GetColor()
 {
-	return colors[GetState()];
+	wiColor retVal = colors[GetState()];
+	if (!IsEnabled()) {
+		retVal = wiColor::lerp(wiColor::Transparent, retVal, 0.5f);
+	}
+	return retVal;
 }
 float wiWidget::GetScaledFontSize()
 {
@@ -244,10 +248,6 @@ void wiButton::Render(wiGUI* gui)
 	}
 
 	wiColor color = GetColor();
-	if (!IsEnabled())
-	{
-		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
-	}
 
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
@@ -316,10 +316,6 @@ void wiLabel::Render(wiGUI* gui)
 	}
 
 	wiColor color = GetColor();
-	if (!IsEnabled())
-	{
-		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
-	}
 
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
@@ -441,10 +437,6 @@ void wiSlider::Render(wiGUI* gui)
 	}
 
 	wiColor color = GetColor();
-	if (!IsEnabled())
-	{
-		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
-	}
 
 	float headWidth = scale.x*0.05f;
 
@@ -572,10 +564,6 @@ void wiCheckBox::Render(wiGUI* gui)
 	}
 
 	wiColor color = GetColor();
-	if (!IsEnabled())
-	{
-		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
-	}
 
 	// control
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
@@ -693,6 +681,8 @@ void wiWindow::AddWidget(wiWidget* widget)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
+	widget->SetEnabled(this->IsEnabled());
+	widget->SetVisible(this->IsVisible());
 	gui->AddWidget(widget);
 	widget->attachTo(this);
 
@@ -748,10 +738,6 @@ void wiWindow::Render(wiGUI* gui)
 	}
 
 	wiColor color = GetColor();
-	if (!IsEnabled())
-	{
-		color = wiColor::lerp(wiColor::Transparent, color, 0.25f);
-	}
 
 	// body
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
@@ -787,5 +773,13 @@ void wiWindow::SetVisible(bool value)
 	for (auto& x : childrenWidgets)
 	{
 		x->SetVisible(value);
+	}
+}
+void wiWindow::SetEnabled(bool value)
+{
+	wiWidget::SetEnabled(value);
+	for (auto& x : childrenWidgets)
+	{
+		x->SetEnabled(value);
 	}
 }

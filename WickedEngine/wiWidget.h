@@ -57,7 +57,7 @@ public:
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState();
-	void SetEnabled(bool val);
+	virtual void SetEnabled(bool val);
 	bool IsEnabled();
 	virtual void SetVisible(bool val);
 	bool IsVisible();
@@ -175,5 +175,6 @@ public:
 	virtual void Render(wiGUI* gui) override;
 
 	virtual void SetVisible(bool value) override;
+	virtual void SetEnabled(bool value) override;
 };
 
