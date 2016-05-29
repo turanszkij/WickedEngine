@@ -3335,7 +3335,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 							object->mesh, pI
 							);
 					}
-					if (object->kinematic) {
+					if (object->kinematic && object->rigidBody) {
 						physicsEngine->transformBody(object->rotation, object->translation, pI);
 					}
 				}
@@ -3348,7 +3348,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 		{
 			for (Object* object : model->objects) {
 				int pI = object->physicsObjectI;
-				if (pI >= 0 && !object->kinematic) {
+				if (pI >= 0 && !object->kinematic && object->rigidBody) {
 					PHYSICS::PhysicsTransform* transform(physicsEngine->getObject(pI));
 					object->translation_rest = transform->position;
 					object->rotation_rest = transform->rotation;

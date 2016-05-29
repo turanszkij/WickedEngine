@@ -707,6 +707,18 @@ void wiWindow::RemoveWidget(wiWidget* widget)
 
 	childrenWidgets.remove(widget);
 }
+void wiWindow::RemoveWidgets()
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	for (auto& x : childrenWidgets)
+	{
+		gui->RemoveWidget(x);
+		x->detach();
+	}
+
+	childrenWidgets.clear();
+}
 void wiWindow::Update(wiGUI* gui)
 {
 	wiWidget::Update(gui);

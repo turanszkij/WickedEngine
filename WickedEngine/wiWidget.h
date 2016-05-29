@@ -169,6 +169,7 @@ public:
 
 	void AddWidget(wiWidget* widget);
 	void RemoveWidget(wiWidget* widget);
+	void RemoveWidgets();
 
 	virtual void Update(wiGUI* gui) override;
 	virtual void Render(wiGUI* gui) override;
