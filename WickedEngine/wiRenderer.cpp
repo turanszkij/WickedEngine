@@ -523,6 +523,9 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(CameraCB);
 	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CAMERA]);
 
+	bd.ByteWidth = sizeof(MaterialCB_VS);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MATERIAL_VS]);
+
 	bd.ByteWidth = sizeof(MaterialCB);
 	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MATERIAL]);
 
@@ -1081,11 +1084,12 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 
+	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
+	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
+	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
+	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
+
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
-	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
-	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
-	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
 
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), threadID);
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), threadID);
@@ -2139,13 +2143,15 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										for (Material* iMat : mesh->materials) {
 
 											if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-												GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
+												GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 
 
+												MaterialCB_VS mcbvs;
+												mcbvs.Create(*iMat, m);
+												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
 
 												MaterialCB mcb;
-												mcb.Create(*iMat, m);
-
+												mcb.Create(*iMat);
 												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 
@@ -2240,12 +2246,16 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									for (Material* iMat : mesh->materials) {
 
 										if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-											GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
+											GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 
 
+											MaterialCB_VS mcbvs;
+											mcbvs.Create(*iMat, m);
+											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
 
 											MaterialCB mcb;
-											mcb.Create(*iMat, m);
+											mcb.Create(*iMat);
+											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
@@ -2346,10 +2356,15 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							int m = 0;
 							for (Material* iMat : mesh->materials) {
 								if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-									GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
+									GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+
+									MaterialCB_VS mcbvs;
+									mcbvs.Create(*iMat, m);
+									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
 
 									MaterialCB mcb;
-									mcb.Create(*iMat, m);
+									mcb.Create(*iMat);
+									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
@@ -2569,24 +2584,29 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 					
 					if(iMat->shadeless)
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SHADELESS,threadID);
-					if(iMat->subsurface_scattering)
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SKIN,threadID);
+					if (iMat->subsurfaceScattering > 0)
+						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
 					else
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],mesh->stencilRef,threadID);
 
+					MaterialCB_VS mcbvs;
+					mcbvs.Create(*iMat, m);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
 
 					MaterialCB mcb;
-					mcb.Create(*iMat, m);
-
+					mcb.Create(*iMat);
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 					
-
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0,threadID);
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->refMap, TEXSLOT_ONDEMAND1,threadID);
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->normalMap, TEXSLOT_ONDEMAND2,threadID);
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->specularMap, TEXSLOT_ONDEMAND3,threadID);
+					if (!wireRender)
+					{
+						GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+						GetDevice()->BindResourcePS(iMat->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+						GetDevice()->BindResourcePS(iMat->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
+						GetDevice()->BindResourcePS(iMat->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
+						GetDevice()->BindResourcePS(iMat->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+					}
 					if(DX11Eff)
-						GetDevice()->BindResourceDS(iMat->displacementMap, TEXSLOT_ONDEMAND4,threadID);
+						GetDevice()->BindResourceDS(iMat->GetDisplacementMap(), TEXSLOT_ONDEMAND0,threadID);
 					
 					GetDevice()->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),threadID);
 				}
@@ -2718,15 +2738,24 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 
 				if(iMat->IsTransparent() || iMat->IsWater())
 				{
+					MaterialCB_VS mcbvs;
+					mcbvs.Create(*iMat, m);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
+
 					MaterialCB mcb;
-					mcb.Create(*iMat, m);
+					mcb.Create(*iMat);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0,threadID);
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->refMap, TEXSLOT_ONDEMAND1,threadID);
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->normalMap, TEXSLOT_ONDEMAND2,threadID);
-					if(!wireRender) GetDevice()->BindResourcePS(iMat->specularMap, TEXSLOT_ONDEMAND3,threadID);
+					if (!wireRender)
+					{
+						GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+						GetDevice()->BindResourcePS(iMat->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+						GetDevice()->BindResourcePS(iMat->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
+						GetDevice()->BindResourcePS(iMat->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
+						GetDevice()->BindResourcePS(iMat->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+					}
 
 					if (iMat->IsTransparent() && lastRenderType != RENDERTYPE_TRANSPARENT)
 					{
@@ -3492,15 +3521,20 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 					if (iMat->shadeless)
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, threadID);
-					if (iMat->subsurface_scattering)
+					if (iMat->subsurfaceScattering > 0)
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
 					else
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 
-					GetDevice()->BindResourcePS(iMat->texture, TEXSLOT_ONDEMAND0, threadID);
+					GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+
+					MaterialCB_VS mcbvs;
+					mcbvs.Create(*iMat, m);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
 
 					MaterialCB mcb;
-					mcb.Create(*iMat, m);
+					mcb.Create(*iMat);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
@@ -3547,20 +3581,33 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	GetDevice()->UNLOCK();
 }
 
-void wiRenderer::MaterialCB::Create(const Material& mat,UINT materialIndex){
-	difColor = XMFLOAT4(mat.diffuseColor.x, mat.diffuseColor.y, mat.diffuseColor.z, mat.alpha);
-	hasRef = mat.refMap != nullptr;
-	hasNor = mat.normalMap != nullptr;
-	hasTex = mat.texture != nullptr;
-	hasSpe = mat.specularMap != nullptr;
-	specular = mat.specular;
-	refractionIndex = mat.refraction_index;
+void wiRenderer::MaterialCB_VS::Create(const Material& mat, UINT materialIndex) {
 	texMulAdd = mat.texMulAdd;
-	metallic = mat.enviroReflection;
-	shadeless = mat.shadeless;
-	specular_power = mat.specular_power;
-	toon = mat.toonshading;
 	matIndex = materialIndex;
-	emissive = mat.emissive;
+}
+void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/) {
+	//difColor = XMFLOAT4(mat.diffuseColor.x, mat.diffuseColor.y, mat.diffuseColor.z, mat.alpha);
+	//hasRef = mat.refMap != nullptr;
+	//hasNor = mat.normalMap != nullptr;
+	//hasTex = mat.texture != nullptr;
+	//hasSpe = mat.specularMap != nullptr;
+	//specular = mat.specular;
+	//refractionIndex = mat.refraction_index;
+	//texMulAdd = mat.texMulAdd;
+	//metallic = mat.enviroReflection;
+	//shadeless = mat.shadeless;
+	//specular_power = mat.specular_power;
+	//toon = mat.toonshading;
+	//matIndex = materialIndex;
+	//emissive = mat.emissive;
+	//roughness = mat.roughness;
+
+	baseColor = XMFLOAT4(mat.baseColor.x, mat.baseColor.y, mat.baseColor.z, mat.alpha);
 	roughness = mat.roughness;
+	reflectance = mat.reflectance;
+	metalness = mat.metalness;
+	emissive = mat.emissive;
+	refractionIndex = mat.refractionIndex;
+	subsurfaceScattering = mat.subsurfaceScattering;
+	normalMapStrength = mat.normalMapStrength;
 }

@@ -133,29 +133,52 @@ protected:
 
 		ALIGN_16
 	};
+	GFX_STRUCT MaterialCB_VS
+	{
+		XMFLOAT4 texMulAdd;
+		UINT matIndex;
+		float pad[3];
+
+		MaterialCB_VS() {};
+		MaterialCB_VS(const Material& mat, UINT materialIndex) { Create(mat, materialIndex); };
+		void Create(const Material& mat, UINT materialIndex);
+		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
+
+		ALIGN_16
+	};
 	GFX_STRUCT MaterialCB
 	{
-		XMFLOAT4 difColor;
-		XMFLOAT4 specular;
-		XMFLOAT4 texMulAdd;
-		UINT hasRef;
-		UINT hasNor;
-		UINT hasTex;
-		UINT hasSpe;
-		UINT shadeless;
-		UINT specular_power;
-		UINT toon;
-		UINT matIndex;
-		float refractionIndex;
-		float metallic;
-		float emissive;
+		//XMFLOAT4 difColor;
+		//XMFLOAT4 specular;
+		//XMFLOAT4 texMulAdd;
+		//UINT hasRef;
+		//UINT hasNor;
+		//UINT hasTex;
+		//UINT hasSpe;
+		//UINT shadeless;
+		//UINT specular_power;
+		//UINT toon;
+		//UINT matIndex;
+		//float refractionIndex;
+		//float metallic;
+		//float emissive;
+		//float roughness;
+
+		XMFLOAT4 baseColor; // + alpha (.w)
 		float roughness;
+		float reflectance;
+		float metalness;
+		float emissive;
+		float refractionIndex;
+		float subsurfaceScattering;
+		float normalMapStrength;
+		float pad[1];
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
 
 		MaterialCB() {};
-		MaterialCB(const Material& mat, UINT materialIndex) { Create(mat,materialIndex); };
-		void Create(const Material& mat, UINT materialIndex);
+		MaterialCB(const Material& mat) { Create(mat); };
+		void Create(const Material& mat);
 
 		ALIGN_16
 	};

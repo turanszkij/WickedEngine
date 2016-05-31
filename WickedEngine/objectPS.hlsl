@@ -1,4 +1,5 @@
 #include "objectHF.hlsli"
+#include "objectHF_PS.hlsli"
 
 PixelOutputType main(PixelInputType input)
 {
@@ -10,11 +11,7 @@ PixelOutputType main(PixelInputType input)
 
 	OBJECT_PS_NORMALMAPPING
 
-	OBJECT_PS_SPECULARMAPPING
-
 	OBJECT_PS_ENVIRONMENTMAPPING
-
-	OBJECT_PS_PLANARREFLECTIONS
 		
 	OBJECT_PS_OUT_GBUFFER
 }

@@ -115,14 +115,9 @@ struct Material
 	string specularMapName;
 	wiGraphicsTypes::Texture2D* specularMap;
 
-	bool subsurface_scattering;
 	bool toonshading;
 	bool water,shadeless;
-	float alpha;
-	float refraction_index;
 	float enviroReflection;
-	float emissive;
-	float roughness;
 
 	XMFLOAT4 specular;
 	int specular_power;
@@ -132,6 +127,17 @@ struct Material
 	bool isSky;
 
 	bool cast_shadow;
+
+	// PBR properties
+	XMFLOAT3 baseColor;
+	float alpha;
+	float roughness;
+	float reflectance;
+	float metalness;
+	float emissive;
+	float refractionIndex;
+	float subsurfaceScattering;
+	float normalMapStrength;
 
 
 	Material(){}
@@ -156,12 +162,8 @@ struct Material
 		specularMapName="";
 		specularMap = nullptr;
 
-		subsurface_scattering=toonshading=water=false;
-		alpha=1.0f;
-		refraction_index=0.0f;
+		toonshading=water=false;
 		enviroReflection=0.0f;
-		emissive=0.0f;
-		roughness = 0.0f;
 
 		specular=XMFLOAT4(0,0,0,0);
 		specular_power=50;
@@ -170,6 +172,17 @@ struct Material
 		texMulAdd=XMFLOAT4(1,1,0,0);
 		isSky=water=shadeless=false;
 		cast_shadow=true;
+
+		// PBR props
+		baseColor = XMFLOAT3(1, 1, 1);
+		alpha = 1.0f;
+		roughness = 0.0f;
+		reflectance = 0.0f;
+		metalness = 0.0f;
+		refractionIndex = 0.0f;
+		subsurfaceScattering = 0.0f;
+		emissive = 0.0f;
+		normalMapStrength = 1.0f;
 	}
 	~Material();
 
@@ -183,6 +196,14 @@ struct Material
 			return RENDERTYPE_TRANSPARENT;
 		return RENDERTYPE_OPAQUE;
 	}
+
+	void ConvertToPhysicallyBasedMaterial();
+	wiGraphicsTypes::Texture2D* GetBaseColorMap();
+	wiGraphicsTypes::Texture2D* GetNormalMap();
+	wiGraphicsTypes::Texture2D* GetRoughnessMap();
+	wiGraphicsTypes::Texture2D* GetMetalnessMap();
+	wiGraphicsTypes::Texture2D* GetReflectanceMap();
+	wiGraphicsTypes::Texture2D* GetDisplacementMap();
 };
 struct RibbonVertex
 {

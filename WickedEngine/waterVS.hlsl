@@ -1,11 +1,11 @@
-#include "objectHF.hlsli"
+#include "objectHF_VS.hlsli"
 
 PixelInputType main(Input input)
 {
 	PixelInputType Out = (PixelInputType)0;
 	
 
-	[branch]if((uint)input.tex.z == g_xMat_matIndex){
+	[branch]if((uint)input.tex.z == g_xMatVS_matIndex){
 		float4x4 WORLD = MakeWorldMatrixFromInstance(input);
 		
 		float4 pos = input.pos;

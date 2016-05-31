@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
+#include "objectHF_VS.hlsli"
 
 struct GS_CUBEMAP_IN 
 { 
@@ -12,7 +13,7 @@ GS_CUBEMAP_IN main(Input input)
 	GS_CUBEMAP_IN Out = (GS_CUBEMAP_IN)0;
 
 	[branch]
-	if((uint)input.tex.z == g_xMat_matIndex)
+	if((uint)input.tex.z == g_xMatVS_matIndex)
 	{
 		
 

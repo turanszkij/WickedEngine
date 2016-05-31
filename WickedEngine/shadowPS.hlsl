@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "objectHF_PS.hlsli"
 
 struct VertextoPixel
 {
@@ -8,6 +9,5 @@ struct VertextoPixel
 
 void main(VertextoPixel PSIn)
 {
-	[branch]if (g_xMat_hasTex)
-		ALPHATEST(texture_0.Sample(sampler_linear_wrap, PSIn.tex).a);
+	ALPHATEST(xBaseColorMap.Sample(sampler_linear_wrap, PSIn.tex).a);
 }

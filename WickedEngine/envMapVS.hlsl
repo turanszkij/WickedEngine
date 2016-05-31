@@ -1,12 +1,13 @@
 #include "objectInputLayoutHF.hlsli"
 #include "envMapHF.hlsli"
+#include "objectHF_VS.hlsli"
 
 VSOut main(Input input)
 {
 	VSOut Out = (VSOut)0;
 
 	[branch]
-	if ((uint)input.tex.z == g_xMat_matIndex)
+	if ((uint)input.tex.z == g_xMatVS_matIndex)
 	{
 
 		float4x4 WORLD = MakeWorldMatrixFromInstance(input);

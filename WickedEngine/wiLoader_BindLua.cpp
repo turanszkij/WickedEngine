@@ -1624,7 +1624,7 @@ int Material_BindLua::SetAlpha(lua_State* L)
 }
 int Material_BindLua::GetRefractionIndex(lua_State* L)
 {
-	wiLua::SSetFloat(L, material->refraction_index);
+	wiLua::SSetFloat(L, material->refractionIndex);
 	return 1;
 }
 int Material_BindLua::SetRefractionIndex(lua_State* L)
@@ -1632,7 +1632,7 @@ int Material_BindLua::SetRefractionIndex(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		material->refraction_index = wiLua::SGetFloat(L, 1);
+		material->refractionIndex = wiLua::SGetFloat(L, 1);
 	}
 	else
 		wiLua::SError(L, "SetRefractionIndex(float alpha) not enough arguments!");

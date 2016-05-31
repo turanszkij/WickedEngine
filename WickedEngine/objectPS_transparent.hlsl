@@ -1,4 +1,5 @@
 #include "objectHF.hlsli"
+#include "objectHF_PS.hlsli"
 
 
 float4 main( PixelInputType input) : SV_TARGET
@@ -10,8 +11,6 @@ float4 main( PixelInputType input) : SV_TARGET
 	OBJECT_PS_NORMALMAPPING
 
 	OBJECT_PS_REFRACTION
-
-	OBJECT_PS_SPECULARMAPPING
 
 	OBJECT_PS_ENVIRONMENTMAPPING
 

@@ -2,6 +2,7 @@
 #include "windHF.hlsli"
 #include "objectInputLayoutHF.hlsli"
 #include "globals.hlsli"
+#include "objectHF_VS.hlsli"
 
 struct VertextoPixel
 {
@@ -13,7 +14,7 @@ VertextoPixel main(Input input)
 {
 	VertextoPixel Out = (VertextoPixel)0;
 
-	[branch]if((uint)input.tex.z == g_xMat_matIndex){
+	[branch]if((uint)input.tex.z == g_xMatVS_matIndex){
 		
 		float4x4 WORLD = float4x4(
 				float4(input.wi0.x,input.wi1.x,input.wi2.x,0)

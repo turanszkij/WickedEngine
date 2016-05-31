@@ -1,4 +1,5 @@
 #include "objectHF.hlsli"
+#include "objectHF_VS.hlsli"
 
 struct ConstantOutputType
 {
@@ -102,7 +103,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	
 	Out.pos = Out.pos2D = mul( vertexPosition, g_xCamera_VP );
 	Out.pos3D = vertexPosition.xyz;
-	Out.tex = vertexTex.xy;
+	Out.tex = vertexTex.xy * g_xMatVS_texMulAdd.xy + g_xMatVS_texMulAdd.zw;
 	Out.nor = vertexNormal;
 	/*float2x3 tanbin = tangentBinormal(Out.nor);
 	Out.tan=tanbin[0];

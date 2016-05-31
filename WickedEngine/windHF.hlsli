@@ -1,3 +1,6 @@
+#ifndef _WIND_HF_
+#define _WIND_HF_
+
 #include "globals.hlsli"
 
 inline void affectWind(inout float3 pos, in float value, in uint randVertex){
@@ -5,3 +8,4 @@ inline void affectWind(inout float3 pos, in float value, in uint randVertex){
 	pos+=wind;
 }
 
+#endif // _WIND_HF_

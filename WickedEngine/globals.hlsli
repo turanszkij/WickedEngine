@@ -77,24 +77,6 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float		g_xCamera_ZFarP;
 	float		xPadding_CameraCB[2];
 };
-CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
-{
-	float4		g_xMat_diffuseColor;
-	float4		g_xMat_specular;
-	float4		g_xMat_texMulAdd;
-	uint		g_xMat_hasRef;
-	uint		g_xMat_hasNor;
-	uint		g_xMat_hasTex;
-	uint		g_xMat_hasSpe;
-	uint		g_xMat_shadeless;
-	uint		g_xMat_specular_power;
-	uint		g_xMat_toon;
-	uint		g_xMat_matIndex;
-	float		g_xMat_refractionIndex;
-	float		g_xMat_metallic;
-	float		g_xMat_emissive;
-	float		g_xMat_roughness;
-};
 CBUFFER(DirectionalLightCB, CBSLOT_RENDERER_DIRLIGHT)
 {
 	float4		g_xDirLight_direction;

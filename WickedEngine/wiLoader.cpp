@@ -163,8 +163,11 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 			string line="";
 			file>>line;
 			if(line[0]=='/' && !strcmp(line.substr(2,8).c_str(),"MATERIAL")) {
-				if(currentMat)
-					materials.insert(pair<string,Material*>(currentMat->name,currentMat));
+				if (currentMat)
+				{
+					currentMat->ConvertToPhysicallyBasedMaterial();
+					materials.insert(pair<string, Material*>(currentMat->name, currentMat));
+				}
 				
 				stringstream identified_name("");
 				identified_name<<line.substr(11,strlen(line.c_str())-11)<<identifier;
@@ -239,7 +242,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 					currentMat->shadeless=true;
 					break;
 				case 'R':
-					file>>currentMat->refraction_index;
+					file>>currentMat->refractionIndex;
 					break;
 				case 'e':
 					file>>currentMat->enviroReflection;
@@ -266,7 +269,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 					currentMat->water=true;
 					break;
 				case 'u':
-					currentMat->subsurface_scattering=true;
+					currentMat->subsurfaceScattering=true;
 					break;
 				case 'b':
 					{
@@ -288,8 +291,11 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 	}
 	file.close();
 	
-	if(currentMat)
-		materials.insert(pair<string,Material*>(currentMat->name,currentMat));
+	if (currentMat)
+	{
+		currentMat->ConvertToPhysicallyBasedMaterial();
+		materials.insert(pair<string, Material*>(currentMat->name, currentMat));
+	}
 
 }
 void LoadWiObjects(const string& directory, const string& name, const string& identifier, vector<Object*>& objects
@@ -1352,6 +1358,54 @@ Material::~Material() {
 	normalMap = nullptr;
 	displacementMap = nullptr;
 	specularMap = nullptr;
+}
+void Material::ConvertToPhysicallyBasedMaterial()
+{
+	baseColor = diffuseColor;
+	roughness = (1 - (float)specular_power / 128.0f);
+	metalness = 0.0f;
+	reflectance = (specular.x + specular.y + specular.z) / 3.0f * specular.w;
+	normalMapStrength = 1.0f;
+}
+Texture2D* Material::GetBaseColorMap()
+{
+	if (texture != nullptr)
+	{
+		return texture;
+	}
+	return wiTextureHelper::getInstance()->getWhite();
+}
+Texture2D* Material::GetNormalMap()
+{
+	if (normalMap != nullptr)
+	{
+		return normalMap;
+	}
+	return wiTextureHelper::getInstance()->getNormalMapDefault();
+}
+Texture2D* Material::GetRoughnessMap()
+{
+	return wiTextureHelper::getInstance()->getColor(wiColor::Gray);
+}
+Texture2D* Material::GetMetalnessMap()
+{
+	return wiTextureHelper::getInstance()->getWhite();
+}
+Texture2D* Material::GetReflectanceMap()
+{
+	if (refMap != nullptr)
+	{
+		return refMap;
+	}
+	return wiTextureHelper::getInstance()->getWhite();
+}
+Texture2D* Material::GetDisplacementMap()
+{
+	if (displacementMap != nullptr)
+	{
+		return displacementMap;
+	}
+	return wiTextureHelper::getInstance()->getWhite();
 }
 #pragma endregion
 

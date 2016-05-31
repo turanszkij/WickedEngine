@@ -1,4 +1,5 @@
 #include "objectHF.hlsli"
+#include "objectHF_VS.hlsli"
 
 
 PixelInputType main(Input input)
@@ -6,7 +7,7 @@ PixelInputType main(Input input)
 	PixelInputType Out = (PixelInputType)0;
 
 
-	[branch]if((uint)input.tex.z == g_xMat_matIndex)
+	[branch]if((uint)input.tex.z == g_xMatVS_matIndex)
 	{
 
 		float4x4 WORLD = MakeWorldMatrixFromInstance(input);
@@ -45,7 +46,7 @@ PixelInputType main(Input input)
 		Out.pos = Out.pos2D = mul( pos, g_xCamera_VP );
 		Out.pos2DPrev = mul(posPrev, g_xCamera_PrevVP);
 		Out.pos3D = pos.xyz;
-		Out.tex = input.tex.xy;
+		Out.tex = input.tex.xy * g_xMatVS_texMulAdd.xy + g_xMatVS_texMulAdd.zw;
 		Out.nor = normalize(normal);
 		Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP).xy;
 
