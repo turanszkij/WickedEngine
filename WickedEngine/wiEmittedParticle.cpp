@@ -23,11 +23,13 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot){
 	name=newName;
 	object=newObject;
-	for(Material*mat : object->mesh->materials)
-		if(!mat->name.compare(newMat)){
-			material=mat;
+	for (MeshSubset& subset : object->mesh->subsets)
+	{
+		if (!newMat.compare(subset.material->name)) {
+			material = subset.material;
 			break;
 		}
+	}
 
 	size=newSize;
 	random_factor=newRandomFac;

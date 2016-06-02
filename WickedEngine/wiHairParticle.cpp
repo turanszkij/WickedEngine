@@ -33,14 +33,18 @@ wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 	material=nullptr;
 	object = newObject;
 	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, object->getMatrix()));
-	for(Material* m : object->mesh->materials)
-		if(!newMat.compare(m->name)){
-			material = m;
+	for (MeshSubset& subset : object->mesh->subsets)
+	{
+		if (!newMat.compare(subset.material->name)) {
+			material = subset.material;
 			break;
 		}
+	}
 	
-	if(material)
+	if (material)
+	{
 		SetUpPatches();
+	}
 }
 
 

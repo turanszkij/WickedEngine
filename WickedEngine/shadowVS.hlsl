@@ -2,7 +2,7 @@
 #include "windHF.hlsli"
 #include "objectInputLayoutHF.hlsli"
 #include "globals.hlsli"
-#include "objectHF_VS.hlsli"
+
 
 struct VertextoPixel
 {
@@ -14,27 +14,21 @@ VertextoPixel main(Input input)
 {
 	VertextoPixel Out = (VertextoPixel)0;
 
-	[branch]if((uint)input.tex.z == g_xMatVS_matIndex){
+	float4x4 WORLD = float4x4(
+			float4(input.wi0.x,input.wi1.x,input.wi2.x,0)
+			,float4(input.wi0.y,input.wi1.y,input.wi2.y,0)
+			,float4(input.wi0.z,input.wi1.z,input.wi2.z,0)
+			,float4(input.wi0.w,input.wi1.w,input.wi2.w,1)
+		);
+
+	float4 pos = input.pos;
 		
-		float4x4 WORLD = float4x4(
-				float4(input.wi0.x,input.wi1.x,input.wi2.x,0)
-				,float4(input.wi0.y,input.wi1.y,input.wi2.y,0)
-				,float4(input.wi0.z,input.wi1.z,input.wi2.z,0)
-				,float4(input.wi0.w,input.wi1.w,input.wi2.w,1)
-			);
+	pos=mul(pos,WORLD);
+	affectWind(pos.xyz,input.tex.w,input.id);
 
-		float4 pos = input.pos;
-		
-//#ifdef SKINNING_ON
-//		Skinning(pos,input.bon,input.wei);
-//#endif
-		pos=mul(pos,WORLD);
-		affectWind(pos.xyz,input.tex.w,input.id);
+	Out.pos = mul( pos, g_xShadow_VP);
+	Out.tex = input.tex.xy;
 
-		Out.pos = mul( pos, g_xShadow_VP);
-		Out.tex = input.tex.xy;
-
-	}
 
 	return Out;
 }

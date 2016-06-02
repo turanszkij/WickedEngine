@@ -4,7 +4,7 @@
 #include "dirLightHF.hlsli"
 
 #include "objectHF.hlsli"
-#include "objectHF_PS.hlsli"
+
 
 float4 main(PSIn input) : SV_TARGET
 {

@@ -66,6 +66,13 @@ struct Vertex
 		tex=XMFLOAT4(0,0,0,0);
 		pre=XMFLOAT4(0,0,0,0);
 	}
+	Vertex(const SkinnedVertex& copyFromSkinnedVert)
+	{
+		pos = copyFromSkinnedVert.pos;
+		nor = copyFromSkinnedVert.nor;
+		tex = copyFromSkinnedVert.tex;
+		pre = XMFLOAT4(0, 0, 0, 0);
+	}
 };
 struct Instance
 {
@@ -289,27 +296,36 @@ struct VertexGroup{
 	VertexGroup(string n){name=n;}
 	void addVertex(const VertexRef& vRef){vertices.insert(pair<int,float>(vRef.index,vRef.weight));}
 };
+struct MeshSubset
+{
+	Material* material;
+	wiGraphicsTypes::GPUBuffer	indexBuffer;
+
+	vector<unsigned int>		subsetIndices;
+
+	MeshSubset();
+	~MeshSubset();
+};
 struct Mesh{
 	string name;
 	string parent;
-	vector<SkinnedVertex> vertices;
-	vector<Vertex> skinnedVertices;
+	// Full vertex info with bones
+	vector<SkinnedVertex>	vertices;
+	// Already animated vertices
+	vector<Vertex>			vertices_Complete;
 	vector<unsigned int>    indices;
 	vector<XMFLOAT3>		physicsverts;
 	vector<unsigned int>	physicsindices;
 	vector<int>				physicalmapGP;
+	vector<MeshSubset>		subsets;
+	vector<string>			materialNames;
 
-	wiGraphicsTypes::GPUBuffer meshVertBuff;
-	static wiGraphicsTypes::GPUBuffer meshInstanceBuffer;
-	wiGraphicsTypes::GPUBuffer meshIndexBuff;
-	wiGraphicsTypes::GPUBuffer sOutBuffer;
+	wiGraphicsTypes::GPUBuffer			vertexBuffer;
+	wiGraphicsTypes::GPUBuffer			streamoutBuffer;
+	static wiGraphicsTypes::GPUBuffer	instanceBuffer;
 
-	vector<string> materialNames;
-	vector<int> materialIndices;
-	vector<Material*> materials;
 	bool renderable,doubleSided;
 	STENCILREF stencilRef;
-	//vector<int> usedBy;
 
 	bool calculatedAO;
 
@@ -336,14 +352,7 @@ struct Mesh{
 		name=newName;
 		init();
 	}
-	~Mesh(){
-		vertices.clear();
-		skinnedVertices.clear();
-		indices.clear();
-		vertexGroups.clear();
-		goalPositions.clear();
-		goalNormals.clear();
-	}
+	~Mesh() {}
 	void LoadFromFile(const string& newName, const string& fname
 		, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier="");
 	bool buffersComplete;
@@ -355,11 +364,7 @@ struct Mesh{
 	static void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
 	void init(){
 		parent="";
-		vertices.resize(0);
-		skinnedVertices.resize(0);
 		indices.resize(0);
-		materialNames.resize(0);
-		materialIndices.resize(0);
 		renderable=false;
 		doubleSided=false;
 		stencilRef = STENCILREF::STENCILREF_DEFAULT;
@@ -471,15 +476,7 @@ struct Object : public Streamable, public Transform
 	virtual ~Object();
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
-	int GetRenderTypes()
-	{
-		int retVal = RENDERTYPE::RENDERTYPE_VOID;
-		for (Material* mat : mesh->materials)
-		{
-			retVal |= mat->GetRenderType();
-		}
-		return retVal;
-	}
+	int GetRenderTypes();
 	virtual void UpdateTransform();
 	void UpdateObject();
 };

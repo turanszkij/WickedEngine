@@ -77,6 +77,19 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float		g_xCamera_ZFarP;
 	float		xPadding_CameraCB[2];
 };
+CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
+{
+	float4		g_xMat_baseColor;
+	float4		g_xMat_texMulAdd;
+	float		g_xMat_roughness;
+	float		g_xMat_reflectance;
+	float		g_xMat_metalness;
+	float		g_xMat_emissive;
+	float		g_xMat_refractionIndex;
+	float		g_xMat_subsurfaceScattering;
+	float		g_xMat_normalMapStrength;
+	float		xPadding_MaterialCB[1];
+};
 CBUFFER(DirectionalLightCB, CBSLOT_RENDERER_DIRLIGHT)
 {
 	float4		g_xDirLight_direction;

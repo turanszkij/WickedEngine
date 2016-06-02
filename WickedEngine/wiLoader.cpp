@@ -666,9 +666,10 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						currentMesh->materialNames.push_back(identified_material.str());
 						MaterialCollection::const_iterator iter = materials.find(identified_material.str());
 						if(iter!=materials.end()) {
+							currentMesh->subsets.push_back(MeshSubset());
 							currentMesh->renderable=true;
-							currentMesh->materials.push_back(iter->second);
-							currentMesh->materialIndices.push_back(currentMesh->materials.size()); //CONNECT meshes WITH MATERIALS
+							currentMesh->subsets.back().material = (iter->second);
+							//currentMesh->materialIndices.push_back(currentMesh->materials.size()); //CONNECT meshes WITH MATERIALS
 						}
 					}
 					break;
@@ -1409,9 +1410,20 @@ Texture2D* Material::GetDisplacementMap()
 }
 #pragma endregion
 
+#pragma region MESHSUBSET
+
+MeshSubset::MeshSubset()
+{
+}
+MeshSubset::~MeshSubset()
+{
+}
+
+#pragma endregion
+
 #pragma region MESH
 
-GPUBuffer Mesh::meshInstanceBuffer;
+GPUBuffer Mesh::instanceBuffer;
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
 	, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier) {
@@ -1489,7 +1501,9 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 			identified_matname << matName << identifier;
 			MaterialCollection::const_iterator iter = materialColl.find(identified_matname.str());
 			if (iter != materialColl.end()) {
-				materials.push_back(iter->second);
+				subsets.push_back(MeshSubset());
+				subsets.back().material = iter->second;
+				//materials.push_back(iter->second);
 			}
 
 			materialNames.push_back(identified_matname.str());
@@ -1702,12 +1716,6 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 		delete[] buffer;
 
 		renderable = rendermesh == 0 ? false : true;
-
-		//CreateVertexArrays();
-
-		//Optimize();
-
-		//CreateBuffers();
 	}
 }
 void Mesh::Optimize()
@@ -1715,17 +1723,18 @@ void Mesh::Optimize()
 	//TODO
 }
 void Mesh::CreateBuffers(Object* object) {
-	if (!buffersComplete) {
+	if (!buffersComplete) 
+	{
 
 		GPUBufferDesc bd;
-		if (!meshInstanceBuffer.IsValid())
+		if (!instanceBuffer.IsValid())
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DYNAMIC;
 			bd.ByteWidth = sizeof(Instance) * 2;
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, 0, &meshInstanceBuffer);
+			wiRenderer::GetDevice()->CreateBuffer(&bd, 0, &instanceBuffer);
 		}
 
 
@@ -1734,8 +1743,6 @@ void Mesh::CreateBuffers(Object* object) {
 			goalNormals.resize(vertexGroups[goalVG].vertices.size());
 		}
 
-
-
 		ZeroMemory(&bd, sizeof(bd));
 #ifdef USE_GPU_SKINNING
 		bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
@@ -1743,11 +1750,11 @@ void Mesh::CreateBuffers(Object* object) {
 		if (object->isArmatureDeformed() && !softBody)
 			bd.ByteWidth = sizeof(SkinnedVertex) * vertices.size();
 		else
-			bd.ByteWidth = sizeof(Vertex) * vertices.size();
+			bd.ByteWidth = sizeof(Vertex) * vertices_Complete.size();
 #else
 		bd.Usage = ((softBody || object->isArmatureDeformed()) ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
 		bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? CPU_ACCESS_WRITE : 0);
-		bd.ByteWidth = sizeof(Vertex) * vertices.size();
+		bd.ByteWidth = sizeof(Vertex) * vertices_Complete.size();
 #endif
 		bd.BindFlags = BIND_VERTEX_BUFFER;
 		SubresourceData InitData;
@@ -1755,30 +1762,19 @@ void Mesh::CreateBuffers(Object* object) {
 		if (object->isArmatureDeformed() && !softBody)
 			InitData.pSysMem = vertices.data();
 		else
-			InitData.pSysMem = skinnedVertices.data();
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &meshVertBuff);
-
-
-		ZeroMemory(&bd, sizeof(bd));
-		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(unsigned int) * indices.size();
-		bd.BindFlags = BIND_INDEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		ZeroMemory(&InitData, sizeof(InitData));
-		InitData.pSysMem = indices.data();
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &meshIndexBuff);
+			InitData.pSysMem = vertices_Complete.data();
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer);
 
 		if (renderable)
 		{
-
 			if (object->isArmatureDeformed() && !softBody) {
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = USAGE_DEFAULT;
-				bd.ByteWidth = sizeof(Vertex) * vertices.size();
+				bd.ByteWidth = sizeof(Vertex) * vertices_Complete.size();
 				bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride = 0;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, &sOutBuffer);
+				wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, &streamoutBuffer);
 			}
 
 			//PHYSICALMAPPING
@@ -1799,6 +1795,22 @@ void Mesh::CreateBuffers(Object* object) {
 			}
 		}
 
+		for (MeshSubset& subset : subsets)
+		{
+			if (subset.subsetIndices.empty())
+			{
+				continue;
+			}
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.ByteWidth = sizeof(unsigned int) * subset.subsetIndices.size();
+			bd.BindFlags = BIND_INDEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = subset.subsetIndices.data();
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &subset.indexBuffer);
+		}
+
 
 		buffersComplete = true;
 	}
@@ -1806,14 +1818,27 @@ void Mesh::CreateBuffers(Object* object) {
 }
 void Mesh::CreateVertexArrays()
 {
-	if (skinnedVertices.empty())
+	if (vertices_Complete.empty())
 	{
-		skinnedVertices.resize(vertices.size());
-		for (unsigned int i = 0; i<vertices.size(); ++i) {
-			skinnedVertices[i].pos = vertices[i].pos;
-			skinnedVertices[i].nor = vertices[i].nor;
-			skinnedVertices[i].tex = vertices[i].tex;
+		vertices_Complete.resize(vertices.size());
+		for (size_t i = 0; i < vertices.size(); ++i) 
+		{
+			vertices_Complete[i].pos = vertices[i].pos;
+			vertices_Complete[i].nor = vertices[i].nor;
+			vertices_Complete[i].tex = vertices[i].tex;
 		}
+	}
+
+	for (size_t i = 0; i < indices.size(); ++i)
+	{
+		unsigned int index = indices[i];
+		SkinnedVertex skinnedVertex = vertices[index];
+		unsigned int materialIndex = (unsigned int)floor(skinnedVertex.tex.z);
+
+		assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
+
+		MeshSubset& subset = subsets[materialIndex];
+		subset.subsetIndices.push_back(index);
 	}
 }
 
@@ -1828,7 +1853,7 @@ void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHI
 }
 void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->UpdateBuffer(&meshInstanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
+	wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
 }
 #pragma endregion
 
@@ -2778,6 +2803,15 @@ void Object::UpdateObject()
 		x->Update(wiRenderer::GetGameSpeed());
 		wiRenderer::emitterSystems.push_back(x);
 	}
+}
+int Object::GetRenderTypes()
+{
+	int retVal = RENDERTYPE::RENDERTYPE_VOID;
+	for (auto& x : mesh->subsets)
+	{
+		retVal |= x.material->GetRenderType();
+	}
+	return retVal;
 }
 #pragma endregion
 

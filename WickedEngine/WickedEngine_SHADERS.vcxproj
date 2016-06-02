@@ -30,8 +30,6 @@
     <None Include="lightHF.hlsli" />
     <None Include="normalsCompressHF.hlsli" />
     <None Include="objectHF.hlsli" />
-    <None Include="objectHF_PS.hlsli" />
-    <None Include="objectHF_VS.hlsli" />
     <None Include="objectInputLayoutHF.hlsli" />
     <None Include="packHF.hlsli" />
     <None Include="pointLightHF.hlsli" />

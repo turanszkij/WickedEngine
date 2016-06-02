@@ -100,12 +100,6 @@
     <None Include="imageHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="objectHF_PS.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="objectHF_VS.hlsli">
-      <Filter>HF</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">

@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
-#include "objectHF_VS.hlsli"
+
 
 struct GS_CUBEMAP_IN 
 { 
@@ -12,23 +12,14 @@ GS_CUBEMAP_IN main(Input input)
 {
 	GS_CUBEMAP_IN Out = (GS_CUBEMAP_IN)0;
 
-	[branch]
-	if((uint)input.tex.z == g_xMatVS_matIndex)
-	{
-		
 
-		float4x4 WORLD = MakeWorldMatrixFromInstance(input);
+	float4x4 WORLD = MakeWorldMatrixFromInstance(input);
 
-		float4 pos = input.pos;
-		
-//#ifdef SKINNING_ON
-//		Skinning(pos,input.bon,input.wei);
-//#endif
+	float4 pos = input.pos;
 
-		Out.Pos = mul(pos,WORLD);
-		Out.Tex = input.tex.xy;
+	Out.Pos = mul(pos,WORLD);
+	Out.Tex = input.tex.xy;
 
-	}
 
 	return Out;
 }

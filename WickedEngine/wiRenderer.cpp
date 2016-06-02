@@ -523,9 +523,6 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(CameraCB);
 	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CAMERA]);
 
-	bd.ByteWidth = sizeof(MaterialCB_VS);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MATERIAL_VS]);
-
 	bd.ByteWidth = sizeof(MaterialCB);
 	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MATERIAL]);
 
@@ -1084,11 +1081,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
-	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
-	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
-	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_MATERIAL_VS], CB_GETBINDSLOT(MaterialCB), threadID);
-
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
 
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), threadID);
@@ -1324,7 +1316,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				Mesh* mesh = iter->second;
 
 				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices.empty()
-					&& mesh->sOutBuffer.IsValid() && mesh->meshVertBuff.IsValid())
+					&& mesh->streamoutBuffer.IsValid() && mesh->vertexBuffer.IsValid())
 				{
 #ifdef USE_GPU_SKINNING
 					GetDevice()->EventBegin(L"Skinning", threadID);
@@ -1360,8 +1352,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf[threadID], threadID, sizeof(ShaderBoneType) * mesh->armature->boneCollection.size());
 
 					// Do the skinning
-					GetDevice()->BindVertexBuffer(&mesh->meshVertBuff, 0, sizeof(SkinnedVertex), threadID);
-					GetDevice()->BindStreamOutTarget(&mesh->sOutBuffer, threadID);
+					GetDevice()->BindVertexBuffer(&mesh->vertexBuffer, 0, sizeof(SkinnedVertex), threadID);
+					GetDevice()->BindStreamOutTarget(&mesh->streamoutBuffer, threadID);
 					GetDevice()->Draw(mesh->vertices.size(), threadID);
 
 					GetDevice()->EventEnd(threadID);
@@ -1381,7 +1373,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (mesh->softBody || mesh->hasArmature())
 #endif
 				{
-					GetDevice()->UpdateBuffer(&mesh->meshVertBuff, mesh->skinnedVertices.data(), threadID, sizeof(Vertex)*mesh->skinnedVertices.size());
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffer, mesh->vertices_Complete.data(), threadID, sizeof(Vertex)*mesh->vertices_Complete.size());
 				}
 			}
 		}
@@ -2132,32 +2124,23 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 										Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
+										GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+										GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
 
-										GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-										GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-										GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
+										for(MeshSubset& subset : mesh->subsets)
+										{
+											if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
+											{
+												GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
 
-
-										int matsiz = mesh->materialIndices.size();
-										int m = 0;
-										for (Material* iMat : mesh->materials) {
-
-											if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-												GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-
-												MaterialCB_VS mcbvs;
-												mcbvs.Create(*iMat, m);
-												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
+												GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 
 												MaterialCB mcb;
-												mcb.Create(*iMat);
+												mcb.Create(*subset.material);
 												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 
-												GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
-
-												m++;
+												GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
 											}
 										}
 									}
@@ -2235,34 +2218,27 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 									Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
+									GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+									GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
 
-									GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-									GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-									GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
+									for (MeshSubset& subset : mesh->subsets) 
+									{
 
+										if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
+										{
+											GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
 
-									int matsiz = mesh->materialIndices.size();
-									int m = 0;
-									for (Material* iMat : mesh->materials) {
-
-										if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-											GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-
-											MaterialCB_VS mcbvs;
-											mcbvs.Create(*iMat, m);
-											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
+											GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 
 											MaterialCB mcb;
-											mcb.Create(*iMat);
+											mcb.Create(*subset.material);
 											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 
-											GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
+											GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
 
-											m++;
 										}
 									}
 								}
@@ -2346,31 +2322,27 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 							Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
-
-							GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-							GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-							GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
+							GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+							GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
 
 
-							int matsiz = mesh->materialIndices.size();
-							int m = 0;
-							for (Material* iMat : mesh->materials) {
-								if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-									GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+							for(MeshSubset& subset : mesh->subsets)
+							{
+								if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
+								{
+									GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
 
-									MaterialCB_VS mcbvs;
-									mcbvs.Create(*iMat, m);
-									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
+
+									GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 
 									MaterialCB mcb;
-									mcb.Create(*iMat);
+									mcb.Create(*subset.material);
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
-									GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
+									GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
 								}
-								m++;
 							}
 						}
 						visibleInstances.clear();
@@ -2555,7 +2527,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			else
 				GetDevice()->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_DOUBLESIDED],threadID);
 
-			int matsiz = mesh->materialIndices.size();
 
 			int k=0;
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
@@ -2571,46 +2542,40 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 				continue;
 
 			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
-				
-				
-			GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff,threadID);
-			GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid()?&mesh->sOutBuffer:&mesh->meshVertBuff),0,sizeof(Vertex),threadID);
-			GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
 
-			int m=0;
-			for(Material* iMat : mesh->materials){
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+			
+			for(MeshSubset& subset : mesh->subsets)
+			{
+				if (!subset.material->IsTransparent() && !subset.material->isSky && !subset.material->water)
+				{
+					GetDevice()->BindIndexBuffer(&subset.indexBuffer,threadID);
 
-				if(!iMat->IsTransparent() && !iMat->isSky && !iMat->water){
-					
-					if(iMat->shadeless)
+					if(subset.material->shadeless)
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SHADELESS,threadID);
-					if (iMat->subsurfaceScattering > 0)
+					if (subset.material->subsurfaceScattering > 0)
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
 					else
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],mesh->stencilRef,threadID);
 
-					MaterialCB_VS mcbvs;
-					mcbvs.Create(*iMat, m);
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
-
 					MaterialCB mcb;
-					mcb.Create(*iMat);
+					mcb.Create(*subset.material);
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 					
 					if (!wireRender)
 					{
-						GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-						GetDevice()->BindResourcePS(iMat->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-						GetDevice()->BindResourcePS(iMat->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
-						GetDevice()->BindResourcePS(iMat->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
-						GetDevice()->BindResourcePS(iMat->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
 					}
 					if(DX11Eff)
-						GetDevice()->BindResourceDS(iMat->GetDisplacementMap(), TEXSLOT_ONDEMAND0,threadID);
+						GetDevice()->BindResourceDS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND0,threadID);
 					
-					GetDevice()->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),threadID);
+					GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(),visibleInstances.size(),threadID);
 				}
-				m++;
 			}
 
 		}
@@ -2689,9 +2654,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 			CulledObjectList& visibleInstances = iter->second;
 
 			bool isValid = false;
-			for (Material* iMat : mesh->materials)
+			for (MeshSubset& subset : mesh->subsets)
 			{
-				if (iMat->IsTransparent() || iMat->IsWater())
+				if (subset.material->IsTransparent() || subset.material->IsWater())
 				{
 					isValid = true;
 					break;
@@ -2705,8 +2670,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 			else
 				GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
 
-
-			int matsiz = mesh->materialIndices.size();
 
 				
 			
@@ -2725,46 +2688,41 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 
 			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
-				
-			GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff,threadID);
-			GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid()?&mesh->sOutBuffer:&mesh->meshVertBuff),0,sizeof(Vertex),threadID);
-			GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer,1,sizeof(Instance),threadID);
-				
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
 
-			int m=0;
-			for(Material* iMat : mesh->materials){
-				if (iMat->isSky)
+			for(MeshSubset& subset : mesh->subsets)
+			{
+				if (subset.material->isSky)
 					continue;
 
-				if(iMat->IsTransparent() || iMat->IsWater())
+				if(subset.material->IsTransparent() || subset.material->IsWater())
 				{
-					MaterialCB_VS mcbvs;
-					mcbvs.Create(*iMat, m);
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
-
+					GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+					
 					MaterialCB mcb;
-					mcb.Create(*iMat);
+					mcb.Create(*subset.material);
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					if (!wireRender)
 					{
-						GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-						GetDevice()->BindResourcePS(iMat->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-						GetDevice()->BindResourcePS(iMat->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
-						GetDevice()->BindResourcePS(iMat->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
-						GetDevice()->BindResourcePS(iMat->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
 					}
 
-					if (iMat->IsTransparent() && lastRenderType != RENDERTYPE_TRANSPARENT)
+					if (subset.material->IsTransparent() && lastRenderType != RENDERTYPE_TRANSPARENT)
 					{
 						lastRenderType = RENDERTYPE_TRANSPARENT;
 
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_TRANSPARENT, threadID);
 						GetDevice()->BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_OBJECT_TRANSPARENT], threadID);
 					}
-					if (iMat->IsWater() && lastRenderType != RENDERTYPE_WATER)
+					if (subset.material->IsWater() && lastRenderType != RENDERTYPE_WATER)
 					{
 						lastRenderType = RENDERTYPE_WATER;
 
@@ -2773,9 +2731,8 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 						GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
 					}
 					
-					GetDevice()->DrawIndexedInstanced(mesh->indices.size(),visibleInstances.size(),threadID);
+					GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(),visibleInstances.size(),threadID);
 				}
-				m++;
 			}
 		}
 
@@ -3160,9 +3117,9 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 
 		for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
 			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-			Vertex& v0 = mesh->skinnedVertices[i0]; 
-			Vertex& v1 = mesh->skinnedVertices[i1];
-			Vertex& v2 = mesh->skinnedVertices[i2];
+			Vertex& v0 = mesh->vertices_Complete[i0]; 
+			Vertex& v1 = mesh->vertices_Complete[i1];
+			Vertex& v2 = mesh->vertices_Complete[i2];
 			XMVECTOR& V0 = XMLoadFloat4(&v0.pos);
 			XMVECTOR& V1 = XMLoadFloat4(&v1.pos);
 			XMVECTOR& V2 = XMLoadFloat4(&v2.pos);
@@ -3243,7 +3200,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 				ambientLightIntensity += minAmbient;
 
 				vert.nor.w = ambientLightIntensity;
-				mesh->skinnedVertices[ind].nor.w = ambientLightIntensity;
+				mesh->vertices[ind].nor.w = ambientLightIntensity;
 			}
 
 			++ind;
@@ -3368,7 +3325,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 						int j = 0;
 						for (map<int, float>::iterator it = m->vertexGroups[gvg].vertices.begin(); it != m->vertexGroups[gvg].vertices.end(); ++it) {
 							int vi = (*it).first;
-							Vertex tvert = m->skinnedVertices[vi];
+							Vertex tvert = m->vertices_Complete[vi];
 							if (m->hasArmature())
 								tvert = TransformVertex(m, vi);
 							m->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
@@ -3508,39 +3465,33 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
 
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
 
-			GetDevice()->BindVertexBuffer((mesh->sOutBuffer.IsValid() ? &mesh->sOutBuffer : &mesh->meshVertBuff), 0, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer(&mesh->meshInstanceBuffer, 1, sizeof(Instance), threadID);
-			GetDevice()->BindIndexBuffer(&mesh->meshIndexBuff, threadID);
+			for(MeshSubset& subset : mesh->subsets)
+			{
+				if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow) 
+				{
+					GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
 
 
-			int matsiz = mesh->materialIndices.size();
-			int m = 0;
-			for (Material* iMat : mesh->materials) {
-				if (!wireRender && !iMat->isSky && !iMat->water && iMat->cast_shadow) {
-
-					if (iMat->shadeless)
+					if (subset.material->shadeless)
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, threadID);
-					if (iMat->subsurfaceScattering > 0)
+					if (subset.material->subsurfaceScattering > 0)
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
 					else
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 
-					GetDevice()->BindResourcePS(iMat->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-					MaterialCB_VS mcbvs;
-					mcbvs.Create(*iMat, m);
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL_VS], &mcbvs, threadID);
+					GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 
 					MaterialCB mcb;
-					mcb.Create(*iMat);
+					mcb.Create(*subset.material);
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
-					GetDevice()->DrawIndexedInstanced(mesh->indices.size(), visibleInstances.size(), threadID);
+					GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
 				}
-				m++;
 			}
 		}
 		visibleInstances.clear();
@@ -3581,10 +3532,6 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	GetDevice()->UNLOCK();
 }
 
-void wiRenderer::MaterialCB_VS::Create(const Material& mat, UINT materialIndex) {
-	texMulAdd = mat.texMulAdd;
-	matIndex = materialIndex;
-}
 void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/) {
 	//difColor = XMFLOAT4(mat.diffuseColor.x, mat.diffuseColor.y, mat.diffuseColor.z, mat.alpha);
 	//hasRef = mat.refMap != nullptr;
@@ -3603,6 +3550,7 @@ void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/)
 	//roughness = mat.roughness;
 
 	baseColor = XMFLOAT4(mat.baseColor.x, mat.baseColor.y, mat.baseColor.z, mat.alpha);
+	texMulAdd = mat.texMulAdd;
 	roughness = mat.roughness;
 	reflectance = mat.reflectance;
 	metalness = mat.metalness;

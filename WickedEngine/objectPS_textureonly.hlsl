@@ -1,5 +1,5 @@
 #include "objectHF.hlsli"
-#include "objectHF_PS.hlsli"
+
 
 
 float4 main(PixelInputType input) : SV_TARGET

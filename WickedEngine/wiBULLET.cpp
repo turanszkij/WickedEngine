@@ -586,16 +586,16 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
 		int gvg = mesh->goalVG;
-		for (unsigned int i = 0; i<mesh->skinnedVertices.size(); ++i)
+		for (unsigned int i = 0; i<mesh->vertices_Complete.size(); ++i)
 		{
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
-			mesh->skinnedVertices[i].pre=mesh->skinnedVertices[i].pos;
-			mesh->skinnedVertices[i].pos = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), 1);
-			mesh->skinnedVertices[i].nor.x = -nodes[indexP].m_n.getX();
-			mesh->skinnedVertices[i].nor.y = -nodes[indexP].m_n.getY();
-			mesh->skinnedVertices[i].nor.z = -nodes[indexP].m_n.getZ();
-			mesh->skinnedVertices[i].tex=mesh->vertices[i].tex;
+			mesh->vertices_Complete[i].pre=mesh->vertices_Complete[i].pos;
+			mesh->vertices_Complete[i].pos = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), 1);
+			mesh->vertices_Complete[i].nor.x = -nodes[indexP].m_n.getX();
+			mesh->vertices_Complete[i].nor.y = -nodes[indexP].m_n.getY();
+			mesh->vertices_Complete[i].nor.z = -nodes[indexP].m_n.getZ();
+			mesh->vertices_Complete[i].tex=mesh->vertices[i].tex;
 		}
 	}
 }

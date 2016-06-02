@@ -133,19 +133,6 @@ protected:
 
 		ALIGN_16
 	};
-	GFX_STRUCT MaterialCB_VS
-	{
-		XMFLOAT4 texMulAdd;
-		UINT matIndex;
-		float pad[3];
-
-		MaterialCB_VS() {};
-		MaterialCB_VS(const Material& mat, UINT materialIndex) { Create(mat, materialIndex); };
-		void Create(const Material& mat, UINT materialIndex);
-		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
-
-		ALIGN_16
-	};
 	GFX_STRUCT MaterialCB
 	{
 		//XMFLOAT4 difColor;
@@ -165,6 +152,7 @@ protected:
 		//float roughness;
 
 		XMFLOAT4 baseColor; // + alpha (.w)
+		XMFLOAT4 texMulAdd;
 		float roughness;
 		float reflectance;
 		float metalness;
