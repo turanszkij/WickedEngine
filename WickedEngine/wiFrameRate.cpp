@@ -14,18 +14,19 @@ void wiFrameRate::Frame(){
 }
 
 double wiFrameRate::FPS() {
-	static const int NUM_FPS_SAMPLES = 60;
+	static const int NUM_FPS_SAMPLES = 20;
+	static const double INV_NUM_FPS_SAMPLES = 1.0 / NUM_FPS_SAMPLES;
 	static double fpsSamples[NUM_FPS_SAMPLES];
 	static int currentSample = 0;
 
 
-	fpsSamples[currentSample % NUM_FPS_SAMPLES] = 1000.0 / dt;
+	fpsSamples[currentSample] = 1000.0 / dt;
     double fps = 0;
     for (int i = 0; i < NUM_FPS_SAMPLES; i++){
         fps += fpsSamples[i];
 	}
-    fps /= NUM_FPS_SAMPLES;
-	currentSample++;
+    fps *= INV_NUM_FPS_SAMPLES;
+	currentSample = (currentSample + 1) % NUM_FPS_SAMPLES;
 
     return fps;
 }
