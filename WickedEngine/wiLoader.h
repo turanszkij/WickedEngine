@@ -359,6 +359,7 @@ struct Mesh{
 	void Optimize();
 	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
 	void CreateBuffers(Object* object);
+	bool arraysComplete;
 	void CreateVertexArrays();
 	static void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
 	static void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
@@ -382,7 +383,8 @@ struct Mesh{
 		softVG=-1;
 		goalPositions.resize(0);
 		goalNormals.resize(0);
-		buffersComplete=false;
+		buffersComplete = false;
+		arraysComplete = false;
 		calculatedAO = false;
 	}
 	

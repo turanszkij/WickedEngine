@@ -1818,6 +1818,11 @@ void Mesh::CreateBuffers(Object* object) {
 }
 void Mesh::CreateVertexArrays()
 {
+	if (arraysComplete)
+	{
+		return;
+	}
+
 	if (vertices_Complete.empty())
 	{
 		vertices_Complete.resize(vertices.size());
@@ -1840,6 +1845,8 @@ void Mesh::CreateVertexArrays()
 		MeshSubset& subset = subsets[materialIndex];
 		subset.subsetIndices.push_back(index);
 	}
+
+	arraysComplete = true;
 }
 
 vector<Instance> meshInstances[GRAPHICSTHREAD_COUNT];
