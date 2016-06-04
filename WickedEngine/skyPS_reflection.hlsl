@@ -7,5 +7,5 @@ struct VSOut {
 
 float4 main(VSOut PSIn) : SV_TARGET
 {
-	return GetSkyColor(PSIn.nor);
+	return float4(GetSkyColor(PSIn.nor), 0);
 }

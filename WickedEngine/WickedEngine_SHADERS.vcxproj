@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <None Include="brdf.hlsli" />
     <None Include="circle.hlsli" />
     <None Include="cone.hlsli" />
     <None Include="cube.hlsli" />
@@ -22,7 +23,6 @@
     <None Include="fullScreenTriangleHF.hlsli" />
     <None Include="fxaa.hlsli" />
     <None Include="globals.hlsli" />
-    <None Include="globalsHF.hlsli" />
     <None Include="grassHF_GS.hlsli" />
     <None Include="grassHF_PS.hlsli" />
     <None Include="icosphere.hlsli" />
@@ -39,7 +39,6 @@
     <None Include="skinningHF.hlsli" />
     <None Include="skyHF.hlsli" />
     <None Include="sOHF.hlsli" />
-    <None Include="specularHF.hlsli" />
     <None Include="spotLightHF.hlsli" />
     <None Include="tangentComputeHF.hlsli" />
     <None Include="volumeLightHF.hlsli" />

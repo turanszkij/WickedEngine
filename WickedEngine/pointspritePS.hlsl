@@ -1,5 +1,4 @@
 #include "depthConvertHF.hlsli"
-#include "globalsHF.hlsli"
 
 
 struct VertextoPixel

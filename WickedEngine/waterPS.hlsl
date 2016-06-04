@@ -1,14 +1,18 @@
 #include "objectHF.hlsli"
 #include "depthConvertHF.hlsli"
 #include "fogHF.hlsli"
-#include "specularHF.hlsli"
 #include "globals.hlsli"
+#include "brdf.hlsli"
 
 float4 main(PixelInputType input) : SV_TARGET
 {
 	OBJECT_PS_MAKE
 
 	OBJECT_PS_DEGAMMA
+
+	OBJECT_PS_MAKE_LIGHTPARAMS
+
+	OBJECT_PS_EMISSIVE
 
 	baseColor.a = 1;
 
@@ -33,13 +37,13 @@ float4 main(PixelInputType input) : SV_TARGET
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + bumpColor.rg;
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
-	float eyeDot = dot(N, -V);
+	float NdotV = abs(dot(N, V)) + 1e-5f;
 	float mod = saturate(0.05*(refDepth- lineardepth));
-	float3 dullColor = lerp(refractiveColor, g_xMat_baseColor.rgb, saturate(eyeDot));
+	float3 dullColor = lerp(refractiveColor, g_xMat_baseColor.rgb, saturate(NdotV));
 	refractiveColor = lerp(refractiveColor, dullColor, mod).rgb;
 		
 	//FRESNEL TERM
-	float fresnelTerm = abs(eyeDot);
+	float3 fresnelTerm = F_Fresnel(f0, NdotV);
 	baseColor.rgb = lerp(reflectiveColor.rgb, refractiveColor, fresnelTerm);
 
 	//DULL COLOR
@@ -49,7 +53,6 @@ float4 main(PixelInputType input) : SV_TARGET
 	//SOFT EDGE
 	float fade = saturate(0.3* abs(refDepth- lineardepth));
 	baseColor.a*=fade;
-
 		
 	OBJECT_PS_DIRECTIONALLIGHT
 

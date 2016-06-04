@@ -48,7 +48,7 @@ float4 main(VertexToPixelPostProcess input ):SV_Target
 	//float4 normap = xNormalMap.SampleLevel( Sampler, input.tex, 0 );
 	float4 normap = loadNormal(input.tex.xy);
 
-	clip(normap.a?-1:1);
+	//clip(normap.a?-1:1);
 
 	float3 normal = normap.xyz;
 

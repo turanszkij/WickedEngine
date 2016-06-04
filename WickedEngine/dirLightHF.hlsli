@@ -1,6 +1,6 @@
 #ifndef _DIRLIGHT_HF_
 #define _DIRLIGHT_HF_
-
+#include "brdf.hlsli"
 
 // dir light constant buffer is global
 
@@ -46,13 +46,20 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	return retVal;
 }
 
-inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color)
+inline float4 dirLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0, in float3 albedo)
 {
-	float difLight=max(dot(normal.xyz, g_xDirLight_direction.xyz),0);
+	float4 color = float4(0, 0, 0, 1);
+
+	float3 L = g_xDirLight_direction.xyz;
+	BRDF_MAKE(N, L, V);
+	float3 lightSpecular = g_xDirLight_col.rgb * BRDF_SPECULAR(roughness, f0);
+	float3 lightDiffuse = g_xDirLight_col.rgb * BRDF_DIFFUSE(roughness, albedo);
+	color.rgb = lightDiffuse + lightSpecular;
+
 	float4 ShPos[3];
-		ShPos[0] = mul(float4(pos3D,1),g_xDirLight_ShM[0]);
-		ShPos[1] = mul(float4(pos3D,1),g_xDirLight_ShM[1]);
-		ShPos[2] = mul(float4(pos3D,1),g_xDirLight_ShM[2]);
+		ShPos[0] = mul(float4(P,1),g_xDirLight_ShM[0]);
+		ShPos[1] = mul(float4(P,1),g_xDirLight_ShM[1]);
+		ShPos[2] = mul(float4(P,1),g_xDirLight_ShM[2]);
 	float3 ShTex[3];
 		ShTex[0] = ShPos[0].xyz*float3(1,-1,1)/ShPos[0].w/2.0f +0.5f;
 		ShTex[1] = ShPos[1].xyz*float3(1,-1,1)/ShPos[1].w/2.0f +0.5f;
@@ -66,28 +73,32 @@ inline float dirLight(in float3 pos3D, in float3 normal, inout float4 color)
 	{
 		//color.r+=0.5f;
 		const float2 lerpVal = abs( ShTex[2].xy*2-1 );
-		difLight *= lerp( shadows[2],shadows[1], pow( max(lerpVal.x,lerpVal.y),4 ) );
+		color *= lerp( shadows[2],shadows[1], pow( max(lerpVal.x,lerpVal.y),4 ) );
 	}
 	else [branch]if((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
 	{ 
 		//color.g+=0.5f;
 		const float2 lerpVal = abs( ShTex[1].xy*2-1 );
-		difLight *= lerp( shadows[1],shadows[0], pow( max(lerpVal.x,lerpVal.y),4 ) );
+		color *= lerp( shadows[1],shadows[0], pow( max(lerpVal.x,lerpVal.y),4 ) );
 	}
 	else [branch]if((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
 	{ 
 		//color.b+=0.5f;
-		difLight *= shadows[0];
+		color *= shadows[0];
 	}
-	return difLight;
+
+	return color;
 }
 
 
 // MACROS
 
-#define DEFERRED_DIRLIGHT_MAIN																										\
-	float lighting = dirLight(P,N,color);																		\
-	color.rgb *= lighting;																											\
-	applySpecular(color, (color*lighting).rgb, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular);
+//#define DEFERRED_DIRLIGHT_MAIN																										\
+//	float lighting = dirLight(P,N,color);																		\
+//	color.rgb *= lighting;																											\
+//	applySpecular(color, (color*lighting).rgb, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular);
+
+#define DEFERRED_DIRLIGHT_MAIN	\
+	lightColor = dirLight(P, N, V, roughness, f0, albedo);
 
 #endif // _DIRLIGHT_HF_

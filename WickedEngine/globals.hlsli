@@ -112,12 +112,16 @@ CBUFFER(APICB, CBSLOT_API)
 	float4		g_xClipPlane;
 };
 
+static const float		PI = 3.14159265358979323846;
+
+#define sqr( a )		(a)*(a)
 
 #define ALPHATEST(x)	clip((x)-0.1);
 static const float		g_GammaValue = 2.2;
 #define DEGAMMA(x)		pow(abs(x),g_GammaValue)
 #define GAMMA(x)		pow(abs(x),1.0/g_GammaValue)
 
+inline float3 GetSunDirection() { return g_xWorld_SunDir.xyz; }
 inline float3 GetSunColor() { return GAMMA(g_xWorld_SunColor.rgb); }
 inline float3 GetHorizonColor() { return GAMMA(g_xWorld_Horizon.rgb); }
 inline float3 GetZenithColor() { return GAMMA(g_xWorld_Zenith.rgb); }

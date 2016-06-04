@@ -1,6 +1,5 @@
 //#include "ViewProp.h"
 #include "imageHF.hlsli"
-#include "globalsHF.hlsli"
 
 
 

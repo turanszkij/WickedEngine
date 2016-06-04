@@ -2129,6 +2129,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 										for(MeshSubset& subset : mesh->subsets)
 										{
+											if (subset.subsetIndices.empty())
+											{
+												continue;
+											}
 											if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
 											{
 												GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
@@ -2328,6 +2332,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 							for(MeshSubset& subset : mesh->subsets)
 							{
+								if (subset.subsetIndices.empty())
+								{
+									continue;
+								}
 								if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
 								{
 									GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
@@ -2548,6 +2556,10 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			
 			for(MeshSubset& subset : mesh->subsets)
 			{
+				if (subset.subsetIndices.empty())
+				{
+					continue;
+				}
 				if (!subset.material->IsTransparent() && !subset.material->isSky && !subset.material->water)
 				{
 					GetDevice()->BindIndexBuffer(&subset.indexBuffer,threadID);
@@ -2693,6 +2705,10 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 
 			for(MeshSubset& subset : mesh->subsets)
 			{
+				if (subset.subsetIndices.empty())
+				{
+					continue;
+				}
 				if (subset.material->isSky)
 					continue;
 
@@ -3470,6 +3486,10 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 			for(MeshSubset& subset : mesh->subsets)
 			{
+				if (subset.subsetIndices.empty())
+				{
+					continue;
+				}
 				if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow) 
 				{
 					GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);

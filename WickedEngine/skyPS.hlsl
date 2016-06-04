@@ -1,4 +1,3 @@
-#include "globalsHF.hlsli"
 #include "skyHF.hlsli"
 
 struct VSOut{
@@ -21,7 +20,7 @@ PSOut main(VSOut PSIn)
 	float2 vel = ScreenCoord - ScreenCoordPrev;
 
 	PSOut Out = (PSOut)0;
-	Out.col = GetSkyColor(PSIn.nor);
+	Out.col = float4(GetSkyColor(PSIn.nor), 0);
 	Out.nor = float4(0, 0, 0, 0);
 	Out.vel = float4(vel, 0, 0);
 	return Out;

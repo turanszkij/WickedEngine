@@ -16,9 +16,8 @@ PS_OUT main(QGS_OUT PSIn)
 	float4 col = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
 	ALPHATEST(col.a)
 	col = DEGAMMA(col);
-	Out.col = float4(col.rgb,1);
-	Out.nor = float4(PSIn.nor,0);
-	Out.vel = float4(vel,0,0);
-	//Out.spe = float4(PSIn.col,0.1f);
+	Out.col = float4(col.rgb, 0);
+	Out.nor = float4(PSIn.nor, 0);
+	Out.vel = float4(vel, 0, 0);
 	return Out;
 }

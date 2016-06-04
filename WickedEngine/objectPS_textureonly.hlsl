@@ -9,7 +9,9 @@ float4 main(PixelInputType input) : SV_TARGET
 	OBJECT_PS_MAKE
 
 	OBJECT_PS_DEGAMMA
+
+	OBJECT_PS_EMISSIVE
 	
-	return baseColor*(1 + g_xMat_emissive);
+	OBJECT_PS_OUT_FORWARD
 }
 

@@ -1,31 +1,44 @@
 #ifndef _POINTLIGHT_HF_
 #define _POINTLIGHT_HF_
 #include "globals.hlsli"
+#include "brdf.hlsli"
 
 CBUFFER(PointLightCB, CBSLOT_RENDERER_POINTLIGHT)
 {
-	float3 lightPos; float pad;
-	float4 lightColor;
-	float4 lightEnerdis;
+	float3 xLightPos; float pad;
+	float4 xLightColor;
+	float4 xLightEnerdis;
 };
 
-inline float pointLight(in float3 pos3D, in float3 normal, out float3 lightDir, out float attenuation, in bool toonshaded = false)
+inline float4 pointLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0, in float3 albedo)
 {
-	float  lightdis = distance(pos3D,lightPos);
-	float att = ( lightEnerdis.x * (lightEnerdis.y/(lightEnerdis.y+1+lightdis)) );
-	attenuation = /*saturate*/( att * (lightEnerdis.y-lightdis) / lightEnerdis.y );
-	lightDir = normalize( lightPos - pos3D );
-	float  lightint = saturate( dot( lightDir,normal ) );
-	//[branch]if(toonshaded) toon(lightint);
+	float4 color = float4(0, 0, 0, 1);
 
+	float3 L = normalize(xLightPos - P);
+	BRDF_MAKE(N, L, V);
+	float3 lightSpecular = xLightColor.rgb * BRDF_SPECULAR(roughness, f0);
+	float3 lightDiffuse = xLightColor.rgb * BRDF_DIFFUSE(roughness, albedo);
+	color.rgb = lightDiffuse + lightSpecular;
+	//color.rgb *= xLightEnerdis.x;
 
-	[branch]if(lightEnerdis.w){
-		const float3 lv = pos3D.xyz-lightPos.xyz;
+	float  lightdis = distance(P, xLightPos);
+	float att = (xLightEnerdis.x * (xLightEnerdis.y / (xLightEnerdis.y + 1 + lightdis)));
+	float attenuation = /*saturate*/(att * (xLightEnerdis.y - lightdis) / xLightEnerdis.y);
+	color *= attenuation;
+
+	[branch]if(xLightEnerdis.w){
+		const float3 lv = P - xLightPos.xyz;
 		static const float bias = 0.025;
-		lightint *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth,lv,length(lv)/lightEnerdis.y-bias ).r;
+		color *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth,lv,length(lv)/ xLightEnerdis.y-bias ).r;
 	}
 
-	return max(attenuation*lightint,0);
+	return color;
 }
+
+
+// MACROS
+
+#define DEFERRED_POINTLIGHT_MAIN	\
+	lightColor = pointLight(P, N, V, roughness, f0, albedo);
 
 #endif // _POINTLIGHT_HF_

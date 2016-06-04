@@ -6,10 +6,10 @@
 
 CBUFFER(SpotLightCB, CBSLOT_RENDERER_SPOTLIGHT)
 {
-	float4x4 lightWorld;
-	float4 lightDir;
-	float4 lightColor;
-	float4 lightEnerDisCone;
+	float4x4 xLightWorld;
+	float4 xLightDir;
+	float4 xLightColor;
+	float4 xLightEnerDisCone;
 	float4 xBiasResSoftshadow;
 	float4x4 xShMat;
 };
@@ -34,36 +34,48 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	return retVal;
 }
 
-inline float spotLight(in float3 pos3D, in float3 normal, out float attenuation, out float3 lightToPixel)
+inline float4 spotLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0, in float3 albedo)
 {
-	float3 lightPos = float3( lightWorld._41,lightWorld._42,lightWorld._43 );
+	float4 color = float4(0, 0, 0, 1);
+
+	float3 lightPos = float3( xLightWorld._41, xLightWorld._42, xLightWorld._43 );
 	
-	lightToPixel = normalize(lightPos-pos3D);
-	float SpotFactor = dot(lightToPixel, lightDir.xyz);
+	float3 L = normalize(lightPos - P);
+	BRDF_MAKE(N, L, V);
+	float3 lightSpecular = xLightColor.rgb * BRDF_SPECULAR(roughness, f0);
+	float3 lightDiffuse = xLightColor.rgb * BRDF_DIFFUSE(roughness, albedo);
+	color.rgb = lightDiffuse + lightSpecular;
+	color.rgb *= xLightEnerDisCone.x;
 
-	float spotCutOff = lightEnerDisCone.z;
+	float SpotFactor = dot(L, xLightDir.xyz);
 
-	float l=0;
-	attenuation=0;
+	float spotCutOff = xLightEnerDisCone.z;
+
 	[branch]if (SpotFactor > spotCutOff){
 
-		l=max(dot(normalize(lightDir.xyz),normalize(normal)),0)*lightEnerDisCone.x;
+		//color.rgb = max(dot(normalize(xLightDir.xyz), normalize(N)), 0)*xLightEnerDisCone.x;
 
-		float4 ShPos = mul(float4(pos3D,1),xShMat);
+		float4 ShPos = mul(float4(P,1),xShMat);
 		float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f,-0.5f) + float2(0.5f,0.5f);
 		[branch]if((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 		{
 			//light.r+=1.0f;
-			l *= shadowCascade(ShPos,ShTex,texture_shadow0);
+			color *= shadowCascade(ShPos,ShTex,texture_shadow0);
 		}
 
 		
-		attenuation=saturate( (1.0 - (1.0 - SpotFactor) * 1.0/(1.0 - spotCutOff)) );
+		float attenuation=saturate( (1.0 - (1.0 - SpotFactor) * 1.0/(1.0 - spotCutOff)) );
+		color *= attenuation;
 
 	}
 		
 
-	return l;
+	return color;
 }
+
+// MACROS
+
+#define DEFERRED_SPOTLIGHT_MAIN	\
+	lightColor = spotLight(P, N, V, roughness, f0, albedo);
 
 #endif // _SPOTLIGHT_HF_

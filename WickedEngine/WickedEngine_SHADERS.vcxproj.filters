@@ -34,9 +34,6 @@
     <None Include="globals.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="globalsHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="grassHF_GS.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -82,9 +79,6 @@
     <None Include="sOHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="specularHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="spotLightHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -98,6 +92,9 @@
       <Filter>HF</Filter>
     </None>
     <None Include="imageHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="brdf.hlsli">
       <Filter>HF</Filter>
     </None>
   </ItemGroup>
