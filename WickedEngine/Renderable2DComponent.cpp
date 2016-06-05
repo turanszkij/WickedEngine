@@ -24,8 +24,7 @@ Renderable2DComponent::~Renderable2DComponent()
 void Renderable2DComponent::Initialize()
 {
 	rtFinal.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false);
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false);
 
 	RenderableComponent::Initialize();
 }

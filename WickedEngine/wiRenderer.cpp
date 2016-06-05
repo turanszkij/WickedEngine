@@ -222,17 +222,17 @@ void wiRenderer::SetUpStaticComponents()
 	normalMapRT.Initialize(
 		GetDevice()->GetScreenWidth()
 		,GetDevice()->GetScreenHeight()
-		,1,false,1,0,FORMAT_R8G8B8A8_SNORM
+		,false,FORMAT_R8G8B8A8_SNORM, 1, 0
 		);
 	imagesRTAdd.Initialize(
 		GetDevice()->GetScreenWidth()
 		,GetDevice()->GetScreenHeight()
-		,1,false
+		,false
 		);
 	imagesRT.Initialize(
 		GetDevice()->GetScreenWidth()
 		,GetDevice()->GetScreenHeight()
-		,1,false
+		,false
 		);
 
 	SetDirectionalLightShadowProps(1024, 2);
@@ -2071,7 +2071,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						if (!l->shadowMaps_dirLight[index].IsInitialized() || l->shadowMaps_dirLight[index].depth->GetDesc().Height != SHADOWMAPRES)
 						{
 							// Create the shadow map
-							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, 0, true);
+							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, true, FORMAT_R32_FLOAT, 1, 1, 0, true);
 						}
 
 						l->shadowMaps_dirLight[index].Activate(threadID);
@@ -2382,7 +2382,7 @@ void wiRenderer::SetPointLightShadowProps(int shadowMapCount, int resolution)
 	Light::shadowMaps_pointLight.resize(shadowMapCount);
 	for (int i = 0; i < shadowMapCount; ++i)
 	{
-		Light::shadowMaps_pointLight[i].InitializeCube(POINTLIGHTSHADOWRES, 0, true);
+		Light::shadowMaps_pointLight[i].InitializeCube(POINTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, true);
 	}
 }
 void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
@@ -2393,7 +2393,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 	Light::shadowMaps_spotLight.resize(shadowMapCount);
 	for (int i = 0; i < shadowMapCount; ++i)
 	{
-		Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, 1, true);
+		Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, 0, true);
 	}
 }
 
@@ -3399,7 +3399,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 {
 	EnvironmentProbe* probe = new EnvironmentProbe;
 	probe->transform(position);
-	probe->cubeMap.InitializeCube(resolution, 1, true, FORMAT_R16G16B16A16_FLOAT, 0);
+	probe->cubeMap.InitializeCube(resolution, true, FORMAT_R16G16B16A16_FLOAT, 0);
 
 	GetDevice()->LOCK();
 

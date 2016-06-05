@@ -11,13 +11,12 @@ wiRenderTarget::wiRenderTarget()
 	depth = nullptr;
 	isCube = false;
 }
-wiRenderTarget::wiRenderTarget(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
-	, FORMAT format, UINT mipMapLevelCount)
+wiRenderTarget::wiRenderTarget(UINT width, UINT height, bool hasDepth, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, UINT MSAAQ, bool depthOnly)
 {
 	numViews = 0;
 	depth = nullptr;
 	isCube = false;
-	Initialize(width, height, numViews, hasDepth, MSAAC, MSAAQ, format, mipMapLevelCount);
+	Initialize(width, height, hasDepth, format, mipMapLevelCount, MSAAC, MSAAQ);
 }
 
 
@@ -38,41 +37,36 @@ void wiRenderTarget::clear() {
 	SAFE_DELETE(depth);
 }
 
-void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasDepth, UINT MSAAC, UINT MSAAQ
-	, FORMAT format, UINT mipMapLevelCount)
+void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
+	, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, UINT MSAAQ, bool depthOnly)
 {
 	clear();
 
 	isCube = false;
 
-	this->numViews = numViews;
-	//texture2D.resize(numViews);
-	//renderTarget.resize(numViews);
-	//shaderResource.resize(numViews);
-	//SAVEDshaderResource.resize(numViews);
-	renderTargets.resize(numViews);
-
-	Texture2DDesc textureDesc;
-	ZeroMemory(&textureDesc, sizeof(textureDesc));
-	textureDesc.Width = width;
-	textureDesc.Height = height;
-	textureDesc.MipLevels = mipMapLevelCount;
-	textureDesc.ArraySize = 1;
-	textureDesc.Format = format;
-	textureDesc.SampleDesc.Count = MSAAC;
-	textureDesc.SampleDesc.Quality = MSAAQ;
-	textureDesc.Usage = USAGE_DEFAULT;
-	textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-	textureDesc.CPUAccessFlags = 0;
-	textureDesc.MiscFlags = 0;
-	if (mipMapLevelCount != 1)
+	if (!depthOnly)
 	{
-		textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
-	}
+		Texture2DDesc textureDesc;
+		ZeroMemory(&textureDesc, sizeof(textureDesc));
+		textureDesc.Width = width;
+		textureDesc.Height = height;
+		textureDesc.MipLevels = mipMapLevelCount;
+		textureDesc.ArraySize = 1;
+		textureDesc.Format = format;
+		textureDesc.SampleDesc.Count = MSAAC;
+		textureDesc.SampleDesc.Quality = MSAAQ;
+		textureDesc.Usage = USAGE_DEFAULT;
+		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		textureDesc.CPUAccessFlags = 0;
+		textureDesc.MiscFlags = 0;
+		if (mipMapLevelCount != 1)
+		{
+			textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
+		}
 
-	for (int i = 0; i < numViews; ++i)
-	{
-		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[i]);
+		numViews = 1;
+		renderTargets.push_back(nullptr);
+		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
 	}
 	
 	viewPort.Width = (FLOAT)width;
@@ -87,36 +81,36 @@ void wiRenderTarget::Initialize(UINT width, UINT height, int numViews, bool hasD
 		depth->Initialize(width,height,MSAAC,MSAAQ);
 	}
 }
-void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, FORMAT format, UINT mipMapLevelCount)
+void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UINT mipMapLevelCount, bool depthOnly)
 {
 	clear();
 
 	isCube = true;
 
-	this->numViews = numViews;
-	renderTargets_Cube.resize(numViews);
-	
-	Texture2DDesc textureDesc;
-	ZeroMemory(&textureDesc, sizeof(textureDesc));
-	textureDesc.Width = size;
-	textureDesc.Height = size;
-	textureDesc.MipLevels = mipMapLevelCount;
-	textureDesc.ArraySize = 6;
-	textureDesc.Format = format;
-	textureDesc.SampleDesc.Count = 1;
-	textureDesc.SampleDesc.Quality = 0;
-	textureDesc.Usage = USAGE_DEFAULT;
-	textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-	textureDesc.CPUAccessFlags = 0;
-	textureDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-	if (mipMapLevelCount != 1)
-	{
-		textureDesc.MiscFlags |= RESOURCE_MISC_GENERATE_MIPS;
-	}
 
-	for (int i = 0; i < numViews; ++i)
+	if (!depthOnly)
 	{
-		wiRenderer::GetDevice()->CreateTextureCube(&textureDesc, nullptr, &renderTargets_Cube[i]);
+		Texture2DDesc textureDesc;
+		ZeroMemory(&textureDesc, sizeof(textureDesc));
+		textureDesc.Width = size;
+		textureDesc.Height = size;
+		textureDesc.MipLevels = mipMapLevelCount;
+		textureDesc.ArraySize = 6;
+		textureDesc.Format = format;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Usage = USAGE_DEFAULT;
+		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		textureDesc.CPUAccessFlags = 0;
+		textureDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+		if (mipMapLevelCount != 1)
+		{
+			textureDesc.MiscFlags |= RESOURCE_MISC_GENERATE_MIPS;
+		}
+
+		numViews = 1;
+		renderTargets_Cube.push_back(nullptr);
+		wiRenderer::GetDevice()->CreateTextureCube(&textureDesc, nullptr, &renderTargets_Cube[0]);
 	}
 	
 	viewPort.Width = (FLOAT)size;
@@ -131,9 +125,28 @@ void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth, FORM
 		depth->InitializeCube(size);
 	}
 }
-void wiRenderTarget::InitializeCube(UINT size, int numViews, bool hasDepth)
+void wiRenderTarget::Add(FORMAT format)
 {
-	InitializeCube(size,numViews,hasDepth,FORMAT_R8G8B8A8_UNORM);
+	Texture2DDesc desc = GetTexture(0)->GetDesc();
+	desc.Format = format;
+
+	if (!renderTargets.empty())
+	{
+		numViews++;
+		renderTargets.push_back(nullptr);
+		wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &renderTargets.back());
+	}
+	else if (!renderTargets_Cube.empty())
+	{
+		numViews++;
+		renderTargets_Cube.push_back(nullptr);
+		wiRenderer::GetDevice()->CreateTextureCube(&desc, nullptr, &renderTargets_Cube.back());
+	}
+	else
+	{
+		assert(0 && "Rendertarget Add failed because it is not properly initilaized!");
+	}
+
 }
 
 void wiRenderTarget::Activate(GRAPHICSTHREAD threadID)

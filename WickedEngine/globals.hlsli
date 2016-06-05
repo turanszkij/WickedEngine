@@ -130,5 +130,6 @@ inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
 inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
 inline float GetTime() { return g_xFrame_WindTime; }
+inline float GetEmissive(float emissive) { return emissive * 10.0f; };
 
 #endif // _SHADER_GLOBALS_

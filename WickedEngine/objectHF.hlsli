@@ -10,6 +10,7 @@
 #include "dirLightHF.hlsli"
 #include "brdf.hlsli"
 #include "envReflectionHF.hlsli"
+#include "packHF.hlsli"
 
 // DEFINITIONS
 //////////////////
@@ -49,11 +50,12 @@ struct PixelInputType
 };
 
 
-struct PixelOutputType
+struct GBUFFEROutputType
 {
 	float4 g0	: SV_TARGET0;		// texture_gbuffer0
 	float4 g1	: SV_TARGET1;		// texture_gbuffer1
 	float4 g2	: SV_TARGET2;		// texture_gbuffer2
+	float4 g3	: SV_TARGET3;		// texture_gbuffer3
 };
 
 
@@ -120,18 +122,21 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 	reflectance *= xReflectanceMap.Sample(sampler_aniso_wrap, UV).r;		\
 	reflectance = saturate(reflectance);									\
 	float emissive = g_xMat_emissive;										\
+	float sss = g_xMat_subsurfaceScattering;								\
 	float3 N = input.nor;													\
 	float3 P = input.pos3D;													\
 	float3 V = normalize(g_xCamera_CamPos - P);								\
 	float3 bumpColor = 0;													\
-	float depth = input.pos.z;
+	float depth = input.pos.z;												\
+	float ao = input.ao;
 
 #define OBJECT_PS_MAKE																								\
 	OBJECT_PS_MAKE_COMMON																							\
 	float lineardepth = input.pos2D.z;																				\
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;\
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
-	float2 ScreenCoordPrev = float2(1, -1)*input.pos2DPrev.xy / input.pos2DPrev.w / 2.0f + 0.5f;
+	float2 ScreenCoordPrev = float2(1, -1)*input.pos2DPrev.xy / input.pos2DPrev.w / 2.0f + 0.5f;					\
+	float2 velocity = ScreenCoord - ScreenCoordPrev;
 
 #define OBJECT_PS_LIGHT_BEGIN																						\
 	float3 diffuse, specular;																						\
@@ -140,7 +145,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 #define OBJECT_PS_LIGHT_DIRECTIONAL																					\
 	DirectionalLight(N, V, f0, albedo, roughness, diffuse, specular);
 
-#define OBJECT_PS_LIGHT_END																						\
+#define OBJECT_PS_LIGHT_END																							\
 	color.rgb = (GetAmbientColor() + diffuse) * albedo + specular;
 
 #define OBJECT_PS_DITHER																							\
@@ -162,16 +167,17 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 	color = DEGAMMA(color);
 
 #define OBJECT_PS_EMISSIVE																							\
-	color.rgb += baseColor.rgb * emissive;
+	color.rgb += baseColor.rgb * GetEmissive(emissive);
 
 #define OBJECT_PS_FOG																								\
 	color.rgb = applyFog(color.rgb, getFog(getLinearDepth(depth)));
 
 #define OBJECT_PS_OUT_GBUFFER																						\
-	PixelOutputType Out = (PixelOutputType)0;																		\
-	Out.g0 = float4(color.rgb, emissive);																		\
-	Out.g1 = float4(N.xyz, roughness);																				\
-	Out.g2 = float4(ScreenCoord - ScreenCoordPrev, reflectance, metalness);											\
+	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
+	Out.g0 = float4(color.rgb, 0);									/*FORMAT_R8G8B8A8_UNORM*/						\
+	Out.g1 = float4(N.xyz * 0.5f + 0.5f, 0);						/*FORMAT_R11G11B10_FLOAT*/						\
+	Out.g2 = float4(velocity * 0.5f + 0.5f, sss, emissive);			/*FORMAT_R8G8B8A8_UNORM*/						\
+	Out.g3 = float4(roughness, reflectance, metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	return Out;
 
 #define OBJECT_PS_OUT_FORWARD																						\

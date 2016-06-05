@@ -1,7 +1,7 @@
 #include "objectHF.hlsli"
 
 
-PixelOutputType main(PixelInputType input)
+GBUFFEROutputType main(PixelInputType input)
 {
 	OBJECT_PS_DITHER
 

@@ -74,6 +74,7 @@ PixelOutputType main(VertexToPixel PSIn)
 			Out.nor.a=Out.col.a;
 	}
 
+	Out.nor = Out.nor * 0.5f + 0.5f;
 
 	return Out;
 }

@@ -2,6 +2,7 @@
 #define _LIGHTHF_
 #include "globals.hlsli"
 #include "brdf.hlsli"
+#include "packHF.hlsli"
 
 struct VertexToPixel{
 	float4 pos			: SV_POSITION;
@@ -33,11 +34,11 @@ struct LightOutputType
 	float depth = texture_depth.SampleLevel(sampler_point_clamp, screenPos, 0);			\
 	float4 baseColor = texture_gbuffer0.SampleLevel(sampler_point_clamp,screenPos,0);	\
 	float4 g1 = texture_gbuffer1.SampleLevel(sampler_point_clamp,screenPos,0);			\
-	float4 g2 = texture_gbuffer2.SampleLevel(sampler_point_clamp,screenPos,0);			\
-	float3 N = g1.xyz;																	\
-	float roughness = g1.w;																\
-	float reflectance = g2.z;															\
-	float metalness = g2.w;																\
+	float4 g3 = texture_gbuffer3.SampleLevel(sampler_point_clamp,screenPos,0);			\
+	float3 N = g1.xyz * 2 - 1;															\
+	float roughness = g3.x;																\
+	float reflectance = g3.y;															\
+	float metalness = g3.z;																\
 	BRDF_HELPER_MAKEINPUTS( baseColor, reflectance, metalness )							\
 	float3 P = getPosition(screenPos, depth);											\
 	float3 V = normalize(g_xCamera_CamPos - P);

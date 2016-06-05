@@ -25,17 +25,18 @@ void DeferredRenderableComponent::Initialize()
 
 	rtGBuffer.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 3, true, 1, 0
-		, FORMAT_R16G16B16A16_FLOAT
-		);
+		, true, FORMAT_R8G8B8A8_UNORM);
+	rtGBuffer.Add(FORMAT_R11G11B10_FLOAT);
+	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
+	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
+
 	rtDeferred.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT, 0);
+		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 2, false, 1, 0
-		, FORMAT_R11G11B10_FLOAT
-		);
+		, false, FORMAT_R11G11B10_FLOAT);
+	rtLight.Add(FORMAT_R11G11B10_FLOAT);
 
 	Renderable2DComponent::Initialize();
 }
@@ -126,7 +127,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 	}
 	rtGBuffer.Deactivate(threadID);
 
-	wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), nullptr, nullptr, threadID);
+	wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), rtGBuffer.GetTexture(3), nullptr, threadID);
 
 	rtLight.Activate(threadID, rtGBuffer.depth); {
 		wiRenderer::DrawLights(wiRenderer::getCamera(), threadID);

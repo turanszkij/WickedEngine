@@ -1,5 +1,5 @@
-#ifndef PACK_HLSL
-#define PACK_HLSL
+#ifndef _PACK_HF_
+#define _PACK_HF_
 
 // Helper functions to compress and uncompress two floats
 
@@ -22,4 +22,4 @@ float2 Unpack(float input, int precision = 4096)
 	return output / (precision - 1);
 }
 
-#endif //PACK_HLSL
+#endif // _PACK_HF_

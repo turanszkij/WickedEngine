@@ -45,12 +45,8 @@ static const float3 AO_SAMPLES[ NUM_SAMPLES ] =
 
 float4 main(VertexToPixelPostProcess input ):SV_Target
 {
-	//float4 normap = xNormalMap.SampleLevel( Sampler, input.tex, 0 );
-	float4 normap = loadNormal(input.tex.xy);
 
-	//clip(normap.a?-1:1);
-
-	float3 normal = normap.xyz;
+	float3 normal = loadNormal(input.tex.xy).xyz * 2 - 1;
 
 	float3 fres = normalize(xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0);
 
@@ -77,6 +73,7 @@ float4 main(VertexToPixelPostProcess input ):SV_Target
 		occFrag = loadNormal(newTex).xyz;
 		if(!occFrag.x && !occFrag.y && !occFrag.z)
 			break;
+		occFrag = occFrag * 2 - 1;
 
 		depthDiff = ( depth - ( texture_lineardepth.SampleLevel(Sampler,newTex,0).r ) );
 
