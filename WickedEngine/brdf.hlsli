@@ -94,11 +94,11 @@ float GetDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughness)
 // ROUGHNESS:	float surface roughness
 // F0:			float3 surface specular color (fresnel f0)
 #define BRDF_SPECULAR( ROUGHNESS, F0 )					\
-	GetSpecular(NdotV, NdotL, LdotH, NdotH, ROUGHNESS, F0)
+	GetSpecular(NdotV, NdotL, LdotH, NdotH, ROUGHNESS, F0) * LdotN
 
 // ROUGHNESS:		float surface roughness
 #define BRDF_DIFFUSE( ROUGHNESS )							\
-	GetDiffuse(NdotV, NdotL, LdotH, ROUGHNESS)
+	GetDiffuse(NdotV, NdotL, LdotH, ROUGHNESS) * LdotN
 
 // BASECOLOR:	float4 surface color
 // REFLECTANCE:	float surface reflectance value

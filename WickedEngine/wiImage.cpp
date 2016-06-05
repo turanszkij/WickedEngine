@@ -451,7 +451,7 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 
 	wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 	wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
-	wiRenderer::GetDevice()->BindDepthStencilState(depthNoStencilState,stencilRef,threadID);
+	wiRenderer::GetDevice()->BindDepthStencilState(depthStencilStateLess,stencilRef,threadID);
 
 	wiRenderer::GetDevice()->BindVertexLayout(nullptr, threadID);
 	wiRenderer::GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);

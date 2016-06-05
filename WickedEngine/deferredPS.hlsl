@@ -19,17 +19,14 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	float  depth = texture_lineardepth.Load(int3(PSIn.pos.xy, 0)).r;
 
-	[branch]if(depth<g_xCamera_ZFarP)
-	{
-		float3 diffuse = texture_0.Load(int3(PSIn.pos.xy, 0)).rgb; // light diffuse
-		float3 specular = texture_1.Load(int3(PSIn.pos.xy, 0)).rgb; // light specular
-		float ssao = texture_2.SampleLevel(sampler_linear_clamp, PSIn.tex.xy, 0).r;
-		color.rgb = (GetAmbientColor() * ao * ssao + diffuse) * albedo + specular;
-		color.rgb += color.rgb * GetEmissive(emissive);
+	float3 diffuse = texture_0.Load(int3(PSIn.pos.xy, 0)).rgb; // light diffuse
+	float3 specular = texture_1.Load(int3(PSIn.pos.xy, 0)).rgb; // light specular
+	float ssao = texture_2.SampleLevel(sampler_linear_clamp, PSIn.tex.xy, 0).r;
+	color.rgb = (GetAmbientColor() * ao * ssao + diffuse) * albedo + specular;
+	color.rgb += color.rgb * GetEmissive(emissive);
 
-		float fog = getFog((depth));
-		color.rgb = applyFog(color.rgb,fog);
-	}
+	float fog = getFog((depth));
+	color.rgb = applyFog(color.rgb,fog);
 
 	return color;
 }

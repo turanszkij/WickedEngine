@@ -3149,6 +3149,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
 				picked.distance = wiMath::Distance(pos, rayOrigin);
+				picked.subsetIndex = (int)v0.tex.z;
 				points.push_back(picked);
 			}
 		}
@@ -3578,5 +3579,5 @@ void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/)
 	emissive = mat.emissive;
 	refractionIndex = mat.refractionIndex;
 	subsurfaceScattering = mat.subsurfaceScattering;
-	normalMapStrength = mat.normalMapStrength;
+	normalMapStrength = (mat.normalMap == nullptr? 0 : mat.normalMapStrength);
 }

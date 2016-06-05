@@ -7,7 +7,7 @@ CBUFFER(PointLightCB, CBSLOT_RENDERER_POINTLIGHT)
 {
 	float3 xLightPos; float pad;
 	float4 xLightColor;
-	float4 xLightEnerdis;
+	float4 xLightEnerDis;
 };
 
 inline void pointLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0,
@@ -17,19 +17,20 @@ inline void pointLight(in float3 P, in float3 N, in float3 V, in float roughness
 	BRDF_MAKE(N, L, V);
 	specular = xLightColor.rgb * BRDF_SPECULAR(roughness, f0);
 	diffuse = xLightColor.rgb * BRDF_DIFFUSE(roughness);
-	//color.rgb *= xLightEnerdis.x;
+	diffuse *= xLightEnerDis.x;
+	specular *= xLightEnerDis.x;
 
 	float  lightdis = distance(P, xLightPos);
-	float att = (xLightEnerdis.x * (xLightEnerdis.y / (xLightEnerdis.y + 1 + lightdis)));
-	float attenuation = /*saturate*/(att * (xLightEnerdis.y - lightdis) / xLightEnerdis.y);
+	float att = (xLightEnerDis.x * (xLightEnerDis.y / (xLightEnerDis.y + 1 + lightdis)));
+	float attenuation = /*saturate*/(att * (xLightEnerDis.y - lightdis) / xLightEnerDis.y);
 	diffuse *= attenuation;
 	specular *= attenuation;
 
 	float sh = 1;
-	[branch]if(xLightEnerdis.w){
+	[branch]if(xLightEnerDis.w){
 		const float3 lv = P - xLightPos.xyz;
 		static const float bias = 0.025;
-		sh *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth,lv,length(lv)/ xLightEnerdis.y-bias ).r;
+		sh *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth,lv,length(lv)/ xLightEnerDis.y-bias ).r;
 	}
 	diffuse *= sh;
 	specular *= sh;

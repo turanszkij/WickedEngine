@@ -32,7 +32,7 @@ void DeferredRenderableComponent::Initialize()
 
 	rtDeferred.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, FORMAT_R16G16B16A16_FLOAT, 0);
 	rtLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false, FORMAT_R11G11B10_FLOAT); // diffuse
@@ -94,14 +94,13 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 	static const int tessellationQuality = 0;
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
-	rtGBuffer.Activate(threadID); {
+	rtGBuffer.Activate(threadID, 0.5f, 0.5f, 0.5f, 1); // special clearcolor! background should write 0.5 in velocity buffer!
+	{
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, tessellationQuality, threadID, false, false
 			, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true, GRAPHICSTHREAD_SCENE);
-
-		wiRenderer::DrawSky(threadID);
 
 	}
 
@@ -172,41 +171,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 	if (getSSSEnabled())
 	{
-		//fx.stencilRef = STENCILREF_SKIN;
-		//fx.stencilComp = COMPARISON_LESS;
-		//fx.quality = QUALITY_BILINEAR;
-		//fx.sampleFlag = SAMPLEMODE_CLAMP;
-		//for (unsigned int i = 0; i<rtSSS.size() - 1; ++i) {
-		//	rtSSS[i].Activate(threadID, rtGBuffer.depth);
-		//	XMFLOAT2 dir = XMFLOAT2(0, 0);
-		//	static const float stren = 0.018f;
-		//	if (i % 2)
-		//		dir.x = stren*((float)wiRenderer::GetDevice()->GetScreenHeight() / (float)wiRenderer::GetDevice()->GetScreenWidth());
-		//	else
-		//		dir.y = stren;
-		//	fx.process.setSSSS(dir);
-		//	if (i == 0)
-		//		wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
-		//	else
-		//		wiImage::Draw(rtSSS[i - 1].GetTexture(), fx, threadID);
-		//}
-		//fx.process.clear();
-		//rtSSS.back().Activate(threadID, rtGBuffer.depth); {
-		//	fx.setMaskMap(nullptr);
-		//	fx.quality = QUALITY_NEAREST;
-		//	fx.sampleFlag = SAMPLEMODE_CLAMP;
-		//	fx.blendFlag = BLENDMODE_OPAQUE;
-		//	fx.stencilRef = 0;
-		//	fx.stencilComp = 0;
-		//	wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
-		//	fx.stencilRef = STENCILREF_SKIN;
-		//	fx.stencilComp = COMPARISON_LESS;
-		//	wiImage::Draw(rtSSS[rtSSS.size() - 2].GetTexture(), fx, threadID);
-		//}
-
-		//fx.stencilRef = 0;
-		//fx.stencilComp = 0;
-
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;
@@ -214,6 +178,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		static int sssPassCount = 6;
 		for (int i = 0; i < sssPassCount; ++i) 
 		{
+			wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 			rtSSS[i % 2].Activate(threadID, rtGBuffer.depth, 0, 0, 0, 0);
 			XMFLOAT2 dir = XMFLOAT2(0, 0);
 			static float stren = 0.018f;
@@ -236,6 +201,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 			}
 		}
 		fx.process.clear();
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		rtSSS[0].Activate(threadID, rtGBuffer.depth); {
 			fx.setMaskMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
@@ -253,10 +219,11 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		fx.stencilComp = 0;
 	}
 
-	rtDeferred.Activate(threadID); {
+	rtDeferred.Activate(threadID, rtGBuffer.depth); {
 		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : rtLight.GetTexture(0)), rtLight.GetTexture(1)
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
-			, threadID, 0);
+			, threadID, STENCILREF_DEFAULT); 
+		wiRenderer::DrawSky(threadID);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);

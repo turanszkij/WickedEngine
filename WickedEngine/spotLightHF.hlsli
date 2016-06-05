@@ -38,13 +38,10 @@ inline void spotLight(in float3 P, in float3 N, in float3 V, in float roughness,
 	out float3 diffuse, out float3 specular)
 {
 	float3 lightPos = float3( xLightWorld._41, xLightWorld._42, xLightWorld._43 );
+	diffuse = 0;
+	specular = 0;
 	
 	float3 L = normalize(lightPos - P);
-	BRDF_MAKE(N, L, V);
-	specular = xLightColor.rgb * BRDF_SPECULAR(roughness, f0);
-	diffuse = xLightColor.rgb * BRDF_DIFFUSE(roughness);
-	diffuse *= xLightEnerDisCone.x;
-	specular *= xLightEnerDisCone.x;
 
 	float SpotFactor = dot(L, xLightDir.xyz);
 
@@ -52,6 +49,11 @@ inline void spotLight(in float3 P, in float3 N, in float3 V, in float roughness,
 
 	[branch]if (SpotFactor > spotCutOff){
 
+		BRDF_MAKE(N, L, V);
+		specular = xLightColor.rgb * BRDF_SPECULAR(roughness, f0);
+		diffuse = xLightColor.rgb * BRDF_DIFFUSE(roughness);
+		diffuse *= xLightEnerDisCone.x;
+		specular *= xLightEnerDisCone.x;
 		//color.rgb = max(dot(normalize(xLightDir.xyz), normalize(N)), 0)*xLightEnerDisCone.x;
 
 		float sh = 1;

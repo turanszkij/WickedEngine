@@ -434,8 +434,9 @@ public:
 		Object* object;
 		XMFLOAT3 position,normal;
 		float distance;
+		int subsetIndex;
 
-		Picked():object(nullptr),distance(0){}
+		Picked():object(nullptr),distance(0),subsetIndex(-1){}
 	};
 
 	// Pick closest object in the world

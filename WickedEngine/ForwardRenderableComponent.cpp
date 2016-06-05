@@ -72,7 +72,7 @@ void ForwardRenderableComponent::Render()
 
 void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-	rtMain.Activate(threadID, 0, 0, 0, 1);
+	rtMain.Activate(threadID, 0.5f, 0.5f, 0.5f, 1);
 	{
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
