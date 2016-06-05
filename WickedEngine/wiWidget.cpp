@@ -374,9 +374,11 @@ void wiSlider::Update(wiGUI* gui)
 		state = IDLE;
 	}
 
-	hitBox.pos.x = Transform::translation.x;
+	float headWidth = scale.x*0.05f;
+
+	hitBox.pos.x = Transform::translation.x - headWidth*0.5f;
 	hitBox.pos.y = Transform::translation.y;
-	hitBox.siz.x = Transform::scale.x;
+	hitBox.siz.x = Transform::scale.x + headWidth;
 	hitBox.siz.y = Transform::scale.y;
 
 	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
@@ -625,14 +627,13 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	// Add a grabber onto the title bar
 	moveDragger = new wiButton(name + "move_dragger");
 	moveDragger->SetText("");
-	moveDragger->SetSize(XMFLOAT2(scale.x - controlSize * 2, controlSize));
+	moveDragger->SetSize(XMFLOAT2(scale.x - controlSize * 3, controlSize));
 	moveDragger->SetPos(XMFLOAT2(controlSize, 0));
 	moveDragger->OnDrag([this](wiEventArgs args) {
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 	});
 	gui->AddWidget(moveDragger);
 	moveDragger->attachTo(this);
-
 
 	// Add close button to the top right corner
 	closeButton = new wiButton(name + "_close_button");
@@ -644,6 +645,17 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	});
 	gui->AddWidget(closeButton);
 	closeButton->attachTo(this);
+
+	// Add minimize button to the top right corner
+	minimizeButton = new wiButton(name + "_minimize_button");
+	minimizeButton->SetText("-");
+	minimizeButton->SetSize(XMFLOAT2(controlSize, controlSize));
+	minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - controlSize*2, translation.y));
+	minimizeButton->OnClick([this](wiEventArgs args) {
+		this->SetMinimized(!this->IsMinimized());
+	});
+	gui->AddWidget(minimizeButton);
+	minimizeButton->attachTo(this);
 
 	// Add a resizer control to the upperleft corner
 	resizeDragger_UpperLeft = new wiButton(name + "resize_dragger_upper_left");
@@ -744,8 +756,11 @@ void wiWindow::Render(wiGUI* gui)
 	wiColor color = GetColor();
 
 	// body
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+	if (!IsMinimized())
+	{
+		wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+			, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+	}
 
 
 	scissorRect.bottom = (LONG)(translation.y + scale.y);
@@ -758,9 +773,14 @@ void wiWindow::Render(wiGUI* gui)
 void wiWindow::SetVisible(bool value)
 {
 	wiWidget::SetVisible(value);
+	SetMinimized(!value);
 	if (closeButton != nullptr)
 	{
 		closeButton->SetVisible(value);
+	}
+	if (minimizeButton != nullptr)
+	{
+		minimizeButton->SetVisible(value);
 	}
 	if (moveDragger != nullptr)
 	{
@@ -787,3 +807,21 @@ void wiWindow::SetEnabled(bool value)
 		x->SetEnabled(value);
 	}
 }
+void wiWindow::SetMinimized(bool value)
+{
+	minimized = value;
+
+	if (resizeDragger_BottomRight != nullptr)
+	{
+		resizeDragger_BottomRight->SetVisible(!value);
+	}
+	for (auto& x : childrenWidgets)
+	{
+		x->SetVisible(!value);
+	}
+}
+bool wiWindow::IsMinimized()
+{
+	return minimized;
+}
+

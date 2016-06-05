@@ -159,10 +159,12 @@ class wiWindow :public wiWidget
 protected:
 	wiGUI* gui;
 	wiButton* closeButton;
+	wiButton* minimizeButton;
 	wiButton* resizeDragger_UpperLeft;
 	wiButton* resizeDragger_BottomRight;
 	wiButton* moveDragger;
 	list<wiWidget*> childrenWidgets;
+	bool minimized;
 public:
 	wiWindow(wiGUI* gui, const string& name = "");
 	virtual ~wiWindow();
@@ -176,5 +178,7 @@ public:
 
 	virtual void SetVisible(bool value) override;
 	virtual void SetEnabled(bool value) override;
+	void SetMinimized(bool value);
+	bool IsMinimized();
 };
 
