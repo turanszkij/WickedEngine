@@ -69,9 +69,10 @@ struct GBUFFEROutputType
 
 inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float3 bumpColor)
 {
-	float3 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV).rgb;
+	float4 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV);
 	float3x3 tangentFrame = compute_tangent_frame(N, V, -UV);
 	bumpColor = 2.0f * nortex.rgb - 1.0f;
+	bumpColor *= nortex.a;
 	N = normalize(lerp(N, mul(bumpColor, tangentFrame), g_xMat_normalMapStrength));
 }
 

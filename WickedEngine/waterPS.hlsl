@@ -23,8 +23,8 @@ float4 main(PixelInputType input) : SV_TARGET
 	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,input.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
 	bumpColor2 = xWaterRipples.Sample(sampler_aniso_wrap,ScreenCoord).rg;
 	bumpColor= float3( bumpColor0+bumpColor1+bumpColor2,1 )  * g_xMat_refractionIndex;
-	N = normalize(mul(normalize(bumpColor), tangentFrame));
-		
+	N = normalize(lerp(N, mul(normalize(bumpColor), tangentFrame), g_xMat_normalMapStrength));
+	bumpColor *= g_xMat_normalMapStrength;
 
 	//REFLECTION
 	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
@@ -42,7 +42,7 @@ float4 main(PixelInputType input) : SV_TARGET
 		
 	//FRESNEL TERM
 	float3 fresnelTerm = F_Fresnel(f0, NdotV);
-	albedo.rgb = lerp(reflectiveColor.rgb, refractiveColor, fresnelTerm);
+	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 
 	//DULL COLOR
 	albedo.rgb = lerp(albedo.rgb, g_xMat_baseColor.rgb, 0.16);
