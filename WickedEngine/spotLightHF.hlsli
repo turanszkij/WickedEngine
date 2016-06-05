@@ -34,18 +34,17 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	return retVal;
 }
 
-inline float4 spotLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0, in float3 albedo)
+inline void spotLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0,
+	out float3 diffuse, out float3 specular)
 {
-	float4 color = float4(0, 0, 0, 1);
-
 	float3 lightPos = float3( xLightWorld._41, xLightWorld._42, xLightWorld._43 );
 	
 	float3 L = normalize(lightPos - P);
 	BRDF_MAKE(N, L, V);
-	float3 lightSpecular = xLightColor.rgb * BRDF_SPECULAR(roughness, f0);
-	float3 lightDiffuse = xLightColor.rgb * BRDF_DIFFUSE(roughness, albedo);
-	color.rgb = lightDiffuse + lightSpecular;
-	color.rgb *= xLightEnerDisCone.x;
+	specular = xLightColor.rgb * BRDF_SPECULAR(roughness, f0);
+	diffuse = xLightColor.rgb * BRDF_DIFFUSE(roughness);
+	diffuse *= xLightEnerDisCone.x;
+	specular *= xLightEnerDisCone.x;
 
 	float SpotFactor = dot(L, xLightDir.xyz);
 
@@ -55,27 +54,32 @@ inline float4 spotLight(in float3 P, in float3 N, in float3 V, in float roughnes
 
 		//color.rgb = max(dot(normalize(xLightDir.xyz), normalize(N)), 0)*xLightEnerDisCone.x;
 
+		float sh = 1;
 		float4 ShPos = mul(float4(P,1),xShMat);
 		float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f,-0.5f) + float2(0.5f,0.5f);
 		[branch]if((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 		{
 			//light.r+=1.0f;
-			color *= shadowCascade(ShPos,ShTex,texture_shadow0);
+			sh *= shadowCascade(ShPos,ShTex,texture_shadow0);
 		}
+		diffuse *= sh;
+		specular *= sh;
 
 		
 		float attenuation=saturate( (1.0 - (1.0 - SpotFactor) * 1.0/(1.0 - spotCutOff)) );
-		color *= attenuation;
+		diffuse *= attenuation;
+		specular *= attenuation;
 
 	}
-		
 
-	return color;
+	diffuse = max(diffuse, 0);
+	specular = max(specular, 0);
+
 }
 
 // MACROS
 
 #define DEFERRED_SPOTLIGHT_MAIN	\
-	lightColor = spotLight(P, N, V, roughness, f0, albedo);
+	spotLight(P, N, V, roughness, f0, diffuse, specular);
 
 #endif // _SPOTLIGHT_HF_

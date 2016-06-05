@@ -10,11 +10,9 @@ float4 main(PixelInputType input) : SV_TARGET
 
 	OBJECT_PS_DEGAMMA
 
-	OBJECT_PS_MAKE_LIGHTPARAMS
+	OBJECT_PS_LIGHT_BEGIN
 
-	OBJECT_PS_EMISSIVE
-
-	baseColor.a = 1;
+	color.a = 1;
 
 	//NORMALMAP
 	float2 bumpColor0=0;
@@ -44,17 +42,20 @@ float4 main(PixelInputType input) : SV_TARGET
 		
 	//FRESNEL TERM
 	float3 fresnelTerm = F_Fresnel(f0, NdotV);
-	baseColor.rgb = lerp(reflectiveColor.rgb, refractiveColor, fresnelTerm);
+	albedo.rgb = lerp(reflectiveColor.rgb, refractiveColor, fresnelTerm);
 
 	//DULL COLOR
-	baseColor.rgb = lerp(baseColor.rgb, g_xMat_baseColor.rgb, 0.16);
+	albedo.rgb = lerp(albedo.rgb, g_xMat_baseColor.rgb, 0.16);
 		
-		
+	OBJECT_PS_LIGHT_DIRECTIONAL
+
+	OBJECT_PS_LIGHT_END
+
+	OBJECT_PS_EMISSIVE
+
 	//SOFT EDGE
-	float fade = saturate(0.3* abs(refDepth- lineardepth));
-	baseColor.a*=fade;
-		
-	OBJECT_PS_DIRECTIONALLIGHT
+	float fade = saturate(0.3* abs(refDepth - lineardepth));
+	color.a *= fade;
 
 	OBJECT_PS_FOG
 

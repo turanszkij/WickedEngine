@@ -19,6 +19,7 @@
     <None Include="dirLightHF.hlsli" />
     <None Include="ditherHF.hlsli" />
     <None Include="envMapHF.hlsli" />
+    <None Include="envReflectionHF.hlsli" />
     <None Include="fogHF.hlsli" />
     <None Include="fullScreenTriangleHF.hlsli" />
     <None Include="fxaa.hlsli" />

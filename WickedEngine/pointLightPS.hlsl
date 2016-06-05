@@ -2,7 +2,7 @@
 #include "pointLightHF.hlsli"
 
 
-float4 main(VertexToPixel PSIn) : SV_TARGET
+LightOutputType main(VertexToPixel PSIn)
 { 
 	DEFERREDLIGHT_MAKEPARAMS
 

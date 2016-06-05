@@ -97,6 +97,9 @@
     <None Include="brdf.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="envReflectionHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">

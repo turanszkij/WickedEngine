@@ -1043,7 +1043,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
-	bd.IndependentBlendEnable=true,
+	bd.IndependentBlendEnable=false,
 	bd.AlphaToCoverageEnable=false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_ADDITIVE]);
 }
@@ -1057,6 +1057,7 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 		GetDevice()->BindSamplerGS(samplers[i], i, threadID);
 		GetDevice()->BindSamplerDS(samplers[i], i, threadID);
 		GetDevice()->BindSamplerHS(samplers[i], i, threadID);
+		GetDevice()->BindSamplerCS(samplers[i], i, threadID);
 	}
 
 

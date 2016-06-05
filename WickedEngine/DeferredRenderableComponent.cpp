@@ -33,7 +33,7 @@ void DeferredRenderableComponent::Initialize()
 		, 1, false, 1, 0, FORMAT_R16G16B16A16_FLOAT, 0);
 	rtLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, 1, false, 1, 0
+		, 2, false, 1, 0
 		, FORMAT_R11G11B10_FLOAT
 		);
 
@@ -164,7 +164,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 
 	rtDeferred.Activate(threadID); {
-		wiImage::DrawDeferred(rtLight.GetTexture()
+		wiImage::DrawDeferred(rtLight.GetTexture(0), rtLight.GetTexture(1)
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
 			, threadID, 0);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);

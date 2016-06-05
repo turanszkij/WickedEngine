@@ -1,6 +1,7 @@
 #ifndef _DIRLIGHT_HF_
 #define _DIRLIGHT_HF_
 #include "brdf.hlsli"
+#include "envReflectionHF.hlsli"
 
 // dir light constant buffer is global
 
@@ -46,16 +47,17 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shad
 	return retVal;
 }
 
-inline float4 dirLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0, in float3 albedo)
+inline void dirLight(in float3 P, in float3 N, in float3 V, in float roughness, in float3 f0,
+	out float3 diffuse, out float3 specular)
 {
-	float4 color = float4(0, 0, 0, 1);
-
 	float3 L = g_xDirLight_direction.xyz;
 	BRDF_MAKE(N, L, V);
-	float3 lightSpecular = g_xDirLight_col.rgb * BRDF_SPECULAR(roughness, f0);
-	float3 lightDiffuse = g_xDirLight_col.rgb * BRDF_DIFFUSE(roughness, albedo);
-	color.rgb = lightDiffuse + lightSpecular;
+	specular = g_xDirLight_col.rgb * BRDF_SPECULAR(roughness, f0);
+	diffuse = g_xDirLight_col.rgb * BRDF_DIFFUSE(roughness);
 
+	specular += EnvironmentReflection(N, V, P, roughness, f0);
+
+	float sh = 1;
 	float4 ShPos[3];
 		ShPos[0] = mul(float4(P,1),g_xDirLight_ShM[0]);
 		ShPos[1] = mul(float4(P,1),g_xDirLight_ShM[1]);
@@ -73,21 +75,25 @@ inline float4 dirLight(in float3 P, in float3 N, in float3 V, in float roughness
 	{
 		//color.r+=0.5f;
 		const float2 lerpVal = abs( ShTex[2].xy*2-1 );
-		color *= lerp( shadows[2],shadows[1], pow( max(lerpVal.x,lerpVal.y),4 ) );
+		sh *= lerp( shadows[2],shadows[1], pow( max(lerpVal.x,lerpVal.y),4 ) );
 	}
 	else [branch]if((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
 	{ 
 		//color.g+=0.5f;
 		const float2 lerpVal = abs( ShTex[1].xy*2-1 );
-		color *= lerp( shadows[1],shadows[0], pow( max(lerpVal.x,lerpVal.y),4 ) );
+		sh *= lerp( shadows[1],shadows[0], pow( max(lerpVal.x,lerpVal.y),4 ) );
 	}
 	else [branch]if((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
 	{ 
 		//color.b+=0.5f;
-		color *= shadows[0];
+		sh *= shadows[0];
 	}
 
-	return color;
+	diffuse *= sh;
+	specular *= sh;
+
+	diffuse = max(diffuse, 0);
+	specular = max(specular, 0);
 }
 
 
@@ -99,6 +105,6 @@ inline float4 dirLight(in float3 P, in float3 N, in float3 V, in float roughness
 //	applySpecular(color, (color*lighting).rgb, N, V, g_xDirLight_direction.xyz, 1, specular_power, specular);
 
 #define DEFERRED_DIRLIGHT_MAIN	\
-	lightColor = dirLight(P, N, V, roughness, f0, albedo);
+	dirLight(P, N, V, roughness, f0, diffuse, specular);
 
 #endif // _DIRLIGHT_HF_

@@ -446,7 +446,8 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	device->EventEnd(threadID);
 }
 
-void wiImage::DrawDeferred(Texture2D* lightmap, Texture2D* ao, GRAPHICSTHREAD threadID, int stencilRef){
+void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_specular, Texture2D* ao, 
+	GRAPHICSTHREAD threadID, int stencilRef){
 
 	wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 	wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
@@ -459,8 +460,9 @@ void wiImage::DrawDeferred(Texture2D* lightmap, Texture2D* ao, GRAPHICSTHREAD th
 	wiRenderer::GetDevice()->BindVS(screenVS,threadID);
 	wiRenderer::GetDevice()->BindPS(deferredPS,threadID);
 
-	wiRenderer::GetDevice()->BindResourcePS(lightmap,TEXSLOT_ONDEMAND0,threadID);
-	wiRenderer::GetDevice()->BindResourcePS(ao,TEXSLOT_ONDEMAND1,threadID);
+	wiRenderer::GetDevice()->BindResourcePS(lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
+	wiRenderer::GetDevice()->BindResourcePS(lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
+	wiRenderer::GetDevice()->BindResourcePS(ao,TEXSLOT_ONDEMAND2,threadID);
 
 	wiRenderer::GetDevice()->BindBlendState(blendStateNoBlend,threadID);
 

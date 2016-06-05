@@ -9,6 +9,7 @@
 #include "fogHF.hlsli"
 #include "dirLightHF.hlsli"
 #include "brdf.hlsli"
+#include "envReflectionHF.hlsli"
 
 // DEFINITIONS
 //////////////////
@@ -50,9 +51,9 @@ struct PixelInputType
 
 struct PixelOutputType
 {
-	float4 col	: SV_TARGET0;		// texture_gbuffer0
-	float4 nor	: SV_TARGET1;		// texture_gbuffer1
-	float4 vel	: SV_TARGET2;		// texture_gbuffer2
+	float4 g0	: SV_TARGET0;		// texture_gbuffer0
+	float4 g1	: SV_TARGET1;		// texture_gbuffer1
+	float4 g2	: SV_TARGET2;		// texture_gbuffer2
 };
 
 
@@ -74,11 +75,6 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float
 	N = normalize(mul(bumpColor, tangentFrame));
 }
 
-//inline void SpecularMapping(in float2 UV, inout float4 specularColor)
-//{
-//	specularColor = lerp(specularColor, specularColor * xSpecularMap.Sample(sampler_aniso_wrap, UV).r, g_xMat_hasSpe);
-//}
-
 //inline void PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, inout float4 baseColor)
 //{
 //	float colorMat = xReflectionMap.SampleLevel(sampler_aniso_wrap, UV, 0).r;
@@ -94,45 +90,14 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	baseColor.a = 1;
 }
 
-// #define ENVMAP_CAMERA_BLEND
-inline void EnvironmentReflection(in float3 N, in float3 V, in float3 P, in float roughness, in float metalness, in float reflectance,
-	inout float4 color)
-{
-	//	uint mip0 = 0;
-	//	float2 size0;
-	//	float mipLevels0;
-	//	texture_env0.GetDimensions(mip0, size0.x, size0.y, mipLevels0);
-	//	uint mip1 = 0;
-	//	float2 size1;
-	//	float mipLevels1;
-	//	texture_env1.GetDimensions(mip1, size1.x, size1.y, mipLevels1);
-	//	float3 ref = reflect(V, N);
-	//	float4 envCol0 = texture_env0.SampleLevel(sampler_linear_clamp, ref, roughness*mipLevels0);
-	//	float4 envCol1 = texture_env1.SampleLevel(sampler_linear_clamp, ref, roughness*mipLevels0);
-	//#ifdef ENVMAP_CAMERA_BLEND
-	//	float dist0 = distance(g_xCamera_CamPos, g_xTransform[0].xyz);
-	//	float dist1 = distance(g_xCamera_CamPos, g_xTransform[1].xyz);
-	//#else
-	//	float dist0 = distance(P, g_xTransform[0].xyz);
-	//	float dist1 = distance(P, g_xTransform[1].xyz);
-	//#endif
-	//	static const float blendStrength = 0.05f;
-	//	float blend = clamp((dist0 - dist1)*blendStrength, -1, 1)*0.5f + 0.5f;
-	//	float4 envCol = lerp(envCol0, envCol1, blend);
-	//
-	//	color.rgb += envCol.rgb * specularColor.rgb;
-}
-
 inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 albedo, in float roughness,
-	inout float4 baseColor)
+	inout float3 diffuse, out float3 specular)
 {
 	float3 L = GetSunDirection();
 	float3 lightColor = GetSunColor();
 	BRDF_MAKE(N, L, V);
-	float3 lightSpecular = lightColor * BRDF_SPECULAR(roughness, f0);
-	float3 lightDiffuse = lightColor * BRDF_DIFFUSE(roughness, albedo);
-
-	baseColor.rgb *= GetAmbientColor() + lightDiffuse + lightSpecular;
+	specular = lightColor * BRDF_SPECULAR(roughness, f0);
+	diffuse = lightColor * BRDF_DIFFUSE(roughness);
 }
 
 
@@ -144,6 +109,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
 	baseColor *= xBaseColorMap.Sample(sampler_aniso_wrap, UV);				\
 	ALPHATEST(baseColor.a);													\
+	float4 color = baseColor;												\
 	float roughness = g_xMat_roughness;										\
 	roughness *= xRoughnessMap.Sample(sampler_aniso_wrap, UV).r;			\
 	roughness = saturate(roughness);										\
@@ -167,11 +133,15 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
 	float2 ScreenCoordPrev = float2(1, -1)*input.pos2DPrev.xy / input.pos2DPrev.w / 2.0f + 0.5f;
 
-#define OBJECT_PS_MAKE_LIGHTPARAMS																					\
-	BRDF_HELPER_MAKEINPUTS( baseColor, reflectance, metalness )
+#define OBJECT_PS_LIGHT_BEGIN																						\
+	float3 diffuse, specular;																						\
+	BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
 
-#define OBJECT_PS_EMISSIVE																							\
-	baseColor *= 1 + emissive;
+#define OBJECT_PS_LIGHT_DIRECTIONAL																					\
+	DirectionalLight(N, V, f0, albedo, roughness, diffuse, specular);
+
+#define OBJECT_PS_LIGHT_END																						\
+	color.rgb = (GetAmbientColor() + diffuse) * albedo + specular;
 
 #define OBJECT_PS_DITHER																							\
 	clip(dither(input.pos.xy) - input.dither);
@@ -180,31 +150,31 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 	NormalMapping(UV, P, N, bumpColor);
 
 #define OBJECT_PS_ENVIRONMENTMAPPING																				\
-	//EnvironmentReflection(N, V, P, roughness, metalness, reflectance, baseColor);
+	specular += EnvironmentReflection(N, V, P, roughness, f0);
 
 //#define OBJECT_PS_PLANARREFLECTIONS																					\
-//	PlanarReflection(input.tex, refUV, N, baseColor);
+//	PlanarReflection(input.tex, refUV, N, color);
 
 #define OBJECT_PS_REFRACTION																						\
-	Refraction(ScreenCoord, input.nor2D, bumpColor, baseColor);
+	Refraction(ScreenCoord, input.nor2D, bumpColor, color);
 
 #define OBJECT_PS_DEGAMMA																							\
-	baseColor = DEGAMMA(baseColor);
+	color = DEGAMMA(color);
+
+#define OBJECT_PS_EMISSIVE																							\
+	color.rgb += baseColor.rgb * emissive;
 
 #define OBJECT_PS_FOG																								\
-	baseColor.rgb = applyFog(baseColor.rgb, getFog(getLinearDepth(depth)));
-
-#define OBJECT_PS_DIRECTIONALLIGHT																					\
-	DirectionalLight(N, V, f0, albedo, roughness, baseColor);
+	color.rgb = applyFog(color.rgb, getFog(getLinearDepth(depth)));
 
 #define OBJECT_PS_OUT_GBUFFER																						\
 	PixelOutputType Out = (PixelOutputType)0;																		\
-	Out.col = float4(baseColor.rgb, emissive);																		\
-	Out.nor = float4(N.xyz, roughness);																				\
-	Out.vel = float4(ScreenCoord - ScreenCoordPrev, reflectance, metalness);										\
+	Out.g0 = float4(color.rgb, emissive);																		\
+	Out.g1 = float4(N.xyz, roughness);																				\
+	Out.g2 = float4(ScreenCoord - ScreenCoordPrev, reflectance, metalness);											\
 	return Out;
 
 #define OBJECT_PS_OUT_FORWARD																						\
-	return baseColor;
+	return color;
 
 #endif // _OBJECTSHADER_HF_

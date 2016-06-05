@@ -97,15 +97,14 @@ float GetDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughness)
 	GetSpecular(NdotV, NdotL, LdotH, NdotH, ROUGHNESS, F0)
 
 // ROUGHNESS:		float surface roughness
-// ALBEDO:			float3 surface diffuse color
-#define BRDF_DIFFUSE( ROUGHNESS, ALBEDO )							\
-	ALBEDO * GetDiffuse(NdotV, NdotL, LdotH, ROUGHNESS)
+#define BRDF_DIFFUSE( ROUGHNESS )							\
+	GetDiffuse(NdotV, NdotL, LdotH, ROUGHNESS)
 
 // BASECOLOR:	float4 surface color
 // REFLECTANCE:	float surface reflectance value
 // METALNESS:	float surface metalness value
 #define BRDF_HELPER_MAKEINPUTS( BASECOLOR, REFLECTANCE, METALNESS )									\
-	float3 albedo = lerp(lerp(BASECOLOR.rgb, float3(0,0,0), METALNESS), float3(0,0,0), REFLECTANCE);\
-	float3 f0 = lerp(lerp(float3(0,0,0), BASECOLOR.rgb, METALNESS), float3(1,1,1), REFLECTANCE);
+	float3 albedo = lerp(lerp(BASECOLOR.rgb, float3(0,0,0), REFLECTANCE), float3(0,0,0), METALNESS);\
+	float3 f0 = lerp(lerp(float3(0,0,0), float3(1,1,1), REFLECTANCE), BASECOLOR.rgb, METALNESS);
 
 #endif // _BRDF_HF_

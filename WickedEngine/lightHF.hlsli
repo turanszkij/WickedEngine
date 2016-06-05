@@ -18,11 +18,17 @@ struct VertexToPixel{
 static const float specularMaximumIntensity = 1;
 
 
+struct LightOutputType
+{
+	float4 diffuse : SV_TARGET0;
+	float4 specular: SV_TARGET1;
+};
+
 
 // MACROS
 
 #define DEFERREDLIGHT_MAKEPARAMS														\
-	float4 lightColor;																	\
+	float3 diffuse, specular;															\
 	float2 screenPos = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;		\
 	float depth = texture_depth.SampleLevel(sampler_point_clamp, screenPos, 0);			\
 	float4 baseColor = texture_gbuffer0.SampleLevel(sampler_point_clamp,screenPos,0);	\
@@ -36,8 +42,11 @@ static const float specularMaximumIntensity = 1;
 	float3 P = getPosition(screenPos, depth);											\
 	float3 V = normalize(g_xCamera_CamPos - P);
 
-#define DEFERREDLIGHT_RETURN	\
-	return max(lightColor, 0.0f);
+#define DEFERREDLIGHT_RETURN					\
+	LightOutputType Out = (LightOutputType)0;	\
+	Out.diffuse = float4(diffuse, 1);			\
+	Out.specular = float4(specular, 1);			\
+	return Out;
 
 
 
