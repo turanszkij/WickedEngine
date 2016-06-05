@@ -119,11 +119,6 @@ void Renderable3DComponent::Initialize()
 		rtSSAO[i].Initialize(
 			(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getSSAOQuality()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getSSAOQuality())
 			, false, FORMAT_R8_UNORM);
-	rtSSS.resize(3);
-	for (int i = 0; i < 3; ++i)
-		rtSSS[i].Initialize(
-			(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
-			, false, FORMAT_R16G16B16A16_FLOAT);
 
 
 	rtSun.resize(2);

@@ -39,7 +39,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
     //     step = sssStrength * gaussianWidth * pixelSize * dir
     // The closer the pixel, the stronger the effect needs to be, hence
     // the factor 1.0 / depthM.
-	float2 step = float2(xPPParams0[3], xPPParams1[3]);
+	float2 step = float2(xPPParams0[3], xPPParams1[3]) * texture_gbuffer2.Load(uint3(PSIn.pos.xy,0)).z * 100;
     float2 finalStep = colorM.a * step / depthM;
 
     // Accumulate the other samples:

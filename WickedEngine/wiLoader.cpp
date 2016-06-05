@@ -1386,7 +1386,7 @@ Texture2D* Material::GetNormalMap()
 }
 Texture2D* Material::GetRoughnessMap()
 {
-	return wiTextureHelper::getInstance()->getColor(wiColor::Gray);
+	return wiTextureHelper::getInstance()->getWhite();
 }
 Texture2D* Material::GetMetalnessMap()
 {

@@ -69,12 +69,10 @@ struct GBUFFEROutputType
 
 inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float3 bumpColor)
 {
-	float4 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV);
+	float3 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV).rgb;
 	float3x3 tangentFrame = compute_tangent_frame(N, V, -UV);
 	bumpColor = 2.0f * nortex.rgb - 1.0f;
-	bumpColor *= nortex.a;
-	bumpColor *= g_xMat_normalMapStrength;
-	N = normalize(mul(bumpColor, tangentFrame));
+	N = normalize(lerp(N, mul(bumpColor, tangentFrame), g_xMat_normalMapStrength));
 }
 
 //inline void PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, inout float4 baseColor)
@@ -84,12 +82,12 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float
 //	baseColor.rgb = lerp(baseColor.rgb, colorReflection.rgb, colorMat);
 //}
 
-inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float4 baseColor)
+inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float alpha, inout float3 albedo)
 {
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
 	float4 refractiveColor = (xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, 0));
-	baseColor.rgb = lerp(refractiveColor.rgb, baseColor.rgb, baseColor.a);
-	baseColor.a = 1;
+	albedo.rgb = lerp(refractiveColor.rgb, albedo.rgb, alpha);
+	alpha = 1;
 }
 
 inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 albedo, in float roughness,
@@ -146,7 +144,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 	DirectionalLight(N, V, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_LIGHT_END																							\
-	color.rgb = (GetAmbientColor() + diffuse) * albedo + specular;
+	color.rgb = (GetAmbientColor() * ao + diffuse) * albedo + specular;
 
 #define OBJECT_PS_DITHER																							\
 	clip(dither(input.pos.xy) - input.dither);
@@ -161,7 +159,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 //	PlanarReflection(input.tex, refUV, N, color);
 
 #define OBJECT_PS_REFRACTION																						\
-	Refraction(ScreenCoord, input.nor2D, bumpColor, color);
+	Refraction(ScreenCoord, input.nor2D, bumpColor, color.a, albedo);
 
 #define OBJECT_PS_DEGAMMA																							\
 	color = DEGAMMA(color);
@@ -174,7 +172,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 
 #define OBJECT_PS_OUT_GBUFFER																						\
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
-	Out.g0 = float4(color.rgb, 0);									/*FORMAT_R8G8B8A8_UNORM*/						\
+	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g1 = float4(N.xyz * 0.5f + 0.5f, 0);						/*FORMAT_R11G11B10_FLOAT*/						\
 	Out.g2 = float4(velocity * 0.5f + 0.5f, sss, emissive);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g3 = float4(roughness, reflectance, metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\

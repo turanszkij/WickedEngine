@@ -35,8 +35,15 @@ void DeferredRenderableComponent::Initialize()
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		, false, FORMAT_R11G11B10_FLOAT); // diffuse
+	rtLight.Add(FORMAT_R11G11B10_FLOAT); // specular
+
+	rtSSS[0].Initialize(
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false, FORMAT_R11G11B10_FLOAT);
-	rtLight.Add(FORMAT_R11G11B10_FLOAT);
+	rtSSS[1].Initialize(
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		, false, FORMAT_R11G11B10_FLOAT);
 
 	Renderable2DComponent::Initialize();
 }
@@ -163,9 +170,91 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		fx.stencilComp = 0;
 	}
 
+	if (getSSSEnabled())
+	{
+		//fx.stencilRef = STENCILREF_SKIN;
+		//fx.stencilComp = COMPARISON_LESS;
+		//fx.quality = QUALITY_BILINEAR;
+		//fx.sampleFlag = SAMPLEMODE_CLAMP;
+		//for (unsigned int i = 0; i<rtSSS.size() - 1; ++i) {
+		//	rtSSS[i].Activate(threadID, rtGBuffer.depth);
+		//	XMFLOAT2 dir = XMFLOAT2(0, 0);
+		//	static const float stren = 0.018f;
+		//	if (i % 2)
+		//		dir.x = stren*((float)wiRenderer::GetDevice()->GetScreenHeight() / (float)wiRenderer::GetDevice()->GetScreenWidth());
+		//	else
+		//		dir.y = stren;
+		//	fx.process.setSSSS(dir);
+		//	if (i == 0)
+		//		wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
+		//	else
+		//		wiImage::Draw(rtSSS[i - 1].GetTexture(), fx, threadID);
+		//}
+		//fx.process.clear();
+		//rtSSS.back().Activate(threadID, rtGBuffer.depth); {
+		//	fx.setMaskMap(nullptr);
+		//	fx.quality = QUALITY_NEAREST;
+		//	fx.sampleFlag = SAMPLEMODE_CLAMP;
+		//	fx.blendFlag = BLENDMODE_OPAQUE;
+		//	fx.stencilRef = 0;
+		//	fx.stencilComp = 0;
+		//	wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
+		//	fx.stencilRef = STENCILREF_SKIN;
+		//	fx.stencilComp = COMPARISON_LESS;
+		//	wiImage::Draw(rtSSS[rtSSS.size() - 2].GetTexture(), fx, threadID);
+		//}
+
+		//fx.stencilRef = 0;
+		//fx.stencilComp = 0;
+
+		fx.stencilRef = STENCILREF_SKIN;
+		fx.stencilComp = COMPARISON_LESS;
+		fx.quality = QUALITY_BILINEAR;
+		fx.sampleFlag = SAMPLEMODE_CLAMP;
+		static int sssPassCount = 6;
+		for (int i = 0; i < sssPassCount; ++i) 
+		{
+			rtSSS[i % 2].Activate(threadID, rtGBuffer.depth, 0, 0, 0, 0);
+			XMFLOAT2 dir = XMFLOAT2(0, 0);
+			static float stren = 0.018f;
+			if (i % 2 == 0)
+			{
+				dir.x = stren*((float)wiRenderer::GetDevice()->GetScreenHeight() / (float)wiRenderer::GetDevice()->GetScreenWidth());
+			}
+			else
+			{
+				dir.y = stren;
+			}
+			fx.process.setSSSS(dir);
+			if (i == 0)
+			{
+				wiImage::Draw(rtLight.GetTexture(0), fx, threadID);
+			}
+			else
+			{
+				wiImage::Draw(rtSSS[(i + 1) % 2].GetTexture(), fx, threadID);
+			}
+		}
+		fx.process.clear();
+		rtSSS[0].Activate(threadID, rtGBuffer.depth); {
+			fx.setMaskMap(nullptr);
+			fx.quality = QUALITY_NEAREST;
+			fx.sampleFlag = SAMPLEMODE_CLAMP;
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			fx.stencilRef = 0;
+			fx.stencilComp = 0;
+			wiImage::Draw(rtLight.GetTexture(0), fx, threadID);
+			fx.stencilRef = STENCILREF_SKIN;
+			fx.stencilComp = COMPARISON_LESS;
+			wiImage::Draw(rtSSS[1].GetTexture(), fx, threadID);
+		}
+
+		fx.stencilRef = 0;
+		fx.stencilComp = 0;
+	}
 
 	rtDeferred.Activate(threadID); {
-		wiImage::DrawDeferred(rtLight.GetTexture(0), rtLight.GetTexture(1)
+		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : rtLight.GetTexture(0)), rtLight.GetTexture(1)
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
 			, threadID, 0);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
@@ -173,53 +262,13 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
 	}
 
-	if (getSSSEnabled())
-	{
-		fx.stencilRef = STENCILREF_SKIN;
-		fx.stencilComp = COMPARISON_LESS;
-		fx.quality = QUALITY_BILINEAR;
-		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		for (unsigned int i = 0; i<rtSSS.size() - 1; ++i){
-			rtSSS[i].Activate(threadID, rtGBuffer.depth);
-			XMFLOAT2 dir = XMFLOAT2(0, 0);
-			static const float stren = 0.018f;
-			if (i % 2)
-				dir.x = stren*((float)wiRenderer::GetDevice()->GetScreenHeight() / (float)wiRenderer::GetDevice()->GetScreenWidth());
-			else
-				dir.y = stren;
-			fx.process.setSSSS(dir);
-			if (i == 0)
-				wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
-			else
-				wiImage::Draw(rtSSS[i - 1].GetTexture(), fx, threadID);
-		}
-		fx.process.clear();
-		rtSSS.back().Activate(threadID, rtGBuffer.depth); {
-			fx.setMaskMap(nullptr);
-			fx.quality = QUALITY_NEAREST;
-			fx.sampleFlag = SAMPLEMODE_CLAMP;
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			fx.stencilRef = 0;
-			fx.stencilComp = 0;
-			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
-			fx.stencilRef = STENCILREF_SKIN;
-			fx.stencilComp = COMPARISON_LESS;
-			wiImage::Draw(rtSSS[rtSSS.size() - 2].GetTexture(), fx, threadID);
-		}
-
-		fx.stencilRef = 0;
-		fx.stencilComp = 0;
-	}
 
 	if (getSSREnabled()){
 		rtSSR.Activate(threadID); {
 			wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
 			fx.process.setSSR(true);
 			fx.setMaskMap(nullptr);
-			if (getSSSEnabled())
-				wiImage::Draw(rtSSS.back().GetTexture(), fx, threadID);
-			else
-				wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
+			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 			fx.process.clear();
 		}
 	}
@@ -232,10 +281,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		if (getSSREnabled()){
 			wiImage::Draw(rtSSR.GetTexture(), fx, threadID);
-		}
-		else if (getSSSEnabled())
-		{
-			wiImage::Draw(rtSSS.back().GetTexture(), fx, threadID);
 		}
 		else{
 			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
@@ -250,8 +295,6 @@ wiRenderTarget& DeferredRenderableComponent::GetFinalRT()
 		return rtMotionBlur;
 	else if (getSSREnabled())
 		return rtSSR;
-	else if (getSSSEnabled())
-		return rtSSS.back();
 	else
 		return rtDeferred;
 }

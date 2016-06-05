@@ -58,7 +58,7 @@ protected:
 		, rtFinal[3]
 		, rtDof[3]
 		;
-	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO, rtSSS;
+	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
 	wiDepthTarget dtDepthCopy;
 
 	vector<wiTaskThread*> workerThreads;

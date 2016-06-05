@@ -17,6 +17,10 @@ wiWidget::wiWidget():Transform()
 	colors[FOCUS] = wiColor::Gray;
 	colors[ACTIVE] = wiColor::White;
 	colors[DEACTIVATING] = wiColor::Gray;
+	scissorRect.bottom = 0;
+	scissorRect.left = 0;
+	scissorRect.right = 0;
+	scissorRect.top = 0;
 }
 wiWidget::~wiWidget()
 {
