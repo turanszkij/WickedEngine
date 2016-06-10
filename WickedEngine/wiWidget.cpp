@@ -5,6 +5,7 @@
 #include "wiTextureHelper.h"
 #include "wiFont.h"
 #include "wiMath.h"
+#include "wiHelper.h"
 
 
 wiWidget::wiWidget():Transform()
@@ -704,7 +705,7 @@ void wiWindow::AddWidget(wiWidget* widget)
 
 	childrenWidgets.push_back(widget);
 }
-void wiWindow::RemoveWidget(wiWidget* widget)
+void wiWindow::RemoveWidget(wiWidget* widget, bool alsoDelete)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -712,15 +713,24 @@ void wiWindow::RemoveWidget(wiWidget* widget)
 	widget->detach();
 
 	childrenWidgets.remove(widget);
+
+	if (alsoDelete)
+	{
+		SAFE_DELETE(widget);
+	}
 }
-void wiWindow::RemoveWidgets()
+void wiWindow::RemoveWidgets(bool alsoDelete)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
 	for (auto& x : childrenWidgets)
 	{
-		gui->RemoveWidget(x);
 		x->detach();
+		gui->RemoveWidget(x);
+		if (alsoDelete)
+		{
+			SAFE_DELETE(x);
+		}
 	}
 
 	childrenWidgets.clear();

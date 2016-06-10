@@ -15,6 +15,10 @@ namespace wiHelper
 	void screenshot(const string& name = "");
 
 	string getCurrentDateTimeAsString();
+
+	string GetWorkingDirectory();
+
+	void GetFilesInDirectory(vector<string> &out, const string &directory);
 };
 
 #endif

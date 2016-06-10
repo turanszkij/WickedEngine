@@ -170,8 +170,8 @@ public:
 	virtual ~wiWindow();
 
 	void AddWidget(wiWidget* widget);
-	void RemoveWidget(wiWidget* widget);
-	void RemoveWidgets();
+	void RemoveWidget(wiWidget* widget, bool alsoDelete = false);
+	void RemoveWidgets(bool alsoDelete = false);
 
 	virtual void Update(wiGUI* gui) override;
 	virtual void Render(wiGUI* gui) override;
