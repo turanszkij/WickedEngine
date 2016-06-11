@@ -98,14 +98,14 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	float3 lightColor = GetSunColor();
 	BRDF_MAKE(N, L, V);
 	specular = lightColor * BRDF_SPECULAR(roughness, f0);
-	diffuse = lightColor * BRDF_DIFFUSE(roughness); 
-	
-	specular += EnvironmentReflection(N, V, P, roughness, f0);
+	diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
 	float sh = max(NdotL, 0);
 
 	diffuse *= sh;
 	specular *= sh;
+
+	specular += EnvironmentReflection(N, V, P, roughness, f0);
 
 	diffuse = max(diffuse, 0);
 	specular = max(specular, 0);
