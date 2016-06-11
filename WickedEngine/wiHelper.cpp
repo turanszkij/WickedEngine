@@ -74,10 +74,10 @@ namespace wiHelper
 		return ss.str();
 	}
 
+#include <direct.h>
 	string GetWorkingDirectory()
 	{
-		char result[MAX_PATH];
-		return std::string(result, GetModuleFileNameA(NULL, result, MAX_PATH));
+		return _getcwd(NULL, 0);
 	}
 
 	void GetFilesInDirectory(vector<string>& out, const string& directory)
