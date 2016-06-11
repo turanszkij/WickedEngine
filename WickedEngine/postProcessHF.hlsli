@@ -1,5 +1,8 @@
-//#include "ViewProp.h"
+#ifndef _POSTPROCESS_HF_
+#define _POSTPROCESS_HF_
+
 #include "imageHF.hlsli"
+#include "packHF.hlsli"
 
 
 
@@ -43,3 +46,5 @@ float4 loadScene(float2 texCoord)
 	texture_0.GetDimensions(dim.x, dim.y);
 	return texture_0.Load(int3(dim*texCoord, 0));
 }
+
+#endif // _POSTPROCESS_HF_

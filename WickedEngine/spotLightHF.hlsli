@@ -56,7 +56,7 @@ inline void spotLight(in float3 P, in float3 N, in float3 V, in float roughness,
 		specular *= xLightEnerDisCone.x;
 		//color.rgb = max(dot(normalize(xLightDir.xyz), normalize(N)), 0)*xLightEnerDisCone.x;
 
-		float sh = 1;
+		float sh = max(NdotL, 0);
 		float4 ShPos = mul(float4(P,1),xShMat);
 		float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f,-0.5f) + float2(0.5f,0.5f);
 		[branch]if((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))

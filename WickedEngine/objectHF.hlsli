@@ -91,14 +91,24 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	alpha = 1;
 }
 
-inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 albedo, in float roughness,
+inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
 	float3 L = GetSunDirection();
 	float3 lightColor = GetSunColor();
 	BRDF_MAKE(N, L, V);
 	specular = lightColor * BRDF_SPECULAR(roughness, f0);
-	diffuse = lightColor * BRDF_DIFFUSE(roughness);
+	diffuse = lightColor * BRDF_DIFFUSE(roughness); 
+	
+	specular += EnvironmentReflection(N, V, P, roughness, f0);
+
+	float sh = max(NdotL, 0);
+
+	diffuse *= sh;
+	specular *= sh;
+
+	diffuse = max(diffuse, 0);
+	specular = max(specular, 0);
 }
 
 
@@ -142,7 +152,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 	BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
 
 #define OBJECT_PS_LIGHT_DIRECTIONAL																					\
-	DirectionalLight(N, V, f0, albedo, roughness, diffuse, specular);
+	DirectionalLight(N, V, P, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_LIGHT_END																							\
 	color.rgb = (GetAmbientColor() * ao + diffuse) * albedo + specular;
@@ -152,9 +162,6 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 
 #define OBJECT_PS_NORMALMAPPING																						\
 	NormalMapping(UV, P, N, bumpColor);
-
-#define OBJECT_PS_ENVIRONMENTMAPPING																				\
-	specular += EnvironmentReflection(N, V, P, roughness, f0);
 
 //#define OBJECT_PS_PLANARREFLECTIONS																					\
 //	PlanarReflection(input.tex, refUV, N, color);
@@ -173,8 +180,9 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 f0, in float3 a
 
 #define OBJECT_PS_OUT_GBUFFER																						\
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
+	/*N = mul(N.xyz, (float3x3)g_xCamera_View);*/																		\
 	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
-	Out.g1 = float4(N.xyz * 0.5f + 0.5f, 0);						/*FORMAT_R11G11B10_FLOAT*/						\
+	Out.g1 = float4(encode(N), 0, 0);								/*FORMAT_R16G16_FLOAT*/							\
 	Out.g2 = float4(velocity * 0.5f + 0.5f, sss, emissive);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g3 = float4(roughness, reflectance, metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	return Out;

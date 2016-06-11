@@ -35,7 +35,7 @@ struct LightOutputType
 	float4 baseColor = texture_gbuffer0.SampleLevel(sampler_point_clamp,screenPos,0);	\
 	float4 g1 = texture_gbuffer1.SampleLevel(sampler_point_clamp,screenPos,0);			\
 	float4 g3 = texture_gbuffer3.SampleLevel(sampler_point_clamp,screenPos,0);			\
-	float3 N = g1.xyz * 2 - 1;															\
+	float3 N = decode(g1.xy);																	\
 	float roughness = g3.x;																\
 	float reflectance = g3.y;															\
 	float metalness = g3.z;																\

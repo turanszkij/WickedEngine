@@ -4,6 +4,7 @@ static const float strength = 0.85;
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
+	//return texture_gbuffer1.Load(uint3(PSIn.pos.xy,0)).zzzz;
 	float4 hdr = xTexture.Load(uint3(PSIn.pos.xy,0));
 	float average_luminance = xMaskTex.Load(uint3(0,0,0)).r;
 	//return xMaskTex.SampleLevel(sampler_linear_clamp, PSIn.tex, 0);

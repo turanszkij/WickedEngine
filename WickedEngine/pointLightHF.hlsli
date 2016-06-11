@@ -26,7 +26,7 @@ inline void pointLight(in float3 P, in float3 N, in float3 V, in float roughness
 	diffuse *= attenuation;
 	specular *= attenuation;
 
-	float sh = 1;
+	float sh = max(NdotL, 0);
 	[branch]if(xLightEnerDis.w){
 		const float3 lv = P - xLightPos.xyz;
 		static const float bias = 0.025;

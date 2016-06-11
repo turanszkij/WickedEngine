@@ -46,7 +46,7 @@ static const float3 AO_SAMPLES[ NUM_SAMPLES ] =
 float4 main(VertexToPixelPostProcess input ):SV_Target
 {
 
-	float3 normal = loadNormal(input.tex.xy).xyz * 2 - 1;
+	float3 normal = decode(loadNormal(input.tex.xy).xy);
 
 	float3 fres = normalize(xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0);
 

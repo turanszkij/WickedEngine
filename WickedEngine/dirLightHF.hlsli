@@ -57,7 +57,7 @@ inline void dirLight(in float3 P, in float3 N, in float3 V, in float roughness, 
 
 	specular += EnvironmentReflection(N, V, P, roughness, f0);
 
-	float sh = 1;
+	float sh = max(NdotL, 0);
 	float4 ShPos[3];
 		ShPos[0] = mul(float4(P,1),g_xDirLight_ShM[0]);
 		ShPos[1] = mul(float4(P,1),g_xDirLight_ShM[1]);

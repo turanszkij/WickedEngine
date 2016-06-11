@@ -1,5 +1,6 @@
 #include "reconstructPositionHF.hlsli"
 #include "tangentComputeHF.hlsli"
+#include "packHF.hlsli"
 
 //Texture2D<float> xSceneDepthMap:register(t1);
 //Texture2D<float4> xTexture:register(t2);
@@ -74,7 +75,7 @@ PixelOutputType main(VertexToPixel PSIn)
 			Out.nor.a=Out.col.a;
 	}
 
-	Out.nor = Out.nor * 0.5f + 0.5f;
+	Out.nor = float4(encode(Out.nor.xyz), 0, Out.nor.a);
 
 	return Out;
 }

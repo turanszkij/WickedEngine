@@ -85,7 +85,7 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 	float4 o = 1;
 
 	float4 vNormZ;
-	vNormZ.rgb = texture_gbuffer1.Load(int3(input.pos.xy, 0)).rgb;
+	vNormZ.rgb = decode(texture_gbuffer1.Load(int3(input.pos.xy, 0)).rg);
 	vNormZ.a = texture_depth.Load(int3(input.pos.xy, 0));
 
 	float2 vRougnessSpec = loadVelocity(input.tex).zw; //specular_power,specular intensity
