@@ -84,6 +84,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
 	}
 
 	rtLinearDepth.Activate(threadID); {

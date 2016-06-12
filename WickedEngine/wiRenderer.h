@@ -31,6 +31,7 @@ struct Scene;
 
 class  Lines;
 class  Cube;
+class  wiTranslator;
 class  wiParticle;
 class  wiEmittedParticle;
 class  wiHairParticle;
@@ -379,6 +380,7 @@ public:
 	static void DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
@@ -458,5 +460,9 @@ public:
 	static void LoadDefaultLighting();
 
 	static void PutEnvProbe(const XMFLOAT3& position, int resolution = 256);
+
+	static vector<wiTranslator*> renderableTranslators;
+	// Add translator to render in next frame
+	static void AddRenderableTranslator(wiTranslator* translator);
 };
 

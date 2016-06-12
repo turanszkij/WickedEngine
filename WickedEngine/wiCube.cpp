@@ -24,23 +24,34 @@ void Cube::CleanUpStatic()
 void Cube::SetUpVertices()
 {
 
-	Vertex* verts = new Vertex[8];
+	//Vertex* verts = new Vertex[8];
 
-	XMFLOAT3 min = XMFLOAT3(-1,-1,-1);
-	XMFLOAT3 max = XMFLOAT3(1,1,1);
-	verts[0].pos=min;
-	verts[1].pos=XMFLOAT3(min.x,max.y,min.z);
-	verts[2].pos=XMFLOAT3(min.x,max.y,max.z);
-	verts[3].pos=XMFLOAT3(min.x,min.y,max.z);
-	verts[4].pos=XMFLOAT3(max.x,min.y,min.z);
-	verts[5].pos=XMFLOAT3(max.x,max.y,min.z);
-	verts[6].pos=max;
-	verts[7].pos=XMFLOAT3(max.x,min.y,max.z);
+	XMFLOAT4 min = XMFLOAT4(-1, -1, -1, 1);
+	XMFLOAT4 max = XMFLOAT4(1, 1, 1, 1);
+	//verts[0].pos=min;
+	//verts[1].pos=XMFLOAT3(min.x,max.y,min.z);
+	//verts[2].pos=XMFLOAT3(min.x,max.y,max.z);
+	//verts[3].pos=XMFLOAT3(min.x,min.y,max.z);
+	//verts[4].pos=XMFLOAT3(max.x,min.y,min.z);
+	//verts[5].pos=XMFLOAT3(max.x,max.y,min.z);
+	//verts[6].pos=max;
+	//verts[7].pos=XMFLOAT3(max.x,min.y,max.z);
+
+	XMFLOAT4 verts[] = {
+		min,							XMFLOAT4(1,1,1,1),
+		XMFLOAT4(min.x,max.y,min.z,1),	XMFLOAT4(1,1,1,1),
+		XMFLOAT4(min.x,max.y,max.z,1),	XMFLOAT4(1,1,1,1),
+		XMFLOAT4(min.x,min.y,max.z,1),	XMFLOAT4(1,1,1,1),
+		XMFLOAT4(max.x,min.y,min.z,1),	XMFLOAT4(1,1,1,1),
+		XMFLOAT4(max.x,max.y,min.z,1),	XMFLOAT4(1,1,1,1),
+		max,							XMFLOAT4(1,1,1,1),
+		XMFLOAT4(max.x,min.y,max.z,1),	XMFLOAT4(1,1,1,1),
+	};
 
 	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof( Vertex ) * 8;
+	bd.ByteWidth = sizeof(verts);
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	SubresourceData InitData;
@@ -48,10 +59,10 @@ void Cube::SetUpVertices()
 	InitData.pSysMem = verts;
 	wiRenderer::GetDevice()->CreateBuffer( &bd, &InitData, &vertexBuffer );
 
-	if(verts){
-		delete[](verts);
-		verts=NULL;
-	}
+	//if(verts){
+	//	delete[](verts);
+	//	verts=NULL;
+	//}
 
 	unsigned int indices[]={
 		0,1,1,2,0,3,0,4,1,5,4,5,
@@ -60,7 +71,7 @@ void Cube::SetUpVertices()
 
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof( unsigned int ) * 24;
+	bd.ByteWidth = sizeof(indices);
 	bd.BindFlags = BIND_INDEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	ZeroMemory( &InitData, sizeof(InitData) );

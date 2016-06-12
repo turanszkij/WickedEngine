@@ -1,14 +1,14 @@
 #include "globals.hlsli"
 
-struct VertexToPixel{
+struct VertexToPixel {
 	float4 pos	: SV_POSITION;
 	float4 col	: COLOR;
 };
 
-VertexToPixel main( float3 inPos : POSITION )
+VertexToPixel main( float4 inPos : POSITION, float4 inCol : TEXCOORD0 )
 {
 	VertexToPixel Out = (VertexToPixel)0;
-	Out.pos = mul( float4(inPos,1), g_xTransform);
-	Out.col = g_xColor;
+	Out.pos = mul( inPos, g_xTransform);
+	Out.col = inCol * g_xColor;
 	return Out;
 }

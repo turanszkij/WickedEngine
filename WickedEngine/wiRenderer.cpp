@@ -21,6 +21,7 @@
 #include "wiFont.h"
 #include "ResourceMapping.h"
 #include "wiGraphicsDevice_DX11.h"
+#include "wiTranslator.h"
 
 using namespace wiGraphicsTypes;
 
@@ -72,6 +73,8 @@ vector<wiEmittedParticle*> wiRenderer::emitterSystems;
 vector<Lines*>	wiRenderer::boneLines;
 vector<Lines*>	wiRenderer::linesTemp;
 vector<Cube>	wiRenderer::cubes;
+
+vector<wiTranslator*> wiRenderer::renderableTranslators;
 
 #pragma endregion
 
@@ -668,7 +671,8 @@ void wiRenderer::LoadLineShaders()
 {
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 
@@ -1508,7 +1512,7 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->BindVertexBuffer(&boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
+			GetDevice()->BindVertexBuffer(&boneLines[i]->vertexBuffer, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
 			GetDevice()->Draw(2, threadID);
 		}
 
@@ -1540,7 +1544,7 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		GetDevice()->BindVertexBuffer(&linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT3A), threadID);
+		GetDevice()->BindVertexBuffer(&linesTemp[i]->vertexBuffer, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
 		GetDevice()->Draw(2, threadID);
 	}
 
@@ -1566,7 +1570,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 		
-		GetDevice()->BindVertexBuffer(&Cube::vertexBuffer,0,sizeof(XMFLOAT3A),threadID);
+		GetDevice()->BindVertexBuffer(&Cube::vertexBuffer,0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4),threadID);
 		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
 
 		MiscCB sb;
@@ -1580,6 +1584,40 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		}
 
 		GetDevice()->EventEnd(threadID);
+	}
+}
+void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	if(!renderableTranslators.empty()){
+		GetDevice()->EventBegin(L"Translators", threadID);
+
+		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED],threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+
+
+		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+		
+		GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+
+		MiscCB sb;
+		for (auto& x : renderableTranslators)
+		{
+			sb.mTransform = XMMatrixTranspose(x->getMatrix()*camera->GetViewProjection());
+			sb.mColor = XMFLOAT4(1, 1, 1, 1);
+
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			GetDevice()->Draw(wiTranslator::vertexCount, threadID);
+		}
+
+		GetDevice()->EventEnd(threadID);
+
+		renderableTranslators.clear();
 	}
 }
 
@@ -3068,12 +3106,14 @@ wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, co
 }
 
 RAY wiRenderer::getPickRay(long cursorX, long cursorY){
-	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet((float)cursorX,(float)cursorY,0,1),0,0
-		, (float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0
-		, (float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-	XMVECTOR& rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd,lineStart));
-	return RAY(lineStart,rayDirection);
+	Camera* cam = getCamera();
+	XMMATRIX V = cam->GetView();
+	XMMATRIX P = cam->GetProjection();
+	XMMATRIX W = XMMatrixIdentity();
+	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 0, 1), 0, 0, cam->width, cam->height, 0.0f, 1.0f, P, V, W);
+	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0, cam->width, cam->height, 0.0f, 1.0f, P, V, W);
+	XMVECTOR& rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd, lineStart));
+	return RAY(lineStart, rayDirection);
 }
 
 void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
@@ -3581,4 +3621,9 @@ void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/)
 	refractionIndex = mat.refractionIndex;
 	subsurfaceScattering = mat.subsurfaceScattering;
 	normalMapStrength = (mat.normalMap == nullptr? 0 : mat.normalMapStrength);
+}
+
+void wiRenderer::AddRenderableTranslator(wiTranslator* translator)
+{
+	renderableTranslators.push_back(translator);
 }

@@ -22,16 +22,6 @@ private:
 				);
 		};
 	};
-	struct Vertex
-	{
-		XMFLOAT3	pos;
-		float		padding;
-
-		Vertex(){ pos=XMFLOAT3(0,0,0); }
-		Vertex(const XMFLOAT3& newPos){ pos=newPos; }
-
-		ALIGN_16
-	};
 	static void SetUpVertices();
 public:
 	Cube(const XMFLOAT3& center=XMFLOAT3(0,0,0), const XMFLOAT3& halfwidth=XMFLOAT3(1,1,1), const XMFLOAT4& color = XMFLOAT4(1,1,1,1));

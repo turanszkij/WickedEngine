@@ -21,14 +21,6 @@ private:
 				);
 		};
 	};
-	struct Vertex
-	{
-		XMFLOAT3	pos;
-		float padding;
-
-		Vertex(){ pos=XMFLOAT3(0,0,0); }
-		Vertex(const XMFLOAT3& newPos){ pos=newPos; }
-	};
 	void SetUpVertices();
 public:
 	Lines();
