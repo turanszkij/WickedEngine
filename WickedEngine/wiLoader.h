@@ -203,7 +203,6 @@ struct Material
 			return RENDERTYPE_TRANSPARENT;
 		return RENDERTYPE_OPAQUE;
 	}
-
 	void ConvertToPhysicallyBasedMaterial();
 	wiGraphicsTypes::Texture2D* GetBaseColorMap();
 	wiGraphicsTypes::Texture2D* GetNormalMap();

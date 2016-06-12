@@ -99,7 +99,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, tessellationQuality, threadID, false, false
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, tessellationQuality, threadID, false
 			, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true, GRAPHICSTHREAD_SCENE);
 
 	}

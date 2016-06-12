@@ -13,6 +13,8 @@ wiTranslator::wiTranslator() :Transform()
 {
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 
+	enabled = true;
+
 	if (vertexBuffer == nullptr)
 	{
 		vertexBuffer = new GPUBuffer;
@@ -50,7 +52,7 @@ wiTranslator::~wiTranslator()
 void wiTranslator::Update()
 {
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
-	if (wiInputManager::GetInstance()->down(VK_LBUTTON))
+	if (enabled && wiInputManager::GetInstance()->down(VK_LBUTTON))
 	{
 		Camera* cam = wiRenderer::getCamera();
 		float dist = wiMath::Distance(cam->translation, translation);

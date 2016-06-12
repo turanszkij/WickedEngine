@@ -10,7 +10,7 @@ GBUFFEROutputType main(PixelInputType input)
 	OBJECT_PS_DEGAMMA
 
 	OBJECT_PS_NORMALMAPPING
-		
+
 	OBJECT_PS_OUT_GBUFFER
 }
 

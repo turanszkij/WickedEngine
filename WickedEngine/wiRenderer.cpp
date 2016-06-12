@@ -645,10 +645,13 @@ void wiRenderer::LoadBasicShaders()
 	vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	pixelShaders[PSTYPE_OBJECT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_transparent.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forwardSimple.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
@@ -2437,7 +2440,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 
 
 void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
-				  , bool BlackOut, bool isReflection, SHADERTYPE shaded
+				  , bool isReflection, SHADERTYPE shaderType
 				  , Texture2D* refRes, bool grass, GRAPHICSTHREAD thread)
 {
 	CulledCollection culledRenderer;
@@ -2535,17 +2538,17 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 
 		if (wireRender)
 			GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
-		else
-			if (BlackOut)
-				GetDevice()->BindPS(pixelShaders[PSTYPE_BLACKOUT], threadID);
-			else if (shaded == SHADERTYPE_NONE)
-				GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
-			else if (shaded == SHADERTYPE_DEFERRED)
-				GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT], threadID);
-			else if (shaded == SHADERTYPE_FORWARD_SIMPLE)
-				GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE], threadID);
-			else
-				return;
+		//else 
+		//	if (BlackOut)
+		//		GetDevice()->BindPS(pixelShaders[PSTYPE_BLACKOUT], threadID);
+		//	else if (shaderType == SHADERTYPE_NONE)
+		//		GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
+		//	else if (shaderType == SHADERTYPE_DEFERRED)
+		//		GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED], threadID);
+		//	else if (shaderType == SHADERTYPE_FORWARD_SIMPLE)
+		//		GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE], threadID);
+		//	else
+		//		return;
 
 
 			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
@@ -2621,6 +2624,37 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 						GetDevice()->BindResourcePS(subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
 						GetDevice()->BindResourcePS(subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
 						GetDevice()->BindResourcePS(subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+
+						PSTYPES realPS = PSTYPE_SIMPLEST;
+						switch (shaderType)
+						{
+						case SHADERTYPE_TEXTURE:
+							realPS = PSTYPE_TEXTUREONLY;
+							break;
+						case SHADERTYPE_DEFERRED:
+							if (subset.material->GetNormalMap() == nullptr)
+							{
+								realPS = PSTYPE_OBJECT_DEFERRED;
+							}
+							else
+							{
+								realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+							}
+							break;
+						case SHADERTYPE_FORWARD:
+							if (subset.material->GetNormalMap() == nullptr)
+							{
+								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
+							}
+							else
+							{
+								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+							}
+							break;
+						default:
+							break;
+						}
+						GetDevice()->BindPS(pixelShaders[realPS], threadID);
 					}
 					if(DX11Eff)
 						GetDevice()->BindResourceDS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND0,threadID);
@@ -2697,8 +2731,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 
 
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
-	
-		RENDERTYPE lastRenderType = RENDERTYPE_VOID;
 
 		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
@@ -2761,6 +2793,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
+					PSTYPES realPS = PSTYPE_SIMPLEST;
 					if (!wireRender)
 					{
 						GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
@@ -2768,21 +2801,30 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 						GetDevice()->BindResourcePS(subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
 						GetDevice()->BindResourcePS(subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
 						GetDevice()->BindResourcePS(subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+
+						if (subset.material->IsWater()) {
+							realPS = PSTYPE_WATER;
+						}
+						else if (subset.material->IsTransparent()) {
+							if (subset.material->GetNormalMap() == nullptr)
+							{
+								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
+							}
+							else
+							{
+								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
+							}
+						}
 					}
+					GetDevice()->BindPS(pixelShaders[realPS], threadID);
 
-					if (subset.material->IsTransparent() && lastRenderType != RENDERTYPE_TRANSPARENT)
+					if (subset.material->IsTransparent())
 					{
-						lastRenderType = RENDERTYPE_TRANSPARENT;
-
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_TRANSPARENT, threadID);
-						GetDevice()->BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_OBJECT_TRANSPARENT], threadID);
 					}
-					if (subset.material->IsWater() && lastRenderType != RENDERTYPE_WATER)
+					if (subset.material->IsWater())
 					{
-						lastRenderType = RENDERTYPE_WATER;
-
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
-						GetDevice()->BindPS(wireRender ? pixelShaders[PSTYPE_SIMPLEST] : pixelShaders[PSTYPE_WATER], threadID);
 						GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
 					}
 					

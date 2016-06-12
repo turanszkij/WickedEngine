@@ -371,7 +371,7 @@ public:
 	static void DrawSky(GRAPHICSTHREAD threadID, bool isReflection = false);
 	static void DrawSun(GRAPHICSTHREAD threadID);
 	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
-		, bool BlackOut, bool isReflection, SHADERTYPE shaded, wiGraphicsTypes::Texture2D* refRes, bool grass, GRAPHICSTHREAD thread);
+		, bool isReflection, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass, GRAPHICSTHREAD thread);
 	static void ClearShadowMaps(GRAPHICSTHREAD threadID);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);
 	static void DrawWorldTransparent(Camera* camera, wiGraphicsTypes::Texture2D* refracRes, wiGraphicsTypes::Texture2D* refRes

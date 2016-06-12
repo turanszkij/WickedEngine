@@ -1378,11 +1378,12 @@ Texture2D* Material::GetBaseColorMap()
 }
 Texture2D* Material::GetNormalMap()
 {
-	if (normalMap != nullptr)
-	{
-		return normalMap;
-	}
-	return wiTextureHelper::getInstance()->getNormalMapDefault();
+	return normalMap;
+	//if (normalMap != nullptr)
+	//{
+	//	return normalMap;
+	//}
+	//return wiTextureHelper::getInstance()->getNormalMapDefault();
 }
 Texture2D* Material::GetRoughnessMap()
 {

@@ -13,6 +13,8 @@ public:
 	void Update();
 
 
+	bool enabled;
+
 	static wiGraphicsTypes::GPUBuffer* vertexBuffer;
 	static int vertexCount;
 };

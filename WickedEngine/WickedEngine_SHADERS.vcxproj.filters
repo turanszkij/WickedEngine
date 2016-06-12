@@ -210,22 +210,13 @@
     <FxCompile Include="motionBlurPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="objectPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="objectPS_blackout.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forwardSimple.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_simplest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_textureonly.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_transparent.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="outlinePS.hlsl">
@@ -368,6 +359,24 @@
     </FxCompile>
     <FxCompile Include="vSpotLightVS.hlsl">
       <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_deferred.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_deferred_normalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_normalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_transparent.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
