@@ -3239,6 +3239,8 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 	model->transform(transform);
 
+	GetDevice()->LOCK();
+
 	GetScene().AddModel(model);
 
 	for (Object* o : model->objects)
@@ -3248,7 +3250,6 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 		}
 	}
 
-	GetDevice()->LOCK();
 
 	Update();
 
