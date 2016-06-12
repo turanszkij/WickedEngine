@@ -436,11 +436,12 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 	}
 
 	rtFinal[2].Activate(threadID);
-	fx.process.setFXAA(true);
+	fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
 	else
 		wiImage::Draw(rtFinal[1].GetTexture(), fx, threadID);
+	fx.process.clear();
 
 	if (getBloomEnabled())
 	{

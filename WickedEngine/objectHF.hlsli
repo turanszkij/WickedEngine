@@ -62,11 +62,6 @@ struct GBUFFEROutputType
 // METHODS
 ////////////
 
-//inline void BaseColorMapping(in float2 UV, inout float4 baseColor)
-//{
-//	baseColor *= xBaseColorMap.Sample(sampler_aniso_wrap, UV);
-//}
-
 inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float3 bumpColor)
 {
 	float4 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV);
@@ -104,8 +99,6 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 
 	diffuse *= sh;
 	specular *= sh;
-
-	specular += EnvironmentReflection(N, V, P, roughness, f0);
 
 	diffuse = max(diffuse, 0);
 	specular = max(specular, 0);
@@ -166,6 +159,10 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 //#define OBJECT_PS_PLANARREFLECTIONS																					\
 //	PlanarReflection(input.tex, refUV, N, color);
 
+#define OBJECT_PS_ENVIRONMENTREFLECTIONS																			\
+	specular += EnvironmentReflection(N, V, P, roughness, f0);
+	
+
 #define OBJECT_PS_REFRACTION																						\
 	Refraction(ScreenCoord, input.nor2D, bumpColor, color.a, albedo);
 
@@ -180,7 +177,6 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 
 #define OBJECT_PS_OUT_GBUFFER																						\
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
-	/*N = mul(N.xyz, (float3x3)g_xCamera_View);*/																		\
 	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g1 = float4(encode(N), 0, 0);								/*FORMAT_R16G16_FLOAT*/							\
 	Out.g2 = float4(velocity * 0.5f + 0.5f, sss, emissive);			/*FORMAT_R8G8B8A8_UNORM*/						\
