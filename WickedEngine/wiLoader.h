@@ -793,6 +793,7 @@ struct Camera:public Transform{
 	XMFLOAT3 At, Up;
 	float width, height;
 	float zNearP, zFarP;
+	float fov;
 	Frustum frustum;
 	
 	Camera():Transform(){
@@ -804,7 +805,7 @@ struct Camera:public Transform{
 		rotation_rest=newRot;
 		name=newName;
 	}
-	void SetUp(int newWidth, int newHeight, float newNear, float newFar)
+	void SetUp(int newWidth, int newHeight, float newNear, float newFar, float fov = XM_PI / 3.0f)
 	{
 		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
@@ -814,6 +815,8 @@ struct Camera:public Transform{
 
 		width = (float)newWidth;
 		height = (float)newHeight;
+
+		this->fov = fov;
 
 		UpdateProjection();
 
@@ -877,7 +880,7 @@ struct Camera:public Transform{
 	}
 	void UpdateProjection()
 	{
-		XMStoreFloat4x4(&this->Projection, XMMatrixPerspectiveFovLH(XM_PI / 3.0f, (float)width / (float)height, zNearP, zFarP));
+		XMStoreFloat4x4(&this->Projection, XMMatrixPerspectiveFovLH(fov, (float)width / (float)height, zNearP, zFarP));
 	}
 
 	XMVECTOR GetEye()

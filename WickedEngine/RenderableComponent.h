@@ -15,7 +15,7 @@ public:
 	function<void()> onStop;
 
 	RenderableComponent(){}
-	~RenderableComponent(){}
+	virtual ~RenderableComponent() { Unload(); }
 
 	// initialize component
 	virtual void Initialize() {}

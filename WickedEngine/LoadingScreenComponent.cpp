@@ -1,5 +1,5 @@
 #include "LoadingScreenComponent.h"
-
+#include "MainComponent.h"
 
 LoadingScreenComponent::LoadingScreenComponent()
 {
@@ -33,9 +33,14 @@ void LoadingScreenComponent::addLoadingFunction(function<void()> loadingFunction
 	}
 }
 
-void LoadingScreenComponent::addLoadingComponent(RenderableComponent* component)
+void LoadingScreenComponent::addLoadingComponent(RenderableComponent* component, MainComponent* main)
 {
-	//TODO
+	addLoadingFunction([=] {
+		component->Load();
+	});
+	onFinished([=] {
+		main->activateComponent(component);
+	});
 	//addLoadingFunction(bind(&RenderableComponent::Load, this, component));
 	//onFinished(bind(&RenderableComponent::Start, this, component));
 }
@@ -90,8 +95,7 @@ int LoadingScreenComponent::getPercentageComplete()
 
 void LoadingScreenComponent::Unload()
 {
-	loaders.clear();
-	finish = nullptr;
+	Renderable2DComponent::Unload();
 }
 
 void LoadingScreenComponent::Start()
@@ -100,5 +104,13 @@ void LoadingScreenComponent::Start()
 	thread(&LoadingScreenComponent::waitForFinish, this).detach();
 
 	Renderable2DComponent::Start();
+}
+
+void LoadingScreenComponent::Stop()
+{
+	loaders.clear();
+	finish = nullptr;
+
+	Renderable2DComponent::Stop();
 }
 

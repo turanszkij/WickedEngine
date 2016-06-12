@@ -33,7 +33,10 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
-	activeComponent->Unload();
+	if (activeComponent != nullptr)
+	{
+		activeComponent->Unload();
+	}
 }
 
 void MainComponent::Initialize()
