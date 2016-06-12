@@ -19,6 +19,10 @@ RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticl
 DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
 set<wiEmittedParticle*> wiEmittedParticle::systems;
 
+
+static const int NUM_POS_SAMPLES = 30;
+static const float INV_NUM_POS_SAMPLES = 1.0f / NUM_POS_SAMPLES;
+
 wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot){
 	name=newName;
@@ -55,7 +59,8 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 		light->color.y=material->diffuseColor.y;
 		light->color.z=material->diffuseColor.z;
 		light->type=Light::POINT;
-		light->name="particleSystemLight";
+		light->name=name+"_pslight";
+		light->shadow = true;
 		//light->shadowMap.resize(1);
 		//light->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
 	}
@@ -71,6 +76,18 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 		);
 
 	motionBlurAmount = 0.0f;
+
+	// for smooth light interpolation
+	currentSample = 0;
+	posSamples = new XMFLOAT3[NUM_POS_SAMPLES];
+	radSamples = new float[NUM_POS_SAMPLES];
+	energySamples = new float[NUM_POS_SAMPLES];
+	for (int i = 0; i < NUM_POS_SAMPLES; ++i)
+	{
+		radSamples[i] = 0.0f;
+		energySamples[i] = 0.0f;
+		posSamples[i] = XMFLOAT3(0, 0, 0);
+	}
 }
 long wiEmittedParticle::getCount(){return points.size();}
 
@@ -208,9 +225,35 @@ void wiEmittedParticle::Update(float gamespeed)
 	if((int)emit>0)
 		emit=0;
 	
-	if(light!=nullptr){
-		light->translation_rest=bounding_box->getCenter();
-		light->enerDis=XMFLOAT4(5,bounding_box->getRadius()*3,0,0);
+	if(light!=nullptr)
+	{
+		// smooth light position to eliminate jitter
+
+		posSamples[currentSample] = bounding_box->getCenter();
+		radSamples[currentSample] = bounding_box->getRadius()*2;
+		energySamples[currentSample] = sqrt((float)points.size());
+
+		XMFLOAT3 pos = XMFLOAT3(0, 0, 0);
+		float rad = 0.0f;
+		float energy = 0.0f;
+		for (int i = 0; i < NUM_POS_SAMPLES; ++i)
+		{
+			pos.x += posSamples[i].x;
+			pos.y += posSamples[i].y;
+			pos.z += posSamples[i].z;
+			rad += radSamples[i];
+			energy += energySamples[i];
+		}
+		pos.x *= INV_NUM_POS_SAMPLES;
+		pos.y *= INV_NUM_POS_SAMPLES;
+		pos.z *= INV_NUM_POS_SAMPLES;
+		rad *= INV_NUM_POS_SAMPLES;
+		energy *= INV_NUM_POS_SAMPLES;
+		currentSample = (currentSample + 1) % NUM_POS_SAMPLES;
+
+		light->translation_rest=pos;
+
+		light->enerDis = XMFLOAT4(energy, rad, 0, 0);
 		light->UpdateLight();
 	}
 	
@@ -303,6 +346,10 @@ void wiEmittedParticle::CleanUp()
 
 	delete bounding_box;
 	bounding_box=nullptr;
+
+	SAFE_DELETE_ARRAY(posSamples);
+	SAFE_DELETE_ARRAY(radSamples);
+	SAFE_DELETE_ARRAY(energySamples);
 
 	//delete(this);
 }

@@ -85,6 +85,10 @@ private:
 
 	float emit;
 
+	XMFLOAT3* posSamples;
+	float* radSamples;
+	float* energySamples;
+	int currentSample;
 public:
 	wiEmittedParticle(){};
 	wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
