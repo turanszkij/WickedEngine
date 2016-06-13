@@ -56,16 +56,16 @@ void wiTranslator::Update()
 	{
 		Camera* cam = wiRenderer::getCamera();
 		float dist = wiMath::Distance(cam->translation, translation);
+		XMVECTOR pos = XMLoadFloat3(&translation);
+		XMVECTOR plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(cam->GetAt()));
 
-
-		RAY prevRay = wiRenderer::getPickRay((long)prevPointer.x, (long)prevPointer.y);
 		RAY ray = wiRenderer::getPickRay((long)pointer.x, (long)pointer.y);
-
-		XMFLOAT3 prevGrab = wiMath::Lerp(prevRay.origin, prevRay.direction, dist);
-		XMFLOAT3 grab = wiMath::Lerp(ray.origin, ray.direction, dist);
+		XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+		XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
+		XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
 
 		XMFLOAT3 delta;
-		XMStoreFloat3(&delta, XMVectorSubtract(XMLoadFloat3(&grab), XMLoadFloat3(&prevGrab)));
+		XMStoreFloat3(&delta, intersection - pos);
 
 		Translate(delta);
 
