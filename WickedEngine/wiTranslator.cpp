@@ -5,42 +5,129 @@
 
 using namespace wiGraphicsTypes;
 
-GPUBuffer* wiTranslator::vertexBuffer = nullptr;
-int wiTranslator::vertexCount = 0;
+GPUBuffer* wiTranslator::vertexBuffer_Axis = nullptr;
+GPUBuffer* wiTranslator::vertexBuffer_Plane = nullptr;
+GPUBuffer* wiTranslator::vertexBuffer_Origin = nullptr;
+int wiTranslator::vertexCount_Axis = 0;
+int wiTranslator::vertexCount_Plane = 0;
+int wiTranslator::vertexCount_Origin = 0;
 
 
 wiTranslator::wiTranslator() :Transform()
 {
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
+	dragStart = XMFLOAT3(0, 0, 0);
+
+	dragging = false;
 
 	enabled = true;
 
-	if (vertexBuffer == nullptr)
+	state = TRANSLATOR_IDLE;
+
+	if (vertexBuffer_Axis == nullptr)
 	{
-		vertexBuffer = new GPUBuffer;
+		{
+			XMFLOAT4 verts[] = {
+				XMFLOAT4(0,0,0,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(3,0,0,1), XMFLOAT4(1,1,1,1),
+			};
+			vertexCount_Axis = ARRAYSIZE(verts) / 2;
 
-		XMFLOAT4 verts[] = {
-			XMFLOAT4(0,0,0,1), XMFLOAT4(1,0,0,1),
-			XMFLOAT4(1,0,0,1), XMFLOAT4(1,0,0,1),
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = verts;
+			vertexBuffer_Axis = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_Axis);
+		}
+	}
 
-			XMFLOAT4(0,0,0,1), XMFLOAT4(0,1,0,1),
-			XMFLOAT4(0,1,0,1), XMFLOAT4(0,1,0,1),
+	if (vertexBuffer_Plane == nullptr)
+	{
+		{
+			XMFLOAT4 verts[] = {
+				XMFLOAT4(1,0,0,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,1,0,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,1,0,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0,1,0,1), XMFLOAT4(1,1,1,1),
+			};
+			vertexCount_Plane = ARRAYSIZE(verts) / 2;
 
-			XMFLOAT4(0,0,0,1), XMFLOAT4(0,0,1,1),
-			XMFLOAT4(0,0,1,1), XMFLOAT4(0,0,1,1),
-		};
-		vertexCount = ARRAYSIZE(verts);
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = verts;
+			vertexBuffer_Plane = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_Plane);
+		}
+	}
 
-		GPUBufferDesc bd;
-		ZeroMemory(&bd, sizeof(bd));
-		bd.Usage = USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(verts);
-		bd.BindFlags = BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		SubresourceData InitData;
-		ZeroMemory(&InitData, sizeof(InitData));
-		InitData.pSysMem = verts;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer);
+	if (vertexBuffer_Origin == nullptr)
+	{
+		{
+			float edge = 0.2f;
+			XMFLOAT4 verts[] = {
+				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,-edge,1), XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,-edge,edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,-edge,-edge,1),  XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,-edge,1),   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(edge,edge,edge,1),	   XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-edge,edge,-edge,1),  XMFLOAT4(1,1,1,1),
+			};
+			vertexCount_Origin = ARRAYSIZE(verts) / 2;
+
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = verts;
+			vertexBuffer_Origin = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_Origin);
+		}
 	}
 }
 
@@ -52,24 +139,160 @@ wiTranslator::~wiTranslator()
 void wiTranslator::Update()
 {
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
-	if (enabled && wiInputManager::GetInstance()->down(VK_LBUTTON))
+	Camera* cam = wiRenderer::getCamera();
+	XMVECTOR pos = XMLoadFloat3(&translation);
+
+	if (enabled)
 	{
-		Camera* cam = wiRenderer::getCamera();
-		float dist = wiMath::Distance(cam->translation, translation);
-		XMVECTOR pos = XMLoadFloat3(&translation);
-		XMVECTOR plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(cam->GetAt()));
+		if (!dragging)
+		{
+			float fDist = wiMath::Distance(translation, cam->translation) * 0.05f;
 
-		RAY ray = wiRenderer::getPickRay((long)pointer.x, (long)pointer.y);
-		XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
-		XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
-		XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
+			XMVECTOR o, x, y, z, p, xy, xz, yz;
 
-		XMFLOAT3 delta;
-		XMStoreFloat3(&delta, intersection - pos);
+			o = pos;
+			x = o + XMVectorSet(3, 0, 0, 0) * fDist;
+			y = o + XMVectorSet(0, 3, 0, 0) * fDist;
+			z = o + XMVectorSet(0, 0, 3, 0) * fDist;
+			p = XMLoadFloat4(&pointer);
+			xy = o + XMVectorSet(1, 1, 0, 0) * fDist;
+			xz = o + XMVectorSet(1, 0, 1, 0) * fDist;
+			yz = o + XMVectorSet(0, 1, 1, 0) * fDist;
 
-		Translate(delta);
+			XMMATRIX P = cam->GetProjection();
+			XMMATRIX V = cam->GetView();
+			XMMATRIX W = XMMatrixIdentity();
 
-		Transform::UpdateTransform();
+			o = XMVector3Project(o, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			x = XMVector3Project(x, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			y = XMVector3Project(y, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			z = XMVector3Project(z, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			xy = XMVector3Project(xy, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			xz = XMVector3Project(xz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			yz = XMVector3Project(yz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+
+			XMVECTOR xDisV = XMVector2LinePointDistance(o, x, p);
+			XMVECTOR yDisV = XMVector2LinePointDistance(o, y, p);
+			XMVECTOR zDisV = XMVector2LinePointDistance(o, z, p);
+			XMVECTOR oDisV = XMVector3Length(o - p);
+			XMVECTOR xyDisV = XMVector3Length(xy - p);
+			XMVECTOR xzDisV = XMVector3Length(xz - p);
+			XMVECTOR yzDisV = XMVector3Length(yz - p);
+
+			float xDis = XMVectorGetX(xDisV);
+			float yDis = XMVectorGetX(yDisV);
+			float zDis = XMVectorGetX(zDisV);
+			float oDis = XMVectorGetX(oDisV);
+			float xyDis = XMVectorGetX(xyDisV);
+			float xzDis = XMVectorGetX(xzDisV);
+			float yzDis = XMVectorGetX(yzDisV);
+
+			if (oDis < 10)
+			{
+				state = TRANSLATOR_XYZ;
+			}
+			else if (xyDis < 10)
+			{
+				state = TRANSLATOR_XY;
+			}
+			else if (xzDis < 10)
+			{
+				state = TRANSLATOR_XZ;
+			}
+			else if (yzDis < 10)
+			{
+				state = TRANSLATOR_YZ;
+			}
+			else if (xDis < 10)
+			{
+				state = TRANSLATOR_X;
+			}
+			else if (yDis < 10)
+			{
+				state = TRANSLATOR_Y;
+			}
+			else if (zDis < 10)
+			{
+				state = TRANSLATOR_Z;
+			}
+			else if (!dragging)
+			{
+				state = TRANSLATOR_IDLE;
+			}
+		}
+
+		if (dragging || (state != TRANSLATOR_IDLE && wiInputManager::GetInstance()->down(VK_LBUTTON)))
+		{
+			XMVECTOR dragStartV = XMLoadFloat3(&dragStart);
+
+			XMVECTOR plane;
+
+			if (state == TRANSLATOR_XY)
+			{
+				plane = XMPlaneFromPointNormal(pos, XMVectorSet(0, 0, 1, 1));
+			}
+			else if (state == TRANSLATOR_XZ)
+			{
+				plane = XMPlaneFromPointNormal(pos, XMVectorSet(0, 1, 0, 1));
+			}
+			else if (state == TRANSLATOR_YZ)
+			{
+				plane = XMPlaneFromPointNormal(pos, XMVectorSet(1, 0, 0, 1));
+			}
+			else
+			{
+				// xyz
+				plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(cam->GetAt()));
+			}
+
+			RAY ray = wiRenderer::getPickRay((long)pointer.x, (long)pointer.y);
+			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
+			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
+
+			ray = wiRenderer::getPickRay((long)prevPointer.x, (long)prevPointer.y);
+			rayOrigin = XMLoadFloat3(&ray.origin);
+			rayDir = XMLoadFloat3(&ray.direction);
+			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
+
+			XMFLOAT3 delta;
+			XMStoreFloat3(&delta, intersection - intersectionPrev);
+
+			if (state == TRANSLATOR_X)
+			{
+				delta.y = delta.z = 0;
+			}
+			else if (state == TRANSLATOR_Y)
+			{
+				delta.x = delta.z = 0;
+			}
+			else if (state == TRANSLATOR_Z)
+			{
+				delta.x = delta.y = 0;
+			}
+
+			Translate(delta);
+
+			Transform::UpdateTransform();
+
+			if (!dragging)
+			{
+				// drag start
+				XMStoreFloat3(&dragStart, intersection);
+			}
+			dragging = true;
+		}
+
+		if (!wiInputManager::GetInstance()->down(VK_LBUTTON))
+		{
+			dragging = false;
+		}
+
 	}
+	else
+	{
+		dragging = false;
+	}
+
 	prevPointer = pointer;
 }

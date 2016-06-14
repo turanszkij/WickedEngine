@@ -70,10 +70,9 @@ float4 main(VertexToPixelPostProcess input ):SV_Target
 		float2 newTex = ep.xy + ray.xy;
 
 		//occFrag = xNormalMap.SampleLevel(Sampler, newTex,0).xyz;
-		occFrag = loadNormal(newTex).xyz;
+		occFrag = decode(loadNormal(newTex).xy);
 		if(!occFrag.x && !occFrag.y && !occFrag.z)
 			break;
-		occFrag = occFrag * 2 - 1;
 
 		depthDiff = ( depth - ( texture_lineardepth.SampleLevel(Sampler,newTex,0).r ) );
 

@@ -1594,10 +1594,11 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 	if(!renderableTranslators.empty()){
 		GetDevice()->EventBegin(L"Translators", threadID);
 
-		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+		GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED], threadID);
+
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED],threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
@@ -1605,17 +1606,55 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 		
-		GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+		XMMATRIX VP = camera->GetViewProjection();
 
 		MiscCB sb;
 		for (auto& x : renderableTranslators)
 		{
-			sb.mTransform = XMMatrixTranspose(x->getMatrix()*camera->GetViewProjection());
-			sb.mColor = XMFLOAT4(1, 1, 1, 1);
+			if (!x->enabled)
+				continue;
 
+			float fDist = wiMath::Distance(x->translation, camera->translation) * 0.05f;
+			XMMATRIX mat = XMMatrixScaling(fDist, fDist, fDist)*x->getMatrix()*VP;
+
+			// x
+			sb.mTransform = XMMatrixTranspose(mat);
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-			GetDevice()->Draw(wiTranslator::vertexCount, threadID);
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Axis, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Axis, threadID);
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Plane, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+			// y
+			sb.mTransform = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Axis, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Axis, threadID);
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Plane, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+			// z
+			sb.mTransform = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Axis, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Axis, threadID);
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Plane, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+			// origin
+			sb.mTransform = XMMatrixTranspose(mat);
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Origin, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Origin, threadID);
 		}
 
 		GetDevice()->EventEnd(threadID);

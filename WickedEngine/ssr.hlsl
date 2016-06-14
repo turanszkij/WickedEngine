@@ -1,6 +1,6 @@
 #include "postProcessHF.hlsli"
 #include "reconstructPositionHF.hlsli"
-
+#include "brdf.hlsli"
 
 // Ne lepegessunk 0-kat, akkor mar inkabb kicsit tobbet inkabb
 static const float	g_fMinRayStep = 0.01f;
@@ -82,21 +82,21 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 
 float4 main(VertexToPixelPostProcess input) : SV_Target
 {
-	float4 o = 1;
+	float4 g0 = texture_gbuffer0.Load(int3(input.pos.xy, 0));
+	float4 g3 = texture_gbuffer3.Load(int3(input.pos.xy, 0));
+	
+	BRDF_HELPER_MAKEINPUTS(g0, g3.y, g3.z);
 
-	float4 vNormZ;
-	vNormZ.rgb = decode(texture_gbuffer1.Load(int3(input.pos.xy, 0)).rg);
-	vNormZ.a = texture_depth.Load(int3(input.pos.xy, 0));
+	float3 N = decode(texture_gbuffer1.Load(int3(input.pos.xy, 0)).xy);
 
-	float2 vRougnessSpec = loadVelocity(input.tex).zw; //specular_power,specular intensity
-													   //float fSpecularModifier = (1 - clamp(vRougnessSpec.x, 0, 256) / 256.f)*vRougnessSpec.y;
+	float depth = texture_lineardepth.Load(int3(input.pos.xy, 0));
 
-	float3 vWorldPos = getPosition(input.tex, vNormZ.a);
+	float3 vWorldPos = getPosition(input.tex, depth);
 
 
 	//Reflection vector
 	float3 vViewPos = mul(float4(vWorldPos.xyz, 1), g_xCamera_View).xyz;
-	float3 vViewNor = mul(float4(vNormZ.xyz, 0), g_xCamera_View).xyz;
+	float3 vViewNor = mul(float4(N, 0), g_xCamera_View).xyz;
 	float3 vReflectDir = normalize(reflect(normalize(vViewPos.xyz), normalize(vViewNor.xyz)));
 
 
@@ -113,9 +113,8 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 
 
 	//Color
-	float fReflectionIntensity =
+	float reflectionIntensity =
 		saturate(
-			pow(vRougnessSpec.y, 2) *															//specular fade
 			fScreenEdgeFactor *																	// screen fade
 			saturate(vReflectDir.z)																// camera facing fade
 			//* saturate((g_fSearchDist - distance(vViewPos, vHitPos)) * g_fSearchDistInv)	// reflected object distance fade
@@ -123,11 +122,9 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 			);
 
 
-	float3 vReflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
-	float3 vSceneColor = xTexture.Load(int3(input.pos.xy,0)).rgb;
+	float3 reflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
+	float3 sceneColor = xTexture.Load(int3(input.pos.xy,0)).rgb;
 
-	o = float4(lerp(vSceneColor, vReflectionColor, fReflectionIntensity), 1);
-
-	return o;
+	return float4(sceneColor.rgb + reflectionColor.rgb * f0 * reflectionIntensity, 1);
 
 }

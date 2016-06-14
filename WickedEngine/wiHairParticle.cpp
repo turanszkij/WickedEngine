@@ -386,7 +386,7 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation));
 		At = XMVector3Normalize(XMVector3Transform(XMVector3Transform(At, camRot), inverseRenderMat));
 		Up = XMVector3Normalize(XMVector3Transform(XMVector3Transform(Up, camRot), inverseRenderMat));
-		Eye = XMVector3Transform(camera->GetEye(), inverseRenderMat);
+		Eye = XMVector4Transform(camera->GetEye(), inverseRenderMat);
 
 		View = XMMatrixLookToLH(Eye, At, Up);
 
