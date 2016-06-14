@@ -130,6 +130,14 @@ float wiWidget::GetFontScaling()
 void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
 {
 	scissorRect = rect;
+	if(scissorRect.bottom>0)
+		scissorRect.bottom -= 1;
+	if (scissorRect.left>0)
+		scissorRect.left += 1;
+	if (scissorRect.right>0)
+		scissorRect.right -= 1;
+	if (scissorRect.top>0)
+		scissorRect.top += 1;
 }
 
 
