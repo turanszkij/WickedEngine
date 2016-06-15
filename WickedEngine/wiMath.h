@@ -28,5 +28,7 @@ namespace wiMath
 	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT4& a,const XMFLOAT4&b, const XMFLOAT4& c, float t);
 
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion);
+
+	XMVECTOR GetClosestPointToLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& P, bool segmentClamp = false);
 };
 

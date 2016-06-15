@@ -24,6 +24,10 @@ wiTranslator::wiTranslator() :Transform()
 
 	state = TRANSLATOR_IDLE;
 
+	dist = 1;
+
+	isTranslator = true; isScalator = false; isRotator = false;
+
 	if (vertexBuffer_Axis == nullptr)
 	{
 		{
@@ -136,6 +140,7 @@ wiTranslator::~wiTranslator()
 {
 }
 
+
 void wiTranslator::Update()
 {
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
@@ -144,24 +149,26 @@ void wiTranslator::Update()
 
 	if (enabled)
 	{
+
 		if (!dragging)
 		{
-			float fDist = wiMath::Distance(translation, cam->translation) * 0.05f;
+			XMMATRIX P = cam->GetProjection();
+			XMMATRIX V = cam->GetView();
+			XMMATRIX W = XMMatrixIdentity();
+
+			dist = wiMath::Distance(translation, cam->translation) * 0.05f;
 
 			XMVECTOR o, x, y, z, p, xy, xz, yz;
 
 			o = pos;
-			x = o + XMVectorSet(3, 0, 0, 0) * fDist;
-			y = o + XMVectorSet(0, 3, 0, 0) * fDist;
-			z = o + XMVectorSet(0, 0, 3, 0) * fDist;
+			x = o + XMVectorSet(3, 0, 0, 0) * dist;
+			y = o + XMVectorSet(0, 3, 0, 0) * dist;
+			z = o + XMVectorSet(0, 0, 3, 0) * dist;
 			p = XMLoadFloat4(&pointer);
-			xy = o + XMVectorSet(1, 1, 0, 0) * fDist;
-			xz = o + XMVectorSet(1, 0, 1, 0) * fDist;
-			yz = o + XMVectorSet(0, 1, 1, 0) * fDist;
+			xy = o + XMVectorSet(1, 1, 0, 0) * dist;
+			xz = o + XMVectorSet(1, 0, 1, 0) * dist;
+			yz = o + XMVectorSet(0, 1, 1, 0) * dist;
 
-			XMMATRIX P = cam->GetProjection();
-			XMMATRIX V = cam->GetView();
-			XMMATRIX W = XMMatrixIdentity();
 
 			o = XMVector3Project(o, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
 			x = XMVector3Project(x, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
@@ -223,27 +230,43 @@ void wiTranslator::Update()
 
 		if (dragging || (state != TRANSLATOR_IDLE && wiInputManager::GetInstance()->down(VK_LBUTTON)))
 		{
-			XMVECTOR dragStartV = XMLoadFloat3(&dragStart);
-
-			XMVECTOR plane;
-
-			if (state == TRANSLATOR_XY)
+			XMVECTOR plane, planeNormal;
+			if (state == TRANSLATOR_X)
 			{
-				plane = XMPlaneFromPointNormal(pos, XMVectorSet(0, 0, 1, 1));
+				XMVECTOR axis = XMVectorSet(1, 0, 0, 0);
+				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				planeNormal = XMVector3Cross(wrong, axis);
+			}
+			else if (state == TRANSLATOR_Y)
+			{
+				XMVECTOR axis = XMVectorSet(0, 1, 0, 0);
+				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				planeNormal = XMVector3Cross(wrong, axis);
+			}
+			else if (state == TRANSLATOR_Z)
+			{
+				XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
+				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				planeNormal = XMVector3Cross(wrong, axis);
+			}
+			else if (state == TRANSLATOR_XY)
+			{
+				planeNormal = XMVectorSet(0, 0, 1, 0);
 			}
 			else if (state == TRANSLATOR_XZ)
 			{
-				plane = XMPlaneFromPointNormal(pos, XMVectorSet(0, 1, 0, 1));
+				planeNormal = XMVectorSet(0, 1, 0, 0);
 			}
 			else if (state == TRANSLATOR_YZ)
 			{
-				plane = XMPlaneFromPointNormal(pos, XMVectorSet(1, 0, 0, 1));
+				planeNormal = XMVectorSet(1, 0, 0, 0);
 			}
 			else
 			{
 				// xyz
-				plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(cam->GetAt()));
+				planeNormal = cam->GetAt();
 			}
+			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
 			RAY ray = wiRenderer::getPickRay((long)pointer.x, (long)pointer.y);
 			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
@@ -255,31 +278,49 @@ void wiTranslator::Update()
 			rayDir = XMLoadFloat3(&ray.direction);
 			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
 
-			XMFLOAT3 delta;
-			XMStoreFloat3(&delta, intersection - intersectionPrev);
 
+			XMFLOAT3 delta;
 			if (state == TRANSLATOR_X)
 			{
-				delta.y = delta.z = 0;
+				XMVECTOR A = pos, B = pos + XMVectorSet(1, 0, 0, 0);
+				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
+				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
+				XMStoreFloat3(&delta, P - PPrev);
 			}
 			else if (state == TRANSLATOR_Y)
 			{
-				delta.x = delta.z = 0;
+				XMVECTOR A = pos, B = pos + XMVectorSet(0, 1, 0, 0);
+				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
+				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
+				XMStoreFloat3(&delta, P - PPrev);
 			}
 			else if (state == TRANSLATOR_Z)
 			{
-				delta.x = delta.y = 0;
+				XMVECTOR A = pos, B = pos + XMVectorSet(0, 0, 1, 0);
+				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
+				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
+				XMStoreFloat3(&delta, P - PPrev);
+			}
+			else
+			{
+				XMStoreFloat3(&delta, intersection - intersectionPrev);
 			}
 
-			Translate(delta);
+			if (isScalator)
+			{
+				scale_rest.x += delta.x; scale_rest.y += delta.y; scale_rest.z += delta.z;
+			}
+			if (isRotator)
+			{
+				RotateRollPitchYaw(delta);
+			}
+			if (isTranslator)
+			{
+				Translate(delta);
+			}
 
 			Transform::UpdateTransform();
 
-			if (!dragging)
-			{
-				// drag start
-				XMStoreFloat3(&dragStart, intersection);
-			}
 			dragging = true;
 		}
 

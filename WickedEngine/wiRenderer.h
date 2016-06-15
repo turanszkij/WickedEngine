@@ -388,7 +388,7 @@ public:
 	//alpha-opaque
 	static void DrawImages(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawImagesNormals(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
-	static void DrawLights(Camera* camera, GRAPHICSTHREAD threadID, unsigned int stencilRef = 2);
+	static void DrawLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);

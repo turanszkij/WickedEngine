@@ -28,6 +28,10 @@ public:
 		TRANSLATOR_XYZ,
 	} state;
 
+	float dist;
+
+	bool isTranslator, isScalator, isRotator;
+
 	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Axis;
 	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Plane;
 	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Origin;
