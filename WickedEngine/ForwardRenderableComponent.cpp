@@ -81,6 +81,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			, false, SHADERTYPE_FORWARD
 			, nullptr, true, GRAPHICSTHREAD_SCENE);
 		wiRenderer::DrawSky(threadID);
+		wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);

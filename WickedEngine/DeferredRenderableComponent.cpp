@@ -224,6 +224,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
 			, threadID, STENCILREF_DEFAULT); 
 		wiRenderer::DrawSky(threadID);
+		wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);

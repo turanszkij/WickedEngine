@@ -44,7 +44,8 @@ GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
-bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false;
+bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false
+, wiRenderer::debugEnvProbes = false;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -687,6 +688,15 @@ void wiRenderer::LoadLineShaders()
 
 
 	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
+
+
+	VertexShaderInfo* vsinfoSphere = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereVS.cso", wiResourceManager::VERTEXSHADER));
+	if (vsinfoSphere != nullptr) {
+		vertexShaders[VSTYPE_SPHERE] = vsinfoSphere->vertexShader;
+	}
+
+
+	pixelShaders[PSTYPE_CUBEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubemapPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiRenderer::LoadTessShaders()
@@ -1673,6 +1683,46 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Origin, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
 			GetDevice()->Draw(wiTranslator::vertexCount_Origin, threadID);
+		}
+
+		GetDevice()->EventEnd(threadID);
+
+		renderableTranslators.clear();
+	}
+}
+void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	if (debugEnvProbes && !GetScene().environmentProbes.empty()) {
+		GetDevice()->EventBegin(L"Debug EnvProbes", threadID);
+
+		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+
+		GetDevice()->BindVertexLayout(nullptr, threadID);
+
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+
+
+		GetDevice()->BindPS(pixelShaders[PSTYPE_CUBEMAP], threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_SPHERE], threadID);
+
+		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
+		GetDevice()->BindIndexBuffer(nullptr, threadID);
+
+		XMMATRIX VP = camera->GetViewProjection();
+
+		MiscCB sb;
+		for (auto& x : GetScene().environmentProbes)
+		{
+			float dist = wiMath::Distance(x->translation, camera->translation) * 0.09f;
+			sb.mTransform = XMMatrixTranspose(XMMatrixScaling(dist, dist, dist)*x->getMatrix());
+			sb.mColor = XMFLOAT4(1, 1, 1, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			GetDevice()->BindResourcePS(x->cubeMap.GetTexture(), TEXSLOT_ENV0, threadID);
+
+			GetDevice()->Draw(2880, threadID);
 		}
 
 		GetDevice()->EventEnd(threadID);
@@ -3689,7 +3739,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 	GetDevice()->GenerateMips(probe->cubeMap.GetTexture(), threadID);
 
-	enviroMap = probe->cubeMap.GetTexture();
+	//enviroMap = probe->cubeMap.GetTexture();
 
 	scene->environmentProbes.push_back(probe);
 

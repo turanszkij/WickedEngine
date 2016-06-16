@@ -100,6 +100,9 @@
     <None Include="envReflectionHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="uvsphere.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -377,6 +380,12 @@
     </FxCompile>
     <FxCompile Include="objectPS_forward_dirlight_transparent.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeMapPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="sphereVS.hlsl">
+      <Filter>VS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

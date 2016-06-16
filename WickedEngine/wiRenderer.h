@@ -280,7 +280,7 @@ protected:
 	
 
 
-	static bool	wireRender, debugSpheres, debugBoneLines, debugBoxes;
+	static bool	wireRender, debugSpheres, debugBoneLines, debugBoxes, debugEnvProbes;
 
 
 	static wiGraphicsTypes::Texture2D* enviroMap,*colorGrading;
@@ -330,10 +330,13 @@ public:
 	static bool GetRasterizer(){return wireRender;};
 	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}
 	static void SetToDrawDebugSpheres(bool param){debugSpheres=param;}
-	static void SetToDrawDebugBoneLines(bool param){ debugBoneLines = param; }
+	static void SetToDrawDebugBoneLines(bool param) { debugBoneLines = param; }
+	static bool GetToDrawDebugBoneLines() { return debugBoneLines; }
 	static void SetToDrawDebugBoxes(bool param){debugBoxes=param;}
-	static bool GetToDrawDebugSpheres(){return debugSpheres;};
-	static bool GetToDrawDebugBoxes(){return debugBoxes;};
+	static bool GetToDrawDebugSpheres(){return debugSpheres;}
+	static bool GetToDrawDebugBoxes(){return debugBoxes;}
+	static bool GetToDrawDebugEnvProbes() { return debugEnvProbes; }
+	static void SetToDrawDebugEnvProbes(bool value) { debugEnvProbes = value; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }
@@ -381,6 +384,7 @@ public:
 	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
