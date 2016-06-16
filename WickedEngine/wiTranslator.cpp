@@ -303,23 +303,37 @@ void wiTranslator::Update()
 			}
 			else
 			{
-				XMStoreFloat3(&delta, intersection - intersectionPrev);
+				XMVECTOR deltaV = intersection - intersectionPrev;
+				if (isScalator)
+				{
+					float sca = XMVectorGetY(deltaV);
+					delta = XMFLOAT3(sca, sca, sca);
+				}
+				else
+				{
+					XMStoreFloat3(&delta, deltaV);
+				}
 			}
 
-			if (isScalator)
+
+			XMMATRIX transf = XMMatrixIdentity();
+
+			if (isTranslator)
 			{
-				scale_rest.x += delta.x; scale_rest.y += delta.y; scale_rest.z += delta.z;
+				transf *= XMMatrixTranslation(delta.x, delta.y, delta.z);
 			}
 			if (isRotator)
 			{
-				RotateRollPitchYaw(delta);
+				transf *= XMMatrixRotationRollPitchYaw(delta.x, delta.y, delta.z);
 			}
-			if (isTranslator)
+			if (isScalator)
 			{
-				Translate(delta);
+				transf *= XMMatrixScaling((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
 			}
 
-			Transform::UpdateTransform();
+			Transform::transform(transf);
+
+			Transform::applyTransform();
 
 			dragging = true;
 		}
