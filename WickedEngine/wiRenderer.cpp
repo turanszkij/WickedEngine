@@ -778,7 +778,7 @@ void wiRenderer::SetUpStates()
 	}
 
 	SamplerDesc samplerDesc;
-	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
@@ -793,13 +793,13 @@ void wiRenderer::SetUpStates()
 	samplerDesc.MaxLOD = FLOAT32_MAX;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_MIRROR]);
 
-	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_CLAMP]);
 
-	samplerDesc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;

@@ -20,5 +20,7 @@ float4 main(PSIn input) : SV_TARGET
 
 	OBJECT_PS_FOG
 
+	OBJECT_PS_GAMMA
+
 	OBJECT_PS_OUT_FORWARD
 }

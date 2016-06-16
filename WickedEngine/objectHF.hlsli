@@ -169,6 +169,9 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 #define OBJECT_PS_DEGAMMA																							\
 	color = DEGAMMA(color);
 
+#define OBJECT_PS_GAMMA																							\
+	color = GAMMA(color);
+
 #define OBJECT_PS_EMISSIVE																							\
 	color.rgb += baseColor.rgb * GetEmissive(emissive);
 
