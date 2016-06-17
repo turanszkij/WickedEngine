@@ -1710,8 +1710,6 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 		GetDevice()->BindIndexBuffer(nullptr, threadID);
 
-		XMMATRIX VP = camera->GetViewProjection();
-
 		MiscCB sb;
 		for (auto& x : GetScene().environmentProbes)
 		{
@@ -1726,8 +1724,6 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 		}
 
 		GetDevice()->EventEnd(threadID);
-
-		renderableTranslators.clear();
 	}
 }
 
@@ -3234,6 +3230,26 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 
 		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable);
 
+		if (pickType & PICK_LIGHT)
+		{
+
+		}
+		if (pickType & PICK_ENVPROBE)
+		{
+			for (auto& x : GetScene().environmentProbes)
+			{
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&x->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(x->translation, cam->translation) * 0.09f)
+				{
+					Picked pick = Picked();
+					pick.transform = x;
+					pick.distance = wiMath::Distance(x->translation, ray.origin);;
+					pickPoints.push_back(pick);
+				}
+			}
+		}
+
 		if (!pickPoints.empty()){
 			Picked min = pickPoints.front();
 			for (unsigned int i = 1; i<pickPoints.size(); ++i){
@@ -3336,6 +3352,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				XMVECTOR& pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
 				XMVECTOR& nor = XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0))), objectMat);
 				Picked picked = Picked();
+				picked.transform = object;
 				picked.object = object;
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
