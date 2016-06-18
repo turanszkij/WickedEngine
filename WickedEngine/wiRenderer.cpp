@@ -1704,7 +1704,7 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindVertexLayout(nullptr, threadID);
 
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_DEFAULT, threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 
