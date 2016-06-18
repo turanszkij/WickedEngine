@@ -12,5 +12,5 @@ float4 main(VSOut_Sphere input) : SV_TARGET
 	float3 P = input.pos3D;
 	float3 N = normalize(input.nor);
 	float3 V = normalize(g_xCamera_CamPos - P);
-	return texture_env0.Sample(sampler_linear_clamp,-reflect(V, N));
+	return float4(texture_env0.Sample(sampler_linear_clamp,-reflect(V, N)).rgb,1);
 }

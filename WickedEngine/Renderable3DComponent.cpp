@@ -271,6 +271,12 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.GetTexture(), rtReflection.GetTexture()
 			, rtWaterRipple.GetTexture(), threadID);
 		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
+		wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
 	}
 
 }

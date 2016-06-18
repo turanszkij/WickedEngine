@@ -45,7 +45,7 @@ int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false
-, wiRenderer::debugEnvProbes = false;
+, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -916,8 +916,10 @@ void wiRenderer::SetUpStates()
 	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
-	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_WIRE]);
+	rs.AntialiasedLineEnable = false;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE]);
+	rs.AntialiasedLineEnable = true;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_SMOOTH]);
 	
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_NONE;
@@ -941,7 +943,9 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable = false;
-	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
+	rs.AntialiasedLineEnable = true;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
 	
 	rs.FillMode=FILL_SOLID;
 	rs.CullMode=CULL_FRONT;
@@ -1700,7 +1704,7 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindVertexLayout(nullptr, threadID);
 
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_DEFAULT, threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 
@@ -1722,6 +1726,78 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 
 			GetDevice()->Draw(2880, threadID);
 		}
+
+		GetDevice()->EventEnd(threadID);
+	}
+}
+void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	if(gridHelper){
+		GetDevice()->EventBegin(L"GridHelper", threadID);
+
+		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+
+
+		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+		
+		GetDevice()->BindVertexBuffer(&Cube::vertexBuffer,0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4),threadID);
+		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
+
+		static int gridVertexCount = 0;
+		static GPUBuffer* grid = nullptr;
+		if (grid == nullptr)
+		{
+			const int a = 20;
+			XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
+
+			int count = 0;
+			for (int i = 0; i <= a; ++i)
+			{
+				verts[count++] = XMFLOAT4(i - a*0.5f, 0, -a*0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(1, 1, 1, 1));
+
+				verts[count++] = XMFLOAT4(i - a*0.5f, 0, +a*0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(1, 1, 1, 1));
+			}
+			for (int j = 0; j <= a; ++j)
+			{
+				verts[count++] = XMFLOAT4(-a*0.5f, 0, j - a*0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(1, 1, 1, 1));
+
+				verts[count++] = XMFLOAT4(+a*0.5f, 0, j - a*0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(1, 1, 1, 1));
+			}
+
+			gridVertexCount = ARRAYSIZE(verts) / 2;
+
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = verts;
+			grid = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
+		}
+
+		MiscCB sb;
+		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		GetDevice()->BindVertexBuffer(grid, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+		GetDevice()->Draw(gridVertexCount, threadID);
+
 
 		GetDevice()->EventEnd(threadID);
 	}
