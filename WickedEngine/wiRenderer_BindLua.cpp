@@ -404,13 +404,18 @@ namespace wiRenderer_BindLua
 			wiLua::SError(L, "SetSpotLightShadowProps(int shadowMapCount, int resolution) not enough arguments!");
 		return 0;
 	}
-	int SetDebugBoxesEnabled(lua_State* L)
+	int SetDebugPartitionTreeEnabled(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetToDrawDebugBoxes(wiLua::SGetBool(L, 1));
+			wiRenderer::SetToDrawDebugPartitionTree(wiLua::SGetBool(L, 1));
 		}
+		return 0;
+	}
+	int SetDebugBoxesEnabled(lua_State* L)
+	{
+		wiLua::SError(L, "SetDebugBoxesEnabled is obsolete! Use SetDebugPartitionTreeEnabled(bool value) instead to draw a partition tree!");
 		return 0;
 	}
 	int SetDebugBonesEnabled(lua_State* L)
@@ -637,6 +642,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetPointLightShadowProps", SetPointLightShadowProps);
 			wiLua::GetGlobal()->RegisterFunc("SetSpotLightShadowProps", SetSpotLightShadowProps);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
+			wiLua::GetGlobal()->RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetPhysicsParams", SetPhysicsParams);

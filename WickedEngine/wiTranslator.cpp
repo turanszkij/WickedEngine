@@ -55,8 +55,11 @@ wiTranslator::wiTranslator() :Transform()
 	{
 		{
 			XMFLOAT4 verts[] = {
+				XMFLOAT4(0,0,0,1), XMFLOAT4(1,1,1,1),
 				XMFLOAT4(1,0,0,1), XMFLOAT4(1,1,1,1),
 				XMFLOAT4(1,1,0,1), XMFLOAT4(1,1,1,1),
+
+				XMFLOAT4(0,0,0,1), XMFLOAT4(1,1,1,1),
 				XMFLOAT4(1,1,0,1), XMFLOAT4(1,1,1,1),
 				XMFLOAT4(0,1,0,1), XMFLOAT4(1,1,1,1),
 			};

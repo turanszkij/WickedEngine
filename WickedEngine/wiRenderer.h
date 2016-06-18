@@ -280,7 +280,7 @@ protected:
 	
 
 
-	static bool	wireRender, debugSpheres, debugBoneLines, debugBoxes, debugEnvProbes, gridHelper;
+	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, gridHelper;
 
 
 	static wiGraphicsTypes::Texture2D* enviroMap,*colorGrading;
@@ -330,11 +330,11 @@ public:
 	static bool GetRasterizer(){return wireRender;};
 	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}
 	static void SetToDrawDebugSpheres(bool param){debugSpheres=param;}
+	static bool GetToDrawDebugSpheres() { return debugSpheres; }
 	static void SetToDrawDebugBoneLines(bool param) { debugBoneLines = param; }
 	static bool GetToDrawDebugBoneLines() { return debugBoneLines; }
-	static void SetToDrawDebugBoxes(bool param){debugBoxes=param;}
-	static bool GetToDrawDebugSpheres(){return debugSpheres;}
-	static bool GetToDrawDebugBoxes(){return debugBoxes;}
+	static void SetToDrawDebugPartitionTree(bool param){debugPartitionTree=param;}
+	static bool GetToDrawDebugPartitionTree(){return debugPartitionTree;}
 	static bool GetToDrawDebugEnvProbes() { return debugEnvProbes; }
 	static void SetToDrawDebugEnvProbes(bool value) { debugEnvProbes = value; }
 	static bool GetToDrawGridHelper() { return gridHelper; }
@@ -442,11 +442,19 @@ public:
 	{
 		Transform* transform;
 		Object* object;
+		Light* light;
+		Decal* decal;
 		XMFLOAT3 position,normal;
 		float distance;
 		int subsetIndex;
 
-		Picked():transform(nullptr),object(nullptr),distance(0),subsetIndex(-1){}
+		Picked():distance(0),subsetIndex(-1)
+		{
+			SAFE_INIT(transform);
+			SAFE_INIT(object);
+			SAFE_INIT(light);
+			SAFE_INIT(decal);
+		}
 	};
 
 	// Pick closest object in the world
@@ -472,5 +480,9 @@ public:
 	static vector<wiTranslator*> renderableTranslators;
 	// Add translator to render in next frame
 	static void AddRenderableTranslator(wiTranslator* translator);
+
+	static vector<pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;
+	// Add box to render in next frame
+	static void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 };
 

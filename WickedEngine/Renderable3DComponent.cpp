@@ -271,12 +271,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.GetTexture(), rtReflection.GetTexture()
 			, rtWaterRipple.GetTexture(), threadID);
 		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
-		wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
 	}
 
 }
@@ -392,7 +386,7 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, GR
 		wiImage::Draw(rtLensFlare.GetTexture(), fx, threadID);
 	}
 }
-void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
+void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID){
 	if (getStereogramEnabled())
 	{
 		// We don't need the following for stereograms...
@@ -441,7 +435,7 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 		fx.process.clear();
 	}
 
-	rtFinal[2].Activate(threadID);
+	rtFinal[2].Activate(threadID, mainRT.depth);
 	fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
@@ -455,6 +449,13 @@ void Renderable3DComponent::RenderComposition2(GRAPHICSTHREAD threadID){
 		fx.presentFullScreen = true;
 		wiImage::Draw(rtBloom.back().GetTexture(), fx, threadID);
 	}
+
+	wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
+	wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
+	wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
+	wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
+	wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
+	wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
 }
 void Renderable3DComponent::RenderColorGradedComposition(){
 

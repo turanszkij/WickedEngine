@@ -44,7 +44,7 @@ GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
-bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugBoxes = false
+bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
@@ -76,6 +76,7 @@ vector<Lines*>	wiRenderer::linesTemp;
 vector<Cube>	wiRenderer::cubes;
 
 vector<wiTranslator*> wiRenderer::renderableTranslators;
+vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
 
 #pragma endregion
 
@@ -473,7 +474,7 @@ void wiRenderer::SetUpCubes(){
 	cubes.clear();
 }
 void wiRenderer::UpdateCubes(){
-	if(debugBoxes && spTree && spTree->root){
+	if(debugPartitionTree && spTree && spTree->root){
 		/*int num=0;
 		iterateSPTreeUpdate(spTree->root,cubes,num);
 		for(Object* object:objects){
@@ -936,8 +937,8 @@ void wiRenderer::SetUpStates()
 	rs.FillMode=FILL_WIREFRAME;
 	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=false;
 	rs.ScissorEnable=false;
@@ -1533,9 +1534,9 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 	
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW],threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
@@ -1565,9 +1566,9 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 	GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
 
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
-	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 
 
 	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE], threadID);
@@ -1592,15 +1593,15 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if(debugBoxes){
+	if(debugPartitionTree || !renderableBoxes.empty()){
 		GetDevice()->EventBegin(L"DebugBoxes", threadID);
 
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED],threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
@@ -1610,14 +1611,26 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
 
 		MiscCB sb;
-		for (unsigned int i = 0; i<cubes.size(); i++){
-			sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&cubes[i].desc.transform)*camera->GetViewProjection());
-			sb.mColor=cubes[i].desc.color;
+		for (auto& x : cubes)
+		{
+			sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&x.desc.transform)*camera->GetViewProjection());
+			sb.mColor=x.desc.color;
 
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			GetDevice()->DrawIndexed(24,threadID);
 		}
+
+		for (auto& x : renderableBoxes)
+		{
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera->GetViewProjection());
+			sb.mColor = x.second;
+
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			GetDevice()->DrawIndexed(24, threadID);
+		}
+		renderableBoxes.clear();
 
 		GetDevice()->EventEnd(threadID);
 	}
@@ -1627,13 +1640,10 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 	if(!renderableTranslators.empty()){
 		GetDevice()->EventBegin(L"Translators", threadID);
 
-		GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED], threadID);
 
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
 
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
@@ -1648,38 +1658,61 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				continue;
 
 			XMMATRIX mat = XMMatrixScaling(x->dist, x->dist, x->dist)*XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z)*VP;
+			XMMATRIX matX = XMMatrixTranspose(mat);
+			XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
+			XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
+
+			// Planes:
+
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Plane, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
+			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+			GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
+
+			// xy
+			sb.mTransform = matX;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+
+			// xz
+			sb.mTransform = matZ;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+
+			// yz
+			sb.mTransform = matY;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+
+			// Lines:
+
+			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Axis, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
+			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
+			GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
+			GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 
 			// x
-			sb.mTransform = XMMatrixTranspose(mat);
+			sb.mTransform = matX;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Axis, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
 			GetDevice()->Draw(wiTranslator::vertexCount_Axis, threadID);
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Plane, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+
 			// y
-			sb.mTransform = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
+			sb.mTransform = matY;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Axis, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
 			GetDevice()->Draw(wiTranslator::vertexCount_Axis, threadID);
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Plane, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
+
 			// z
-			sb.mTransform = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
+			sb.mTransform = matZ;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Axis, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
 			GetDevice()->Draw(wiTranslator::vertexCount_Axis, threadID);
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 1, 0, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->BindVertexBuffer(wiTranslator::vertexBuffer_Plane, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, threadID);
-			// origin
+
+			// Origin:
 			sb.mTransform = XMMatrixTranspose(mat);
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -1740,7 +1773,7 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
@@ -1749,6 +1782,7 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexBuffer(&Cube::vertexBuffer,0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4),threadID);
 		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
 
+		static float col = 0.7f;
 		static int gridVertexCount = 0;
 		static GPUBuffer* grid = nullptr;
 		if (grid == nullptr)
@@ -1760,18 +1794,18 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 			for (int i = 0; i <= a; ++i)
 			{
 				verts[count++] = XMFLOAT4(i - a*0.5f, 0, -a*0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(1, 1, 1, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 
 				verts[count++] = XMFLOAT4(i - a*0.5f, 0, +a*0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(1, 1, 1, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 			}
 			for (int j = 0; j <= a; ++j)
 			{
 				verts[count++] = XMFLOAT4(-a*0.5f, 0, j - a*0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(1, 1, 1, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 
 				verts[count++] = XMFLOAT4(+a*0.5f, 0, j - a*0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(1, 1, 1, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 			}
 
 			gridVertexCount = ARRAYSIZE(verts) / 2;
@@ -3306,9 +3340,40 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 
 		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable);
 
-		if (pickType & PICK_LIGHT)
+		if ((pickType & PICK_LIGHT) || (pickType & PICK_DECAL))
 		{
-
+			for (auto& model : GetScene().models)
+			{
+				for (auto& light : model->lights)
+				{
+					if (light->bounds.intersects(ray))
+					{
+						Picked pick = Picked();
+						pick.transform = light;
+						pick.light = light;
+						if (light->type == Light::DIRECTIONAL)
+						{
+							pick.distance = FLT_MAX;
+						}
+						else
+						{
+							pick.distance = wiMath::Distance(light->translation, ray.origin);
+						}
+						pickPoints.push_back(pick);
+					}
+				}
+				for (auto& decal : model->decals)
+				{
+					if (decal->bounds.intersects(ray))
+					{
+						Picked pick = Picked();
+						pick.transform = decal;
+						pick.decal = decal;
+						pick.distance = wiMath::Distance(decal->translation, ray.origin);
+						pickPoints.push_back(pick);
+					}
+				}
+			}
 		}
 		if (pickType & PICK_ENVPROBE)
 		{
@@ -3320,7 +3385,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 				{
 					Picked pick = Picked();
 					pick.transform = x;
-					pick.distance = wiMath::Distance(x->translation, ray.origin);;
+					pick.distance = wiMath::Distance(x->translation, ray.origin);
 					pickPoints.push_back(pick);
 				}
 			}
@@ -3870,4 +3935,9 @@ void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/)
 void wiRenderer::AddRenderableTranslator(wiTranslator* translator)
 {
 	renderableTranslators.push_back(translator);
+}
+
+void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
+{
+	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));
 }

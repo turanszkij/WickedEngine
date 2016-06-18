@@ -71,7 +71,7 @@ protected:
 	virtual void RenderBloom(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderLightShafts(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderComposition1(wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
-	virtual void RenderComposition2(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderComposition2(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderColorGradedComposition();
 public:
 	inline float getLightShaftQuality(){ return lightShaftQuality; }

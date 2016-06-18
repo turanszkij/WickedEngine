@@ -63,7 +63,7 @@ void ForwardRenderableComponent::Render()
 		RenderLightShafts(rtMain);
 		RenderComposition1(rtMain);
 		RenderBloom();
-		RenderComposition2();
+		RenderComposition2(rtMain);
 	}
 
 	Renderable2DComponent::Render();
@@ -130,7 +130,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderLightShafts(rtMain, GRAPHICSTHREAD_SCENE);
 			RenderComposition1(rtMain, GRAPHICSTHREAD_SCENE);
 			RenderBloom(GRAPHICSTHREAD_SCENE);
-			RenderComposition2(GRAPHICSTHREAD_SCENE);
+			RenderComposition2(rtMain, GRAPHICSTHREAD_SCENE);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
 
@@ -160,7 +160,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderLightShafts(rtMain, GRAPHICSTHREAD_MISC1);
 			RenderComposition1(rtMain, GRAPHICSTHREAD_MISC1);
 			RenderBloom(GRAPHICSTHREAD_MISC1);
-			RenderComposition2(GRAPHICSTHREAD_MISC1);
+			RenderComposition2(rtMain, GRAPHICSTHREAD_MISC1);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
 		}));
 
@@ -198,7 +198,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		{
 			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC2);
 			RenderBloom(GRAPHICSTHREAD_MISC2);
-			RenderComposition2(GRAPHICSTHREAD_MISC2);
+			RenderComposition2(rtMain, GRAPHICSTHREAD_MISC2);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);
 		}));
 

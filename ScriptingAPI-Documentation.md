@@ -119,7 +119,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDirectionalLightShadowProps(int resolution, int softshadowQuality)
 - SetPointLightShadowProps(int shadowMapCount, int resolution)
 - SetSpotLightShadowProps(int shadowMapCount, int resolution)
-- SetDebugBoxesEnabled(bool enabled)
+- SetDebugPartitionTreeEnabled(bool enabled)
 - SetDebugBonesEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)

@@ -254,6 +254,7 @@ struct AABB{
 	XMFLOAT3 getMax() const;
 	XMFLOAT3 getCenter() const;
 	XMFLOAT3 getHalfWidth() const;
+	XMMATRIX getAsBoxMatrix() const;
 	float getArea() const;
 	float getRadius() const;
 	INTERSECTION_TYPE intersects(const AABB& b) const;

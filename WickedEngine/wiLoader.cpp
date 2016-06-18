@@ -2126,6 +2126,15 @@ XMFLOAT3 AABB::getHalfWidth() const{
 	XMFLOAT3 max=getMax(),center=getCenter();
 	return XMFLOAT3(abs(max.x-center.x),abs(max.y-center.y),abs(max.z-center.z));
 }
+XMMATRIX AABB::AABB::getAsBoxMatrix() const
+{
+	XMFLOAT3 ext = getHalfWidth();
+	XMMATRIX sca = XMMatrixScaling(ext.x,ext.y,ext.z);
+	XMFLOAT3 pos = getCenter();
+	XMMATRIX tra = XMMatrixTranslation(pos.x, pos.y, pos.z);
+
+	return sca*tra;
+}
 float AABB::getArea() const{
 	XMFLOAT3 _min = getMin();
 	XMFLOAT3 _max = getMax();
