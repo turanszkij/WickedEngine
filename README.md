@@ -71,6 +71,8 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 ### Editor:
 
+<b>Update: I started working on a standalone editor for the engine using no other gui system than what the engine provides. It is still work in progress. Check it out: https://github.com/turanszkij/WickedEngine-Editor</b>
+
 For the time being, Blender software is the editor program for Wicked Engine. I provide an export script which
 you can use to export to the wicked scene format. The script is also going to be updated from time to time to
 remove the known hiccups and bugs.
