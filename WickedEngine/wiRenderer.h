@@ -455,6 +455,17 @@ public:
 			SAFE_INIT(light);
 			SAFE_INIT(decal);
 		}
+
+		// Subset index, position, normal, distance don't distinguish between pickeds! 
+		bool operator==(const Picked& other)
+		{
+			return
+				transform == other.transform &&
+				object == other.object &&
+				light == other.light &&
+				decal == other.decal
+				;
+		}
 	};
 
 	// Pick closest object in the world

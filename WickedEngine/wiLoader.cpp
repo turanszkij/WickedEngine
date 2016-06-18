@@ -2215,6 +2215,10 @@ AABB AABB::operator* (float a)
 	max.z*=a;
 	return AABB(min,max);
 }
+AABB AABB::Merge(const AABB& a, const AABB& b)
+{
+	return AABB(wiMath::Min(a.getMin(), b.getMin()), wiMath::Max(a.getMax(), b.getMax()));
+}
 #pragma endregion
 
 #pragma region SPHERE

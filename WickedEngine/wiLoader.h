@@ -261,6 +261,7 @@ struct AABB{
 	bool intersects(const XMFLOAT3& p) const;
 	bool intersects(const RAY& ray) const;
 	AABB operator* (float a);
+	static AABB Merge(const AABB& a, const AABB& b);
 };
 struct SPHERE{
 	float radius;
