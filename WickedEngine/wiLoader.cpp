@@ -2467,6 +2467,27 @@ void Model::Serialize(wiArchive& archive)
 					}
 				}
 			}
+			// link particlesystems
+			for (auto& y : x->eParticleSystems)
+			{
+				y->object = x;
+				MaterialCollection::iterator it = materials.find(y->materialName);
+				if (it != materials.end())
+				{
+					y->material = it->second;
+					y->CreateLight();
+				}
+			}
+			for (auto& y : x->hParticleSystems)
+			{
+				y->object = x;
+				MaterialCollection::iterator it = materials.find(y->materialName);
+				if (it != materials.end())
+				{
+					y->material = it->second;
+					y->SetUpPatches();
+				}
+			}
 		}
 	}
 	else
@@ -3524,6 +3545,23 @@ void Object::Serialize(wiArchive& archive)
 		archive >> friction;
 		archive >> restitution;
 		archive >> damping;
+
+		size_t emitterPSCount;
+		archive >> emitterPSCount;
+		for (size_t i = 0; i < emitterPSCount; ++i)
+		{
+			wiEmittedParticle* e = new wiEmittedParticle;
+			e->Serialize(archive);
+			eParticleSystems.push_back(e);
+		}
+		size_t hairPSCount;
+		archive >> hairPSCount;
+		for (size_t i = 0; i < hairPSCount; ++i)
+		{
+			wiHairParticle* h = new wiHairParticle;
+			h->Serialize(archive);
+			hParticleSystems.push_back(h);
+		}
 	}
 	else
 	{
@@ -3538,6 +3576,17 @@ void Object::Serialize(wiArchive& archive)
 		archive << friction;
 		archive << restitution;
 		archive << damping;
+
+		archive << eParticleSystems.size();
+		for (auto& x : eParticleSystems)
+		{
+			x->Serialize(archive);
+		}
+		archive << hParticleSystems.size();
+		for (auto& x : hParticleSystems)
+		{
+			x->Serialize(archive);
+		}
 	}
 }
 #pragma endregion

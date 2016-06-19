@@ -6,6 +6,8 @@ class wiSPTree;
 struct Material;
 struct Camera;
 
+class wiArchive;
+
 class wiHairParticle :
 	public wiParticle
 {
@@ -28,10 +30,6 @@ public:
 		void CleanUp();
 	};
 private:
-	float length;
-	int count;
-	string name,densityG,lenG;
-	Material* material;
 	GFX_STRUCT ConstantBuffer
 	{
 		XMMATRIX mWorld;
@@ -67,11 +65,17 @@ public:
 	static void CleanUpStatic();
 	static void SetUpStatic();
 	static void Settings(int lod0,int lod1,int lod2);
-	
+
+	float length;
+	int count;
+	string name, densityG, lenG, materialName;
+	Material* material;
 	XMFLOAT4X4 OriginalMatrix_Inverse;
 	Object* object;
 	vector<Patch*> patches;
 	wiSPTree* spTree;
 	wiGraphicsTypes::GPUBuffer *vb[3];
+
+	void Serialize(wiArchive& archive);
 };
 

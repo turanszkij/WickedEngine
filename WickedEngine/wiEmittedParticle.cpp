@@ -6,6 +6,7 @@
 #include "wiFrustum.h"
 #include "wiRandom.h"
 #include "ResourceMapping.h"
+#include "wiArchive.h"
 
 using namespace wiGraphicsTypes;
 
@@ -23,10 +24,19 @@ set<wiEmittedParticle*> wiEmittedParticle::systems;
 static const int NUM_POS_SAMPLES = 30;
 static const float INV_NUM_POS_SAMPLES = 1.0f / NUM_POS_SAMPLES;
 
+wiEmittedParticle::wiEmittedParticle()
+{
+	name = "";
+	object = nullptr;
+	materialName = "";
+	light = nullptr;
+	bounding_box = new AABB();
+}
 wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot){
 	name=newName;
 	object=newObject;
+	materialName = newMat;
 	for (MeshSubset& subset : object->mesh->subsets)
 	{
 		if (!newMat.compare(subset.material->name)) {
@@ -52,18 +62,7 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 	bounding_box=new AABB();
 	lastSquaredDistMulThousand=0;
 	light=nullptr;
-	if(material->blendFlag==BLENDMODE_ADDITIVE){
-		light=new Light();
-		light->SetUp();
-		light->color.x=material->diffuseColor.x;
-		light->color.y=material->diffuseColor.y;
-		light->color.z=material->diffuseColor.z;
-		light->type=Light::POINT;
-		light->name=name+"_pslight";
-		light->shadow = true;
-		//light->shadowMap.resize(1);
-		//light->shadowMap[0].InitializeCube(wiRenderer::POINTLIGHTSHADOWRES,0,true);
-	}
+	CreateLight();
 
 	LoadVertexBuffer();
 
@@ -77,6 +76,12 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 
 	motionBlurAmount = 0.0f;
 
+	SetupLightInterpolators();
+}
+long wiEmittedParticle::getCount(){return points.size();}
+
+void wiEmittedParticle::SetupLightInterpolators()
+{
 	// for smooth light interpolation
 	currentSample = 0;
 	posSamples = new XMFLOAT3[NUM_POS_SAMPLES];
@@ -89,11 +94,23 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 		posSamples[i] = XMFLOAT3(0, 0, 0);
 	}
 }
-long wiEmittedParticle::getCount(){return points.size();}
-
 
 int wiEmittedParticle::getRandomPointOnEmitter(){ return wiRandom::getRandom(object->mesh->indices.size()-1); }
 
+void wiEmittedParticle::CreateLight()
+{
+	if (light == nullptr && material->blendFlag == BLENDMODE_ADDITIVE)
+	{
+		light = new Light();
+		light->SetUp();
+		light->color.x = material->diffuseColor.x;
+		light->color.y = material->diffuseColor.y;
+		light->color.z = material->diffuseColor.z;
+		light->type = Light::POINT;
+		light->name = name + "_pslight";
+		light->shadow = true;
+	}
+}
 
 void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 {
@@ -224,6 +241,7 @@ void wiEmittedParticle::Update(float gamespeed)
 	}
 	if((int)emit>0)
 		emit=0;
+	
 	
 	if(light!=nullptr)
 	{
@@ -523,4 +541,47 @@ long wiEmittedParticle::getNumParticles()
 		if(e)
 			retval+=e->getCount();
 	return retval;
+}
+
+void wiEmittedParticle::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> emit;
+		archive >> transform4;
+		archive >> transform3;
+		archive >> name;
+		archive >> materialName;
+		archive >> size;
+		archive >> random_factor;
+		archive >> normal_factor;
+		archive >> count;
+		archive >> life;
+		archive >> random_life;
+		archive >> scaleX;
+		archive >> scaleY;
+		archive >> rotation;
+		archive >> motionBlurAmount;
+
+		LoadVertexBuffer();
+		SetupLightInterpolators();
+	}
+	else
+	{
+		archive << emit;
+		archive << transform4;
+		archive << transform3;
+		archive << name;
+		archive << materialName;
+		archive << size;
+		archive << random_factor;
+		archive << normal_factor;
+		archive << count;
+		archive << life;
+		archive << random_life;
+		archive << scaleX;
+		archive << scaleY;
+		archive << rotation;
+		archive << motionBlurAmount;
+	}
 }

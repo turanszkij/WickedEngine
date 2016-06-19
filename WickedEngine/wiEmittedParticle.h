@@ -7,6 +7,8 @@ struct AABB;
 struct Light;
 struct Camera;
 
+class wiArchive;
+
 class wiEmittedParticle :
 	public wiParticle
 {
@@ -71,7 +73,6 @@ private:
 	
 
 	//std::vector<SkinnedVertex> emitterVertexList;
-	Object* object;
 	
 	float getNewVelocityModifier(){ return 1+((rand()%10001+1)*0.0001f)*random_factor;}
 	float getNewPositionModifier(){ return (rand()%((int)(random_factor*1000)+1))*0.001f - random_factor*0.5f; }
@@ -89,8 +90,9 @@ private:
 	float* radSamples;
 	float* energySamples;
 	int currentSample;
+	void SetupLightInterpolators();
 public:
-	wiEmittedParticle(){};
+	wiEmittedParticle();
 	wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot);
 	static void SetUpStatic();
@@ -110,7 +112,8 @@ public:
 	void CleanUp();
 
 	string name;
-	//std::string material;
+	Object* object;
+	string materialName;
 	Material* material;
 	Light* light;
 	
@@ -121,5 +124,9 @@ public:
 	float count,life,random_life;
 	float scaleX,scaleY,rotation;
 	float motionBlurAmount;
+
+	void CreateLight();
+
+	void Serialize(wiArchive& archive);
 };
 

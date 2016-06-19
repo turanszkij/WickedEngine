@@ -6,6 +6,7 @@
 #include "wiFrustum.h"
 #include "wiRandom.h"
 #include "ResourceMapping.h"
+#include "wiArchive.h"
 
 using namespace wiGraphicsTypes;
 
@@ -21,6 +22,14 @@ int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
 {
+	name = "";
+	densityG = "";
+	lenG = "";
+	length = 0;
+	count = 0;
+	material = nullptr;
+	object = nullptr;
+	materialName = "";
 }
 wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 						   , const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup)
@@ -32,6 +41,7 @@ wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 	count=newCount;
 	material=nullptr;
 	object = newObject;
+	materialName = newMat;
 	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, object->getMatrix()));
 	for (MeshSubset& subset : object->mesh->subsets)
 	{
@@ -485,4 +495,29 @@ void wiHairParticle::Patch::CleanUp(){
 	//if(vb)
 	//	vb->Release();
 	//vb=NULL;
+}
+
+
+void wiHairParticle::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> length;
+		archive >> count;
+		archive >> name;
+		archive >> densityG;
+		archive >> lenG;
+		archive >> materialName;
+		archive >> OriginalMatrix_Inverse;
+	}
+	else
+	{
+		archive << length;
+		archive << count;
+		archive << name;
+		archive << densityG;
+		archive << lenG;
+		archive << materialName;
+		archive << OriginalMatrix_Inverse;
+	}
 }
