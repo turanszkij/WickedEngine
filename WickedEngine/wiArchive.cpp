@@ -9,19 +9,19 @@ wiArchive::wiArchive(const string& fileName, bool readMode):readMode(readMode),p
 	{
 		if (readMode)
 		{
-			file = fstream(fileName.c_str(), ios::binary | ios::in);
+			file.open(fileName.c_str(), ios::in | ios::binary);
 			if (IsOpen())
 			{
-				file >> version;
+				(*this) >> version;
 			}
 		}
 		else
 		{
-			file = fstream(fileName.c_str(), ios::binary | ios::out);
+			file.open(fileName.c_str(), ios::out | ios::binary | ios::trunc);
 			if (IsOpen())
 			{
 				version = __archiveVersion;
-				file << version;
+				(*this) << version;
 			}
 		}
 	}

@@ -149,38 +149,46 @@ struct Material
 	float normalMapStrength;
 
 
-	Material(){}
+	Material()
+	{
+		init();
+	}
 	Material(string newName){
 		name=newName;
-		diffuseColor = XMFLOAT3(1,1,1);
+		init();
+	}
+	~Material();
+	void init()
+	{
+		diffuseColor = XMFLOAT3(1, 1, 1);
 
-		refMapName="";
+		refMapName = "";
 		refMap = nullptr;
 
-		textureName="";
+		textureName = "";
 		texture = nullptr;
-		premultipliedTexture=false;
-		blendFlag=BLENDMODE::BLENDMODE_ALPHA;
+		premultipliedTexture = false;
+		blendFlag = BLENDMODE::BLENDMODE_ALPHA;
 
-		normalMapName="";
+		normalMapName = "";
 		normalMap = nullptr;
 
-		displacementMapName="";
+		displacementMapName = "";
 		displacementMap = nullptr;
 
-		specularMapName="";
+		specularMapName = "";
 		specularMap = nullptr;
 
-		toonshading=water=false;
-		enviroReflection=0.0f;
+		toonshading = water = false;
+		enviroReflection = 0.0f;
 
-		specular=XMFLOAT4(0,0,0,0);
-		specular_power=50;
-		movingTex=XMFLOAT3(0,0,0);
-		framesToWaitForTexCoordOffset=0;
-		texMulAdd=XMFLOAT4(1,1,0,0);
-		isSky=water=shadeless=false;
-		cast_shadow=true;
+		specular = XMFLOAT4(0, 0, 0, 0);
+		specular_power = 50;
+		movingTex = XMFLOAT3(0, 0, 0);
+		framesToWaitForTexCoordOffset = 0;
+		texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		isSky = water = shadeless = false;
+		cast_shadow = true;
 
 		// PBR props
 		baseColor = XMFLOAT3(1, 1, 1);
@@ -193,7 +201,6 @@ struct Material
 		emissive = 0.0f;
 		normalMapStrength = 1.0f;
 	}
-	~Material();
 
 	bool IsTransparent() { return alpha < 1.0f; }
 	bool IsWater() { return water; }
@@ -299,6 +306,7 @@ struct VertexGroup{
 	VertexGroup(){name="";}
 	VertexGroup(string n){name=n;}
 	void addVertex(const VertexRef& vRef){vertices.insert(pair<int,float>(vRef.index,vRef.weight));}
+	void Serialize(wiArchive& archive);
 };
 struct MeshSubset
 {
@@ -420,6 +428,7 @@ public:
 
 	void StreamIn();
 	void StreamOut();
+	void Serialize(wiArchive& archive);
 };
 struct Object : public Streamable, public Transform
 {
@@ -463,27 +472,33 @@ struct Object : public Streamable, public Transform
 		return ((physicsObjectI >= 0 && !kinematic) || mesh->softBody || isArmatureDeformed());
 	}
 
-	Object(){};
+	Object():Transform(){
+		init();
+	};
 	Object(string newName):Transform(){
 		name=newName;
-		XMStoreFloat4x4( &world,XMMatrixIdentity() );
-		XMStoreFloat4x4( &worldPrev,XMMatrixIdentity() );
+		init();
+	}
+	virtual ~Object();
+	void init()
+	{
+		XMStoreFloat4x4(&world, XMMatrixIdentity());
+		XMStoreFloat4x4(&worldPrev, XMMatrixIdentity());
 		trail.resize(0);
 		emitterType = NO_EMITTER;
 		eParticleSystems.resize(0);
 		hParticleSystems.resize(0);
-		mesh=nullptr;
-		rigidBody=kinematic=false;
-		collisionShape="";
+		mesh = nullptr;
+		rigidBody = kinematic = false;
+		collisionShape = "";
 		mass = friction = restitution = damping = 1.0f;
-		physicsType="ACTIVE";
-		physicsObjectI=-1;
+		physicsType = "ACTIVE";
+		physicsObjectI = -1;
 		transparency = 0.0f;
 		color = XMFLOAT3(1, 1, 1);
 		trailDistortTex = nullptr;
 		trailTex = nullptr;
 	}
-	virtual ~Object();
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
 	int GetRenderTypes();
@@ -610,24 +625,30 @@ public:
 	vector<Action> actions;
 	
 
-	Armature() {};
+	Armature() :Transform(){
+		init();
+	};
 	Armature(string newName,string identifier):Transform(){
 		unidentified_name=newName;
 		stringstream ss("");
 		ss<<newName<<identifier;
 		name=ss.str();
+		init();
+	}
+	virtual ~Armature();
+	void init()
+	{
 		boneCollection.clear();
 		rootbones.clear();
 		actions.clear();
 		actions.push_back(Action());
 		actions.back().name = "[WickedEngine-Default]{IdentityAction}";
 		actions.back().frameCount = 1;
-		XMStoreFloat4x4(&world,XMMatrixIdentity());
+		XMStoreFloat4x4(&world, XMMatrixIdentity());
 		animationLayers.clear();
 		animationLayers.push_back(new AnimationLayer());
 		animationLayers.back()->type = AnimationLayer::ANIMLAYER_TYPE_PRIMARY;
 	}
-	virtual ~Armature();
 
 	inline AnimationLayer* GetPrimaryAnimation() { 
 		return *animationLayers.begin(); 

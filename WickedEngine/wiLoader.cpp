@@ -328,6 +328,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 						file>>meshName;
 						stringstream identified_mesh("");
 						identified_mesh<<meshName<<identifier;
+						objects.back()->meshfile = identified_mesh.str();
 						MeshCollection::iterator iter = meshes.find(identified_mesh.str());
 						
 						if(line[1]=='b'){ //binary load mesh in place if not present
@@ -1357,6 +1358,31 @@ void Cullable::Serialize(wiArchive& archive)
 
 #pragma region STREAMABLE
 Streamable::Streamable():directory(""),meshfile(""),materialfile(""),loaded(false){}
+void Streamable::StreamIn()
+{
+}
+void Streamable::StreamOut()
+{
+}
+void Streamable::Serialize(wiArchive& archive)
+{
+	Cullable::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> directory;
+		archive >> meshfile;
+		archive >> materialfile;
+		archive >> loaded;
+	}
+	else
+	{
+		archive << directory;
+		archive << meshfile;
+		archive << materialfile;
+		archive << loaded;
+	}
+}
 #pragma endregion
 
 #pragma region MATERIAL
@@ -1448,11 +1474,26 @@ void Material::Serialize(wiArchive& archive)
 		archive >> subsurfaceScattering;
 		archive >> normalMapStrength;
 
-		refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(refMapName);
-		texture = (Texture2D*)wiResourceManager::GetGlobal()->add(textureName);
-		normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(normalMapName);
-		displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(displacementMapName);
-		specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(specularMapName);
+		if (!refMapName.empty())
+		{
+			refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(refMapName);
+		}
+		if (!textureName.empty())
+		{
+			texture = (Texture2D*)wiResourceManager::GetGlobal()->add(textureName);
+		}
+		if (!normalMapName.empty())
+		{
+			normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(normalMapName);
+		}
+		if (!displacementMapName.empty())
+		{
+			displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(displacementMapName);
+		}
+		if (!specularMapName.empty())
+		{
+			specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(specularMapName);
+		}
 	}
 	else
 	{
@@ -1486,11 +1527,42 @@ void Material::Serialize(wiArchive& archive)
 
 MeshSubset::MeshSubset()
 {
+	material = nullptr;
 }
 MeshSubset::~MeshSubset()
 {
 }
 
+#pragma endregion
+
+#pragma region VERTEXGROUP
+void VertexGroup::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> name;
+		size_t vertexCount;
+		archive >> vertexCount;
+		for (size_t i = 0; i < vertexCount; ++i)
+		{
+			int first;
+			float second;
+			archive >> first;
+			archive >> second;
+			vertices.insert(pair<int, float>(first, second));
+		}
+	}
+	else
+	{
+		archive << name;
+		archive << vertices.size();
+		for (auto& x : vertices)
+		{
+			archive << x.first;
+			archive << x.second;
+		}
+	}
+}
 #pragma endregion
 
 #pragma region MESH
@@ -1553,6 +1625,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 			identified_parent << parent << identifier;
 			for (Armature* a : armatures) {
 				if (!a->name.compare(identified_parent.str())) {
+					armatureName = identified_parent.str();
 					armature = a;
 				}
 			}
@@ -2005,11 +2078,44 @@ void Mesh::Serialize(wiArchive& archive)
 				subsets.push_back(MeshSubset());
 			}
 		}
+		// vertexGroups
+		{
+			size_t groupCount;
+			archive >> groupCount;
+			for (size_t i = 0; i < groupCount; ++i)
+			{
+				VertexGroup group = VertexGroup();
+				group.Serialize(archive);
+				vertexGroups.push_back(group);
+			}
+		}
+		// materialNames
+		{
+			size_t materialNameCount;
+			archive >> materialNameCount;
+			string tempString;
+			for (size_t i = 0; i < materialNameCount; ++i)
+			{
+				archive >> tempString;
+				materialNames.push_back(tempString);
+			}
+		}
 		archive >> renderable;
 		archive >> doubleSided;
 		archive >> stencilRef;
 		archive >> calculatedAO;
-		
+		archive >> trailInfo.base;
+		archive >> trailInfo.tip;
+		archive >> isBillboarded;
+		archive >> billboardAxis;
+		archive >> softBody;
+		archive >> mass;
+		archive >> friction;
+		archive >> massVG;
+		archive >> goalVG;
+		archive >> softVG;
+		archive >> aabb;
+		archive >> armatureName;
 	}
 	else
 	{
@@ -2032,10 +2138,10 @@ void Mesh::Serialize(wiArchive& archive)
 				archive << x;
 			}
 		}
-		// physicsVerts
+		// physicsverts
 		{
-			archive << physicsVerts.size();
-			for (auto& x : physicsVerts)
+			archive << physicsverts.size();
+			for (auto& x : physicsverts)
 			{
 				archive << x;
 			}
@@ -2058,14 +2164,40 @@ void Mesh::Serialize(wiArchive& archive)
 		}
 		// subsets
 		{
-			size_t subsetCount;
-			archive >> subsetCount;
+			archive << subsets.size();
+		}
+		// vertexGroups
+		{
+			archive << vertexGroups.size();
+			for (auto& x : vertexGroups)
+			{
+				x.Serialize(archive);
+			}
+		}
+		// materialNames
+		{
+			archive << materialNames.size();
+			for (auto& x : materialNames)
+			{
+				archive << x;
+			}
 		}
 		archive << renderable;
 		archive << doubleSided;
 		archive << stencilRef;
 		archive << calculatedAO;
-
+		archive << trailInfo.base;
+		archive << trailInfo.tip;
+		archive << isBillboarded;
+		archive << billboardAxis;
+		archive << softBody;
+		archive << mass;
+		archive << friction;
+		archive << massVG;
+		archive << goalVG;
+		archive << softVG;
+		archive << aabb;
+		archive << armatureName;
 	}
 }
 #pragma endregion
@@ -2215,7 +2347,7 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 	// Set up Render data
 	for (Object* x : objects)
 	{
-		if (x->mesh) 
+		if (x->mesh != nullptr)
 		{
 			// Ribbon trails
 			if (x->mesh->trailInfo.base >= 0 && x->mesh->trailInfo.tip >= 0) {
@@ -2259,7 +2391,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Mesh* x = new Mesh;
 			x->Serialize(archive);
-			meshes.insert(MeshCollection::allocator_type(x->name, x));
+			meshes.insert(pair<string,Mesh*>(x->name, x));
 		}
 
 		archive >> materialCount;
@@ -2267,7 +2399,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Material* x = new Material;
 			x->Serialize(archive);
-			materials.insert(MaterialCollection::allocator_type(x->name, x));
+			materials.insert(pair<string,Material*>(x->name, x));
 		}
 
 		archive >> armaturesCount;
@@ -2292,6 +2424,49 @@ void Model::Serialize(wiArchive& archive)
 			Decal* x = new Decal;
 			x->Serialize(archive);
 			decals.push_back(x);
+		}
+
+		// RESOLVE CONNECTIONS
+		for (Object* x : objects)
+		{
+			if (x->mesh == nullptr)
+			{
+				// find mesh
+				MeshCollection::iterator found = meshes.find(x->meshfile);
+				if (found != meshes.end())
+				{
+					x->mesh = found->second;
+				}
+			}
+			if (x->mesh != nullptr)
+			{
+				// find materials for mesh subsets
+				int i = 0;
+				for (auto& y : x->mesh->subsets)
+				{
+					if (y.material == nullptr)
+					{
+						MaterialCollection::iterator it = materials.find(x->mesh->materialNames[i]);
+						if (it != materials.end())
+						{
+							y.material = it->second;
+						}
+					}
+					i++;
+				}
+				// find armature
+				if (!x->mesh->armatureName.empty())
+				{
+					for (auto& y : armatures)
+					{
+						if (!y->name.compare(x->mesh->armatureName))
+						{
+							x->mesh->armature = y;
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 	else
@@ -2620,29 +2795,32 @@ void Bone::Serialize(wiArchive& archive)
 			childrenN.push_back(tempName);
 		}
 		archive >> restInv;
-		archive >> actionFrames.size();
-		for (auto& x : actionFrames)
+		size_t actionFramesCount;
+		archive >> actionFramesCount;
+		for (size_t i = 0; i < actionFramesCount; ++i)
 		{
+			ActionFrames aframes = ActionFrames();
 			KeyFrame tempKeyFrame;
 			size_t tempCount;
 			archive >> tempCount;
 			for (size_t i = 0; i < tempCount; ++i)
 			{
 				archive >> tempKeyFrame;
-				keyframesRot.push_back(tempKeyFrame);
+				aframes.keyframesRot.push_back(tempKeyFrame);
 			}
 			archive >> tempCount;
 			for (size_t i = 0; i < tempCount; ++i)
 			{
 				archive >> tempKeyFrame;
-				keyframesRot.push_back(keyframesPos);
+				aframes.keyframesPos.push_back(tempKeyFrame);
 			}
 			archive >> tempCount;
 			for (size_t i = 0; i < tempCount; ++i)
 			{
 				archive >> tempKeyFrame;
-				keyframesRot.push_back(keyframesSca);
+				aframes.keyframesSca.push_back(tempKeyFrame);
 			}
+			actionFrames.push_back(aframes);
 		}
 		archive >> recursivePose;
 		archive >> recursiveRest;
@@ -2661,18 +2839,18 @@ void Bone::Serialize(wiArchive& archive)
 		archive << actionFrames.size();
 		for (auto& x : actionFrames)
 		{
-			archive << x->keyframesRot.size();
-			for (auto& y : x->keyFramesRot)
+			archive << x.keyframesRot.size();
+			for (auto& y : x.keyframesRot)
 			{
 				archive << y;
 			}
-			archive << x->keyframesPos.size();
-			for (auto& y : x->keyframesPos)
+			archive << x.keyframesPos.size();
+			for (auto& y : x.keyframesPos)
 			{
 				archive << y;
 			}
-			archive << x->keyframesSca.size();
-			for (auto& y : x->keyframesSca)
+			archive << x.keyframesSca.size();
+			for (auto& y : x.keyframesSca)
 			{
 				archive << y;
 			}
@@ -2751,12 +2929,12 @@ void AnimationLayer::Serialize(wiArchive& archive)
 	}
 	else
 	{
-		archive >> name;
-		archive >> blendFrames;
-		archive >> blendFact;
-		archive >> weight;
-		archive >> type;
-		archive >> looped;
+		archive << name;
+		archive << blendFrames;
+		archive << blendFact;
+		archive << weight;
+		archive << type;
+		archive << looped;
 	}
 }
 #pragma endregion
@@ -3104,8 +3282,8 @@ void Armature::Serialize(wiArchive& archive)
 	else
 	{
 		archive << unidentified_name;
-		archive << bones.size();
-		for (auto& x : bones)
+		archive << boneCollection.size();
+		for (auto& x : boneCollection)
 		{
 			x->Serialize(archive);
 		}
@@ -3181,6 +3359,33 @@ void Decal::UpdateDecal()
 }
 void Decal::Serialize(wiArchive& archive)
 {
+	Cullable::Serialize(archive);
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> texName;
+		archive >> norName;
+		archive >> life;
+		archive >> fadeStart;
+
+		if (!texName.empty())
+		{
+			texture = (Texture2D*)wiResourceManager::GetGlobal()->add(texName);
+		}
+		if (!norName.empty())
+		{
+			normal = (Texture2D*)wiResourceManager::GetGlobal()->add(norName);
+		}
+
+	}
+	else
+	{
+		archive << texName;
+		archive << norName;
+		archive << life;
+		archive << fadeStart;
+	}
 }
 #pragma endregion
 
@@ -3303,6 +3508,37 @@ int Object::GetRenderTypes()
 }
 void Object::Serialize(wiArchive& archive)
 {
+	Streamable::Serialize(archive);
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> emitterType;
+		archive >> transparency;
+		archive >> color;
+		archive >> rigidBody;
+		archive >> kinematic;
+		archive >> collisionShape;
+		archive >> physicsType;
+		archive >> mass;
+		archive >> friction;
+		archive >> restitution;
+		archive >> damping;
+	}
+	else
+	{
+		archive << emitterType;
+		archive << transparency;
+		archive << color;
+		archive << rigidBody;
+		archive << kinematic;
+		archive << collisionShape;
+		archive << physicsType;
+		archive << mass;
+		archive << friction;
+		archive << restitution;
+		archive << damping;
+	}
 }
 #pragma endregion
 
@@ -3410,5 +3646,47 @@ void Light::UpdateLight()
 }
 void Light::Serialize(wiArchive& archive)
 {
+	Cullable::Serialize(archive);
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> color;
+		archive >> enerDis;
+		archive >> noHalo;
+		archive >> shadow;
+		archive >> shadowBias;
+		archive >> type;
+		if (type == DIRECTIONAL)
+		{
+			shadowMaps_dirLight.resize(3);
+		}
+		size_t lensFlareCount;
+		archive >> lensFlareCount;
+		string rim;
+		for (size_t i = 0; i < lensFlareCount; ++i)
+		{
+			archive >> rim;
+			Texture2D* tex;
+			if (!rim.empty() && (tex = (Texture2D*)wiResourceManager::GetGlobal()->add(rim)) != nullptr) {
+				lensFlareRimTextures.push_back(tex);
+				lensFlareNames.push_back(rim);
+			}
+		}
+	}
+	else
+	{
+		archive << color;
+		archive << enerDis;
+		archive << noHalo;
+		archive << shadow;
+		archive << shadowBias;
+		archive << type;
+		archive << lensFlareNames.size();
+		for (auto& x : lensFlareNames)
+		{
+			archive << x;
+		}
+	}
 }
 #pragma endregion
