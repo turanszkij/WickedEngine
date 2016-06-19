@@ -2,6 +2,8 @@
 #define _TRANSFORM_H_
 #include "CommonInclude.h"
 
+class wiArchive;
+
 struct Node
 {
 	string name;
@@ -20,6 +22,8 @@ struct Node
 		}
 		return "";
 	}
+
+	void Serialize(wiArchive& archive);
 };
 
 struct Transform : public Node
@@ -74,6 +78,7 @@ struct Transform : public Node
 	virtual void UpdateTransform();
 	// Get the root of the tree
 	Transform* GetRoot();
+	void Serialize(wiArchive& archive);
 };
 
 #endif // _TRANSFORM_H_

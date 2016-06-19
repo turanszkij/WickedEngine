@@ -1071,6 +1071,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTranslator.h">
       <Filter>ENGINE\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1837,6 +1840,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTranslator.cpp">
       <Filter>ENGINE\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp">
+      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

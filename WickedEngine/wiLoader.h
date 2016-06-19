@@ -23,6 +23,8 @@ struct Object;
 typedef map<string,Mesh*> MeshCollection;
 typedef map<string,Material*> MaterialCollection;
 
+class wiArchive;
+
 struct SkinnedVertex
 {
 	XMFLOAT4 pos; //pos, wind
@@ -210,6 +212,7 @@ struct Material
 	wiGraphicsTypes::Texture2D* GetMetalnessMap();
 	wiGraphicsTypes::Texture2D* GetReflectanceMap();
 	wiGraphicsTypes::Texture2D* GetDisplacementMap();
+	void Serialize(wiArchive& archive);
 };
 struct RibbonVertex
 {
@@ -330,6 +333,7 @@ struct Mesh{
 
 	bool calculatedAO;
 
+	string armatureName;
 	Armature* armature;
 
 	AABB aabb;
@@ -373,7 +377,7 @@ struct Mesh{
 		//usedBy.resize(0);
 		aabb=AABB();
 		trailInfo=RibbonTrail();
-		armature=NULL;
+		armature=nullptr;
 		isBillboarded=false;
 		billboardAxis=XMFLOAT3(0,0,0);
 		vertexGroups.resize(0);
@@ -387,9 +391,11 @@ struct Mesh{
 		buffersComplete = false;
 		arraysComplete = false;
 		calculatedAO = false;
+		armatureName = "";
 	}
 	
 	bool hasArmature()const{return armature!=nullptr;}
+	void Serialize(wiArchive& archive);
 };
 struct Cullable
 {
@@ -400,6 +406,7 @@ public:
 	bool operator() (const Cullable* a, const Cullable* b) const{
 		return a->lastSquaredDistMulThousand<b->lastSquaredDistMulThousand;
 	}
+	void Serialize(wiArchive& archive);
 };
 struct Streamable : public Cullable
 {
@@ -482,7 +489,9 @@ struct Object : public Streamable, public Transform
 	int GetRenderTypes();
 	virtual void UpdateTransform();
 	void UpdateObject();
+	void Serialize(wiArchive& archive);
 };
+// AutoSerialized!
 struct KeyFrame
 {
 	XMFLOAT4 data;
@@ -549,6 +558,7 @@ struct Bone : public Transform
 
 	XMMATRIX getMatrix(int getTranslation = 1, int getRotation = 1, int getScale = 1);
 	virtual void UpdateTransform();
+	void Serialize(wiArchive& archive);
 };
 struct AnimationLayer
 {
@@ -586,6 +596,8 @@ struct AnimationLayer
 	void PauseAction();
 	void StopAction();
 	void PlayAction();
+
+	void Serialize(wiArchive& archive);
 };
 struct Armature : public Transform
 {
@@ -598,7 +610,7 @@ public:
 	vector<Action> actions;
 	
 
-	Armature() = delete;
+	Armature() {};
 	Armature(string newName,string identifier):Transform(){
 		unidentified_name=newName;
 		stringstream ss("");
@@ -628,6 +640,7 @@ public:
 	void DeleteAnimLayer(const string& name);
 	virtual void UpdateTransform();
 	void UpdateArmature();
+	void Serialize(wiArchive& archive);
 
 private:
 	enum KeyFrameType {
@@ -750,6 +763,7 @@ struct Light : public Cullable , public Transform
 	void SetUp();
 	virtual void UpdateTransform();
 	void UpdateLight();
+	void Serialize(wiArchive& archive);
 };
 struct Decal : public Cullable, public Transform
 {
@@ -766,6 +780,7 @@ struct Decal : public Cullable, public Transform
 	void addNormal(const string& nor);
 	virtual void UpdateTransform();
 	void UpdateDecal();
+	void Serialize(wiArchive& archive);
 };
 struct WorldInfo{
 	XMFLOAT3 horizon;
@@ -965,6 +980,7 @@ struct Model : public Transform
 	virtual ~Model();
 	void CleanUp();
 	void LoadFromDisk(const string& dir, const string& name, const string& identifier);
+	void Serialize(wiArchive& archive);
 	void UpdateModel();
 };
 

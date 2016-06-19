@@ -9,6 +9,7 @@
 #include "wiDepthTarget.h"
 #include "wiTextureHelper.h"
 #include "wiPHYSICS.h"
+#include "wiArchive.h"
 
 using namespace wiGraphicsTypes;
 
@@ -1341,6 +1342,17 @@ void Scene::Update()
 
 #pragma region CULLABLE
 Cullable::Cullable():bounds(AABB())/*,lastSquaredDistMulThousand(0)*/{}
+void Cullable::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> bounds;
+	}
+	else
+	{
+		archive << bounds;
+	}
+}
 #pragma endregion
 
 #pragma region STREAMABLE
@@ -1408,6 +1420,65 @@ Texture2D* Material::GetDisplacementMap()
 		return displacementMap;
 	}
 	return wiTextureHelper::getInstance()->getWhite();
+}
+void Material::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> name;
+		archive >> refMapName;
+		archive >> textureName;
+		archive >> premultipliedTexture;
+		archive >> blendFlag;
+		archive >> normalMapName;
+		archive >> displacementMapName;
+		archive >> specularMapName;
+		archive >> water;
+		archive >> movingTex;
+		archive >> framesToWaitForTexCoordOffset;
+		archive >> texMulAdd;
+		archive >> cast_shadow;
+		archive >> baseColor;
+		archive >> alpha;
+		archive >> roughness;
+		archive >> reflectance;
+		archive >> metalness;
+		archive >> emissive;
+		archive >> refractionIndex;
+		archive >> subsurfaceScattering;
+		archive >> normalMapStrength;
+
+		refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(refMapName);
+		texture = (Texture2D*)wiResourceManager::GetGlobal()->add(textureName);
+		normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(normalMapName);
+		displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(displacementMapName);
+		specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(specularMapName);
+	}
+	else
+	{
+		archive << name;
+		archive << refMapName;
+		archive << textureName;
+		archive << premultipliedTexture;
+		archive << blendFlag;
+		archive << normalMapName;
+		archive << displacementMapName;
+		archive << specularMapName;
+		archive << water;
+		archive << movingTex;
+		archive << framesToWaitForTexCoordOffset;
+		archive << texMulAdd;
+		archive << cast_shadow;
+		archive << baseColor;
+		archive << alpha;
+		archive << roughness;
+		archive << reflectance;
+		archive << metalness;
+		archive << emissive;
+		archive << refractionIndex;
+		archive << subsurfaceScattering;
+		archive << normalMapStrength;
+	}
 }
 #pragma endregion
 
@@ -1779,7 +1850,7 @@ void Mesh::CreateBuffers(Object* object) {
 			}
 
 			//PHYSICALMAPPING
-			if (!physicsverts.empty())
+			if (!physicsverts.empty() && physicalmapGP.empty())
 			{
 				for (unsigned int i = 0; i < vertices.size(); ++i) {
 					for (unsigned int j = 0; j < physicsverts.size(); ++j) {
@@ -1863,6 +1934,140 @@ void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
 	wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
 }
+void Mesh::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> name;
+		archive >> parent;
+
+		// vertices
+		{
+			size_t vertexCount;
+			archive >> vertexCount;
+			SkinnedVertex tempVert;
+			for (size_t i = 0; i < vertexCount; ++i)
+			{
+				archive >> tempVert;
+				vertices.push_back(tempVert);
+			}
+		}
+		// indices
+		{
+			size_t indexCount;
+			archive >> indexCount;
+			unsigned int tempInd;
+			for (size_t i = 0; i < indexCount; ++i)
+			{
+				archive >> tempInd;
+				indices.push_back(tempInd);
+			}
+		}
+		// physicsVerts
+		{
+			size_t physicsVertCount;
+			archive >> physicsVertCount;
+			XMFLOAT3 tempPhysicsVert;
+			for (size_t i = 0; i < physicsVertCount; ++i)
+			{
+				archive >> tempPhysicsVert;
+				physicsverts.push_back(tempPhysicsVert);
+			}
+		}
+		// physicsindices
+		{
+			size_t physicsIndexCount;
+			archive >> physicsIndexCount;
+			unsigned int tempInd;
+			for (size_t i = 0; i < physicsIndexCount; ++i)
+			{
+				archive >> tempInd;
+				physicsindices.push_back(tempInd);
+			}
+		}
+		// physicalmapGP
+		{
+			size_t physicalmapGPCount;
+			archive >> physicalmapGPCount;
+			int tempInd;
+			for (size_t i = 0; i < physicalmapGPCount; ++i)
+			{
+				archive >> tempInd;
+				physicalmapGP.push_back(tempInd);
+			}
+		}
+		// subsets
+		{
+			size_t subsetCount;
+			archive >> subsetCount;
+			for (size_t i = 0; i < subsetCount; ++i)
+			{
+				subsets.push_back(MeshSubset());
+			}
+		}
+		archive >> renderable;
+		archive >> doubleSided;
+		archive >> stencilRef;
+		archive >> calculatedAO;
+		
+	}
+	else
+	{
+		archive << name;
+		archive << parent;
+
+		// vertices
+		{
+			archive << vertices.size();
+			for (auto& x : vertices)
+			{
+				archive << x;
+			}
+		}
+		// indices
+		{
+			archive << indices.size();
+			for (auto& x : indices)
+			{
+				archive << x;
+			}
+		}
+		// physicsVerts
+		{
+			archive << physicsVerts.size();
+			for (auto& x : physicsVerts)
+			{
+				archive << x;
+			}
+		}
+		// physicsindices
+		{
+			archive << physicsindices.size();
+			for (auto& x : physicsindices)
+			{
+				archive << x;
+			}
+		}
+		// physicalmapGP
+		{
+			archive << physicalmapGP.size();
+			for (auto& x : physicalmapGP)
+			{
+				archive << x;
+			}
+		}
+		// subsets
+		{
+			size_t subsetCount;
+			archive >> subsetCount;
+		}
+		archive << renderable;
+		archive << doubleSided;
+		archive << stencilRef;
+		archive << calculatedAO;
+
+	}
+}
 #pragma endregion
 
 #pragma region MODEL
@@ -1903,25 +2108,35 @@ void Model::CleanUp()
 }
 void Model::LoadFromDisk(const string& dir, const string& name, const string& identifier)
 {
-	stringstream directory(""), armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
-		, actionsFilePath(""), lightsFilePath(""), decalsFilePath("");
+	wiArchive archive(dir + name + ".wimf", true);
+	if (archive.IsOpen())
+	{
+		// New Import if wimf model is available
+		this->Serialize(archive);
+	}
+	else
+	{
+		// Old Import
+		stringstream directory(""), armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
+			, actionsFilePath(""), lightsFilePath(""), decalsFilePath("");
 
-	directory << dir;
-	armatureFilePath << name << ".wia";
-	materialLibFilePath << name << ".wim";
-	meshesFilePath << name << ".wi";
-	objectsFilePath << name << ".wio";
-	actionsFilePath << name << ".wiact";
-	lightsFilePath << name << ".wil";
-	decalsFilePath << name << ".wid";
+		directory << dir;
+		armatureFilePath << name << ".wia";
+		materialLibFilePath << name << ".wim";
+		meshesFilePath << name << ".wi";
+		objectsFilePath << name << ".wio";
+		actionsFilePath << name << ".wiact";
+		lightsFilePath << name << ".wil";
+		decalsFilePath << name << ".wid";
 
-	LoadWiArmatures(directory.str(), armatureFilePath.str(), identifier, armatures);
-	LoadWiMaterialLibrary(directory.str(), materialLibFilePath.str(), identifier, "textures/", materials);
-	LoadWiMeshes(directory.str(), meshesFilePath.str(), identifier, meshes, armatures, materials);
-	LoadWiObjects(directory.str(), objectsFilePath.str(), identifier, objects, armatures, meshes, materials);
-	LoadWiActions(directory.str(), actionsFilePath.str(), identifier, armatures);
-	LoadWiLights(directory.str(), lightsFilePath.str(), identifier, lights);
-	LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", decals);
+		LoadWiArmatures(directory.str(), armatureFilePath.str(), identifier, armatures);
+		LoadWiMaterialLibrary(directory.str(), materialLibFilePath.str(), identifier, "textures/", materials);
+		LoadWiMeshes(directory.str(), meshesFilePath.str(), identifier, meshes, armatures, materials);
+		LoadWiObjects(directory.str(), objectsFilePath.str(), identifier, objects, armatures, meshes, materials);
+		LoadWiActions(directory.str(), actionsFilePath.str(), identifier, armatures);
+		LoadWiLights(directory.str(), lightsFilePath.str(), identifier, lights);
+		LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", decals);
+	}
 
 	vector<Transform*> transforms(0);
 	transforms.reserve(armatures.size() + objects.size() + lights.size() + decals.size());
@@ -2022,6 +2237,101 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		}
 	}
 
+}
+void Model::Serialize(wiArchive& archive)
+{
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		size_t objectsCount, meshCount, materialCount, armaturesCount, lightsCount, decalsCount;
+
+		archive >> objectsCount;
+		for (size_t i = 0; i < objectsCount; ++i)
+		{
+			Object* x = new Object;
+			x->Serialize(archive);
+			objects.push_back(x);
+		}
+
+		archive >> meshCount;
+		for (size_t i = 0; i < meshCount; ++i)
+		{
+			Mesh* x = new Mesh;
+			x->Serialize(archive);
+			meshes.insert(MeshCollection::allocator_type(x->name, x));
+		}
+
+		archive >> materialCount;
+		for (size_t i = 0; i < materialCount; ++i)
+		{
+			Material* x = new Material;
+			x->Serialize(archive);
+			materials.insert(MaterialCollection::allocator_type(x->name, x));
+		}
+
+		archive >> armaturesCount;
+		for (size_t i = 0; i < armaturesCount; ++i)
+		{
+			Armature* x = new Armature;
+			x->Serialize(archive);
+			armatures.push_back(x);
+		}
+
+		archive >> lightsCount;
+		for (size_t i = 0; i < lightsCount; ++i)
+		{
+			Light* x = new Light;
+			x->Serialize(archive);
+			lights.push_back(x);
+		}
+
+		archive >> decalsCount;
+		for (size_t i = 0; i < decalsCount; ++i)
+		{
+			Decal* x = new Decal;
+			x->Serialize(archive);
+			decals.push_back(x);
+		}
+	}
+	else
+	{
+		archive << objects.size();
+		for (auto& x : objects)
+		{
+			x->Serialize(archive);
+		}
+
+		archive << meshes.size();
+		for (auto& x : meshes)
+		{
+			x.second->Serialize(archive);
+		}
+
+		archive << materials.size();
+		for (auto& x : materials)
+		{
+			x.second->Serialize(archive);
+		}
+
+		archive << armatures.size();
+		for (auto& x : armatures)
+		{
+			x->Serialize(archive);
+		}
+
+		archive << lights.size();
+		for (auto& x : lights)
+		{
+			x->Serialize(archive);
+		}
+
+		archive << decals.size();
+		for (auto& x : decals)
+		{
+			x->Serialize(archive);
+		}
+	}
 }
 void Model::UpdateModel()
 {
@@ -2295,6 +2605,85 @@ void Bone::UpdateTransform()
 		child->UpdateTransform();
 	}
 }
+void Bone::Serialize(wiArchive& archive)
+{
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		size_t childCount;
+		archive >> childCount;
+		string tempName;
+		for (size_t j = 0; j < childCount; ++j)
+		{
+			archive >> tempName;
+			childrenN.push_back(tempName);
+		}
+		archive >> restInv;
+		archive >> actionFrames.size();
+		for (auto& x : actionFrames)
+		{
+			KeyFrame tempKeyFrame;
+			size_t tempCount;
+			archive >> tempCount;
+			for (size_t i = 0; i < tempCount; ++i)
+			{
+				archive >> tempKeyFrame;
+				keyframesRot.push_back(tempKeyFrame);
+			}
+			archive >> tempCount;
+			for (size_t i = 0; i < tempCount; ++i)
+			{
+				archive >> tempKeyFrame;
+				keyframesRot.push_back(keyframesPos);
+			}
+			archive >> tempCount;
+			for (size_t i = 0; i < tempCount; ++i)
+			{
+				archive >> tempKeyFrame;
+				keyframesRot.push_back(keyframesSca);
+			}
+		}
+		archive >> recursivePose;
+		archive >> recursiveRest;
+		archive >> recursiveRestInv;
+		archive >> length;
+		archive >> connected;
+	}
+	else
+	{
+		archive << childrenN.size();
+		for (auto& x : childrenN)
+		{
+			archive << x;
+		}
+		archive << restInv;
+		archive << actionFrames.size();
+		for (auto& x : actionFrames)
+		{
+			archive << x->keyframesRot.size();
+			for (auto& y : x->keyFramesRot)
+			{
+				archive << y;
+			}
+			archive << x->keyframesPos.size();
+			for (auto& y : x->keyframesPos)
+			{
+				archive << y;
+			}
+			archive << x->keyframesSca.size();
+			for (auto& y : x->keyframesSca)
+			{
+				archive << y;
+			}
+		}
+		archive << recursivePose;
+		archive << recursiveRest;
+		archive << recursiveRestInv;
+		archive << length;
+		archive << connected;
+	}
+}
 #pragma endregion
 
 #pragma region ANIMATIONLAYER
@@ -2348,6 +2737,27 @@ void AnimationLayer::StopAction()
 void AnimationLayer::PlayAction()
 {
 	playing = true;
+}
+void AnimationLayer::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> name;
+		archive >> blendFrames;
+		archive >> blendFact;
+		archive >> weight;
+		archive >> type;
+		archive >> looped;
+	}
+	else
+	{
+		archive >> name;
+		archive >> blendFrames;
+		archive >> blendFact;
+		archive >> weight;
+		archive >> type;
+		archive >> looped;
+	}
 }
 #pragma endregion
 
@@ -2658,6 +3068,60 @@ void Armature::DeleteAnimLayer(const string& name)
 		}
 	}
 }
+void Armature::Serialize(wiArchive& archive)
+{
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> unidentified_name;
+		size_t boneCount;
+		archive >> boneCount;
+		for (size_t i = 0; i < boneCount; ++i)
+		{
+			Bone* bone = new Bone;
+			bone->Serialize(archive);
+			boneCollection.push_back(bone);
+		}
+		size_t animLayerCount;
+		archive >> animLayerCount;
+		for (size_t i = 0; i < animLayerCount; ++i)
+		{
+			AnimationLayer* layer = new AnimationLayer;
+			layer->Serialize(archive);
+			animationLayers.push_back(layer);
+		}
+		size_t actionCount;
+		archive >> actionCount;
+		Action tempAction;
+		for (size_t i = 0; i < actionCount; ++i)
+		{
+			archive >> tempAction.name;
+			archive >> tempAction.frameCount;
+			actions.push_back(tempAction);
+		}
+	}
+	else
+	{
+		archive << unidentified_name;
+		archive << bones.size();
+		for (auto& x : bones)
+		{
+			x->Serialize(archive);
+		}
+		archive << animationLayers.size();
+		for (auto& x : animationLayers)
+		{
+			x->Serialize(archive);
+		}
+		archive << actions.size();
+		for (auto& x : actions)
+		{
+			archive << x.name;
+			archive << x.frameCount;
+		}
+	}
+}
 #pragma endregion
 
 #pragma region Decals
@@ -2714,6 +3178,9 @@ void Decal::UpdateDecal()
 	if (life>-2) {
 		life -= wiRenderer::GetGameSpeed();
 	}
+}
+void Decal::Serialize(wiArchive& archive)
+{
 }
 #pragma endregion
 
@@ -2834,6 +3301,9 @@ int Object::GetRenderTypes()
 	}
 	return retVal;
 }
+void Object::Serialize(wiArchive& archive)
+{
+}
 #pragma endregion
 
 #pragma region LIGHT
@@ -2937,5 +3407,8 @@ void Light::UpdateLight()
 
 		bounds.createFromHalfWidth(translation, XMFLOAT3(enerDis.y, enerDis.y, enerDis.y));
 	}
+}
+void Light::Serialize(wiArchive& archive)
+{
 }
 #pragma endregion

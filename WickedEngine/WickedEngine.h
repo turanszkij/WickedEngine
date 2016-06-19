@@ -48,6 +48,7 @@
 #include "wiHashString.h"
 #include "wiWindowRegistration.h"
 #include "wiTranslator.h"
+#include "wiArchive.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

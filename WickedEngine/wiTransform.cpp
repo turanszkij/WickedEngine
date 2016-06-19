@@ -1,5 +1,18 @@
 #include "wiTransform.h"
+#include "wiArchive.h"
 
+
+void Node::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> name;
+	}
+	else
+	{
+		archive << name;
+	}
+}
 
 Transform::~Transform()
 {
@@ -233,4 +246,35 @@ Transform* Transform::GetRoot()
 		return parent->GetRoot();
 	}
 	return this;
+}
+void Transform::Serialize(wiArchive& archive)
+{
+	Node::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> parentName;
+		archive >> translation_rest;
+		archive >> rotation_rest;
+		archive >> scale_rest;
+		archive >> world_rest;
+		archive >> boneParent;
+		archive >> parent_inv_rest;
+		archive >> copyParentT;
+		archive >> copyParentR;
+		archive >> copyParentS;
+	}
+	else
+	{
+		archive << parentName;
+		archive << translation_rest;
+		archive << rotation_rest;
+		archive << scale_rest;
+		archive << world_rest;
+		archive << boneParent;
+		archive << parent_inv_rest;
+		archive << copyParentT;
+		archive << copyParentR;
+		archive << copyParentS;
+	}
 }
