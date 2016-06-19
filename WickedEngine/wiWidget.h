@@ -21,14 +21,7 @@ struct wiEventArgs
 class wiWidget : public Transform
 {
 	friend class wiGUI;
-private:
-	float fontScaling;
-protected:
-	wiHashString fastName;
-	string text;
-	bool enabled;
-	bool visible;
-
+public:
 	enum WIDGETSTATE
 	{
 		// widget is doing nothing
@@ -40,7 +33,16 @@ protected:
 		// widget has last been active but no more interactions are occuring
 		DEACTIVATING,
 		WIDGETSTATE_COUNT,
-	} state;
+	};
+private:
+	float fontScaling;
+protected:
+	wiHashString fastName;
+	string text;
+	bool enabled;
+	bool visible;
+
+	WIDGETSTATE state;
 	void Activate();
 	void Deactivate();
 	wiColor colors[WIDGETSTATE_COUNT];
