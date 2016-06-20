@@ -8,6 +8,7 @@ private:
 	fstream file;
 	bool readMode;
 	streamsize pos;
+	char* DATA;
 public:
 	wiArchive(const string& fileName, bool readMode = true);
 	~wiArchive();
@@ -15,7 +16,9 @@ public:
 	unsigned long GetVersion() { return version; }
 	bool IsReadMode() { return readMode; }
 	bool IsOpen();
+	void Close();
 
+	// Write data using file operations
 	template<typename T>
 	wiArchive& operator<<(const T& data)
 	{
@@ -24,16 +27,6 @@ public:
 		pos += sizeof(data);
 		return *this;
 	}
-	template<typename T>
-	wiArchive& operator >> (T& data)
-	{
-		file.seekg(pos);
-		file.read(reinterpret_cast<char*>(&data), sizeof(data));
-		pos += sizeof(data);
-		return *this;
-	}
-
-	// special object serializers
 	wiArchive& operator<<(const string& data)
 	{
 		file.seekp(pos);
@@ -45,20 +38,51 @@ public:
 		pos += sizeof(char)*len;
 		return *this;
 	}
-	wiArchive& operator>>(string& data)
+
+	// Read data using memory operations
+	template<typename T>
+	wiArchive& operator >> (T& data)
 	{
-		file.seekg(pos);
+		memcpy(&data, reinterpret_cast<void*>((int)DATA + (int)pos), sizeof(data));
+		pos += sizeof(data);
+		return *this;
+	}
+	wiArchive& operator >> (string& data)
+	{
 		size_t len;
-		file.read(reinterpret_cast<char*>(&len), sizeof(len));
-		pos += sizeof(len);
+		(*this) >> len;
 		char* str = new char[len];
 		memset(str, '\0', sizeof(char)*len);
-		file.seekg(pos);
-		file.read(str, sizeof(char)*len);
+		memcpy(str, reinterpret_cast<void*>((int)DATA + (int)pos), sizeof(char)*len);
 		pos += sizeof(char)*len;
 		data = string(str);
 		delete[] str;
 		return *this;
 	}
+
+
+	//template<typename T>
+	//wiArchive& operator >> (T& data)
+	//{
+	//	file.seekg(pos);
+	//	file.read(reinterpret_cast<char*>(&data), sizeof(data));
+	//	pos += sizeof(data);
+	//	return *this;
+	//}
+	//wiArchive& operator >> (string& data)
+	//{
+	//	file.seekg(pos);
+	//	size_t len;
+	//	file.read(reinterpret_cast<char*>(&len), sizeof(len));
+	//	pos += sizeof(len);
+	//	char* str = new char[len];
+	//	memset(str, '\0', sizeof(char)*len);
+	//	file.seekg(pos);
+	//	file.read(str, sizeof(char)*len);
+	//	pos += sizeof(char)*len;
+	//	data = string(str);
+	//	delete[] str;
+	//	return *this;
+	//}
 };
 
