@@ -116,6 +116,7 @@ public:
 	string materialName;
 	Material* material;
 	Light* light;
+	string lightName;
 	
 	AABB* bounding_box;
 	long lastSquaredDistMulThousand;

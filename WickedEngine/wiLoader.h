@@ -661,6 +661,7 @@ public:
 	void DeleteAnimLayer(const string& name);
 	virtual void UpdateTransform();
 	void UpdateArmature();
+	void CreateFamily();
 	void Serialize(wiArchive& archive);
 
 private:
@@ -1001,8 +1002,9 @@ struct Model : public Transform
 	virtual ~Model();
 	void CleanUp();
 	void LoadFromDisk(const string& dir, const string& name, const string& identifier);
-	void Serialize(wiArchive& archive);
+	void FinishLoading();
 	void UpdateModel();
+	void Serialize(wiArchive& archive);
 };
 
 struct Scene

@@ -31,6 +31,7 @@ wiEmittedParticle::wiEmittedParticle()
 	materialName = "";
 	light = nullptr;
 	bounding_box = new AABB();
+	lightName = "";
 }
 wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot){
@@ -103,12 +104,13 @@ void wiEmittedParticle::CreateLight()
 	{
 		light = new Light();
 		light->SetUp();
-		light->color.x = material->diffuseColor.x;
-		light->color.y = material->diffuseColor.y;
-		light->color.z = material->diffuseColor.z;
+		light->color.x = material->baseColor.x;
+		light->color.y = material->baseColor.y;
+		light->color.z = material->baseColor.z;
 		light->type = Light::POINT;
 		light->name = name + "_pslight";
 		light->shadow = true;
+		lightName = light->name;
 	}
 }
 
@@ -562,6 +564,7 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		archive >> scaleY;
 		archive >> rotation;
 		archive >> motionBlurAmount;
+		archive >> lightName;
 
 		LoadVertexBuffer();
 		SetupLightInterpolators();
@@ -583,5 +586,6 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		archive << scaleY;
 		archive << rotation;
 		archive << motionBlurAmount;
+		archive << lightName;
 	}
 }

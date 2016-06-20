@@ -102,27 +102,7 @@ void LoadWiArmatures(const string& directory, const string& name, const string& 
 
 	//CREATE FAMILY
 	for(Armature* armature : armatures){
-		for(Bone* i : armature->boneCollection){
-			if(i->parentName.length()>0){
-				for(Bone* j : armature->boneCollection){
-					if(i!=j){
-						if(!i->parentName.compare(j->name)){
-							i->parent=j;
-							j->childrenN.push_back(i->name);
-							j->childrenI.push_back(i);
-							i->attachTo(j,1,1,1);
-						}
-					}
-				}
-			}
-			else{
-				armature->rootbones.push_back(i);
-			}
-		}
-
-		for (unsigned int i = 0; i<armature->rootbones.size(); ++i){
-			RecursiveRest(armature,armature->rootbones[i]);
-		}
+		armature->CreateFamily();
 	}
 
 }
@@ -2268,8 +2248,12 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		LoadWiActions(directory.str(), actionsFilePath.str(), identifier, armatures);
 		LoadWiLights(directory.str(), lightsFilePath.str(), identifier, lights);
 		LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", decals);
-	}
 
+		FinishLoading();
+	}
+}
+void Model::FinishLoading()
+{
 	vector<Transform*> transforms(0);
 	transforms.reserve(armatures.size() + objects.size() + lights.size() + decals.size());
 
@@ -2286,9 +2270,39 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		transforms.push_back(x);
 		for (wiEmittedParticle* e : x->eParticleSystems)
 		{
+			// If the particle system has light, then register it to the light array (if not already registered!)
 			if (e->light != nullptr)
 			{
-				lights.push_back(e->light);
+				bool registeredLight = false;
+				for (Light* l : lights)
+				{
+					if (e->light == l)
+					{
+						registeredLight = true;
+					}
+				}
+				if (!registeredLight)
+				{
+					lights.push_back(e->light);
+				}
+			}
+		}
+		// Match parentBone (not armaturedeform!)
+		if (!x->boneParent.empty() && x->mesh != nullptr)
+		{
+			Armature* armature = x->mesh->armature;
+			if (armature != nullptr)
+			{
+				for (Bone* b : armature->boneCollection)
+				{
+					if (!b->name.compare(x->boneParent))
+					{
+						XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
+						x->attachTo(b);
+						x->parent_inv_rest = saved_parent_rest_inv;
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -2306,37 +2320,22 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 	// Match loaded parenting information
 	for (Transform* x : transforms)
 	{
-		for (Transform* y : transforms)
+		if (x->parent == nullptr)
 		{
-			if (x != y && x->parentName.length() > 0 && !x->parentName.compare(y->name))
+			for (Transform* y : transforms)
 			{
-				// Match parent
-				XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
-				x->attachTo(y);
-				x->parent_inv_rest = saved_parent_rest_inv;
-				break;
-			}
-		}
-
-		if (x->parent != nullptr && x->parentName.length() > 0 && x->boneParent.length() > 0)
-		{
-			// Match Bone parent
-			Armature* armature = dynamic_cast<Armature*>(x->parent);
-			if (armature != nullptr)
-			{
-				// Only if the current parent is an Armature!
-				for (Bone* b : armature->boneCollection) {
-					if (!b->name.compare(x->boneParent))
-					{
-						XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
-						x->attachTo(b);
-						x->parent_inv_rest = saved_parent_rest_inv;
-						break;
-					}
+				if (x != y && !x->parentName.empty() && !x->parentName.compare(y->name))
+				{
+					// Match parent
+					XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
+					x->attachTo(y);
+					x->parent_inv_rest = saved_parent_rest_inv;
+					break;
 				}
 			}
 		}
 
+		// If it has still not parent, then attach to this model!
 		if (x->parent == nullptr)
 		{
 			x->attachTo(this);
@@ -2368,7 +2367,47 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 			x->mesh->CreateBuffers(x);
 		}
 	}
+}
+void Model::UpdateModel()
+{
+	for (MaterialCollection::iterator iter = materials.begin(); iter != materials.end(); ++iter) {
+		Material* iMat = iter->second;
+		iMat->framesToWaitForTexCoordOffset -= 1.0f;
+		if (iMat->framesToWaitForTexCoordOffset <= 0) {
+			iMat->texMulAdd.z += iMat->movingTex.x*wiRenderer::GetGameSpeed();
+			iMat->texMulAdd.w += iMat->movingTex.y*wiRenderer::GetGameSpeed();
+			iMat->framesToWaitForTexCoordOffset = iMat->movingTex.z*wiRenderer::GetGameSpeed();
+		}
+	}
 
+	for (Armature* x : armatures)
+	{
+		x->UpdateArmature();
+	}
+	for (Object* x : objects)
+	{
+		x->UpdateObject();
+	}
+	for (Light*x : lights)
+	{
+		x->UpdateLight();
+	}
+	
+	list<Decal*>::iterator iter = decals.begin();
+	while (iter != decals.end())
+	{
+		Decal* decal = *iter;
+		decal->UpdateDecal();
+		if (decal->life>-2) {
+			if (decal->life <= 0) {
+				decal->detach();
+				decals.erase(iter++);
+				delete decal;
+				continue;
+			}
+		}
+		++iter;
+	}
 }
 void Model::Serialize(wiArchive& archive)
 {
@@ -2391,7 +2430,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Mesh* x = new Mesh;
 			x->Serialize(archive);
-			meshes.insert(pair<string,Mesh*>(x->name, x));
+			meshes.insert(pair<string, Mesh*>(x->name, x));
 		}
 
 		archive >> materialCount;
@@ -2399,7 +2438,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Material* x = new Material;
 			x->Serialize(archive);
-			materials.insert(pair<string,Material*>(x->name, x));
+			materials.insert(pair<string, Material*>(x->name, x));
 		}
 
 		archive >> armaturesCount;
@@ -2475,7 +2514,17 @@ void Model::Serialize(wiArchive& archive)
 				if (it != materials.end())
 				{
 					y->material = it->second;
-					y->CreateLight();
+					if (!y->lightName.empty())
+					{
+						for (auto& l : lights)
+						{
+							if (!l->name.compare(y->lightName))
+							{
+								y->light = l;
+								break;
+							}
+						}
+					}
 				}
 			}
 			for (auto& y : x->hParticleSystems)
@@ -2489,6 +2538,8 @@ void Model::Serialize(wiArchive& archive)
 				}
 			}
 		}
+
+		FinishLoading();
 	}
 	else
 	{
@@ -2527,47 +2578,6 @@ void Model::Serialize(wiArchive& archive)
 		{
 			x->Serialize(archive);
 		}
-	}
-}
-void Model::UpdateModel()
-{
-	for (MaterialCollection::iterator iter = materials.begin(); iter != materials.end(); ++iter) {
-		Material* iMat = iter->second;
-		iMat->framesToWaitForTexCoordOffset -= 1.0f;
-		if (iMat->framesToWaitForTexCoordOffset <= 0) {
-			iMat->texMulAdd.z += iMat->movingTex.x*wiRenderer::GetGameSpeed();
-			iMat->texMulAdd.w += iMat->movingTex.y*wiRenderer::GetGameSpeed();
-			iMat->framesToWaitForTexCoordOffset = iMat->movingTex.z*wiRenderer::GetGameSpeed();
-		}
-	}
-
-	for (Armature* x : armatures)
-	{
-		x->UpdateArmature();
-	}
-	for (Object* x : objects)
-	{
-		x->UpdateObject();
-	}
-	for (Light*x : lights)
-	{
-		x->UpdateLight();
-	}
-	
-	list<Decal*>::iterator iter = decals.begin();
-	while (iter != decals.end())
-	{
-		Decal* decal = *iter;
-		decal->UpdateDecal();
-		if (decal->life>-2) {
-			if (decal->life <= 0) {
-				decal->detach();
-				decals.erase(iter++);
-				delete decal;
-				continue;
-			}
-		}
-		++iter;
 	}
 }
 #pragma endregion
@@ -2858,6 +2868,7 @@ void Bone::Serialize(wiArchive& archive)
 		}
 		archive << restInv;
 		archive << actionFrames.size();
+		int i = 0;
 		for (auto& x : actionFrames)
 		{
 			archive << x.keyframesRot.size();
@@ -3267,6 +3278,30 @@ void Armature::DeleteAnimLayer(const string& name)
 		}
 	}
 }
+void Armature::CreateFamily()
+{
+	for (Bone* i : boneCollection) {
+		if (i->parentName.length()>0) {
+			for (Bone* j : boneCollection) {
+				if (i != j) {
+					if (!i->parentName.compare(j->name)) {
+						i->parent = j;
+						j->childrenN.push_back(i->name);
+						j->childrenI.push_back(i);
+						i->attachTo(j, 1, 1, 1);
+					}
+				}
+			}
+		}
+		else {
+			rootbones.push_back(i);
+		}
+	}
+
+	for (unsigned int i = 0; i<rootbones.size(); ++i) {
+		RecursiveRest(this, rootbones[i]);
+	}
+}
 void Armature::Serialize(wiArchive& archive)
 {
 	Transform::Serialize(archive);
@@ -3284,6 +3319,7 @@ void Armature::Serialize(wiArchive& archive)
 		}
 		size_t animLayerCount;
 		archive >> animLayerCount;
+		animationLayers.clear();
 		for (size_t i = 0; i < animLayerCount; ++i)
 		{
 			AnimationLayer* layer = new AnimationLayer;
@@ -3293,12 +3329,15 @@ void Armature::Serialize(wiArchive& archive)
 		size_t actionCount;
 		archive >> actionCount;
 		Action tempAction;
+		actions.clear();
 		for (size_t i = 0; i < actionCount; ++i)
 		{
 			archive >> tempAction.name;
 			archive >> tempAction.frameCount;
 			actions.push_back(tempAction);
 		}
+
+		CreateFamily();
 	}
 	else
 	{

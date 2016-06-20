@@ -263,6 +263,8 @@ void Transform::Serialize(wiArchive& archive)
 		archive >> copyParentT;
 		archive >> copyParentR;
 		archive >> copyParentS;
+
+		UpdateTransform();
 	}
 	else
 	{
