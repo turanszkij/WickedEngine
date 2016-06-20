@@ -3706,7 +3706,7 @@ void Light::UpdateLight()
 			f = shadowCam[2].size / (float)wiRenderer::SHADOWMAPRES;
 			e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) / f)*f;
 
-			XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation_rest));
+			XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
 			shadowCam[0].Update(rrr*XMMatrixTranslationFromVector(e));
 			if (shadowCam.size()>1) {
 				shadowCam[1].Update(rrr*XMMatrixTranslationFromVector(e1));
