@@ -1272,6 +1272,28 @@ void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
 	tree->initialize(objects);
 }
 
+#pragma region SKINNEDVERTEX
+void SkinnedVertex::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> pos;
+		archive >> nor;
+		archive >> tex;
+		archive >> bon;
+		archive >> wei;
+	}
+	else
+	{
+		archive << pos;
+		archive << nor;
+		archive << tex;
+		archive << bon;
+		archive << wei;
+	}
+}
+#pragma endregion
+
 #pragma region SCENE
 Scene::Scene()
 {
@@ -1325,14 +1347,7 @@ void Scene::Update()
 Cullable::Cullable():bounds(AABB())/*,lastSquaredDistMulThousand(0)*/{}
 void Cullable::Serialize(wiArchive& archive)
 {
-	if (archive.IsReadMode())
-	{
-		archive >> bounds;
-	}
-	else
-	{
-		archive << bounds;
-	}
+	bounds.Serialize(archive);
 }
 #pragma endregion
 
@@ -1435,7 +1450,9 @@ void Material::Serialize(wiArchive& archive)
 		archive >> refMapName;
 		archive >> textureName;
 		archive >> premultipliedTexture;
-		archive >> blendFlag;
+		int temp;
+		archive >> temp;
+		blendFlag = (BLENDMODE)temp;
 		archive >> normalMapName;
 		archive >> displacementMapName;
 		archive >> specularMapName;
@@ -1481,7 +1498,7 @@ void Material::Serialize(wiArchive& archive)
 		archive << refMapName;
 		archive << textureName;
 		archive << premultipliedTexture;
-		archive << blendFlag;
+		archive << (int)blendFlag;
 		archive << normalMapName;
 		archive << displacementMapName;
 		archive << specularMapName;
@@ -2001,7 +2018,7 @@ void Mesh::Serialize(wiArchive& archive)
 			SkinnedVertex tempVert;
 			for (size_t i = 0; i < vertexCount; ++i)
 			{
-				archive >> tempVert;
+				tempVert.Serialize(archive);
 				vertices.push_back(tempVert);
 			}
 		}
@@ -2082,7 +2099,9 @@ void Mesh::Serialize(wiArchive& archive)
 		}
 		archive >> renderable;
 		archive >> doubleSided;
-		archive >> stencilRef;
+		int temp;
+		archive >> temp;
+		stencilRef = (STENCILREF)temp;
 		archive >> calculatedAO;
 		archive >> trailInfo.base;
 		archive >> trailInfo.tip;
@@ -2094,8 +2113,8 @@ void Mesh::Serialize(wiArchive& archive)
 		archive >> massVG;
 		archive >> goalVG;
 		archive >> softVG;
-		archive >> aabb;
 		archive >> armatureName;
+		aabb.Serialize(archive);
 	}
 	else
 	{
@@ -2107,7 +2126,7 @@ void Mesh::Serialize(wiArchive& archive)
 			archive << vertices.size();
 			for (auto& x : vertices)
 			{
-				archive << x;
+				x.Serialize(archive);
 			}
 		}
 		// indices
@@ -2164,7 +2183,7 @@ void Mesh::Serialize(wiArchive& archive)
 		}
 		archive << renderable;
 		archive << doubleSided;
-		archive << stencilRef;
+		archive << (int)stencilRef;
 		archive << calculatedAO;
 		archive << trailInfo.base;
 		archive << trailInfo.tip;
@@ -2176,8 +2195,8 @@ void Mesh::Serialize(wiArchive& archive)
 		archive << massVG;
 		archive << goalVG;
 		archive << softVG;
-		archive << aabb;
 		archive << armatureName;
+		aabb.Serialize(archive);
 	}
 }
 #pragma endregion
@@ -2735,6 +2754,31 @@ AABB AABB::Merge(const AABB& a, const AABB& b)
 {
 	return AABB(wiMath::Min(a.getMin(), b.getMin()), wiMath::Max(a.getMax(), b.getMax()));
 }
+void AABB::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> corners[0];
+		archive >> corners[1];
+		archive >> corners[2];
+		archive >> corners[3];
+		archive >> corners[4];
+		archive >> corners[5];
+		archive >> corners[6];
+		archive >> corners[7];
+	}
+	else
+	{
+		archive << corners[0];
+		archive << corners[1];
+		archive << corners[2];
+		archive << corners[3];
+		archive << corners[4];
+		archive << corners[5];
+		archive << corners[6];
+		archive << corners[7];
+	}
+}
 #pragma endregion
 
 #pragma region SPHERE
@@ -2836,19 +2880,19 @@ void Bone::Serialize(wiArchive& archive)
 			archive >> tempCount;
 			for (size_t i = 0; i < tempCount; ++i)
 			{
-				archive >> tempKeyFrame;
+				tempKeyFrame.Serialize(archive);
 				aframes.keyframesRot.push_back(tempKeyFrame);
 			}
 			archive >> tempCount;
 			for (size_t i = 0; i < tempCount; ++i)
 			{
-				archive >> tempKeyFrame;
+				tempKeyFrame.Serialize(archive);
 				aframes.keyframesPos.push_back(tempKeyFrame);
 			}
 			archive >> tempCount;
 			for (size_t i = 0; i < tempCount; ++i)
 			{
-				archive >> tempKeyFrame;
+				tempKeyFrame.Serialize(archive);
 				aframes.keyframesSca.push_back(tempKeyFrame);
 			}
 			actionFrames.push_back(aframes);
@@ -2874,17 +2918,17 @@ void Bone::Serialize(wiArchive& archive)
 			archive << x.keyframesRot.size();
 			for (auto& y : x.keyframesRot)
 			{
-				archive << y;
+				y.Serialize(archive);
 			}
 			archive << x.keyframesPos.size();
 			for (auto& y : x.keyframesPos)
 			{
-				archive << y;
+				y.Serialize(archive);
 			}
 			archive << x.keyframesSca.size();
 			for (auto& y : x.keyframesSca)
 			{
-				archive << y;
+				y.Serialize(archive);
 			}
 		}
 		archive << recursivePose;
@@ -2892,6 +2936,22 @@ void Bone::Serialize(wiArchive& archive)
 		archive << recursiveRestInv;
 		archive << length;
 		archive << connected;
+	}
+}
+#pragma endregion
+
+#pragma region KEYFRAME
+void KeyFrame::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+		archive >> data;
+		archive >> frameI;
+	}
+	else
+	{
+		archive << data;
+		archive << frameI;
 	}
 }
 #pragma endregion
@@ -2956,7 +3016,9 @@ void AnimationLayer::Serialize(wiArchive& archive)
 		archive >> blendFrames;
 		archive >> blendFact;
 		archive >> weight;
-		archive >> type;
+		int temp;
+		archive >> temp;
+		type = (ANIMATIONLAYER_TYPE)temp;
 		archive >> looped;
 	}
 	else
@@ -2965,7 +3027,7 @@ void AnimationLayer::Serialize(wiArchive& archive)
 		archive << blendFrames;
 		archive << blendFact;
 		archive << weight;
-		archive << type;
+		archive << (int)type;
 		archive << looped;
 	}
 }
@@ -3573,7 +3635,9 @@ void Object::Serialize(wiArchive& archive)
 
 	if (archive.IsReadMode())
 	{
-		archive >> emitterType;
+		int temp;
+		archive >> temp;
+		emitterType = (EmitterType)temp;
 		archive >> transparency;
 		archive >> color;
 		archive >> rigidBody;
@@ -3604,7 +3668,7 @@ void Object::Serialize(wiArchive& archive)
 	}
 	else
 	{
-		archive << emitterType;
+		archive << (int)emitterType;
 		archive << transparency;
 		archive << color;
 		archive << rigidBody;
@@ -3744,7 +3808,9 @@ void Light::Serialize(wiArchive& archive)
 		archive >> noHalo;
 		archive >> shadow;
 		archive >> shadowBias;
-		archive >> type;
+		int temp;
+		archive >> temp;
+		type = (LightType)temp;
 		if (type == DIRECTIONAL)
 		{
 			shadowMaps_dirLight.resize(3);
@@ -3769,7 +3835,7 @@ void Light::Serialize(wiArchive& archive)
 		archive << noHalo;
 		archive << shadow;
 		archive << shadowBias;
-		archive << type;
+		archive << (int)type;
 		archive << lensFlareNames.size();
 		for (auto& x : lensFlareNames)
 		{

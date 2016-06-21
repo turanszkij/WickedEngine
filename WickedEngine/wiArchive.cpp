@@ -1,7 +1,10 @@
 #include "wiArchive.h"
+#include "wiHelper.h"
 
 // this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-unsigned long __archiveVersion = 0;
+uint64_t __archiveVersion = 1;
+// this is the version number of which below the archive is not compatible with the current version
+uint64_t __archiveVersionBarrier = 1;
 
 wiArchive::wiArchive(const string& fileName, bool readMode):readMode(readMode),pos(0),DATA(nullptr)
 {
@@ -18,6 +21,12 @@ wiArchive::wiArchive(const string& fileName, bool readMode):readMode(readMode),p
 				file.read(DATA, dataSize);
 				file.close();
 				(*this) >> version;
+				if (version < __archiveVersionBarrier)
+				{
+					stringstream ss("");
+					ss << "The archive version (" << version << ") is no longer supported!";
+					wiHelper::messageBox(ss.str(), "Error!");
+				}
 			}
 		}
 		else

@@ -48,6 +48,7 @@ struct SkinnedVertex
 		bon=XMFLOAT4(0,0,0,0);
 		wei=XMFLOAT4(0,0,0,0);
 	}
+	void Serialize(wiArchive& archive);
 };
 struct Vertex
 {
@@ -272,6 +273,7 @@ struct AABB{
 	bool intersects(const RAY& ray) const;
 	AABB operator* (float a);
 	static AABB Merge(const AABB& a, const AABB& b);
+	void Serialize(wiArchive& archive);
 };
 struct SPHERE{
 	float radius;
@@ -520,6 +522,7 @@ struct KeyFrame
 		frameI=newFrameI;
 		data=XMFLOAT4(x,y,z,w);
 	}
+	void Serialize(wiArchive& archive);
 };
 struct Action
 {
