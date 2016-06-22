@@ -26,6 +26,7 @@ wiArchive::wiArchive(const string& fileName, bool readMode):readMode(readMode),p
 					stringstream ss("");
 					ss << "The archive version (" << version << ") is no longer supported!";
 					wiHelper::messageBox(ss.str(), "Error!");
+					Close();
 				}
 			}
 		}
