@@ -90,7 +90,7 @@ inline void dirLight(in float3 P, in float3 N, in float3 V, in float roughness, 
 	diffuse *= sh;
 	specular *= sh;
 
-	specular += EnvironmentReflection(N, V, P, roughness, f0);
+	//specular += EnvironmentReflection(N, V, P, roughness, f0);
 
 	diffuse = max(diffuse, 0);
 	specular = max(specular, 0);

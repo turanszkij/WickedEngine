@@ -656,6 +656,7 @@ void wiRenderer::LoadBasicShaders()
 	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
@@ -991,11 +992,11 @@ void wiRenderer::SetUpStates()
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
@@ -1996,134 +1997,139 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 	if(spTree_lights)
 		wiSPTree::getVisible(spTree_lights->root,frustum,culledObjects);
 
-	if(!culledObjects.empty())
-	{
-		GetDevice()->EventBegin(L"Light Render", threadID);
+	GetDevice()->EventBegin(L"Light Render", threadID);
 
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
+	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
 	
-		GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
+	GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
+	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
 
-		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
-		GetDevice()->BindIndexBuffer(nullptr, threadID);
+	GetDevice()->BindVertexLayout(nullptr, threadID);
+	GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
+	GetDevice()->BindIndexBuffer(nullptr, threadID);
 
-		GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
-		GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
-
-		GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
-		GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
-
-		for(int type=0;type<3;++type){
-
-			
-			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],threadID);
-
-			switch (type)
-			{
-			case 0:
-				if (SOFTSHADOW)
-				{
-					GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
-				}
-				else
-				{
-					GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT], threadID);
-				}
-				GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
-				break;
-			case 1:
-				GetDevice()->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
-				GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
-				break;
-			case 2:
-				GetDevice()->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
-				GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
-				break;
-			default:
-				break;
-			}
-
-
-			for(Cullable* c : culledObjects){
-				Light* l = (Light*)c;
-				if (l->type != type)
-					continue;
-			
-				if(type==0) //dir
-				{
-					DirectionalLightCB lcb;
-					lcb.direction=XMVector3Normalize(
-						-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
-						);
-					lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-					lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
-					for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
-						lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
-						if(l->shadowMaps_dirLight[shmap].depth)
-							GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
-					}
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
-
-					GetDevice()->Draw(3, threadID);
-				}
-				else if(type==1) //point
-				{
-					PointLightCB lcb;
-					lcb.pos=l->translation;
-					lcb.col=l->color;
-					lcb.enerdis=l->enerDis;
-					lcb.enerdis.w = 0.f;
-
-					if (l->shadow && l->shadowMap_index>=0)
-					{
-						lcb.enerdis.w = 1.f;
-						if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
-							GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
-					}
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
-
-					GetDevice()->Draw(240, threadID);
-				}
-				else if(type==2) //spot
-				{
-					SpotLightCB lcb;
-					const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
-					XMMATRIX world,rot;
-					world = XMMatrixTranspose(
-							XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
-							XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
-							XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
-							);
-					rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
-					lcb.direction=XMVector3Normalize(
-						-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
-						);
-					lcb.world=world;
-					lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
-					lcb.mShM = XMMatrixIdentity();
-					lcb.col=l->color;
-					lcb.enerdis=l->enerDis;
-					lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
-
-					if (l->shadow && l->shadowMap_index>=0)
-					{
-						lcb.mShM = l->shadowCam[0].getVP();
-						if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
-							GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
-					}
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
-
-					GetDevice()->Draw(192, threadID);
-				}
-			}
-
-
-		}
-		GetDevice()->EventEnd(threadID);
+	// Environmental reflection is always drawn
+	{
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID); // just full screen triangle so we can use it
+		GetDevice()->BindPS(pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], threadID);
+		GetDevice()->Draw(3, threadID);
 	}
+
+	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
+	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
+
+	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
+	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
+
+	for(int type=0;type<3;++type){
+
+			
+		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],threadID);
+
+		switch (type)
+		{
+		case 0:
+			if (SOFTSHADOW)
+			{
+				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
+			}
+			else
+			{
+				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT], threadID);
+			}
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+			break;
+		case 1:
+			GetDevice()->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
+			break;
+		case 2:
+			GetDevice()->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
+			break;
+		default:
+			break;
+		}
+
+
+		for(Cullable* c : culledObjects){
+			Light* l = (Light*)c;
+			if (l->type != type)
+				continue;
+			
+			if(type==0) //dir
+			{
+				DirectionalLightCB lcb;
+				lcb.direction=XMVector3Normalize(
+					-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
+					);
+				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
+				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
+					lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
+					if(l->shadowMaps_dirLight[shmap].depth)
+						GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
+				}
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
+
+				GetDevice()->Draw(3, threadID);
+			}
+			else if(type==1) //point
+			{
+				PointLightCB lcb;
+				lcb.pos=l->translation;
+				lcb.col=l->color;
+				lcb.enerdis=l->enerDis;
+				lcb.enerdis.w = 0.f;
+
+				if (l->shadow && l->shadowMap_index>=0)
+				{
+					lcb.enerdis.w = 1.f;
+					if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
+						GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
+				}
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
+
+				GetDevice()->Draw(240, threadID);
+			}
+			else if(type==2) //spot
+			{
+				SpotLightCB lcb;
+				const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
+				XMMATRIX world,rot;
+				world = XMMatrixTranspose(
+						XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
+						XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
+						XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
+						);
+				rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
+				lcb.direction=XMVector3Normalize(
+					-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
+					);
+				lcb.world=world;
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
+				lcb.mShM = XMMatrixIdentity();
+				lcb.col=l->color;
+				lcb.enerdis=l->enerDis;
+				lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
+
+				if (l->shadow && l->shadowMap_index>=0)
+				{
+					lcb.mShM = l->shadowCam[0].getVP();
+					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
+						GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
+				}
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
+
+				GetDevice()->Draw(192, threadID);
+			}
+		}
+
+
+	}
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 {

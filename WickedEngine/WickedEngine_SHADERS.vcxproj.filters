@@ -387,6 +387,9 @@
     <FxCompile Include="sphereVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="environmentalLightPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
