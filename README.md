@@ -11,7 +11,7 @@ From now on you can easily set up a game project by using the component template
 
 
 ### Platforms:
-- Windows PC Desktop (tested for version 0.7.6)
+- Windows PC Desktop (tested for version 0.8.22)
 - Universal Windows (tested for version 0.7.6)
 
 ### Requirements:
@@ -44,9 +44,6 @@ will load all features of the engine. If you want to use just a subset of featur
 with a WICKEDENGINE_INITIALIZER enum value, or multiple values joined by the | operator.
 For further details, please check the demo project at: https://github.com/turanszkij/WickedEngineDemos.
 
-
-Editor: Use Blender 2.72 as the editor of this engine. Set up your scene and export it with the provided script
-
 Windows 7 support: define _WIN32_WINNT=0x0601 preprocessor on the whole project
 
 Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole project
@@ -71,9 +68,11 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 ### Editor:
 
-<b>Update: I started working on a standalone editor for the engine using no other gui system than what the engine provides. It is still work in progress. Check it out: https://github.com/turanszkij/WickedEngine-Editor</b>
+<b>Update: I started working on a standalone editor for the engine using no other gui system than what the engine provides. 
+It is still work in progress. Check it out: https://github.com/turanszkij/WickedEngine-Editor</b>
+You can import models exported from blender with the provided python script: io_export_wicked_wi_bin.py
 
-For the time being, Blender software is the editor program for Wicked Engine. I provide an export script which
+For the time being, Blender software is the editor program for Wicked Engine. I provide an export script (io_export_wicked_wi_bin.py) which
 you can use to export to the wicked scene format. The script is also going to be updated from time to time to
 remove the known hiccups and bugs.
 - Names should not contain spaces inside Blender

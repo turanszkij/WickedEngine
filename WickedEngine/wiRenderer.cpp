@@ -3346,9 +3346,9 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 
 		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable);
 
-		if ((pickType & PICK_LIGHT) || (pickType & PICK_DECAL))
+		for (auto& model : GetScene().models)
 		{
-			for (auto& model : GetScene().models)
+			if (pickType & PICK_LIGHT)
 			{
 				for (auto& light : model->lights)
 				{
@@ -3368,6 +3368,9 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 						pickPoints.push_back(pick);
 					}
 				}
+			}
+			if (pickType & PICK_DECAL)
+			{
 				for (auto& decal : model->decals)
 				{
 					if (decal->bounds.intersects(ray))
