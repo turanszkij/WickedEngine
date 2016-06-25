@@ -830,12 +830,13 @@ struct Wind{
 	Wind():direction(XMFLOAT3(0,0,0)),time(0),randomness(5),waveSize(1){}
 };
 struct Camera:public Transform{
-	XMFLOAT4X4 View, Projection;
+	XMFLOAT4X4 View, Projection, VP;
 	XMFLOAT3 At, Up;
 	float width, height;
 	float zNearP, zFarP;
 	float fov;
 	Frustum frustum;
+	XMFLOAT4X4 InvView, InvProjection, InvVP;
 	
 	Camera():Transform(){
 	}
@@ -883,6 +884,11 @@ struct Camera:public Transform{
 		XMStoreFloat3(&this->Up, Up);
 
 		frustum.ConstructFrustum(zFarP, Projection, this->View);
+
+		XMMATRIX VP = XMMatrixMultiply(View, GetProjection());
+		XMStoreFloat4x4(&this->VP, VP);
+		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, View));
+		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, VP));
 	}
 	void Move(const XMVECTOR& movevector)
 	{
@@ -921,7 +927,10 @@ struct Camera:public Transform{
 	}
 	void UpdateProjection()
 	{
-		XMStoreFloat4x4(&this->Projection, XMMatrixPerspectiveFovLH(fov, (float)width / (float)height, zNearP, zFarP));
+		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, (float)width / (float)height, zNearP, zFarP);
+		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
+		XMStoreFloat4x4(&this->Projection, P);
+		XMStoreFloat4x4(&this->InvProjection, InvP);
 	}
 
 	XMVECTOR GetEye()
@@ -940,13 +949,25 @@ struct Camera:public Transform{
 	{
 		return XMLoadFloat4x4(&View);
 	}
+	XMMATRIX GetInvView()
+	{
+		return XMLoadFloat4x4(&InvView);
+	}
 	XMMATRIX GetProjection()
 	{
 		return XMLoadFloat4x4(&Projection);
 	}
+	XMMATRIX GetInvProjection()
+	{
+		return XMLoadFloat4x4(&InvProjection);
+	}
 	XMMATRIX GetViewProjection()
 	{
-		return XMMatrixMultiply(GetView(),GetProjection());
+		return XMLoadFloat4x4(&VP);
+	}
+	XMMATRIX GetInvViewProjection()
+	{
+		return XMLoadFloat4x4(&InvVP);
 	}
 	virtual void UpdateTransform();
 };

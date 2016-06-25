@@ -2,7 +2,7 @@
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	float4 color = float4(0,0,0,0);
+	float4 color = xColor;
 
 	//return float4(PSIn.tex, 0, 1);
 		
@@ -14,7 +14,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 		PSIn.tex.xy=distortionCo+distort;
 	}
 
-	color += xTexture.SampleLevel(Sampler, PSIn.tex.xy, xMipLevel);
+	color *= xTexture.SampleLevel(Sampler, PSIn.tex.xy, xMipLevel);
 	[branch]if(xMask==1)
 		color *= xMaskTex.SampleLevel(Sampler, PSIn.tex.xy, xMipLevel).a;
 	[branch]if(xNormalmapSeparate==2)

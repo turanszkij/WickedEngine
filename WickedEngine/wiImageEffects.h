@@ -27,6 +27,7 @@ class wiImageEffects {
 public:
 	XMFLOAT3 pos;
 	XMFLOAT2 siz;
+	XMFLOAT4 col;
 	XMFLOAT2 scale;
 	XMFLOAT4 drawRec;
 	XMFLOAT2 texOffset;
@@ -105,6 +106,7 @@ public:
 	void init() {
 		pos = XMFLOAT3(0, 0, 0);
 		siz = XMFLOAT2(1, 1);
+		col = XMFLOAT4(1, 1, 1, 1);
 		scale = XMFLOAT2(1, 1);
 		drawRec = XMFLOAT4(0, 0, 0, 0);
 		texOffset = XMFLOAT2(0, 0);

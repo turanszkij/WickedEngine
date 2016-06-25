@@ -85,7 +85,7 @@ void wiImage::SetUpStates()
 	
 	RasterizerStateDesc rs;
 	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_BACK;
+	rs.CullMode=CULL_NONE;
 	rs.FrontCounterClockwise=false;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
@@ -285,20 +285,23 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 					;
 				}
 				else
-					faceRot=XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
+				{
+					faceRot = XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
+				}
 
 				cb.mTransform = XMMatrixTranspose(
-						XMMatrixScaling(effects.scale.x*effects.siz.x,effects.scale.y*effects.siz.y,1)
+						XMMatrixScaling(effects.scale.x*effects.siz.x,-1*effects.scale.y*effects.siz.y,1)
 						*XMMatrixRotationZ(effects.rotation)
 						*faceRot
 						*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
-						*wiRenderer::getCamera()->GetView() * wiRenderer::getCamera()->GetProjection()
+						*wiRenderer::getCamera()->GetViewProjection()
 					);
 			}
 
 			// todo: effects.drawRec -> texmuladd!
 
 			cb.mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
+			cb.mColor = effects.col;
 			cb.mPivot = effects.pivot;
 			cb.mMirror = effects.mirror;
 			cb.mPivot = effects.pivot;

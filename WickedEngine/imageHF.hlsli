@@ -26,6 +26,7 @@ CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 {
 	float4x4	xTransform;
 	float4		xTexMulAdd;
+	float4		xColor;
 	float2		xPivot;
 	uint		xMirror;
 

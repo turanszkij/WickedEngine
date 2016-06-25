@@ -15,6 +15,7 @@ protected:
 	{
 		XMMATRIX	mTransform;
 		XMFLOAT4	mTexMulAdd;
+		XMFLOAT4	mColor;
 		XMFLOAT2	mPivot;
 		UINT		mMirror;
 

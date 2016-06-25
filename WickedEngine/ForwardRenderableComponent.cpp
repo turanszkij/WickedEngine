@@ -79,7 +79,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, 0, threadID
 			, false, SHADERTYPE_FORWARD
-			, nullptr, true, GRAPHICSTHREAD_SCENE);
+			, nullptr, true);
 		wiRenderer::DrawSky(threadID);
 	}
 

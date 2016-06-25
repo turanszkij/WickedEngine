@@ -211,7 +211,7 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, threadID
 			, true, SHADERTYPE_TEXTURE
-			, nullptr, getHairParticlesReflectionEnabled(), GRAPHICSTHREAD_REFLECTIONS);
+			, nullptr, getHairParticlesReflectionEnabled());
 		wiRenderer::DrawSky(threadID,true);
 	}
 }

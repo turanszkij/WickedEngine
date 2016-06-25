@@ -2662,7 +2662,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 
 void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
 				  , bool isReflection, SHADERTYPE shaderType
-				  , Texture2D* refRes, bool grass, GRAPHICSTHREAD thread)
+				  , Texture2D* refRes, bool grass)
 {
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -3352,21 +3352,31 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 			{
 				for (auto& light : model->lights)
 				{
-					if (light->bounds.intersects(ray))
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&light->translation));
+					float dis = XMVectorGetX(disV);
+					if (dis < wiMath::Distance(light->translation, cam->translation) * 0.05f)
 					{
 						Picked pick = Picked();
 						pick.transform = light;
 						pick.light = light;
-						if (light->type == Light::DIRECTIONAL)
-						{
-							pick.distance = FLT_MAX;
-						}
-						else
-						{
-							pick.distance = wiMath::Distance(light->translation, ray.origin);
-						}
+						pick.distance = wiMath::Distance(light->translation, ray.origin);
 						pickPoints.push_back(pick);
 					}
+					//if (light->bounds.intersects(ray))
+					//{
+					//	Picked pick = Picked();
+					//	pick.transform = light;
+					//	pick.light = light;
+					//	if (light->type == Light::DIRECTIONAL)
+					//	{
+					//		pick.distance = FLT_MAX;
+					//	}
+					//	else
+					//	{
+					//		pick.distance = wiMath::Distance(light->translation, ray.origin);
+					//	}
+					//	pickPoints.push_back(pick);
+					//}
 				}
 			}
 			if (pickType & PICK_DECAL)
