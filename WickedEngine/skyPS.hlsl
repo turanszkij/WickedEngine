@@ -7,7 +7,7 @@ struct VSOut{
 	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 
-float4 main(VSOut PSIn) : SV_TARGET
+float4 main(VSOut PSIn) : SV_Target
 {
 	return float4(GetSkyColor(PSIn.nor), 1);
 }

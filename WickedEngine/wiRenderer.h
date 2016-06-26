@@ -122,7 +122,7 @@ protected:
 		XMMATRIX mPrevP;
 		XMMATRIX mPrevVP;
 		XMMATRIX mReflVP;
-		XMMATRIX mInvP;
+		XMMATRIX mInvVP;
 		XMFLOAT3 mCamPos;		float pad0;
 		XMFLOAT3 mAt;			float pad1;
 		XMFLOAT3 mUp;			float pad2;

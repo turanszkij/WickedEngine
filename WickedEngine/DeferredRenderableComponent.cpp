@@ -29,6 +29,7 @@ void DeferredRenderableComponent::Initialize()
 	rtGBuffer.Add(FORMAT_R16G16_FLOAT);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
+	rtGBuffer.Add(FORMAT_R16G16_FLOAT);
 
 	rtDeferred.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
@@ -94,7 +95,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 	static const int tessellationQuality = 0;
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
-	rtGBuffer.Activate(threadID, 0.5f, 0.5f, 0.5f, 1); // special clearcolor! background should write 0.5 in velocity buffer!
+	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
@@ -222,7 +223,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
 		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : rtLight.GetTexture(0)), rtLight.GetTexture(1)
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
-			, threadID, STENCILREF_DEFAULT); 
+			, threadID, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(threadID);
 	}
 
@@ -237,27 +238,23 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 		}
 	}
 
-	if (getMotionBlurEnabled()){ //MOTIONBLUR
-		rtMotionBlur.Activate(threadID);
-		fx.process.setMotionBlur(true);
-		//fx.setVelocityMap(rtGBuffer.shaderResource.back());
-		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		if (getSSREnabled()){
-			wiImage::Draw(rtSSR.GetTexture(), fx, threadID);
-		}
-		else{
-			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
-		}
-		fx.process.clear();
-	}
+	//if (getMotionBlurEnabled()){ //MOTIONBLUR
+	//	rtMotionBlur.Activate(threadID);
+	//	fx.process.setMotionBlur(true);
+	//	fx.blendFlag = BLENDMODE_OPAQUE;
+	//	if (getSSREnabled()){
+	//		wiImage::Draw(rtSSR.GetTexture(), fx, threadID);
+	//	}
+	//	else{
+	//		wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
+	//	}
+	//	fx.process.clear();
+	//}
 }
 
 wiRenderTarget& DeferredRenderableComponent::GetFinalRT()
 {
-	if (getMotionBlurEnabled())
-		return rtMotionBlur;
-	else if (getSSREnabled())
+	if (getSSREnabled())
 		return rtSSR;
 	else
 		return rtDeferred;

@@ -15,13 +15,6 @@
 // DEFINITIONS
 //////////////////
 
-//#define xTextureMap			texture_0
-//#define xReflectionMap		texture_1
-//#define xNormalMap			texture_2
-//#define xSpecularMap		texture_3
-//#define xDisplacementMap	texture_4
-//#define	xReflection			texture_5
-
 #define xBaseColorMap		texture_0
 #define xNormalMap			texture_1
 #define xRoughnessMap		texture_2
@@ -56,6 +49,7 @@ struct GBUFFEROutputType
 	float4 g1	: SV_TARGET1;		// texture_gbuffer1
 	float4 g2	: SV_TARGET2;		// texture_gbuffer2
 	float4 g3	: SV_TARGET3;		// texture_gbuffer3
+	float4 g4	: SV_TARGET4;		// texture_gbuffer4
 };
 
 
@@ -71,12 +65,13 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float
 	N = normalize(lerp(N, mul(bumpColor, tangentFrame), g_xMat_normalMapStrength));
 }
 
-//inline void PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, inout float4 baseColor)
-//{
-//	float colorMat = xReflectionMap.SampleLevel(sampler_aniso_wrap, UV, 0).r;
-//	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz, 0);
-//	baseColor.rgb = lerp(baseColor.rgb, colorReflection.rgb, colorMat);
-//}
+inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, in float3 V, in float roughness, in float3 f0)
+{
+	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz*0.1f, 0);
+	float f90 = saturate(50.0 * dot(f0, 0.33));
+	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
+	return colorReflection.rgb * F;
+}
 
 inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float alpha, inout float3 albedo)
 {
@@ -137,8 +132,6 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	float lineardepth = input.pos2D.z;																				\
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;\
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
-	float2 ScreenCoordPrev = float2(1, -1)*input.pos2DPrev.xy / input.pos2DPrev.w / 2.0f + 0.5f;					\
-	float2 velocity = ScreenCoord - ScreenCoordPrev;
 
 #define OBJECT_PS_LIGHT_BEGIN																						\
 	float3 diffuse, specular;																						\
@@ -156,12 +149,11 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 #define OBJECT_PS_NORMALMAPPING																						\
 	NormalMapping(UV, P, N, bumpColor);
 
-//#define OBJECT_PS_PLANARREFLECTIONS																					\
-//	PlanarReflection(input.tex, refUV, N, color);
+#define OBJECT_PS_PLANARREFLECTIONS																					\
+	specular += PlanarReflection(UV, refUV, N, V, roughness, f0);
 
 #define OBJECT_PS_ENVIRONMENTREFLECTIONS																			\
 	specular += EnvironmentReflection(N, V, P, roughness, f0);
-	
 
 #define OBJECT_PS_REFRACTION																						\
 	Refraction(ScreenCoord, input.nor2D, bumpColor, color.a, albedo);
@@ -169,7 +161,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 #define OBJECT_PS_DEGAMMA																							\
 	color = DEGAMMA(color);
 
-#define OBJECT_PS_GAMMA																							\
+#define OBJECT_PS_GAMMA																								\
 	color = GAMMA(color);
 
 #define OBJECT_PS_EMISSIVE																							\
@@ -182,7 +174,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
 	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g1 = float4(encode(N), 0, 0);								/*FORMAT_R16G16_FLOAT*/							\
-	Out.g2 = float4(velocity * 0.5f + 0.5f, sss, emissive);			/*FORMAT_R8G8B8A8_UNORM*/						\
+	Out.g2 = float4(0, 0, sss, emissive);							/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g3 = float4(roughness, reflectance, metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	return Out;
 

@@ -8,8 +8,6 @@ GBUFFEROutputType main(GS_OUT PSIn)
 	clip(dither(PSIn.pos.xy) - PSIn.fade);
 #endif
 
-	float2 velocity = 0;
-
 	float4 color = float4(PSIn.col,1);
 	color = DEGAMMA(color);
 	float emissive = 0;

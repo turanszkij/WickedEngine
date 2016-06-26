@@ -653,6 +653,10 @@ void wiRenderer::LoadBasicShaders()
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
@@ -2002,8 +2006,8 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
 	
-	GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
+	GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 
 	GetDevice()->BindVertexLayout(nullptr, threadID);
 	GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
@@ -2866,10 +2870,18 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 							if (subset.material->GetNormalMap() == nullptr)
 							{
 								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
+								if (subset.material->HasPlanarReflection())
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION;
+								}
 							}
 							else
 							{
 								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+								if (subset.material->HasPlanarReflection())
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
+								}
 							}
 							break;
 						default:
@@ -3030,10 +3042,18 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 							if (subset.material->GetNormalMap() == nullptr)
 							{
 								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
+								if (subset.material->HasPlanarReflection())
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION;
+								}
 							}
 							else
 							{
 								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
+								if (subset.material->HasPlanarReflection())
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
+								}
 							}
 						}
 					}
@@ -3205,7 +3225,7 @@ void wiRenderer::UpdateCameraCB(GRAPHICSTHREAD threadID)
 	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
 	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
 	cb.mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
-	cb.mInvP = XMMatrixInverse(nullptr, cb.mVP);
+	cb.mInvVP = XMMatrixTranspose(camera->GetInvViewProjection());
 	cb.mCamPos = camera->translation;
 	cb.mAt = camera->At;
 	cb.mUp = camera->Up;

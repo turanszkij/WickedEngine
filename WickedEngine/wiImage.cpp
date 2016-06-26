@@ -21,7 +21,8 @@ PixelShader      *wiImage::pixelShader = nullptr, *wiImage::blurHPS = nullptr, *
 	
 
 RasterizerState		*wiImage::rasterizerState = nullptr;
-DepthStencilState	*wiImage::depthStencilStateGreater = nullptr,*wiImage::depthStencilStateLess = nullptr,*wiImage::depthNoStencilState = nullptr;
+DepthStencilState	*wiImage::depthStencilStateGreater = nullptr, *wiImage::depthStencilStateLess = nullptr, *wiImage::depthStencilStateEqual = nullptr
+	,*wiImage::depthNoStencilState = nullptr;
 
 #pragma endregion
 
@@ -120,6 +121,11 @@ void wiImage::SetUpStates()
 	// Create the depth stencil state.
 	depthStencilStateLess = new DepthStencilState;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateLess);
+
+	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+	depthStencilStateEqual = new DepthStencilState;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateEqual);
 
 	
 	dsd.DepthEnable = false;
@@ -234,14 +240,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	else
 		device->BindBlendState(blendState, threadID);
 
-	if (effects.presentFullScreen)
-	{
-		device->BindVS(screenVS, threadID);
-		device->BindPS(screenPS, threadID);
-		device->Draw(3, threadID);
-		device->EventEnd(threadID);
-		return;
-	}
 
 	ImageCB cb;
 	PostProcessCB prcb;
@@ -249,15 +247,29 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		switch (effects.stencilComp)
 		{
 		case COMPARISON_LESS:
+		case COMPARISON_LESS_EQUAL:
 			device->BindDepthStencilState(depthStencilStateLess, effects.stencilRef, threadID);
 			break;
 		case COMPARISON_GREATER:
+		case COMPARISON_GREATER_EQUAL:
 			device->BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, threadID);
+			break;
+		case COMPARISON_EQUAL:
+			device->BindDepthStencilState(depthStencilStateEqual, effects.stencilRef, threadID);
 			break;
 		default:
 			device->BindDepthStencilState(depthNoStencilState, effects.stencilRef, threadID);
 			break;
 		}
+	}
+
+	if (effects.presentFullScreen)
+	{
+		device->BindVS(screenVS, threadID);
+		device->BindPS(screenPS, threadID);
+		device->Draw(3, threadID);
+		device->EventEnd(threadID);
+		return;
 	}
 
 	if(!effects.blur)
@@ -491,6 +503,7 @@ void wiImage::CleanUp()
 	SAFE_DELETE(rasterizerState);
 	SAFE_DELETE(depthStencilStateGreater);
 	SAFE_DELETE(depthStencilStateLess);
+	SAFE_DELETE(depthStencilStateEqual);
 	SAFE_DELETE(depthNoStencilState);
 
 	SAFE_DELETE(vertexShader);

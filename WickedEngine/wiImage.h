@@ -51,7 +51,7 @@ protected:
 
 	
 	static wiGraphicsTypes::RasterizerState		*rasterizerState;
-	static wiGraphicsTypes::DepthStencilState	*depthStencilStateGreater,*depthStencilStateLess,*depthNoStencilState;
+	static wiGraphicsTypes::DepthStencilState	*depthStencilStateGreater, *depthStencilStateLess, *depthStencilStateEqual,*depthNoStencilState;
 
 public:
 	static void LoadShaders();

@@ -1859,6 +1859,7 @@
     <Text Include="$(MSBuildThisFileDirectory)fonts\basic.wifont">
       <Filter>fonts</Filter>
     </Text>
+    <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />

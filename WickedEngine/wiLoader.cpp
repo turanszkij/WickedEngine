@@ -1470,6 +1470,10 @@ void Material::Serialize(wiArchive& archive)
 		archive >> refractionIndex;
 		archive >> subsurfaceScattering;
 		archive >> normalMapStrength;
+		if (archive.GetVersion() >= 2)
+		{
+			archive >> planar_reflections;
+		}
 
 		if (!refMapName.empty())
 		{
@@ -1516,6 +1520,10 @@ void Material::Serialize(wiArchive& archive)
 		archive << refractionIndex;
 		archive << subsurfaceScattering;
 		archive << normalMapStrength;
+		if (archive.GetVersion() >= 2)
+		{
+			archive << planar_reflections;
+		}
 	}
 }
 #pragma endregion

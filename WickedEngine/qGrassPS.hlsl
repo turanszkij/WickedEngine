@@ -8,10 +8,6 @@ GBUFFEROutputType main(QGS_OUT PSIn)
 	clip(dither(PSIn.pos.xy) - PSIn.fade);
 #endif
 
-	float2 ScreenCoord = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;
-	float2 ScreenCoordPrev = float2(1, -1) * PSIn.pos2DPrev.xy / PSIn.pos2DPrev.w / 2.0f + 0.5f;
-	float2 velocity = ScreenCoord - ScreenCoordPrev;
-
 	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
 	ALPHATEST(color.a)
 	color = DEGAMMA(color);

@@ -394,6 +394,17 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 	}
 
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+
+	if (getMotionBlurEnabled()) {
+		rtMotionBlur.Activate(threadID);
+		fx.process.setMotionBlur(true);
+		fx.blendFlag = BLENDMODE_OPAQUE;
+		fx.presentFullScreen = false;
+		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		fx.process.clear();
+	}
+
+
 	fx.blendFlag = BLENDMODE_OPAQUE;
 
 	rtFinal[1].Activate(threadID);
@@ -406,7 +417,14 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 	{
 		fx.setMaskMap(wiTextureHelper::getInstance()->getColor(wiColor::Gray));
 	}
-	wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+	if (getMotionBlurEnabled())
+	{
+		wiImage::Draw(rtMotionBlur.GetTexture(), fx, threadID);
+	}
+	else
+	{
+		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+	}
 	fx.process.clear();
 
 
@@ -434,6 +452,7 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 		//fx.setDepthMap(nullptr);
 		fx.process.clear();
 	}
+
 
 	rtFinal[2].Activate(threadID, mainRT.depth);
 	fx.process.setFXAA(getFXAAEnabled());

@@ -149,6 +149,8 @@ struct Material
 	float subsurfaceScattering;
 	float normalMapStrength;
 
+	bool planar_reflections;
+
 
 	Material()
 	{
@@ -201,10 +203,13 @@ struct Material
 		subsurfaceScattering = 0.0f;
 		emissive = 0.0f;
 		normalMapStrength = 1.0f;
+
+		planar_reflections = false;
 	}
 
 	bool IsTransparent() { return alpha < 1.0f; }
 	bool IsWater() { return water; }
+	bool HasPlanarReflection() { return planar_reflections; }
 	RENDERTYPE GetRenderType()
 	{
 		if (IsWater())
@@ -924,6 +929,11 @@ struct Camera:public Transform{
 		XMStoreFloat3(&this->Up, Up);
 
 		frustum.ConstructFrustum(zFarP, Projection, this->View);
+
+		XMMATRIX VP = XMMatrixMultiply(View, GetProjection());
+		XMStoreFloat4x4(&this->VP, VP);
+		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, View));
+		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, VP));
 	}
 	void UpdateProjection()
 	{
