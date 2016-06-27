@@ -2314,24 +2314,6 @@ void Model::FinishLoading()
 				}
 			}
 		}
-		// Match parentBone (not armaturedeform!)
-		if (!x->boneParent.empty() && x->mesh != nullptr)
-		{
-			Armature* armature = x->mesh->armature;
-			if (armature != nullptr)
-			{
-				for (Bone* b : armature->boneCollection)
-				{
-					if (!b->name.compare(x->boneParent))
-					{
-						XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
-						x->attachTo(b);
-						x->parent_inv_rest = saved_parent_rest_inv;
-						break;
-					}
-				}
-			}
-		}
 	}
 	for (Light* x : lights)
 	{
@@ -2353,16 +2335,32 @@ void Model::FinishLoading()
 			{
 				if (x != y && !x->parentName.empty() && !x->parentName.compare(y->name))
 				{
+					Transform* parent = y;
+					if (!x->boneParent.empty())
+					{
+						Armature* armature = dynamic_cast<Armature*>(y);
+						if (armature != nullptr)
+						{
+							for (Bone* bone : armature->boneCollection)
+							{
+								if (!bone->name.compare(x->boneParent))
+								{
+									parent = bone;
+									break;
+								}
+							}
+						}
+					}
 					// Match parent
 					XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
-					x->attachTo(y);
+					x->attachTo(parent);
 					x->parent_inv_rest = saved_parent_rest_inv;
 					break;
 				}
 			}
 		}
 
-		// If it has still not parent, then attach to this model!
+		// If it has still no parent, then attach to this model!
 		if (x->parent == nullptr)
 		{
 			x->attachTo(this);
