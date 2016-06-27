@@ -3521,9 +3521,19 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 
 		for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
 			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-			Vertex& v0 = mesh->vertices_Complete[i0]; 
-			Vertex& v1 = mesh->vertices_Complete[i1];
-			Vertex& v2 = mesh->vertices_Complete[i2];
+			Vertex v0, v1, v2;
+			if (mesh->hasArmature())
+			{
+				v0 = TransformVertex(mesh, mesh->vertices[i0]);
+				v1 = TransformVertex(mesh, mesh->vertices[i1]);
+				v2 = TransformVertex(mesh, mesh->vertices[i2]);
+			}
+			else
+			{
+				v0 = mesh->vertices_Complete[i0];
+				v1 = mesh->vertices_Complete[i1];
+				v2 = mesh->vertices_Complete[i2];
+			}
 			XMVECTOR& V0 = XMLoadFloat4(&v0.pos);
 			XMVECTOR& V1 = XMLoadFloat4(&v1.pos);
 			XMVECTOR& V2 = XMLoadFloat4(&v2.pos);
