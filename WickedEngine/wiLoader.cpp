@@ -2336,6 +2336,7 @@ void Model::FinishLoading()
 				if (x != y && !x->parentName.empty() && !x->parentName.compare(y->name))
 				{
 					Transform* parent = y;
+					string parentName = parent->name;
 					if (!x->boneParent.empty())
 					{
 						Armature* armature = dynamic_cast<Armature*>(y);
@@ -2355,6 +2356,7 @@ void Model::FinishLoading()
 					XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
 					x->attachTo(parent);
 					x->parent_inv_rest = saved_parent_rest_inv;
+					x->parentName = parentName; // this will ensure that the bone parenting is always resolved as armature->bone
 					break;
 				}
 			}

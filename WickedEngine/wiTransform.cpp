@@ -14,25 +14,19 @@ void Node::Serialize(wiArchive& archive)
 	}
 }
 
+
+Transform::Transform() :Node() {
+	parent = nullptr;
+	parentName = "";
+	boneParent = "";
+	Clear();
+}
 Transform::~Transform()
 {
 	detach();
 	detachChild();
 }
 
-//void Transform::DeleteTree(Transform* transform)
-//{
-//	if (transform == nullptr)
-//	{
-//		return;
-//	}
-//
-//	for (auto* x : transform->children)
-//	{
-//		DeleteTree(x);
-//	}
-//	delete transform;
-//}
 
 XMMATRIX Transform::getMatrix(int getTranslation, int getRotation, int getScale) {
 	return XMLoadFloat4x4(&world);
@@ -278,5 +272,6 @@ void Transform::Serialize(wiArchive& archive)
 		archive << copyParentT;
 		archive << copyParentR;
 		archive << copyParentS;
+
 	}
 }

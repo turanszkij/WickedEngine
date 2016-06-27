@@ -42,12 +42,7 @@ struct Transform : public Node
 	XMFLOAT4X4 parent_inv_rest;
 	int copyParentT, copyParentR, copyParentS;
 
-	Transform() :Node() {
-		parent = nullptr;
-		parentName = "";
-		boneParent = "";
-		Clear();
-	}
+	Transform();
 	virtual ~Transform();
 	void Clear()
 	{
