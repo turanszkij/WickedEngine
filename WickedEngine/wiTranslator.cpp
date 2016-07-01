@@ -344,12 +344,14 @@ void wiTranslator::Update()
 		if (!wiInputManager::GetInstance()->down(VK_LBUTTON))
 		{
 			dragging = false;
+			Transform::UpdateTransform();
 		}
 
 	}
 	else
 	{
 		dragging = false;
+		Transform::UpdateTransform();
 	}
 
 	prevPointer = pointer;

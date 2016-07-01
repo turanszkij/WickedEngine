@@ -105,6 +105,12 @@ void wiInputManager::Update()
 
 bool wiInputManager::down(DWORD button, InputType inputType, short playerindex)
 {
+	if (!wiWindowRegistration::GetInstance()->IsWindowActive())
+	{
+		return false;
+	}
+
+
 	switch (inputType)
 	{
 	case KEYBOARD:
@@ -123,8 +129,8 @@ bool wiInputManager::down(DWORD button, InputType inputType, short playerindex)
 	}
 	return false;
 }
-bool wiInputManager::press(DWORD button, InputType inputType, short playerindex){
-
+bool wiInputManager::press(DWORD button, InputType inputType, short playerindex)
+{
 	if (!down(button, inputType, playerindex))
 		return false;
 
@@ -147,7 +153,8 @@ bool wiInputManager::press(DWORD button, InputType inputType, short playerindex)
 	UNLOCK();
 	return false;
 }
-bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType inputType, short playerIndex){
+bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType inputType, short playerIndex)
+{
 
 	if (!down(button, inputType, playerIndex))
 		return false;

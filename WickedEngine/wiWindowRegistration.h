@@ -22,6 +22,14 @@ public:
 	void RegisterWindow(window_type wnd) {
 		window = wnd;
 	}
+	bool IsWindowActive() {
+#ifndef WINSTORE_SUPPORT
+		HWND fgw = GetForegroundWindow();
+		return fgw == window;
+#else
+		return true;
+#endif
+	}
 
 	static wiWindowRegistration* GetInstance() {
 		static wiWindowRegistration* reg = new wiWindowRegistration;

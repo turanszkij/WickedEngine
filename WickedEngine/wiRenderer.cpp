@@ -3513,7 +3513,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		}
 
 		Mesh* mesh = object->mesh;
-		XMMATRIX& objectMat = XMLoadFloat4x4(&object->world);
+		XMMATRIX& objectMat = object->getMatrix();
 		XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
 		XMVECTOR& rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
@@ -3522,11 +3522,11 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
 			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
 			Vertex v0, v1, v2;
-			if (mesh->hasArmature())
+			if (object->isArmatureDeformed())
 			{
-				v0 = TransformVertex(mesh, mesh->vertices[i0]);
-				v1 = TransformVertex(mesh, mesh->vertices[i1]);
-				v2 = TransformVertex(mesh, mesh->vertices[i2]);
+				v0 = TransformVertex(mesh, mesh->vertices[i0], objectMat_Inverse);
+				v1 = TransformVertex(mesh, mesh->vertices[i1], objectMat_Inverse);
+				v2 = TransformVertex(mesh, mesh->vertices[i2], objectMat_Inverse);
 			}
 			else
 			{
