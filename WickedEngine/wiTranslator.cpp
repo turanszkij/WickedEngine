@@ -168,9 +168,9 @@ void wiTranslator::Update()
 			y = o + XMVectorSet(0, 3, 0, 0) * dist;
 			z = o + XMVectorSet(0, 0, 3, 0) * dist;
 			p = XMLoadFloat4(&pointer);
-			xy = o + XMVectorSet(1, 1, 0, 0) * dist;
-			xz = o + XMVectorSet(1, 0, 1, 0) * dist;
-			yz = o + XMVectorSet(0, 1, 1, 0) * dist;
+			xy = o + XMVectorSet(0.5f, 0.5f, 0, 0) * dist;
+			xz = o + XMVectorSet(0.5f, 0, 0.5f, 0) * dist;
+			yz = o + XMVectorSet(0, 0.5f, 0.5f, 0) * dist;
 
 
 			o = XMVector3Project(o, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
@@ -181,17 +181,14 @@ void wiTranslator::Update()
 			xz = XMVector3Project(xz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
 			yz = XMVector3Project(yz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
 
-			XMVECTOR xDisV = XMVector2LinePointDistance(o, x, p);
-			XMVECTOR yDisV = XMVector2LinePointDistance(o, y, p);
-			XMVECTOR zDisV = XMVector2LinePointDistance(o, z, p);
 			XMVECTOR oDisV = XMVector3Length(o - p);
 			XMVECTOR xyDisV = XMVector3Length(xy - p);
 			XMVECTOR xzDisV = XMVector3Length(xz - p);
 			XMVECTOR yzDisV = XMVector3Length(yz - p);
 
-			float xDis = XMVectorGetX(xDisV);
-			float yDis = XMVectorGetX(yDisV);
-			float zDis = XMVectorGetX(zDisV);
+			float xDis = wiMath::GetPointSegmentDistance(p, o, x);
+			float yDis = wiMath::GetPointSegmentDistance(p, o, y);
+			float zDis = wiMath::GetPointSegmentDistance(p, o, z);
 			float oDis = XMVectorGetX(oDisV);
 			float xyDis = XMVectorGetX(xyDisV);
 			float xzDis = XMVectorGetX(xzDisV);
@@ -201,15 +198,15 @@ void wiTranslator::Update()
 			{
 				state = TRANSLATOR_XYZ;
 			}
-			else if (xyDis < 10)
+			else if (xyDis < 20)
 			{
 				state = TRANSLATOR_XY;
 			}
-			else if (xzDis < 10)
+			else if (xzDis < 20)
 			{
 				state = TRANSLATOR_XZ;
 			}
-			else if (yzDis < 10)
+			else if (yzDis < 20)
 			{
 				state = TRANSLATOR_YZ;
 			}

@@ -162,4 +162,17 @@ namespace wiMath
 		XMVECTOR Closest = A + AB_ * t;
 		return Closest;
 	}
+	float GetPointSegmentDistance(const XMVECTOR& point, const XMVECTOR& segmentA, const XMVECTOR& segmentB)
+	{
+		// Return minimum distance between line segment vw and point p
+		const float l2 = XMVectorGetX(XMVector3LengthSq(segmentB - segmentA));  // i.e. |w-v|^2 -  avoid a sqrt
+		if (l2 == 0.0) return Distance(point, segmentA);   // v == w case
+												// Consider the line extending the segment, parameterized as v + t (w - v).
+												// We find projection of point p onto the line. 
+												// It falls where t = [(p-v) . (w-v)] / |w-v|^2
+												// We clamp t from [0,1] to handle points outside the segment vw.
+		const float t = max(0, min(1, XMVectorGetX(XMVector3Dot(point - segmentA, segmentB-segmentA)) / l2));
+		const XMVECTOR projection = segmentA + t * (segmentB - segmentA);  // Projection falls on the segment
+		return Distance(point, projection);
+	}
 }

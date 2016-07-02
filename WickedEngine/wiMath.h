@@ -30,5 +30,6 @@ namespace wiMath
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion);
 
 	XMVECTOR GetClosestPointToLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& P, bool segmentClamp = false);
+	float GetPointSegmentDistance(const XMVECTOR& point, const XMVECTOR& segmentA, const XMVECTOR& segmentB);
 };
 
