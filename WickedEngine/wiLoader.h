@@ -955,6 +955,10 @@ struct Camera:public Transform{
 	{
 		return XMLoadFloat3(&Up);
 	}
+	XMVECTOR GetRight()
+	{
+		return XMVector3Cross(GetAt(), GetUp());
+	}
 	XMMATRIX GetView()
 	{
 		return XMLoadFloat4x4(&View);
