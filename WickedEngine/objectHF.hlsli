@@ -56,13 +56,12 @@ struct GBUFFEROutputType
 // METHODS
 ////////////
 
-inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, inout float3 bumpColor)
+inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, inout float3 bumpColor)
 {
 	float4 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV);
-	float3x3 tangentFrame = compute_tangent_frame(N, V, -UV);
 	bumpColor = 2.0f * nortex.rgb - 1.0f;
 	bumpColor *= nortex.a;
-	N = normalize(lerp(N, mul(bumpColor, tangentFrame), g_xMat_normalMapStrength));
+	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMat_normalMapStrength));
 }
 
 inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, in float3 V, in float roughness, in float3 f0)
@@ -104,25 +103,20 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 ////////////
 
 #define OBJECT_PS_MAKE_COMMON												\
-	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
-	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
-	baseColor *= xBaseColorMap.Sample(sampler_aniso_wrap, UV);				\
-	ALPHATEST(baseColor.a);													\
-	float4 color = baseColor;												\
-	float roughness = g_xMat_roughness;										\
-	roughness *= xRoughnessMap.Sample(sampler_aniso_wrap, UV).r;			\
-	roughness = saturate(roughness);										\
-	float metalness = g_xMat_metalness;										\
-	metalness *= xMetalnessMap.Sample(sampler_aniso_wrap, UV).r;			\
-	metalness = saturate(metalness);										\
-	float reflectance = g_xMat_reflectance;									\
-	reflectance *= xReflectanceMap.Sample(sampler_aniso_wrap, UV).r;		\
-	reflectance = saturate(reflectance);									\
-	float emissive = g_xMat_emissive;										\
-	float sss = g_xMat_subsurfaceScattering;								\
 	float3 N = input.nor;													\
 	float3 P = input.pos3D;													\
 	float3 V = normalize(g_xCamera_CamPos - P);								\
+	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
+	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
+	float4 color = baseColor;												\
+	float roughness = g_xMat_roughness;										\
+	roughness = saturate(roughness);										\
+	float metalness = g_xMat_metalness;										\
+	metalness = saturate(metalness);										\
+	float reflectance = g_xMat_reflectance;									\
+	reflectance = saturate(reflectance);									\
+	float emissive = g_xMat_emissive;										\
+	float sss = g_xMat_subsurfaceScattering;								\
 	float3 bumpColor = 0;													\
 	float depth = input.pos.z;												\
 	float ao = input.ao;
@@ -132,6 +126,21 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	float lineardepth = input.pos2D.z;																				\
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;\
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
+
+#define OBJECT_PS_COMPUTETANGENTSPACE										\
+	float3 T, B;															\
+	float3x3 TBN = compute_tangent_frame(N, V, UV, T, B);
+
+#define OBJECT_PS_SAMPLETEXTURES											\
+	baseColor *= xBaseColorMap.Sample(sampler_aniso_wrap, UV);				\
+	ALPHATEST(baseColor.a);													\
+	color = baseColor;														\
+	roughness *= xRoughnessMap.Sample(sampler_aniso_wrap, UV).r;			\
+	metalness *= xMetalnessMap.Sample(sampler_aniso_wrap, UV).r;			\
+	reflectance *= xReflectanceMap.Sample(sampler_aniso_wrap, UV).r;
+
+#define OBJECT_PS_NORMALMAPPING												\
+	NormalMapping(UV, P, N, TBN, bumpColor);
 
 #define OBJECT_PS_LIGHT_BEGIN																						\
 	float3 diffuse, specular;																						\
@@ -145,9 +154,6 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 
 #define OBJECT_PS_DITHER																							\
 	clip(dither(input.pos.xy) - input.dither);
-
-#define OBJECT_PS_NORMALMAPPING																						\
-	NormalMapping(UV, P, N, bumpColor);
 
 #define OBJECT_PS_PLANARREFLECTIONS																					\
 	specular += PlanarReflection(UV, refUV, N, V, roughness, f0);

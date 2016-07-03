@@ -8,6 +8,10 @@ float4 main(PixelInputType input) : SV_TARGET
 {
 	OBJECT_PS_MAKE
 
+	OBJECT_PS_COMPUTETANGENTSPACE
+
+	OBJECT_PS_SAMPLETEXTURES
+
 	OBJECT_PS_DEGAMMA
 
 	OBJECT_PS_LIGHT_BEGIN
@@ -18,12 +22,11 @@ float4 main(PixelInputType input) : SV_TARGET
 	float2 bumpColor0=0;
 	float2 bumpColor1=0;
 	float2 bumpColor2=0;
-	float3x3 tangentFrame = compute_tangent_frame(N, P, UV);
 	bumpColor0 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,input.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
 	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_aniso_wrap,input.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
 	bumpColor2 = xWaterRipples.Sample(sampler_aniso_wrap,ScreenCoord).rg;
 	bumpColor= float3( bumpColor0+bumpColor1+bumpColor2,1 )  * g_xMat_refractionIndex;
-	N = normalize(lerp(N, mul(normalize(bumpColor), tangentFrame), g_xMat_normalMapStrength));
+	N = normalize(lerp(N, mul(normalize(bumpColor), TBN), g_xMat_normalMapStrength));
 	bumpColor *= g_xMat_normalMapStrength;
 
 	//REFLECTION

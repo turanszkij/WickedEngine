@@ -54,7 +54,8 @@ PixelOutputType main(VertexToPixel PSIn)
 		float4 nortex=texture_1.Sample(sampler_aniso_clamp,projTex.xy);
 		float3 eyevector = normalize( eye - pos3D );
 		if(nortex.a>0){
-			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -projTex.xy);
+			float3 T, B;
+			float3x3 tangentFrame = compute_tangent_frame(normal, eyevector, -projTex.xy, T, B);
 			float3 bumpColor = 2.0f * nortex.rgb - 1.0f;
 			//bumpColor.g*=-1;
 			normal = normalize(mul(bumpColor, tangentFrame));
