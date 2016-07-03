@@ -29,7 +29,6 @@ void DeferredRenderableComponent::Initialize()
 	rtGBuffer.Add(FORMAT_R16G16_FLOAT);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
-	rtGBuffer.Add(FORMAT_R16G16_FLOAT);
 
 	rtDeferred.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()

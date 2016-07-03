@@ -20,11 +20,11 @@
 #define xRoughnessMap		texture_2
 #define xReflectanceMap		texture_3
 #define xMetalnessMap		texture_4
-#define xDisplacementMap	texture_0
+#define xDisplacementMap	texture_5
 
-#define xReflection			texture_5
-#define xRefraction			texture_6
-#define	xWaterRipples		texture_7
+#define xReflection			texture_6
+#define xRefraction			texture_7
+#define	xWaterRipples		texture_8
 
 struct PixelInputType
 {
@@ -49,7 +49,6 @@ struct GBUFFEROutputType
 	float4 g1	: SV_TARGET1;		// texture_gbuffer1
 	float4 g2	: SV_TARGET2;		// texture_gbuffer2
 	float4 g3	: SV_TARGET3;		// texture_gbuffer3
-	float4 g4	: SV_TARGET4;		// texture_gbuffer4
 };
 
 

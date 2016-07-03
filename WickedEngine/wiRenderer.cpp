@@ -2788,7 +2788,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 				GetDevice()->UnBindResources(TEXSLOT_ENV_GLOBAL, 1, threadID);
 			}
 			if(refRes != nullptr) 
-				GetDevice()->BindResourcePS(refRes,TEXSLOT_ONDEMAND5,threadID);
+				GetDevice()->BindResourcePS(refRes,TEXSLOT_ONDEMAND6,threadID);
 		}
 
 
@@ -2849,6 +2849,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 						GetDevice()->BindResourcePS(subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
 						GetDevice()->BindResourcePS(subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
 						GetDevice()->BindResourcePS(subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+						GetDevice()->BindResourcePS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
 
 						PSTYPES realPS = PSTYPE_SIMPLEST;
 						switch (shaderType)
@@ -2890,7 +2891,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 						GetDevice()->BindPS(pixelShaders[realPS], threadID);
 					}
 					if(DX11Eff)
-						GetDevice()->BindResourceDS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND0,threadID);
+						GetDevice()->BindResourceDS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5,threadID);
 					
 					GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(),visibleInstances.size(),threadID);
 				}
@@ -2956,10 +2957,10 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 			{
 				GetDevice()->UnBindResources(TEXSLOT_ENV_GLOBAL, 1, threadID);
 			}
-			GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND5,threadID);
-			GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND6,threadID);
+			GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6,threadID);
+			GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7,threadID);
 			//BindResourcePS(depth,7,threadID);
-			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND7, threadID);
+			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
 		}
 
 
