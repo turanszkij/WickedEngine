@@ -148,6 +148,7 @@ struct Material
 	float refractionIndex;
 	float subsurfaceScattering;
 	float normalMapStrength;
+	float parallaxOcclusionMapping;
 
 	bool planar_reflections;
 
@@ -203,6 +204,7 @@ struct Material
 		subsurfaceScattering = 0.0f;
 		emissive = 0.0f;
 		normalMapStrength = 1.0f;
+		parallaxOcclusionMapping = 0.0f;
 
 		planar_reflections = false;
 	}

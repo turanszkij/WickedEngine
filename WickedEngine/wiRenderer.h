@@ -136,22 +136,6 @@ protected:
 	};
 	GFX_STRUCT MaterialCB
 	{
-		//XMFLOAT4 difColor;
-		//XMFLOAT4 specular;
-		//XMFLOAT4 texMulAdd;
-		//UINT hasRef;
-		//UINT hasNor;
-		//UINT hasTex;
-		//UINT hasSpe;
-		//UINT shadeless;
-		//UINT specular_power;
-		//UINT toon;
-		//UINT matIndex;
-		//float refractionIndex;
-		//float metallic;
-		//float emissive;
-		//float roughness;
-
 		XMFLOAT4 baseColor; // + alpha (.w)
 		XMFLOAT4 texMulAdd;
 		float roughness;
@@ -161,7 +145,7 @@ protected:
 		float refractionIndex;
 		float subsurfaceScattering;
 		float normalMapStrength;
-		float pad[1];
+		float parallaxOcclusionMapping;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
 

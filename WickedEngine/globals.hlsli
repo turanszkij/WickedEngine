@@ -88,7 +88,7 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 	float		g_xMat_refractionIndex;
 	float		g_xMat_subsurfaceScattering;
 	float		g_xMat_normalMapStrength;
-	float		xPadding_MaterialCB[1];
+	float		g_xMat_parallaxOcclusionMapping;
 };
 CBUFFER(DirectionalLightCB, CBSLOT_RENDERER_DIRLIGHT)
 {

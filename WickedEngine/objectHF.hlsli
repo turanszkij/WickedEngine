@@ -71,6 +71,31 @@ inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N
 	return colorReflection.rgb * F;
 }
 
+#define NUM_PARALLAX_OCCLUSION_STEPS 32
+inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 TBN)
+{
+	V = mul(V, transpose(TBN));
+	float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
+	float curLayerHeight = 0;
+	float2 dtex = g_xMat_parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
+	float2 currentTextureCoords = UV;
+	float heightFromTexture = 1 - xDisplacementMap.Sample(sampler_aniso_wrap, currentTextureCoords).r;
+	[unroll(NUM_PARALLAX_OCCLUSION_STEPS)]
+	while (heightFromTexture > curLayerHeight)
+	{
+		curLayerHeight += layerHeight;
+		currentTextureCoords -= dtex;
+		heightFromTexture = 1 - xDisplacementMap.Sample(sampler_aniso_wrap, currentTextureCoords).r;
+	}
+	float2 prevTCoords = currentTextureCoords + dtex;
+	float nextH = heightFromTexture - curLayerHeight;
+	float prevH = xDisplacementMap.Sample(sampler_aniso_wrap, prevTCoords).r
+		- curLayerHeight + layerHeight;
+	float weight = nextH / (nextH - prevH);
+	float2 finalTexCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
+	UV = finalTexCoords;
+}
+
 inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float alpha, inout float3 albedo)
 {
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
@@ -128,7 +153,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 
 #define OBJECT_PS_COMPUTETANGENTSPACE										\
 	float3 T, B;															\
-	float3x3 TBN = compute_tangent_frame(N, V, UV, T, B);
+	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
 
 #define OBJECT_PS_SAMPLETEXTURES											\
 	baseColor *= xBaseColorMap.Sample(sampler_aniso_wrap, UV);				\
@@ -140,6 +165,9 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 
 #define OBJECT_PS_NORMALMAPPING												\
 	NormalMapping(UV, P, N, TBN, bumpColor);
+
+#define OBJECT_PS_PARALLAXOCCLUSIONMAPPING									\
+	ParallaxOcclusionMapping(UV, V, TBN);
 
 #define OBJECT_PS_LIGHT_BEGIN																						\
 	float3 diffuse, specular;																						\

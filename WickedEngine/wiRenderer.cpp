@@ -657,6 +657,12 @@ void wiRenderer::LoadBasicShaders()
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
@@ -2860,17 +2866,38 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 						case SHADERTYPE_DEFERRED:
 							if (subset.material->GetNormalMap() == nullptr)
 							{
-								realPS = PSTYPE_OBJECT_DEFERRED;
+								if (subset.material->parallaxOcclusionMapping > 0)
+								{
+									realPS = PSTYPE_OBJECT_DEFERRED_POM;
+								}
+								else
+								{
+									realPS = PSTYPE_OBJECT_DEFERRED;
+								}
 							}
 							else
 							{
-								realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+								if (subset.material->parallaxOcclusionMapping > 0)
+								{
+									realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM;
+								}
+								else
+								{
+									realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+								}
 							}
 							break;
 						case SHADERTYPE_FORWARD:
 							if (subset.material->GetNormalMap() == nullptr)
 							{
-								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
+								if (subset.material->parallaxOcclusionMapping > 0)
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM;
+								}
+								else
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
+								}
 								if (subset.material->HasPlanarReflection())
 								{
 									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION;
@@ -2878,7 +2905,14 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 							}
 							else
 							{
-								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+								if (subset.material->parallaxOcclusionMapping > 0)
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM;
+								}
+								else
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+								}
 								if (subset.material->HasPlanarReflection())
 								{
 									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
@@ -3042,7 +3076,14 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 						else if (subset.material->IsTransparent()) {
 							if (subset.material->GetNormalMap() == nullptr)
 							{
-								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
+								if (subset.material->parallaxOcclusionMapping > 0)
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM;
+								}
+								else
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
+								}
 								if (subset.material->HasPlanarReflection())
 								{
 									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION;
@@ -3050,7 +3091,14 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 							}
 							else
 							{
-								realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
+								if (subset.material->parallaxOcclusionMapping > 0)
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM;
+								}
+								else
+								{
+									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
+								}
 								if (subset.material->HasPlanarReflection())
 								{
 									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
@@ -3954,23 +4002,8 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	GetDevice()->UNLOCK();
 }
 
-void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/) {
-	//difColor = XMFLOAT4(mat.diffuseColor.x, mat.diffuseColor.y, mat.diffuseColor.z, mat.alpha);
-	//hasRef = mat.refMap != nullptr;
-	//hasNor = mat.normalMap != nullptr;
-	//hasTex = mat.texture != nullptr;
-	//hasSpe = mat.specularMap != nullptr;
-	//specular = mat.specular;
-	//refractionIndex = mat.refraction_index;
-	//texMulAdd = mat.texMulAdd;
-	//metallic = mat.enviroReflection;
-	//shadeless = mat.shadeless;
-	//specular_power = mat.specular_power;
-	//toon = mat.toonshading;
-	//matIndex = materialIndex;
-	//emissive = mat.emissive;
-	//roughness = mat.roughness;
-
+void wiRenderer::MaterialCB::Create(const Material& mat)
+{
 	baseColor = XMFLOAT4(mat.baseColor.x, mat.baseColor.y, mat.baseColor.z, mat.alpha);
 	texMulAdd = mat.texMulAdd;
 	roughness = mat.roughness;
@@ -3980,6 +4013,7 @@ void wiRenderer::MaterialCB::Create(const Material& mat/*, UINT materialIndex*/)
 	refractionIndex = mat.refractionIndex;
 	subsurfaceScattering = mat.subsurfaceScattering;
 	normalMapStrength = (mat.normalMap == nullptr? 0 : mat.normalMapStrength);
+	parallaxOcclusionMapping = mat.parallaxOcclusionMapping;
 }
 
 void wiRenderer::AddRenderableTranslator(wiTranslator* translator)

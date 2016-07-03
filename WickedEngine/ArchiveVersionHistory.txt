@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+3:	serialized Material property parallaxOcclusionMapping
 2:	serialized Material property planar_reflections
 1:	Refactor Archive
 --VERSION_BARRIER------------------

@@ -402,6 +402,24 @@
     <FxCompile Include="objectPS_forward_dirlight_transparent_planarreflection.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_normalmap_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_transparent_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_deferred_normalmap_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_deferred_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
