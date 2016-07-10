@@ -2486,6 +2486,54 @@ void Model::UpdateModel()
 		++iter;
 	}
 }
+void Model::Add(Object* value)
+{
+	if (value != nullptr)
+	{
+		objects.push_back(value);
+		if (value->mesh != nullptr)
+		{
+			meshes.insert(pair<string, Mesh*>(value->mesh->name, value->mesh));
+			for (auto& x : value->mesh->subsets)
+			{
+				materials.insert(pair<string, Material*>(x.material->name, x.material));
+			}
+		}
+	}
+}
+void Model::Add(Armature* value)
+{
+	if (value != nullptr)
+	{
+		armatures.push_back(value);
+	}
+}
+void Model::Add(Light* value)
+{
+	if (value != nullptr)
+	{
+		lights.push_back(value);
+	}
+}
+void Model::Add(Decal* value)
+{
+	if (value != nullptr)
+	{
+		decals.push_back(value);
+	}
+}
+void Model::Add(Model* value)
+{
+	if (value != nullptr)
+	{
+		objects.insert(objects.begin(), value->objects.begin(), value->objects.end());
+		armatures.insert(armatures.begin(), value->armatures.begin(), value->armatures.end());
+		decals.insert(decals.begin(), value->decals.begin(), value->decals.end());
+		lights.insert(lights.begin(), value->lights.begin(), value->lights.end());
+		meshes.insert(value->meshes.begin(), value->meshes.end());
+		materials.insert(value->materials.begin(), value->materials.end());
+	}
+}
 void Model::Serialize(wiArchive& archive)
 {
 	Transform::Serialize(archive);

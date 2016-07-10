@@ -1045,6 +1045,12 @@ struct Model : public Transform
 	void LoadFromDisk(const string& dir, const string& name, const string& identifier);
 	void FinishLoading();
 	void UpdateModel();
+	void Add(Object* value);
+	void Add(Armature* value);
+	void Add(Light* value);
+	void Add(Decal* value);
+	// merge
+	void Add(Model* value);
 	void Serialize(wiArchive& archive);
 };
 
