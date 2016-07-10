@@ -376,7 +376,7 @@ struct Mesh{
 	}
 	~Mesh() {}
 	void LoadFromFile(const string& newName, const string& fname
-		, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier="");
+		, const MaterialCollection& materialColl, list<Armature*> armatures, const string& identifier="");
 	bool buffersComplete;
 	void Optimize();
 	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
@@ -672,6 +672,7 @@ public:
 	virtual void UpdateTransform();
 	void UpdateArmature();
 	void CreateFamily();
+	Bone* GetBone(const string& name);
 	void Serialize(wiArchive& archive);
 
 private:
@@ -1031,11 +1032,11 @@ struct EnvironmentProbe : public Transform
 
 struct Model : public Transform
 {
-	vector<Object*> objects;
+	list<Object*> objects;
 	MeshCollection meshes;
 	MaterialCollection materials;
-	vector<Armature*> armatures;
-	vector<Light*> lights;
+	list<Armature*> armatures;
+	list<Light*> lights;
 	list<Decal*> decals;
 
 	Model();
@@ -1053,7 +1054,7 @@ struct Scene
 	vector<Model*> models;
 	WorldInfo worldInfo;
 	Wind wind;
-	vector<EnvironmentProbe*> environmentProbes;
+	list<EnvironmentProbe*> environmentProbes;
 
 	Scene();
 	~Scene();
@@ -1069,18 +1070,18 @@ struct Scene
 // Create rest positions for bone tree
 void RecursiveRest(Armature* armature, Bone* bone);
 
-void LoadWiArmatures(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures);
+void LoadWiArmatures(const string& directory, const string& filename, const string& identifier, list<Armature*>& armatures);
 void LoadWiMaterialLibrary(const string& directory, const string& filename, const string& identifier, const string& texturesDir, MaterialCollection& materials);
-void LoadWiObjects(const string& directory, const string& filename, const string& identifier, vector<Object*>& objects
-				   , vector<Armature*>& armatures, MeshCollection& meshes, const MaterialCollection& materials);
-void LoadWiMeshes(const string& directory, const string& filename, const string& identifier, MeshCollection& meshes, const vector<Armature*>& armatures, const MaterialCollection& materials);
-void LoadWiActions(const string& directory, const string& filename, const string& identifier, vector<Armature*>& armatures);
-void LoadWiLights(const string& directory, const string& filename, const string& identifier, vector<Light*>& lights);
+void LoadWiObjects(const string& directory, const string& filename, const string& identifier, list<Object*>& objects
+				   , list<Armature*>& armatures, MeshCollection& meshes, const MaterialCollection& materials);
+void LoadWiMeshes(const string& directory, const string& filename, const string& identifier, MeshCollection& meshes, const list<Armature*>& armatures, const MaterialCollection& materials);
+void LoadWiActions(const string& directory, const string& filename, const string& identifier, list<Armature*>& armatures);
+void LoadWiLights(const string& directory, const string& filename, const string& identifier, list<Light*>& lights);
 void LoadWiHitSpheres(const string& directory, const string& name, const string& identifier, vector<HitSphere*>& spheres
-					  ,const vector<Armature*>& armatures);
+					  ,const list<Armature*>& armatures);
 void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worldInfo, Wind& wind);
 void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
-				   ,const vector<Armature*>& armatures);
+				   ,const list<Armature*>& armatures);
 void LoadWiDecals(const string&directory, const string& name, const string& texturesDir, list<Decal*>& decals);
 
 

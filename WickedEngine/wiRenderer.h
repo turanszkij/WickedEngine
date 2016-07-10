@@ -479,5 +479,14 @@ public:
 	static vector<pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;
 	// Add box to render in next frame
 	static void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
+
+	// Add model to the scene
+	static void AddModel(Model* value);
+
+	// Remove from the scene
+	static void Remove(Object* value);
+	static void Remove(Light* value);
+	static void Remove(Decal* value);
+	static void Remove(EnvironmentProbe* value);
 };
 

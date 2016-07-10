@@ -76,6 +76,7 @@ public:
 	static void getVisible(Node* node, RAY& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
 	static void getAll(Node* node, CulledList& objects);
 	wiSPTree* updateTree(Node* node);
+	void Remove(Cullable* value, Node* node = nullptr);
 
 	void CleanUp();
 };

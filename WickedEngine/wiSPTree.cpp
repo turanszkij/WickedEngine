@@ -49,19 +49,6 @@ void wiSPTree::CleanUp()
 
 void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects){
 	for(Cullable* object : newObjects){
-		/*bool default_mesh = false;
-		bool water_mesh = false;
-		bool transparent_mesh = false;
-
-		if(object->mesh->renderable)
-			for(Material* mat : object->mesh->materials){
-				if(!mat->water && !mat->isSky && !mat->transparent)
-					default_mesh=true;
-				if(mat->water && !mat->isSky)
-					water_mesh=true;
-				if(!mat->water && !mat->isSky && mat->transparent)
-					transparent_mesh=true;
-			}*/
 		
 		node->objects.push_back(object);
 	}
@@ -224,6 +211,18 @@ void wiSPTree::getAll(Node* node, CulledList& objects){
 			for (unsigned int i = 0; i<node->children.size(); ++i)
 				getAll(node->children[i],objects);
 		}
+	}
+}
+void wiSPTree::Remove(Cullable* value, Node* node)
+{
+	if (node == nullptr)
+	{
+		node = root;
+	}
+	node->objects.remove(value);
+	for (auto& child : node->children)
+	{
+		Remove(value, child);
 	}
 }
 

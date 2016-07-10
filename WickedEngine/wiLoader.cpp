@@ -13,7 +13,7 @@
 
 using namespace wiGraphicsTypes;
 
-void LoadWiArmatures(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures)
+void LoadWiArmatures(const string& directory, const string& name, const string& identifier, list<Armature*>& armatures)
 {
 	stringstream filename("");
 	filename<<directory<<name;
@@ -279,11 +279,10 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 	}
 
 }
-void LoadWiObjects(const string& directory, const string& name, const string& identifier, vector<Object*>& objects
-					, vector<Armature*>& armatures
+void LoadWiObjects(const string& directory, const string& name, const string& identifier, list<Object*>& objects
+					, list<Armature*>& armatures
 				   , MeshCollection& meshes, const MaterialCollection& materials)
 {
-	int objectI=objects.size()-1;
 	
 	stringstream filename("");
 	filename<<directory<<name;
@@ -298,7 +297,6 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 				stringstream identified_name("");
 				identified_name<<line.substr(9,strlen(line.c_str())-9)<<identifier;
 				objects.push_back(new Object(identified_name.str()));
-				objectI++;
 			}
 			else{
 				switch(line[0]){
@@ -481,7 +479,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 
 }
 void LoadWiMeshes(const string& directory, const string& name, const string& identifier, MeshCollection& meshes, 
-	const vector<Armature*>& armatures, const MaterialCollection& materials)
+	const list<Armature*>& armatures, const MaterialCollection& materials)
 {
 	int meshI=meshes.size()-1;
 	Mesh* currentMesh = NULL;
@@ -512,10 +510,18 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						stringstream identified_parentArmature("");
 						identified_parentArmature<<parentArmature<<identifier;
 						currentMesh->parent=identified_parentArmature.str();
-						for (unsigned int i = 0; i<armatures.size(); ++i)
-							if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str())){
-								currentMesh->armature=armatures[i];
+						//for (unsigned int i = 0; i<armatures.size(); ++i)
+						//	if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str())){
+						//		currentMesh->armature=armatures[i];
+						//	}
+						for (auto& a : armatures)
+						{
+							if (!a->name.compare(currentMesh->parent))
+							{
+								currentMesh->armature = a;
+								break;
 							}
+						}
 					}
 					break;
 				case 'v': 
@@ -547,20 +553,29 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						float weight=0;
 						int BONEINDEX=0;
 						file>>nameB>>weight;
-						bool gotArmature=false;
+						//bool gotArmature=false;
 						bool gotBone=false;
-						int i=0;
-						while(!gotArmature && i<(int)armatures.size()){  //SEARCH FOR PARENT ARMATURE
-							if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str()))
-								gotArmature=true;
-							else i++;
-						}
-						if(gotArmature){
+						//int i=0;
+						//while(!gotArmature && i<(int)armatures.size()){  //SEARCH FOR PARENT ARMATURE
+						//	if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str()))
+						//		gotArmature=true;
+						//	else i++;
+						//}
+						if(currentMesh->armature != nullptr){
 							int j=0;
-							while(!gotBone && j<(int)armatures[i]->boneCollection.size()){
-								if(!armatures[i]->boneCollection[j]->name.compare(nameB)){
-									gotBone=true;
-									BONEINDEX=j; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
+							//while(!gotBone && j<(int)currentMesh->armature->boneCollection.size()){
+							//	if(!armatures[i]->boneCollection[j]->name.compare(nameB)){
+							//		gotBone=true;
+							//		BONEINDEX=j; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
+							//	}
+							//	j++;
+							//}
+							for (auto& b : currentMesh->armature->boneCollection)
+							{
+								if (!b->name.compare(nameB))
+								{
+									BONEINDEX = j;
+									break;
 								}
 								j++;
 							}
@@ -703,10 +718,10 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 		meshes.insert( pair<string,Mesh*>(currentMesh->name,currentMesh) );
 
 }
-void LoadWiActions(const string& directory, const string& name, const string& identifier, vector<Armature*>& armatures)
+void LoadWiActions(const string& directory, const string& name, const string& identifier, list<Armature*>& armatures)
 {
-	int armatureI=0;
-	int boneI=0;
+	Armature* armatureI=nullptr;
+	Bone* boneI=nullptr;
 	int firstFrame=INT_MAX;
 
 	stringstream filename("");
@@ -721,31 +736,43 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 				stringstream identified_name("");
 				identified_name<<line.substr(11,strlen(line.c_str())-11)<<identifier;
 				string armaturename = identified_name.str() ;
-				for (unsigned int i = 0; i<armatures.size(); i++)
-					if(!armatures[i]->name.compare(armaturename)){
-						armatureI=i;
+				//for (unsigned int i = 0; i<armatures.size(); i++)
+				//	if(!armatures[i]->name.compare(armaturename)){
+				//		armatureI=i;
+				//		break;
+				//	}
+				for (auto& a : armatures)
+				{
+					if (!a->name.compare(armaturename)) {
+						armatureI = a;
 						break;
 					}
+				}
 			}
 			else{
 				switch(line[0]){
 				case 'C':
-					armatures[armatureI]->actions.push_back(Action());
-					file>>armatures[armatureI]->actions.back().name;
+					armatureI->actions.push_back(Action());
+					file>> armatureI->actions.back().name;
 					break;
 				case 'A':
-					file>>armatures[armatureI]->actions.back().frameCount;
+					file>> armatureI->actions.back().frameCount;
 					break;
 				case 'b':
 					{
 						string boneName;
 						file>>boneName;
-						for (unsigned int i = 0; i<armatures[armatureI]->boneCollection.size(); i++)
-							if(!armatures[armatureI]->boneCollection[i]->name.compare(boneName)){
-								boneI=i;
-								break;
-							} //GOT BONE INDEX
-						armatures[armatureI]->boneCollection[boneI]->actionFrames.resize(armatures[armatureI]->actions.size());
+						//for (unsigned int i = 0; i<armatures[armatureI]->boneCollection.size(); i++)
+						//	if(!armatures[armatureI]->boneCollection[i]->name.compare(boneName)){
+						//		boneI=i;
+						//		break;
+						//	} //GOT BONE INDEX
+						//armatures[armatureI]->boneCollection[boneI]->actionFrames.resize(armatures[armatureI]->actions.size());
+						boneI = armatureI->GetBone(boneName);
+						if (boneI != nullptr)
+						{
+							boneI->actionFrames.resize(armatureI->actions.size());
+						}
 					}
 					break;
 				case 'r':
@@ -753,7 +780,8 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 						int f = 0;
 						float x=0,y=0,z=0,w=0;
 						file>>f>>x>>y>>z>>w;
-						armatures[armatureI]->boneCollection[boneI]->actionFrames.back().keyframesRot.push_back(KeyFrame(f,x,y,z,w));
+						if (boneI != nullptr)
+							boneI->actionFrames.back().keyframesRot.push_back(KeyFrame(f,x,y,z,w));
 					}
 					break;
 				case 't':
@@ -761,7 +789,8 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 						int f = 0;
 						float x=0,y=0,z=0;
 						file>>f>>x>>y>>z;
-						armatures[armatureI]->boneCollection[boneI]->actionFrames.back().keyframesPos.push_back(KeyFrame(f,x,y,z,0));
+						if (boneI != nullptr)
+							boneI->actionFrames.back().keyframesPos.push_back(KeyFrame(f,x,y,z,0));
 					}
 					break;
 				case 's':
@@ -769,7 +798,8 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 						int f = 0;
 						float x=0,y=0,z=0;
 						file>>f>>x>>y>>z;
-						armatures[armatureI]->boneCollection[boneI]->actionFrames.back().keyframesSca.push_back(KeyFrame(f,x,y,z,0));
+						if(boneI!=nullptr)
+							boneI->actionFrames.back().keyframesSca.push_back(KeyFrame(f,x,y,z,0));
 					}
 					break;
 				default: break;
@@ -779,7 +809,7 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 	}
 	file.close();
 }
-void LoadWiLights(const string& directory, const string& name, const string& identifier, vector<Light*>& lights)
+void LoadWiLights(const string& directory, const string& name, const string& identifier, list<Light*>& lights)
 {
 
 	stringstream filename("");
@@ -937,7 +967,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 	file.close();
 }
 void LoadWiHitSpheres(const string& directory, const string& name, const string& identifier, vector<HitSphere*>& spheres
-					  ,const vector<Armature*>& armatures)
+					  ,const list<Armature*>& armatures)
 {
 	stringstream filename("");
 	filename<<directory<<name;
@@ -1078,7 +1108,7 @@ void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worl
 	file.close();
 }
 void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
-				   ,const vector<Armature*>& armatures){
+				   ,const list<Armature*>& armatures){
 	stringstream filename("");
 	filename<<directory<<name;
 
@@ -1108,12 +1138,20 @@ void LoadWiCameras(const string&directory, const string& name, const string& ide
 						,name)
 						);
 
-					for (unsigned int i = 0; i<armatures.size(); ++i){
-						if(!armatures[i]->name.compare(identified_parentArmature.str())){
-							for (unsigned int j = 0; j<armatures[i]->boneCollection.size(); ++j){
-								if(!armatures[i]->boneCollection[j]->name.compare(parentB.c_str()))
-									cameras.back().attachTo(armatures[i]->boneCollection[j]);
-							}
+					//for (unsigned int i = 0; i<armatures.size(); ++i){
+					//	if(!armatures[i]->name.compare(identified_parentArmature.str())){
+					//		for (unsigned int j = 0; j<armatures[i]->boneCollection.size(); ++j){
+					//			if(!armatures[i]->boneCollection[j]->name.compare(parentB.c_str()))
+					//				cameras.back().attachTo(armatures[i]->boneCollection[j]);
+					//		}
+					//	}
+					//}
+					for (auto& a : armatures)
+					{
+						Bone* b = a->GetBone(parentB);
+						if (b != nullptr)
+						{
+							cameras.back().attachTo(b);
 						}
 					}
 
@@ -1310,16 +1348,20 @@ Scene::~Scene()
 void Scene::ClearWorld()
 {
 	Model* world = GetWorldNode();
-	for (unsigned int i = 1; i < models.size();++i)
+	int i = 0;
+	for (auto& x : models)
 	{
-		SAFE_DELETE(models[i]);
+		if (i == 0)
+			continue;
+		SAFE_DELETE(x);
+		i++;
 	}
 	models.clear();
 	models.push_back(world);
 
-	for (unsigned int i = 0; i < environmentProbes.size(); ++i)
+	for (auto& x : environmentProbes)
 	{
-		SAFE_DELETE(environmentProbes[i]);
+		SAFE_DELETE(x);
 	}
 	environmentProbes.clear();
 }
@@ -1583,7 +1625,7 @@ void VertexGroup::Serialize(wiArchive& archive)
 GPUBuffer Mesh::instanceBuffer;
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
-	, const MaterialCollection& materialColl, vector<Armature*> armatures, const string& identifier) {
+	, const MaterialCollection& materialColl, list<Armature*> armatures, const string& identifier) {
 	name = newName;
 
 	BYTE* buffer;
@@ -3379,6 +3421,17 @@ void Armature::CreateFamily()
 	for (unsigned int i = 0; i<rootbones.size(); ++i) {
 		RecursiveRest(this, rootbones[i]);
 	}
+}
+Bone* Armature::GetBone(const string& name)
+{
+	for (auto& x : boneCollection)
+	{
+		if (!x->name.compare(name))
+		{
+			return x;
+		}
+	}
+	return nullptr;
 }
 void Armature::Serialize(wiArchive& archive)
 {

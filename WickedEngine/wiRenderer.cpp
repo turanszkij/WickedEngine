@@ -402,10 +402,21 @@ void wiRenderer::SetUpBoneLines()
 	boneLines.clear();
 	for (Model* model : GetScene().models)
 	{
-		for (unsigned int i = 0; i < model->armatures.size(); i++) {
-			for (unsigned int j = 0; j < model->armatures[i]->boneCollection.size(); j++) {
-				boneLines.push_back(new Lines(model->armatures[i]->boneCollection[j]->length, XMFLOAT4A(1, 1, 1, 1), i, j));
+		//for (unsigned int i = 0; i < model->armatures.size(); i++) {
+		//	for (unsigned int j = 0; j < model->armatures[i]->boneCollection.size(); j++) {
+		//		boneLines.push_back(new Lines(model->armatures[i]->boneCollection[j]->length, XMFLOAT4A(1, 1, 1, 1), i, j));
+		//	}
+		//}
+		int i = 0;
+		for (auto& a : model->armatures)
+		{
+			int j = 0;
+			for (auto& b : a->boneCollection)
+			{
+				boneLines.push_back(new Lines(b->length, XMFLOAT4A(1, 1, 1, 1), i, j));
+				j++;
 			}
+			i++;
 		}
 	}
 }
@@ -413,28 +424,31 @@ void wiRenderer::UpdateBoneLines()
 {
 	if (debugBoneLines)
 	{
-			for (unsigned int i = 0; i < boneLines.size(); i++) {
-				int armatureI = boneLines[i]->parentArmature;
-				int boneI = boneLines[i]->parentBone;
+		for (unsigned int i = 0; i < boneLines.size(); i++) {
+			int armatureI = boneLines[i]->parentArmature;
+			int boneI = boneLines[i]->parentBone;
 
-				//XMMATRIX rest = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->recursiveRest) ;
-				//XMMATRIX pose = XMLoadFloat4x4(&armatures[armatureI]->boneCollection[boneI]->world) ;
-				//XMFLOAT4X4 finalM;
-				//XMStoreFloat4x4( &finalM,  /*rest**/pose );
-
-				int arm = 0;
-				for (Model* model : GetScene().models)
+			int arm = 0;
+			for (Model* model : GetScene().models)
+			{
+				for (Armature* armature : model->armatures)
 				{
-					for (Armature* armature : model->armatures)
+					if (arm == armatureI)
 					{
-						if (arm == armatureI)
+						int bonI = 0;
+						for (Bone* b : armature->boneCollection)
 						{
-							boneLines[i]->Transform(armature->boneCollection[boneI]->world);
+							if (boneI == bonI)
+							{
+								boneLines[i]->Transform(b->world);
+							}
+							bonI++;
 						}
-						arm++;
 					}
+					arm++;
 				}
 			}
+		}
 	}
 }
 void iterateSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col);
@@ -2685,39 +2699,54 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 
 		Texture2D* envMaps[] = { enviroMap, enviroMap };
 		XMFLOAT3 envMapPositions[] = { XMFLOAT3(0,0,0),XMFLOAT3(0,0,0) };
-		if (!GetScene().environmentProbes.empty())
+		GetScene().environmentProbes.sort(
+			[&](EnvironmentProbe* a, EnvironmentProbe* b) {
+				return wiMath::DistanceSquared(a->translation, getCamera()->translation) < wiMath::DistanceSquared(b->translation, getCamera()->translation);
+			}
+		);
+		int envProbeInd = 0;
+		for (auto& x : GetScene().environmentProbes)
 		{
-			// Get the closest probes to the camera and bind to shader
-			vector<EnvironmentProbe*> sortedEnvProbes;
-			vector<float> sortedDistances;
-			sortedEnvProbes.reserve(GetScene().environmentProbes.size());
-			sortedDistances.reserve(GetScene().environmentProbes.size());
-			for (unsigned int i = 0; i < GetScene().environmentProbes.size(); ++i)
-			{
-				sortedEnvProbes.push_back(GetScene().environmentProbes[i]);
-				sortedDistances.push_back(wiMath::DistanceSquared(camera->translation, GetScene().environmentProbes[i]->translation));
-			}
-			for (unsigned int i = 0; i < sortedEnvProbes.size() - 1; ++i)
-			{
-				for (unsigned int j = i + 1; j < sortedEnvProbes.size(); ++j)
-				{
-					if (sortedDistances[i] > sortedDistances[j])
-					{
-						float swapDist = sortedDistances[i];
-						sortedDistances[i] = sortedDistances[j];
-						sortedDistances[j] = swapDist;
-						EnvironmentProbe* swapProbe = sortedEnvProbes[i];
-						sortedEnvProbes[i] = sortedEnvProbes[j];
-						sortedEnvProbes[j] = swapProbe;
-					}
-				}
-			}
-			for (unsigned int i = 0; i < min(sortedEnvProbes.size(), 2); ++i)
-			{
-				envMaps[i] = sortedEnvProbes[i]->cubeMap.GetTexture();
-				envMapPositions[i] = sortedEnvProbes[i]->translation;
-			}
+			envMaps[envProbeInd] = x->cubeMap.GetTexture();
+			envMapPositions[envProbeInd] = x->translation;
+			envProbeInd++;
+			if (envProbeInd >= ARRAYSIZE(envMaps))
+				break;
 		}
+
+		//if (!GetScene().environmentProbes.empty())
+		//{
+		//	// Get the closest probes to the camera and bind to shader
+		//	vector<EnvironmentProbe*> sortedEnvProbes;
+		//	vector<float> sortedDistances;
+		//	sortedEnvProbes.reserve(GetScene().environmentProbes.size());
+		//	sortedDistances.reserve(GetScene().environmentProbes.size());
+		//	for (unsigned int i = 0; i < GetScene().environmentProbes.size(); ++i)
+		//	{
+		//		sortedEnvProbes.push_back(GetScene().environmentProbes[i]);
+		//		sortedDistances.push_back(wiMath::DistanceSquared(camera->translation, GetScene().environmentProbes[i]->translation));
+		//	}
+		//	for (unsigned int i = 0; i < sortedEnvProbes.size() - 1; ++i)
+		//	{
+		//		for (unsigned int j = i + 1; j < sortedEnvProbes.size(); ++j)
+		//		{
+		//			if (sortedDistances[i] > sortedDistances[j])
+		//			{
+		//				float swapDist = sortedDistances[i];
+		//				sortedDistances[i] = sortedDistances[j];
+		//				sortedDistances[j] = swapDist;
+		//				EnvironmentProbe* swapProbe = sortedEnvProbes[i];
+		//				sortedEnvProbes[i] = sortedEnvProbes[j];
+		//				sortedEnvProbes[j] = swapProbe;
+		//			}
+		//		}
+		//	}
+		//	for (unsigned int i = 0; i < min(sortedEnvProbes.size(), 2); ++i)
+		//	{
+		//		envMaps[i] = sortedEnvProbes[i]->cubeMap.GetTexture();
+		//		envMapPositions[i] = sortedEnvProbes[i]->translation;
+		//	}
+		//}
 		MiscCB envProbeCB;
 		envProbeCB.mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
 		envProbeCB.mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
@@ -3686,49 +3715,12 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 	model->transform(transform);
 
-	GetDevice()->LOCK();
-
-	GetScene().AddModel(model);
-
-	for (Object* o : model->objects)
-	{
-		if (physicsEngine != nullptr) {
-			physicsEngine->registerObject(o);
-		}
-	}
-
-
-	Update();
-
-	if(spTree){
-		spTree->AddObjects(spTree->root,vector<Cullable*>(model->objects.begin(), model->objects.end()));
-	}
-	else
-	{
-		GenerateSPTree(spTree, vector<Cullable*>(model->objects.begin(), model->objects.end()), SPTREE_GENERATE_OCTREE);
-	}
-	if(spTree_lights){
-		spTree_lights->AddObjects(spTree_lights->root,vector<Cullable*>(model->lights.begin(),model->lights.end()));
-	}
-	else
-	{
-		GenerateSPTree(spTree_lights, vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
-	}
-
-	unique_identifier++;
-
-
-
-	//UpdateRenderData(nullptr);
-
-	SetUpCubes();
-	SetUpBoneLines();
-
-	GetDevice()->UNLOCK();
+	AddModel(model);
 
 
 	LoadWorldInfo(dir, name);
 
+	unique_identifier++;
 
 	return model;
 }
@@ -4024,4 +4016,92 @@ void wiRenderer::AddRenderableTranslator(wiTranslator* translator)
 void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 {
 	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));
+}
+
+
+
+void wiRenderer::AddModel(Model* model)
+{
+	GetDevice()->LOCK();
+
+	GetScene().AddModel(model);
+
+	for (Object* o : model->objects)
+	{
+		if (physicsEngine != nullptr) {
+			physicsEngine->registerObject(o);
+		}
+	}
+
+
+	Update();
+
+	if (spTree) {
+		spTree->AddObjects(spTree->root, vector<Cullable*>(model->objects.begin(), model->objects.end()));
+	}
+	else
+	{
+		GenerateSPTree(spTree, vector<Cullable*>(model->objects.begin(), model->objects.end()), SPTREE_GENERATE_OCTREE);
+	}
+	if (spTree_lights) {
+		spTree_lights->AddObjects(spTree_lights->root, vector<Cullable*>(model->lights.begin(), model->lights.end()));
+	}
+	else
+	{
+		GenerateSPTree(spTree_lights, vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
+	}
+
+
+
+
+	//UpdateRenderData(nullptr);
+
+	SetUpCubes();
+	SetUpBoneLines();
+
+	GetDevice()->UNLOCK();
+}
+
+void wiRenderer::Remove(Object* value)
+{
+	if (value != nullptr)
+	{
+		for (auto& x : GetScene().models)
+		{
+			x->objects.remove(value);
+		}
+		spTree->Remove(value);
+		value->detach();
+	}
+}
+void wiRenderer::Remove(Light* value)
+{
+	if (value != nullptr)
+	{
+		for (auto& x : GetScene().models)
+		{
+			x->lights.remove(value);
+		}
+		spTree_lights->Remove(value);
+		value->detach();
+	}
+}
+void wiRenderer::Remove(Decal* value)
+{
+	if (value != nullptr)
+	{
+		for (auto& x : GetScene().models)
+		{
+			x->decals.remove(value);
+		}
+		value->detach();
+	}
+}
+void wiRenderer::Remove(EnvironmentProbe* value)
+{
+	if (value != nullptr)
+	{
+		GetScene().environmentProbes.remove(value);
+		value->detach();
+	}
 }
