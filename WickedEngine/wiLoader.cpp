@@ -2888,21 +2888,30 @@ void AABB::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region SPHERE
-bool SPHERE::intersects(const AABB& b){
+bool SPHERE::intersects(const AABB& b) const{
 	XMFLOAT3 min = b.getMin();
 	XMFLOAT3 max = b.getMax();
 	XMFLOAT3 closestPointInAabb = wiMath::Min(wiMath::Max(center, min), max);
 	double distanceSquared = wiMath::Distance(closestPointInAabb,center);
 	return distanceSquared < radius;
 }
-bool SPHERE::intersects(const SPHERE& b){
+bool SPHERE::intersects(const SPHERE& b)const {
 	return wiMath::Distance(center,b.center)<=radius+b.radius;
+}
+bool SPHERE::intersects(const RAY& b) const{
+	XMVECTOR o = XMLoadFloat3(&b.origin);
+	XMVECTOR r = XMLoadFloat3(&b.direction);
+	XMVECTOR dist = XMVector3LinePointDistance(o, o + r, XMLoadFloat3(&center));
+	return XMVectorGetX(dist) <= radius;
 }
 #pragma endregion
 
 #pragma region RAY
-bool RAY::intersects(const AABB& box) const{
-	return box.intersects(*this);
+bool RAY::intersects(const AABB& b) const{
+	return b.intersects(*this);
+}
+bool RAY::intersects(const SPHERE& b) const {
+	return b.intersects(*this);
 }
 #pragma endregion
 

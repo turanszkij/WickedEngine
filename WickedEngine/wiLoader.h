@@ -287,8 +287,9 @@ struct SPHERE{
 	XMFLOAT3 center;
 	SPHERE():center(XMFLOAT3(0,0,0)),radius(0){}
 	SPHERE(const XMFLOAT3& c, float r):center(c),radius(r){}
-	bool intersects(const AABB& b);
-	bool intersects(const SPHERE& b);
+	bool intersects(const AABB& b) const;
+	bool intersects(const SPHERE& b) const;
+	bool intersects(const RAY& b) const;
 };
 struct RAY{
 	XMFLOAT3 origin,direction,direction_inverse;
@@ -299,7 +300,8 @@ struct RAY{
 		XMStoreFloat3(&direction,newDirection);
 		XMStoreFloat3(&direction_inverse,XMVectorDivide(XMVectorSet(1,1,1,1),newDirection));
 	}
-	bool intersects(const AABB& box) const;
+	bool intersects(const AABB& b) const;
+	bool intersects(const SPHERE& b) const;
 };
 struct VertexRef{
 	int index;

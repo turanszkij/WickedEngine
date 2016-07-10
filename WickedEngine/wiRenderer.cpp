@@ -1775,8 +1775,7 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 		MiscCB sb;
 		for (auto& x : GetScene().environmentProbes)
 		{
-			float dist = wiMath::Distance(x->translation, camera->translation) * 0.09f;
-			sb.mTransform = XMMatrixTranspose(XMMatrixScaling(dist, dist, dist)*x->getMatrix());
+			sb.mTransform = XMMatrixTranspose(x->getMatrix());
 			sb.mColor = XMFLOAT4(1, 1, 1, 1);
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
@@ -3496,9 +3495,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 		{
 			for (auto& x : GetScene().environmentProbes)
 			{
-				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&x->translation));
-				float dis = XMVectorGetX(disV);
-				if (dis < wiMath::Distance(x->translation, cam->translation) * 0.09f)
+				if (SPHERE(x->translation,1).intersects(ray))
 				{
 					Picked pick = Picked();
 					pick.transform = x;
