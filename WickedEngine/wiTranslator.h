@@ -6,8 +6,10 @@ class wiTranslator : public Transform
 {
 private:
 	XMFLOAT4 prevPointer;
-	XMFLOAT3 dragStart;
+	XMFLOAT4X4 dragStart, dragEnd;
 	bool dragging;
+	bool dragStarted;
+	bool dragEnded;
 public:
 	wiTranslator();
 	~wiTranslator();
@@ -31,6 +33,14 @@ public:
 	float dist;
 
 	bool isTranslator, isScalator, isRotator;
+
+
+	// Check if the drag started in this exact frame
+	bool IsDragStarted();
+	XMFLOAT4X4 GetDragStart();
+	// Check if the drag ended in this exact frame
+	bool IsDragEnded();
+	XMFLOAT4X4 GetDragEnd();
 
 	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Axis;
 	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Plane;

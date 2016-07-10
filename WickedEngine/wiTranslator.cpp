@@ -16,9 +16,13 @@ int wiTranslator::vertexCount_Origin = 0;
 wiTranslator::wiTranslator() :Transform()
 {
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
-	dragStart = XMFLOAT3(0, 0, 0);
+
+	XMStoreFloat4x4(&dragStart, XMMatrixIdentity());
+	XMStoreFloat4x4(&dragEnd, XMMatrixIdentity());
 
 	dragging = false;
+	dragStarted = false;
+	dragEnded = false;
 
 	enabled = true;
 
@@ -138,14 +142,15 @@ wiTranslator::wiTranslator() :Transform()
 	}
 }
 
-
 wiTranslator::~wiTranslator()
 {
 }
 
-
 void wiTranslator::Update()
 {
+	dragStarted = false;
+	dragEnded = false;
+
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
 	Camera* cam = wiRenderer::getCamera();
 	XMVECTOR pos = XMLoadFloat3(&translation);
@@ -335,11 +340,22 @@ void wiTranslator::Update()
 
 			Transform::applyTransform();
 
+			if (!dragging)
+			{
+				dragStarted = true;
+				dragStart = world;
+			}
+
 			dragging = true;
 		}
 
 		if (!wiInputManager::GetInstance()->down(VK_LBUTTON))
 		{
+			if (dragging)
+			{
+				dragEnded = true;
+				dragEnd = world;
+			}
 			dragging = false;
 			Transform::UpdateTransform();
 		}
@@ -347,9 +363,32 @@ void wiTranslator::Update()
 	}
 	else
 	{
+		if (dragging)
+		{
+			dragEnded = true;
+			dragEnd = world;
+		}
 		dragging = false;
 		Transform::UpdateTransform();
 	}
 
 	prevPointer = pointer;
+}
+
+
+bool wiTranslator::IsDragStarted()
+{
+	return dragStarted;
+}
+XMFLOAT4X4 wiTranslator::GetDragStart()
+{
+	return dragStart;
+}
+bool wiTranslator::IsDragEnded()
+{
+	return dragEnded;
+}
+XMFLOAT4X4 wiTranslator::GetDragEnd()
+{
+	return dragEnd;
 }
