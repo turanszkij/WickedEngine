@@ -4,16 +4,23 @@
 
 class wiArchive;
 
+static unsigned long long __Unique_ID_Counter = 0;
+
 struct Node
 {
+private:
+	unsigned long long ID;
+public:
 	string name;
 
 	Node() {
 		name = "";
+		ID = __Unique_ID_Counter;
+		__Unique_ID_Counter++;
 	}
 
 
-	string GetID()
+	string GetLayerID()
 	{
 		auto x = name.find_last_of('_');
 		if (x != string::npos)
@@ -22,6 +29,7 @@ struct Node
 		}
 		return "";
 	}
+	unsigned long long GetID() { return ID; }
 
 	void Serialize(wiArchive& archive);
 };
@@ -58,6 +66,7 @@ struct Transform : public Node
 	void attachTo(Transform* newParent, int copyTranslation = 1, int copyRotation = 1, int copyScale = 1);
 	//find transform in tree
 	Transform* find(const string& name);
+	Transform* find(unsigned long long ID);
 	//detach child - detach all if no parameters
 	void detachChild(Transform* child = nullptr);
 	//detach from parent

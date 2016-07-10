@@ -7,10 +7,18 @@ void Node::Serialize(wiArchive& archive)
 	if (archive.IsReadMode())
 	{
 		archive >> name;
+		if (archive.GetVersion() >= 4)
+		{
+			archive >> ID;
+		}
 	}
 	else
 	{
 		archive << name;
+		if (archive.GetVersion() >= 4)
+		{
+			archive << ID;
+		}
 	}
 }
 
@@ -93,6 +101,25 @@ Transform* Transform::find(const string& findname)
 		if (x != nullptr)
 		{
 			Transform* found = x->find(findname);
+			if (found != nullptr)
+			{
+				return found;
+			}
+		}
+	}
+	return nullptr;
+}
+Transform* Transform::find(unsigned long long id)
+{
+	if (GetID()==id)
+	{
+		return this;
+	}
+	for (Transform* x : children)
+	{
+		if (x != nullptr)
+		{
+			Transform* found = x->find(id);
 			if (found != nullptr)
 			{
 				return found;

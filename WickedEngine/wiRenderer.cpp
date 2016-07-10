@@ -3575,7 +3575,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		// layer support
 		if (checkLayers || dontcheckLayers)
 		{
-			string id = object->GetID();
+			string id = object->GetLayerID();
 
 			if (checkLayers && layer.find(id) == string::npos)
 			{
