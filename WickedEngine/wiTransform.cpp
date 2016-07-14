@@ -7,18 +7,10 @@ void Node::Serialize(wiArchive& archive)
 	if (archive.IsReadMode())
 	{
 		archive >> name;
-		if (archive.GetVersion() >= 4)
-		{
-			archive >> ID;
-		}
 	}
 	else
 	{
 		archive << name;
-		if (archive.GetVersion() >= 4)
-		{
-			archive << ID;
-		}
 	}
 }
 
