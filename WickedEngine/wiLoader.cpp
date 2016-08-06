@@ -3901,15 +3901,13 @@ void Light::UpdateLight()
 	else if (type == Light::SPOT) {
 		if (shadow)
 		{
-			if (!shadowCam_spotLight.empty()) 
-			{
-				shadowCam_spotLight[0].Update(XMLoadFloat4x4(&world));
-				shadowCam_spotLight[0].Create_Perspective(XM_PIDIV2);
-			}
-			else
+			if (shadowCam_spotLight.empty()) 
 			{
 				shadowCam_spotLight.push_back(SHCAM(XMFLOAT4(0, 0, 0, 1), 0.1f, 1000.0f, enerDis.z));
 			}
+			shadowCam_spotLight[0].Update(XMLoadFloat4x4(&world));
+			shadowCam_spotLight[0].farplane = enerDis.y;
+			shadowCam_spotLight[0].Create_Perspective(enerDis.z);
 		}
 
 		bounds.createFromHalfWidth(translation, XMFLOAT3(enerDis.y, enerDis.y, enerDis.y));
@@ -3917,14 +3915,7 @@ void Light::UpdateLight()
 	else if (type == Light::POINT) {
 		if (shadow)
 		{
-			if (!shadowCam_pointLight.empty())
-			{
-				for (unsigned int i = 0; i < shadowCam_pointLight.size(); ++i) {
-					shadowCam_pointLight[i].Update(XMLoadFloat3(&translation));
-					shadowCam_pointLight[i].Create_Perspective(XM_PIDIV2);
-				}
-			}
-			else
+			if (shadowCam_pointLight.empty())
 			{
 				shadowCam_pointLight.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //+x
 				shadowCam_pointLight.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //-x
@@ -3934,6 +3925,11 @@ void Light::UpdateLight()
 
 				shadowCam_pointLight.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), 0.1f, 1000.0f, XM_PIDIV2)); //+z
 				shadowCam_pointLight.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), 0.1f, 1000.0f, XM_PIDIV2)); //-z
+			}
+			for (unsigned int i = 0; i < shadowCam_pointLight.size(); ++i) {
+				shadowCam_pointLight[i].Update(XMLoadFloat3(&translation));
+				shadowCam_spotLight[i].farplane = enerDis.y;
+				shadowCam_pointLight[i].Create_Perspective(XM_PIDIV2);
 			}
 		}
 

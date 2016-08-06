@@ -2331,13 +2331,16 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					switch (l->type)
 					{
 					case Light::SPOT:
-						orderedSpotLights.insert(l);
+						if(!l->shadowCam_spotLight.empty())
+							orderedSpotLights.insert(l);
 						break;
 					case Light::POINT:
-						orderedPointLights.insert(l);
+						if (!l->shadowCam_pointLight.empty())
+							orderedPointLights.insert(l);
 						break;
 					default:
-						dirLights.insert(l);
+						if (!l->shadowCam_dirLight.empty())
+							dirLights.insert(l);
 						break;
 					}
 				}
@@ -2460,14 +2463,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 					Light::shadowMaps_spotLight[i].Set(threadID);
 					Frustum frustum;
-					XMFLOAT4X4 proj, view;
-					XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam_spotLight[0].Projection));
-					XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam_spotLight[0].View));
-					frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, proj, view);
+					frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
 					if (spTree)
 						wiSPTree::getVisible(spTree->root, frustum, culledObjects);
 
-					int index = 0;
 #pragma region BLOAT
 					{
 						if (!culledObjects.empty()) {
@@ -2489,7 +2488,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 									//MAPPED_SUBRESOURCE mappedResource;
 									ShadowCB cb;
-									cb.mVP = l->shadowCam_spotLight[index].getVP();
+									cb.mVP = l->shadowCam_spotLight[0].getVP();
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 
