@@ -2091,7 +2091,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
 				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
 				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
-					lcb.mShM[shmap]=l->shadowCam[shmap].getVP();
+					lcb.mShM[shmap]=l->shadowCam_dirLight[shmap].getVP();
 					if(l->shadowMaps_dirLight[shmap].depth)
 						GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
 				}
@@ -2140,7 +2140,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 				if (l->shadow && l->shadowMap_index>=0)
 				{
-					lcb.mShM = l->shadowCam[0].getVP();
+					lcb.mShM = l->shadowCam_spotLight[0].getVP();
 					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
 						GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
 				}
@@ -2361,13 +2361,13 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 						l->shadowMaps_dirLight[index].Activate(threadID);
 
-						const float siz = l->shadowCam[index].size * 0.5f;
-						const float f = l->shadowCam[index].farplane;
+						const float siz = l->shadowCam_dirLight[index].size * 0.5f;
+						const float f = l->shadowCam_dirLight[index].farplane;
 						AABB boundingbox;
 						boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
 						if (spTree)
 							wiSPTree::getVisible(spTree->root, boundingbox.get(
-								XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam[index].View))
+								XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))
 								), culledObjects);
 
 #pragma region BLOAT
@@ -2391,7 +2391,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 										//MAPPED_SUBRESOURCE mappedResource;
 										ShadowCB cb;
-										cb.mVP = l->shadowCam[index].getVP();
+										cb.mVP = l->shadowCam_dirLight[index].getVP();
 										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 
@@ -2461,8 +2461,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					Light::shadowMaps_spotLight[i].Set(threadID);
 					Frustum frustum;
 					XMFLOAT4X4 proj, view;
-					XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam[0].Projection));
-					XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam[0].View));
+					XMStoreFloat4x4(&proj, XMLoadFloat4x4(&l->shadowCam_spotLight[0].Projection));
+					XMStoreFloat4x4(&view, XMLoadFloat4x4(&l->shadowCam_spotLight[0].View));
 					frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, proj, view);
 					if (spTree)
 						wiSPTree::getVisible(spTree->root, frustum, culledObjects);
@@ -2489,7 +2489,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 									//MAPPED_SUBRESOURCE mappedResource;
 									ShadowCB cb;
-									cb.mVP = l->shadowCam[index].getVP();
+									cb.mVP = l->shadowCam_spotLight[index].getVP();
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 
@@ -2570,8 +2570,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
 
 					CubeMapRenderCB cb;
-					for (unsigned int shcam = 0; shcam < l->shadowCam.size(); ++shcam)
-						cb.mViewProjection[shcam] = l->shadowCam[shcam].getVP();
+					for (unsigned int shcam = 0; shcam < l->shadowCam_pointLight.size(); ++shcam)
+						cb.mViewProjection[shcam] = l->shadowCam_pointLight[shcam].getVP();
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 

@@ -103,7 +103,6 @@ void wiEmittedParticle::CreateLight()
 	if (light == nullptr && material->blendFlag == BLENDMODE_ADDITIVE)
 	{
 		light = new Light();
-		light->SetUp();
 		light->color.x = material->baseColor.x;
 		light->color.y = material->baseColor.y;
 		light->color.z = material->baseColor.z;

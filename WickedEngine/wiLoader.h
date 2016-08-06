@@ -770,7 +770,9 @@ struct Light : public Cullable , public Transform
 	vector<wiRenderTarget> shadowMaps_dirLight;
 	int shadowMap_index;
 
-	vector<SHCAM> shadowCam;
+	vector<SHCAM> shadowCam_pointLight;
+	vector<SHCAM> shadowCam_dirLight;
+	vector<SHCAM> shadowCam_spotLight;
 
 	float shadowBias;
 
@@ -781,21 +783,8 @@ struct Light : public Cullable , public Transform
 	};
 	LightType type;
 
-	Light():Transform(){
-		color=XMFLOAT4(0,0,0,0);
-		enerDis=XMFLOAT4(0,0,0,0);
-		type=LightType::POINT;
-		//shadowMap.resize(0);
-		shadow = false;
-		shadowCam.resize(0);
-		noHalo=false;
-		lensFlareRimTextures.resize(0);
-		lensFlareNames.resize(0);
-		shadowMap_index = -1;
-		shadowBias = 0.00001f;
-	}
+	Light();
 	virtual ~Light();
-	void SetUp();
 	virtual void UpdateTransform();
 	void UpdateLight();
 	void Serialize(wiArchive& archive);
