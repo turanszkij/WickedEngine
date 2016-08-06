@@ -37,9 +37,6 @@
     <Filter Include="ENGINE\Network">
       <UniqueIdentifier>{c5d86df2-c519-488e-a98a-ba1eab3d19c3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ENGINE\Graphics\ResourceMapping">
-      <UniqueIdentifier>{042fbecf-7b1e-4c61-9b93-f3e5ca541b99}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ENGINE\Audio">
       <UniqueIdentifier>{76f7fa22-7992-4b49-b4d2-cc24be672869}</UniqueIdentifier>
     </Filter>
@@ -57,6 +54,9 @@
     </Filter>
     <Filter Include="ENGINE\Tools">
       <UniqueIdentifier>{5ac4a1c9-91a8-4d52-9cd6-6139a848a2f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ENGINE\Graphics\GPUMapping">
+      <UniqueIdentifier>{042fbecf-7b1e-4c61-9b93-f3e5ca541b99}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -166,7 +166,7 @@
       <Filter>ENGINE\Common</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
-      <Filter>ENGINE\Graphics\ResourceMapping</Filter>
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
@@ -226,10 +226,10 @@
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h">
-      <Filter>ENGINE\Graphics\ResourceMapping</Filter>
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ResourceMapping.h">
-      <Filter>ENGINE\Graphics\ResourceMapping</Filter>
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
