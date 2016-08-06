@@ -462,26 +462,32 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 }
 
 void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_specular, Texture2D* ao, 
-	GRAPHICSTHREAD threadID, int stencilRef){
+	GRAPHICSTHREAD threadID, int stencilRef)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	wiRenderer::GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-	wiRenderer::GetDevice()->BindRasterizerState(rasterizerState,threadID);
-	wiRenderer::GetDevice()->BindDepthStencilState(depthStencilStateLess,stencilRef,threadID);
+	device->EventBegin(L"DeferredComposition", threadID);
 
-	wiRenderer::GetDevice()->BindVertexLayout(nullptr, threadID);
-	wiRenderer::GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
-	wiRenderer::GetDevice()->BindIndexBuffer(nullptr, threadID);
+	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
+	device->BindRasterizerState(rasterizerState,threadID);
+	device->BindDepthStencilState(depthStencilStateLess,stencilRef,threadID);
 
-	wiRenderer::GetDevice()->BindVS(screenVS,threadID);
-	wiRenderer::GetDevice()->BindPS(deferredPS,threadID);
+	device->BindVertexLayout(nullptr, threadID);
+	device->BindVertexBuffer(nullptr, 0, 0, threadID);
+	device->BindIndexBuffer(nullptr, threadID);
 
-	wiRenderer::GetDevice()->BindResourcePS(lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
-	wiRenderer::GetDevice()->BindResourcePS(lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
-	wiRenderer::GetDevice()->BindResourcePS(ao,TEXSLOT_ONDEMAND2,threadID);
+	device->BindVS(screenVS,threadID);
+	device->BindPS(deferredPS,threadID);
 
-	wiRenderer::GetDevice()->BindBlendState(blendStateNoBlend,threadID);
+	device->BindResourcePS(lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResourcePS(lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
+	device->BindResourcePS(ao,TEXSLOT_ONDEMAND2,threadID);
 
-	wiRenderer::GetDevice()->Draw(3,threadID);
+	device->BindBlendState(blendStateNoBlend,threadID);
+
+	device->Draw(3,threadID);
+
+	device->EventEnd();
 }
 
 
