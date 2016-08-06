@@ -3480,7 +3480,13 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 			{
 				for (auto& decal : model->decals)
 				{
-					if (decal->bounds.intersects(ray))
+					XMVECTOR localOrigin=XMLoadFloat3(&ray.origin), localDirection=XMLoadFloat3(&ray.direction);
+					XMMATRIX localTransform = XMLoadFloat4x4(&decal->world);
+					localTransform = XMMatrixInverse(nullptr, localTransform);
+					localOrigin = XMVector3Transform(localOrigin, localTransform);
+					localDirection = XMVector3TransformNormal(localDirection, localTransform);
+					RAY localRay = RAY(localOrigin, localDirection);
+					if (AABB(XMFLOAT3(-1, -1, -1),XMFLOAT3(1, 1, 1)).intersects(localRay))
 					{
 						Picked pick = Picked();
 						pick.transform = decal;
