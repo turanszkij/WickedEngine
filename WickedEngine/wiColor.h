@@ -27,6 +27,7 @@ public:
 	static wiColor Transparent;
 	static wiColor Gray;
 	static wiColor Ghost;
+	static wiColor Booger;
 };
 
 

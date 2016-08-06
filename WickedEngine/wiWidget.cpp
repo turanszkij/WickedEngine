@@ -14,7 +14,7 @@ wiWidget::wiWidget():Transform()
 	state = IDLE;
 	enabled = true;
 	visible = true;
-	colors[IDLE] = wiColor::Ghost;
+	colors[IDLE] = wiColor::Booger;
 	colors[FOCUS] = wiColor::Gray;
 	colors[ACTIVE] = wiColor::White;
 	colors[DEACTIVATING] = wiColor::Gray;
