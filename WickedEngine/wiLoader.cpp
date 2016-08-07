@@ -3928,7 +3928,7 @@ void Light::UpdateLight()
 			}
 			for (unsigned int i = 0; i < shadowCam_pointLight.size(); ++i) {
 				shadowCam_pointLight[i].Update(XMLoadFloat3(&translation));
-				shadowCam_spotLight[i].farplane = enerDis.y;
+				shadowCam_pointLight[i].farplane = enerDis.y;
 				shadowCam_pointLight[i].Create_Perspective(XM_PIDIV2);
 			}
 		}

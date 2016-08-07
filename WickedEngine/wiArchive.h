@@ -6,10 +6,12 @@ class wiArchive
 {
 private:
 	uint64_t version;
-	fstream file;
 	bool readMode;
-	streamsize pos;
+	size_t pos;
 	char* DATA;
+	size_t dataSize;
+
+	string fileName; // save to this file on closing if not empty
 public:
 	wiArchive(const string& fileName, bool readMode = true);
 	~wiArchive();
@@ -18,6 +20,7 @@ public:
 	bool IsReadMode() { return readMode; }
 	bool IsOpen();
 	void Close();
+	bool SaveFile(const string& fileName);
 
 	// It could be templated but we have to be extremely careful of different datasizes on different platforms
 	// because serialized data should be interchangeable!
@@ -103,9 +106,7 @@ public:
 	{
 		uint64_t len = (uint64_t)(data.length() + 1); // +1 for the null-terminator
 		_write(len);
-		file.seekp(pos);
-		file.write(data.c_str(), sizeof(char)*len);
-		pos += sizeof(char)*len;
+		_write(*data.c_str(), len);
 		return *this;
 	}
 
@@ -205,8 +206,7 @@ public:
 		_read(len);
 		char* str = new char[(size_t)len];
 		memset(str, '\0', (size_t)(sizeof(char)*len));
-		memcpy(str, reinterpret_cast<void*>((uint64_t)DATA + (uint64_t)pos), (size_t)(sizeof(char)*len));
-		pos += (size_t)(sizeof(char)*len);
+		_read(*str, len);
 		data = string(str);
 		delete[] str;
 		return *this;
@@ -220,20 +220,30 @@ private:
 	// Any specific type serialization should be implemented by hand
 	// But these can be used as helper functions inside this class
 
-	// Write data using stream operations
+	// Write data using memory operations
 	template<typename T>
-	void _write(const T& data)
+	void _write(const T& data, uint64_t count = 1)
 	{
-		file.seekp(pos);
-		file.write(reinterpret_cast<const char*>(&data), sizeof(data));
-		pos += sizeof(data);
+		size_t _size = (size_t)(sizeof(data)*count);
+		size_t _right = pos + _size;
+		if (_right > dataSize)
+		{
+			char* NEWDATA = new char[_right * 2];
+			memcpy(NEWDATA, DATA, dataSize);
+			dataSize = _right * 2;
+			SAFE_DELETE_ARRAY(DATA);
+			DATA = NEWDATA;
+		}
+		memcpy(reinterpret_cast<void*>((uint64_t)DATA + (uint64_t)pos), &data, _size);
+		pos = _right;
 	}
+
 	// Read data using memory operations
 	template<typename T>
-	void _read(T& data)
+	void _read(T& data, uint64_t count = 1)
 	{
-		memcpy(&data, reinterpret_cast<void*>((uint64_t)DATA + (uint64_t)pos), sizeof(data));
-		pos += sizeof(data);
+		memcpy(&data, reinterpret_cast<void*>((uint64_t)DATA + (uint64_t)pos), (size_t)(sizeof(data)*count));
+		pos += (size_t)(sizeof(data)*count);
 	}
 };
 
