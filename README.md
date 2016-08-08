@@ -11,7 +11,7 @@ From now on you can easily set up a game project by using the component template
 
 
 ### Platforms:
-- Windows PC Desktop (tested for version 0.8.22)
+- Windows PC Desktop (tested for version 0.8.38)
 - Universal Windows (tested for version 0.7.6)
 
 ### Requirements:
