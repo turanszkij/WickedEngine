@@ -3719,7 +3719,6 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 	AddModel(model);
 
-
 	LoadWorldInfo(dir, name);
 
 	unique_identifier++;
@@ -3728,7 +3727,7 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 }
 void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
 {
-	LoadWiWorldInfo(dir, name+".wiw", GetScene().worldInfo, GetScene().wind);
+	LoadWiWorldInfo(/*dir*/"", name+".wiw", GetScene().worldInfo, GetScene().wind);
 
 	GetDevice()->LOCK();
 	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);

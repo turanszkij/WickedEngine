@@ -2,7 +2,6 @@
 #define WHELPER
 
 #include "CommonInclude.h"
-#include <locale>
 
 namespace wiHelper
 {
@@ -16,9 +15,21 @@ namespace wiHelper
 
 	string getCurrentDateTimeAsString();
 
+	string GetApplicationDirectory();
+
+	string GetOriginalWorkingDirectory();
+
 	string GetWorkingDirectory();
 
+	bool SetWorkingDirectory(const string& path);
+
 	void GetFilesInDirectory(vector<string> &out, const string &directory);
+
+	void SplitPath(const string& fullPath, string& dir, string& fileName);
+
+	string GetFileNameFromPath(const string& fullPath);
+
+	string GetDirectoryFromPath(const string& fullPath);
 };
 
 #endif

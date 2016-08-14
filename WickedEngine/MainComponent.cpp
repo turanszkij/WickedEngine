@@ -14,6 +14,9 @@
 
 MainComponent::MainComponent()
 {
+	// This call also saves the current working dir as the original one on this first call
+	wiHelper::GetOriginalWorkingDirectory();
+
 	screenW = 0;
 	screenH = 0;
 	fullscreen = false;
@@ -86,7 +89,7 @@ void MainComponent::run()
 	if (frameskip)
 	{
 		accumulator += elapsedTime;
-		if (accumulator > applicationControlLostThreshold) //application probably lost control
+		if (!wiWindowRegistration::GetInstance()->IsWindowActive() || accumulator > applicationControlLostThreshold) //application probably lost control
 			accumulator = 0;
 
 		while (accumulator >= targetFrameRateInv)

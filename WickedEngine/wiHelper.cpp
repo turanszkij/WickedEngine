@@ -3,10 +3,13 @@
 #include "wiBackLog.h"
 #include "wiWindowRegistration.h"
 
+#include <locale>
+#include <direct.h>
+
 namespace wiHelper
 {
 
-	string toUpper(const std::string& s)
+	string toUpper(const string& s)
 	{
 		std::string result;
 		std::locale loc;
@@ -74,10 +77,35 @@ namespace wiHelper
 		return ss.str();
 	}
 
-#include <direct.h>
+	string GetApplicationDirectory()
+	{
+		static string __appDir;
+		static bool __initComplete = false;
+		if (!__initComplete)
+		{
+			LPSTR fileName = new CHAR[MAX_TEXT];
+			GetModuleFileNameA(NULL, fileName, MAX_TEXT);
+			__appDir = GetDirectoryFromPath(fileName);
+			delete[] fileName;
+			__initComplete = true;
+		}
+		return __appDir;
+	}
+
+	string GetOriginalWorkingDirectory()
+	{
+		static const string __originalWorkingDir = GetWorkingDirectory();
+		return __originalWorkingDir;
+	}
+
 	string GetWorkingDirectory()
 	{
-		return _getcwd(NULL, 0);
+		return string(_getcwd(NULL, 0)) + "/";
+	}
+
+	bool SetWorkingDirectory(const string& path)
+	{
+		return _chdir(path.c_str()) == 0;
 	}
 
 	void GetFilesInDirectory(vector<string>& out, const string& directory)
@@ -132,5 +160,27 @@ namespace wiHelper
 		//	out.push_back(full_file_name);
 		//}
 		//closedir(dir);
+	}
+
+	void SplitPath(const string& fullPath, string& dir, string& fileName)
+	{
+		size_t found;
+		found = fullPath.find_last_of("/\\");
+		dir = fullPath.substr(0, found + 1);
+		fileName = fullPath.substr(found + 1);
+	}
+
+	string GetFileNameFromPath(const string& fullPath)
+	{
+		string ret, empty;
+		SplitPath(fullPath, empty, ret);
+		return ret;
+	}
+
+	string GetDirectoryFromPath(const string& fullPath)
+	{
+		string ret, empty;
+		SplitPath(fullPath, ret, empty);
+		return ret;
 	}
 }

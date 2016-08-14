@@ -1521,37 +1521,43 @@ void Material::Serialize(wiArchive& archive)
 			archive >> parallaxOcclusionMapping;
 		}
 
+		string texturesDir = "textures/";
 		if (!refMapName.empty())
 		{
+			refMapName = texturesDir + refMapName;
 			refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(refMapName);
 		}
 		if (!textureName.empty())
 		{
+			textureName = texturesDir + textureName;
 			texture = (Texture2D*)wiResourceManager::GetGlobal()->add(textureName);
 		}
 		if (!normalMapName.empty())
 		{
+			normalMapName = texturesDir + normalMapName;
 			normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(normalMapName);
 		}
 		if (!displacementMapName.empty())
 		{
+			displacementMapName = texturesDir + displacementMapName;
 			displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(displacementMapName);
 		}
 		if (!specularMapName.empty())
 		{
+			specularMapName = texturesDir + specularMapName;
 			specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(specularMapName);
 		}
 	}
 	else
 	{
 		archive << name;
-		archive << refMapName;
-		archive << textureName;
+		archive << wiHelper::GetFileNameFromPath(refMapName);
+		archive << wiHelper::GetFileNameFromPath(textureName);
 		archive << premultipliedTexture;
 		archive << (int)blendFlag;
-		archive << normalMapName;
-		archive << displacementMapName;
-		archive << specularMapName;
+		archive << wiHelper::GetFileNameFromPath(normalMapName);
+		archive << wiHelper::GetFileNameFromPath(displacementMapName);
+		archive << wiHelper::GetFileNameFromPath(specularMapName);
 		archive << water;
 		archive << movingTex;
 		archive << framesToWaitForTexCoordOffset;
@@ -2297,7 +2303,12 @@ void Model::CleanUp()
 }
 void Model::LoadFromDisk(const string& dir, const string& name, const string& identifier)
 {
-	wiArchive archive(dir + name + ".wimf", true);
+	if (!dir.empty())
+	{
+		wiHelper::SetWorkingDirectory(wiHelper::GetOriginalWorkingDirectory() + dir);
+	}
+
+	wiArchive archive(name + ".wimf", true);
 	if (archive.IsOpen())
 	{
 		// New Import if wimf model is available
@@ -2309,7 +2320,7 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		stringstream directory(""), armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
 			, actionsFilePath(""), lightsFilePath(""), decalsFilePath("");
 
-		directory << dir;
+		//directory << dir;
 		armatureFilePath << name << ".wia";
 		materialLibFilePath << name << ".wim";
 		meshesFilePath << name << ".wi";
@@ -3616,20 +3627,23 @@ void Decal::Serialize(wiArchive& archive)
 		archive >> life;
 		archive >> fadeStart;
 
+		string texturesDir = "textures/";
 		if (!texName.empty())
 		{
+			texName = texturesDir + texName;
 			texture = (Texture2D*)wiResourceManager::GetGlobal()->add(texName);
 		}
 		if (!norName.empty())
 		{
+			norName = texturesDir + norName;
 			normal = (Texture2D*)wiResourceManager::GetGlobal()->add(norName);
 		}
 
 	}
 	else
 	{
-		archive << texName;
-		archive << norName;
+		archive << wiHelper::GetFileNameFromPath(texName);
+		archive << wiHelper::GetFileNameFromPath(norName);
 		archive << life;
 		archive << fadeStart;
 	}
@@ -3962,6 +3976,7 @@ void Light::Serialize(wiArchive& archive)
 		{
 			archive >> rim;
 			Texture2D* tex;
+			rim = "rims/" + rim;
 			if (!rim.empty() && (tex = (Texture2D*)wiResourceManager::GetGlobal()->add(rim)) != nullptr) {
 				lensFlareRimTextures.push_back(tex);
 				lensFlareNames.push_back(rim);
@@ -3979,7 +3994,7 @@ void Light::Serialize(wiArchive& archive)
 		archive << lensFlareNames.size();
 		for (auto& x : lensFlareNames)
 		{
-			archive << x;
+			archive << wiHelper::GetFileNameFromPath(x);
 		}
 	}
 }
