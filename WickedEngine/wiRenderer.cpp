@@ -193,9 +193,9 @@ void wiRenderer::SetUpStaticComponents()
 
 	//cam = new Camera(GetDevice()->GetScreenWidth(), GetDevice()->GetScreenHeight(), 0.1f, 800, XMVectorSet(0, 4, -4, 1));
 	cam = new Camera();
-	cam->SetUp(GetDevice()->GetScreenWidth(), GetDevice()->GetScreenHeight(), 0.1f, 800);
+	cam->SetUp((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight(), 0.1f, 800);
 	refCam = new Camera();
-	refCam->SetUp(GetDevice()->GetScreenWidth(), GetDevice()->GetScreenHeight(), 0.1f, 800);
+	refCam->SetUp((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight(), 0.1f, 800);
 	prevFrameCam = new Camera;
 	
 
@@ -1818,18 +1818,18 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 			for (int i = 0; i <= a; ++i)
 			{
 				verts[count++] = XMFLOAT4(i - a*0.5f, 0, -a*0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 
 				verts[count++] = XMFLOAT4(i - a*0.5f, 0, +a*0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 			}
 			for (int j = 0; j <= a; ++j)
 			{
 				verts[count++] = XMFLOAT4(-a*0.5f, 0, j - a*0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 
 				verts[count++] = XMFLOAT4(+a*0.5f, 0, j - a*0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 			}
 
 			gridVertexCount = ARRAYSIZE(verts) / 2;
@@ -2712,39 +2712,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 				break;
 		}
 
-		//if (!GetScene().environmentProbes.empty())
-		//{
-		//	// Get the closest probes to the camera and bind to shader
-		//	vector<EnvironmentProbe*> sortedEnvProbes;
-		//	vector<float> sortedDistances;
-		//	sortedEnvProbes.reserve(GetScene().environmentProbes.size());
-		//	sortedDistances.reserve(GetScene().environmentProbes.size());
-		//	for (unsigned int i = 0; i < GetScene().environmentProbes.size(); ++i)
-		//	{
-		//		sortedEnvProbes.push_back(GetScene().environmentProbes[i]);
-		//		sortedDistances.push_back(wiMath::DistanceSquared(camera->translation, GetScene().environmentProbes[i]->translation));
-		//	}
-		//	for (unsigned int i = 0; i < sortedEnvProbes.size() - 1; ++i)
-		//	{
-		//		for (unsigned int j = i + 1; j < sortedEnvProbes.size(); ++j)
-		//		{
-		//			if (sortedDistances[i] > sortedDistances[j])
-		//			{
-		//				float swapDist = sortedDistances[i];
-		//				sortedDistances[i] = sortedDistances[j];
-		//				sortedDistances[j] = swapDist;
-		//				EnvironmentProbe* swapProbe = sortedEnvProbes[i];
-		//				sortedEnvProbes[i] = sortedEnvProbes[j];
-		//				sortedEnvProbes[j] = swapProbe;
-		//			}
-		//		}
-		//	}
-		//	for (unsigned int i = 0; i < min(sortedEnvProbes.size(), 2); ++i)
-		//	{
-		//		envMaps[i] = sortedEnvProbes[i]->cubeMap.GetTexture();
-		//		envMapPositions[i] = sortedEnvProbes[i]->translation;
-		//	}
-		//}
 		MiscCB envProbeCB;
 		envProbeCB.mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
 		envProbeCB.mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
@@ -2796,20 +2763,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 
 		if (wireRender)
 			GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
-		//else 
-		//	if (BlackOut)
-		//		GetDevice()->BindPS(pixelShaders[PSTYPE_BLACKOUT], threadID);
-		//	else if (shaderType == SHADERTYPE_NONE)
-		//		GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
-		//	else if (shaderType == SHADERTYPE_DEFERRED)
-		//		GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED], threadID);
-		//	else if (shaderType == SHADERTYPE_FORWARD_SIMPLE)
-		//		GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARDSIMPLE], threadID);
-		//	else
-		//		return;
 
 
-			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
 		if(!wireRender) {
 			if (enviroMap != nullptr)
@@ -2829,6 +2785,39 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			Mesh* mesh = iter->first;
 			CulledObjectList& visibleInstances = iter->second;
 
+
+			if (mesh->hasImpostor())
+			{
+				int k = 0;
+				for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
+					if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
+						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency, (*viter)->color), k, threadID);
+						++k;
+					}
+				}
+				if (k<1)
+					continue;
+				Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+
+				MaterialCB mcb;
+				ZeroMemory(&mcb, sizeof(mcb));
+				mcb.baseColor = XMFLOAT4(1, 1, 1, 1);
+				mcb.texMulAdd = XMFLOAT4(1, 1, 0, 0);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+
+				GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
+				GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
+
+				GetDevice()->BindIndexBuffer(nullptr, threadID);
+				GetDevice()->BindVertexBuffer(&Mesh::impostorVB, 0, sizeof(Vertex), threadID);
+				GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+				GetDevice()->BindResourcePS(mesh->impostorTargets[0].GetTexture(), TEXSLOT_ONDEMAND0, threadID);
+				//GetDevice()->BindResourcePS(wiTextureHelper::getInstance()->getColor(wiColor::Red), TEXSLOT_ONDEMAND0, threadID);
+				GetDevice()->BindVS(vertexShaders[(isReflection?VSTYPE_OBJECT_REFLECTION:VSTYPE_OBJECT10)], threadID);
+				GetDevice()->BindPS(pixelShaders[(shaderType==SHADERTYPE_DEFERRED?PSTYPE_OBJECT_DEFERRED:PSTYPE_OBJECT_FORWARD_DIRLIGHT)], threadID);
+				GetDevice()->DrawInstanced(6, visibleInstances.size(), threadID);
+				continue;
+			}
 
 			if(!mesh->doubleSided)
 				GetDevice()->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE]:rasterizers[RSTYPE_FRONT],threadID);
@@ -3991,6 +3980,142 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	//enviroMap = probe->cubeMap.GetTexture();
 
 	scene->environmentProbes.push_back(probe);
+
+	GetDevice()->UNLOCK();
+}
+
+void wiRenderer::CreateImpostor(Mesh* mesh)
+{
+	const GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+
+	const AABB& bbox = mesh->aabb;
+	const XMFLOAT3 extents = bbox.getHalfWidth();
+	if (mesh->impostorTargets.empty())
+	{
+		mesh->impostorTargets.resize(6);
+		for (auto& x : mesh->impostorTargets)
+		{
+			x.Initialize(512, 512, true, FORMAT_R8G8B8A8_UNORM, 0);
+		}
+	}
+
+	Camera savedCam = *cam;
+
+	GetDevice()->LOCK();
+
+
+	Mesh::AddRenderableInstance(Instance(XMMatrixIdentity()), 0, threadID);
+	Mesh::UpdateRenderableInstances(1, threadID);
+	GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+	GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+
+
+	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
+	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
+	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
+	GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
+
+	for (size_t i = 0; i < mesh->impostorTargets.size(); ++i)
+	{
+		mesh->impostorTargets[i].Activate(threadID, 0, 0, 0, 0);
+
+		cam->Clear();
+		cam->Translate(bbox.getCenter());
+		switch (i)
+		{
+		case 0:
+		{
+			// front capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+			XMStoreFloat4x4(&cam->Projection, ortho);
+		}
+		break;
+		case 1:
+		{
+			// right capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
+			XMStoreFloat4x4(&cam->Projection, ortho);
+			cam->RotateRollPitchYaw(XMFLOAT3(0, -XM_PIDIV2, 0));
+		}
+		break;
+		case 2:
+		{
+			// back capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+			XMStoreFloat4x4(&cam->Projection, ortho);
+			cam->RotateRollPitchYaw(XMFLOAT3(0, XM_PI, 0));
+		}
+		break;
+		case 3:
+		{
+			// left capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
+			XMStoreFloat4x4(&cam->Projection, ortho);
+			cam->RotateRollPitchYaw(XMFLOAT3(0, XM_PIDIV2, 0));
+		}
+		break;
+		case 4:
+		{
+			// bottom capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
+			XMStoreFloat4x4(&cam->Projection, ortho);
+			cam->RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
+		}
+		break;
+		case 5:
+		{
+			// top capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
+			XMStoreFloat4x4(&cam->Projection, ortho);
+			cam->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+		}
+		break;
+		default:
+			break;
+		}
+		cam->UpdateProps();
+		UpdateCameraCB(threadID);
+
+		for (MeshSubset& subset : mesh->subsets)
+		{
+			if (subset.subsetIndices.empty())
+			{
+				continue;
+			}
+			if (!subset.material->IsTransparent() && !subset.material->isSky && !subset.material->water)
+			{
+				GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+
+				MaterialCB mcb;
+				mcb.Create(*subset.material);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+
+				GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+				GetDevice()->BindResourcePS(subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+				GetDevice()->BindResourcePS(subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
+				GetDevice()->BindResourcePS(subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
+				GetDevice()->BindResourcePS(subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+				GetDevice()->BindResourcePS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
+
+
+				GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), 1, threadID);
+			}
+		}
+
+		GetDevice()->GenerateMips(mesh->impostorTargets[i].GetTexture(), threadID);
+	}
+	//GetDevice()->SaveTexturePNG("d:\\asd0.png", mesh->impostorTargets[0].GetTexture(), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd1.png", mesh->impostorTargets[1].GetTexture(), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd2.png", mesh->impostorTargets[2].GetTexture(), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd3.png", mesh->impostorTargets[3].GetTexture(), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd4.png", mesh->impostorTargets[4].GetTexture(), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd5.png", mesh->impostorTargets[5].GetTexture(), threadID);
+
+	*cam = savedCam;
+	UpdateCameraCB(threadID);
 
 	GetDevice()->UNLOCK();
 }

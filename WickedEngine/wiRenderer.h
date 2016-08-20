@@ -472,6 +472,8 @@ public:
 
 	static void PutEnvProbe(const XMFLOAT3& position, int resolution = 256);
 
+	static void CreateImpostor(Mesh* mesh);
+
 	static vector<wiTranslator*> renderableTranslators;
 	// Add translator to render in next frame
 	static void AddRenderableTranslator(wiTranslator* translator);

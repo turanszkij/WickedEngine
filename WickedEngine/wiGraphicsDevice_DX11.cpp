@@ -2169,7 +2169,11 @@ void GraphicsDevice_DX11::DrawIndexed(int indexCount, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->DrawIndexed(indexCount, 0, 0);
 }
-void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::DrawInstanced(int vertexCount, int instanceCount, GRAPHICSTHREAD threadID) 
+{
+	deviceContexts[threadID]->DrawInstanced(vertexCount, instanceCount, 0, 0);
+}
+void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, 0, 0, 0);
 }

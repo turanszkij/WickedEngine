@@ -369,6 +369,10 @@ struct Mesh{
 	int massVG,goalVG,softVG; //vertexGroupID
 	vector<XMFLOAT3> goalPositions,goalNormals;
 
+	vector<wiRenderTarget>	impostorTargets;
+	float impostorDistance;
+	static wiGraphicsTypes::GPUBuffer	impostorVB;
+
 	Mesh(){
 		init();
 	}
@@ -411,9 +415,11 @@ struct Mesh{
 		arraysComplete = false;
 		calculatedAO = false;
 		armatureName = "";
+		impostorDistance = 0.0f;
 	}
 	
-	bool hasArmature()const{return armature!=nullptr;}
+	bool hasArmature()const { return armature != nullptr; }
+	bool hasImpostor()const { return !impostorTargets.empty(); }
 	void Serialize(wiArchive& archive);
 };
 struct Cullable
@@ -846,7 +852,7 @@ struct Camera:public Transform{
 		rotation_rest=newRot;
 		name=newName;
 	}
-	void SetUp(int newWidth, int newHeight, float newNear, float newFar, float fov = XM_PI / 3.0f)
+	void SetUp(float newWidth, float newHeight, float newNear, float newFar, float fov = XM_PI / 3.0f)
 	{
 		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
@@ -854,8 +860,8 @@ struct Camera:public Transform{
 		zNearP = newNear;
 		zFarP = newFar;
 
-		width = (float)newWidth;
-		height = (float)newHeight;
+		width = newWidth;
+		height = newHeight;
 
 		this->fov = fov;
 
@@ -931,7 +937,7 @@ struct Camera:public Transform{
 	}
 	void UpdateProjection()
 	{
-		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, (float)width / (float)height, zNearP, zFarP);
+		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP);
 		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
 		XMStoreFloat4x4(&this->Projection, P);
 		XMStoreFloat4x4(&this->InvProjection, InvP);

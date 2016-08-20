@@ -1629,6 +1629,7 @@ void VertexGroup::Serialize(wiArchive& archive)
 #pragma region MESH
 
 GPUBuffer Mesh::instanceBuffer;
+GPUBuffer Mesh::impostorVB;
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
 	, const MaterialCollection& materialColl, list<Armature*> armatures, const string& identifier) {
@@ -1940,7 +1941,50 @@ void Mesh::CreateBuffers(Object* object) {
 			bd.ByteWidth = sizeof(Instance) * 2;
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, 0, &instanceBuffer);
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBuffer);
+		}
+		if (!impostorVB.IsValid())
+		{
+			Vertex impostorVertices[6];
+			impostorVertices[0].pos = XMFLOAT4(-1, 1, 0, 1);
+			impostorVertices[0].nor = XMFLOAT4(0, 0, -1, 1);
+			impostorVertices[0].tex = XMFLOAT4(0, 0, 0, 0);
+			impostorVertices[0].pre = XMFLOAT4(-1, 1, 0, 1);
+
+			impostorVertices[1].pos = XMFLOAT4(1, 1, 0, 1);
+			impostorVertices[1].nor = XMFLOAT4(0, 0, -1, 1);
+			impostorVertices[1].tex = XMFLOAT4(1, 0, 0, 0);
+			impostorVertices[1].pre = XMFLOAT4(1, 1, 0, 1);
+
+			impostorVertices[2].pos = XMFLOAT4(-1, -1, 0, 1);
+			impostorVertices[2].nor = XMFLOAT4(0, 0, -1, 1);
+			impostorVertices[2].tex = XMFLOAT4(0, 1, 0, 0);
+			impostorVertices[2].pre = XMFLOAT4(-1, -1, 0, 1);
+
+			impostorVertices[3].pos = XMFLOAT4(-1, -1, 0, 1);
+			impostorVertices[3].nor = XMFLOAT4(0, 0, -1, 1);
+			impostorVertices[3].tex = XMFLOAT4(0, 1, 0, 0);
+			impostorVertices[3].pre = XMFLOAT4(-1, -1, 0, 1);
+
+			impostorVertices[4].pos = XMFLOAT4(1, -1, 0, 1);
+			impostorVertices[4].nor = XMFLOAT4(0, 0, -1, 1);
+			impostorVertices[4].tex = XMFLOAT4(1, 1, 0, 0);
+			impostorVertices[4].pre = XMFLOAT4(1, -1, 0, 1);
+
+			impostorVertices[5].pos = XMFLOAT4(1, 1, 0, 1);
+			impostorVertices[5].nor = XMFLOAT4(0, 0, -1, 1);
+			impostorVertices[5].tex = XMFLOAT4(1, 0, 0, 0);
+			impostorVertices[5].pre = XMFLOAT4(1, 1, 0, 1);
+
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.ByteWidth = sizeof(impostorVertices);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = impostorVertices;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB);
 		}
 
 
@@ -1980,7 +2024,7 @@ void Mesh::CreateBuffers(Object* object) {
 				bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride = 0;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, &streamoutBuffer);
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer);
 			}
 
 			//PHYSICALMAPPING
