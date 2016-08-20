@@ -420,6 +420,9 @@
     <FxCompile Include="objectPS_deferred_pom.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="captureImpostorPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

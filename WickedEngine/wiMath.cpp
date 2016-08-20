@@ -110,6 +110,11 @@ namespace wiMath
 		else if (val > max) return max;
 		return val;
 	}
+	float SmoothStep(float value1, float value2, float amount)
+	{
+		amount = Clamp((amount - value1) / (value2 - value1), 0.0f, 1.0f);
+		return amount*amount*amount*(amount*(amount * 6 - 15) + 10);
+	}
 
 	XMFLOAT3 getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XMFLOAT3& endPos
 		, const XMFLOAT3& startTangent, const XMFLOAT3& endTangent

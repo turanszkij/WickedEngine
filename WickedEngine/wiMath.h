@@ -20,6 +20,7 @@ namespace wiMath
 	XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b);
 	float Clamp(float val, float min, float max);
 	UINT GetNextPowerOfTwo(UINT x);
+	float SmoothStep(float value1, float value2, float amount);
 
 	XMFLOAT3 getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XMFLOAT3& endPos
 							, const XMFLOAT3& startTangent, const XMFLOAT3& endTangent

@@ -415,7 +415,7 @@ struct Mesh{
 		arraysComplete = false;
 		calculatedAO = false;
 		armatureName = "";
-		impostorDistance = 0.0f;
+		impostorDistance = 100.0f;
 	}
 	
 	bool hasArmature()const { return armature != nullptr; }
