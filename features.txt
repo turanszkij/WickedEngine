@@ -55,3 +55,4 @@ Deferred decals
 Color Grading
 Lua Scripting
 Dynamic environment mapping
+Impostor system

@@ -2794,7 +2794,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 				for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
 					if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
 						const float impostorThreshold = (*viter)->bounds.getRadius();
-						float dist = wiMath::Distance(camera->translation, (*viter)->translation);
+						float dist = wiMath::Distance(camera->translation, (*viter)->bounds.getCenter());
 						float dither = (*viter)->transparency;
 						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - impostorDistance) / impostorThreshold, 0, 1));
 						if (dither > 1.0f - FLT_EPSILON)
@@ -2818,20 +2818,19 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 					mcb.metalness = 1.0f;
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
-					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
+					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
 					GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
 					GetDevice()->BindVertexBuffer(&Mesh::impostorVB, 0, sizeof(Vertex), threadID);
 					GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTargets[0].GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTargets[0].GetTexture(1), TEXSLOT_ONDEMAND1, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTargets[0].GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTargets[0].GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTargets[0].GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
+					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
+					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(1), TEXSLOT_ONDEMAND1, threadID);
+					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
+					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
+					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
 					GetDevice()->BindPS(pixelShaders[(shaderType == SHADERTYPE_DEFERRED ? PSTYPE_OBJECT_DEFERRED_NORMALMAP : PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP)], threadID);
-					GetDevice()->DrawInstanced(6, k, threadID);
-					//continue;
+					GetDevice()->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
 				}
 			}
 
@@ -2845,10 +2844,10 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			for(CulledObjectList::iterator viter=visibleInstances.begin();viter!=visibleInstances.end();++viter){
 				if((*viter)->emitterType !=Object::EmitterType::EMITTER_INVISIBLE){
 					const float impostorThreshold = (*viter)->bounds.getRadius();
-					float dist = wiMath::Distance(camera->translation, (*viter)->translation);
+					float dist = wiMath::Distance(camera->translation, (*viter)->bounds.getCenter());
 					float dither = (*viter)->transparency;
 					if(mesh->hasImpostor())
-						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold * 0.5f - impostorDistance) / impostorThreshold, 0, 1));
+						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - impostorDistance) / impostorThreshold, 0, 1));
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
 					if (mesh->softBody || (*viter)->isArmatureDeformed())
@@ -4011,21 +4010,21 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 void wiRenderer::CreateImpostor(Mesh* mesh)
 {
-	const GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+	Mesh::CreateImpostorVB();
+
+	static const GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+	static const int res = 256;
 
 	const AABB& bbox = mesh->aabb;
 	const XMFLOAT3 extents = bbox.getHalfWidth();
-	if (mesh->impostorTargets.empty())
+	if (!mesh->impostorTarget.IsInitialized())
 	{
-		mesh->impostorTargets.resize(6);
-		for (auto& x : mesh->impostorTargets)
-		{
-			x.Initialize(512, 512, true, FORMAT_R8G8B8A8_UNORM, 0);
-			x.Add(FORMAT_R8G8B8A8_UNORM);	// normal
-			x.Add(FORMAT_R8_UNORM);			// roughness
-			x.Add(FORMAT_R8_UNORM);			// reflectance
-			x.Add(FORMAT_R8_UNORM);			// metalness
-		}
+		// TODO: Validate MRT format mismatch??? (Seems to work on Nvidia GT525M)
+		mesh->impostorTarget.Initialize(res * 6, res, true, FORMAT_R8G8B8A8_UNORM, 0);
+		mesh->impostorTarget.Add(FORMAT_R8G8B8A8_UNORM);	// normal
+		mesh->impostorTarget.Add(FORMAT_R8_UNORM);			// roughness
+		mesh->impostorTarget.Add(FORMAT_R8_UNORM);			// reflectance
+		mesh->impostorTarget.Add(FORMAT_R8_UNORM);			// metalness
 	}
 
 	Camera savedCam = *cam;
@@ -4047,9 +4046,15 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
 	GetDevice()->BindPS(pixelShaders[PSTYPE_CAPTUREIMPOSTOR], threadID);
 
-	for (size_t i = 0; i < mesh->impostorTargets.size(); ++i)
+	ViewPort savedViewPort = mesh->impostorTarget.viewPort;
+	mesh->impostorTarget.Activate(threadID, 0, 0, 0, 0);
+	for (size_t i = 0; i < 6; ++i)
 	{
-		mesh->impostorTargets[i].Activate(threadID, 0, 0, 0, 0);
+		mesh->impostorTarget.viewPort.Height = (float)res;
+		mesh->impostorTarget.viewPort.Width = (float)res;
+		mesh->impostorTarget.viewPort.TopLeftX = (float)(i*res);
+		mesh->impostorTarget.viewPort.TopLeftY = 0.f;
+		mesh->impostorTarget.Set(threadID);
 
 		cam->Clear();
 		cam->Translate(bbox.getCenter());
@@ -4075,7 +4080,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			// back capture
 			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
 			XMStoreFloat4x4(&cam->Projection, ortho);
-			cam->RotateRollPitchYaw(XMFLOAT3(0, XM_PI, 0));
+			cam->RotateRollPitchYaw(XMFLOAT3(0, -XM_PI, 0));
 		}
 		break;
 		case 3:
@@ -4134,16 +4139,15 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			}
 		}
 
-		GetDevice()->GenerateMips(mesh->impostorTargets[i].GetTexture(), threadID);
 	}
-	//GetDevice()->SaveTexturePNG("d:\\asd0_col.png", mesh->impostorTargets[0].GetTexture(0), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd0_nor.png", mesh->impostorTargets[0].GetTexture(1), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd1.png", mesh->impostorTargets[1].GetTexture(), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd2.png", mesh->impostorTargets[2].GetTexture(), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd3.png", mesh->impostorTargets[3].GetTexture(), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd4.png", mesh->impostorTargets[4].GetTexture(), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd5.png", mesh->impostorTargets[5].GetTexture(), threadID);
+	GetDevice()->GenerateMips(mesh->impostorTarget.GetTexture(), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd_col.png", mesh->impostorTarget.GetTexture(0), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd_nor.png", mesh->impostorTarget.GetTexture(1), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd_rou.png", mesh->impostorTarget.GetTexture(2), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd_ref.png", mesh->impostorTarget.GetTexture(3), threadID);
+	//GetDevice()->SaveTexturePNG("d:\\asd_met.png", mesh->impostorTarget.GetTexture(4), threadID);
 
+	mesh->impostorTarget.viewPort = savedViewPort;
 	*cam = savedCam;
 	UpdateCameraCB(threadID);
 

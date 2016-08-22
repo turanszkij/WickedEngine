@@ -27,9 +27,9 @@ class wiArchive;
 
 struct SkinnedVertex
 {
-	XMFLOAT4 pos; //pos, wind
+	XMFLOAT4 pos; //pos
 	XMFLOAT4 nor; //normal, vertex ao
-	XMFLOAT4 tex; //tex, matIndex, padding
+	XMFLOAT4 tex; //tex, matIndex, wind
 	XMFLOAT4 bon; //bone indices
 	XMFLOAT4 wei; //bone weights
 
@@ -52,9 +52,9 @@ struct SkinnedVertex
 };
 struct Vertex
 {
-	XMFLOAT4 pos; //pos, wind
+	XMFLOAT4 pos; //pos
 	XMFLOAT4 nor; //normal, vertex ao
-	XMFLOAT4 tex; //tex, matIndex, padding
+	XMFLOAT4 tex; //tex, matIndex, wind
 	XMFLOAT4 pre; //previous frame position
 
 	Vertex(){
@@ -369,7 +369,7 @@ struct Mesh{
 	int massVG,goalVG,softVG; //vertexGroupID
 	vector<XMFLOAT3> goalPositions,goalNormals;
 
-	vector<wiRenderTarget>	impostorTargets;
+	wiRenderTarget	impostorTarget;
 	float impostorDistance;
 	static wiGraphicsTypes::GPUBuffer	impostorVB;
 
@@ -387,6 +387,7 @@ struct Mesh{
 	void Optimize();
 	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
 	void CreateBuffers(Object* object);
+	static void CreateImpostorVB();
 	bool arraysComplete;
 	void CreateVertexArrays();
 	static void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
@@ -419,7 +420,7 @@ struct Mesh{
 	}
 	
 	bool hasArmature()const { return armature != nullptr; }
-	bool hasImpostor()const { return !impostorTargets.empty(); }
+	bool hasImpostor()const { return impostorTarget.IsInitialized(); }
 	void Serialize(wiArchive& archive);
 };
 struct Cullable
