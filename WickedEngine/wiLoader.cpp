@@ -3804,15 +3804,9 @@ void Decal::UpdateTransform()
 
 	XMMATRIX rotMat = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
 	XMVECTOR eye = XMLoadFloat3(&translation);
-	XMVECTOR frontV = XMVector3Transform(XMVectorSet(0, 0, 1, 0), rotMat);
-	XMStoreFloat3(&front, frontV);
-	XMVECTOR at = XMVectorAdd(eye, frontV);
-	XMVECTOR up = XMVector3Transform(XMVectorSet(0, 1, 0, 0), rotMat);
-	XMStoreFloat4x4(&view, XMMatrixLookAtLH(eye, at, up));
-	XMStoreFloat4x4(&projection, XMMatrixOrthographicLH(scale.x, scale.y, -scale.z * 0.5f, scale.z * 0.5f));
 	XMStoreFloat4x4(&world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&scale))*rotMat*XMMatrixTranslationFromVector(eye));
 
-	bounds.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(scale.x, scale.y, scale.z));
+	bounds.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(scale.x*0.5f, scale.y*0.5f, scale.z*0.5f));
 	bounds = bounds.get(XMLoadFloat4x4(&world_rest));
 
 }

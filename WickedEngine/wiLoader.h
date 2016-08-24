@@ -800,7 +800,6 @@ struct Decal : public Cullable, public Transform
 {
 	string texName,norName;
 	wiGraphicsTypes::Texture2D* texture,*normal;
-	XMFLOAT4X4 view,projection;
 	XMFLOAT3 front;
 	float life,fadeStart;
 

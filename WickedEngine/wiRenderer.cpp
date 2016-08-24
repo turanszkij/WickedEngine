@@ -3243,15 +3243,14 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 				GetDevice()->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
 				GetDevice()->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
 
+				XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
+
 				MiscCB dcbvs;
-				dcbvs.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&decal->world)*camera->GetViewProjection());
+				dcbvs.mTransform =XMMatrixTranspose(decalWorld*camera->GetViewProjection());
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
 				DecalCB dcbps;
-				dcbps.mDecalVP =
-					XMMatrixTranspose(
-						XMLoadFloat4x4(&decal->view)*XMLoadFloat4x4(&decal->projection)
-						);
+				dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld));
 				dcbps.hasTexNor = 0;
 				if (decal->texture != nullptr)
 					dcbps.hasTexNor |= 0x0000001;
