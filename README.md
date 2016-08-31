@@ -10,6 +10,7 @@ Demos are available at: https://github.com/turanszkij/WickedEngineDemos
 From now on you can easily set up a game project by using the component templates. (see the demos for examples)
 
 Video: https://www.youtube.com/watch?v=nNlfkrURqZQ
+
 Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg
 
 ### Platforms:
