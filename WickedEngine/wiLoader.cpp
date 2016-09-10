@@ -2715,6 +2715,7 @@ void Model::Add(Object* value)
 			{
 				materials.insert(pair<string, Material*>(x.material->name, x.material));
 			}
+			this->Add(value->mesh->armature);
 		}
 	}
 }
