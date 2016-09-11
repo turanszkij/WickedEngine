@@ -21,6 +21,8 @@ public:
 	bool IsOpen();
 	void Close();
 	bool SaveFile(const string& fileName);
+	string GetSourceDirectory();
+	string GetSourceFileName();
 
 	// It could be templated but we have to be extremely careful of different datasizes on different platforms
 	// because serialized data should be interchangeable!

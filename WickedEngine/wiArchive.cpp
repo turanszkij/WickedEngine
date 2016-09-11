@@ -88,3 +88,13 @@ bool wiArchive::SaveFile(const string& fileName)
 
 	return false;
 }
+
+string wiArchive::GetSourceDirectory()
+{
+	return wiHelper::GetDirectoryFromPath(fileName);
+}
+
+string wiArchive::GetSourceFileName()
+{
+	return fileName;
+}

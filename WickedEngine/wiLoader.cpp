@@ -1521,7 +1521,7 @@ void Material::Serialize(wiArchive& archive)
 			archive >> parallaxOcclusionMapping;
 		}
 
-		string texturesDir = "textures/";
+		string texturesDir = archive.GetSourceDirectory() + "textures/";
 		if (!refMapName.empty())
 		{
 			refMapName = texturesDir + refMapName;
@@ -2510,11 +2510,6 @@ void Model::CleanUp()
 }
 void Model::LoadFromDisk(const string& dir, const string& name, const string& identifier)
 {
-	if (!dir.empty())
-	{
-		wiHelper::SetWorkingDirectory(wiHelper::GetOriginalWorkingDirectory() + dir);
-	}
-
 	wiArchive archive(name + ".wimf", true);
 	if (archive.IsOpen())
 	{
@@ -3828,7 +3823,7 @@ void Decal::Serialize(wiArchive& archive)
 		archive >> life;
 		archive >> fadeStart;
 
-		string texturesDir = "textures/";
+		string texturesDir = archive.GetSourceDirectory() + "textures/";
 		if (!texName.empty())
 		{
 			texName = texturesDir + texName;
@@ -4177,7 +4172,7 @@ void Light::Serialize(wiArchive& archive)
 		{
 			archive >> rim;
 			Texture2D* tex;
-			rim = "rims/" + rim;
+			rim = archive.GetSourceDirectory() + "rims/" + rim;
 			if (!rim.empty() && (tex = (Texture2D*)wiResourceManager::GetGlobal()->add(rim)) != nullptr) {
 				lensFlareRimTextures.push_back(tex);
 				lensFlareNames.push_back(rim);

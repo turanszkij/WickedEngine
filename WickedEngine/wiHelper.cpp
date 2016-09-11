@@ -172,6 +172,11 @@ namespace wiHelper
 
 	string GetFileNameFromPath(const string& fullPath)
 	{
+		if (fullPath.empty())
+		{
+			return fullPath;
+		}
+
 		string ret, empty;
 		SplitPath(fullPath, empty, ret);
 		return ret;
@@ -179,6 +184,11 @@ namespace wiHelper
 
 	string GetDirectoryFromPath(const string& fullPath)
 	{
+		if (fullPath.empty())
+		{
+			return fullPath;
+		}
+
 		string ret, empty;
 		SplitPath(fullPath, ret, empty);
 		return ret;
