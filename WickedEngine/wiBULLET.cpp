@@ -458,7 +458,7 @@ void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vect
 void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 	, float newMass, float newFriction, float newRestitution, float newDamping){
 
-	const size_t vCount = mesh->physicsverts.size();
+	const int vCount = (int)mesh->physicsverts.size();
 	btScalar* btVerts = new btScalar[vCount*3];
 	for(int i=0;i<vCount*3;i+=3){
 		const int vindex = i/3;

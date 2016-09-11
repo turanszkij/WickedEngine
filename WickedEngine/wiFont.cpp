@@ -330,7 +330,7 @@ int wiFont::textWidth()
 {
 	int i=0;
 	int max=0,lineW=0;
-	size_t len=text.length();
+	int len=(int)text.length();
 	while(i<len){
 		if(text[i]=='\n') {
 			if(max<lineW) max=lineW;
@@ -351,7 +351,7 @@ int wiFont::textHeight()
 {
 	int i=0;
 	int lines=1;
-	size_t len=text.length();
+	int len=(int)text.length();
 	while(i<len){
 		if(text[i]=='\n') {
 			lines++;
