@@ -1413,7 +1413,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					}
 					if (mesh->armature->boneCollection.size() > maxBoneCount)
 					{
-						maxBoneCount = mesh->armature->boneCollection.size() * 2;
+						maxBoneCount = (int)mesh->armature->boneCollection.size() * 2;
 						SAFE_DELETE_ARRAY(bonebuf[threadID]);
 						bonebuf[threadID] = new ShaderBoneType[maxBoneCount];
 					}
@@ -1421,12 +1421,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						bonebuf[threadID][k].pose = mesh->armature->boneCollection[k]->boneRelativity;
 						bonebuf[threadID][k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
 					}
-					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf[threadID], threadID, sizeof(ShaderBoneType) * mesh->armature->boneCollection.size());
+					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf[threadID], threadID, (int)(sizeof(ShaderBoneType) * mesh->armature->boneCollection.size()));
 
 					// Do the skinning
 					GetDevice()->BindVertexBuffer(&mesh->vertexBuffer, 0, sizeof(SkinnedVertex), threadID);
 					GetDevice()->BindStreamOutTarget(&mesh->streamoutBuffer, threadID);
-					GetDevice()->Draw(mesh->vertices.size(), threadID);
+					GetDevice()->Draw((int)mesh->vertices.size(), threadID);
 
 					GetDevice()->EventEnd(threadID);
 #else
@@ -1445,7 +1445,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (mesh->softBody || mesh->hasArmature())
 #endif
 				{
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffer, mesh->vertices_Complete.data(), threadID, sizeof(Vertex)*mesh->vertices_Complete.size());
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffer, mesh->vertices_Complete.data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Complete.size()));
 				}
 			}
 		}
@@ -1921,7 +1921,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 
 			vector<RibbonVertex> trails;
 
-			int bounds = o->trail.size();
+			int bounds = (int)o->trail.size();
 			trails.reserve(bounds * 10);
 			int req = bounds-3;
 			for(int k=0;k<req;k+=2)
@@ -1959,10 +1959,10 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 				}
 			}
 			if(!trails.empty()){
-				GetDevice()->UpdateBuffer(&o->trailBuff,trails.data(),threadID,sizeof(RibbonVertex)*trails.size());
+				GetDevice()->UpdateBuffer(&o->trailBuff,trails.data(),threadID,(int)(sizeof(RibbonVertex)*trails.size()));
 
 				GetDevice()->BindVertexBuffer(&o->trailBuff,0,sizeof(RibbonVertex),threadID);
-				GetDevice()->Draw(trails.size(),threadID);
+				GetDevice()->Draw((int)trails.size(),threadID);
 
 				trails.clear();
 			}
@@ -2416,7 +2416,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										if (k < 1)
 											continue;
 
-										Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+										Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
 
 										GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 										GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
@@ -2438,7 +2438,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 
-												GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
+												GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 											}
 										}
 									}
@@ -2510,7 +2510,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									if (k < 1)
 										continue;
 
-									Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+									Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
 
 									GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 									GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
@@ -2531,7 +2531,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 
-											GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
+											GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 
 										}
 									}
@@ -2614,7 +2614,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							if (k < 1)
 								continue;
 
-							Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+							Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
 
 							GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 							GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
@@ -2639,7 +2639,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
-									GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
+									GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 								}
 							}
 						}
@@ -2810,7 +2810,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 				}
 				if (k > 0)
 				{
-					Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+					Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
 
 					MaterialCB mcb;
 					ZeroMemory(&mcb, sizeof(mcb));
@@ -2866,7 +2866,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 			if(k<1)
 				continue;
 
-			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+			Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
 
 			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 			GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
@@ -2971,7 +2971,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 					if(DX11Eff)
 						GetDevice()->BindResourceDS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5,threadID);
 					
-					GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(),k,threadID);
+					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(),k,threadID);
 				}
 			}
 
@@ -3081,7 +3081,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 			if (k<1)
 				continue;
 
-			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+			Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
 
 			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 			GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
@@ -3162,7 +3162,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, Texture2D* refracRes, Text
 						GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
 					}
 					
-					GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(),visibleInstances.size(),threadID);
+					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 				}
 			}
 		}
@@ -3938,7 +3938,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 			if (k < 1)
 				continue;
 
-			Mesh::UpdateRenderableInstances(visibleInstances.size(), threadID);
+			Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
 
 			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 			GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
@@ -3969,7 +3969,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
-					GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), visibleInstances.size(), threadID);
+					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 				}
 			}
 		}
@@ -4138,7 +4138,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 				GetDevice()->BindResourcePS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
 
 
-				GetDevice()->DrawIndexedInstanced(subset.subsetIndices.size(), 1, threadID);
+				GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), 1, threadID);
 			}
 		}
 

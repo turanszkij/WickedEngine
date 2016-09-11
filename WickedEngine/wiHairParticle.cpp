@@ -470,9 +470,9 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 					++iter;
 			}
 
-			device->UpdateBuffer(vb[i],renderPoints.data(),threadID,sizeof(Point)*renderPoints.size());
+			device->UpdateBuffer(vb[i],renderPoints.data(),threadID,(int)(sizeof(Point)*renderPoints.size()));
 			device->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
-			device->Draw(renderPoints.size(),threadID);
+			device->Draw((int)renderPoints.size(),threadID);
 		}
 
 		device->BindGS(nullptr,threadID);

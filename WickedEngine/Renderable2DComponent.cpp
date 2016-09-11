@@ -232,7 +232,7 @@ void Renderable2DComponent::addLayer(const string& name)
 			return;
 	}
 	RenderLayer layer = RenderLayer(name);
-	layer.order = layers.size();
+	layer.order = (int)layers.size();
 	layers.push_back(layer);
 	layers.back().entities.clear();
 }

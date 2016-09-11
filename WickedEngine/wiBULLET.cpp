@@ -377,8 +377,8 @@ void wiBULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOA
 void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	
-	int totalVerts = vertices.size();
-	int totalTriangles = indices.size() / 3;
+	int totalVerts = (int)vertices.size();
+	int totalTriangles = (int)indices.size() / 3;
 
 	btVector3* btVerts = new btVector3[totalVerts];
 	for (unsigned int i = 0; i<vertices.size(); ++i)
@@ -458,7 +458,7 @@ void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vect
 void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 	, float newMass, float newFriction, float newRestitution, float newDamping){
 
-	const int vCount = mesh->physicsverts.size();
+	const size_t vCount = mesh->physicsverts.size();
 	btScalar* btVerts = new btScalar[vCount*3];
 	for(int i=0;i<vCount*3;i+=3){
 		const int vindex = i/3;
@@ -466,7 +466,7 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 		btVerts[i+1] = btScalar(mesh->physicsverts[vindex].y);
 		btVerts[i+2] = btScalar(mesh->physicsverts[vindex].z);
 	}
-	const int iCount = mesh->physicsindices.size();
+	const int iCount = (int)mesh->physicsindices.size();
 	const int tCount = iCount/3;
 	int* btInd = new int[iCount];
 	for(int i=0;i<iCount;++i){

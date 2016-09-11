@@ -123,7 +123,7 @@ int wiInputManager_BindLua::GetTouches(lua_State* L)
 	{
 		Luna<Touch_BindLua>::push(L, new Touch_BindLua(touch));
 	}
-	return touches.size();
+	return (int)touches.size();
 }
 
 void wiInputManager_BindLua::Bind()

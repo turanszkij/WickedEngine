@@ -79,7 +79,7 @@ void LoadingScreenComponent::doLoadingTasks()
 
 int LoadingScreenComponent::getPercentageComplete()
 {
-	const int numberOfLoaders = loaders.size();
+	const int numberOfLoaders = (int)loaders.size();
 	int completed = 0;
 
 	for (LoaderTask& x : loaders)

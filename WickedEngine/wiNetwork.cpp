@@ -17,7 +17,7 @@ wiNetwork::~wiNetwork(void)
 
 bool wiNetwork::sendText(const std::string& text, SOCKET socket){
 	if(sendData((int)text.length(),socket)){
-		int sent = send(socket, text.c_str(), text.length(), 0);
+		int sent = send(socket, text.c_str(), (int)text.length(), 0);
 
 		if(sent==SOCKET_ERROR) {
 			//cout << "\n[Error] Sending text '"<<text<<"' failed with error: " << WSAGetLastError();

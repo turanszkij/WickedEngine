@@ -87,7 +87,7 @@ public:
 		time.tv_sec=0;
 		time.tv_usec=1;
 
-		if ((select( s + 1 , &readfds , NULL , NULL , &time) < 0) && (errno!=EINTR))
+		if ((select( (int)s + 1, &readfds , NULL , NULL , &time) < 0) && (errno!=EINTR))
 		{
 			wiBackLog::post("select error");
 		}

@@ -131,7 +131,7 @@ void RecursiveRest(Armature* armature, Bone* bone){
 }
 void LoadWiMaterialLibrary(const string& directory, const string& name, const string& identifier, const string& texturesDir,MaterialCollection& materials)
 {
-	int materialI=materials.size()-1;
+	int materialI=(int)(materials.size()-1);
 
 	Material* currentMat = NULL;
 	
@@ -481,7 +481,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 void LoadWiMeshes(const string& directory, const string& name, const string& identifier, MeshCollection& meshes, 
 	const list<Armature*>& armatures, const MaterialCollection& materials)
 {
-	int meshI=meshes.size()-1;
+	int meshI=(int)(meshes.size()-1);
 	Mesh* currentMesh = NULL;
 	
 	stringstream filename("");
@@ -602,9 +602,9 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						 //(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
 
 						if(nameB.find("trailbase")!=string::npos)
-							currentMesh->trailInfo.base = currentMesh->vertices.size()-1;
+							currentMesh->trailInfo.base = (int)(currentMesh->vertices.size()-1);
 						else if(nameB.find("trailtip")!=string::npos)
-							currentMesh->trailInfo.tip = currentMesh->vertices.size()-1;
+							currentMesh->trailInfo.tip = (int)(currentMesh->vertices.size()-1);
 						
 						bool windAffection=false;
 						if(nameB.find("wind")!=string::npos)
@@ -613,13 +613,13 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v)
 							if(!nameB.compare(currentMesh->vertexGroups[v].name)){
 								gotvg=true;
-								currentMesh->vertexGroups[v].addVertex( VertexRef(currentMesh->vertices.size()-1,weight) );
+								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices.size() - 1), weight));
 								if(windAffection)
 									currentMesh->vertices.back().tex.w=weight;
 							}
 						if(!gotvg){
 							currentMesh->vertexGroups.push_back(VertexGroup(nameB));
-							currentMesh->vertexGroups.back().addVertex( VertexRef(currentMesh->vertices.size()-1,weight) );
+							currentMesh->vertexGroups.back().addVertex(VertexRef((int)(currentMesh->vertices.size() - 1), weight));
 							if(windAffection)
 								currentMesh->vertices.back().tex.w=weight;
 						}
@@ -1799,9 +1799,9 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				//(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
 
 				if (nameB.find("trailbase") != string::npos)
-					trailInfo.base = vertices.size();
+					trailInfo.base = (int)vertices.size();
 				else if (nameB.find("trailtip") != string::npos)
-					trailInfo.tip = vertices.size();
+					trailInfo.tip = (int)vertices.size();
 
 				bool windAffection = false;
 				if (nameB.find("wind") != string::npos)
@@ -1810,13 +1810,13 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				for (unsigned int v = 0; v<vertexGroups.size(); ++v)
 					if (!nameB.compare(vertexGroups[v].name)) {
 						gotvg = true;
-						vertexGroups[v].addVertex(VertexRef(vertices.size(), weightValue));
+						vertexGroups[v].addVertex(VertexRef((int)vertices.size(), weightValue));
 						if (windAffection)
 							vert.tex.w = weightValue;
 					}
 				if (!gotvg) {
 					vertexGroups.push_back(VertexGroup(nameB));
-					vertexGroups.back().addVertex(VertexRef(vertices.size(), weightValue));
+					vertexGroups.back().addVertex(VertexRef((int)vertices.size(), weightValue));
 					if (windAffection)
 						vert.tex.w = weightValue;
 				}
@@ -1955,9 +1955,9 @@ void Mesh::CreateBuffers(Object* object) {
 		bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
 		bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
 		if (object->isArmatureDeformed() && !softBody)
-			bd.ByteWidth = sizeof(SkinnedVertex) * vertices.size();
+			bd.ByteWidth = (UINT)(sizeof(SkinnedVertex) * vertices.size());
 		else
-			bd.ByteWidth = sizeof(Vertex) * vertices_Complete.size();
+			bd.ByteWidth = (UINT)(sizeof(Vertex) * vertices_Complete.size());
 #else
 		bd.Usage = ((softBody || object->isArmatureDeformed()) ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
 		bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? CPU_ACCESS_WRITE : 0);
@@ -1977,7 +1977,7 @@ void Mesh::CreateBuffers(Object* object) {
 			if (object->isArmatureDeformed() && !softBody) {
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = USAGE_DEFAULT;
-				bd.ByteWidth = sizeof(Vertex) * vertices_Complete.size();
+				bd.ByteWidth = (UINT)(sizeof(Vertex) * vertices_Complete.size());
 				bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride = 0;
@@ -2010,7 +2010,7 @@ void Mesh::CreateBuffers(Object* object) {
 			}
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
-			bd.ByteWidth = sizeof(unsigned int) * subset.subsetIndices.size();
+			bd.ByteWidth = (UINT)(sizeof(unsigned int) * subset.subsetIndices.size());
 			bd.BindFlags = BIND_INDEX_BUFFER;
 			bd.CPUAccessFlags = 0;
 			ZeroMemory(&InitData, sizeof(InitData));
@@ -3144,7 +3144,7 @@ void HitSphere::SetUpStatic()
 	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_IMMUTABLE;
-	bd.ByteWidth = sizeof( XMFLOAT3A )*verts.size();
+	bd.ByteWidth = (UINT)(sizeof( XMFLOAT3A )*verts.size());
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	SubresourceData InitData;
@@ -3545,16 +3545,16 @@ XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const vector<
 			nearest[1] = 0;
 		}
 		else if (cf >= last) {
-			nearest[0] = keyframeList.size() - 1;
-			nearest[1] = keyframeList.size() - 1;
+			nearest[0] = (int)(keyframeList.size() - 1);
+			nearest[1] = (int)(keyframeList.size() - 1);
 		}
 		else { //IN BETWEEN TWO KEYFRAMES, DECIDE WHICH
-			for (int k = keyframeList.size() - 1; k>0; k--)
+			for (int k = (int)keyframeList.size() - 1; k>0; k--)
 				if (keyframeList[k].frameI <= cf) {
 					nearest[0] = k;
 					break;
 				}
-			for (unsigned int k = 0; k<keyframeList.size(); k++)
+			for (int k = 0; k<(int)keyframeList.size(); k++)
 				if (keyframeList[k].frameI >= cf) {
 					nearest[1] = k;
 					break;
@@ -3867,7 +3867,7 @@ void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 		int tip = mesh->trailInfo.tip;
 
 
-		int x = trail.size();
+		//int x = trail.size();
 
 		if (base >= 0 && tip >= 0) {
 			XMFLOAT4 baseP, tipP;

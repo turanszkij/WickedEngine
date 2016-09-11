@@ -233,7 +233,7 @@ void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHI
 		}
 	}
 
-	wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer, vertexList.data(), threadID, sizeof(Vertex) * text.length() * 4);
+	wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer, vertexList.data(), threadID, (int)(sizeof(Vertex) * text.length() * 4));
 	
 }
 
@@ -318,7 +318,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest){
 		device->BindIndexBuffer(indexBuffer,threadID);
 
 		device->BindResourcePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
-		device->DrawIndexed(text.length()*6,threadID);
+		device->DrawIndexed((int)text.length()*6,threadID);
 
 		device->EventEnd(threadID);
 	}
@@ -330,7 +330,7 @@ int wiFont::textWidth()
 {
 	int i=0;
 	int max=0,lineW=0;
-	int len=text.length();
+	size_t len=text.length();
 	while(i<len){
 		if(text[i]=='\n') {
 			if(max<lineW) max=lineW;
@@ -351,7 +351,7 @@ int wiFont::textHeight()
 {
 	int i=0;
 	int lines=1;
-	int len=text.length();
+	size_t len=text.length();
 	while(i<len){
 		if(text[i]=='\n') {
 			lines++;

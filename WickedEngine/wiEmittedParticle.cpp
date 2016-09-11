@@ -79,7 +79,7 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 
 	SetupLightInterpolators();
 }
-long wiEmittedParticle::getCount(){return points.size();}
+int wiEmittedParticle::getCount(){return (int)points.size();}
 
 void wiEmittedParticle::SetupLightInterpolators()
 {
@@ -96,7 +96,7 @@ void wiEmittedParticle::SetupLightInterpolators()
 	}
 }
 
-int wiEmittedParticle::getRandomPointOnEmitter(){ return wiRandom::getRandom(object->mesh->indices.size()-1); }
+int wiEmittedParticle::getRandomPointOnEmitter(){ return wiRandom::getRandom((int)object->mesh->indices.size()-1); }
 
 void wiEmittedParticle::CreateLight()
 {
@@ -306,7 +306,7 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 			device->EventBegin(L"EmittedParticle", threadID);
 			
 			vector<Point> renderPoints=vector<Point>(points.begin(),points.end());
-			device->UpdateBuffer(vertexBuffer,renderPoints.data(),threadID,sizeof(Point)* renderPoints.size());
+			device->UpdateBuffer(vertexBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
 
 			bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
@@ -336,7 +336,7 @@ void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
 
 			if(!wireRender && material->texture) 
 				device->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
-			device->Draw(renderPoints.size(),threadID);
+			device->Draw((int)renderPoints.size(),threadID);
 
 
 			device->BindGS(nullptr,threadID);

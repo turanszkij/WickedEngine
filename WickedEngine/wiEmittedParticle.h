@@ -98,7 +98,7 @@ public:
 	static void SetUpStatic();
 	static void CleanUpStatic();
 
-	long getCount();
+	int getCount();
 	static long getNumParticles();
 
 	void Update(float gamespeed);
