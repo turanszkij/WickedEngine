@@ -2510,7 +2510,7 @@ void Model::CleanUp()
 }
 void Model::LoadFromDisk(const string& dir, const string& name, const string& identifier)
 {
-	wiArchive archive(name + ".wimf", true);
+	wiArchive archive(dir + name + ".wimf", true);
 	if (archive.IsOpen())
 	{
 		// New Import if wimf model is available
