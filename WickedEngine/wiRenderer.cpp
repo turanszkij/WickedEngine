@@ -1261,7 +1261,11 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX
 {
 	return TransformVertex(mesh, mesh->vertices[vertexI], mat);
 }
-Vertex wiRenderer::TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat){
+Vertex wiRenderer::TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat)
+{
+	assert(mesh->hasArmature() && string(mesh->name + "has no Armature!").c_str());
+	assert(!mesh->armature->boneCollection.empty() && string(mesh->armature->name + "has no bones!").c_str());
+
 	XMVECTOR pos = XMLoadFloat4( &vertex.pos );
 	XMVECTOR nor = XMLoadFloat4(&vertex.nor);
 	float inWei[4] = { 
@@ -3614,7 +3618,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
 			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
 			Vertex v0, v1, v2;
-			if (object->isArmatureDeformed())
+			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
 			{
 				v0 = TransformVertex(mesh, mesh->vertices[i0], objectMat_Inverse);
 				v1 = TransformVertex(mesh, mesh->vertices[i1], objectMat_Inverse);
