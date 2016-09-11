@@ -2522,7 +2522,7 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 		stringstream directory(""), armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
 			, actionsFilePath(""), lightsFilePath(""), decalsFilePath("");
 
-		//directory << dir;
+		directory << dir;
 		armatureFilePath << name << ".wia";
 		materialLibFilePath << name << ".wim";
 		meshesFilePath << name << ".wi";
