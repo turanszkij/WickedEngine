@@ -208,6 +208,23 @@ Texture2D GraphicsDevice_DX11::GetBackBuffer()
 	return result;
 }
 
+bool GraphicsDevice_DX11::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
+{
+	switch (capability)
+	{
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
+		return DX11;
+		break;
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
+		return DEFERREDCONTEXT_SUPPORT;
+		break;
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_COUNT:
+		break;
+	default:
+		break;
+	}
+}
+
 // Engine -> Native converters
 
 inline UINT _ParseBindFlags(UINT value)

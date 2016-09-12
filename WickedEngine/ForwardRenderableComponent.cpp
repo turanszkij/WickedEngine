@@ -77,7 +77,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, 0, threadID
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID
 			, false, SHADERTYPE_FORWARD
 			, nullptr, true);
 		wiRenderer::DrawSky(threadID);
@@ -103,7 +103,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 {
 	Renderable3DComponent::setPreferredThreadingCount(value);
 
-	if (!wiRenderer::GetDevice()->GetMultithreadingSupport())
+	if (!wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING))
 	{
 		if (value > 1)
 			wiHelper::messageBox("Multithreaded rendering not supported by your hardware! Falling back to single threading!", "Caution");

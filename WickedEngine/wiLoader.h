@@ -373,6 +373,8 @@ struct Mesh{
 	float impostorDistance;
 	static wiGraphicsTypes::GPUBuffer	impostorVB;
 
+	float tessellationFactor;
+
 	Mesh(){
 		init();
 	}
@@ -417,10 +419,12 @@ struct Mesh{
 		calculatedAO = false;
 		armatureName = "";
 		impostorDistance = 100.0f;
+		tessellationFactor = 0.0f;
 	}
 	
 	bool hasArmature()const { return armature != nullptr; }
 	bool hasImpostor()const { return impostorTarget.IsInitialized(); }
+	float getTessellationFactor() { return tessellationFactor; }
 	void Serialize(wiArchive& archive);
 };
 struct Cullable

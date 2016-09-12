@@ -3,6 +3,7 @@
 #include "wiTaskThread.h"
 #include "wiRenderer.h"
 #include "wiWaterPlane.h"
+#include "wiGraphicsDevice.h"
 #include <atomic>
 
 class Renderable3DComponent :
@@ -42,6 +43,7 @@ private:
 	bool depthOfFieldEnabled;
 	bool stereogramEnabled;
 	bool eyeAdaptionEnabled;
+	bool tessellationEnabled;
 
 protected:
 	wiRenderTarget
@@ -107,6 +109,7 @@ public:
 	inline bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
 	inline bool getStereogramEnabled() { return stereogramEnabled; }
 	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
+	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 
 	inline unsigned int getThreadingCount(){ return (unsigned int)workerThreads.size(); }
 
@@ -143,6 +146,7 @@ public:
 	inline void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
 	inline void setStereogramEnabled(bool value) { stereogramEnabled = value; }
 	inline void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
+	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

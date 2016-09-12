@@ -55,6 +55,7 @@ void Renderable3DComponent::setProperties()
 	setDepthOfFieldEnabled(false);
 	setStereogramEnabled(false);
 	setEyeAdaptionEnabled(false);
+	setTessellationEnabled(false);
 
 	setPreferredThreadingCount(0);
 }
@@ -209,7 +210,7 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 		wiRenderer::SetClipPlane(water, threadID);
 
-		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, 0, threadID
+		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID
 			, true, SHADERTYPE_TEXTURE
 			, nullptr, getHairParticlesReflectionEnabled());
 		wiRenderer::DrawSky(threadID,true);
@@ -242,7 +243,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	if (getLensFlareEnabled())
 	{
 		rtLensFlare.Activate(threadID);
-		if (!wiRenderer::GetRasterizer())
+		if (!wiRenderer::IsWireRender())
 			wiRenderer::DrawLensFlares(threadID);
 	}
 

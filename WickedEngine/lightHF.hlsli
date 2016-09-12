@@ -50,7 +50,8 @@ struct LightOutputType
 	return Out;
 
 
-#define DEFERREDLIGHT_ENVIRONMENTALLIGHT	\
+#define DEFERREDLIGHT_ENVIRONMENTALLIGHT						\
+	diffuse = 0;												\
 	specular = EnvironmentReflection(N, V, P, roughness, f0);
 
 #endif // _LIGHTHF_

@@ -246,6 +246,14 @@ protected:
 
 		ALIGN_16
 	};
+	GFX_STRUCT TessellationCB
+	{
+		XMFLOAT4 tessellationFactors;
+		
+		CB_SETBINDSLOT(CBSLOT_RENDERER_TESSELLATION)
+
+		ALIGN_16
+	};
 
 	// Resource Buffers:
 	struct ShaderBoneType
@@ -310,8 +318,8 @@ public:
 	static void DrawWaterRipples(GRAPHICSTHREAD threadID);
 	static void SetGameSpeed(float value){GameSpeed=value; if(GameSpeed<0) GameSpeed=0;};
 	static float GetGameSpeed();
-	static void ChangeRasterizer(){wireRender=!wireRender;};
-	static bool GetRasterizer(){return wireRender;};
+	static void SetWireRender(bool value) { wireRender = value; }
+	static bool IsWireRender() { return wireRender; }
 	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}
 	static void SetToDrawDebugSpheres(bool param){debugSpheres=param;}
 	static bool GetToDrawDebugSpheres() { return debugSpheres; }
@@ -359,7 +367,7 @@ public:
 	
 	static void DrawSky(GRAPHICSTHREAD threadID, bool isReflection = false);
 	static void DrawSun(GRAPHICSTHREAD threadID);
-	static void DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
+	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID
 		, bool isReflection, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass);
 	static void ClearShadowMaps(GRAPHICSTHREAD threadID);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);

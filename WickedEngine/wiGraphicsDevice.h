@@ -48,8 +48,6 @@ namespace wiGraphicsTypes
 		virtual void ExecuteDeferredContexts() = 0;
 		virtual void FinishCommandList(GRAPHICSTHREAD thread) = 0;
 
-		virtual bool GetMultithreadingSupport() = 0;
-
 		bool GetVSyncEnabled() { return VSYNC; }
 		void SetVSyncEnabled(bool value) { VSYNC = value; }
 		long GetFrameCount() { return FRAMECOUNT; }
@@ -61,6 +59,14 @@ namespace wiGraphicsTypes
 		virtual void SetScreenHeight(int value) = 0;
 
 		virtual Texture2D GetBackBuffer() = 0;
+
+		enum GRAPHICSDEVICE_CAPABILITY
+		{
+			GRAPHICSDEVICE_CAPABILITY_TESSELLATION,
+			GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING,
+			GRAPHICSDEVICE_CAPABILITY_COUNT,
+		};
+		virtual bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) = 0;
 
 		///////////////Thread-sensitive////////////////////////
 

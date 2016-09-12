@@ -3,10 +3,12 @@
 
 struct HullInputType
 {
-	float3 pos				: POSITION0;
-	float3 tex				: TEXCOORD0;
-	float3 nor				: NORMAL;
-	float3 vel				: TEXCOORD1;
+	float3 pos								: POSITION0;
+	float3 tex								: TEXCOORD0;
+	float4 nor								: NORMAL;
+	float3 vel								: TEXCOORD1;
+	nointerpolation float3 instanceColor	: INSTANCECOLOR;
+	nointerpolation float dither			: DITHER;
 };
 
 
@@ -35,8 +37,11 @@ HullInputType main(Input input)
 
 	Out.pos=pos.xyz;
 	Out.tex=input.tex.xyz;
-	Out.nor = normalize(normal);
+	Out.nor.xyz = normalize(normal);
+	Out.nor.w = input.nor.w;
 
+	Out.instanceColor = input.color_dither.rgb;
+	Out.dither = input.color_dither.a;
 
 	return Out;
 }

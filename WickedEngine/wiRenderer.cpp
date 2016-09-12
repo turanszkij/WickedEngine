@@ -574,6 +574,9 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(CubeMapRenderCB);
 	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CUBEMAPRENDER]);
 
+	bd.ByteWidth = sizeof(TessellationCB);
+	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_TESSELLATION]);
+
 
 
 
@@ -2687,10 +2690,12 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 }
 
 
-void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHREAD threadID
+void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID
 				  , bool isReflection, SHADERTYPE shaderType
 				  , Texture2D* refRes, bool grass)
 {
+	tessellation = tessellation && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
+
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	if(spTree)
@@ -2738,34 +2743,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 
 		GetDevice()->EventBegin(L"DrawWorld", threadID);
 
-		if(DX11Eff && tessF) 
-			GetDevice()->BindPrimitiveTopology(PATCHLIST,threadID);
-		else		
-			GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT],threadID);
-
-		if(DX11Eff && tessF)
-			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT],threadID);
-		else
-		{
-			if (isReflection)
-			{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_REFLECTION], threadID);
-			}
-			else
-			{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
-			}
-		}
-		if(DX11Eff && tessF)
-			GetDevice()->BindHS(hullShaders[HSTYPE_OBJECT],threadID);
-		else
-			GetDevice()->BindHS(nullptr,threadID);
-		if(DX11Eff && tessF) 
-			GetDevice()->BindDS(domainShaders[DSTYPE_OBJECT],threadID);
-		else		
-			GetDevice()->BindDS(nullptr,threadID);
-
 		if (wireRender)
 			GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
 
@@ -2789,6 +2766,43 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
 			CulledObjectList& visibleInstances = iter->second;
+
+			float tessF = mesh->getTessellationFactor();
+
+			if (tessellation && tessF)
+				GetDevice()->BindPrimitiveTopology(PATCHLIST, threadID);
+			else
+				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+
+			if (tessellation && tessF)
+				GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT], threadID);
+			else
+			{
+				if (isReflection)
+				{
+					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_REFLECTION], threadID);
+				}
+				else
+				{
+					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
+				}
+			}
+			if (tessellation && tessF)
+			{
+				TessellationCB tessCB;
+				tessCB.tessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
+				GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
+				GetDevice()->BindHS(hullShaders[HSTYPE_OBJECT], threadID);
+			}
+			else
+				GetDevice()->BindHS(nullptr, threadID);
+			if (tessellation && tessF)
+				GetDevice()->BindDS(domainShaders[DSTYPE_OBJECT], threadID);
+			else
+				GetDevice()->BindDS(nullptr, threadID);
+
 
 			float impostorDistance = mesh->impostorDistance;
 
@@ -2968,7 +2982,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool DX11Eff, int tessF, GRAPHICSTHRE
 						}
 						GetDevice()->BindPS(pixelShaders[realPS], threadID);
 					}
-					if(DX11Eff)
+					if(tessellation)
 						GetDevice()->BindResourceDS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5,threadID);
 					
 					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(),k,threadID);

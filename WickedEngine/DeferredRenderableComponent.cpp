@@ -90,8 +90,8 @@ void DeferredRenderableComponent::Render()
 }
 
 
-void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
-	static const int tessellationQuality = 0;
+void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
+{
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
@@ -99,7 +99,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID){
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), false, tessellationQuality, threadID, false
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, false
 			, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true);
 
 	}
@@ -263,7 +263,7 @@ void DeferredRenderableComponent::setPreferredThreadingCount(unsigned short valu
 {
 	Renderable3DComponent::setPreferredThreadingCount(value);
 
-	if (!wiRenderer::GetDevice()->GetMultithreadingSupport())
+	if (!wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING))
 	{
 		if (value > 1)
 			wiHelper::messageBox("Multithreaded rendering not supported by your hardware! Falling back to single threading!", "Caution");

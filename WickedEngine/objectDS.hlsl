@@ -10,25 +10,20 @@ struct ConstantOutputType
 	float3 f3B1 : POSITION1;
 	float3 f3B2 : POSITION2;
 
-	float3 f3N0 : NORMAL0;
-	float3 f3N1 : NORMAL1;
-	float3 f3N2 : NORMAL2;
+	float4 f4N0 : NORMAL0;
+	float4 f4N1 : NORMAL1;
+	float4 f4N2 : NORMAL2;
 };
 
 struct HullOutputType
 {
-	float3 pos				: POSITION;
-	float3 tex				: TEXCOORD0;
-	float3 nor				: NORMAL;
-	float3 vel				: TEXCOORD1;
+	float3 pos								: POSITION;
+	float3 tex								: TEXCOORD0;
+	float3 nor								: NORMAL;
+	float3 vel								: TEXCOORD1;
+	nointerpolation float3 instanceColor	: INSTANCECOLOR;
+	nointerpolation float dither			: DITHER;
 };
-
-
-
-float3 GetLightDirection(float3 pos3D, float3 lightPos)
-{
-	return normalize(pos3D - lightPos);
-}
 
 
 
@@ -47,9 +42,9 @@ float3 PhongGeometry(float u, float v, float w, ConstantOutputType hsc)
     // Find local space point
     float3 p = w * hsc.f3B0 + u * hsc.f3B1 + v * hsc.f3B2;
     // Find projected vectors
-    float3 c0 = project(p, hsc.f3B0, hsc.f3N0);
-    float3 c1 = project(p, hsc.f3B1, hsc.f3N1);
-    float3 c2 = project(p, hsc.f3B2, hsc.f3N2);
+    float3 c0 = project(p, hsc.f3B0, hsc.f4N0);
+    float3 c1 = project(p, hsc.f3B1, hsc.f4N1);
+    float3 c2 = project(p, hsc.f3B2, hsc.f4N2);
     // Interpolate
     float3 q = w * c0 + u * c1 + v * c2;
     // For blending between tessellated and untessellated model:
@@ -58,10 +53,10 @@ float3 PhongGeometry(float u, float v, float w, ConstantOutputType hsc)
 }
 
 // Computes the normal of a point in the Phong Tessellated triangle
-float3 PhongNormal(float u, float v, float w, ConstantOutputType hsc)
+float4 PhongNormal(float u, float v, float w, ConstantOutputType hsc)
 {
     // Interpolate
-    return normalize(w * hsc.f3N0 + u * hsc.f3N1 + v * hsc.f3N2);
+    return normalize(w * hsc.f4N0 + u * hsc.f4N1 + v * hsc.f4N2);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -74,7 +69,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 
 
     float4 vertexPosition;
-	float3 vertexNormal;
+	float4 vertexNormal;
 	float2 vertexTex;
 	float3 vertexVel;
 
@@ -104,7 +99,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.pos = Out.pos2D = mul( vertexPosition, g_xCamera_VP );
 	Out.pos3D = vertexPosition.xyz;
 	Out.tex = vertexTex.xy;
-	Out.nor = vertexNormal;
+	Out.nor = normalize(vertexNormal);
 	/*float2x3 tanbin = tangentBinormal(Out.nor);
 	Out.tan=tanbin[0];
 	Out.bin=tanbin[1];*/
@@ -123,6 +118,11 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	//Out.vel = vertexVel;
 	//Out.vel += (Out.pos.xyz-mul(vertexPosition,xPrevViewProjection).xyz)*0.10;
 	//Out.mat = mat;
+
+	Out.ao = vertexNormal.w;
+
+	Out.instanceColor = patch[0].instanceColor.rgb;
+	Out.dither = patch[0].dither;
 
 
 	return Out;
