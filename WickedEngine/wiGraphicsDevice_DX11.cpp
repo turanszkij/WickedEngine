@@ -223,6 +223,7 @@ bool GraphicsDevice_DX11::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
 	default:
 		break;
 	}
+	return false;
 }
 
 // Engine -> Native converters
