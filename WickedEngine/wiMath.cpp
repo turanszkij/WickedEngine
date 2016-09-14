@@ -204,4 +204,57 @@ namespace wiMath
 		}
 		return angle;
 	}
+	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C)
+	{
+		float deg = 0;
+		float t = deg * XM_PI / 180.0f;
+		A = XMFLOAT4(radius*cos(t), radius*-sin(t), 0, 1);
+		deg += 120;
+		t = deg * XM_PI / 180.0f;
+		B = XMFLOAT4(radius*cos(t), radius*-sin(t), 0, 1);
+		deg += 120;
+		t = deg * XM_PI / 180.0f;
+		C = XMFLOAT4(radius*cos(t), radius*-sin(t), 0, 1);
+	}
+	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp)
+	{
+		XMVECTOR v0 = b - a, v1 = c - a, v2 = p - a;
+		float d00 = XMVectorGetX(XMVector3Dot(v0, v0));
+		float d01 = XMVectorGetX(XMVector3Dot(v0, v1));
+		float d11 = XMVectorGetX(XMVector3Dot(v1, v1));
+		float d20 = XMVectorGetX(XMVector3Dot(v2, v0));
+		float d21 = XMVectorGetX(XMVector3Dot(v2, v1));
+		float denom = d00 * d11 - d01 * d01;
+		v = (d11 * d20 - d01 * d21) / denom;
+		w = (d00 * d21 - d01 * d20) / denom;
+		u = 1.0f - v - w;
+
+		if (clamp)
+		{
+			if (u < 0)
+			{
+				float t = XMVectorGetX(XMVector3Dot(p - b, c - b) / XMVector3Dot(c - b, c - b));
+				t = saturate(t);
+				u = 0.0f;
+				v = 1.0f - t;
+				w = t;
+			}
+			else if (v < 0)
+			{
+				float t = XMVectorGetX(XMVector3Dot(p - c, a - c) / XMVector3Dot(a - c, a - c));
+				t = saturate(t);
+				u = t;
+				v = 0.0f;
+				w = 1.0f - t;
+			}
+			else if (w < 0)
+			{
+				float t = XMVectorGetX(XMVector3Dot(p - a, b - a) / XMVector3Dot(b - a, b - a));
+				t = saturate(t);
+				u = 1.0f - t;
+				v = t;
+				w = 0.0f;
+			}
+		}
+	}
 }

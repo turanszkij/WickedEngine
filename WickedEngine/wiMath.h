@@ -1,6 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
 
+#define saturate(x) min(max(x,0),1)
+
 namespace wiMath
 {
 	float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2);
@@ -36,5 +38,7 @@ namespace wiMath
 
 	XMFLOAT3 HueToRGB(float H);
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b);
+	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
+	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
 };
 

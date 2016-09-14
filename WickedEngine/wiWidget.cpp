@@ -730,7 +730,7 @@ void wiWindow::AddWidget(wiWidget* widget)
 
 	childrenWidgets.push_back(widget);
 }
-void wiWindow::RemoveWidget(wiWidget* widget, bool alsoDelete)
+void wiWindow::RemoveWidget(wiWidget* widget)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -738,11 +738,6 @@ void wiWindow::RemoveWidget(wiWidget* widget, bool alsoDelete)
 	widget->detach();
 
 	childrenWidgets.remove(widget);
-
-	if (alsoDelete)
-	{
-		SAFE_DELETE(widget);
-	}
 }
 void wiWindow::RemoveWidgets(bool alsoDelete)
 {
@@ -867,16 +862,21 @@ wiColorPicker::wiColorPicker(wiGUI* gui, const string& name) :wiWindow(gui, name
 {
 	SetSize(XMFLOAT2(300, 300));
 	SetColor(wiColor::Ghost);
+	RemoveWidget(resizeDragger_BottomRight);
+	RemoveWidget(resizeDragger_UpperLeft);
 
 	hue_picker = XMFLOAT2(0, 0);
 	saturation_picker = XMFLOAT2(0, 0);
-	color = XMFLOAT4(1, 1, 1, 1);
+	saturation_picker_barycentric = XMFLOAT3(0, 1, 0);
+	hue_color = XMFLOAT4(1, 0, 0, 1);
+	final_color = XMFLOAT4(1, 1, 1, 1);
 	angle = 0;
 }
 wiColorPicker::~wiColorPicker()
 {
 }
 static const float __colorpicker_center = 120;
+static const float __colorpicker_radius_triangle = 75;
 static const float __colorpicker_radius = 80;
 static const float __colorpicker_width = 16;
 void wiColorPicker::Update(wiGUI* gui)
@@ -888,10 +888,10 @@ void wiColorPicker::Update(wiGUI* gui)
 		return;
 	}
 
-	if (gui->IsWidgetDisabled(this))
-	{
-		return;
-	}
+	//if (!gui->IsWidgetDisabled(this))
+	//{
+	//	return;
+	//}
 
 	if (state == DEACTIVATING)
 	{
@@ -904,38 +904,88 @@ void wiColorPicker::Update(wiGUI* gui)
 	float distance = wiMath::Distance(center, pointer);
 	bool hover_hue = (distance > __colorpicker_radius) && (distance < __colorpicker_radius + __colorpicker_width);
 
-	if (hover_hue)
+	float distTri = 0;
+	XMFLOAT4 A, B, C;
+	wiMath::ConstructTriangleEquilateral(__colorpicker_radius_triangle, A, B, C);
+	XMVECTOR _A = XMLoadFloat4(&A);
+	XMVECTOR _B = XMLoadFloat4(&B);
+	XMVECTOR _C = XMLoadFloat4(&C);
+	XMMATRIX _triTransform = XMMatrixRotationZ(-angle) * XMMatrixTranslation(center.x, center.y, 0);
+	_A = XMVector4Transform(_A, _triTransform);
+	_B = XMVector4Transform(_B, _triTransform);
+	_C = XMVector4Transform(_C, _triTransform);
+	XMVECTOR O = XMVectorSet(pointer.x, pointer.y, 0, 0);
+	XMVECTOR D = XMVectorSet(0, 0, 1, 0);
+	bool hover_saturation = TriangleTests::Intersects(O, D, _A, _B, _C, distTri);
+
+	if (hover_hue && state==IDLE)
 	{
 		state = FOCUS;
 		huefocus = true;
+	}
+	else if (hover_saturation && state == IDLE)
+	{
+		state = FOCUS;
+		huefocus = false;
 	}
 	else if (state == IDLE)
 	{
 		huefocus = false;
 	}
 
-	bool btndown = wiInputManager::GetInstance()->down(VK_LBUTTON);
-	if (huefocus && btndown)
+	bool dragged = false;
+
+	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == FOCUS)
+		{
+			// activate
+			dragged = true;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == ACTIVE)
+		{
+			// continue drag if already grabbed wheter it is intersecting or not
+			dragged = true;
+		}
+	}
+
+	dragged = dragged && !gui->IsWidgetDisabled(this);
+	if (huefocus && dragged)
 	{
 		//hue pick
 		angle = wiMath::GetAngle(XMFLOAT2(pointer.x - center.x, pointer.y - center.y), XMFLOAT2(__colorpicker_radius, 0));
 		XMFLOAT3 color3 = wiMath::HueToRGB(angle / XM_2PI);
-		color = XMFLOAT4(color3.x, color3.y, color3.z, 1);
+		hue_color = XMFLOAT4(color3.x, color3.y, color3.z, 1);
 		gui->ActivateWidget(this);
 	}
-	else if (!huefocus && btndown)
+	else if (!huefocus && dragged)
 	{
 		// saturation pick
-		gui->DeactivateWidget(this); // todo
+		wiMath::GetBarycentric(O, _A, _B, _C, saturation_picker_barycentric.x, saturation_picker_barycentric.y, saturation_picker_barycentric.z, true);
+		gui->ActivateWidget(this);
 	}
-	else
+	else if(state != IDLE)
 	{
 		gui->DeactivateWidget(this);
 	}
 
 	float r = __colorpicker_radius + __colorpicker_width*0.5f;
 	hue_picker = XMFLOAT2(center.x + r*cos(angle), center.y + r*-sin(angle));
-	saturation_picker = center;
+	XMStoreFloat2(&saturation_picker, _A*saturation_picker_barycentric.x + _B*saturation_picker_barycentric.y + _C*saturation_picker_barycentric.z);
+	XMStoreFloat4(&final_color, XMLoadFloat4(&hue_color)*saturation_picker_barycentric.x + XMVectorSet(1, 1, 1, 1)*saturation_picker_barycentric.y + XMVectorSet(0, 0, 0, 1)*saturation_picker_barycentric.z);
+
+	if (dragged)
+	{
+		wiEventArgs args;
+		args.clickPos = pointer;
+		args.fValue = angle;
+		args.color = final_color;
+		onColorChanged(args);
+	}
 }
 void wiColorPicker::Render(wiGUI* gui)
 {
@@ -967,21 +1017,15 @@ void wiColorPicker::Render(wiGUI* gui)
 			static vector<Vertex> vertices(0);
 			if (vb_saturation.IsValid() && !vertices.empty())
 			{
-				XMFLOAT3 color3 = wiMath::HueToRGB(angle / XM_2PI);
-				vertices[0].col = XMFLOAT4(color3.x, color3.y, color3.z, 1);
+				vertices[0].col = hue_color;
 				wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices.data(), threadID, vb_saturation.GetDesc().ByteWidth);
 			}
 			else
 			{
-				float deg = 0;
-				float t = deg * XM_PI / 180.0f;
-				vertices.push_back({ XMFLOAT4(__colorpicker_radius*cos(t), __colorpicker_radius*-sin(t),0,1),XMFLOAT4(1,0,0,1) });		// hue
-				deg += 120;
-				t = deg * XM_PI / 180.0f;
-				vertices.push_back({ XMFLOAT4(__colorpicker_radius*cos(t), __colorpicker_radius*-sin(t), 0, 1),XMFLOAT4(1,1,1,1) });	// white
-				deg += 120;
-				t = deg * XM_PI / 180.0f;
-				vertices.push_back({ XMFLOAT4(__colorpicker_radius*cos(t), __colorpicker_radius*-sin(t), 0, 1),XMFLOAT4(0,0,0,1) });	// black
+				vertices.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });	// hue
+				vertices.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,1,1,1) });	// white
+				vertices.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
+				wiMath::ConstructTriangleEquilateral(__colorpicker_radius_triangle, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
 				GPUBufferDesc desc = { 0 };
 				desc.BindFlags = BIND_VERTEX_BUFFER;
@@ -1131,7 +1175,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
 		__cam
 	);
-	cb.mColor = color;
+	cb.mColor = GetColor();
 	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 	wiRenderer::GetDevice()->BindVertexBuffer(&vb_preview, 0, sizeof(Vertex), threadID);
 	wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
@@ -1139,6 +1183,9 @@ void wiColorPicker::Render(wiGUI* gui)
 }
 XMFLOAT4 wiColorPicker::GetColor()
 {
-	return color;
+	return final_color;
 }
-
+void wiColorPicker::OnColorChanged(function<void(wiEventArgs args)> func)
+{
+	onColorChanged = move(func);
+}

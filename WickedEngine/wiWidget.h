@@ -16,6 +16,7 @@ struct wiEventArgs
 	XMFLOAT2 endPos;
 	float fValue;
 	bool bValue;
+	XMFLOAT4 color;
 };
 
 class wiWidget : public Transform
@@ -173,7 +174,7 @@ public:
 	virtual ~wiWindow();
 
 	void AddWidget(wiWidget* widget);
-	void RemoveWidget(wiWidget* widget, bool alsoDelete = false);
+	void RemoveWidget(wiWidget* widget);
 	void RemoveWidgets(bool alsoDelete = false);
 
 	virtual void Update(wiGUI* gui) override;
@@ -189,9 +190,12 @@ public:
 class wiColorPicker : public wiWindow
 {
 protected:
+	function<void(wiEventArgs args)> onColorChanged;
 	XMFLOAT2 hue_picker;
 	XMFLOAT2 saturation_picker;
-	XMFLOAT4 color;
+	XMFLOAT3 saturation_picker_barycentric;
+	XMFLOAT4 hue_color;
+	XMFLOAT4 final_color;
 	float angle;
 	bool huefocus; // whether the hue is in focus or the saturation
 public:
@@ -202,5 +206,7 @@ public:
 	virtual void Render(wiGUI* gui) override;
 
 	XMFLOAT4 GetColor();
+
+	void OnColorChanged(function<void(wiEventArgs args)> func);
 };
 
