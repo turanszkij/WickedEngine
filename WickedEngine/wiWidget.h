@@ -4,7 +4,7 @@
 #include "wiHashString.h"
 #include "wiHitBox2D.h"
 #include "wiColor.h"
-#include "wiGraphicsDescriptors.h"
+#include "wiGraphicsAPI.h"
 
 class wiGUI;
 
@@ -63,7 +63,8 @@ public:
 	bool IsEnabled();
 	virtual void SetVisible(bool val);
 	bool IsVisible();
-	void SetColor(const wiColor& color, WIDGETSTATE state);
+	// last param default: set color for all states
+	void SetColor(const wiColor& color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor();
 	void SetFontScaling(float val);
 	float GetFontScaling();
@@ -182,5 +183,24 @@ public:
 	virtual void SetEnabled(bool value) override;
 	void SetMinimized(bool value);
 	bool IsMinimized();
+};
+
+// HSV-Color Picker
+class wiColorPicker : public wiWindow
+{
+protected:
+	XMFLOAT2 hue_picker;
+	XMFLOAT2 saturation_picker;
+	XMFLOAT4 color;
+	float angle;
+	bool huefocus; // whether the hue is in focus or the saturation
+public:
+	wiColorPicker(wiGUI* gui, const string& name = "");
+	virtual ~wiColorPicker();
+
+	virtual void Update(wiGUI* gui) override;
+	virtual void Render(wiGUI* gui) override;
+
+	XMFLOAT4 GetColor();
 };
 

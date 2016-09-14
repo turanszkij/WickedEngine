@@ -3,6 +3,7 @@
 
 namespace wiMath
 {
+	float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2);
 	float Distance(const XMFLOAT3& v1,const XMFLOAT3& v2);
 	float DistanceSquared(const XMFLOAT3& v1,const XMFLOAT3& v2);
 	float DistanceEstimated(const XMFLOAT3& v1, const XMFLOAT3& v2);
@@ -32,5 +33,8 @@ namespace wiMath
 
 	XMVECTOR GetClosestPointToLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& P, bool segmentClamp = false);
 	float GetPointSegmentDistance(const XMVECTOR& point, const XMVECTOR& segmentA, const XMVECTOR& segmentB);
+
+	XMFLOAT3 HueToRGB(float H);
+	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b);
 };
 

@@ -42,9 +42,9 @@ float3 PhongGeometry(float u, float v, float w, ConstantOutputType hsc)
     // Find local space point
     float3 p = w * hsc.f3B0 + u * hsc.f3B1 + v * hsc.f3B2;
     // Find projected vectors
-    float3 c0 = project(p, hsc.f3B0, hsc.f4N0);
-    float3 c1 = project(p, hsc.f3B1, hsc.f4N1);
-    float3 c2 = project(p, hsc.f3B2, hsc.f4N2);
+    float3 c0 = project(p, hsc.f3B0, hsc.f4N0.xyz);
+    float3 c1 = project(p, hsc.f3B1, hsc.f4N1.xyz);
+    float3 c2 = project(p, hsc.f3B2, hsc.f4N2.xyz);
     // Interpolate
     float3 q = w * c0 + u * c1 + v * c2;
     // For blending between tessellated and untessellated model:
@@ -99,7 +99,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.pos = Out.pos2D = mul( vertexPosition, g_xCamera_VP );
 	Out.pos3D = vertexPosition.xyz;
 	Out.tex = vertexTex.xy;
-	Out.nor = normalize(vertexNormal);
+	Out.nor = normalize(vertexNormal.xyz);
 	/*float2x3 tanbin = tangentBinormal(Out.nor);
 	Out.tan=tanbin[0];
 	Out.bin=tanbin[1];*/

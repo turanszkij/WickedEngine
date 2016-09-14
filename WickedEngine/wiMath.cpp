@@ -2,7 +2,12 @@
 
 namespace wiMath
 {
-
+	float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2)
+	{
+		XMVECTOR& vector1 = XMLoadFloat2(&v1);
+		XMVECTOR& vector2 = XMLoadFloat2(&v2);
+		return XMVectorGetX(XMVector2Length(vector2 - vector1));
+	}
 	float Distance(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
 		XMVECTOR& vector1 = XMLoadFloat3(&v1);
@@ -179,5 +184,24 @@ namespace wiMath
 		const float t = max(0, min(1, XMVectorGetX(XMVector3Dot(point - segmentA, segmentB-segmentA)) / l2));
 		const XMVECTOR projection = segmentA + t * (segmentB - segmentA);  // Projection falls on the segment
 		return Distance(point, projection);
+	}
+
+	XMFLOAT3 HueToRGB(float H)
+	{
+		float R = abs(H * 6 - 3) - 1;
+		float G = 2 - abs(H * 6 - 2);
+		float B = 2 - abs(H * 6 - 4);
+		return XMFLOAT3(R, G, B);
+	}
+	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b)
+	{
+		float dot = a.x*b.x + a.y*b.y;      // dot product
+		float det = a.x*b.y - a.y*b.x;		// determinant
+		float angle = atan2(det, dot);		// atan2(y, x) or atan2(sin, cos)
+		if (angle < 0)
+		{
+			angle += XM_2PI;
+		}
+		return angle;
 	}
 }

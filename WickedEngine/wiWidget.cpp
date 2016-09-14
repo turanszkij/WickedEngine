@@ -7,6 +7,8 @@
 #include "wiMath.h"
 #include "wiHelper.h"
 
+using namespace wiGraphicsTypes;
+
 
 wiWidget::wiWidget():Transform()
 {
@@ -105,7 +107,17 @@ void wiWidget::Deactivate()
 }
 void wiWidget::SetColor(const wiColor& color, WIDGETSTATE state)
 {
-	colors[state] = color;
+	if (state == WIDGETSTATE_COUNT)
+	{
+		for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
+		{
+			colors[i] = color;
+		}
+	}
+	else
+	{
+		colors[state] = color;
+	}
 }
 wiColor wiWidget::GetColor()
 {
@@ -634,7 +646,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 
 
 	// Add a grabber onto the title bar
-	moveDragger = new wiButton(name + "move_dragger");
+	moveDragger = new wiButton(name + "_move_dragger");
 	moveDragger->SetText("");
 	moveDragger->SetSize(XMFLOAT2(scale.x - controlSize * 3, controlSize));
 	moveDragger->SetPos(XMFLOAT2(controlSize, 0));
@@ -667,7 +679,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	minimizeButton->attachTo(this);
 
 	// Add a resizer control to the upperleft corner
-	resizeDragger_UpperLeft = new wiButton(name + "resize_dragger_upper_left");
+	resizeDragger_UpperLeft = new wiButton(name + "_resize_dragger_upper_left");
 	resizeDragger_UpperLeft->SetText("");
 	resizeDragger_UpperLeft->SetSize(XMFLOAT2(controlSize, controlSize));
 	resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
@@ -682,7 +694,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	resizeDragger_UpperLeft->attachTo(this);
 
 	// Add a resizer control to the bottom right corner
-	resizeDragger_BottomRight = new wiButton(name + "resize_dragger_bottom_right");
+	resizeDragger_BottomRight = new wiButton(name + "_resize_dragger_bottom_right");
 	resizeDragger_BottomRight->SetText("");
 	resizeDragger_BottomRight->SetSize(XMFLOAT2(controlSize, controlSize));
 	resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - controlSize, translation.y + scale.y - controlSize));
@@ -694,6 +706,11 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	});
 	gui->AddWidget(resizeDragger_BottomRight);
 	resizeDragger_BottomRight->attachTo(this);
+
+
+	SetEnabled(true);
+	SetVisible(true);
+	SetMinimized(false);
 }
 wiWindow::~wiWindow()
 {
@@ -841,5 +858,287 @@ void wiWindow::SetMinimized(bool value)
 bool wiWindow::IsMinimized()
 {
 	return minimized;
+}
+
+
+
+
+wiColorPicker::wiColorPicker(wiGUI* gui, const string& name) :wiWindow(gui, name)
+{
+	SetSize(XMFLOAT2(300, 300));
+	SetColor(wiColor::Ghost);
+
+	hue_picker = XMFLOAT2(0, 0);
+	saturation_picker = XMFLOAT2(0, 0);
+	color = XMFLOAT4(1, 1, 1, 1);
+	angle = 0;
+}
+wiColorPicker::~wiColorPicker()
+{
+}
+static const float __colorpicker_center = 120;
+static const float __colorpicker_radius = 80;
+static const float __colorpicker_width = 16;
+void wiColorPicker::Update(wiGUI* gui)
+{
+	wiWindow::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
+
+	if (state == DEACTIVATING)
+	{
+		state = IDLE;
+	}
+
+	XMFLOAT2 center = XMFLOAT2(translation.x + __colorpicker_center, translation.y + __colorpicker_center);
+	XMFLOAT4 pointer4 = wiInputManager::GetInstance()->getpointer();
+	XMFLOAT2 pointer = XMFLOAT2(pointer4.x, pointer4.y);
+	float distance = wiMath::Distance(center, pointer);
+	bool hover_hue = (distance > __colorpicker_radius) && (distance < __colorpicker_radius + __colorpicker_width);
+
+	if (hover_hue)
+	{
+		state = FOCUS;
+		huefocus = true;
+	}
+	else if (state == IDLE)
+	{
+		huefocus = false;
+	}
+
+	bool btndown = wiInputManager::GetInstance()->down(VK_LBUTTON);
+	if (huefocus && btndown)
+	{
+		//hue pick
+		angle = wiMath::GetAngle(XMFLOAT2(pointer.x - center.x, pointer.y - center.y), XMFLOAT2(__colorpicker_radius, 0));
+		XMFLOAT3 color3 = wiMath::HueToRGB(angle / XM_2PI);
+		color = XMFLOAT4(color3.x, color3.y, color3.z, 1);
+		gui->ActivateWidget(this);
+	}
+	else if (!huefocus && btndown)
+	{
+		// saturation pick
+		gui->DeactivateWidget(this); // todo
+	}
+	else
+	{
+		gui->DeactivateWidget(this);
+	}
+
+	float r = __colorpicker_radius + __colorpicker_width*0.5f;
+	hue_picker = XMFLOAT2(center.x + r*cos(angle), center.y + r*-sin(angle));
+	saturation_picker = center;
+}
+void wiColorPicker::Render(wiGUI* gui)
+{
+	wiWindow::Render(gui);
+
+
+	if (!IsVisible() || IsMinimized())
+	{
+		return;
+	}
+	GRAPHICSTHREAD threadID = gui->GetGraphicsThread();
+
+	struct Vertex
+	{
+		XMFLOAT4 pos;
+		XMFLOAT4 col;
+	};
+	static wiGraphicsTypes::GPUBuffer vb_saturation;
+	static wiGraphicsTypes::GPUBuffer vb_hue;
+	static wiGraphicsTypes::GPUBuffer vb_picker;
+	static wiGraphicsTypes::GPUBuffer vb_preview;
+
+	static bool buffersComplete = false;
+	if (!buffersComplete)
+	{
+		HRESULT hr = S_OK;
+		// saturation
+		{
+			static vector<Vertex> vertices(0);
+			if (vb_saturation.IsValid() && !vertices.empty())
+			{
+				XMFLOAT3 color3 = wiMath::HueToRGB(angle / XM_2PI);
+				vertices[0].col = XMFLOAT4(color3.x, color3.y, color3.z, 1);
+				wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices.data(), threadID, vb_saturation.GetDesc().ByteWidth);
+			}
+			else
+			{
+				float deg = 0;
+				float t = deg * XM_PI / 180.0f;
+				vertices.push_back({ XMFLOAT4(__colorpicker_radius*cos(t), __colorpicker_radius*-sin(t),0,1),XMFLOAT4(1,0,0,1) });		// hue
+				deg += 120;
+				t = deg * XM_PI / 180.0f;
+				vertices.push_back({ XMFLOAT4(__colorpicker_radius*cos(t), __colorpicker_radius*-sin(t), 0, 1),XMFLOAT4(1,1,1,1) });	// white
+				deg += 120;
+				t = deg * XM_PI / 180.0f;
+				vertices.push_back({ XMFLOAT4(__colorpicker_radius*cos(t), __colorpicker_radius*-sin(t), 0, 1),XMFLOAT4(0,0,0,1) });	// black
+
+				GPUBufferDesc desc = { 0 };
+				desc.BindFlags = BIND_VERTEX_BUFFER;
+				desc.ByteWidth = vertices.size() * sizeof(Vertex);
+				desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+				desc.MiscFlags = 0;
+				desc.StructureByteStride = 0;
+				desc.Usage = USAGE_DYNAMIC;
+				SubresourceData data = { 0 };
+				data.pSysMem = vertices.data();
+				hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_saturation);
+			}
+		}
+		// hue
+		{
+			vector<Vertex> vertices(0);
+			for (float i = 0; i <= 100; i += 1.0f)
+			{
+				float p = i / 100;
+				float t = p * XM_2PI;
+				float x = cos(t);
+				float y = -sin(t);
+				XMFLOAT3 rgb = wiMath::HueToRGB(p);
+				vertices.push_back({ XMFLOAT4(__colorpicker_radius * x, __colorpicker_radius * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
+				vertices.push_back({ XMFLOAT4((__colorpicker_radius + __colorpicker_width) * x, (__colorpicker_radius + __colorpicker_width) * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
+			}
+
+			GPUBufferDesc desc = { 0 };
+			desc.BindFlags = BIND_VERTEX_BUFFER;
+			desc.ByteWidth = vertices.size() * sizeof(Vertex);
+			desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+			desc.MiscFlags = 0;
+			desc.StructureByteStride = 0;
+			desc.Usage = USAGE_DYNAMIC;
+			SubresourceData data = { 0 };
+			data.pSysMem = vertices.data();
+			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_hue);
+		}
+		// picker
+		{
+			float _radius = 3;
+			float _width = 3;
+			vector<Vertex> vertices(0);
+			for (float i = 0; i <= 100; i += 1.0f)
+			{
+				float p = i / 100;
+				float t = p * XM_2PI;
+				float x = cos(t);
+				float y = -sin(t);
+				XMFLOAT3 rgb = wiMath::HueToRGB(p);
+				vertices.push_back({ XMFLOAT4(_radius * x, _radius * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
+				vertices.push_back({ XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
+			}
+
+			GPUBufferDesc desc = { 0 };
+			desc.BindFlags = BIND_VERTEX_BUFFER;
+			desc.ByteWidth = vertices.size() * sizeof(Vertex);
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+			desc.StructureByteStride = 0;
+			desc.Usage = USAGE_IMMUTABLE;
+			SubresourceData data = { 0 };
+			data.pSysMem = vertices.data();
+			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker);
+		}
+		// preview
+		{
+			float _width = 20;
+
+			vector<Vertex> vertices(0);
+			vertices.push_back({ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
+			vertices.push_back({ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
+			vertices.push_back({ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
+			vertices.push_back({ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
+			vertices.push_back({ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
+			vertices.push_back({ XMFLOAT4(_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
+
+			GPUBufferDesc desc = { 0 };
+			desc.BindFlags = BIND_VERTEX_BUFFER;
+			desc.ByteWidth = vertices.size() * sizeof(Vertex);
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+			desc.StructureByteStride = 0;
+			desc.Usage = USAGE_IMMUTABLE;
+			SubresourceData data = { 0 };
+			data.pSysMem = vertices.data();
+			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
+		}
+
+	}
+
+	XMMATRIX __cam = XMMatrixOrthographicOffCenterLH(0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, -1, 1);
+
+	wiRenderer::GetDevice()->BindConstantBufferVS(wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
+	wiRenderer::GetDevice()->BindRasterizerState(wiRenderer::rasterizers[RSTYPE_DOUBLESIDED], threadID);
+	wiRenderer::GetDevice()->BindBlendState(wiRenderer::blendStates[BSTYPE_OPAQUE], threadID);
+	wiRenderer::GetDevice()->BindDepthStencilState(wiRenderer::depthStencils[DSSTYPE_XRAY], 0, threadID);
+	wiRenderer::GetDevice()->BindVertexLayout(wiRenderer::vertexLayouts[VLTYPE_LINE], threadID);
+	wiRenderer::GetDevice()->BindVS(wiRenderer::vertexShaders[VSTYPE_LINE], threadID);
+	wiRenderer::GetDevice()->BindPS(wiRenderer::pixelShaders[PSTYPE_LINE], threadID);
+	wiRenderer::GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
+
+	// render saturation triangle
+	wiRenderer::MiscCB cb;
+	cb.mTransform = XMMatrixTranspose(
+		XMMatrixRotationZ(-angle) *
+		XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
+		__cam
+	);
+	cb.mColor = XMFLOAT4(1, 1, 1, 1);
+	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+	wiRenderer::GetDevice()->BindVertexBuffer(&vb_saturation, 0, sizeof(Vertex), threadID);
+	wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+
+	// render hue circle
+	cb.mTransform = XMMatrixTranspose(
+		XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
+		__cam
+	);
+	cb.mColor = XMFLOAT4(1, 1, 1, 1);
+	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+	wiRenderer::GetDevice()->BindVertexBuffer(&vb_hue, 0, sizeof(Vertex), threadID);
+	wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+
+	// render hue picker
+	cb.mTransform = XMMatrixTranspose(
+		XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
+		__cam
+	);
+	cb.mColor = XMFLOAT4(0, 0, 0, 1);
+	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+	wiRenderer::GetDevice()->BindVertexBuffer(&vb_picker, 0, sizeof(Vertex), threadID);
+	wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+
+	// render saturation picker
+	cb.mTransform = XMMatrixTranspose(
+		XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
+		__cam
+	);
+	cb.mColor = XMFLOAT4(0, 0, 0, 1);
+	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+	wiRenderer::GetDevice()->BindVertexBuffer(&vb_picker, 0, sizeof(Vertex), threadID);
+	wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+
+	// render preview
+	cb.mTransform = XMMatrixTranspose(
+		XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
+		__cam
+	);
+	cb.mColor = color;
+	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+	wiRenderer::GetDevice()->BindVertexBuffer(&vb_preview, 0, sizeof(Vertex), threadID);
+	wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	
+}
+XMFLOAT4 wiColorPicker::GetColor()
+{
+	return color;
 }
 

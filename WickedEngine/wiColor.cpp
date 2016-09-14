@@ -31,6 +31,7 @@ wiColor wiColor::lerp(const wiColor& a, const wiColor& b, float i)
 	return wiColor::fromFloat(retF.x, retF.y, retF.z, retF.w);
 }
 
+
 wiColor wiColor::Red				= wiColor(255, 0, 0, 255);
 wiColor wiColor::Green				= wiColor(0, 255, 0, 255);
 wiColor wiColor::Blue				= wiColor(0, 0, 255, 255);

@@ -82,8 +82,6 @@ public:
 	static void SetPointLightShadowProps(int shadowMapCount, int resolution);
 	static void SetSpotLightShadowProps(int count, int resolution);
 
-protected:
-
 	// Constant Buffers:
 	// Persistent buffers:
 	GFX_STRUCT WorldCB
@@ -263,6 +261,7 @@ protected:
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_BONE)
 	};
 
+protected:
 
 	void UpdateSpheres();
 	static void SetUpBoneLines();
