@@ -1116,7 +1116,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	}
 
-	XMMATRIX __cam = XMMatrixOrthographicOffCenterLH(0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, -1, 1);
+	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
 	wiRenderer::GetDevice()->BindConstantBufferVS(wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
 	wiRenderer::GetDevice()->BindRasterizerState(wiRenderer::rasterizers[RSTYPE_DOUBLESIDED], threadID);

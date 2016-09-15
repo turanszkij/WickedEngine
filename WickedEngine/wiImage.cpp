@@ -280,7 +280,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 					XMMatrixScaling(effects.scale.x*effects.siz.x, effects.scale.y*effects.siz.y, 1)
 					* XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(effects.pos.x, effects.pos.y, 0)
-					* XMMatrixOrthographicOffCenterLH(0, (float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, -1, 1)
+					* device->GetScreenProjection()
 				);
 			}
 			else if(effects.typeFlag==WORLD){

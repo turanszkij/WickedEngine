@@ -304,7 +304,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest){
 		ConstantBuffer cb;
 		cb.mTransform = XMMatrixTranspose(
 			XMMatrixTranslation(newProps.posX, newProps.posY, 0)
-			* XMMatrixOrthographicOffCenterLH(0, (float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, -1, 1)
+			* device->GetScreenProjection()
 		);
 		
 		device->UpdateBuffer(constantBuffer,&cb,threadID);

@@ -68,6 +68,11 @@ namespace wiGraphicsTypes
 		};
 		virtual bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) = 0;
 
+		XMMATRIX GetScreenProjection()
+		{
+			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
+		}
+
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
