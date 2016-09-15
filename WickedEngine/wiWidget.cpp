@@ -860,7 +860,7 @@ bool wiWindow::IsMinimized()
 
 wiColorPicker::wiColorPicker(wiGUI* gui, const string& name) :wiWindow(gui, name)
 {
-	SetSize(XMFLOAT2(300, 300));
+	SetSize(XMFLOAT2(300, 260));
 	SetColor(wiColor::Ghost);
 	RemoveWidget(resizeDragger_BottomRight);
 	RemoveWidget(resizeDragger_UpperLeft);
@@ -1075,9 +1075,8 @@ void wiColorPicker::Render(wiGUI* gui)
 				float t = p * XM_2PI;
 				float x = cos(t);
 				float y = -sin(t);
-				XMFLOAT3 rgb = wiMath::HueToRGB(p);
-				vertices.push_back({ XMFLOAT4(_radius * x, _radius * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
-				vertices.push_back({ XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
+				vertices.push_back({ XMFLOAT4(_radius * x, _radius * y, 0, 1), XMFLOAT4(1,1,1,1) });
+				vertices.push_back({ XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1), XMFLOAT4(1,1,1,1) });
 			}
 
 			GPUBufferDesc desc = { 0 };
@@ -1155,7 +1154,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
 		__cam
 	);
-	cb.mColor = XMFLOAT4(0, 0, 0, 1);
+	cb.mColor = XMFLOAT4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
 	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 	wiRenderer::GetDevice()->BindVertexBuffer(&vb_picker, 0, sizeof(Vertex), threadID);
 	wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
@@ -1165,7 +1164,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
 		__cam
 	);
-	cb.mColor = XMFLOAT4(0, 0, 0, 1);
+	cb.mColor = XMFLOAT4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
 	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 	wiRenderer::GetDevice()->BindVertexBuffer(&vb_picker, 0, sizeof(Vertex), threadID);
 	wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
@@ -1179,6 +1178,17 @@ void wiColorPicker::Render(wiGUI* gui)
 	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 	wiRenderer::GetDevice()->BindVertexBuffer(&vb_preview, 0, sizeof(Vertex), threadID);
 	wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+
+	// RGB values:
+	stringstream _r("");
+	stringstream _g("");
+	stringstream _b("");
+	_r << "R: " << (int)(final_color.x * 255);
+	_g << "G: " << (int)(final_color.y * 255);
+	_b << "B: " << (int)(final_color.z * 255);
+	wiFont(_r.str(), wiFontProps(translation.x + 200, translation.y + 200)).Draw(threadID, true);
+	wiFont(_g.str(), wiFontProps(translation.x + 200, translation.y + 210)).Draw(threadID, true);
+	wiFont(_b.str(), wiFontProps(translation.x + 200, translation.y + 220)).Draw(threadID, true);
 	
 }
 XMFLOAT4 wiColorPicker::GetColor()

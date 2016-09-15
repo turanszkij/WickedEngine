@@ -191,7 +191,7 @@ namespace wiMath
 		float R = abs(H * 6 - 3) - 1;
 		float G = 2 - abs(H * 6 - 2);
 		float B = 2 - abs(H * 6 - 4);
-		return XMFLOAT3(R, G, B);
+		return XMFLOAT3(saturate(R), saturate(G), saturate(B));
 	}
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b)
 	{
