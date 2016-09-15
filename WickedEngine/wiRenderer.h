@@ -93,7 +93,8 @@ public:
 		XMFLOAT3 mAmbient;				float pad2;
 		XMFLOAT3 mFog;					float pad3;
 		XMFLOAT2 mScreenWidthHeight;
-		float padding[2];
+		float pad4;
+		float pad5;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 
@@ -105,7 +106,7 @@ public:
 		float mWindTime;
 		float mWindWaveSize;
 		float mWindRandomness;
-		float padding[1];
+		float pad1;
 		
 		CB_SETBINDSLOT(CBSLOT_RENDERER_FRAME)
 
@@ -126,7 +127,8 @@ public:
 		XMFLOAT3 mUp;			float pad2;
 		float    mZNearP;
 		float    mZFarP;
-		float padding[2];
+		float	 pad3;
+		float	 pad4;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_CAMERA)
 

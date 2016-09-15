@@ -36,7 +36,9 @@ CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 	float		xMipLevel;
 	float		xFade;
 	float		xOpacity;
-	float		xPadding_ImageCB[3];
+	float		xPadding0_ImageCB;
+	float		xPadding1_ImageCB;
+	float		xPadding2_ImageCB;
 };
 CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
 {

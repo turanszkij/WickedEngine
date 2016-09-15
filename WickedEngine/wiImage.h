@@ -25,7 +25,9 @@ protected:
 		float		mMipLevel;
 		float		mFade;
 		float		mOpacity;
-		float		pad[3];
+		float		pad0;
+		float		pad1;
+		float		pad2;
 
 		CB_SETBINDSLOT(CBSLOT_IMAGE_IMAGE)
 

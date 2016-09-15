@@ -50,7 +50,8 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
 	float3		g_xWorld_Fog;					float xPadding3_WorldCB;
 	float2		g_xWorld_ScreenWidthHeight;
-	float		xPadding_WorldCB[2];
+	float		xPadding4_WorldCB;
+	float		xPadding5_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
@@ -58,7 +59,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindTime;
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
-	float		xPadding_FrameCB[1];
+	float		xPadding1_FrameCB;
 };
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 {
@@ -75,7 +76,8 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float3		g_xCamera_Up;					float xPadding2_CameraCB;
 	float		g_xCamera_ZNearP;
 	float		g_xCamera_ZFarP;
-	float		xPadding_CameraCB[2];
+	float		xPadding3_CameraCB;
+	float		xPadding4_CameraCB;
 };
 CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 {
