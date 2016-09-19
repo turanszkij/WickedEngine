@@ -4213,23 +4213,8 @@ void wiRenderer::AddModel(Model* model)
 
 	Update();
 
-	if (spTree) {
-		spTree->AddObjects(spTree->root, vector<Cullable*>(model->objects.begin(), model->objects.end()));
-	}
-	else
-	{
-		GenerateSPTree(spTree, vector<Cullable*>(model->objects.begin(), model->objects.end()), SPTREE_GENERATE_OCTREE);
-	}
-	if (spTree_lights) {
-		spTree_lights->AddObjects(spTree_lights->root, vector<Cullable*>(model->lights.begin(), model->lights.end()));
-	}
-	else
-	{
-		GenerateSPTree(spTree_lights, vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
-	}
-
-
-
+	Add(model->objects);
+	Add(model->lights);
 
 	//UpdateRenderData(nullptr);
 
@@ -4237,6 +4222,53 @@ void wiRenderer::AddModel(Model* model)
 	SetUpBoneLines();
 
 	GetDevice()->UNLOCK();
+}
+
+void wiRenderer::Add(Object* value)
+{
+	list<Object*> collection(0);
+	collection.push_back(value);
+	Add(collection);
+}
+void wiRenderer::Add(Light* value)
+{
+	list<Light*> collection(0);
+	collection.push_back(value);
+	Add(collection);
+}
+void wiRenderer::Add(const list<Object*>& objects)
+{
+	for (Object* x : objects)
+	{
+		if (x->parent == nullptr)
+		{
+			GetScene().GetWorldNode()->Add(x);
+		}
+	}
+	if (spTree) {
+		spTree->AddObjects(spTree->root, vector<Cullable*>(objects.begin(), objects.end()));
+	}
+	else
+	{
+		GenerateSPTree(spTree, vector<Cullable*>(objects.begin(), objects.end()), SPTREE_GENERATE_OCTREE);
+	}
+}
+void wiRenderer::Add(const list<Light*>& lights)
+{
+	for (Light* x : lights)
+	{
+		if (x->parent == nullptr)
+		{
+			GetScene().GetWorldNode()->Add(x);
+		}
+	}
+	if (spTree_lights) {
+		spTree_lights->AddObjects(spTree_lights->root, vector<Cullable*>(lights.begin(), lights.end()));
+	}
+	else
+	{
+		GenerateSPTree(spTree_lights, vector<Cullable*>(lights.begin(), lights.end()), SPTREE_GENERATE_OCTREE);
+	}
 }
 
 void wiRenderer::Remove(Object* value)

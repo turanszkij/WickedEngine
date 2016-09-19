@@ -494,6 +494,13 @@ public:
 	// Add model to the scene
 	static void AddModel(Model* value);
 
+	// Add Object Instance
+	static void Add(Object* value);
+	static void Add(const list<Object*>& objects);
+	// Add Light Instance
+	static void Add(Light* value);
+	static void Add(const list<Light*>& lights);
+
 	// Remove from the scene
 	static void Remove(Object* value);
 	static void Remove(Light* value);

@@ -1029,7 +1029,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 				GPUBufferDesc desc = { 0 };
 				desc.BindFlags = BIND_VERTEX_BUFFER;
-				desc.ByteWidth = vertices.size() * sizeof(Vertex);
+				desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 				desc.CPUAccessFlags = CPU_ACCESS_WRITE;
 				desc.MiscFlags = 0;
 				desc.StructureByteStride = 0;
@@ -1055,7 +1055,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 			GPUBufferDesc desc = { 0 };
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = vertices.size() * sizeof(Vertex);
+			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = CPU_ACCESS_WRITE;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -1081,7 +1081,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 			GPUBufferDesc desc = { 0 };
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = vertices.size() * sizeof(Vertex);
+			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
@@ -1104,7 +1104,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 			GPUBufferDesc desc = { 0 };
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = vertices.size() * sizeof(Vertex);
+			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
