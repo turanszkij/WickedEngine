@@ -70,6 +70,7 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_PrevP;
 	float4x4	g_xCamera_PrevVP;				// PrevView*PrevProjection
 	float4x4	g_xCamera_ReflVP;				// ReflectionView*ReflectionProjection
+	float4x4	g_xCamera_InvP;					// Inverse Projection
 	float4x4	g_xCamera_InvVP;				// Inverse View-Projection
 	float3		g_xCamera_CamPos;				float xPadding0_CameraCB;
 	float3		g_xCamera_At;					float xPadding1_CameraCB;

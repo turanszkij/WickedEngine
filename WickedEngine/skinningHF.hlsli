@@ -15,7 +15,8 @@ struct Bone
 	bonetype pose, prev;
 };
 
-StructuredBuffer<Bone> boneBuffer:register(t0);
+//StructuredBuffer<Bone> boneBuffer:register(t0);
+STRUCTUREDBUFFER(boneBuffer, Bone, SBSLOT_BONE);
 
 inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 inNor, inout float4 inBon, inout float4 inWei)
 {

@@ -2013,7 +2013,7 @@ void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUUnorderedResour
 	if (resource != nullptr)
 		deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->unorderedAccessView_DX11, nullptr);
 }
-const void* const __nullBlob[1024] = { nullptr };
+const void* const __nullBlob[1024] = { 0 }; // this is initialized to nullptrs!
 void GraphicsDevice_DX11::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");

@@ -89,12 +89,10 @@ namespace wiGraphicsTypes
 	GPUBuffer::GPUBuffer() : GPUResource(), GPUUnorderedResource()
 	{
 		SAFE_INIT(resource_DX11);
-		SAFE_INIT(unorderedAccessView_DX11);
 	}
 	GPUBuffer::~GPUBuffer()
 	{
 		SAFE_RELEASE(resource_DX11);
-		SAFE_RELEASE(unorderedAccessView_DX11);
 	}
 
 	VertexLayout::VertexLayout()

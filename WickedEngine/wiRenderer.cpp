@@ -534,48 +534,51 @@ void wiRenderer::LoadBuffers()
 
 	//Persistent buffers...
 	bd.ByteWidth = sizeof(WorldCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_WORLD]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_WORLD]);
 
 	bd.ByteWidth = sizeof(FrameCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_FRAME]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
 
 	bd.ByteWidth = sizeof(CameraCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CAMERA]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
 
 	bd.ByteWidth = sizeof(MaterialCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MATERIAL]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MATERIAL]);
 
 	bd.ByteWidth = sizeof(DirectionalLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_DIRLIGHT]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DIRLIGHT]);
 
 	bd.ByteWidth = sizeof(MiscCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_MISC]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
 
 	bd.ByteWidth = sizeof(ShadowCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_SHADOW]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_SHADOW]);
 
 	bd.ByteWidth = sizeof(APICB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CLIPPLANE]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLIPPLANE]);
 
 
 	// On demand buffers...
 	bd.ByteWidth = sizeof(PointLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_POINTLIGHT]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_POINTLIGHT]);
 
 	bd.ByteWidth = sizeof(SpotLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_SPOTLIGHT]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_SPOTLIGHT]);
 
 	bd.ByteWidth = sizeof(VolumeLightCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_VOLUMELIGHT]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOLUMELIGHT]);
 
 	bd.ByteWidth = sizeof(DecalCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_DECAL]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DECAL]);
 
 	bd.ByteWidth = sizeof(CubeMapRenderCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_CUBEMAPRENDER]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CUBEMAPRENDER]);
 
 	bd.ByteWidth = sizeof(TessellationCB);
-	GetDevice()->CreateBuffer(&bd, NULL, constantBuffers[CBTYPE_TESSELLATION]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_TESSELLATION]);
+
+	bd.ByteWidth = sizeof(DispatchParamsCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
 
 
 
@@ -588,11 +591,20 @@ void wiRenderer::LoadBuffers()
 		resourceBuffers[i] = new GPUBuffer;
 	}
 
+	bd.Usage = USAGE_DEFAULT;
+	bd.CPUAccessFlags = 0;
+
 	bd.ByteWidth = sizeof(ShaderBoneType) * 100;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderBoneType);
-	GetDevice()->CreateBuffer(&bd, NULL, resourceBuffers[RBTYPE_BONE]);
+	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_BONE]);
+
+	bd.ByteWidth = sizeof(LightArrayType) * 1024;
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(LightArrayType);
+	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTARRAY]);
 
 }
 
@@ -699,6 +711,8 @@ void wiRenderer::LoadBasicShaders()
 
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEFRUSTUMS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS.cso", wiResourceManager::COMPUTESHADER));
 	
 }
 void wiRenderer::LoadLineShaders()
@@ -1408,7 +1422,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					}
 
 					// Upload bones for skinning to shader
-					static thread_local unsigned int maxBoneCount = 100;
+					static thread_local unsigned int maxBoneCount = resourceBuffers[RBTYPE_BONE]->GetDesc().ByteWidth / sizeof(ShaderBoneType);
 					static ShaderBoneType *bonebuf[GRAPHICSTHREAD_COUNT] = { 0 };
 					if (bonebuf[threadID] == nullptr)
 					{
@@ -3289,6 +3303,126 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 	}
 }
 
+Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	int _width = device->GetScreenWidth();
+	int _height = device->GetScreenHeight();
+	int tileCount = (int)(ceilf((float)_width / 16.f) * ceilf((float)_height / 16.f));
+
+	static GPUBuffer* frustumBuffer = nullptr;
+	if(frustumBuffer == nullptr)
+	{
+		frustumBuffer = new GPUBuffer;
+
+		UINT _stride = sizeof(XMFLOAT4) * 4;
+
+		GPUBufferDesc bd;
+		ZeroMemory(&bd, sizeof(bd));
+		bd.ByteWidth = _stride * tileCount; // storing 4 planes for every tile
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Usage = USAGE_DEFAULT;
+		bd.CPUAccessFlags = 0;
+		bd.StructureByteStride = _stride;
+		device->CreateBuffer(&bd, nullptr, frustumBuffer);
+
+	}
+
+	// Calc dispatchparams
+	int _B = 16;
+	DispatchParamsCB dispatchParams;
+	dispatchParams.numThreads[0] = (uint32_t)ceilf((float)_width / _B);
+	dispatchParams.numThreads[1] = (uint32_t)ceilf((float)_height / _B);
+	dispatchParams.numThreads[2] = 1;
+	dispatchParams.numThreadGroups[0] = (uint32_t)ceilf((float)dispatchParams.numThreads[0] / _B);
+	dispatchParams.numThreadGroups[1] = (uint32_t)ceilf((float)dispatchParams.numThreads[1] / _B);
+	dispatchParams.numThreadGroups[0] = 1;
+	device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+	device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+
+	// calculate the per-tile frustums once:
+	static bool frustumsComplete = false;
+	if(!frustumsComplete)
+	{
+		frustumsComplete = true;
+		device->BindUnorderedAccessResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
+		device->BindCS(computeShaders[CSTYPE_TILEFRUSTUMS], threadID);
+		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
+		device->UnBindUnorderedAccessResources(SBSLOT_TILEFRUSTUMS, 1, threadID);
+	}
+
+	static Texture2D* uav;
+	if (uav == nullptr)
+	{
+		Texture2DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = (UINT)_width;
+		desc.Height = (UINT)_height;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
+
+		device->CreateTexture2D(&desc, nullptr, &uav);
+	}
+	if (uav != nullptr)
+	{
+		// Fill Light Array with lights in the frustum
+		CulledList culledObjects;
+		if (spTree_lights)
+			wiSPTree::getVisible(spTree_lights->root, getCamera()->frustum, culledObjects);
+
+		GetDevice()->EventBegin(L"Light Culling", threadID);
+
+		static LightArrayType lightArray[1024];
+		memset(lightArray, 0, sizeof(lightArray));
+		
+		int counter = 0;
+		for (Cullable* c : culledObjects) 
+		{
+			Light* l = (Light*)c;
+
+			//lightArray[counter].boundsMin = l->bounds.getMin();
+			//lightArray[counter].boundsMax = l->bounds.getMax();
+			lightArray[counter].pos = l->translation;
+			lightArray[counter].radius = l->enerDis.y;
+			lightArray[counter].col = l->color;
+
+			counter++;
+			if (counter == 1024)
+			{
+				assert(0 && "Over 1024 lights are in the frustum!");
+				break;
+			}
+		}
+		device->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*counter));
+		device->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
+
+		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
+
+		MiscCB cb;
+		cb.mColor.x = (float)counter;
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+		device->BindConstantBufferCS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		
+		Texture2DDesc uav_desc = uav->GetDesc();
+		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
+		device->BindUnorderedAccessResourceCS(uav, 0, threadID);
+		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
+		device->UnBindUnorderedAccessResources(0, 1, threadID);
+
+		GetDevice()->EventEnd(threadID);
+	}
+	return uav;
+}
+
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 {
 	WorldCB cb;
@@ -3331,6 +3465,7 @@ void wiRenderer::UpdateCameraCB(GRAPHICSTHREAD threadID)
 	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
 	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
 	cb.mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
+	cb.mInvP = XMMatrixTranspose(camera->GetInvProjection());
 	cb.mInvVP = XMMatrixTranspose(camera->GetInvViewProjection());
 	cb.mCamPos = camera->translation;
 	cb.mAt = camera->At;

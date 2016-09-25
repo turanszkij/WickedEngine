@@ -7,6 +7,8 @@
 // Structured Buffers (t slot):
 
 #define SBSLOT_BONE			0
+#define SBSLOT_TILEFRUSTUMS	25
+#define SBSLOT_LIGHTARRAY	26
 
 
 // Textures (t slot):
@@ -66,10 +68,14 @@
 // Automatically binds resources on the shader side:
 
 #define STRUCTUREDBUFFER_X(name, type, slot) StructuredBuffer< type > name : register(t ## slot)
-#define STRUCTUREDBUFFER(name, slot) STRUCTUREDBUFFER_X(name, type, slot)
+#define STRUCTUREDBUFFER(name, type, slot) STRUCTUREDBUFFER_X(name, type, slot)
+#define RWSTRUCTUREDBUFFER_X(name, type, slot) RWStructuredBuffer< type > name : register(u ## slot)
+#define RWSTRUCTUREDBUFFER(name, type, slot) RWSTRUCTUREDBUFFER_X(name, type, slot)
 
 #define TEXTURE2D_X(name, type, slot) Texture2D< type > name : register(t ## slot);
 #define TEXTURE2D(name, type, slot) TEXTURE2D_X(name, type, slot)
+#define RWTEXTURE2D_X(name, type, slot) RWTexture2D< type > name : register(u ## slot);
+#define RWTEXTURE2D(name, type, slot) RWTEXTURE2D_X(name, type, slot)
 #define TEXTURECUBE_X(name, type, slot) TextureCube< type > name : register(t ## slot);
 #define TEXTURECUBE(name, type, slot) TEXTURECUBE_X(name, type, slot)
 

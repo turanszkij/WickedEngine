@@ -121,6 +121,7 @@ public:
 		XMMATRIX mPrevP;
 		XMMATRIX mPrevVP;
 		XMMATRIX mReflVP;
+		XMMATRIX mInvP;
 		XMMATRIX mInvVP;
 		XMFLOAT3 mCamPos;		float pad0;
 		XMFLOAT3 mAt;			float pad1;
@@ -254,13 +255,31 @@ public:
 
 		ALIGN_16
 	};
+	GFX_STRUCT DispatchParamsCB
+	{
+		uint32_t numThreadGroups[3];	uint32_t pad0;
+		uint32_t numThreads[3];			uint32_t pad1;
+
+		CB_SETBINDSLOT(CBSLOT_RENDERER_DISPATCHPARAMS)
+
+		ALIGN_16
+	};
 
 	// Resource Buffers:
-	struct ShaderBoneType
+	GFX_STRUCT ShaderBoneType
 	{
 		XMFLOAT4X4 pose, prev;
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_BONE)
+	};
+
+	GFX_STRUCT LightArrayType
+	{
+		XMFLOAT3 pos;
+		float radius;
+		XMFLOAT4 col;
+
+		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_LIGHTARRAY)
 	};
 
 protected:
@@ -392,6 +411,8 @@ public:
 	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);
+
+	static wiGraphicsTypes::Texture2D* ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();

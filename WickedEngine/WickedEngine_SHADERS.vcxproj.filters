@@ -103,6 +103,9 @@
     <None Include="uvsphere.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="cullingShaderHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -422,6 +425,12 @@
     </FxCompile>
     <FxCompile Include="captureImpostorPS.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightCullingCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="tileFrustumsCS.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

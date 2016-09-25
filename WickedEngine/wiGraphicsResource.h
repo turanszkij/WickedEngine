@@ -140,7 +140,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11Buffer*				resource_DX11;
-		ID3D11UnorderedAccessView*	unorderedAccessView_DX11;
 		GPUBufferDesc desc;
 	public:
 		GPUBuffer();
