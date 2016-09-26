@@ -3393,9 +3393,8 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		{
 			Light* l = (Light*)c;
 
-			//lightArray[counter].boundsMin = l->bounds.getMin();
-			//lightArray[counter].boundsMax = l->bounds.getMax();
-			lightArray[counter].pos = l->translation;
+			//lightArray[counter].pos = l->translation;
+			XMStoreFloat3(&lightArray[counter].pos, XMVector3TransformCoord(XMLoadFloat3(&l->translation), cam->GetView()));
 			lightArray[counter].radius = l->enerDis.y;
 			lightArray[counter].col = l->color;
 
