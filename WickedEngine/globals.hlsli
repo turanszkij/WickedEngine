@@ -133,6 +133,14 @@ inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
 inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
 inline float GetTime() { return g_xFrame_WindTime; }
-inline float GetEmissive(float emissive) { return emissive * 10.0f; };
+inline float GetEmissive(float emissive) { return emissive * 10.0f; }
+
+struct ComputeShaderInput
+{
+	uint3 groupID           : SV_GroupID;           // 3D index of the thread group in the dispatch.
+	uint3 groupThreadID     : SV_GroupThreadID;     // 3D index of local thread ID in a thread group.
+	uint3 dispatchThreadID  : SV_DispatchThreadID;  // 3D index of global thread ID in the dispatch.
+	uint  groupIndex        : SV_GroupIndex;        // Flattened local index of the thread within a thread group.
+};
 
 #endif // _SHADER_GLOBALS_

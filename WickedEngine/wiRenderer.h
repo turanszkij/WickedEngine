@@ -257,8 +257,8 @@ public:
 	};
 	GFX_STRUCT DispatchParamsCB
 	{
-		uint32_t numThreadGroups[3];	uint32_t pad0;
-		uint32_t numThreads[3];			uint32_t pad1;
+		UINT numThreadGroups[3];	UINT pad0;
+		UINT numThreads[3];			UINT pad1;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_DISPATCHPARAMS)
 
@@ -271,6 +271,8 @@ public:
 		XMFLOAT4X4 pose, prev;
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_BONE)
+
+		ALIGN_16
 	};
 
 	GFX_STRUCT LightArrayType
@@ -280,6 +282,8 @@ public:
 		XMFLOAT4 col;
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_LIGHTARRAY)
+
+		ALIGN_16
 	};
 
 protected:

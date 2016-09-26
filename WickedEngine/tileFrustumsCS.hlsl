@@ -6,26 +6,22 @@ RWSTRUCTUREDBUFFER(out_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
 #define BLOCK_SIZE 16
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
-void main(
-	uint3 groupId : SV_GroupID,
-	uint3 groupThreadId : SV_GroupThreadID,
-	uint3 dispatchThreadId : SV_DispatchThreadID, // 
-	uint groupIndex : SV_GroupIndex)
+void main(ComputeShaderInput IN)
 {
 	// View space eye position is always at the origin.
 	const float3 eyePos = float3(0, 0, 0);
 
-	// Compute the 4 corner points on the far clipping plane to use as the 
+	// Compute 4 points on the far clipping plane to use as the 
 	// frustum vertices.
 	float4 screenSpace[4];
 	// Top left point
-	screenSpace[0] = float4(dispatchThreadId.xy * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[0] = float4(IN.dispatchThreadID.xy * BLOCK_SIZE, 1.0f, 1.0f);
 	// Top right point
-	screenSpace[1] = float4(float2(dispatchThreadId.x + 1, dispatchThreadId.y) * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[1] = float4(float2(IN.dispatchThreadID.x + 1, IN.dispatchThreadID.y) * BLOCK_SIZE, 1.0f, 1.0f);
 	// Bottom left point
-	screenSpace[2] = float4(float2(dispatchThreadId.x, dispatchThreadId.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[2] = float4(float2(IN.dispatchThreadID.x, IN.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
 	// Bottom right point
-	screenSpace[3] = float4(float2(dispatchThreadId.x + 1, dispatchThreadId.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[3] = float4(float2(IN.dispatchThreadID.x + 1, IN.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
 
 	float3 viewSpace[4];
 	// Now convert the screen space points to view space
@@ -47,9 +43,10 @@ void main(
 	frustum.planes[3] = ComputePlane(eyePos, viewSpace[3], viewSpace[2]);
 
 	// Store the computed frustum in global memory (if our thread ID is in bounds of the grid).
-	if (dispatchThreadId.x < numThreads.x && dispatchThreadId.y < numThreads.y)
+	if (IN.dispatchThreadID.x < numThreads.x && IN.dispatchThreadID.y < numThreads.y)
 	{
-		uint index = dispatchThreadId.x + (dispatchThreadId.y * numThreads.x);
+		uint index = IN.dispatchThreadID.x + (IN.dispatchThreadID.y * numThreads.x);
 		out_Frustums[index] = frustum;
 	}
+	//out_Frustums[0].planes[0].N = float3(1, 0, 1);
 }

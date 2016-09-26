@@ -246,6 +246,7 @@ void wiRenderer::SetUpStaticComponents()
 
 	GetDevice()->LOCK();
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	GetDevice()->UNLOCK();
 
 	//t1.join();
@@ -1426,13 +1427,16 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					static ShaderBoneType *bonebuf[GRAPHICSTHREAD_COUNT] = { 0 };
 					if (bonebuf[threadID] == nullptr)
 					{
-						bonebuf[threadID] = new ShaderBoneType[maxBoneCount];
+						bonebuf[threadID] = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
 					}
 					if (mesh->armature->boneCollection.size() > maxBoneCount)
 					{
 						maxBoneCount = (int)mesh->armature->boneCollection.size() * 2;
-						SAFE_DELETE_ARRAY(bonebuf[threadID]);
-						bonebuf[threadID] = new ShaderBoneType[maxBoneCount];
+						if (bonebuf[threadID] != nullptr)
+						{
+							_mm_free(bonebuf[threadID]);
+						}
+						bonebuf[threadID] = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
 					}
 					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
 						bonebuf[threadID][k].pose = mesh->armature->boneCollection[k]->boneRelativity;
@@ -3309,10 +3313,22 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 	int _width = device->GetScreenWidth();
 	int _height = device->GetScreenHeight();
-	int tileCount = (int)(ceilf((float)_width / 16.f) * ceilf((float)_height / 16.f));
+
+
+	// Calc dispatchparams
+	int _B = 16;
+	DispatchParamsCB dispatchParams;
+	dispatchParams.numThreads[0] = (UINT)ceilf((float)_width / _B);
+	dispatchParams.numThreads[1] = (UINT)ceilf((float)_height / _B);
+	dispatchParams.numThreads[2] = 1;
+	dispatchParams.numThreadGroups[0] = (UINT)ceilf((float)dispatchParams.numThreads[0] / _B);
+	dispatchParams.numThreadGroups[1] = (UINT)ceilf((float)dispatchParams.numThreads[1] / _B);
+	dispatchParams.numThreadGroups[2] = 1;
+	device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+	device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
 	static GPUBuffer* frustumBuffer = nullptr;
-	if(frustumBuffer == nullptr)
+	if (frustumBuffer == nullptr)
 	{
 		frustumBuffer = new GPUBuffer;
 
@@ -3320,7 +3336,7 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = _stride * tileCount; // storing 4 planes for every tile
+		bd.ByteWidth = _stride * dispatchParams.numThreads[0] * dispatchParams.numThreads[1] * dispatchParams.numThreads[2]; // storing 4 planes for every tile
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
@@ -3330,18 +3346,6 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 	}
 
-	// Calc dispatchparams
-	int _B = 16;
-	DispatchParamsCB dispatchParams;
-	dispatchParams.numThreads[0] = (uint32_t)ceilf((float)_width / _B);
-	dispatchParams.numThreads[1] = (uint32_t)ceilf((float)_height / _B);
-	dispatchParams.numThreads[2] = 1;
-	dispatchParams.numThreadGroups[0] = (uint32_t)ceilf((float)dispatchParams.numThreads[0] / _B);
-	dispatchParams.numThreadGroups[1] = (uint32_t)ceilf((float)dispatchParams.numThreads[1] / _B);
-	dispatchParams.numThreadGroups[0] = 1;
-	device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-	device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
-
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
 	if(!frustumsComplete)
@@ -3349,7 +3353,7 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		frustumsComplete = true;
 		device->BindUnorderedAccessResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		device->BindCS(computeShaders[CSTYPE_TILEFRUSTUMS], threadID);
-		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
+		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 		device->UnBindUnorderedAccessResources(SBSLOT_TILEFRUSTUMS, 1, threadID);
 	}
 
