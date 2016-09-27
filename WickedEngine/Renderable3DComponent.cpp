@@ -178,7 +178,7 @@ void Renderable3DComponent::Compose(){
 
 	RenderColorGradedComposition();
 
-	wiImage::Draw(wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD_IMMEDIATE), wiImageEffects(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()));
+	//wiImage::Draw(wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD_IMMEDIATE), wiImageEffects(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()));
 
 	Renderable2DComponent::Compose();
 }
