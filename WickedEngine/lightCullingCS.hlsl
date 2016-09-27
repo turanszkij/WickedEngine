@@ -12,7 +12,7 @@ struct Light
 	float4 col;
 };
 STRUCTUREDBUFFER(Lights, Light, SBSLOT_LIGHTARRAY);
-#define lightCount ((uint)g_xColor.x)
+#define lightCount xDispatchParams_value0
 
 
 groupshared uint uMinDepth;
@@ -40,7 +40,48 @@ void main(ComputeShaderInput IN)
 		uMaxDepth = 0;
 		//o_LightCount = 0;
 		//t_LightCount = 0;
-		GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * numThreadGroups.x)];
+
+		//// Get frustum from frustum buffer:
+		//GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreadGroups.x)];
+
+		// Calculate frustum in place:
+		{
+			// View space eye position is always at the origin.
+			const float3 eyePos = float3(0, 0, 0);
+
+			// Compute 4 points on the far clipping plane to use as the 
+			// frustum vertices.
+			float4 screenSpace[4];
+			// Top left point
+			screenSpace[0] = float4(IN.dispatchThreadID.xy, 1.0f, 1.0f);
+			// Top right point
+			screenSpace[1] = float4(float2(IN.dispatchThreadID.x + BLOCK_SIZE, IN.dispatchThreadID.y), 1.0f, 1.0f);
+			// Bottom left point
+			screenSpace[2] = float4(float2(IN.dispatchThreadID.x, IN.dispatchThreadID.y + BLOCK_SIZE), 1.0f, 1.0f);
+			// Bottom right point
+			screenSpace[3] = float4(float2(IN.dispatchThreadID.x + BLOCK_SIZE, IN.dispatchThreadID.y + BLOCK_SIZE), 1.0f, 1.0f);
+
+			float3 viewSpace[4];
+			// Now convert the screen space points to view space
+			for (int i = 0; i < 4; i++)
+			{
+				viewSpace[i] = ScreenToView(screenSpace[i]).xyz;
+			}
+
+			// Now build the frustum planes from the view space points
+			Frustum frustum;
+
+			// Left plane
+			frustum.planes[0] = ComputePlane(eyePos, viewSpace[2], viewSpace[0]);
+			// Right plane
+			frustum.planes[1] = ComputePlane(eyePos, viewSpace[1], viewSpace[3]);
+			// Top plane
+			frustum.planes[2] = ComputePlane(eyePos, viewSpace[0], viewSpace[1]);
+			// Bottom plane
+			frustum.planes[3] = ComputePlane(eyePos, viewSpace[3], viewSpace[2]);
+
+			GroupFrustum = frustum;
+		}
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -53,6 +94,9 @@ void main(ComputeShaderInput IN)
 	float fMinDepth = asfloat(uMinDepth);
 	float fMaxDepth = asfloat(uMaxDepth);
 
+	//fMinDepth = g_xCamera_ZFarP;
+	//fMaxDepth = g_xCamera_ZNearP;
+
 	// Convert depth values to view space.
 	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
 	float maxDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1)).z;
@@ -60,7 +104,7 @@ void main(ComputeShaderInput IN)
 
 	// Clipping plane for minimum depth value 
 	// (used for testing lights within the bounds of opaque geometry).
-	Plane minPlane = { float3(0, 0, -1), -minDepthVS };
+	Plane minPlane = { float3(0, 0, 1), minDepthVS };
 
 	// Cull lights
 	// Each thread in a group will cull 1 light until all lights have been culled.
@@ -80,13 +124,14 @@ void main(ComputeShaderInput IN)
 					//// Add light to light list for transparent geometry.
 					//t_AppendLight(i);
 
-					//if (!SphereInsidePlane(sphere, minPlane))
-					//{
-					//	// Add light to light list for opaque geometry.
-					//	o_AppendLight(i);
-					//}
+					if (!SphereInsidePlane(sphere, minPlane))
+					{
+						// Add light to light list for opaque geometry.
+						//o_AppendLight(i);
 
-					InterlockedAdd(_counter, 1);
+						InterlockedAdd(_counter, 1);
+					}
+
 				}
 			//}
 			//break;

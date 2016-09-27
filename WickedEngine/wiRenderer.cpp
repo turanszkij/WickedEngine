@@ -3316,16 +3316,48 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 
 	// Calc dispatchparams
-	int _B = 16;
+	UINT _B = 16;
 	DispatchParamsCB dispatchParams;
-	dispatchParams.numThreads[0] = (UINT)ceilf((float)_width / _B);
-	dispatchParams.numThreads[1] = (UINT)ceilf((float)_height / _B);
-	dispatchParams.numThreads[2] = 1;
-	dispatchParams.numThreadGroups[0] = (UINT)ceilf((float)dispatchParams.numThreads[0] / _B);
-	dispatchParams.numThreadGroups[1] = (UINT)ceilf((float)dispatchParams.numThreads[1] / _B);
-	dispatchParams.numThreadGroups[2] = 1;
-	device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-	device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+	{
+		dispatchParams.numThreads[0] = (UINT)ceilf(_width / (float)_B);
+		dispatchParams.numThreads[1] = (UINT)ceilf(_height / (float)_B);
+		dispatchParams.numThreads[2] = 1;
+		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)_B);
+		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)_B);
+		dispatchParams.numThreadGroups[2] = 1;
+
+		// Fill Light Array with lights in the frustum
+		CulledList culledObjects;
+		if (spTree_lights)
+			wiSPTree::getVisible(spTree_lights->root, getCamera()->frustum, culledObjects);
+		static LightArrayType lightArray[1024];
+		ZeroMemory(lightArray, sizeof(lightArray));
+
+		UINT lightCounter = 0;
+		for (Cullable* c : culledObjects)
+		{
+			Light* l = (Light*)c;
+
+			//lightArray[counter].pos = l->translation;
+			XMStoreFloat3(&lightArray[lightCounter].pos, XMVector3TransformCoord(XMLoadFloat3(&l->translation), cam->GetView()));
+			lightArray[lightCounter].radius = l->enerDis.y;
+			lightArray[lightCounter].col = l->color;
+
+			lightCounter++;
+			if (lightCounter == 1024)
+			{
+				assert(0 && "Over 1024 lights are in the frustum!");
+				break;
+			}
+		}
+		device->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
+
+		dispatchParams.value0 = lightCounter;
+
+		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+	}
+
 
 	static GPUBuffer* frustumBuffer = nullptr;
 	if (frustumBuffer == nullptr)
@@ -3378,42 +3410,12 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 	}
 	if (uav != nullptr)
 	{
-		// Fill Light Array with lights in the frustum
-		CulledList culledObjects;
-		if (spTree_lights)
-			wiSPTree::getVisible(spTree_lights->root, getCamera()->frustum, culledObjects);
 
 		GetDevice()->EventBegin(L"Light Culling", threadID);
-
-		static LightArrayType lightArray[1024];
-		memset(lightArray, 0, sizeof(lightArray));
 		
-		int counter = 0;
-		for (Cullable* c : culledObjects) 
-		{
-			Light* l = (Light*)c;
-
-			//lightArray[counter].pos = l->translation;
-			XMStoreFloat3(&lightArray[counter].pos, XMVector3TransformCoord(XMLoadFloat3(&l->translation), cam->GetView()));
-			lightArray[counter].radius = l->enerDis.y;
-			lightArray[counter].col = l->color;
-
-			counter++;
-			if (counter == 1024)
-			{
-				assert(0 && "Over 1024 lights are in the frustum!");
-				break;
-			}
-		}
-		device->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*counter));
 		device->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
-
-		MiscCB cb;
-		cb.mColor.x = (float)counter;
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
-		device->BindConstantBufferCS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 		
 		Texture2DDesc uav_desc = uav->GetDesc();
 		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);

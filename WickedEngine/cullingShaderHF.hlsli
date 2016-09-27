@@ -4,14 +4,14 @@
 CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
 {
 	// Number of groups dispatched. (This parameter is not available as an HLSL system value!)
-	uint3	numThreadGroups;
-	uint	padding0; // implicit padding to 16 bytes.
+	uint3	xDispatchParams_numThreadGroups;
+	uint	xDispatchParams_value0; // extra value / padding
 
 					  // Total number of threads dispatched. (Also not available as an HLSL system value!)
 					  // Note: This value may be less than the actual number of threads executed 
 					  // if the screen size is not evenly divisible by the block size.
-	uint3	numThreads;
-	uint	padding1; // implicit padding to 16 bytes.
+	uint3	xDispatchParams_numThreads;
+	uint	xDispatchParams_value1; // extra value / padding
 }
 
 struct Plane
@@ -85,10 +85,7 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
 {
 	bool result = true;
 
-	// First check depth
-	// Note: Here, the view vector points in the -Z axis so the 
-	// far depth value will be approaching -infinity.
-	if (sphere.c.z - sphere.r > zNear || sphere.c.z + sphere.r < zFar)
+	if (sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar)
 	{
 		result = false;
 	}

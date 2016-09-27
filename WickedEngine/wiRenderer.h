@@ -257,8 +257,10 @@ public:
 	};
 	GFX_STRUCT DispatchParamsCB
 	{
-		UINT numThreadGroups[3];	UINT pad0;
-		UINT numThreads[3];			UINT pad1;
+		UINT numThreadGroups[3];	
+		UINT value0;
+		UINT numThreads[3];
+		UINT value1;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_DISPATCHPARAMS)
 
