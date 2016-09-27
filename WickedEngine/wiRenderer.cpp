@@ -3330,7 +3330,8 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		CulledList culledObjects;
 		if (spTree_lights)
 			wiSPTree::getVisible(spTree_lights->root, getCamera()->frustum, culledObjects);
-		static LightArrayType lightArray[1024];
+		static int maxLightCount = resourceBuffers[RBTYPE_LIGHTARRAY]->GetDesc().ByteWidth / sizeof(LightArrayType);
+		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*maxLightCount, 16);
 		ZeroMemory(lightArray, sizeof(lightArray));
 
 		UINT lightCounter = 0;
@@ -3340,14 +3341,17 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 			//lightArray[counter].pos = l->translation;
 			XMStoreFloat3(&lightArray[lightCounter].pos, XMVector3TransformCoord(XMLoadFloat3(&l->translation), cam->GetView()));
-			lightArray[lightCounter].radius = l->enerDis.y;
+			lightArray[lightCounter].distance = l->enerDis.y;
 			lightArray[lightCounter].col = l->color;
+			lightArray[lightCounter].energy = l->enerDis.x;
+			lightArray[lightCounter].type = l->type;
 
 			lightCounter++;
-			if (lightCounter == 1024)
+			if (lightCounter == maxLightCount)
 			{
-				assert(0 && "Over 1024 lights are in the frustum!");
-				break;
+				maxLightCount *= 2;
+				_mm_free(lightArray);
+				lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*maxLightCount, 16);
 			}
 		}
 		device->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));

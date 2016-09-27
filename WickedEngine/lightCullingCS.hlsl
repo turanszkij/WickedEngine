@@ -8,8 +8,12 @@ STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 struct Light
 {
 	float3 PositionVS; // View Space!
-	float Range;
+	float distance;
 	float4 col;
+	float energy;
+	uint type;
+	float _pad0;
+	float _pad1;
 };
 STRUCTUREDBUFFER(Lights, Light, SBSLOT_LIGHTARRAY);
 #define lightCount xDispatchParams_value0
@@ -118,7 +122,7 @@ void main(ComputeShaderInput IN)
 			//{
 			//case POINT_LIGHT:
 			//{
-				Sphere sphere = { light.PositionVS.xyz, light.Range };
+				Sphere sphere = { light.PositionVS.xyz, light.distance };
 				if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 				{
 					//// Add light to light list for transparent geometry.
@@ -137,8 +141,8 @@ void main(ComputeShaderInput IN)
 			//break;
 			//case SPOT_LIGHT:
 			//{
-			//	float coneRadius = tan(radians(light.SpotlightAngle)) * light.Range;
-			//	Cone cone = { light.PositionVS.xyz, light.Range, light.DirectionVS.xyz, coneRadius };
+			//	float coneRadius = tan(radians(light.SpotlightAngle)) * light.distance;
+			//	Cone cone = { light.PositionVS.xyz, light.distance, light.DirectionVS.xyz, coneRadius };
 			//	if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
 			//	{
 			//		// Add light to light list for transparent geometry.

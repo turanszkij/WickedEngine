@@ -280,8 +280,12 @@ public:
 	GFX_STRUCT LightArrayType
 	{
 		XMFLOAT3 pos;
-		float radius;
+		float distance;
 		XMFLOAT4 col;
+		float energy;
+		UINT type;
+		float _pad0;
+		float _pad1;
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_LIGHTARRAY)
 
