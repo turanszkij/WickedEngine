@@ -73,6 +73,7 @@ public:
 	static wiGraphicsTypes::BlendState			*blendStates[BSTYPE_LAST];
 	static wiGraphicsTypes::GPUBuffer			*constantBuffers[CBTYPE_LAST];
 	static wiGraphicsTypes::GPUBuffer			*resourceBuffers[RBTYPE_LAST];
+	static wiGraphicsTypes::Texture				*textures[TEXTYPE_LAST];
 
 	
 	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;

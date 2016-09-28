@@ -4,14 +4,18 @@
 // Slot matchings:
 ////////////////////////////////////////////////////
 
-// Structured Buffers (t slot):
+// Unordered Access Resources (u slot):
 
-#define SBSLOT_BONE			0
-#define SBSLOT_TILEFRUSTUMS	25
-#define SBSLOT_LIGHTARRAY	26
+#define UAVSLOT_TILEFRUSTUMS				0
+#define UAVSLOT_LIGHTINDEXCOUNTERHELPER		0
+#define UAVSLOT_LIGHTINDEXLIST_OPAQUE		1
+#define UAVSLOT_LIGHTINDEXLIST_TRANSPARENT	2
+#define UAVSLOT_LIGHTGRID_OPAQUE			3
+#define UAVSLOT_LIGHTGRID_TRANSPARENT		4
+#define UAVSLOT_DEBUGTEXTURE				7
 
 
-// Textures (t slot):
+// Textures, StructuredBuffers (t slot):
 
 #define TEXSLOT_DEPTH		0
 #define TEXSLOT_LINEARDEPTH	1
@@ -45,6 +49,10 @@
 #define TEXSLOT_ONDEMAND_COUNT	(TEXSLOT_ONDEMAND9 - TEXSLOT_ONDEMAND0 + 1)
 
 #define TEXSLOT_COUNT		TEXSLOT_ONDEMAND9
+
+#define SBSLOT_BONE			0
+#define SBSLOT_TILEFRUSTUMS	25
+#define SBSLOT_LIGHTARRAY	26
 
 
 ///////////////////////////

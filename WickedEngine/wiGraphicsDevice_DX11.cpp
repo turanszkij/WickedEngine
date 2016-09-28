@@ -1602,6 +1602,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 	HRESULT hr = S_OK;
 	
 	hr = device->CreateTexture2D(&desc, data, &((*ppTexture2D)->texture2D_DX11));
+	assert(SUCCEEDED(hr) && "Texture2D creating failed!");
 	if (FAILED(hr))
 		return hr;
 
@@ -1648,6 +1649,7 @@ HRESULT GraphicsDevice_DX11::CreateTextureCube(const Texture2DDesc* pDesc, const
 	}
 
 	hr = device->CreateTexture2D(&desc, data, &((*ppTextureCube)->texture2D_DX11));
+	assert(SUCCEEDED(hr) && "TextureCube creation failed!");
 	if (FAILED(hr))
 		return hr;
 

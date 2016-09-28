@@ -40,6 +40,7 @@ DepthStencilState	*wiRenderer::depthStencils[DSSTYPE_LAST];
 BlendState			*wiRenderer::blendStates[BSTYPE_LAST];
 GPUBuffer			*wiRenderer::constantBuffers[CBTYPE_LAST];
 GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
+Texture				*wiRenderer::textures[TEXTYPE_LAST];
 
 int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
 	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
@@ -169,6 +170,10 @@ void wiRenderer::SetUpStaticComponents()
 		SAFE_INIT(resourceBuffers[i]);
 		//constantBuffers[i] = new GPUBuffer;
 	}
+	for (int i = 0; i < TEXTYPE_LAST; ++i)
+	{
+		SAFE_INIT(textures[i]);
+	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
 		SAFE_INIT(samplers[i]);
@@ -227,7 +232,7 @@ void wiRenderer::SetUpStaticComponents()
 	normalMapRT.Initialize(
 		GetDevice()->GetScreenWidth()
 		,GetDevice()->GetScreenHeight()
-		,false,FORMAT_R8G8B8A8_SNORM, 1, 0
+		,false,FORMAT_R8G8B8A8_SNORM
 		);
 	imagesRTAdd.Initialize(
 		GetDevice()->GetScreenWidth()
@@ -314,6 +319,10 @@ void wiRenderer::CleanUpStatic()
 	for (int i = 0; i < RBTYPE_LAST; ++i)
 	{
 		SAFE_DELETE(resourceBuffers[i]);
+	}
+	for (int i = 0; i < TEXTYPE_LAST; ++i)
+	{
+		SAFE_DELETE(textures[i]);
 	}
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
@@ -606,6 +615,7 @@ void wiRenderer::LoadBuffers()
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(LightArrayType);
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTARRAY]);
+
 
 }
 
@@ -3309,29 +3319,40 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 {
+#include "lightCullingCSInterop.h"
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	int _width = device->GetScreenWidth();
 	int _height = device->GetScreenHeight();
+	UINT averageLightCountPerTile = 256;
+
+	static int _savedWidth = 0;
+	static int _savedHeight = 0;
+	bool _resolutionChanged = false;
+	if (_savedWidth != _width || _savedHeight != _height)
+	{
+		_resolutionChanged = true;
+		_savedWidth = _width;
+		_savedHeight = _height;
+	}
 
 
 	// Calc dispatchparams
-	UINT _B = 16;
 	DispatchParamsCB dispatchParams;
 	{
-		dispatchParams.numThreads[0] = (UINT)ceilf(_width / (float)_B);
-		dispatchParams.numThreads[1] = (UINT)ceilf(_height / (float)_B);
+		dispatchParams.numThreads[0] = (UINT)ceilf(_width / (float)BLOCK_SIZE);
+		dispatchParams.numThreads[1] = (UINT)ceilf(_height / (float)BLOCK_SIZE);
 		dispatchParams.numThreads[2] = 1;
-		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)_B);
-		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)_B);
+		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)BLOCK_SIZE);
+		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)BLOCK_SIZE);
 		dispatchParams.numThreadGroups[2] = 1;
 
 		// Fill Light Array with lights in the frustum
 		CulledList culledObjects;
 		if (spTree_lights)
 			wiSPTree::getVisible(spTree_lights->root, getCamera()->frustum, culledObjects);
-		static int maxLightCount = resourceBuffers[RBTYPE_LIGHTARRAY]->GetDesc().ByteWidth / sizeof(LightArrayType);
-		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*maxLightCount, 16);
+		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
 		ZeroMemory(lightArray, sizeof(lightArray));
 
 		UINT lightCounter = 0;
@@ -3347,11 +3368,11 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 			lightArray[lightCounter].type = l->type;
 
 			lightCounter++;
-			if (lightCounter == maxLightCount)
+			if (lightCounter == MAX_LIGHTS)
 			{
-				maxLightCount *= 2;
-				_mm_free(lightArray);
-				lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*maxLightCount, 16);
+				assert(0 && "Maximum Lightcount exceeded for a single tiled lightculling pass! Please redefine MAX_LIGHTS to fit!");
+				lightCounter--;
+				break;
 			}
 		}
 		device->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
@@ -3364,8 +3385,10 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 
 	static GPUBuffer* frustumBuffer = nullptr;
-	if (frustumBuffer == nullptr)
+	if (frustumBuffer == nullptr || _resolutionChanged)
 	{
+		SAFE_DELETE(frustumBuffer);
+
 		frustumBuffer = new GPUBuffer;
 
 		UINT _stride = sizeof(XMFLOAT4) * 4;
@@ -3379,22 +3402,75 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		bd.CPUAccessFlags = 0;
 		bd.StructureByteStride = _stride;
 		device->CreateBuffer(&bd, nullptr, frustumBuffer);
+	}
+	static GPUBuffer* lightCounterHelper = nullptr;
+	if (lightCounterHelper == nullptr)
+	{
+		lightCounterHelper = new GPUBuffer;
 
+		GPUBufferDesc bd;
+		ZeroMemory(&bd, sizeof(bd));
+		bd.ByteWidth = sizeof(UINT) * 2; // one for opaque lightindexlist, one for transparent
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_UNORDERED_ACCESS; // only used in the compute shader which is assembling the light index list, so no need for Shader Resource View
+		bd.CPUAccessFlags = 0;
+		bd.StructureByteStride = sizeof(UINT);
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		device->CreateBuffer(&bd, nullptr, lightCounterHelper);
+	}
+	if (textures[TEXTYPE_2D_LIGHTGRID_OPAQUE] == nullptr || textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT] == nullptr || _resolutionChanged)
+	{
+		SAFE_DELETE(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]);
+		SAFE_DELETE(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]);
+
+		Texture2DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.ArraySize = 1;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_R32G32_UINT; // Can this be less?
+		desc.Height = dispatchParams.numThreads[0];
+		desc.Width = dispatchParams.numThreads[1];
+		desc.MipLevels = 1;
+		desc.MiscFlags = 0;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]);
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]);
+	}
+	if (_resolutionChanged)
+	{
+		SAFE_DELETE(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]);
+		SAFE_DELETE(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]);
+		resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE] = new GPUBuffer;
+		resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT] = new GPUBuffer;
+
+		GPUBufferDesc bd;
+		ZeroMemory(&bd, sizeof(bd));
+		bd.ByteWidth = sizeof(UINT) * dispatchParams.numThreads[0] * dispatchParams.numThreads[1]* dispatchParams.numThreads[2] * averageLightCountPerTile;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		bd.CPUAccessFlags = 0;
+		bd.StructureByteStride = sizeof(UINT);
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]);
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]);
 	}
 
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
-	if(!frustumsComplete)
+	//if(!frustumsComplete || _resolutionChanged)
 	{
 		frustumsComplete = true;
-		device->BindUnorderedAccessResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
+		device->BindUnorderedAccessResourceCS(frustumBuffer, UAVSLOT_TILEFRUSTUMS, threadID);
 		device->BindCS(computeShaders[CSTYPE_TILEFRUSTUMS], threadID);
 		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
-		device->UnBindUnorderedAccessResources(SBSLOT_TILEFRUSTUMS, 1, threadID);
+		device->UnBindUnorderedAccessResources(UAVSLOT_TILEFRUSTUMS, 1, threadID);
 	}
 
-	static Texture2D* uav;
-	if (uav == nullptr)
+	static Texture2D* debugTexture;
+	if (debugTexture == nullptr)
 	{
 		Texture2DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -3410,9 +3486,10 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		device->CreateTexture2D(&desc, nullptr, &uav);
+		device->CreateTexture2D(&desc, nullptr, &debugTexture);
 	}
-	if (uav != nullptr)
+
+	// Perform the culling
 	{
 
 		GetDevice()->EventBegin(L"Light Culling", threadID);
@@ -3421,15 +3498,20 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		
-		Texture2DDesc uav_desc = uav->GetDesc();
 		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
-		device->BindUnorderedAccessResourceCS(uav, 0, threadID);
+		device->BindUnorderedAccessResourceCS(debugTexture, UAVSLOT_DEBUGTEXTURE, threadID);
+		device->BindUnorderedAccessResourceCS(lightCounterHelper, UAVSLOT_LIGHTINDEXCOUNTERHELPER, threadID);
+		device->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], UAVSLOT_LIGHTINDEXLIST_OPAQUE, threadID);
+		device->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], UAVSLOT_LIGHTINDEXLIST_TRANSPARENT, threadID);
+		device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], UAVSLOT_LIGHTGRID_OPAQUE, threadID);
+		device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT], UAVSLOT_LIGHTGRID_TRANSPARENT, threadID);
 		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
-		device->UnBindUnorderedAccessResources(0, 1, threadID);
+		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
 
 		GetDevice()->EventEnd(threadID);
 	}
-	return uav;
+
+	return debugTexture;
 }
 
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)

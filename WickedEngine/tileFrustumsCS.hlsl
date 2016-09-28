@@ -2,9 +2,8 @@
 #include "cullingShaderHF.hlsli"
 
 // View space frustums for the grid cells.
-RWSTRUCTUREDBUFFER(out_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
+RWSTRUCTUREDBUFFER(out_Frustums, Frustum, UAVSLOT_TILEFRUSTUMS);
 
-#define BLOCK_SIZE 16
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void main(ComputeShaderInput IN)
 {

@@ -456,4 +456,9 @@
       <UniqueIdentifier>{12396e21-0254-42fa-a88b-805f0703eca5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="lightCullingCSInterop.h">
+      <Filter>CS</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

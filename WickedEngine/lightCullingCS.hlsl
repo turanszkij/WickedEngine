@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 
-RWTEXTURE2D(DebugTexture, float4, 0);
+RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
@@ -17,21 +17,68 @@ struct Light
 };
 STRUCTUREDBUFFER(Lights, Light, SBSLOT_LIGHTARRAY);
 #define lightCount xDispatchParams_value0
+groupshared uint _counter = 0;
 
 
+// Global counter for current index into the light index list.
+// "o_" prefix indicates light lists for opaque geometry while 
+// "t_" prefix indicates light lists for transparent geometry.
+globallycoherent RWSTRUCTUREDBUFFER(LightIndexCounter, uint, UAVSLOT_LIGHTINDEXCOUNTERHELPER); // [0] : opaque; [1]: transparent
+
+// Light index lists and light grids.
+RWSTRUCTUREDBUFFER(o_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_OPAQUE);
+RWSTRUCTUREDBUFFER(t_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_TRANSPARENT);
+RWTEXTURE2D(o_LightGrid, uint2, UAVSLOT_LIGHTGRID_OPAQUE);
+RWTEXTURE2D(t_LightGrid, uint2, UAVSLOT_LIGHTGRID_TRANSPARENT);
+
+// Group shared variables.
 groupshared uint uMinDepth;
 groupshared uint uMaxDepth;
 groupshared Frustum GroupFrustum;
 
-groupshared uint visibleLightCount = 0;
-groupshared uint visibleLightIndices[1024];
+// Opaque geometry light lists.
+groupshared uint o_LightCount;
+groupshared uint o_LightIndexStartOffset;
+groupshared uint o_LightList[MAX_LIGHTS];
 
-groupshared uint _counter = 0;
+// Transparent geometry light lists.
+groupshared uint t_LightCount;
+groupshared uint t_LightIndexStartOffset;
+groupshared uint t_LightList[MAX_LIGHTS];
 
-#define BLOCK_SIZE 16
+// Add the light to the visible light list for opaque geometry.
+void o_AppendLight(uint lightIndex)
+{
+	uint index; // Index into the visible lights array.
+	InterlockedAdd(o_LightCount, 1, index);
+	if (index < 1024)
+	{
+		o_LightList[index] = lightIndex;
+	}
+}
+
+// Add the light to the visible light list for transparent geometry.
+void t_AppendLight(uint lightIndex)
+{
+	uint index; // Index into the visible lights array.
+	InterlockedAdd(t_LightCount, 1, index);
+	if (index < 1024)
+	{
+		t_LightList[index] = lightIndex;
+	}
+}
+
+
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void main(ComputeShaderInput IN)
 {
+	if (IN.groupIndex == 0 && IN.groupID.x == 0 && IN.groupID.y == 0)
+	{
+		// reset the counter helpers -- maybe it should be done elsewhere? (other pass or updatesubresource)
+		LightIndexCounter[0] = 0;
+		LightIndexCounter[1] = 0;
+	}
+
 	// Calculate min & max depth in threadgroup / tile.
 	int2 texCoord = IN.dispatchThreadID.xy;
 	float fDepth = texture_depth.Load(int3(texCoord, 0)).r;
@@ -42,8 +89,8 @@ void main(ComputeShaderInput IN)
 	{
 		uMinDepth = 0xffffffff;
 		uMaxDepth = 0;
-		//o_LightCount = 0;
-		//t_LightCount = 0;
+		o_LightCount = 0;
+		t_LightCount = 0;
 
 		//// Get frustum from frustum buffer:
 		//GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreadGroups.x)];
@@ -126,12 +173,12 @@ void main(ComputeShaderInput IN)
 				if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 				{
 					//// Add light to light list for transparent geometry.
-					//t_AppendLight(i);
+					t_AppendLight(i);
 
 					if (!SphereInsidePlane(sphere, minPlane))
 					{
 						// Add light to light list for opaque geometry.
-						//o_AppendLight(i);
+						o_AppendLight(i);
 
 						InterlockedAdd(_counter, 1);
 					}
@@ -171,32 +218,32 @@ void main(ComputeShaderInput IN)
 	// Wait till all threads in group have caught up.
 	GroupMemoryBarrierWithGroupSync();
 
-	//// Update global memory with visible light buffer.
-	//// First update the light grid (only thread 0 in group needs to do this)
-	//if (IN.groupIndex == 0)
-	//{
-	//	// Update light grid for opaque geometry.
-	//	InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
-	//	o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
+	// Update global memory with visible light buffer.
+	// First update the light grid (only thread 0 in group needs to do this)
+	if (IN.groupIndex == 0)
+	{
+		// Update light grid for opaque geometry.
+		InterlockedAdd(LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
+		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
 
-	//	// Update light grid for transparent geometry.
-	//	InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
-	//	t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
-	//}
+		// Update light grid for transparent geometry.
+		InterlockedAdd(LightIndexCounter[1], t_LightCount, t_LightIndexStartOffset);
+		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
+	}
 
-	//GroupMemoryBarrierWithGroupSync();
+	GroupMemoryBarrierWithGroupSync();
 
-	//// Now update the light index list (all threads).
-	//// For opaque goemetry.
-	//for (i = IN.groupIndex; i < o_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
-	//{
-	//	o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
-	//}
-	//// For transparent geometry.
-	//for (i = IN.groupIndex; i < t_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
-	//{
-	//	t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
-	//}
+	// Now update the light index list (all threads).
+	// For opaque goemetry.
+	for (i = IN.groupIndex; i < o_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
+	{
+		o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
+	}
+	// For transparent geometry.
+	for (i = IN.groupIndex; i < t_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
+	{
+		t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
+	}
 
 	//// Update the debug texture output.
 	//if (IN.groupThreadID.x == 0 || IN.groupThreadID.y == 0)
