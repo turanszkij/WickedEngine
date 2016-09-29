@@ -281,6 +281,23 @@ inline UINT _ParseResourceMiscFlags(UINT value)
 
 	return _flag;
 }
+inline UINT _ParseColorWriteMask(UINT value)
+{
+	UINT _flag = 0;
+
+	if (value & COLOR_WRITE_ENABLE_RED)
+		_flag |= D3D11_COLOR_WRITE_ENABLE_RED;
+	if (value & COLOR_WRITE_ENABLE_GREEN)
+		_flag |= D3D11_COLOR_WRITE_ENABLE_GREEN;
+	if (value & COLOR_WRITE_ENABLE_BLUE)
+		_flag |= D3D11_COLOR_WRITE_ENABLE_BLUE;
+	if (value & COLOR_WRITE_ENABLE_ALPHA)
+		_flag |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
+	if (value & COLOR_WRITE_ENABLE_ALL)
+		_flag |= D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	return _flag;
+}
 
 inline D3D11_FILTER _ConvertFilter(FILTER value)
 {
@@ -1831,7 +1848,7 @@ HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateD
 		desc.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].SrcBlendAlpha);
 		desc.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].DestBlendAlpha);
 		desc.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc->RenderTarget[i].BlendOpAlpha);
-		desc.RenderTarget[i].RenderTargetWriteMask = pBlendStateDesc->RenderTarget[i].RenderTargetWriteMask;
+		desc.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc->RenderTarget[i].RenderTargetWriteMask);
 	}
 
 	pBlendState->desc = *pBlendStateDesc;

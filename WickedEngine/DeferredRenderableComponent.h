@@ -13,7 +13,7 @@ protected:
 
 public:
 	DeferredRenderableComponent();
-	~DeferredRenderableComponent();
+	virtual ~DeferredRenderableComponent();
 
 	virtual void setPreferredThreadingCount(unsigned short value) override;
 

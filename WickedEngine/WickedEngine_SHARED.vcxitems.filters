@@ -1074,6 +1074,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1843,6 +1846,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

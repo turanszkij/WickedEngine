@@ -48,7 +48,7 @@ private:
 	wiGUI GUI;
 public:
 	Renderable2DComponent();
-	~Renderable2DComponent();
+	virtual ~Renderable2DComponent();
 
 	virtual void Initialize();
 	virtual void Load();

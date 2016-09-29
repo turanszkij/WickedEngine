@@ -106,6 +106,9 @@
     <None Include="cullingShaderHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="tiledLightingHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -431,6 +434,9 @@
     </FxCompile>
     <FxCompile Include="tileFrustumsCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

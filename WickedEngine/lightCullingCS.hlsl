@@ -1,21 +1,13 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
+#include "tiledLightingHF.hlsli"
 
 RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
-struct Light
-{
-	float3 PositionVS; // View Space!
-	float distance;
-	float4 col;
-	float energy;
-	uint type;
-	float _pad0;
-	float _pad1;
-};
-STRUCTUREDBUFFER(Lights, Light, SBSLOT_LIGHTARRAY);
+
+STRUCTUREDBUFFER(Lights, LightArrayType, SBSLOT_LIGHTARRAY);
 #define lightCount xDispatchParams_value0
 groupshared uint _counter = 0;
 
@@ -23,7 +15,8 @@ groupshared uint _counter = 0;
 // Global counter for current index into the light index list.
 // "o_" prefix indicates light lists for opaque geometry while 
 // "t_" prefix indicates light lists for transparent geometry.
-globallycoherent RWSTRUCTUREDBUFFER(LightIndexCounter, uint, UAVSLOT_LIGHTINDEXCOUNTERHELPER); // [0] : opaque; [1]: transparent
+globallycoherent RWSTRUCTUREDBUFFER(o_LightIndexCounter, uint, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE);
+globallycoherent RWSTRUCTUREDBUFFER(t_LightIndexCounter, uint, UAVSLOT_LIGHTINDEXCOUNTERHELPER_TRANSPARENT);
 
 // Light index lists and light grids.
 RWSTRUCTUREDBUFFER(o_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_OPAQUE);
@@ -75,8 +68,8 @@ void main(ComputeShaderInput IN)
 	if (IN.groupIndex == 0 && IN.groupID.x == 0 && IN.groupID.y == 0)
 	{
 		// reset the counter helpers -- maybe it should be done elsewhere? (other pass or updatesubresource)
-		LightIndexCounter[0] = 0;
-		LightIndexCounter[1] = 0;
+		o_LightIndexCounter[0] = 0;
+		t_LightIndexCounter[0] = 0;
 	}
 
 	// Calculate min & max depth in threadgroup / tile.
@@ -92,47 +85,47 @@ void main(ComputeShaderInput IN)
 		o_LightCount = 0;
 		t_LightCount = 0;
 
-		//// Get frustum from frustum buffer:
-		//GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreadGroups.x)];
+		// Get frustum from frustum buffer:
+		GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreads.x)];
 
-		// Calculate frustum in place:
-		{
-			// View space eye position is always at the origin.
-			const float3 eyePos = float3(0, 0, 0);
+		//// Calculate frustum in place:
+		//{
+		//	// View space eye position is always at the origin.
+		//	const float3 eyePos = float3(0, 0, 0);
 
-			// Compute 4 points on the far clipping plane to use as the 
-			// frustum vertices.
-			float4 screenSpace[4];
-			// Top left point
-			screenSpace[0] = float4(IN.dispatchThreadID.xy, 1.0f, 1.0f);
-			// Top right point
-			screenSpace[1] = float4(float2(IN.dispatchThreadID.x + BLOCK_SIZE, IN.dispatchThreadID.y), 1.0f, 1.0f);
-			// Bottom left point
-			screenSpace[2] = float4(float2(IN.dispatchThreadID.x, IN.dispatchThreadID.y + BLOCK_SIZE), 1.0f, 1.0f);
-			// Bottom right point
-			screenSpace[3] = float4(float2(IN.dispatchThreadID.x + BLOCK_SIZE, IN.dispatchThreadID.y + BLOCK_SIZE), 1.0f, 1.0f);
+		//	// Compute 4 points on the far clipping plane to use as the 
+		//	// frustum vertices.
+		//	float4 screenSpace[4];
+		//	// Top left point
+		//	screenSpace[0] = float4(IN.dispatchThreadID.xy, 1.0f, 1.0f);
+		//	// Top right point
+		//	screenSpace[1] = float4(float2(IN.dispatchThreadID.x + BLOCK_SIZE, IN.dispatchThreadID.y), 1.0f, 1.0f);
+		//	// Bottom left point
+		//	screenSpace[2] = float4(float2(IN.dispatchThreadID.x, IN.dispatchThreadID.y + BLOCK_SIZE), 1.0f, 1.0f);
+		//	// Bottom right point
+		//	screenSpace[3] = float4(float2(IN.dispatchThreadID.x + BLOCK_SIZE, IN.dispatchThreadID.y + BLOCK_SIZE), 1.0f, 1.0f);
 
-			float3 viewSpace[4];
-			// Now convert the screen space points to view space
-			for (int i = 0; i < 4; i++)
-			{
-				viewSpace[i] = ScreenToView(screenSpace[i]).xyz;
-			}
+		//	float3 viewSpace[4];
+		//	// Now convert the screen space points to view space
+		//	for (int i = 0; i < 4; i++)
+		//	{
+		//		viewSpace[i] = ScreenToView(screenSpace[i]).xyz;
+		//	}
 
-			// Now build the frustum planes from the view space points
-			Frustum frustum;
+		//	// Now build the frustum planes from the view space points
+		//	Frustum frustum;
 
-			// Left plane
-			frustum.planes[0] = ComputePlane(eyePos, viewSpace[2], viewSpace[0]);
-			// Right plane
-			frustum.planes[1] = ComputePlane(eyePos, viewSpace[1], viewSpace[3]);
-			// Top plane
-			frustum.planes[2] = ComputePlane(eyePos, viewSpace[0], viewSpace[1]);
-			// Bottom plane
-			frustum.planes[3] = ComputePlane(eyePos, viewSpace[3], viewSpace[2]);
+		//	// Left plane
+		//	frustum.planes[0] = ComputePlane(eyePos, viewSpace[2], viewSpace[0]);
+		//	// Right plane
+		//	frustum.planes[1] = ComputePlane(eyePos, viewSpace[1], viewSpace[3]);
+		//	// Top plane
+		//	frustum.planes[2] = ComputePlane(eyePos, viewSpace[0], viewSpace[1]);
+		//	// Bottom plane
+		//	frustum.planes[3] = ComputePlane(eyePos, viewSpace[3], viewSpace[2]);
 
-			GroupFrustum = frustum;
-		}
+		//	GroupFrustum = frustum;
+		//}
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -163,13 +156,13 @@ void main(ComputeShaderInput IN)
 	{
 		//if (Lights[i].Enabled)
 		{
-			Light light = Lights[i];
+			LightArrayType light = Lights[i];
 
-			//switch (light.Type)
-			//{
-			//case POINT_LIGHT:
-			//{
-				Sphere sphere = { light.PositionVS.xyz, light.distance };
+			switch (light.type)
+			{
+			case 1/*POINT_LIGHT*/:
+			{
+				Sphere sphere = { light.PositionVS.xyz, light.range };
 				if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 				{
 					//// Add light to light list for transparent geometry.
@@ -184,8 +177,8 @@ void main(ComputeShaderInput IN)
 					}
 
 				}
-			//}
-			//break;
+			}
+			break;
 			//case SPOT_LIGHT:
 			//{
 			//	float coneRadius = tan(radians(light.SpotlightAngle)) * light.distance;
@@ -203,15 +196,15 @@ void main(ComputeShaderInput IN)
 			//	}
 			//}
 			//break;
-			//case DIRECTIONAL_LIGHT:
-			//{
-			//	// Directional lights always get added to our light list.
-			//	// (Hopefully there are not too many directional lights!)
-			//	t_AppendLight(i);
-			//	o_AppendLight(i);
-			//}
-			//break;
-			//}
+			case 0/*DIRECTIONAL_LIGHT*/:
+			{
+				// Directional lights always get added to our light list.
+				// (Hopefully there are not too many directional lights!)
+				t_AppendLight(i);
+				o_AppendLight(i);
+			}
+			break;
+			}
 		}
 	}
 
@@ -223,11 +216,11 @@ void main(ComputeShaderInput IN)
 	if (IN.groupIndex == 0)
 	{
 		// Update light grid for opaque geometry.
-		InterlockedAdd(LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
+		InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
 		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
 
 		// Update light grid for transparent geometry.
-		InterlockedAdd(LightIndexCounter[1], t_LightCount, t_LightIndexStartOffset);
+		InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
 		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
 	}
 
@@ -266,5 +259,5 @@ void main(ComputeShaderInput IN)
 	//}
 
 	//DebugTexture[texCoord] = float4(GroupFrustum.planes[0].N,1);
-	DebugTexture[texCoord] = float4((float)_counter/ (float)lightCount,0,0,1);
+	DebugTexture[texCoord] = float4((float)_counter / (float)lightCount,0,0,1);
 }

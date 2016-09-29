@@ -43,6 +43,7 @@
     <None Include="sOHF.hlsli" />
     <None Include="spotLightHF.hlsli" />
     <None Include="tangentComputeHF.hlsli" />
+    <None Include="tiledLightingHF.hlsli" />
     <None Include="uvsphere.hlsli" />
     <None Include="volumeLightHF.hlsli" />
     <None Include="windHF.hlsli" />
@@ -311,6 +312,10 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>

@@ -55,6 +55,7 @@
 #include "Renderable3DComponent.h"
 #include "ForwardRenderableComponent.h"
 #include "DeferredRenderableComponent.h"
+#include "TiledForwardRenderableComponent.h"
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
 

@@ -280,11 +280,13 @@ public:
 
 	GFX_STRUCT LightArrayType
 	{
-		XMFLOAT3 pos;
+		XMFLOAT3 posVS;
 		float distance;
 		XMFLOAT4 col;
+		XMFLOAT3 posWS;
 		float energy;
 		UINT type;
+		float shadowBias;
 		float _pad0;
 		float _pad1;
 

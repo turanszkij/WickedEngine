@@ -153,7 +153,7 @@ public:
 	void setProperties();
 
 	Renderable3DComponent();
-	~Renderable3DComponent();
+	virtual ~Renderable3DComponent();
 
 	virtual void Initialize() override;
 	virtual void Load() override;

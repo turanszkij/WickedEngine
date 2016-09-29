@@ -11,7 +11,7 @@ protected:
 	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 public:
 	ForwardRenderableComponent();
-	~ForwardRenderableComponent();
+	virtual ~ForwardRenderableComponent();
 
 	virtual void setPreferredThreadingCount(unsigned short value) override;
 

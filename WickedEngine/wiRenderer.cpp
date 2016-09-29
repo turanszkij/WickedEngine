@@ -703,6 +703,7 @@ void wiRenderer::LoadBasicShaders()
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
@@ -1101,6 +1102,12 @@ void wiRenderer::SetUpStates()
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_XRAY]);
 
 
+	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_EQUAL;
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHEQUAL]);
+
+
 	for (int i = 0; i < BSTYPE_LAST; ++i)
 	{
 		blendStates[i] = new BlendState;
@@ -1115,7 +1122,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable=false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_OPAQUE]);
 
@@ -1126,7 +1133,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable=false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_TRANSPARENT]);
 
@@ -1141,6 +1148,13 @@ void wiRenderer::SetUpStates()
 	bd.IndependentBlendEnable=false,
 	bd.AlphaToCoverageEnable=false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_ADDITIVE]);
+
+
+	bd.RenderTarget[0].BlendEnable = false;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
+	bd.IndependentBlendEnable = false,
+	bd.AlphaToCoverageEnable = false;
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_COLORWRITEDISABLE]);
 }
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -2758,6 +2772,12 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		GetDevice()->BindResourcePS(envMaps[0], TEXSLOT_ENV0, threadID);
 		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
 		
+		if (shaderType == SHADERTYPE_TILEDFORWARD)
+		{
+			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
+			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
+			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
+		}
 
 
 		for(Cullable* object : culledObjects){
@@ -2774,8 +2794,14 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		if (wireRender)
 			GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
 
-
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+		if (shaderType == SHADERTYPE_ALPHATESTONLY)
+		{
+			GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
+		}
+		else
+		{
+			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+		}
 
 		if(!wireRender) {
 			if (enviroMap != nullptr)
@@ -2865,7 +2891,14 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
-					GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
+					if (SHADERTYPE_TILEDFORWARD)
+					{
+						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHEQUAL], mesh->stencilRef, threadID);
+					}
+					else
+					{
+						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
+					}
 
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
 					GetDevice()->BindVertexBuffer(&Mesh::impostorVB, 0, sizeof(Vertex), threadID);
@@ -2875,7 +2908,24 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
-					GetDevice()->BindPS(pixelShaders[(shaderType == SHADERTYPE_DEFERRED ? PSTYPE_OBJECT_DEFERRED_NORMALMAP : PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP)], threadID);
+					switch (shaderType)
+					{
+					case SHADERTYPE_TEXTURE:
+					case SHADERTYPE_ALPHATESTONLY:
+						GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
+						break;
+					case SHADERTYPE_DEFERRED:
+						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], threadID);
+						break;
+					case SHADERTYPE_FORWARD:
+						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP], threadID);
+						break;
+					case SHADERTYPE_TILEDFORWARD:
+						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], threadID);
+						break;
+					default:
+						break;
+					}
 					GetDevice()->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
 				}
 			}
@@ -2923,12 +2973,19 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 				{
 					GetDevice()->BindIndexBuffer(&subset.indexBuffer,threadID);
 
-					if(subset.material->shadeless)
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_SHADELESS,threadID);
-					if (subset.material->subsurfaceScattering > 0)
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
+					if (shaderType == SHADERTYPE_TILEDFORWARD)
+					{
+						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHEQUAL], mesh->stencilRef, threadID);
+					}
 					else
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],mesh->stencilRef,threadID);
+					{
+						if (subset.material->shadeless)
+							GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, threadID);
+						if (subset.material->subsurfaceScattering > 0)
+							GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
+						else
+							GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
+					}
 
 					MaterialCB mcb;
 					mcb.Create(*subset.material);
@@ -2947,6 +3004,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 						switch (shaderType)
 						{
 						case SHADERTYPE_TEXTURE:
+						case SHADERTYPE_ALPHATESTONLY:
 							realPS = PSTYPE_TEXTUREONLY;
 							break;
 						case SHADERTYPE_DEFERRED:
@@ -3004,6 +3062,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 									realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
 								}
 							}
+							break;
+						case SHADERTYPE_TILEDFORWARD:
+							realPS = PSTYPE_OBJECT_TILEDFORWARD;
 							break;
 						default:
 							break;
@@ -3360,8 +3421,8 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		{
 			Light* l = (Light*)c;
 
-			//lightArray[counter].pos = l->translation;
-			XMStoreFloat3(&lightArray[lightCounter].pos, XMVector3TransformCoord(XMLoadFloat3(&l->translation), cam->GetView()));
+			lightArray[lightCounter].posWS = l->translation;
+			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].posWS), cam->GetView()));
 			lightArray[lightCounter].distance = l->enerDis.y;
 			lightArray[lightCounter].col = l->color;
 			lightArray[lightCounter].energy = l->enerDis.x;
@@ -3403,10 +3464,12 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		bd.StructureByteStride = _stride;
 		device->CreateBuffer(&bd, nullptr, frustumBuffer);
 	}
-	static GPUBuffer* lightCounterHelper = nullptr;
-	if (lightCounterHelper == nullptr)
+	static GPUBuffer* lightCounterHelper_Opaque = nullptr;
+	static GPUBuffer* lightCounterHelper_Transparent = nullptr;
+	if (lightCounterHelper_Opaque == nullptr || lightCounterHelper_Transparent == nullptr)
 	{
-		lightCounterHelper = new GPUBuffer;
+		lightCounterHelper_Opaque = new GPUBuffer;
+		lightCounterHelper_Transparent = new GPUBuffer;
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
@@ -3416,7 +3479,8 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		bd.CPUAccessFlags = 0;
 		bd.StructureByteStride = sizeof(UINT);
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, lightCounterHelper);
+		device->CreateBuffer(&bd, nullptr, lightCounterHelper_Opaque);
+		device->CreateBuffer(&bd, nullptr, lightCounterHelper_Transparent);
 	}
 	if (textures[TEXTYPE_2D_LIGHTGRID_OPAQUE] == nullptr || textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT] == nullptr || _resolutionChanged)
 	{
@@ -3429,8 +3493,8 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_R32G32_UINT; // Can this be less?
-		desc.Height = dispatchParams.numThreads[0];
-		desc.Width = dispatchParams.numThreads[1];
+		desc.Width = dispatchParams.numThreads[0];
+		desc.Height = dispatchParams.numThreads[1];
 		desc.MipLevels = 1;
 		desc.MiscFlags = 0;
 		desc.SampleDesc.Count = 1;
@@ -3460,7 +3524,7 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
-	//if(!frustumsComplete || _resolutionChanged)
+	if(!frustumsComplete || _resolutionChanged)
 	{
 		frustumsComplete = true;
 		device->BindUnorderedAccessResourceCS(frustumBuffer, UAVSLOT_TILEFRUSTUMS, threadID);
@@ -3492,7 +3556,9 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 	// Perform the culling
 	{
 
-		GetDevice()->EventBegin(L"Light Culling", threadID);
+		device->EventBegin(L"Light Culling", threadID);
+
+		device->UnBindResources(TEXSLOT_LIGHTGRID, SBSLOT_LIGHTINDEXLIST - TEXSLOT_LIGHTGRID, threadID);
 		
 		device->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
 
@@ -3500,7 +3566,8 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		
 		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
 		device->BindUnorderedAccessResourceCS(debugTexture, UAVSLOT_DEBUGTEXTURE, threadID);
-		device->BindUnorderedAccessResourceCS(lightCounterHelper, UAVSLOT_LIGHTINDEXCOUNTERHELPER, threadID);
+		device->BindUnorderedAccessResourceCS(lightCounterHelper_Opaque, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE, threadID);
+		device->BindUnorderedAccessResourceCS(lightCounterHelper_Transparent, UAVSLOT_LIGHTINDEXCOUNTERHELPER_TRANSPARENT, threadID);
 		device->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], UAVSLOT_LIGHTINDEXLIST_OPAQUE, threadID);
 		device->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], UAVSLOT_LIGHTINDEXLIST_TRANSPARENT, threadID);
 		device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], UAVSLOT_LIGHTGRID_OPAQUE, threadID);
@@ -3508,7 +3575,7 @@ Texture2D* wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
 		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
 	return debugTexture;

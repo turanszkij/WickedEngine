@@ -31,7 +31,7 @@ private:
 	thread worker;
 public:
 	LoadingScreenComponent();
-	~LoadingScreenComponent();
+	virtual ~LoadingScreenComponent();
 
 	//Add a loading task which should be executed
 	//use std::bind( YourFunctionPointer )
