@@ -70,6 +70,7 @@ protected:
 	virtual void RenderShadows(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderTransparentScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderBloom(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderLightShafts(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderComposition1(wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);

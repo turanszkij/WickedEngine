@@ -1,9 +1,9 @@
 #include "objectHF.hlsli"
 
-
-
 float4 main(PixelInputType input) : SV_TARGET
 {
+	OBJECT_PS_DITHER
+
 	OBJECT_PS_MAKE
 
 	OBJECT_PS_SAMPLETEXTURES

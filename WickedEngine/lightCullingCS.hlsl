@@ -166,14 +166,16 @@ void main(ComputeShaderInput IN)
 				if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 				{
 					//// Add light to light list for transparent geometry.
-					t_AppendLight(i);
+					t_AppendLight(i); 
+					
+					InterlockedAdd(_counter, 1);
 
 					if (!SphereInsidePlane(sphere, minPlane))
 					{
 						// Add light to light list for opaque geometry.
 						o_AppendLight(i);
 
-						InterlockedAdd(_counter, 1);
+						//InterlockedAdd(_counter, 1);
 					}
 
 				}
@@ -238,26 +240,6 @@ void main(ComputeShaderInput IN)
 		t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
 	}
 
-	//// Update the debug texture output.
-	//if (IN.groupThreadID.x == 0 || IN.groupThreadID.y == 0)
-	//{
-	//	DebugTexture[texCoord] = float4(0, 0, 0, 0.9f);
-	//}
-	//else if (IN.groupThreadID.x == 1 || IN.groupThreadID.y == 1)
-	//{
-	//	DebugTexture[texCoord] = float4(1, 1, 1, 0.5f);
-	//}
-	//else if (o_LightCount > 0)
-	//{
-	//	float normalizedLightCount = o_LightCount / 50.0f;
-	//	float4 lightCountHeatMapColor = LightCountHeatMap.SampleLevel(LinearClampSampler, float2(normalizedLightCount, 0), 0);
-	//	DebugTexture[texCoord] = lightCountHeatMapColor;
-	//}
-	//else
-	//{
-	//	DebugTexture[texCoord] = float4(0, 0, 0, 1);
-	//}
 
-	//DebugTexture[texCoord] = float4(GroupFrustum.planes[0].N,1);
 	DebugTexture[texCoord] = float4((float)_counter / (float)lightCount,0,0,1);
 }

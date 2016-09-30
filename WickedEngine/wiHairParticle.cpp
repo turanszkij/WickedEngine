@@ -12,7 +12,7 @@ using namespace wiGraphicsTypes;
 
 VertexLayout *wiHairParticle::il;
 VertexShader *wiHairParticle::vs;
-PixelShader *wiHairParticle::ps,*wiHairParticle::qps;
+PixelShader *wiHairParticle::ps[],*wiHairParticle::qps[];
 GeometryShader *wiHairParticle::gs[],*wiHairParticle::qgs[];
 GPUBuffer *wiHairParticle::cbgs;
 DepthStencilState *wiHairParticle::dss;
@@ -70,8 +70,11 @@ void wiHairParticle::CleanUp(){
 void wiHairParticle::CleanUpStatic(){
 	SAFE_DELETE(il);
 	SAFE_DELETE(vs);
-	SAFE_DELETE(ps);
-	SAFE_DELETE(qps);
+	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
+	{
+		SAFE_DELETE(ps[i]);
+		SAFE_DELETE(qps[i]);
+	}
 	SAFE_DELETE(gs[0]);
 	SAFE_DELETE(gs[1]);
 	SAFE_DELETE(gs[2]);
@@ -99,10 +102,16 @@ void wiHairParticle::LoadShaders()
 		il = vsinfo->vertexLayout;
 	}
 
+	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
+	{
+		SAFE_INIT(ps[i]);
+		SAFE_INIT(qps[i]);
+	}
 
-
-	ps = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS.cso", wiResourceManager::PIXELSHADER));
-	qps = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_deferred.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	qps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_deferred.cso", wiResourceManager::PIXELSHADER));
+	qps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
 	gs[0] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL0GS.cso", wiResourceManager::GEOMETRYSHADER));
 	gs[1] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL1GS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -378,8 +387,14 @@ void wiHairParticle::SetUpPatches()
 	GenerateSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),SPTREE_GENERATE_OCTREE);
 	return;
 }
-void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
+void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
+	Texture2D* texture = material->texture;
+	texture = nullptr;
+	PixelShader* _ps = texture != nullptr ? qps[shaderType] : ps[shaderType];
+	if (_ps == nullptr)
+		return;
+
 	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
 	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
 	XMMATRIX inverseRenderMat = XMMatrixInverse(nullptr, renderMatrix);
@@ -416,11 +431,10 @@ void wiHairParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin(L"HairParticle", threadID);
 
-		Texture2D* texture = material->texture;
 
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
 		device->BindVertexLayout(il,threadID);
-		device->BindPS(texture?qps:ps,threadID);
+		device->BindPS(_ps,threadID);
 		device->BindVS(vs,threadID);
 
 		if(texture){

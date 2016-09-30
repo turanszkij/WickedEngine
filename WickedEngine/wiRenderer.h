@@ -285,10 +285,12 @@ public:
 		XMFLOAT4 col;
 		XMFLOAT3 posWS;
 		float energy;
+		XMFLOAT3 direction;
 		UINT type;
 		float shadowBias;
 		float _pad0;
 		float _pad1;
+		float _pad2;
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_LIGHTARRAY)
 
@@ -404,8 +406,8 @@ public:
 		, bool isReflection, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass);
 	static void ClearShadowMaps(GRAPHICSTHREAD threadID);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);
-	static void DrawWorldTransparent(Camera* camera, wiGraphicsTypes::Texture2D* refracRes, wiGraphicsTypes::Texture2D* refRes
-		, wiGraphicsTypes::Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID);
+	static void DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refracRes, wiGraphicsTypes::Texture2D* refRes
+		, wiGraphicsTypes::Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass = false);
 	void DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);
@@ -425,7 +427,7 @@ public:
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);
 
-	static wiGraphicsTypes::Texture2D* ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
+	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();

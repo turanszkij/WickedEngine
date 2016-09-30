@@ -209,10 +209,10 @@ struct Material
 		planar_reflections = false;
 	}
 
-	bool IsTransparent() { return alpha < 1.0f; }
-	bool IsWater() { return water; }
-	bool HasPlanarReflection() { return planar_reflections; }
-	RENDERTYPE GetRenderType()
+	bool IsTransparent() const { return alpha < 1.0f; }
+	bool IsWater() const { return water; }
+	bool HasPlanarReflection() const { return planar_reflections; }
+	RENDERTYPE GetRenderType() const
 	{
 		if (IsWater())
 			return RENDERTYPE_WATER;
@@ -221,12 +221,12 @@ struct Material
 		return RENDERTYPE_OPAQUE;
 	}
 	void ConvertToPhysicallyBasedMaterial();
-	wiGraphicsTypes::Texture2D* GetBaseColorMap();
-	wiGraphicsTypes::Texture2D* GetNormalMap();
-	wiGraphicsTypes::Texture2D* GetRoughnessMap();
-	wiGraphicsTypes::Texture2D* GetMetalnessMap();
-	wiGraphicsTypes::Texture2D* GetReflectanceMap();
-	wiGraphicsTypes::Texture2D* GetDisplacementMap();
+	const wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
+	const wiGraphicsTypes::Texture2D* GetNormalMap() const;
+	const wiGraphicsTypes::Texture2D* GetRoughnessMap() const;
+	const wiGraphicsTypes::Texture2D* GetMetalnessMap() const;
+	const wiGraphicsTypes::Texture2D* GetReflectanceMap() const;
+	const wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 	void Serialize(wiArchive& archive);
 };
 struct RibbonVertex

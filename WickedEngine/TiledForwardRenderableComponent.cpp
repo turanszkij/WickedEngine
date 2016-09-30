@@ -8,6 +8,7 @@ using namespace wiGraphicsTypes;
 
 TiledForwardRenderableComponent::TiledForwardRenderableComponent() {
 	ForwardRenderableComponent::setProperties();
+	setShadowsEnabled(true);
 }
 TiledForwardRenderableComponent::~TiledForwardRenderableComponent() {
 }
@@ -48,5 +49,12 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 }
-
+void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
+{
+	rtTransparent.Activate(threadID, mainRT.depth); {
+		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, shadedSceneRT.GetTexture(), rtReflection.GetTexture()
+			, rtWaterRipple.GetTexture(), threadID, true);
+		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
+	}
+}
 

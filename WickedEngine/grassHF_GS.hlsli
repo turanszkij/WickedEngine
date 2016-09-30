@@ -22,6 +22,7 @@ struct VS_OUT
 struct GS_OUT
 {
 	float4 pos : SV_POSITION;
+	float3 pos3D : POSITION3D;
 	float3 nor : NORMAL;
 	float3 col : COLOR;
 	float  fade : DITHERFADE;
@@ -29,6 +30,7 @@ struct GS_OUT
 struct QGS_OUT
 {
 	float4 pos : SV_POSITION;
+	float3 pos3D : POSITION3D;
 	float3 nor : NORMAL;
 	float2 tex : TEXCOORD;
 	float  fade : DITHERFADE;
@@ -63,6 +65,7 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += -right*0.5;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = color;
 		output.Append(element);
@@ -70,12 +73,14 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += right*0.5;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		output.Append(element);
 	
 		element.pos = pos;
 		element.pos.xyz += -right*0.4+normal*0.3+wind*0.2;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.2);
 		output.Append(element);
@@ -83,12 +88,14 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += right*0.4+normal*0.3+wind*0.2;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		output.Append(element);
 	
 		element.pos = pos;
 		element.pos.xyz += -right*0.2+normal*0.7+wind*1.2;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.6);
 		output.Append(element);
@@ -96,12 +103,14 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += right*0.2+normal*0.7+wind*1.2;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		output.Append(element);
 	
 		element.pos = pos;
 		element.pos.xyz += normal+wind*2.6;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.9);
 		output.Append(element);
@@ -113,6 +122,7 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += -right*2.3+normal*0.56+wind*2+front;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.9);
 		output.Append(element);
@@ -120,6 +130,7 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += -right+normal*0.4+wind+front;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.3);
 		output.Append(element);
@@ -127,6 +138,7 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += -right+front*0.5;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = color;
 		output.Append(element);
@@ -134,12 +146,14 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += right;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		output.Append(element);
 		
 		element.pos = pos;
 		element.pos.xyz += right+normal*0.6+wind*1.6;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.5);
 		output.Append(element);
@@ -147,6 +161,7 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += right*2+normal*0.6+wind*1.6;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.7);
 		output.Append(element);
@@ -154,6 +169,7 @@ inline void genBlade(inout TriangleStream< GS_OUT > output, float4 pos, float3 n
 		element.pos = pos;
 		element.pos.xyz += right*3.4+normal+wind*2.8;
 		element.pos = mul(element.pos, xWorld);
+		element.pos3D = element.pos.xyz;
 		element.pos = mul(element.pos,g_xCamera_VP);
 		element.col = saturate(color*1.9);
 		output.Append(element);

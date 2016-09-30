@@ -42,7 +42,7 @@ private:
 	};
 	static wiGraphicsTypes::VertexLayout *il;
 	static wiGraphicsTypes::VertexShader *vs;
-	static wiGraphicsTypes::PixelShader *ps, *qps;
+	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT], *qps[SHADERTYPE_COUNT];
 	static wiGraphicsTypes::GeometryShader *gs[3],*qgs[2];
 	static wiGraphicsTypes::GPUBuffer *cbgs;
 	static wiGraphicsTypes::DepthStencilState *dss;
@@ -60,7 +60,7 @@ public:
 	void CleanUp();
 
 	void SetUpPatches();
-	void Draw(Camera* camera, GRAPHICSTHREAD threadID);
+	void Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();

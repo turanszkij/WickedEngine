@@ -11,9 +11,15 @@
 #include "brdf.hlsli"
 #include "envReflectionHF.hlsli"
 #include "packHF.hlsli"
+#include "lightCullingCSInterop.h"
+#include "tiledLightingHF.hlsli"
 
 // DEFINITIONS
 //////////////////
+
+TEXTURE2D(LightGrid, uint2, TEXSLOT_LIGHTGRID);
+STRUCTUREDBUFFER(LightIndexList, uint, SBSLOT_LIGHTINDEXLIST);
+STRUCTUREDBUFFER(LightArray, LightArrayType, SBSLOT_LIGHTARRAY);
 
 #define xBaseColorMap		texture_0
 #define xNormalMap			texture_1
@@ -49,6 +55,12 @@ struct GBUFFEROutputType
 	float4 g1	: SV_TARGET1;		// texture_gbuffer1
 	float4 g2	: SV_TARGET2;		// texture_gbuffer2
 	float4 g3	: SV_TARGET3;		// texture_gbuffer3
+};
+
+struct LightingResult
+{
+	float3 diffuse;
+	float3 specular;
 };
 
 
@@ -122,6 +134,113 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	specular = max(specular, 0);
 }
 
+inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
+	inout float3 diffuse, out float3 specular)
+{
+	uint2 tileIndex = uint2(floor(pixel / BLOCK_SIZE));
+	uint startOffset = LightGrid[tileIndex].x;
+	uint lightCount = LightGrid[tileIndex].y;
+
+	specular = 0;
+	diffuse = 0;
+	for (uint i = 0; i < lightCount; i++)
+	{
+		uint lightIndex = LightIndexList[startOffset + i];
+		LightArrayType light = LightArray[lightIndex];
+
+		float3 L = light.PositionWS - P;
+		float lightDistance = length(L);
+		if (light.type > 0 && lightDistance > light.range)
+			continue;
+		L /= lightDistance;
+
+		LightingResult result = (LightingResult)0;
+
+		switch (light.type)
+		{
+		case 0/*DIRECTIONAL*/:
+		{
+			L = light.direction.xyz;
+			BRDF_MAKE(N, L, V);
+			result.specular = light.color.rgb * BRDF_SPECULAR(roughness, f0);
+			result.diffuse = light.color.rgb * BRDF_DIFFUSE(roughness);
+
+			float sh = max(NdotL, 0);
+			float4 ShPos[3];
+			ShPos[0] = mul(float4(P, 1), g_xDirLight_ShM[0]);
+			ShPos[1] = mul(float4(P, 1), g_xDirLight_ShM[1]);
+			ShPos[2] = mul(float4(P, 1), g_xDirLight_ShM[2]);
+			float3 ShTex[3];
+			ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / ShPos[0].w / 2.0f + 0.5f;
+			ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
+			ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
+			const float shadows[3] = {
+				shadowCascade(ShPos[0],ShTex[0].xy,texture_shadow0),
+				shadowCascade(ShPos[1],ShTex[1].xy,texture_shadow1),
+				shadowCascade(ShPos[2],ShTex[2].xy,texture_shadow2)
+			};
+			[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
+			{
+				//color.r+=0.5f;
+				const float2 lerpVal = abs(ShTex[2].xy * 2 - 1);
+				sh *= lerp(shadows[2], shadows[1], pow(max(lerpVal.x, lerpVal.y), 4));
+			}
+			else[branch]if ((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
+			{
+				//color.g+=0.5f;
+				const float2 lerpVal = abs(ShTex[1].xy * 2 - 1);
+				sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
+			}
+			else[branch]if ((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
+			{
+				//color.b+=0.5f;
+				sh *= shadows[0];
+			}
+
+			result.diffuse *= sh;
+			result.specular *= sh;
+
+			result.diffuse = max(result.diffuse, 0);
+			result.specular = max(result.specular, 0);
+		}
+		break;
+		case 1/*POINT*/:
+		{
+			BRDF_MAKE(N, L, V);
+			result.specular = light.color.rgb * BRDF_SPECULAR(roughness, f0);
+			result.diffuse = light.color.rgb * BRDF_DIFFUSE(roughness);
+			result.diffuse *= light.energy;
+			result.specular *= light.energy;
+
+			float att = (light.energy * (light.range / (light.range + 1 + lightDistance)));
+			float attenuation = /*saturate*/(att * (light.range - lightDistance) / light.range);
+			result.diffuse *= attenuation;
+			result.specular *= attenuation;
+
+			float sh = max(NdotL, 0);
+			//[branch]if (xLightEnerDis.w) {
+			//	const float3 lv = P - xLightPos.xyz;
+			//	static const float bias = 0.025;
+			//	sh *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth, lv, length(lv) / xLightEnerDis.y - bias).r;
+			//}
+			result.diffuse *= sh;
+			result.specular *= sh;
+
+			result.diffuse = max(result.diffuse, 0);
+			result.specular = max(result.specular, 0);
+		}
+		break;
+		case 2/*SPOT*/:
+		{
+		}
+		break;
+		}
+
+		diffuse += result.diffuse;
+		specular += result.specular;
+	}
+}
+
 
 // MACROS
 ////////////
@@ -143,7 +262,8 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	float sss = g_xMat_subsurfaceScattering;								\
 	float3 bumpColor = 0;													\
 	float depth = input.pos.z;												\
-	float ao = input.ao;
+	float ao = input.ao;													\
+	float2 pixel = input.pos.xy;
 
 #define OBJECT_PS_MAKE																								\
 	OBJECT_PS_MAKE_COMMON																							\
@@ -175,6 +295,9 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 
 #define OBJECT_PS_LIGHT_DIRECTIONAL																					\
 	DirectionalLight(N, V, P, f0, albedo, roughness, diffuse, specular);
+
+#define OBJECT_PS_LIGHT_TILED																						\
+	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_LIGHT_END																							\
 	color.rgb = (GetAmbientColor() * ao + diffuse) * albedo + specular;

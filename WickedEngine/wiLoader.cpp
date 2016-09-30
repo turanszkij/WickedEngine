@@ -1443,7 +1443,7 @@ void Material::ConvertToPhysicallyBasedMaterial()
 	reflectance = (specular.x + specular.y + specular.z) / 3.0f * specular.w;
 	normalMapStrength = 1.0f;
 }
-Texture2D* Material::GetBaseColorMap()
+const Texture2D* Material::GetBaseColorMap() const
 {
 	if (texture != nullptr)
 	{
@@ -1451,7 +1451,7 @@ Texture2D* Material::GetBaseColorMap()
 	}
 	return wiTextureHelper::getInstance()->getWhite();
 }
-Texture2D* Material::GetNormalMap()
+const Texture2D* Material::GetNormalMap() const
 {
 	return normalMap;
 	//if (normalMap != nullptr)
@@ -1460,15 +1460,15 @@ Texture2D* Material::GetNormalMap()
 	//}
 	//return wiTextureHelper::getInstance()->getNormalMapDefault();
 }
-Texture2D* Material::GetRoughnessMap()
+const Texture2D* Material::GetRoughnessMap() const
 {
 	return wiTextureHelper::getInstance()->getWhite();
 }
-Texture2D* Material::GetMetalnessMap()
+const Texture2D* Material::GetMetalnessMap() const
 {
 	return wiTextureHelper::getInstance()->getWhite();
 }
-Texture2D* Material::GetReflectanceMap()
+const Texture2D* Material::GetReflectanceMap() const
 {
 	if (refMap != nullptr)
 	{
@@ -1476,7 +1476,7 @@ Texture2D* Material::GetReflectanceMap()
 	}
 	return wiTextureHelper::getInstance()->getWhite();
 }
-Texture2D* Material::GetDisplacementMap()
+const Texture2D* Material::GetDisplacementMap() const
 {
 	if (displacementMap != nullptr)
 	{

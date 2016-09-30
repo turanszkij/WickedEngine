@@ -195,9 +195,6 @@
     <FxCompile Include="fontPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="grassPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="horizontalBlurPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -240,9 +237,6 @@
     <FxCompile Include="pointspritePS_simplest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="qGrassPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="screenPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -283,9 +277,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="volumeLightPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="waterPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="fxaa.hlsl">
@@ -436,6 +427,57 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_tiledforward.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_normalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_normalmap_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_normalmap_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_transparent.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_transparent_normalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_transparent_normalmap_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_transparent_normalmap_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_transparent_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_transparent_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_water.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_dirlight_water.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_tiledforward_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassPS_tiledforward.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassPS_deferred.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassPS_deferred.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassPS_tiledforward.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

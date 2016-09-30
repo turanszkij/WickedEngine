@@ -270,12 +270,15 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	RenderTransparentScene(mainRT, shadedSceneRT, threadID);
+}
+void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
+{
 	rtTransparent.Activate(threadID, mainRT.depth); {
-		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), shadedSceneRT.GetTexture(), rtReflection.GetTexture()
+		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, shadedSceneRT.GetTexture(), rtReflection.GetTexture()
 			, rtWaterRipple.GetTexture(), threadID);
 		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
 	}
-
 }
 void Renderable3DComponent::RenderBloom(GRAPHICSTHREAD threadID)
 {

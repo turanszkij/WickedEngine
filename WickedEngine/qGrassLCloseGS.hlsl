@@ -34,6 +34,7 @@ void main(
 	element.pos.xyz+=-right*frame.x+normal*frame.y+wind;
 	element.pos = mul(element.pos, xWorld);
 	float4 savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
@@ -43,6 +44,7 @@ void main(
 	element.pos.xyz+=right*frame.x+normal*frame.y+wind;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
@@ -52,6 +54,7 @@ void main(
 	element.pos.xyz += -right*frame.x;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
@@ -61,6 +64,7 @@ void main(
 	element.pos.xyz += right*frame.x;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
@@ -74,6 +78,7 @@ void main(
 	element.pos.xyz += -front*frame.x + normal*frame.y + wind;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
@@ -83,6 +88,7 @@ void main(
 	element.pos.xyz += front*frame.x + normal*frame.y + wind;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
@@ -92,6 +98,7 @@ void main(
 	element.pos.xyz += -front*frame.x;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
@@ -101,6 +108,7 @@ void main(
 	element.pos.xyz += front*frame.x;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
+	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);

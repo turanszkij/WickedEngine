@@ -1,6 +1,6 @@
 #include "objectHF.hlsli"
 
-float4 main( PixelInputType input) : SV_TARGET
+float4 main(PixelInputType input) : SV_TARGET
 {
 	OBJECT_PS_DITHER
 
@@ -14,11 +14,11 @@ float4 main( PixelInputType input) : SV_TARGET
 
 	OBJECT_PS_LIGHT_BEGIN
 
-	OBJECT_PS_NORMALMAPPING
-
 	OBJECT_PS_REFRACTION
 
-	OBJECT_PS_LIGHT_DIRECTIONAL
+	OBJECT_PS_NORMALMAPPING
+
+	OBJECT_PS_LIGHT_TILED
 
 	OBJECT_PS_ENVIRONMENTREFLECTIONS
 

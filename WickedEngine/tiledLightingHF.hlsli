@@ -8,10 +8,12 @@ struct LightArrayType
 	float4 color;
 	float3 PositionWS;
 	float energy;
+	float3 direction;
 	uint type;
 	float shadowBias;
 	float _pad0;
 	float _pad1;
+	float _pad2;
 };
 
 #endif // _TILEDLIGHTING_HF_
