@@ -6,6 +6,7 @@ class ForwardRenderableComponent :
 	public Renderable3DComponent
 {
 protected:
+
 	wiRenderTarget rtMain;
 
 	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;

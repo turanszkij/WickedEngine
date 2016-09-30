@@ -18,10 +18,10 @@ public:
 	wiDepthTarget*				depth;
 
 	wiRenderTarget();
-	wiRenderTarget(UINT width, UINT height, bool hasDepth = false, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, UINT MSAAC = 1, UINT MSAAQ = 0, bool depthOnly = false);
+	wiRenderTarget(UINT width, UINT height, bool hasDepth = false, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, UINT MSAAC = 1, bool depthOnly = false);
 	~wiRenderTarget();
 
-	void Initialize(UINT width, UINT height, bool hasDepth = false, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, UINT MSAAC = 1, UINT MSAAQ = 0, bool depthOnly = false);
+	void Initialize(UINT width, UINT height, bool hasDepth = false, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, UINT MSAAC = 1, bool depthOnly = false);
 	void InitializeCube(UINT size, bool hasDepth, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, bool depthOnly = false);
 	void Add(wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM);
 	void Activate(GRAPHICSTHREAD threadID);

@@ -19,7 +19,7 @@ public:
 	wiDepthTarget();
 	~wiDepthTarget();
 	
-	void Initialize(int width, int height, UINT MSAAC, UINT MSAAQ);
+	void Initialize(int width, int height, UINT MSAAC);
 	void InitializeCube(int size);
 	void Clear(GRAPHICSTHREAD threadID);
 	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);

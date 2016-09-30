@@ -57,6 +57,8 @@ void Renderable3DComponent::setProperties()
 	setEyeAdaptionEnabled(false);
 	setTessellationEnabled(false);
 
+	setMSAASampleCount(1);
+
 	setPreferredThreadingCount(0);
 }
 
@@ -85,10 +87,10 @@ void Renderable3DComponent::Initialize()
 		, false, FORMAT_R8G8B8A8_SNORM);
 	rtTransparent.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, FORMAT_R16G16B16A16_FLOAT,1,getMSAASampleCount());
 	rtVolumeLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false);
+		, false, FORMAT_R8G8B8A8_UNORM, 1, getMSAASampleCount());
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
@@ -113,7 +115,7 @@ void Renderable3DComponent::Initialize()
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false);
 
-	dtDepthCopy.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), 1, 0);
+	dtDepthCopy.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), getMSAASampleCount());
 
 	rtSSAO.resize(3);
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
@@ -131,7 +133,7 @@ void Renderable3DComponent::Initialize()
 	rtSun[1].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getLightShaftQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getLightShaftQuality())
-		, false
+		, false, FORMAT_R8G8B8A8_UNORM, 1,getMSAASampleCount()
 		);
 	rtLensFlare.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false);
 
@@ -460,7 +462,7 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 	}
 
 
-	rtFinal[2].Activate(threadID, mainRT.depth);
+	rtFinal[2].Activate(threadID);
 	fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);

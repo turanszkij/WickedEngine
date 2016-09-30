@@ -2424,7 +2424,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						if (!l->shadowMaps_dirLight[index].IsInitialized() || l->shadowMaps_dirLight[index].depth->GetDesc().Height != SHADOWMAPRES)
 						{
 							// Create the shadow map
-							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, true, FORMAT_R32_FLOAT, 1, 1, 0, true);
+							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, true, FORMAT_R32_FLOAT, 1, 1, true);
 						}
 
 						l->shadowMaps_dirLight[index].Activate(threadID);
@@ -2742,7 +2742,7 @@ void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 	Light::shadowMaps_spotLight.resize(shadowMapCount);
 	for (int i = 0; i < shadowMapCount; ++i)
 	{
-		Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, 0, true);
+		Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, true);
 	}
 }
 

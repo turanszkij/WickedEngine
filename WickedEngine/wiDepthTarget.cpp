@@ -17,7 +17,7 @@ wiDepthTarget::~wiDepthTarget()
 	SAFE_DELETE(textureCube);
 }
 
-void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
+void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 {
 	SAFE_DELETE(texture);
 	SAFE_DELETE(textureCube);
@@ -34,7 +34,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC, UINT MSAAQ)
 	depthGPUBufferDesc.ArraySize = 1;
 	depthGPUBufferDesc.Format = FORMAT_R24G8_TYPELESS;
 	depthGPUBufferDesc.SampleDesc.Count = MSAAC;
-	depthGPUBufferDesc.SampleDesc.Quality = MSAAQ;
+	// depthGPUBufferDesc.SampleDesc.Quality = 0; // auto-filll in device
 	depthGPUBufferDesc.Usage = USAGE_DEFAULT;
 	depthGPUBufferDesc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 	depthGPUBufferDesc.CPUAccessFlags = 0;

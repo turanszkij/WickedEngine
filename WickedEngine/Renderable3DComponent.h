@@ -45,6 +45,8 @@ private:
 	bool eyeAdaptionEnabled;
 	bool tessellationEnabled;
 
+	UINT msaaSampleCount;
+
 protected:
 	wiRenderTarget
 		rtReflection
@@ -112,6 +114,8 @@ public:
 	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
 	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 
+	inline UINT getMSAASampleCount() { return msaaSampleCount; }
+
 	inline unsigned int getThreadingCount(){ return (unsigned int)workerThreads.size(); }
 
 	inline void setLightShaftQuality(float value){ lightShaftQuality = value; }
@@ -148,6 +152,8 @@ public:
 	inline void setStereogramEnabled(bool value) { stereogramEnabled = value; }
 	inline void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
 	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
+
+	inline void setMSAASampleCount(UINT value) { msaaSampleCount = value; }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

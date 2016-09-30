@@ -1611,6 +1611,18 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 {
 	D3D11_TEXTURE2D_DESC desc = _ConvertTexture2DDesc(pDesc);
 
+	if (desc.SampleDesc.Count > 1)
+	{
+		UINT quality;
+		device->CheckMultisampleQualityLevels(desc.Format, desc.SampleDesc.Count, &quality);
+		desc.SampleDesc.Quality = quality - 1;
+		if (quality == 0)
+		{
+			assert(0 && "MSAA Samplecount not supported!");
+			desc.SampleDesc.Count = 1;
+		}
+	}
+
 	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
 
 	(*ppTexture2D) = new Texture2D;
@@ -1700,7 +1712,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 			{
 				shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 			}
-			shaderResourceViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Quality == 0 ? D3D11_SRV_DIMENSION_TEXTURE2D : D3D11_SRV_DIMENSION_TEXTURE2DMS);
+			shaderResourceViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_SRV_DIMENSION_TEXTURE2D : D3D11_SRV_DIMENSION_TEXTURE2DMS);
 			shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
 			shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 		}
@@ -1726,7 +1738,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 		else
 		{
 			renderTargetViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-			renderTargetViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Quality == 0 ? D3D11_RTV_DIMENSION_TEXTURE2D : D3D11_RTV_DIMENSION_TEXTURE2DMS);
+			renderTargetViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_RTV_DIMENSION_TEXTURE2D : D3D11_RTV_DIMENSION_TEXTURE2DMS);
 			renderTargetViewDesc.Texture2D.MipSlice = 0;
 		}
 
@@ -1754,7 +1766,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 		{
 			ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
 			depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-			depthStencilViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Quality == 0 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS);
+			depthStencilViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS);
 			depthStencilViewDesc.Texture2D.MipSlice = 0;
 			depthStencilViewDesc.Flags = 0;
 		}

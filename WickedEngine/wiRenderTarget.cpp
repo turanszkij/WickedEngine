@@ -11,12 +11,12 @@ wiRenderTarget::wiRenderTarget()
 	depth = nullptr;
 	isCube = false;
 }
-wiRenderTarget::wiRenderTarget(UINT width, UINT height, bool hasDepth, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, UINT MSAAQ, bool depthOnly)
+wiRenderTarget::wiRenderTarget(UINT width, UINT height, bool hasDepth, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, bool depthOnly)
 {
 	numViews = 0;
 	depth = nullptr;
 	isCube = false;
-	Initialize(width, height, hasDepth, format, mipMapLevelCount, MSAAC, MSAAQ);
+	Initialize(width, height, hasDepth, format, mipMapLevelCount, MSAAC);
 }
 
 
@@ -38,7 +38,7 @@ void wiRenderTarget::clear() {
 }
 
 void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
-	, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, UINT MSAAQ, bool depthOnly)
+	, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, bool depthOnly)
 {
 	clear();
 
@@ -54,7 +54,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 		textureDesc.ArraySize = 1;
 		textureDesc.Format = format;
 		textureDesc.SampleDesc.Count = MSAAC;
-		textureDesc.SampleDesc.Quality = MSAAQ;
+		//textureDesc.SampleDesc.Quality = 0; // auto-fill in device
 		textureDesc.Usage = USAGE_DEFAULT;
 		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
@@ -78,7 +78,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 
 	if(hasDepth) {
 		depth = new wiDepthTarget();
-		depth->Initialize(width,height,MSAAC,MSAAQ);
+		depth->Initialize(width,height,MSAAC);
 	}
 }
 void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UINT mipMapLevelCount, bool depthOnly)
@@ -98,7 +98,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 		textureDesc.ArraySize = 6;
 		textureDesc.Format = format;
 		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
+		//textureDesc.SampleDesc.Quality = 0; // auto-fill in device
 		textureDesc.Usage = USAGE_DEFAULT;
 		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
