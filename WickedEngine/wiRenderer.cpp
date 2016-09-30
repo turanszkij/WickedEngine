@@ -1462,26 +1462,27 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					}
 
 					// Upload bones for skinning to shader
-					static thread_local unsigned int maxBoneCount = resourceBuffers[RBTYPE_BONE]->GetDesc().ByteWidth / sizeof(ShaderBoneType);
-					static ShaderBoneType *bonebuf[GRAPHICSTHREAD_COUNT] = { 0 };
-					if (bonebuf[threadID] == nullptr)
+					// Are statics thread safe here? - this is most likely only run by one thread at a time so I think in this case, yes
+					static unsigned int maxBoneCount = resourceBuffers[RBTYPE_BONE]->GetDesc().ByteWidth / sizeof(ShaderBoneType); 
+					static ShaderBoneType *bonebuf = nullptr;
+					if (bonebuf == nullptr)
 					{
-						bonebuf[threadID] = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
+						bonebuf = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
 					}
 					if (mesh->armature->boneCollection.size() > maxBoneCount)
 					{
 						maxBoneCount = (int)mesh->armature->boneCollection.size() * 2;
-						if (bonebuf[threadID] != nullptr)
+						if (bonebuf != nullptr)
 						{
-							_mm_free(bonebuf[threadID]);
+							_mm_free(bonebuf);
 						}
-						bonebuf[threadID] = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
+						bonebuf = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
 					}
 					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
-						bonebuf[threadID][k].pose = mesh->armature->boneCollection[k]->boneRelativity;
-						bonebuf[threadID][k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
+						bonebuf[k].pose = mesh->armature->boneCollection[k]->boneRelativity;
+						bonebuf[k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
 					}
-					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf[threadID], threadID, (int)(sizeof(ShaderBoneType) * mesh->armature->boneCollection.size()));
+					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf, threadID, (int)(sizeof(ShaderBoneType) * mesh->armature->boneCollection.size()));
 
 					// Do the skinning
 					GetDevice()->BindVertexBuffer(&mesh->vertexBuffer, 0, sizeof(SkinnedVertex), threadID);
@@ -3677,9 +3678,10 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		device->UnBindUnorderedAccessResources(UAVSLOT_TILEFRUSTUMS, 1, threadID);
 	}
 
-	static Texture2D* debugTexture;
-	if (debugTexture == nullptr)
+	if (textures[TEXTYPE_2D_DEBUGUAV] == nullptr || _resolutionChanged)
 	{
+		SAFE_DELETE(textures[TEXTYPE_2D_DEBUGUAV]);
+
 		Texture2DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = (UINT)_width;
@@ -3694,7 +3696,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		device->CreateTexture2D(&desc, nullptr, &debugTexture);
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_DEBUGUAV]);
 	}
 
 	// Perform the culling
@@ -3709,7 +3711,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		
 		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
-		device->BindUnorderedAccessResourceCS(debugTexture, UAVSLOT_DEBUGTEXTURE, threadID);
+		//device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Opaque, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE, threadID);
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Transparent, UAVSLOT_LIGHTINDEXCOUNTERHELPER_TRANSPARENT, threadID);
 		device->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], UAVSLOT_LIGHTINDEXLIST_OPAQUE, threadID);

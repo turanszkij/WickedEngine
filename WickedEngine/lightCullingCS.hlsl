@@ -2,14 +2,14 @@
 #include "cullingShaderHF.hlsli"
 #include "tiledLightingHF.hlsli"
 
-RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);
+//RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);
+//groupshared uint _counter = 0;
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
 
 STRUCTUREDBUFFER(Lights, LightArrayType, SBSLOT_LIGHTARRAY);
 #define lightCount xDispatchParams_value0
-groupshared uint _counter = 0;
 
 
 // Global counter for current index into the light index list.
@@ -86,7 +86,7 @@ void main(ComputeShaderInput IN)
 		t_LightCount = 0;
 
 		// Get frustum from frustum buffer:
-		GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreads.x)];
+		GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreads.x)]; // numthreads is from the frustum computation phase, so not actual number of threads here
 
 		//// Calculate frustum in place:
 		//{
@@ -168,7 +168,7 @@ void main(ComputeShaderInput IN)
 					//// Add light to light list for transparent geometry.
 					t_AppendLight(i); 
 					
-					InterlockedAdd(_counter, 1);
+					//InterlockedAdd(_counter, 1);
 
 					if (!SphereInsidePlane(sphere, minPlane))
 					{
@@ -241,5 +241,5 @@ void main(ComputeShaderInput IN)
 	}
 
 
-	DebugTexture[texCoord] = float4((float)_counter / (float)lightCount,0,0,1);
+	//DebugTexture[texCoord] = float4((float)_counter / (float)lightCount,0,0,1);
 }

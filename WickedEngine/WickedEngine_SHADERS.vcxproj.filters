@@ -480,6 +480,12 @@
     <FxCompile Include="grassPS_tiledforward.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="qGrassPS_forward_dirlight.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassPS_forward_dirlight.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

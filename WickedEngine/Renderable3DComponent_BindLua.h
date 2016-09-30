@@ -34,6 +34,7 @@ public:
 	int SetStereogramEnabled(lua_State* L);
 	int SetEyeAdaptionEnabled(lua_State* L);
 	int SetTessellationEnabled(lua_State* L);
+	int SetMSAASampleCount(lua_State* L);
 
 	int SetDepthOfFieldFocus(lua_State* L);
 	int SetDepthOfFieldStrength(lua_State* L);
