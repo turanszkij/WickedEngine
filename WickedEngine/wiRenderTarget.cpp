@@ -149,43 +149,42 @@ void wiRenderTarget::Add(FORMAT format)
 
 }
 
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, bool disableColor)
 {
-	Activate(threadID,0,0,0,0);
+	Activate(threadID,0,0,0,0,disableColor);
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, float r, float g, float b, float a)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, float r, float g, float b, float a, bool disableColor)
 {
-	Set(threadID);
+	Set(threadID, disableColor);
 	float ClearColor[4] = { r, g, b, a };
 	for(int i=0;i<numViews;++i)
 		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
 	if(depth) depth->Clear(threadID);
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, float r, float g, float b, float a)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, float r, float g, float b, float a, bool disableColor)
 {
-	Set(threadID,getDepth);
+	Set(threadID,getDepth, disableColor);
 	float ClearColor[4] = { r, g, b, a };
 	for(int i=0;i<numViews;++i)
 		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor)
 {
-	Activate(threadID,getDepth,0,0,0,0);
+	Activate(threadID,getDepth,0,0,0,0, disableColor);
 }
 void wiRenderTarget::Deactivate(GRAPHICSTHREAD threadID)
 {
 	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 }
-void wiRenderTarget::Set(GRAPHICSTHREAD threadID)
+void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor)
 {
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(numViews, (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr), threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr), threadID);
 }
-void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth)
+void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor)
 {
-	depth = getDepth;
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(numViews, (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr), threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
 }
 
 UINT wiRenderTarget::GetMipCount()

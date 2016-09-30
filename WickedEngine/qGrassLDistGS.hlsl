@@ -39,40 +39,40 @@ void main(
 	
 	element.tex=float2(rand%2?1:0,0);
 	element.pos=pos;
+	element.pos3D = element.pos.xyz;
 	element.pos.xyz+=-right*frame.x+normal*frame.y+wind;
 	element.pos = mul(element.pos, xWorld);
 	float4 savedPos = element.pos;
-	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos,g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 
 	element.tex=float2(rand%2?0:1,0);
 	element.pos=pos;
+	element.pos3D = element.pos.xyz;
 	element.pos.xyz+=right*frame.x+normal*frame.y+wind;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
-	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 
 	element.tex=float2(rand%2?1:0,1);
 	element.pos=pos;
+	element.pos3D = element.pos.xyz;
 	element.pos.xyz += -right*frame.x;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
-	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 	
 	element.tex=float2(rand%2?0:1,1);
 	element.pos=pos;
+	element.pos3D = element.pos.xyz;
 	element.pos.xyz += right*frame.x;
 	element.pos = mul(element.pos, xWorld);
 	savedPos = element.pos;
-	element.pos3D = savedPos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
 	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);

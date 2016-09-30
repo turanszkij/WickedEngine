@@ -15,7 +15,7 @@ TiledForwardRenderableComponent::~TiledForwardRenderableComponent() {
 
 void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-	rtMain.Activate(threadID, 0, 0, 0, 0);
+	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
 	{
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
@@ -45,7 +45,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	{
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID
 			, false, SHADERTYPE_TILEDFORWARD
-			, nullptr, true);
+			, nullptr, false);
 		wiRenderer::DrawSky(threadID);
 	}
 }

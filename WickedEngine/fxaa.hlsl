@@ -3,9 +3,9 @@
 #define FXAA_PC 1
 #define FXAA_HLSL_4 1
 #define FXAA_GREEN_AS_LUMA 1
-#define FXAA_QUALITY__PRESET 12
+//#define FXAA_QUALITY__PRESET 12
 //#define FXAA_QUALITY__PRESET 25
-//#define FXAA_QUALITY__PRESET 39
+#define FXAA_QUALITY__PRESET 39
 #include "fxaa.hlsli"
 
 float4 main(VertexToPixelPostProcess PSIn): SV_Target

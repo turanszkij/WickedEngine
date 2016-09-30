@@ -195,10 +195,10 @@ void wiHairParticle::SetUpStatic(){
 	bld.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bld.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bld.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bld.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
-	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bld.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	bld.AlphaToCoverageEnable=false;
+	bld.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
+	bld.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bld.AlphaToCoverageEnable=false; // maybe for msaa
 	bs = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bld,bs);
 }
@@ -390,7 +390,6 @@ void wiHairParticle::SetUpPatches()
 void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
 	Texture2D* texture = material->texture;
-	texture = nullptr;
 	PixelShader* _ps = texture != nullptr ? qps[shaderType] : ps[shaderType];
 	if (_ps == nullptr)
 		return;

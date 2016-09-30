@@ -103,7 +103,7 @@ void Renderable3DComponent::Initialize()
 		, false);
 	rtFinal[2].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false);
+		, false,FORMAT_R8G8B8A8_UNORM,1,getMSAASampleCount());
 
 	rtDof[0].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
@@ -462,7 +462,7 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 	}
 
 
-	rtFinal[2].Activate(threadID);
+	rtFinal[2].Activate(threadID, mainRT.depth);
 	fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
