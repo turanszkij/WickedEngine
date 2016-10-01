@@ -11,16 +11,14 @@ inline float offset_lookup(Texture2D<float> intex, SamplerComparisonState map,
                      float2 loc,
                      float2 offset,
 					 float scale,
-					 float realDistance)
+					 float biasedDistance)
 {
-	float BiasedDistance = realDistance - g_xDirLight_mBiasResSoftshadow.x;
-
-	return intex.SampleCmpLevelZero( map, loc + offset / scale, BiasedDistance).r;
+	return intex.SampleCmpLevelZero( map, loc + offset / scale, biasedDistance).r;
 }
 
 
-inline float shadowCascade(float4 shadowPos, float2 ShTex, Texture2D<float> shadowTexture){
-	float realDistance = shadowPos.z/shadowPos.w;
+inline float shadowCascade(float4 shadowPos, float2 ShTex, float bias, Texture2D<float> shadowTexture){
+	float realDistance = shadowPos.z/shadowPos.w - bias;
 	float sum = 0;
 	float scale = g_xDirLight_mBiasResSoftshadow.y;
 	float retVal = 1;
@@ -65,9 +63,9 @@ inline void dirLight(in float3 P, in float3 N, in float3 V, in float roughness, 
 		ShTex[1] = ShPos[1].xyz*float3(1,-1,1)/ShPos[1].w/2.0f +0.5f;
 		ShTex[2] = ShPos[2].xyz*float3(1,-1,1)/ShPos[2].w/2.0f +0.5f;
 	const float shadows[3]={
-		shadowCascade(ShPos[0],ShTex[0].xy,texture_shadow0),
-		shadowCascade(ShPos[1],ShTex[1].xy,texture_shadow1),
-		shadowCascade(ShPos[2],ShTex[2].xy,texture_shadow2)
+		shadowCascade(ShPos[0],ShTex[0].xy, g_xDirLight_mBiasResSoftshadow.x,texture_shadow0),
+		shadowCascade(ShPos[1],ShTex[1].xy, g_xDirLight_mBiasResSoftshadow.x,texture_shadow1),
+		shadowCascade(ShPos[2],ShTex[2].xy, g_xDirLight_mBiasResSoftshadow.x,texture_shadow2)
 	};
 	[branch]if((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
 	{

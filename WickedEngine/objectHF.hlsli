@@ -135,9 +135,9 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
 	ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
 	const float shadows[3] = {
-		shadowCascade(ShPos[0],ShTex[0].xy,texture_shadow0),
-		shadowCascade(ShPos[1],ShTex[1].xy,texture_shadow1),
-		shadowCascade(ShPos[2],ShTex[2].xy,texture_shadow2)
+		shadowCascade(ShPos[0],ShTex[0].xy,0.0001f,texture_shadow0),
+		shadowCascade(ShPos[1],ShTex[1].xy,0.0001f,texture_shadow1),
+		shadowCascade(ShPos[2],ShTex[2].xy,0.0001f,texture_shadow2)
 	};
 	[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
 	{
@@ -186,14 +186,16 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 		LightingResult result = (LightingResult)0;
 
+		float3 lightColor = light.color.rgb * light.energy;
+
 		switch (light.type)
 		{
 		case 0/*DIRECTIONAL*/:
 		{
 			L = light.direction.xyz;
 			BRDF_MAKE(N, L, V);
-			result.specular = light.color.rgb * BRDF_SPECULAR(roughness, f0);
-			result.diffuse = light.color.rgb * BRDF_DIFFUSE(roughness);
+			result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
+			result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
 			float sh = max(NdotL, 0);
 			float4 ShPos[3];
@@ -205,9 +207,9 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
 			ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
 			const float shadows[3] = {
-				shadowCascade(ShPos[0],ShTex[0].xy,texture_shadow0),
-				shadowCascade(ShPos[1],ShTex[1].xy,texture_shadow1),
-				shadowCascade(ShPos[2],ShTex[2].xy,texture_shadow2)
+				shadowCascade(ShPos[0],ShTex[0].xy, light.shadowBias,texture_shadow0),
+				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowBias,texture_shadow1),
+				shadowCascade(ShPos[2],ShTex[2].xy, light.shadowBias,texture_shadow2)
 			};
 			[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
 			{
@@ -237,10 +239,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		case 1/*POINT*/:
 		{
 			BRDF_MAKE(N, L, V);
-			result.specular = light.color.rgb * BRDF_SPECULAR(roughness, f0);
-			result.diffuse = light.color.rgb * BRDF_DIFFUSE(roughness);
-			result.diffuse *= light.energy;
-			result.specular *= light.energy;
+			result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
+			result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
 			float att = (light.energy * (light.range / (light.range + 1 + lightDistance)));
 			float attenuation = /*saturate*/(att * (light.range - lightDistance) / light.range);

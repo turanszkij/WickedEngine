@@ -2982,6 +2982,10 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREADEQUAL], 0, threadID);
 		}
+		else if (shaderType == SHADERTYPE_ALPHATESTONLY)
+		{
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
+		}
 
 
 		for(Cullable* object : culledObjects){
@@ -3561,6 +3565,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 			lightArray[lightCounter].col = l->color;
 			lightArray[lightCounter].energy = l->enerDis.x;
 			lightArray[lightCounter].type = l->type;
+			lightArray[lightCounter].shadowBias = l->shadowBias;
 			switch (l->type)
 			{
 			case Light::DIRECTIONAL:
