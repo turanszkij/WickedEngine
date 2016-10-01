@@ -486,6 +486,12 @@
     <FxCompile Include="grassPS_forward_dirlight.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="grassPS_alphatestonly.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="qGrassPS_alphatestonly.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

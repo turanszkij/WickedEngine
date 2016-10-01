@@ -108,9 +108,12 @@ void wiHairParticle::LoadShaders()
 		SAFE_INIT(qps[i]);
 	}
 
+	ps[SHADERTYPE_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_deferred.cso", wiResourceManager::PIXELSHADER));
 	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
 	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	
+	qps[SHADERTYPE_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 	qps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_deferred.cso", wiResourceManager::PIXELSHADER));
 	qps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
 	qps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
@@ -456,7 +459,8 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		device->UpdateBuffer(cbgs,&gcb,threadID);
 		device->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		device->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
+		// use the depthstencil of the drawworld instead!
+		//device->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
 
 
 		for(int i=0;i<3;++i){

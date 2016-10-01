@@ -22,7 +22,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::EnableForwardShadowmaps(threadID);
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID
 			, false, SHADERTYPE_ALPHATESTONLY
-			, nullptr, false);
+			, nullptr, true);
 	}
 
 	rtLinearDepth.Activate(threadID); {
@@ -46,7 +46,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	{
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID
 			, false, SHADERTYPE_TILEDFORWARD
-			, nullptr, false);
+			, nullptr, true);
 		wiRenderer::DrawSky(threadID);
 	}
 }
@@ -54,7 +54,7 @@ void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& mai
 {
 	rtTransparent.Activate(threadID, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, shadedSceneRT.GetTexture(), rtReflection.GetTexture()
-			, rtWaterRipple.GetTexture(), threadID, true);
+			, rtWaterRipple.GetTexture(), threadID, false);
 		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
 	}
 }

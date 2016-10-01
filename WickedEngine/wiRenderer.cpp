@@ -1120,7 +1120,7 @@ void wiRenderer::SetUpStates()
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHEQUAL]);
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREADEQUAL]);
 
 
 	for (int i = 0; i < BSTYPE_LAST; ++i)
@@ -2979,6 +2979,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
 			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
 			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
+
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREADEQUAL], 0, threadID);
 		}
 
 
@@ -3093,11 +3095,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
 					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
-					if (SHADERTYPE_TILEDFORWARD)
-					{
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHEQUAL], mesh->stencilRef, threadID);
-					}
-					else
+					
+					if(shaderType!=SHADERTYPE_TILEDFORWARD)
 					{
 						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 					}
@@ -3177,7 +3176,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 					if (shaderType == SHADERTYPE_TILEDFORWARD)
 					{
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHEQUAL], mesh->stencilRef, threadID);
+						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREADEQUAL], mesh->stencilRef, threadID);
 					}
 					else
 					{
@@ -3235,7 +3234,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if(!culledObjects.empty())
 	{
-		GetDevice()->EventBegin(L"DrawWorld Transparent", threadID);
+		GetDevice()->EventBegin(L"DrawWorld Transparent", threadID); 
 
 		if (shaderType == SHADERTYPE_TILEDFORWARD)
 		{
