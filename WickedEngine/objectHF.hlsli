@@ -125,7 +125,37 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	specular = lightColor * BRDF_SPECULAR(roughness, f0);
 	diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
-	float sh = max(NdotL, 0);
+	float sh = max(NdotL, 0); 
+	float4 ShPos[3];
+	ShPos[0] = mul(float4(P, 1), g_xDirLight_ShM[0]);
+	ShPos[1] = mul(float4(P, 1), g_xDirLight_ShM[1]);
+	ShPos[2] = mul(float4(P, 1), g_xDirLight_ShM[2]);
+	float3 ShTex[3];
+	ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / ShPos[0].w / 2.0f + 0.5f;
+	ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
+	ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
+	const float shadows[3] = {
+		shadowCascade(ShPos[0],ShTex[0].xy,texture_shadow0),
+		shadowCascade(ShPos[1],ShTex[1].xy,texture_shadow1),
+		shadowCascade(ShPos[2],ShTex[2].xy,texture_shadow2)
+	};
+	[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
+	{
+		//color.r+=0.5f;
+		const float2 lerpVal = abs(ShTex[2].xy * 2 - 1);
+		sh *= lerp(shadows[2], shadows[1], pow(max(lerpVal.x, lerpVal.y), 4));
+	}
+	else[branch]if ((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
+	{
+		//color.g+=0.5f;
+		const float2 lerpVal = abs(ShTex[1].xy * 2 - 1);
+		sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
+	}
+	else[branch]if ((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
+	{
+		//color.b+=0.5f;
+		sh *= shadows[0];
+	}
 
 	diffuse *= sh;
 	specular *= sh;

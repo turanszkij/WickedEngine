@@ -56,3 +56,4 @@ Color Grading
 Lua Scripting
 Dynamic environment mapping
 Impostor system
+Tiled forward rendering

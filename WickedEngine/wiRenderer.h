@@ -428,6 +428,7 @@ public:
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);
 
 	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
+	static void EnableForwardShadowmaps(GRAPHICSTHREAD threadID);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();

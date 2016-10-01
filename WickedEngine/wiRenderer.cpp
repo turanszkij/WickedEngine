@@ -3726,6 +3726,42 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 	//return debugTexture;
 }
+void wiRenderer::EnableForwardShadowmaps(GRAPHICSTHREAD threadID)
+{
+	Frustum frustum;
+	frustum.ConstructFrustum(min(getCamera()->zFarP, GetScene().worldInfo.fogSEH.y), getCamera()->Projection, getCamera()->View);
+
+	CulledList culledObjects;
+	if (spTree_lights)
+		wiSPTree::getVisible(spTree_lights->root, frustum, culledObjects);
+
+	for (Cullable* c : culledObjects) 
+	{
+		Light* l = (Light*)c;
+
+		switch (l->type)
+		{
+		case Light::DIRECTIONAL:
+		{
+			DirectionalLightCB lcb;
+			lcb.direction = XMVector3Normalize(
+				-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)))
+			);
+			lcb.col = XMFLOAT4(l->color.x*l->enerDis.x, l->color.y*l->enerDis.x, l->color.z*l->enerDis.x, 1);
+			lcb.mBiasResSoftshadow = XMFLOAT4(l->shadowBias, (float)SHADOWMAPRES, (float)SOFTSHADOW, 0);
+			for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap) {
+				lcb.mShM[shmap] = l->shadowCam_dirLight[shmap].getVP();
+				if (l->shadowMaps_dirLight[shmap].depth)
+					GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(), TEXSLOT_SHADOW0 + shmap, threadID);
+			}
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT], &lcb, threadID);
+		}
+		break;
+		default:
+			break;
+		}
+	}
+}
 
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 {
