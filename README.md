@@ -70,13 +70,12 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 ### Editor:
 
-<b>Update: I started working on a standalone editor for the engine using no other gui system than what the engine provides. 
-It is still work in progress.
-You can import models exported from blender with the provided python script: io_export_wicked_wi_bin.py
+The editor is now available but also work in progress. Just build the editor project and run it, then you will be presented with a blank scene.
+You can import files exported from Blender (.wio) with the scipt described below. You can also save models into the .wimf format from the Editor
+and open them.
 
-For the time being, Blender software is the editor program for Wicked Engine. I provide an export script (io_export_wicked_wi_bin.py) which
-you can use to export to the wicked scene format. The script is also going to be updated from time to time to
-remove the known hiccups and bugs.
+You can export models from Blender with the provided python script: io_export_wicked_wi_bin.py
+Notes on exporting:
 - Names should not contain spaces inside Blender
 	The problem is the c++ side code which parses the text files such as it breaks parsing on spaces. 
 	Mesh files are already exported as binary, so those are okay
