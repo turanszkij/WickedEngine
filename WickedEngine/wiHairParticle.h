@@ -1,8 +1,8 @@
 #pragma once
 #include "wiParticle.h"
 #include "ConstantBufferMapping.h"
+#include "wiSPTree.h"
 
-class wiSPTree;
 struct Material;
 struct Camera;
 
@@ -52,6 +52,12 @@ private:
 public:
 	static void LoadShaders();
 private:
+	struct FrameCulling
+	{
+		CulledList		culledPatches;
+		vector<Point>	renderPoints[3]; // per lod
+	};
+	unordered_map<Camera*, FrameCulling> frameCullings;
 
 public:
 	wiHairParticle();
@@ -61,6 +67,7 @@ public:
 
 	void SetUpPatches();
 	void Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID);
+	void PerformCulling(Camera* camera);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();

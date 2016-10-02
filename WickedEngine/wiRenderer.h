@@ -389,6 +389,15 @@ public:
 	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 	static Vertex TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat = XMMatrixIdentity());
 	static XMFLOAT3 VertexVelocity(const Mesh* mesh, const int& vertexI);
+
+	struct FrameCulling
+	{
+		CulledCollection culledRenderer;
+		CulledList culledObjects;
+		CulledList culledObjects_transparent;
+		CulledList culledLights;
+	};
+	static unordered_map<Camera*, FrameCulling> frameCullings;
 	
 public:
 	

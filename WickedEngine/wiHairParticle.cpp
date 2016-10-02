@@ -423,14 +423,8 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		XMStoreFloat3(&eye, Eye);
 	}
 
-	frustum.ConstructFrustum((float)LOD[2], camera->Projection, cull_View);
+	const FrameCulling& culling = frameCullings[camera];
 
-		
-	CulledList culledPatches;
-	if(spTree)
-		wiSPTree::getVisible(spTree->root,frustum,culledPatches);
-
-	if(!culledPatches.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin(L"HairParticle", threadID);
@@ -462,42 +456,91 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		// use the depthstencil of the drawworld instead!
 		//device->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
 
-
-		for(int i=0;i<3;++i){
-			vector<Point> renderPoints;
-			renderPoints.reserve(MAX_PARTICLES);
-
-			if(texture){
+		for(int i=0;i<3;++i)
+		{
+			if(texture)
+			{
 				device->BindGS(i<2?qgs[0]:qgs[1],threadID);
 				device->BindRasterizerState(i<2?ncrs:rs,threadID);
 			}
 			else
-				device->BindGS(gs[i],threadID);
-			CulledList::iterator iter = culledPatches.begin();
-			while(iter != culledPatches.end()){
-				Cullable* culled = *iter;
-				Patch* patch = ((PatchHolder*)culled)->patch;
-
-				float dis = wiMath::Distance(eye,((PatchHolder*)culled)->bounds.getCenter());
-
-				if(dis<LOD[i]){
-					culledPatches.erase(iter++);
-					culled=NULL;
-					renderPoints.insert(renderPoints.end(),patch->p.begin(),patch->p.end());
-				}
-				else
-					++iter;
+			{
+				device->BindGS(gs[i], threadID);
 			}
 
-			device->UpdateBuffer(vb[i],renderPoints.data(),threadID,(int)(sizeof(Point)*renderPoints.size()));
+			device->UpdateBuffer(vb[i],culling.renderPoints[i].data(),threadID,(int)(sizeof(Point)*culling.renderPoints[i].size()));
 			device->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
-			device->Draw((int)renderPoints.size(),threadID);
+			device->Draw((int)culling.renderPoints[i].size(),threadID);
 		}
 
 		device->BindGS(nullptr,threadID);
 
 		device->EventEnd(threadID);
 	}
+}
+void wiHairParticle::PerformCulling(Camera* camera)
+{
+	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
+	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
+	XMMATRIX inverseRenderMat = XMMatrixInverse(nullptr, renderMatrix);
+
+	Frustum frustum;
+
+	// Culling camera needs to be transformed according to hair ps transform (inverse) 
+	XMFLOAT4X4 cull_View;
+	XMFLOAT3 eye;
+	{
+		XMMATRIX View;
+		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye;
+
+		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation));
+		At = XMVector3Normalize(XMVector3Transform(XMVector3Transform(At, camRot), inverseRenderMat));
+		Up = XMVector3Normalize(XMVector3Transform(XMVector3Transform(Up, camRot), inverseRenderMat));
+		Eye = XMVector4Transform(camera->GetEye(), inverseRenderMat);
+
+		View = XMMatrixLookToLH(Eye, At, Up);
+
+		XMStoreFloat4x4(&cull_View, View);
+		XMStoreFloat3(&eye, Eye);
+	}
+
+	frustum.ConstructFrustum((float)LOD[2], camera->Projection, cull_View);
+
+
+
+	FrameCulling& culling = frameCullings[camera];
+	CulledList& culledPatches = culling.culledPatches;
+
+	culling.culledPatches.clear();
+
+	if (spTree != nullptr)
+	{
+		wiSPTree::getVisible(spTree->root, frustum, culledPatches);
+
+		for (int i = 0; i<3; ++i) 
+		{
+			vector<Point>& renderPoints = culling.renderPoints[i];
+			renderPoints.clear();
+			renderPoints.reserve(MAX_PARTICLES);
+
+			CulledList::iterator iter = culledPatches.begin();
+			while (iter != culledPatches.end()) {
+				Cullable* culled = *iter;
+				Patch* patch = ((PatchHolder*)culled)->patch;
+
+				float dis = wiMath::Distance(eye, ((PatchHolder*)culled)->bounds.getCenter());
+
+				if (dis<LOD[i]) {
+					culledPatches.erase(iter++);
+					culled = NULL;
+					renderPoints.insert(renderPoints.end(), patch->p.begin(), patch->p.end());
+				}
+				else
+					++iter;
+			}
+		}
+	}
+
 }
 
 wiHairParticle::Patch::Patch(){

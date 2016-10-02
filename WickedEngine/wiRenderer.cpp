@@ -79,6 +79,8 @@ vector<Cube>	wiRenderer::cubes;
 vector<wiTranslator*> wiRenderer::renderableTranslators;
 vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
 
+unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
+
 #pragma endregion
 
 wiRenderer::wiRenderer()
@@ -1416,10 +1418,42 @@ void wiRenderer::UpdatePerFrameData()
 {
 	if (GetGameSpeed() > 0)
 	{
-
 		UpdateSPTree(spTree);
 		UpdateSPTree(spTree_lights);
 	}
+	// Perform culling:
+	{
+		for (auto& x : frameCullings)
+		{
+			Camera* cam = x.first;
+			FrameCulling& culling = x.second;
+
+			culling.culledRenderer.clear();
+			culling.culledObjects.clear();
+			culling.culledObjects_transparent.clear();
+			culling.culledLights.clear();
+
+			if (spTree != nullptr)
+			{
+				wiSPTree::getVisible(spTree->root, cam->frustum, culling.culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
+				wiSPTree::getVisible(spTree->root, cam->frustum, culling.culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_PAINTER);
+				for (Cullable* object : culling.culledObjects)
+				{
+					for (wiHairParticle* hair : ((Object*)object)->hParticleSystems) {
+						hair->PerformCulling(cam);
+					}
+					culling.culledRenderer[((Object*)object)->mesh].insert((Object*)object);
+				}
+			}
+			if (spTree_lights != nullptr)
+			{
+				Frustum frustum;
+				frustum.ConstructFrustum(min(cam->zFarP, GetScene().worldInfo.fogSEH.y), cam->Projection, cam->View);
+				wiSPTree::getVisible(spTree_lights->root, frustum, culling.culledLights);
+			}
+		}
+	}
+
 
 	UpdateBoneLines();
 	UpdateCubes();
@@ -1434,6 +1468,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	UpdateCameraCB(threadID);
 
 	
+	// Skinning:
 	{
 		bool streamOutSetUp = false;
 
@@ -1522,6 +1557,34 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 #endif
 
 
+	}
+
+	// Environment probe setup:
+	{
+		Texture2D* envMaps[] = { enviroMap, enviroMap };
+		XMFLOAT3 envMapPositions[] = { XMFLOAT3(0,0,0),XMFLOAT3(0,0,0) };
+		GetScene().environmentProbes.sort(
+			[&](EnvironmentProbe* a, EnvironmentProbe* b) {
+			return wiMath::DistanceSquared(a->translation, getCamera()->translation) < wiMath::DistanceSquared(b->translation, getCamera()->translation);
+		}
+		);
+		int envProbeInd = 0;
+		for (auto& x : GetScene().environmentProbes)
+		{
+			envMaps[envProbeInd] = x->cubeMap.GetTexture();
+			envMapPositions[envProbeInd] = x->translation;
+			envProbeInd++;
+			if (envProbeInd >= ARRAYSIZE(envMaps))
+				break;
+		}
+
+		MiscCB envProbeCB;
+		envProbeCB.mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
+		envProbeCB.mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
+		envProbeCB.mTransform = XMMatrixTranspose(envProbeCB.mTransform);
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &envProbeCB, threadID);
+		GetDevice()->BindResourcePS(envMaps[0], TEXSLOT_ENV0, threadID);
+		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
 	}
 	
 
@@ -2079,12 +2142,8 @@ void wiRenderer::DrawImagesNormals(GRAPHICSTHREAD threadID, Texture2D* refracRes
 }
 void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	Frustum frustum;
-	frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y),camera->Projection,camera->View);
-	
-	CulledList culledObjects;
-	if(spTree_lights)
-		wiSPTree::getVisible(spTree_lights->root,frustum,culledObjects);
+	const FrameCulling& culling = frameCullings[camera];
+	const CulledList& culledLights = culling.culledLights;
 
 	GetDevice()->EventBegin(L"Light Render", threadID);
 
@@ -2143,7 +2202,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 		}
 
 
-		for(Cullable* c : culledObjects){
+		for(Cullable* c : culledLights){
 			Light* l = (Light*)c;
 			if (l->type != type)
 				continue;
@@ -2222,15 +2281,10 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	Frustum frustum;
-	frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
+	const FrameCulling& culling = frameCullings[camera];
+	const CulledList& culledLights = culling.culledLights;
 
-		
-	CulledList culledObjects;
-	if(spTree_lights)
-		wiSPTree::getVisible(spTree_lights->root,frustum,culledObjects);
-
-	if(!culledObjects.empty())
+	if(!culledLights.empty())
 	{
 		GetDevice()->EventBegin(L"Light Volume Render", threadID);
 
@@ -2259,7 +2313,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT],threadID);
 			}
 
-			for(Cullable* c : culledObjects){
+			for(Cullable* c : culledLights){
 				Light* l = (Light*)c;
 				if(l->type==type && l->noHalo==false){
 
@@ -2312,14 +2366,12 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 }
 
 
-void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID){
-	
-		
-	CulledList culledObjects;
-	if(spTree_lights)
-		wiSPTree::getVisible(spTree_lights->root,cam->frustum,culledObjects);
+void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
+{
+	const FrameCulling& culling = frameCullings[getCamera()];
+	const CulledList& culledLights = culling.culledLights;
 
-	for(Cullable* c:culledObjects)
+	for(Cullable* c: culledLights)
 	{
 		Light* l = (Light*)c;
 
@@ -2362,12 +2414,12 @@ void wiRenderer::ClearShadowMaps(GRAPHICSTHREAD threadID){
 }
 void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
-	if (GameSpeed) {
+	if (GameSpeed) 
+	{
 		GetDevice()->EventBegin(L"ShadowMap Render", threadID);
 
-		CulledList culledLights;
-		if (spTree_lights)
-			wiSPTree::getVisible(spTree_lights->root, cam->frustum, culledLights);
+		const FrameCulling& culling = frameCullings[getCamera()];
+		const CulledList& culledLights = culling.culledLights;
 
 		if (culledLights.size() > 0)
 		{
@@ -2940,39 +2992,12 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 {
 	tessellation = tessellation && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
-	CulledCollection culledRenderer;
-	CulledList culledObjects;
-	if(spTree)
-		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects,wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-	else return;
+	const FrameCulling& culling = frameCullings[camera];
+	const CulledList& culledObjects = culling.culledObjects;
+	const CulledCollection& culledRenderer = culling.culledRenderer;
 
 	if(!culledObjects.empty())
 	{
-
-		Texture2D* envMaps[] = { enviroMap, enviroMap };
-		XMFLOAT3 envMapPositions[] = { XMFLOAT3(0,0,0),XMFLOAT3(0,0,0) };
-		GetScene().environmentProbes.sort(
-			[&](EnvironmentProbe* a, EnvironmentProbe* b) {
-				return wiMath::DistanceSquared(a->translation, getCamera()->translation) < wiMath::DistanceSquared(b->translation, getCamera()->translation);
-			}
-		);
-		int envProbeInd = 0;
-		for (auto& x : GetScene().environmentProbes)
-		{
-			envMaps[envProbeInd] = x->cubeMap.GetTexture();
-			envMapPositions[envProbeInd] = x->translation;
-			envProbeInd++;
-			if (envProbeInd >= ARRAYSIZE(envMaps))
-				break;
-		}
-
-		MiscCB envProbeCB;
-		envProbeCB.mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
-		envProbeCB.mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
-		envProbeCB.mTransform = XMMatrixTranspose(envProbeCB.mTransform);
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &envProbeCB, threadID);
-		GetDevice()->BindResourcePS(envMaps[0], TEXSLOT_ENV0, threadID);
-		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
 		
 		if (shaderType == SHADERTYPE_TILEDFORWARD)
 		{
@@ -2989,7 +3014,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 
 		for(Cullable* object : culledObjects){
-			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 			if(grass){
 				for(wiHairParticle* hair : ((Object*)object)->hParticleSystems){
 					hair->Draw(camera, shaderType, threadID);
@@ -3025,9 +3049,9 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		}
 
 
-		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
+		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
-			CulledObjectList& visibleInstances = iter->second;
+			const CulledObjectList& visibleInstances = iter->second;
 
 			float tessF = mesh->getTessellationFactor();
 
@@ -3231,10 +3255,10 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Texture2D* refracRes, Texture2D* refRes
 	, Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass)
 {
-	CulledCollection culledRenderer;
-	CulledList culledObjects;
-	if (spTree)
-		wiSPTree::getVisible(spTree->root, camera->frustum,culledObjects, wiSPTree::SortType::SP_TREE_SORT_PAINTER);
+
+	const FrameCulling& culling = frameCullings[camera];
+	const CulledList& culledObjects = culling.culledObjects_transparent;
+	const CulledCollection& culledRenderer = culling.culledRenderer;
 
 	if(!culledObjects.empty())
 	{
@@ -3254,7 +3278,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 					hair->Draw(camera, shaderType, threadID);
 				}
 			}
-			culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 		}
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
@@ -3281,9 +3304,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
-		for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
+		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
 			Mesh* mesh = iter->first;
-			CulledObjectList& visibleInstances = iter->second;
+			const CulledObjectList& visibleInstances = iter->second;
 
 			bool isValid = false;
 			for (MeshSubset& subset : mesh->subsets)
@@ -3548,14 +3571,14 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		dispatchParams.numThreadGroups[2] = 1;
 
 		// Fill Light Array with lights in the frustum
-		CulledList culledObjects;
-		if (spTree_lights)
-			wiSPTree::getVisible(spTree_lights->root, getCamera()->frustum, culledObjects);
+		const FrameCulling& culling = frameCullings[getCamera()];
+		const CulledList& culledLights = culling.culledLights;
+
 		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
 		ZeroMemory(lightArray, sizeof(lightArray));
 
 		UINT lightCounter = 0;
-		for (Cullable* c : culledObjects)
+		for (Cullable* c : culledLights)
 		{
 			Light* l = (Light*)c;
 
@@ -3732,14 +3755,10 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::EnableForwardShadowmaps(GRAPHICSTHREAD threadID)
 {
-	Frustum frustum;
-	frustum.ConstructFrustum(min(getCamera()->zFarP, GetScene().worldInfo.fogSEH.y), getCamera()->Projection, getCamera()->View);
+	const FrameCulling& culling = frameCullings[getCamera()];
+	const CulledList& culledLights = culling.culledLights;
 
-	CulledList culledObjects;
-	if (spTree_lights)
-		wiSPTree::getVisible(spTree_lights->root, frustum, culledObjects);
-
-	for (Cullable* c : culledObjects) 
+	for (Cullable* c : culledLights) 
 	{
 		Light* l = (Light*)c;
 
