@@ -399,30 +399,6 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 	if (_ps == nullptr)
 		return;
 
-	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
-	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
-	XMMATRIX inverseRenderMat = XMMatrixInverse(nullptr, renderMatrix);
-
-	Frustum frustum;
-
-	// Culling camera needs to be transformed according to hair ps transform (inverse) 
-	XMFLOAT4X4 cull_View;
-	XMFLOAT3 eye;
-	{
-		XMMATRIX View;
-		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye;
-
-		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation));
-		At = XMVector3Normalize(XMVector3Transform(XMVector3Transform(At, camRot), inverseRenderMat));
-		Up = XMVector3Normalize(XMVector3Transform(XMVector3Transform(Up, camRot), inverseRenderMat));
-		Eye = XMVector4Transform(camera->GetEye(), inverseRenderMat);
-
-		View = XMMatrixLookToLH(Eye, At, Up);
-
-		XMStoreFloat4x4(&cull_View, View);
-		XMStoreFloat3(&eye, Eye);
-	}
-
 	const FrameCulling& culling = frameCullings[camera];
 
 	{
@@ -446,7 +422,7 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 
 
 		ConstantBuffer gcb;
-		gcb.mWorld = XMMatrixTranspose(renderMatrix);
+		gcb.mWorld = XMMatrixTranspose(XMLoadFloat4x4(&culling.renderMatrix));
 		gcb.color=material->diffuseColor;
 		gcb.drawdistance = (float)LOD[2];
 		
@@ -512,6 +488,7 @@ void wiHairParticle::PerformCulling(Camera* camera)
 	CulledList& culledPatches = culling.culledPatches;
 
 	culling.culledPatches.clear();
+	XMStoreFloat4x4(&culling.renderMatrix, renderMatrix);
 
 	if (spTree != nullptr)
 	{

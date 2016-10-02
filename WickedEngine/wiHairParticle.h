@@ -56,6 +56,7 @@ private:
 	{
 		CulledList		culledPatches;
 		vector<Point>	renderPoints[3]; // per lod
+		XMFLOAT4X4		renderMatrix;
 	};
 	unordered_map<Camera*, FrameCulling> frameCullings;
 
