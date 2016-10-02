@@ -2982,7 +2982,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREADEQUAL], 0, threadID);
 		}
-		else if (shaderType == SHADERTYPE_ALPHATESTONLY)
+		else
 		{
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
 		}
