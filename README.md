@@ -71,7 +71,7 @@ For further details, please check the scripting API documentation: [Wicked Engin
 ### Editor:
 
 <b>Update: I started working on a standalone editor for the engine using no other gui system than what the engine provides. 
-It is still work in progress. Check it out: https://github.com/turanszkij/WickedEngine-Editor</b>
+It is still work in progress.
 You can import models exported from blender with the provided python script: io_export_wicked_wi_bin.py
 
 For the time being, Blender software is the editor program for Wicked Engine. I provide an export script (io_export_wicked_wi_bin.py) which
