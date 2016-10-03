@@ -82,7 +82,7 @@ void Renderable2DComponent::Update()
 }
 void Renderable2DComponent::Render()
 {
-	rtFinal.Activate(GRAPHICSTHREAD_IMMEDIATE, 0.5f, 0.5f, 0.5f, 0);
+	rtFinal.Activate(GRAPHICSTHREAD_IMMEDIATE, 0.0f, 0.0f, 0.0f, 0);
 
 
 	for (auto& x : layers)
