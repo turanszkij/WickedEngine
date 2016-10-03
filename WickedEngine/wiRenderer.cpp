@@ -1436,7 +1436,7 @@ void wiRenderer::UpdatePerFrameData()
 			if (spTree != nullptr)
 			{
 				wiSPTree::getVisible(spTree->root, cam->frustum, culling.culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-				wiSPTree::getVisible(spTree->root, cam->frustum, culling.culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_PAINTER);
+				wiSPTree::getVisible(spTree->root, cam->frustum, culling.culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
 				for (Cullable* object : culling.culledObjects)
 				{
 					for (wiHairParticle* hair : ((Object*)object)->hParticleSystems) {
@@ -1774,6 +1774,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 
 			GetDevice()->DrawIndexed(24,threadID);
 		}
+		cubes.clear();
 
 		for (auto& x : renderableBoxes)
 		{
@@ -2000,7 +2001,7 @@ void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool
 
 	set<wiEmittedParticle*,particlesystem_comparator> psystems;
 	for(wiEmittedParticle* e : emitterSystems){
-		e->lastSquaredDistMulThousand=(long)(wiMath::DistanceEstimated(e->bounding_box->getCenter(),camera->translation)*1000);
+		e->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(e->bounding_box->getCenter(),camera->translation)*1000);
 		psystems.insert(e);
 	}
 

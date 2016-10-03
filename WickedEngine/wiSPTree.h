@@ -4,8 +4,8 @@
 
 class Frustum;
 
-//#define SORT_SPTREE_CULL
-// currently this is impossible as the distance evaluator would cause race conditions between threads (todo) :(
+// TODO: Profile!
+#define SORT_SPTREE_CULL
 
 #ifdef SORT_SPTREE_CULL
 typedef set<Cullable*, Cullable> CulledList;
@@ -65,7 +65,7 @@ public:
 	};
 	enum SortType
 	{
-		SP_TREE_SORT_PAINTER, // (back to front)
+		SP_TREE_SORT_BACK_TO_FRONT,
 		SP_TREE_SORT_FRONT_TO_BACK
 	};
 

@@ -47,7 +47,8 @@ void wiSPTree::CleanUp()
 }
 
 
-void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects){
+void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects)
+{
 	for(Cullable* object : newObjects){
 		
 		node->objects.push_back(object);
@@ -118,8 +119,8 @@ void wiSPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, Sor
 			{
 
 #ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.getCamPos())*1000);
-				if (sort == SP_TREE_SORT_PAINTER)
+				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.getCamPos())*1000);
+				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
 					object->lastSquaredDistMulThousand *= -1;
 #endif
 
@@ -147,8 +148,8 @@ void wiSPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, SortTy
 			){
 
 #ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.getCenter())*1000);
-				if (sort == SP_TREE_SORT_PAINTER)
+				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.getCenter())*1000);
+				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
 					object->lastSquaredDistMulThousand *= -1;
 #endif
 
@@ -169,8 +170,8 @@ void wiSPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, Sort
 			if(frustum.intersects(object->bounds)){
 
 #ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.center)*1000);
-				if (sort == SP_TREE_SORT_PAINTER)
+				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.center)*1000);
+				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
 					object->lastSquaredDistMulThousand *= -1;
 #endif
 
@@ -191,8 +192,8 @@ void wiSPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, SortTyp
 			if(frustum.intersects(object->bounds)){
 
 #ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::Distance(object->bounds.getCenter(),frustum.origin)*1000);
-				if (sort == SP_TREE_SORT_PAINTER)
+				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.origin)*1000);
+				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
 					object->lastSquaredDistMulThousand *= -1;
 #endif
 
