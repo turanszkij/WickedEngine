@@ -26,7 +26,7 @@ Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg
 
 ### Hardware: 
 
-- DirectX 10+ Graphics card
+- DirectX 11+ Graphics card
 
 
 ### Usage: 
