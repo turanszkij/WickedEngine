@@ -3,17 +3,26 @@
 
 struct LightArrayType
 {
-	float3 PositionVS; // View Space!
+	float3 positionVS; // View Space!
 	float range;
+	// --
 	float4 color;
-	float3 PositionWS;
+	// --
+	float3 positionWS;
 	float energy;
-	float3 direction;
-	uint type;
-	float shadowBias;
+	// --
+	float3 directionVS;
 	float _pad0;
-	float _pad1;
-	float _pad2;
+	// --
+	float3 directionWS;
+	uint type;
+	// --
+	float shadowBias;
+	uint shadowMap_index;
+	float coneAngle;
+	float coneAngleCos;
+	// --
+	float4x4 shadowMat[3];
 };
 
 #endif // _TILEDLIGHTING_HF_

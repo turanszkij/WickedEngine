@@ -1425,7 +1425,7 @@ void wiRenderer::UpdatePerFrameData()
 	{
 		for (auto& x : frameCullings)
 		{
-			Camera* cam = x.first;
+			Camera* camera = x.first;
 			FrameCulling& culling = x.second;
 
 			culling.culledRenderer.clear();
@@ -1435,12 +1435,12 @@ void wiRenderer::UpdatePerFrameData()
 
 			if (spTree != nullptr)
 			{
-				wiSPTree::getVisible(spTree->root, cam->frustum, culling.culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-				wiSPTree::getVisible(spTree->root, cam->frustum, culling.culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
+				wiSPTree::getVisible(spTree->root, camera->frustum, culling.culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
+				wiSPTree::getVisible(spTree->root, camera->frustum, culling.culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
 				for (Cullable* object : culling.culledObjects)
 				{
 					for (wiHairParticle* hair : ((Object*)object)->hParticleSystems) {
-						hair->PerformCulling(cam);
+						hair->PerformCulling(camera);
 					}
 					culling.culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 				}
@@ -1448,7 +1448,7 @@ void wiRenderer::UpdatePerFrameData()
 			if (spTree_lights != nullptr)
 			{
 				Frustum frustum;
-				frustum.ConstructFrustum(min(cam->zFarP, GetScene().worldInfo.fogSEH.y), cam->Projection, cam->View);
+				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
 				wiSPTree::getVisible(spTree_lights->root, frustum, culling.culledLights);
 			}
 		}
@@ -2246,7 +2246,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			else if(type==2) //spot
 			{
 				SpotLightCB lcb;
-				const float coneS=(const float)(l->enerDis.z/0.7853981852531433);
+				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
 				XMMATRIX world,rot;
 				world = XMMatrixTranspose(
 						XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
@@ -3578,23 +3578,41 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
 		ZeroMemory(lightArray, sizeof(lightArray));
 
+		XMMATRIX viewMatrix = cam->GetView();
+
 		UINT lightCounter = 0;
 		for (Cullable* c : culledLights)
 		{
 			Light* l = (Light*)c;
 
 			lightArray[lightCounter].posWS = l->translation;
-			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].posWS), cam->GetView()));
+			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].posWS), viewMatrix));
 			lightArray[lightCounter].distance = l->enerDis.y;
 			lightArray[lightCounter].col = l->color;
 			lightArray[lightCounter].energy = l->enerDis.x;
 			lightArray[lightCounter].type = l->type;
 			lightArray[lightCounter].shadowBias = l->shadowBias;
+			lightArray[lightCounter].shadowMap_index = l->shadowMap_index;
 			switch (l->type)
 			{
 			case Light::DIRECTIONAL:
 			{
-				XMStoreFloat3(&lightArray[lightCounter].direction, XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)))));
+				lightArray[lightCounter].directionWS = l->GetDirection();
+				for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(),ARRAYSIZE(lightArray[lightCounter].shadowMatrix)); ++shmap) {
+					lightArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
+				}
+			}
+			break;
+			case Light::SPOT:
+			{
+				lightArray[lightCounter].coneAngle = (l->enerDis.z * 0.5f);
+				lightArray[lightCounter].coneAngleCos = cosf(lightArray[lightCounter].coneAngle);
+				lightArray[lightCounter].directionWS = l->GetDirection();
+				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&lightArray[lightCounter].directionWS), viewMatrix));
+				if (l->shadow && l->shadowMap_index >= 0)
+				{
+					lightArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
+				}
 			}
 			break;
 			default:
@@ -3739,7 +3757,9 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		
 		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
-		//device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
+#ifdef DEBUG_TILEDLIGHTCULLING
+		device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
+#endif
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Opaque, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE, threadID);
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Transparent, UAVSLOT_LIGHTINDEXCOUNTERHELPER_TRANSPARENT, threadID);
 		device->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], UAVSLOT_LIGHTINDEXLIST_OPAQUE, threadID);

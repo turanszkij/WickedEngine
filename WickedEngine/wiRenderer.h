@@ -285,12 +285,15 @@ public:
 		XMFLOAT4 col;
 		XMFLOAT3 posWS;
 		float energy;
-		XMFLOAT3 direction;
+		XMFLOAT3 directionVS;
+		float __pad0;
+		XMFLOAT3 directionWS;
 		UINT type;
 		float shadowBias;
-		float _pad0;
-		float _pad1;
-		float _pad2;
+		UINT shadowMap_index;
+		float coneAngle;
+		float coneAngleCos;
+		XMMATRIX shadowMatrix[3];
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_LIGHTARRAY)
 

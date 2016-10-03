@@ -4049,6 +4049,13 @@ Light::~Light() {
 	for (string x : lensFlareNames)
 		wiResourceManager::GetGlobal()->del(x);
 }
+XMFLOAT3 Light::GetDirection()
+{
+	XMMATRIX rot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
+	XMFLOAT3 retVal;
+	XMStoreFloat3(&retVal, XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), rot)));
+	return retVal;
+}
 void Light::UpdateTransform()
 {
 	Transform::UpdateTransform();

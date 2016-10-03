@@ -108,4 +108,50 @@ bool PointInsidePlane(float3 p, Plane plane)
 	return dot(plane.N, p) - plane.d < 0;
 }
 
+struct Cone
+{
+	float3 T;   // Cone tip.
+	float  h;   // Height of the cone.
+	float3 d;   // Direction of the cone.
+	float  r;   // bottom radius of the cone.
+};
+// Check to see if a cone if fully behind (inside the negative halfspace of) a plane.
+// Source: Real-time collision detection, Christer Ericson (2005)
+bool ConeInsidePlane(Cone cone, Plane plane)
+{
+	// Compute the farthest point on the end of the cone to the positive space of the plane.
+	float3 m = cross(cross(plane.N, cone.d), cone.d);
+	float3 Q = cone.T + cone.d * cone.h - m * cone.r;
+
+	// The cone is in the negative halfspace of the plane if both
+	// the tip of the cone and the farthest point on the end of the cone to the 
+	// positive halfspace of the plane are both inside the negative halfspace 
+	// of the plane.
+	return PointInsidePlane(cone.T, plane) && PointInsidePlane(Q, plane);
+}
+bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)
+{
+	bool result = true;
+
+	Plane nearPlane = { float3(0, 0, 1), zNear };
+	Plane farPlane = { float3(0, 0, -1), -zFar };
+
+	// First check the near and far clipping planes.
+	if (ConeInsidePlane(cone, nearPlane) || ConeInsidePlane(cone, farPlane))
+	{
+		result = false;
+	}
+
+	// Then check frustum planes
+	for (int i = 0; i < 4 && result; i++)
+	{
+		if (ConeInsidePlane(cone, frustum.planes[i]))
+		{
+			result = false;
+		}
+	}
+
+	return result;
+}
+
 #endif // _CULLING_SHADER_HF_

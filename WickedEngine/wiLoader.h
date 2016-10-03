@@ -794,6 +794,8 @@ struct Light : public Cullable , public Transform
 	};
 	LightType type;
 
+	XMFLOAT3 GetDirection();
+
 	Light();
 	virtual ~Light();
 	virtual void UpdateTransform();

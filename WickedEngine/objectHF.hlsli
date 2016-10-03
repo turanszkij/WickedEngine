@@ -178,7 +178,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		uint lightIndex = LightIndexList[startOffset + i];
 		LightArrayType light = LightArray[lightIndex];
 
-		float3 L = light.PositionWS - P;
+		float3 L = light.positionWS - P;
 		float lightDistance = length(L);
 		if (light.type > 0 && lightDistance > light.range)
 			continue;
@@ -188,20 +188,21 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 		float3 lightColor = light.color.rgb * light.energy;
 
+		[branch]
 		switch (light.type)
 		{
 		case 0/*DIRECTIONAL*/:
 		{
-			L = light.direction.xyz;
+			L = light.directionWS.xyz;
 			BRDF_MAKE(N, L, V);
 			result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
 			result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
 			float sh = max(NdotL, 0);
 			float4 ShPos[3];
-			ShPos[0] = mul(float4(P, 1), g_xDirLight_ShM[0]);
-			ShPos[1] = mul(float4(P, 1), g_xDirLight_ShM[1]);
-			ShPos[2] = mul(float4(P, 1), g_xDirLight_ShM[2]);
+			ShPos[0] = mul(float4(P, 1), light.shadowMat[0]);
+			ShPos[1] = mul(float4(P, 1), light.shadowMat[1]);
+			ShPos[2] = mul(float4(P, 1), light.shadowMat[2]);
 			float3 ShTex[3];
 			ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / ShPos[0].w / 2.0f + 0.5f;
 			ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
@@ -255,19 +256,47 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			//}
 			result.diffuse *= sh;
 			result.specular *= sh;
-
-			result.diffuse = max(result.diffuse, 0);
-			result.specular = max(result.specular, 0);
 		}
 		break;
 		case 2/*SPOT*/:
 		{
+			float SpotFactor = dot(L, light.directionWS);
+
+			float spotCutOff = light.coneAngleCos;
+
+			[branch]if (SpotFactor > spotCutOff) 
+			{
+
+				BRDF_MAKE(N, L, V);
+				result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
+				result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
+
+				float att = (light.energy * (light.range / (light.range + 1 + lightDistance)));
+				float attenuation = /*saturate*/(att * (light.range - lightDistance) / light.range);
+				attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+				result.diffuse *= attenuation;
+				result.specular *= attenuation;
+
+				float sh = max(NdotL, 0);
+				//float4 ShPos = mul(float4(P, 1), xShMat);
+				//float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+				//[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+				//{
+				//	//light.r+=1.0f;
+				//	sh *= shadowCascade(ShPos, ShTex, texture_shadow0);
+				//}
+				result.diffuse *= sh;
+				result.specular *= sh;
+
+				result.diffuse = max(result.diffuse, 0);
+				result.specular = max(result.specular, 0);
+			}
 		}
 		break;
 		}
 
-		diffuse += result.diffuse;
-		specular += result.specular;
+		diffuse += max(0.0f, result.diffuse);
+		specular += max(0.0f, result.specular);
 	}
 }
 
