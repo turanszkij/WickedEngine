@@ -59,6 +59,10 @@
 #define SBSLOT_LIGHTINDEXLIST	27
 
 
+#define TEXSLOT_SHADOWARRAY_2D		28
+#define TEXSLOT_SHADOWARRAY_CUBE	29
+
+
 ///////////////////////////
 // Helpers:
 ///////////////////////////
@@ -86,10 +90,14 @@
 
 #define TEXTURE2D_X(name, type, slot) Texture2D< type > name : register(t ## slot);
 #define TEXTURE2D(name, type, slot) TEXTURE2D_X(name, type, slot)
+#define TEXTURE2DARRAY_X(name, type, slot) Texture2DArray< type > name : register(t ## slot);
+#define TEXTURE2DARRAY(name, type, slot) TEXTURE2DARRAY_X(name, type, slot)
 #define RWTEXTURE2D_X(name, type, slot) RWTexture2D< type > name : register(u ## slot);
 #define RWTEXTURE2D(name, type, slot) RWTEXTURE2D_X(name, type, slot)
 #define TEXTURECUBE_X(name, type, slot) TextureCube< type > name : register(t ## slot);
 #define TEXTURECUBE(name, type, slot) TEXTURECUBE_X(name, type, slot)
+#define TEXTURECUBEARRAY_X(name, type, slot) TextureCubeArray< type > name : register(t ## slot);
+#define TEXTURECUBEARRAY(name, type, slot) TEXTURECUBEARRAY_X(name, type, slot)
 
 
 #endif // _RESOURCEBUFFER_MAPPING_H_

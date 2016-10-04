@@ -57,9 +57,9 @@ void Editor::Initialize()
 	wiRenderer::EMITTERSENABLED = true;
 	wiRenderer::HAIRPARTICLEENABLED = true;
 	//wiRenderer::LoadDefaultLighting();
-	wiRenderer::SetDirectionalLightShadowProps(1024, 2);
-	wiRenderer::SetPointLightShadowProps(3, 512);
-	wiRenderer::SetSpotLightShadowProps(3, 512);
+	//wiRenderer::SetDirectionalLightShadowProps(1024, 2);
+	//wiRenderer::SetPointLightShadowProps(3, 512);
+	//wiRenderer::SetSpotLightShadowProps(3, 512);
 	wiRenderer::physicsEngine = new wiBULLET();
 	wiHairParticle::Settings(400, 1000, 2000);
 

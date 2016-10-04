@@ -134,27 +134,27 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 	ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / ShPos[0].w / 2.0f + 0.5f;
 	ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
 	ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
-	const float shadows[3] = {
-		shadowCascade(ShPos[0],ShTex[0].xy,0.0001f,texture_shadow0),
-		shadowCascade(ShPos[1],ShTex[1].xy,0.0001f,texture_shadow1),
-		shadowCascade(ShPos[2],ShTex[2].xy,0.0001f,texture_shadow2)
-	};
 	[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
 	{
-		//color.r+=0.5f;
+		const float shadows[] = {
+			shadowCascade(ShPos[1],ShTex[1].xy,0.0001f,texture_shadow1),
+			shadowCascade(ShPos[2],ShTex[2].xy,0.0001f,texture_shadow2)
+		};
 		const float2 lerpVal = abs(ShTex[2].xy * 2 - 1);
-		sh *= lerp(shadows[2], shadows[1], pow(max(lerpVal.x, lerpVal.y), 4));
+		sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
 	}
 	else[branch]if ((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
 	{
-		//color.g+=0.5f;
+		const float shadows[] = {
+			shadowCascade(ShPos[0],ShTex[0].xy,0.0001f,texture_shadow0),
+			shadowCascade(ShPos[1],ShTex[1].xy,0.0001f,texture_shadow1),
+		};
 		const float2 lerpVal = abs(ShTex[1].xy * 2 - 1);
 		sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
 	}
 	else[branch]if ((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
 	{
-		//color.b+=0.5f;
-		sh *= shadows[0];
+		sh *= shadowCascade(ShPos[0], ShTex[0].xy, 0.0001f, texture_shadow0);
 	}
 
 	diffuse *= sh;
@@ -162,6 +162,19 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 
 	diffuse = max(diffuse, 0);
 	specular = max(specular, 0);
+}
+
+inline float offset_lookup1(float2 loc, float2 offset, float scale, float biasedDistance,float slice)
+{
+	return texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(loc + offset / scale, slice), biasedDistance).r;
+}
+inline float shadowCascade1(float4 shadowPos, float2 ShTex, float bias, float slice) {
+	float realDistance = shadowPos.z / shadowPos.w - bias;
+	float sum = 0;
+	float scale = g_xDirLight_mBiasResSoftshadow.y;
+	float retVal = 1;
+	retVal *= offset_lookup1(ShTex, float2(0, 0), scale, realDistance,slice);
+	return retVal;
 }
 
 inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
@@ -199,35 +212,40 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
 			float sh = max(NdotL, 0);
-			float4 ShPos[3];
-			ShPos[0] = mul(float4(P, 1), light.shadowMat[0]);
-			ShPos[1] = mul(float4(P, 1), light.shadowMat[1]);
-			ShPos[2] = mul(float4(P, 1), light.shadowMat[2]);
-			float3 ShTex[3];
-			ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / ShPos[0].w / 2.0f + 0.5f;
-			ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
-			ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
-			const float shadows[3] = {
-				shadowCascade(ShPos[0],ShTex[0].xy, light.shadowBias,texture_shadow0),
-				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowBias,texture_shadow1),
-				shadowCascade(ShPos[2],ShTex[2].xy, light.shadowBias,texture_shadow2)
-			};
-			[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
+
+			[branch]
+			if (light.shadowMap_index >= 0)
 			{
-				//color.r+=0.5f;
-				const float2 lerpVal = abs(ShTex[2].xy * 2 - 1);
-				sh *= lerp(shadows[2], shadows[1], pow(max(lerpVal.x, lerpVal.y), 4));
-			}
-			else[branch]if ((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
-			{
-				//color.g+=0.5f;
-				const float2 lerpVal = abs(ShTex[1].xy * 2 - 1);
-				sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
-			}
-			else[branch]if ((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
-			{
-				//color.b+=0.5f;
-				sh *= shadows[0];
+				float4 ShPos[3];
+				ShPos[0] = mul(float4(P, 1), light.shadowMat[0]);
+				ShPos[1] = mul(float4(P, 1), light.shadowMat[1]);
+				ShPos[2] = mul(float4(P, 1), light.shadowMat[2]);
+				float3 ShTex[3];
+				ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / ShPos[0].w / 2.0f + 0.5f;
+				ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
+				ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
+				[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
+				{
+					const float shadows[] = {
+						shadowCascade1(ShPos[1],ShTex[1].xy, light.shadowBias,light.shadowMap_index + 1),
+						shadowCascade1(ShPos[2],ShTex[2].xy, light.shadowBias,light.shadowMap_index + 2)
+					};
+					const float2 lerpVal = abs(ShTex[2].xy * 2 - 1);
+					sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
+				}
+				else[branch]if ((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
+				{
+					const float shadows[] = {
+						shadowCascade1(ShPos[0],ShTex[0].xy, light.shadowBias,light.shadowMap_index + 0),
+						shadowCascade1(ShPos[1],ShTex[1].xy, light.shadowBias,light.shadowMap_index + 1),
+					};
+					const float2 lerpVal = abs(ShTex[1].xy * 2 - 1);
+					sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
+				}
+				else[branch]if ((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
+				{
+					sh *= shadowCascade1(ShPos[0], ShTex[0].xy, light.shadowBias, light.shadowMap_index + 0);
+				}
 			}
 
 			result.diffuse *= sh;
@@ -244,16 +262,16 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
 			float att = (light.energy * (light.range / (light.range + 1 + lightDistance)));
-			float attenuation = /*saturate*/(att * (light.range - lightDistance) / light.range);
+			float attenuation = (att * (light.range - lightDistance) / light.range);
 			result.diffuse *= attenuation;
 			result.specular *= attenuation;
 
 			float sh = max(NdotL, 0);
-			//[branch]if (xLightEnerDis.w) {
-			//	const float3 lv = P - xLightPos.xyz;
-			//	static const float bias = 0.025;
-			//	sh *= texture_shadow_cube.SampleCmpLevelZero(sampler_cmp_depth, lv, length(lv) / xLightEnerDis.y - bias).r;
-			//}
+			[branch]
+			if (light.shadowMap_index >=0) {
+				static const float bias = 0.025;
+				sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L,light.shadowMap_index), lightDistance / light.range - bias).r;
+			}
 			result.diffuse *= sh;
 			result.specular *= sh;
 		}
@@ -264,7 +282,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 			float spotCutOff = light.coneAngleCos;
 
-			[branch]if (SpotFactor > spotCutOff) 
+			[branch]
+			if (SpotFactor > spotCutOff) 
 			{
 
 				BRDF_MAKE(N, L, V);
@@ -272,19 +291,23 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 				result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
 				float att = (light.energy * (light.range / (light.range + 1 + lightDistance)));
-				float attenuation = /*saturate*/(att * (light.range - lightDistance) / light.range);
+				float attenuation = (att * (light.range - lightDistance) / light.range);
 				attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 				result.diffuse *= attenuation;
 				result.specular *= attenuation;
 
 				float sh = max(NdotL, 0);
-				//float4 ShPos = mul(float4(P, 1), xShMat);
-				//float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
-				//[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
-				//{
-				//	//light.r+=1.0f;
-				//	sh *= shadowCascade(ShPos, ShTex, texture_shadow0);
-				//}
+				[branch]
+				if (light.shadowMap_index >= 0) 
+				{
+					float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+					float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+					[branch]
+					if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+					{
+						sh *= shadowCascade1(ShPos[0], ShTex.xy, light.shadowBias, 0);
+					}
+				}
 				result.diffuse *= sh;
 				result.specular *= sh;
 

@@ -376,7 +376,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wiRenderer::SetDirectionalLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			//wiRenderer::SetDirectionalLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
 		}
 		else
 			wiLua::SError(L, "SetDirectionalLightShadowProps(int resolution, int softshadowQuality) not enough arguments!");
@@ -387,7 +387,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wiRenderer::SetPointLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			//wiRenderer::SetPointLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
 		}
 		else
 			wiLua::SError(L, "SetPointLightShadowProps(int shadowMapCount, int resolution) not enough arguments!");
@@ -398,7 +398,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wiRenderer::SetSpotLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			//wiRenderer::SetSpotLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
 		}
 		else
 			wiLua::SError(L, "SetSpotLightShadowProps(int shadowMapCount, int resolution) not enough arguments!");

@@ -30,6 +30,9 @@ TEXTURE2D(texture_7, float4, TEXSLOT_ONDEMAND7)
 TEXTURE2D(texture_8, float4, TEXSLOT_ONDEMAND8)
 TEXTURE2D(texture_9, float4, TEXSLOT_ONDEMAND9)
 
+TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
+TEXTURECUBEARRAY(texture_shadowarray_cube,float,TEXSLOT_SHADOWARRAY_CUBE)
+
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	)
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	)
 SAMPLERSTATE(			sampler_linear_mirror,	SSLOT_LINEAR_MIRROR	)

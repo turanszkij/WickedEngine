@@ -1787,7 +1787,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 			{
 				for (UINT i = 0; i < arraySize; ++i)
 				{
-					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D);
+					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY : D3D11_RTV_DIMENSION_TEXTURE2DARRAY);
 					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
 					renderTargetViewDesc.Texture2DArray.ArraySize = 1;
 					renderTargetViewDesc.Texture2DArray.MipSlice = 0;
@@ -1920,10 +1920,10 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 			{
 				for (UINT i = 0; i < arraySize; ++i)
 				{
-					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D);
+					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY : D3D11_DSV_DIMENSION_TEXTURE2DARRAY);
+					depthStencilViewDesc.Texture2DArray.MipSlice = 0;
 					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
 					depthStencilViewDesc.Texture2DArray.ArraySize = 1;
-					depthStencilViewDesc.Texture2DArray.MipSlice = 0;
 
 					pTexture->depthStencilViews_DX11.push_back(nullptr);
 					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
@@ -2168,13 +2168,15 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
 	ID3D11RenderTargetView* renderTargetViews[8];
+	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
 		assert(ppRenderTargetViews[i]->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
 		renderTargetViews[i] = ppRenderTargetViews[i]->renderTargetViews_DX11[arrayIndex];
 	}
-	deviceContexts[threadID]->OMSetRenderTargets(NumViews, NumViews > 0 ? renderTargetViews : nullptr,
-		(depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilViews_DX11[arrayIndex]));
+	assert(depthStencilTexture == nullptr || depthStencilTexture->depthStencilViews_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+	ID3D11DepthStencilView* depthStencilView = (depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilViews_DX11[arrayIndex]);
+	deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews, depthStencilView);
 }
 void GraphicsDevice_DX11::ClearRenderTarget(Texture2D* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, UINT arrayIndex)
 {

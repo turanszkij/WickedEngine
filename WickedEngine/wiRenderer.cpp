@@ -42,8 +42,9 @@ GPUBuffer			*wiRenderer::constantBuffers[CBTYPE_LAST];
 GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 Texture				*wiRenderer::textures[TEXTYPE_LAST];
 
-int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
-	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
+//int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
+//	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
+int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false;
@@ -247,9 +248,12 @@ void wiRenderer::SetUpStaticComponents()
 		,false
 		);
 
-	SetDirectionalLightShadowProps(1024, 2);
-	SetPointLightShadowProps(2, 512);
-	SetSpotLightShadowProps(2, 512);
+	//SetDirectionalLightShadowProps(1024, 2);
+	//SetPointLightShadowProps(2, 512);
+	//SetSpotLightShadowProps(2, 512);
+
+	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
+	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
 	GetDevice()->LOCK();
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
@@ -2180,7 +2184,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 		switch (type)
 		{
 		case 0:
-			if (SOFTSHADOW)
+			if (SOFTSHADOWQUALITY_2D)
 			{
 				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
 			}
@@ -2215,7 +2219,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 					-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
 					);
 				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
 				//for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
 				//	lcb.mShM[shmap]=l->shadowCam_dirLight[shmap].getVP();
 				//	if(l->shadowMaps_dirLight[shmap].depth)
@@ -2258,7 +2262,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 					-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
 					);
 				lcb.world=world;
-				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SPOTLIGHTSHADOWRES,(float)SOFTSHADOW,0);
+				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
 				lcb.mShM = XMMatrixIdentity();
 				lcb.col=l->color;
 				lcb.enerdis=l->enerDis;
@@ -2412,17 +2416,13 @@ void wiRenderer::ClearShadowMaps(GRAPHICSTHREAD threadID){
 		//	Light::shadowMaps_spotLight[index].Activate(threadID);
 		//}
 
-		for (UINT i = 0; i < Light::dirLightShadowMapArray->GetDesc().ArraySize; ++i)
+		for (UINT i = 0; i < Light::shadowMapArray_2D->GetDesc().ArraySize; ++i)
 		{
-			GetDevice()->ClearDepthStencil(Light::dirLightShadowMapArray, CLEAR_DEPTH, 1.0f, 0, threadID, i);
+			GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, i);
 		}
-		for (UINT i = 0; i < Light::spotLightShadowMapArray->GetDesc().ArraySize; ++i)
+		for (UINT i = 0; i < Light::shadowMapArray_Cube->GetDesc().ArraySize / 6; ++i)
 		{
-			GetDevice()->ClearDepthStencil(Light::spotLightShadowMapArray, CLEAR_DEPTH, 1.0f, 0, threadID, i);
-		}
-		for (UINT i = 0; i < Light::pointLightShadowMapArray->GetDesc().ArraySize / 6; ++i)
-		{
-			GetDevice()->ClearDepthStencil(Light::pointLightShadowMapArray, CLEAR_DEPTH, 1.0f, 0, threadID, i);
+			GetDevice()->ClearDepthStencil(Light::shadowMapArray_Cube, CLEAR_DEPTH, 1.0f, 0, threadID, i);
 		}
 	}
 }
@@ -2432,10 +2432,13 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	{
 		GetDevice()->EventBegin(L"ShadowMap Render", threadID);
 
+		GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
+
 		const FrameCulling& culling = frameCullings[getCamera()];
 		const CulledList& culledLights = culling.culledLights;
 
 		ViewPort vp;
+
 
 		if (culledLights.size() > 0)
 		{
@@ -2480,11 +2483,20 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 				}
 			}
 
+			int shadowCounter_2D = 0;
+			int shadowCounter_Cube = 0;
+
 			//DIRLIGHTS
 			if (!dirLights.empty())
 			{
 				for (Light* l : dirLights)
 				{
+					if (shadowCounter_2D >= SHADOWCOUNT_2D)
+						break;
+
+					l->shadowMap_index = shadowCounter_2D;
+					shadowCounter_2D += 3;
+
 					for (int index = 0; index < 3; ++index)
 					{
 						CulledList culledObjects;
@@ -2500,12 +2512,12 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 						vp.TopLeftX = 0;
 						vp.TopLeftY = 0;
-						vp.Width = (float)SHADOWMAPRES;
-						vp.Height = (float)SHADOWMAPRES;
+						vp.Width = (float)SHADOWRES_2D;
+						vp.Height = (float)SHADOWRES_2D;
 						vp.MinDepth = 0.0f;
 						vp.MaxDepth = 1.0f;
 						GetDevice()->BindViewports(1, &vp, threadID);
-						GetDevice()->BindRenderTargets(0, nullptr, Light::dirLightShadowMapArray, threadID, /*l->shadowMap_index * 3 + */index);
+						GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index * 3 + index);
 
 						const float siz = l->shadowCam_dirLight[index].size * 0.5f;
 						const float f = l->shadowCam_dirLight[index].farplane;
@@ -2593,13 +2605,14 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 			//SPOTLIGHTS
 			if (!orderedSpotLights.empty())
 			{
-				int i = 0;
+				//int i = 0;
 				for (Light* l : orderedSpotLights)
 				{
-					if (i >= SPOTLIGHTSHADOW)
+					if (shadowCounter_2D >= SHADOWCOUNT_2D)
 						break;
 
-					l->shadowMap_index = i;
+					l->shadowMap_index = shadowCounter_2D;
+					shadowCounter_2D += 1;
 
 					CulledList culledObjects;
 					CulledCollection culledRenderer;
@@ -2607,12 +2620,12 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					//Light::shadowMaps_spotLight[i].Set(threadID);
 					vp.TopLeftX = 0;
 					vp.TopLeftY = 0;
-					vp.Width = (float)SPOTLIGHTSHADOWRES;
-					vp.Height = (float)SPOTLIGHTSHADOWRES;
+					vp.Width = (float)SHADOWRES_2D;
+					vp.Height = (float)SHADOWRES_2D;
 					vp.MinDepth = 0.0f;
 					vp.MaxDepth = 1.0f;
 					GetDevice()->BindViewports(1, &vp, threadID);
-					GetDevice()->BindRenderTargets(0, nullptr, Light::spotLightShadowMapArray, threadID, l->shadowMap_index);
+					GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
 
 					Frustum frustum;
 					frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
@@ -2690,7 +2703,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 #pragma endregion
 
 
-					i++;
+					//i++;
 				}
 			}
 
@@ -2704,23 +2717,24 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 				GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
 				GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
-				int i = 0;
+				//int i = 0;
 				for (Light* l : orderedPointLights)
 				{
-					if (i >= POINTLIGHTSHADOW)
+					if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
 						break; 
-					
-					l->shadowMap_index = i;
+
+					l->shadowMap_index = shadowCounter_Cube;
+					shadowCounter_Cube += 1;
 
 					//Light::shadowMaps_pointLight[i].Set(threadID);
 					vp.TopLeftX = 0;
 					vp.TopLeftY = 0;
-					vp.Width = (float)POINTLIGHTSHADOWRES;
-					vp.Height = (float)POINTLIGHTSHADOWRES;
+					vp.Width = (float)SHADOWRES_CUBE;
+					vp.Height = (float)SHADOWRES_CUBE;
 					vp.MinDepth = 0.0f;
 					vp.MaxDepth = 1.0f;
 					GetDevice()->BindViewports(1, &vp, threadID);
-					GetDevice()->BindRenderTargets(0, nullptr, Light::pointLightShadowMapArray, threadID, l->shadowMap_index);
+					GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
 
 					//MAPPED_SUBRESOURCE mappedResource;
 					PointLightCB lcb;
@@ -2801,7 +2815,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						visibleInstances.clear();
 					}
 
-					i++;
+					//i++;
 				}
 
 				GetDevice()->BindGS(nullptr, threadID);
@@ -2811,23 +2825,112 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 		GetDevice()->EventEnd(threadID);
 	}
 
+	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	GetDevice()->BindResourcePS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
-void wiRenderer::SetDirectionalLightShadowProps(int resolution, int softShadowQuality)
+//void wiRenderer::SetDirectionalLightShadowProps(int resolution, int softShadowQuality)
+//{
+//	SHADOWMAPRES = resolution;
+//	SOFTSHADOW = softShadowQuality;
+//
+//	SAFE_DELETE(Light::dirLightShadowMapArray);
+//	Light::dirLightShadowMapArray = new Texture2D;
+//	Light::dirLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
+//
+//	Texture2DDesc desc;
+//	ZeroMemory(&desc, sizeof(desc));
+//	desc.Width = SHADOWMAPRES;
+//	desc.Height = SHADOWMAPRES;
+//	desc.MipLevels = 1;
+//	desc.ArraySize = 3;
+//	desc.Format = FORMAT_R32_TYPELESS;
+//	desc.SampleDesc.Count = 1;
+//	desc.SampleDesc.Quality = 0;
+//	desc.Usage = USAGE_DEFAULT;
+//	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+//	desc.CPUAccessFlags = 0;
+//	desc.MiscFlags = 0;
+//	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::dirLightShadowMapArray);
+//}
+//void wiRenderer::SetPointLightShadowProps(int shadowMapCount, int resolution)
+//{
+//	POINTLIGHTSHADOW = shadowMapCount;
+//	POINTLIGHTSHADOWRES = resolution;
+//	//Light::shadowMaps_pointLight.clear();
+//	//Light::shadowMaps_pointLight.resize(shadowMapCount);
+//	//for (int i = 0; i < shadowMapCount; ++i)
+//	//{
+//	//	Light::shadowMaps_pointLight[i].InitializeCube(POINTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, true);
+//	//}
+//
+//	SAFE_DELETE(Light::pointLightShadowMapArray);
+//	Light::pointLightShadowMapArray = new Texture2D;
+//	Light::pointLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
+//	Light::pointLightShadowMapArray->RequestIndepententRenderTargetCubemapFaces(false);
+//
+//	Texture2DDesc desc;
+//	ZeroMemory(&desc, sizeof(desc));
+//	desc.Width = POINTLIGHTSHADOWRES;
+//	desc.Height = POINTLIGHTSHADOWRES;
+//	desc.MipLevels = 1;
+//	desc.ArraySize = 6 * POINTLIGHTSHADOW;
+//	desc.Format = FORMAT_R32_TYPELESS;
+//	desc.SampleDesc.Count = 1;
+//	desc.SampleDesc.Quality = 0;
+//	desc.Usage = USAGE_DEFAULT;
+//	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+//	desc.CPUAccessFlags = 0;
+//	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+//	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::pointLightShadowMapArray);
+//}
+//void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
+//{
+//	SPOTLIGHTSHADOW = shadowMapCount;
+//	SPOTLIGHTSHADOWRES = resolution;
+//	//Light::shadowMaps_spotLight.clear();
+//	//Light::shadowMaps_spotLight.resize(shadowMapCount);
+//	//for (int i = 0; i < shadowMapCount; ++i)
+//	//{
+//	//	Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, true);
+//	//}
+//
+//	SAFE_DELETE(Light::spotLightShadowMapArray);
+//	Light::spotLightShadowMapArray = new Texture2D;
+//	Light::spotLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
+//
+//	Texture2DDesc desc;
+//	ZeroMemory(&desc, sizeof(desc));
+//	desc.Width = SPOTLIGHTSHADOWRES;
+//	desc.Height = SPOTLIGHTSHADOWRES;
+//	desc.MipLevels = 1;
+//	desc.ArraySize = SPOTLIGHTSHADOW;
+//	desc.Format = FORMAT_R32_TYPELESS;
+//	desc.SampleDesc.Count = 1;
+//	desc.SampleDesc.Quality = 0;
+//	desc.Usage = USAGE_DEFAULT;
+//	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+//	desc.CPUAccessFlags = 0;
+//	desc.MiscFlags = 0;
+//	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::spotLightShadowMapArray);
+//}
+void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuality)
 {
-	SHADOWMAPRES = resolution;
-	SOFTSHADOW = softShadowQuality;
-
-	SAFE_DELETE(Light::dirLightShadowMapArray);
-	Light::dirLightShadowMapArray = new Texture2D;
-	Light::dirLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
-
+	SHADOWRES_2D = resolution;
+	SHADOWCOUNT_2D = count;
+	SOFTSHADOWQUALITY_2D = softShadowQuality;
+	
+	SAFE_DELETE(Light::shadowMapArray_2D);
+	Light::shadowMapArray_2D = new Texture2D;
+	Light::shadowMapArray_2D->RequestIndepententRenderTargetArraySlices(true);
+	
 	Texture2DDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = SHADOWMAPRES;
-	desc.Height = SHADOWMAPRES;
+	desc.Width = SHADOWRES_2D;
+	desc.Height = SHADOWRES_2D;
 	desc.MipLevels = 1;
-	desc.ArraySize = 3;
+	desc.ArraySize = SHADOWCOUNT_2D;
 	desc.Format = FORMAT_R32_TYPELESS;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
@@ -2835,30 +2938,24 @@ void wiRenderer::SetDirectionalLightShadowProps(int resolution, int softShadowQu
 	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::dirLightShadowMapArray);
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_2D);
 }
-void wiRenderer::SetPointLightShadowProps(int shadowMapCount, int resolution)
+void wiRenderer::SetShadowPropsCube(int resolution, int count)
 {
-	POINTLIGHTSHADOW = shadowMapCount;
-	POINTLIGHTSHADOWRES = resolution;
-	//Light::shadowMaps_pointLight.clear();
-	//Light::shadowMaps_pointLight.resize(shadowMapCount);
-	//for (int i = 0; i < shadowMapCount; ++i)
-	//{
-	//	Light::shadowMaps_pointLight[i].InitializeCube(POINTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, true);
-	//}
-
-	SAFE_DELETE(Light::pointLightShadowMapArray);
-	Light::pointLightShadowMapArray = new Texture2D;
-	Light::pointLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
-	Light::pointLightShadowMapArray->RequestIndepententRenderTargetCubemapFaces(false);
-
+	SHADOWRES_CUBE = resolution;
+	SHADOWCOUNT_CUBE = count;
+	
+	SAFE_DELETE(Light::shadowMapArray_Cube);
+	Light::shadowMapArray_Cube = new Texture2D;
+	Light::shadowMapArray_Cube->RequestIndepententRenderTargetArraySlices(true);
+	Light::shadowMapArray_Cube->RequestIndepententRenderTargetCubemapFaces(false);
+	
 	Texture2DDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = POINTLIGHTSHADOWRES;
-	desc.Height = POINTLIGHTSHADOWRES;
+	desc.Width = SHADOWRES_CUBE;
+	desc.Height = SHADOWRES_CUBE;
 	desc.MipLevels = 1;
-	desc.ArraySize = 6 * POINTLIGHTSHADOW;
+	desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
 	desc.Format = FORMAT_R32_TYPELESS;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
@@ -2866,37 +2963,7 @@ void wiRenderer::SetPointLightShadowProps(int shadowMapCount, int resolution)
 	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::pointLightShadowMapArray);
-}
-void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
-{
-	SPOTLIGHTSHADOW = shadowMapCount;
-	SPOTLIGHTSHADOWRES = resolution;
-	//Light::shadowMaps_spotLight.clear();
-	//Light::shadowMaps_spotLight.resize(shadowMapCount);
-	//for (int i = 0; i < shadowMapCount; ++i)
-	//{
-	//	Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, true);
-	//}
-
-	SAFE_DELETE(Light::spotLightShadowMapArray);
-	Light::spotLightShadowMapArray = new Texture2D;
-	Light::spotLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
-
-	Texture2DDesc desc;
-	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = SPOTLIGHTSHADOWRES;
-	desc.Height = SPOTLIGHTSHADOWRES;
-	desc.MipLevels = 1;
-	desc.ArraySize = SPOTLIGHTSHADOW;
-	desc.Format = FORMAT_R32_TYPELESS;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = USAGE_DEFAULT;
-	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::spotLightShadowMapArray);
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_Cube);
 }
 
 PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
@@ -3763,7 +3830,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = sizeof(UINT) * 2; // one for opaque lightindexlist, one for transparent
+		bd.ByteWidth = sizeof(UINT) * 1;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS; // only used in the compute shader which is assembling the light index list, so no need for Shader Resource View
 		bd.CPUAccessFlags = 0;
@@ -3782,7 +3849,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		desc.ArraySize = 1;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_R32G32_UINT; // Can this be less?
+		desc.Format = FORMAT_R32G32_UINT;
 		desc.Width = dispatchParams.numThreads[0];
 		desc.Height = dispatchParams.numThreads[1];
 		desc.MipLevels = 1;
@@ -3872,38 +3939,6 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 	}
 
 	//return debugTexture;
-}
-void wiRenderer::EnableForwardShadowmaps(GRAPHICSTHREAD threadID)
-{
-	const FrameCulling& culling = frameCullings[getCamera()];
-	const CulledList& culledLights = culling.culledLights;
-
-	for (Cullable* c : culledLights) 
-	{
-		Light* l = (Light*)c;
-
-		switch (l->type)
-		{
-		case Light::DIRECTIONAL:
-		{
-			//DirectionalLightCB lcb;
-			//lcb.direction = XMVector3Normalize(
-			//	-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)))
-			//);
-			//lcb.col = XMFLOAT4(l->color.x*l->enerDis.x, l->color.y*l->enerDis.x, l->color.z*l->enerDis.x, 1);
-			//lcb.mBiasResSoftshadow = XMFLOAT4(l->shadowBias, (float)SHADOWMAPRES, (float)SOFTSHADOW, 0);
-			//for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap) {
-			//	lcb.mShM[shmap] = l->shadowCam_dirLight[shmap].getVP();
-			//	if (l->shadowMaps_dirLight[shmap].depth)
-			//		GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(), TEXSLOT_SHADOW0 + shmap, threadID);
-			//}
-			//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT], &lcb, threadID);
-		}
-		break;
-		default:
-			break;
-		}
-	}
 }
 
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)

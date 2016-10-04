@@ -53,6 +53,18 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	fovSlider->SetEnabled(false);
 	lightWindow->AddWidget(fovSlider);
 
+	biasSlider = new wiSlider(0.0f, 0.01f, 0, 100000, "ShadowBias: ");
+	biasSlider->SetSize(XMFLOAT2(100, 30));
+	biasSlider->SetPos(XMFLOAT2(x, y += 30));
+	biasSlider->OnSlide([&](wiEventArgs args) {
+		if (light != nullptr)
+		{
+			light->shadowBias = args.fValue;
+		}
+	});
+	biasSlider->SetEnabled(false);
+	lightWindow->AddWidget(biasSlider);
+
 	shadowCheckBox = new wiCheckBox("Shadow: ");
 	shadowCheckBox->SetPos(XMFLOAT2(x, y += 30));
 	shadowCheckBox->OnClick([&](wiEventArgs args) {
@@ -101,6 +113,7 @@ LightWindow::~LightWindow()
 	SAFE_DELETE(energySlider);
 	SAFE_DELETE(distanceSlider);
 	SAFE_DELETE(fovSlider);
+	SAFE_DELETE(biasSlider);
 	SAFE_DELETE(shadowCheckBox);
 	SAFE_DELETE(haloCheckBox);
 	SAFE_DELETE(addLightButton);
@@ -133,6 +146,8 @@ void LightWindow::SetLight(Light* light)
 				fovSlider->SetEnabled(false);
 			}
 		}
+		biasSlider->SetEnabled(true);
+		biasSlider->SetValue(light->shadowBias);
 		shadowCheckBox->SetCheck(light->shadow);
 		haloCheckBox->SetCheck(!light->noHalo);
 	}
@@ -140,6 +155,7 @@ void LightWindow::SetLight(Light* light)
 	{
 		distanceSlider->SetEnabled(false);
 		fovSlider->SetEnabled(false);
+		biasSlider->SetEnabled(false);
 		energySlider->SetEnabled(false);
 		//lightWindow->SetEnabled(false);
 	}

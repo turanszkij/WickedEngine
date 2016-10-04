@@ -26,6 +26,7 @@ public:
 	wiSlider*	energySlider;
 	wiSlider*	distanceSlider;
 	wiSlider*	fovSlider;
+	wiSlider*	biasSlider;
 	wiCheckBox*	shadowCheckBox;
 	wiCheckBox*	haloCheckBox;
 	wiButton*	addLightButton;

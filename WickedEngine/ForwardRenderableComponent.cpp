@@ -77,7 +77,6 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
-		wiRenderer::EnableForwardShadowmaps(threadID);
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID
 			, false, SHADERTYPE_FORWARD
 			, nullptr, true);

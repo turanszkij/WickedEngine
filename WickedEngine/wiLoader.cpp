@@ -4031,9 +4031,8 @@ void Object::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region LIGHT
-Texture2D* Light::dirLightShadowMapArray = nullptr;
-Texture2D* Light::spotLightShadowMapArray = nullptr;
-Texture2D* Light::pointLightShadowMapArray = nullptr;
+Texture2D* Light::shadowMapArray_2D = nullptr;
+Texture2D* Light::shadowMapArray_Cube = nullptr;
 Light::Light():Transform() {
 	color = XMFLOAT4(0, 0, 0, 0);
 	enerDis = XMFLOAT4(0, 0, 0, 0);
@@ -4096,11 +4095,11 @@ void Light::UpdateLight()
 
 			if (!shadowCam_dirLight.empty()) {
 
-				float f = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWMAPRES;
+				float f = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
 				e = XMVectorFloor(XMVectorLerp(d, c, lerp) / f)*f;
-				f = shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWMAPRES;
+				f = shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
 				e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) / f)*f;
-				f = shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWMAPRES;
+				f = shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
 				e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) / f)*f;
 
 				XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));

@@ -76,12 +76,15 @@ public:
 	static wiGraphicsTypes::Texture				*textures[TEXTYPE_LAST];
 
 	
-	static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
+	//static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
+	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 
-	static void SetDirectionalLightShadowProps(int resolution, int softShadowQuality);
-	static void SetPointLightShadowProps(int shadowMapCount, int resolution);
-	static void SetSpotLightShadowProps(int count, int resolution);
+	//static void SetDirectionalLightShadowProps(int resolution, int softShadowQuality);
+	//static void SetPointLightShadowProps(int shadowMapCount, int resolution);
+	//static void SetSpotLightShadowProps(int count, int resolution);
+	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
+	static void SetShadowPropsCube(int resolution, int count);
 
 	// Constant Buffers:
 	// Persistent buffers:
@@ -440,7 +443,6 @@ public:
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);
 
 	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
-	static void EnableForwardShadowmaps(GRAPHICSTHREAD threadID);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();
