@@ -775,10 +775,12 @@ struct Light : public Cullable , public Transform
 	vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
 	vector<string> lensFlareNames;
 
-	//vector<wiRenderTarget> shadowMap;
-	static vector<wiRenderTarget> shadowMaps_pointLight;
-	static vector<wiRenderTarget> shadowMaps_spotLight;
-	vector<wiRenderTarget> shadowMaps_dirLight;
+	//static vector<wiRenderTarget> shadowMaps_pointLight;
+	//static vector<wiRenderTarget> shadowMaps_spotLight;
+	//vector<wiRenderTarget> shadowMaps_dirLight;
+	static wiGraphicsTypes::Texture2D* dirLightShadowMapArray;
+	static wiGraphicsTypes::Texture2D* spotLightShadowMapArray;
+	static wiGraphicsTypes::Texture2D* pointLightShadowMapArray;
 	int shadowMap_index;
 
 	vector<SHCAM> shadowCam_pointLight;

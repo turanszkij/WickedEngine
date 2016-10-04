@@ -130,7 +130,7 @@ Texture2D* wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& col
 		data[i + 3] = color.a;
 	}
 
-	Texture2D* texture;
+	Texture2D* texture = nullptr;
 	if (FAILED(CreateTexture(texture, data, 1, 1, 4)))
 	{
 		delete[] data;

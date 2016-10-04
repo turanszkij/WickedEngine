@@ -151,15 +151,35 @@ namespace wiGraphicsTypes
 		SAFE_DELETE(vertexLayout);
 	}
 
-	Texture::Texture() : GPUResource(), GPUUnorderedResource()
+	Texture::Texture() : GPUResource(), GPUUnorderedResource(), independentRTVArraySlices(false), independentRTVCubemapFaces(false)
 	{
-		SAFE_INIT(renderTargetView_DX11);
-		SAFE_INIT(depthStencilView_DX11);
 	}
 	Texture::~Texture()
 	{
-		SAFE_RELEASE(renderTargetView_DX11);
-		SAFE_RELEASE(depthStencilView_DX11);
+		for (auto& x : renderTargetViews_DX11)
+		{
+			SAFE_RELEASE(x);
+		}
+		for (auto& x : depthStencilViews_DX11)
+		{
+			SAFE_RELEASE(x);
+		}
+	}
+	void Texture::RequestIndepententRenderTargetArraySlices(bool value)
+	{
+		independentRTVArraySlices = value;
+	}
+	bool Texture::IsIndepententRenderTargetArraySlices()
+	{
+		return independentRTVArraySlices;
+	}
+	void Texture::RequestIndepententRenderTargetCubemapFaces(bool value)
+	{
+		independentRTVCubemapFaces = value;
+	}
+	bool Texture::IsIndepententRenderTargetCubemapFaces()
+	{
+		return independentRTVCubemapFaces;
 	}
 
 	Texture2D::Texture2D() :Texture()
@@ -169,14 +189,5 @@ namespace wiGraphicsTypes
 	Texture2D::~Texture2D()
 	{
 		SAFE_RELEASE(texture2D_DX11);
-	}
-
-	TextureCube::TextureCube() :Texture2D()
-	{
-
-	}
-	TextureCube::~TextureCube()
-	{
-
 	}
 }

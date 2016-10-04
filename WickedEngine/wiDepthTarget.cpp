@@ -6,23 +6,17 @@ using namespace wiGraphicsTypes;
 wiDepthTarget::wiDepthTarget()
 {
 	texture = nullptr;
-	textureCube = nullptr;
-	isCube = false;
 }
 
 
 wiDepthTarget::~wiDepthTarget()
 {
 	SAFE_DELETE(texture);
-	SAFE_DELETE(textureCube);
 }
 
 void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 {
 	SAFE_DELETE(texture);
-	SAFE_DELETE(textureCube);
-
-	isCube = false;
 
 	Texture2DDesc depthGPUBufferDesc;
 	ZeroMemory(&depthGPUBufferDesc, sizeof(depthGPUBufferDesc));
@@ -42,12 +36,9 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 
 	wiRenderer::GetDevice()->CreateTexture2D(&depthGPUBufferDesc, nullptr, &texture);
 }
-void wiDepthTarget::InitializeCube(int size)
+void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 {
 	SAFE_DELETE(texture);
-	SAFE_DELETE(textureCube);
-
-	isCube = true;
 
 	Texture2DDesc depthGPUBufferDesc;
 	ZeroMemory(&depthGPUBufferDesc, sizeof(depthGPUBufferDesc));
@@ -65,7 +56,9 @@ void wiDepthTarget::InitializeCube(int size)
 	depthGPUBufferDesc.CPUAccessFlags = 0;
 	depthGPUBufferDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
-	wiRenderer::GetDevice()->CreateTextureCube(&depthGPUBufferDesc, nullptr, &textureCube);
+	texture = new Texture2D;
+	texture->RequestIndepententRenderTargetCubemapFaces(independentFaces);
+	wiRenderer::GetDevice()->CreateTexture2D(&depthGPUBufferDesc, nullptr, &texture);
 }
 
 void wiDepthTarget::Clear(GRAPHICSTHREAD threadID)

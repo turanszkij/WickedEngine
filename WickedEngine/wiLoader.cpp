@@ -840,7 +840,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					lights.back()->type=Light::DIRECTIONAL;
 					file>>lights.back()->name; 
 					lights.back()->shadow = true;
-					lights.back()->shadowMaps_dirLight.resize(3);
+					//lights.back()->shadowMaps_dirLight.resize(3);
 					lights.back()->shadowBias = 9.99995464e-005f;
 					//for (int i = 0; i < 3; ++i)
 					//{
@@ -4031,13 +4031,13 @@ void Object::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region LIGHT
-vector<wiRenderTarget> Light::shadowMaps_pointLight;
-vector<wiRenderTarget> Light::shadowMaps_spotLight;
+Texture2D* Light::dirLightShadowMapArray = nullptr;
+Texture2D* Light::spotLightShadowMapArray = nullptr;
+Texture2D* Light::pointLightShadowMapArray = nullptr;
 Light::Light():Transform() {
 	color = XMFLOAT4(0, 0, 0, 0);
 	enerDis = XMFLOAT4(0, 0, 0, 0);
 	type = LightType::POINT;
-	//shadowMap.resize(0);
 	shadow = false;
 	noHalo = false;
 	lensFlareRimTextures.resize(0);
@@ -4169,10 +4169,10 @@ void Light::Serialize(wiArchive& archive)
 		int temp;
 		archive >> temp;
 		type = (LightType)temp;
-		if (type == DIRECTIONAL)
-		{
-			shadowMaps_dirLight.resize(3);
-		}
+		//if (type == DIRECTIONAL)
+		//{
+		//	shadowMaps_dirLight.resize(3);
+		//}
 		size_t lensFlareCount;
 		archive >> lensFlareCount;
 		string rim;

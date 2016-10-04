@@ -139,7 +139,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		ID3D11Buffer*				resource_DX11;
+		ID3D11Buffer*		resource_DX11;
 		GPUBufferDesc desc;
 	public:
 		GPUBuffer();
@@ -227,13 +227,22 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		ID3D11RenderTargetView*		renderTargetView_DX11;
-		ID3D11DepthStencilView*		depthStencilView_DX11;
+		vector<ID3D11RenderTargetView*>		renderTargetViews_DX11;
+		vector<ID3D11DepthStencilView*>		depthStencilViews_DX11;
+		bool								independentRTVArraySlices;
+		bool								independentRTVCubemapFaces;
 	public:
 
 		Texture();
 		virtual ~Texture();
+		// if true, then each array slice will get a unique rendertarget
+		void RequestIndepententRenderTargetArraySlices(bool value);
+		bool IsIndepententRenderTargetArraySlices();
+		// if true, then each face of the cubemap will get a unique rendertarget
+		void RequestIndepententRenderTargetCubemapFaces(bool value);
+		bool IsIndepententRenderTargetCubemapFaces();
 	};
+
 	class Texture2D : public Texture
 	{
 		friend class GraphicsDevice_DX11;
@@ -245,13 +254,6 @@ namespace wiGraphicsTypes
 		virtual ~Texture2D();
 
 		Texture2DDesc GetDesc() { return desc; }
-	};
-	class TextureCube : public Texture2D
-	{
-		friend class GraphicsDevice_DX11;
-	public:
-		TextureCube();
-		virtual ~TextureCube();
 	};
 }
 

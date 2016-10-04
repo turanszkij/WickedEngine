@@ -1609,24 +1609,26 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D()
 }
 HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 {
-	D3D11_TEXTURE2D_DESC desc = _ConvertTexture2DDesc(pDesc);
+	if ((*ppTexture2D) == nullptr)
+	{
+		(*ppTexture2D) = new Texture2D;
+	}
+	(*ppTexture2D)->desc = *pDesc;
 
-	if (desc.SampleDesc.Count > 1)
+	if ((*ppTexture2D)->desc.SampleDesc.Count > 1)
 	{
 		UINT quality;
-		device->CheckMultisampleQualityLevels(desc.Format, desc.SampleDesc.Count, &quality);
-		desc.SampleDesc.Quality = quality - 1;
+		device->CheckMultisampleQualityLevels(_ConvertFormat((*ppTexture2D)->desc.Format), (*ppTexture2D)->desc.SampleDesc.Count, &quality);
+		(*ppTexture2D)->desc.SampleDesc.Quality = quality - 1;
 		if (quality == 0)
 		{
 			assert(0 && "MSAA Samplecount not supported!");
-			desc.SampleDesc.Count = 1;
+			(*ppTexture2D)->desc.SampleDesc.Count = 1;
 		}
 	}
 
+	D3D11_TEXTURE2D_DESC desc = _ConvertTexture2DDesc(&(*ppTexture2D)->desc);
 	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
-
-	(*ppTexture2D) = new Texture2D;
-	(*ppTexture2D)->desc = *pDesc;
 
 	HRESULT hr = S_OK;
 	
@@ -1661,64 +1663,60 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D()
 	// TODO
 	return E_FAIL;
 }
-HRESULT GraphicsDevice_DX11::CreateTextureCube(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, TextureCube **ppTextureCube)
-{
-	D3D11_TEXTURE2D_DESC desc = _ConvertTexture2DDesc(pDesc);
-
-	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
-
-	(*ppTextureCube) = new TextureCube;
-	(*ppTextureCube)->desc = *pDesc;
-
-	HRESULT hr = S_OK;
-
-	if (!(desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE))
-	{
-		desc.MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
-	}
-
-	hr = device->CreateTexture2D(&desc, data, &((*ppTextureCube)->texture2D_DX11));
-	assert(SUCCEEDED(hr) && "TextureCube creation failed!");
-	if (FAILED(hr))
-		return hr;
-
-	CreateRenderTargetView(*ppTextureCube);
-	CreateShaderResourceView(*ppTextureCube);
-	CreateDepthStencilView(*ppTextureCube);
-
-	return hr;
-}
 HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 {
 	HRESULT hr = E_FAIL;
 	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 	{
+		UINT arraySize = pTexture->desc.ArraySize;
+		UINT sampleCount = pTexture->desc.SampleDesc.Count;
+		bool multisampled = sampleCount > 1;
+
 		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-		if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
+		ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
+		// Try to resolve shader resource format:
+		switch (pTexture->desc.Format)
 		{
+		case FORMAT_R32_TYPELESS:
+			shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+			break;
+		case FORMAT_R24G8_TYPELESS:
+			shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+			break;
+		default:
 			shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-			if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
+			break;
+		}
+
+		if (arraySize > 1)
+		{
+			if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
 			{
-				shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+				shaderResourceViewDesc.TextureCube.MostDetailedMip = 0; //from most detailed...
+				shaderResourceViewDesc.TextureCube.MipLevels = -1; //...to least detailed
 			}
-			shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-			shaderResourceViewDesc.TextureCube.MostDetailedMip = 0; //from most detailed...
-			shaderResourceViewDesc.TextureCube.MipLevels = -1; //...to least detailed
+			else
+			{
+				shaderResourceViewDesc.ViewDimension = (multisampled ? D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY : D3D11_SRV_DIMENSION_TEXTURE2DARRAY);
+				shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
+				shaderResourceViewDesc.Texture2DArray.ArraySize = arraySize;
+				shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0; //from most detailed...
+				shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
+			}
 		}
 		else
 		{
-			shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-			if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
-			{
-				shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-			}
-			shaderResourceViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_SRV_DIMENSION_TEXTURE2D : D3D11_SRV_DIMENSION_TEXTURE2DMS);
+			shaderResourceViewDesc.ViewDimension = (multisampled ? D3D11_SRV_DIMENSION_TEXTURE2DMS : D3D11_SRV_DIMENSION_TEXTURE2D);
 			shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
 			shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 		}
 
 		hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
+
+		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 	}
+
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
@@ -1726,24 +1724,101 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 	HRESULT hr = E_FAIL;
 	if (pTexture->desc.BindFlags & D3D11_BIND_RENDER_TARGET)
 	{
+		UINT arraySize = pTexture->desc.ArraySize;
+		UINT sampleCount = pTexture->desc.SampleDesc.Count;
+		bool multisampled = sampleCount > 1;
+
 		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
-		if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
+		ZeroMemory(&renderTargetViewDesc, sizeof(renderTargetViewDesc));
+		renderTargetViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
+		renderTargetViewDesc.Texture2DArray.MipSlice = 0;
+
+		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
-			renderTargetViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
+			// TextureCube, TextureCubeArray...
+			const UINT faces = 6;
+			UINT slices = arraySize / faces;
+
 			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-			renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
-			renderTargetViewDesc.Texture2DArray.ArraySize = 6;
 			renderTargetViewDesc.Texture2DArray.MipSlice = 0;
+
+			if (pTexture->independentRTVCubemapFaces)
+			{
+				// independent faces
+				for (UINT i = 0; i < arraySize; ++i)
+				{
+					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
+					renderTargetViewDesc.Texture2DArray.ArraySize = 1;
+
+					pTexture->renderTargetViews_DX11.push_back(nullptr);
+					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
+				}
+			}
+			else
+			{
+
+				if (pTexture->independentRTVArraySlices)
+				{
+					// independent slices
+					for (UINT i = 0; i < slices; ++i)
+					{
+						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i * faces;
+						renderTargetViewDesc.Texture2DArray.ArraySize = faces;
+
+						pTexture->renderTargetViews_DX11.push_back(nullptr);
+						hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
+					}
+				}
+				else
+				{
+					// everything in one
+					renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
+					renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
+
+					pTexture->renderTargetViews_DX11.push_back(nullptr);
+					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[0]);
+				}
+			}
 		}
 		else
 		{
-			renderTargetViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-			renderTargetViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_RTV_DIMENSION_TEXTURE2D : D3D11_RTV_DIMENSION_TEXTURE2DMS);
-			renderTargetViewDesc.Texture2D.MipSlice = 0;
-		}
+			// Texture2D, Texture2DArray...
+			if (arraySize > 1 && pTexture->independentRTVArraySlices)
+			{
+				for (UINT i = 0; i < arraySize; ++i)
+				{
+					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D);
+					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
+					renderTargetViewDesc.Texture2DArray.ArraySize = 1;
+					renderTargetViewDesc.Texture2DArray.MipSlice = 0;
 
-		hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetView_DX11);
+					pTexture->renderTargetViews_DX11.push_back(nullptr);
+					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
+				}
+			}
+			else
+			{
+				if (arraySize > 1)
+				{
+					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY : D3D11_RTV_DIMENSION_TEXTURE2DARRAY);
+					renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
+					renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
+					renderTargetViewDesc.Texture2DArray.MipSlice = 0;
+				}
+				else
+				{
+					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D);
+					renderTargetViewDesc.Texture2D.MipSlice = 0;
+				}
+
+				pTexture->renderTargetViews_DX11.push_back(nullptr);
+				hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[0]);
+			}
+		}
+		
+		assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 	}
+
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
@@ -1751,28 +1826,132 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 	HRESULT hr = E_FAIL;
 	if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
 	{
+		UINT arraySize = pTexture->desc.ArraySize;
+		UINT sampleCount = pTexture->desc.SampleDesc.Count;
+		bool multisampled = sampleCount > 1;
+
 		D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-		if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
+		ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+		depthStencilViewDesc.Texture2DArray.MipSlice = 0;
+		depthStencilViewDesc.Flags = 0;
+
+		// Try to resolve depth stencil format:
+		switch (pTexture->desc.Format)
 		{
-			ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+		case FORMAT_R32_TYPELESS:
 			depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
+			break;
+		case FORMAT_R24G8_TYPELESS:
+			depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			break;
+		default:
+			depthStencilViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
+			break;
+		}
+
+		//if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
+		//{
+		//	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+		//	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+		//	depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
+		//	depthStencilViewDesc.Texture2DArray.ArraySize = 6;
+		//}
+		//else
+		//{
+		//	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+		//	depthStencilViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS);
+		//	depthStencilViewDesc.Texture2D.MipSlice = 0;
+		//	depthStencilViewDesc.Flags = 0;
+		//}
+
+		//hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilView_DX11);
+
+		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		{
+			// TextureCube, TextureCubeArray...
+			const UINT faces = 6;
+			UINT slices = arraySize / faces;
+
 			depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-			depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
-			depthStencilViewDesc.Texture2DArray.ArraySize = 6;
 			depthStencilViewDesc.Texture2DArray.MipSlice = 0;
-			depthStencilViewDesc.Flags = 0;
+
+			if (pTexture->independentRTVCubemapFaces)
+			{
+				// independent faces
+				for (UINT i = 0; i < arraySize; ++i)
+				{
+					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
+					depthStencilViewDesc.Texture2DArray.ArraySize = 1;
+
+					pTexture->depthStencilViews_DX11.push_back(nullptr);
+					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
+				}
+			}
+			else
+			{
+
+				if (pTexture->independentRTVArraySlices)
+				{
+					// independent slices
+					for (UINT i = 0; i < slices; ++i)
+					{
+						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i * faces;
+						depthStencilViewDesc.Texture2DArray.ArraySize = faces;
+
+						pTexture->depthStencilViews_DX11.push_back(nullptr);
+						hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
+					}
+				}
+				else
+				{
+					// everything in one
+					depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
+					depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
+
+					pTexture->depthStencilViews_DX11.push_back(nullptr);
+					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[0]);
+				}
+			}
 		}
 		else
 		{
-			ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-			depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-			depthStencilViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS);
-			depthStencilViewDesc.Texture2D.MipSlice = 0;
-			depthStencilViewDesc.Flags = 0;
+			// Texture2D, Texture2DArray...
+			if (arraySize > 1 && pTexture->independentRTVArraySlices)
+			{
+				for (UINT i = 0; i < arraySize; ++i)
+				{
+					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D);
+					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
+					depthStencilViewDesc.Texture2DArray.ArraySize = 1;
+					depthStencilViewDesc.Texture2DArray.MipSlice = 0;
+
+					pTexture->depthStencilViews_DX11.push_back(nullptr);
+					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
+				}
+			}
+			else
+			{
+				if (arraySize > 1)
+				{
+					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY : D3D11_DSV_DIMENSION_TEXTURE2DARRAY);
+					depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
+					depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
+					depthStencilViewDesc.Texture2DArray.MipSlice = 0;
+				}
+				else
+				{
+					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D);
+					depthStencilViewDesc.Texture2D.MipSlice = 0;
+				}
+
+				pTexture->depthStencilViews_DX11.push_back(nullptr);
+				hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[0]);
+			}
 		}
 
-		hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilView_DX11);
+		assert(SUCCEEDED(hr) && "DepthStencilView Creation failed!");
 	}
+
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
@@ -1986,28 +2165,31 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	deviceContexts[threadID]->RSSetViewports(NumViewports, pd3dViewPorts);
 	SAFE_DELETE_ARRAY(pd3dViewPorts);
 }
-void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
 	ID3D11RenderTargetView* renderTargetViews[8];
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
-		renderTargetViews[i] = ppRenderTargetViews[i]->renderTargetView_DX11;
+		assert(ppRenderTargetViews[i]->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+		renderTargetViews[i] = ppRenderTargetViews[i]->renderTargetViews_DX11[arrayIndex];
 	}
-	deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews,
-		(depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilView_DX11));
+	deviceContexts[threadID]->OMSetRenderTargets(NumViews, NumViews > 0 ? renderTargetViews : nullptr,
+		(depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilViews_DX11[arrayIndex]));
 }
-void GraphicsDevice_DX11::ClearRenderTarget(Texture2D* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::ClearRenderTarget(Texture2D* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
-	deviceContexts[threadID]->ClearRenderTargetView(pTexture->renderTargetView_DX11, ColorRGBA);
+	assert(pTexture->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+	deviceContexts[threadID]->ClearRenderTargetView(pTexture->renderTargetViews_DX11[arrayIndex], ColorRGBA);
 }
-void GraphicsDevice_DX11::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
+	assert(pTexture->depthStencilViews_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
 	UINT _flags = 0;
 	if (ClearFlags & CLEAR_DEPTH)
 		_flags |= D3D11_CLEAR_DEPTH;
 	if (ClearFlags & CLEAR_STENCIL)
 		_flags |= D3D11_CLEAR_STENCIL;
-	deviceContexts[threadID]->ClearDepthStencilView(pTexture->depthStencilView_DX11, _flags, Depth, Stencil);
+	deviceContexts[threadID]->ClearDepthStencilView(pTexture->depthStencilViews_DX11[arrayIndex], _flags, Depth, Stencil);
 }
 void GraphicsDevice_DX11::BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID) 
 {

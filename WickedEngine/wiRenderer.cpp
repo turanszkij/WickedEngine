@@ -2216,11 +2216,11 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 					);
 				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
 				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWMAPRES,(float)SOFTSHADOW,0);
-				for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
-					lcb.mShM[shmap]=l->shadowCam_dirLight[shmap].getVP();
-					if(l->shadowMaps_dirLight[shmap].depth)
-						GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
-				}
+				//for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
+				//	lcb.mShM[shmap]=l->shadowCam_dirLight[shmap].getVP();
+				//	if(l->shadowMaps_dirLight[shmap].depth)
+				//		GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
+				//}
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
 
 				GetDevice()->Draw(3, threadID);
@@ -2233,12 +2233,12 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 				lcb.enerdis=l->enerDis;
 				lcb.enerdis.w = 0.f;
 
-				if (l->shadow && l->shadowMap_index>=0)
-				{
-					lcb.enerdis.w = 1.f;
-					if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
-						GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
-				}
+				//if (l->shadow && l->shadowMap_index>=0)
+				//{
+				//	lcb.enerdis.w = 1.f;
+				//	if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
+				//		GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
+				//}
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
 
 				GetDevice()->Draw(240, threadID);
@@ -2264,12 +2264,12 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 				lcb.enerdis=l->enerDis;
 				lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
 
-				if (l->shadow && l->shadowMap_index>=0)
-				{
-					lcb.mShM = l->shadowCam_spotLight[0].getVP();
-					if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
-						GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
-				}
+				//if (l->shadow && l->shadowMap_index>=0)
+				//{
+				//	lcb.mShM = l->shadowCam_spotLight[0].getVP();
+				//	if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
+				//		GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
+				//}
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
 
 				GetDevice()->Draw(192, threadID);
@@ -2405,11 +2405,24 @@ void wiRenderer::ClearShadowMaps(GRAPHICSTHREAD threadID){
 	{
 		GetDevice()->UnBindResources(TEXSLOT_SHADOW0, 1 + TEXSLOT_SHADOW_CUBE - TEXSLOT_SHADOW0, threadID);
 
-		for (unsigned int index = 0; index < Light::shadowMaps_pointLight.size(); ++index) {
-			Light::shadowMaps_pointLight[index].Activate(threadID);
+		//for (unsigned int index = 0; index < Light::shadowMaps_pointLight.size(); ++index) {
+		//	Light::shadowMaps_pointLight[index].Activate(threadID);
+		//}
+		//for (unsigned int index = 0; index < Light::shadowMaps_spotLight.size(); ++index) {
+		//	Light::shadowMaps_spotLight[index].Activate(threadID);
+		//}
+
+		for (UINT i = 0; i < Light::dirLightShadowMapArray->GetDesc().ArraySize; ++i)
+		{
+			GetDevice()->ClearDepthStencil(Light::dirLightShadowMapArray, CLEAR_DEPTH, 1.0f, 0, threadID, i);
 		}
-		for (unsigned int index = 0; index < Light::shadowMaps_spotLight.size(); ++index) {
-			Light::shadowMaps_spotLight[index].Activate(threadID);
+		for (UINT i = 0; i < Light::spotLightShadowMapArray->GetDesc().ArraySize; ++i)
+		{
+			GetDevice()->ClearDepthStencil(Light::spotLightShadowMapArray, CLEAR_DEPTH, 1.0f, 0, threadID, i);
+		}
+		for (UINT i = 0; i < Light::pointLightShadowMapArray->GetDesc().ArraySize / 6; ++i)
+		{
+			GetDevice()->ClearDepthStencil(Light::pointLightShadowMapArray, CLEAR_DEPTH, 1.0f, 0, threadID, i);
 		}
 	}
 }
@@ -2421,6 +2434,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 		const FrameCulling& culling = frameCullings[getCamera()];
 		const CulledList& culledLights = culling.culledLights;
+
+		ViewPort vp;
 
 		if (culledLights.size() > 0)
 		{
@@ -2475,13 +2490,22 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						CulledList culledObjects;
 						CulledCollection culledRenderer;
 
-						if (!l->shadowMaps_dirLight[index].IsInitialized() || l->shadowMaps_dirLight[index].depth->GetDesc().Height != SHADOWMAPRES)
-						{
-							// Create the shadow map
-							l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, true, FORMAT_R32_FLOAT, 1, 1, true);
-						}
+						//if (!l->shadowMaps_dirLight[index].IsInitialized() || l->shadowMaps_dirLight[index].depth->GetDesc().Height != SHADOWMAPRES)
+						//{
+						//	// Create the shadow map
+						//	l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, true, FORMAT_R32_FLOAT, 1, 1, true);
+						//}
 
-						l->shadowMaps_dirLight[index].Activate(threadID);
+						//l->shadowMaps_dirLight[index].Activate(threadID);
+
+						vp.TopLeftX = 0;
+						vp.TopLeftY = 0;
+						vp.Width = (float)SHADOWMAPRES;
+						vp.Height = (float)SHADOWMAPRES;
+						vp.MinDepth = 0.0f;
+						vp.MaxDepth = 1.0f;
+						GetDevice()->BindViewports(1, &vp, threadID);
+						GetDevice()->BindRenderTargets(0, nullptr, Light::dirLightShadowMapArray, threadID, /*l->shadowMap_index * 3 + */index);
 
 						const float siz = l->shadowCam_dirLight[index].size * 0.5f;
 						const float f = l->shadowCam_dirLight[index].farplane;
@@ -2580,7 +2604,16 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					CulledList culledObjects;
 					CulledCollection culledRenderer;
 
-					Light::shadowMaps_spotLight[i].Set(threadID);
+					//Light::shadowMaps_spotLight[i].Set(threadID);
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)SPOTLIGHTSHADOWRES;
+					vp.Height = (float)SPOTLIGHTSHADOWRES;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					GetDevice()->BindViewports(1, &vp, threadID);
+					GetDevice()->BindRenderTargets(0, nullptr, Light::spotLightShadowMapArray, threadID, l->shadowMap_index);
+
 					Frustum frustum;
 					frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
 					if (spTree)
@@ -2679,7 +2712,15 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					
 					l->shadowMap_index = i;
 
-					Light::shadowMaps_pointLight[i].Set(threadID);
+					//Light::shadowMaps_pointLight[i].Set(threadID);
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)POINTLIGHTSHADOWRES;
+					vp.Height = (float)POINTLIGHTSHADOWRES;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					GetDevice()->BindViewports(1, &vp, threadID);
+					GetDevice()->BindRenderTargets(0, nullptr, Light::pointLightShadowMapArray, threadID, l->shadowMap_index);
 
 					//MAPPED_SUBRESOURCE mappedResource;
 					PointLightCB lcb;
@@ -2776,28 +2817,86 @@ void wiRenderer::SetDirectionalLightShadowProps(int resolution, int softShadowQu
 {
 	SHADOWMAPRES = resolution;
 	SOFTSHADOW = softShadowQuality;
+
+	SAFE_DELETE(Light::dirLightShadowMapArray);
+	Light::dirLightShadowMapArray = new Texture2D;
+	Light::dirLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
+
+	Texture2DDesc desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Width = SHADOWMAPRES;
+	desc.Height = SHADOWMAPRES;
+	desc.MipLevels = 1;
+	desc.ArraySize = 3;
+	desc.Format = FORMAT_R32_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = USAGE_DEFAULT;
+	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::dirLightShadowMapArray);
 }
 void wiRenderer::SetPointLightShadowProps(int shadowMapCount, int resolution)
 {
 	POINTLIGHTSHADOW = shadowMapCount;
 	POINTLIGHTSHADOWRES = resolution;
-	Light::shadowMaps_pointLight.clear();
-	Light::shadowMaps_pointLight.resize(shadowMapCount);
-	for (int i = 0; i < shadowMapCount; ++i)
-	{
-		Light::shadowMaps_pointLight[i].InitializeCube(POINTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, true);
-	}
+	//Light::shadowMaps_pointLight.clear();
+	//Light::shadowMaps_pointLight.resize(shadowMapCount);
+	//for (int i = 0; i < shadowMapCount; ++i)
+	//{
+	//	Light::shadowMaps_pointLight[i].InitializeCube(POINTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, true);
+	//}
+
+	SAFE_DELETE(Light::pointLightShadowMapArray);
+	Light::pointLightShadowMapArray = new Texture2D;
+	Light::pointLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
+	Light::pointLightShadowMapArray->RequestIndepententRenderTargetCubemapFaces(false);
+
+	Texture2DDesc desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Width = POINTLIGHTSHADOWRES;
+	desc.Height = POINTLIGHTSHADOWRES;
+	desc.MipLevels = 1;
+	desc.ArraySize = 6 * POINTLIGHTSHADOW;
+	desc.Format = FORMAT_R32_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = USAGE_DEFAULT;
+	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::pointLightShadowMapArray);
 }
 void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
 {
 	SPOTLIGHTSHADOW = shadowMapCount;
 	SPOTLIGHTSHADOWRES = resolution;
-	Light::shadowMaps_spotLight.clear();
-	Light::shadowMaps_spotLight.resize(shadowMapCount);
-	for (int i = 0; i < shadowMapCount; ++i)
-	{
-		Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, true);
-	}
+	//Light::shadowMaps_spotLight.clear();
+	//Light::shadowMaps_spotLight.resize(shadowMapCount);
+	//for (int i = 0; i < shadowMapCount; ++i)
+	//{
+	//	Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, true);
+	//}
+
+	SAFE_DELETE(Light::spotLightShadowMapArray);
+	Light::spotLightShadowMapArray = new Texture2D;
+	Light::spotLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
+
+	Texture2DDesc desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Width = SPOTLIGHTSHADOWRES;
+	desc.Height = SPOTLIGHTSHADOWRES;
+	desc.MipLevels = 1;
+	desc.ArraySize = SPOTLIGHTSHADOW;
+	desc.Format = FORMAT_R32_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = USAGE_DEFAULT;
+	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::spotLightShadowMapArray);
 }
 
 PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
@@ -3787,18 +3886,18 @@ void wiRenderer::EnableForwardShadowmaps(GRAPHICSTHREAD threadID)
 		{
 		case Light::DIRECTIONAL:
 		{
-			DirectionalLightCB lcb;
-			lcb.direction = XMVector3Normalize(
-				-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)))
-			);
-			lcb.col = XMFLOAT4(l->color.x*l->enerDis.x, l->color.y*l->enerDis.x, l->color.z*l->enerDis.x, 1);
-			lcb.mBiasResSoftshadow = XMFLOAT4(l->shadowBias, (float)SHADOWMAPRES, (float)SOFTSHADOW, 0);
-			for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap) {
-				lcb.mShM[shmap] = l->shadowCam_dirLight[shmap].getVP();
-				if (l->shadowMaps_dirLight[shmap].depth)
-					GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(), TEXSLOT_SHADOW0 + shmap, threadID);
-			}
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT], &lcb, threadID);
+			//DirectionalLightCB lcb;
+			//lcb.direction = XMVector3Normalize(
+			//	-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)))
+			//);
+			//lcb.col = XMFLOAT4(l->color.x*l->enerDis.x, l->color.y*l->enerDis.x, l->color.z*l->enerDis.x, 1);
+			//lcb.mBiasResSoftshadow = XMFLOAT4(l->shadowBias, (float)SHADOWMAPRES, (float)SOFTSHADOW, 0);
+			//for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap) {
+			//	lcb.mShM[shmap] = l->shadowCam_dirLight[shmap].getVP();
+			//	if (l->shadowMaps_dirLight[shmap].depth)
+			//		GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(), TEXSLOT_SHADOW0 + shmap, threadID);
+			//}
+			//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT], &lcb, threadID);
 		}
 		break;
 		default:

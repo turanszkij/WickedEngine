@@ -9,30 +9,24 @@ wiRenderTarget::wiRenderTarget()
 {
 	numViews = 0;
 	depth = nullptr;
-	isCube = false;
 }
 wiRenderTarget::wiRenderTarget(UINT width, UINT height, bool hasDepth, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, bool depthOnly)
 {
 	numViews = 0;
 	depth = nullptr;
-	isCube = false;
 	Initialize(width, height, hasDepth, format, mipMapLevelCount, MSAAC);
 }
 
 
 wiRenderTarget::~wiRenderTarget()
 {
-	clear();
+	CleanUp();
 }
 
-void wiRenderTarget::clear() {
+void wiRenderTarget::CleanUp() {
 	for (unsigned int i = 0; i < renderTargets.size(); ++i)
 	{
 		SAFE_DELETE(renderTargets[i]);
-	}
-	for (unsigned int i = 0; i < renderTargets_Cube.size(); ++i)
-	{
-		SAFE_DELETE(renderTargets_Cube[i]);
 	}
 	SAFE_DELETE(depth);
 }
@@ -40,9 +34,7 @@ void wiRenderTarget::clear() {
 void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 	, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, bool depthOnly)
 {
-	clear();
-
-	isCube = false;
+	CleanUp();
 
 	if (!depthOnly)
 	{
@@ -54,7 +46,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 		textureDesc.ArraySize = 1;
 		textureDesc.Format = format;
 		textureDesc.SampleDesc.Count = MSAAC;
-		//textureDesc.SampleDesc.Quality = 0; // auto-fill in device
+		//textureDesc.SampleDesc.Quality = 0; // auto-fill in device to maximum
 		textureDesc.Usage = USAGE_DEFAULT;
 		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
@@ -83,10 +75,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 }
 void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UINT mipMapLevelCount, bool depthOnly)
 {
-	clear();
-
-	isCube = true;
-
+	CleanUp();
 
 	if (!depthOnly)
 	{
@@ -98,7 +87,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 		textureDesc.ArraySize = 6;
 		textureDesc.Format = format;
 		textureDesc.SampleDesc.Count = 1;
-		//textureDesc.SampleDesc.Quality = 0; // auto-fill in device
+		textureDesc.SampleDesc.Quality = 0;
 		textureDesc.Usage = USAGE_DEFAULT;
 		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
@@ -109,8 +98,8 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 		}
 
 		numViews = 1;
-		renderTargets_Cube.push_back(nullptr);
-		wiRenderer::GetDevice()->CreateTextureCube(&textureDesc, nullptr, &renderTargets_Cube[0]);
+		renderTargets.push_back(nullptr);
+		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
 	}
 	
 	viewPort.Width = (FLOAT)size;
@@ -135,12 +124,6 @@ void wiRenderTarget::Add(FORMAT format)
 		numViews++;
 		renderTargets.push_back(nullptr);
 		wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &renderTargets.back());
-	}
-	else if (!renderTargets_Cube.empty())
-	{
-		numViews++;
-		renderTargets_Cube.push_back(nullptr);
-		wiRenderer::GetDevice()->CreateTextureCube(&desc, nullptr, &renderTargets_Cube.back());
 	}
 	else
 	{
@@ -179,12 +162,12 @@ void wiRenderTarget::Deactivate(GRAPHICSTHREAD threadID)
 void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor)
 {
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (depth ? depth->GetTexture() : nullptr), threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
 }
 void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor)
 {
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (isCube ? (Texture2D**)renderTargets_Cube.data() : renderTargets.data()), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
 }
 
 UINT wiRenderTarget::GetMipCount()
