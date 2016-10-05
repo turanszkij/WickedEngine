@@ -1,12 +1,10 @@
-#include "lightHF.hlsli"
-#include "spotLightHF.hlsli"
-
+#include "deferredLightHF.hlsli"
 
 LightOutputType main(VertexToPixel PSIn)
 {
 	DEFERREDLIGHT_MAKEPARAMS
 
-	DEFERRED_SPOTLIGHT_MAIN
+	DEFERREDLIGHT_SPOT
 
 	DEFERREDLIGHT_RETURN
 }

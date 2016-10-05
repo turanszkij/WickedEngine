@@ -160,21 +160,11 @@ public:
 
 		ALIGN_16
 	};
-	GFX_STRUCT DirectionalLightCB
-	{
-		XMVECTOR direction;
-		XMFLOAT4 col;
-		XMFLOAT4 mBiasResSoftshadow;
-		XMMATRIX mShM[3];
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_DIRLIGHT)
-
-		ALIGN_16
-	};
 	GFX_STRUCT MiscCB
 	{
 		XMMATRIX mTransform;
 		XMFLOAT4 mColor;
+		int mInt[4];
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_MISC)
 
@@ -190,29 +180,6 @@ public:
 	};
 
 	// On demand buffers:
-	GFX_STRUCT PointLightCB
-	{
-		XMFLOAT3 pos; float pad;
-		XMFLOAT4 col;
-		XMFLOAT4 enerdis;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_POINTLIGHT)
-
-		ALIGN_16
-	};
-	GFX_STRUCT SpotLightCB
-	{
-		XMMATRIX world;
-		XMVECTOR direction;
-		XMFLOAT4 col;
-		XMFLOAT4 enerdis;
-		XMFLOAT4 mBiasResSoftshadow;
-		XMMATRIX mShM;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_SPOTLIGHT)
-
-		ALIGN_16
-	};
 	GFX_STRUCT VolumeLightCB
 	{
 		XMMATRIX world;

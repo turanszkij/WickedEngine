@@ -4042,6 +4042,7 @@ Light::Light():Transform() {
 	lensFlareRimTextures.resize(0);
 	lensFlareNames.resize(0);
 	shadowMap_index = -1;
+	lightArray_index = 0;
 	shadowBias = 0.0001f;
 }
 Light::~Light() {

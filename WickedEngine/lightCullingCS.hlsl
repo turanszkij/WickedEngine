@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
-#include "tiledLightingHF.hlsli"
+#include "lightingHF.hlsli"
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);

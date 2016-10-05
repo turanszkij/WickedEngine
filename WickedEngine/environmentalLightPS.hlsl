@@ -1,4 +1,4 @@
-#include "lightHF.hlsli"
+#include "deferredLightHF.hlsli"
 #include "envReflectionHF.hlsli"
 
 

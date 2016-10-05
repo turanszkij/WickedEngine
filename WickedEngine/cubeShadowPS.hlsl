@@ -1,4 +1,3 @@
-#include "pointLightHF.hlsli"
 #include "objectHF.hlsli"
 
 struct VertextoPixel
@@ -12,5 +11,5 @@ struct VertextoPixel
 float main(VertextoPixel PSIn) : SV_DEPTH
 {
 	ALPHATEST(xBaseColorMap.Sample(sampler_linear_wrap,PSIn.tex).a);
-	return distance(PSIn.pos3D.xyz, xLightPos.xyz) / xLightEnerDis.y;
+	return distance(PSIn.pos3D.xyz, g_xColor.xyz) / g_xColor.w;
 }

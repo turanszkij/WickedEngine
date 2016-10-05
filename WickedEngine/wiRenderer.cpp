@@ -22,6 +22,7 @@
 #include "ResourceMapping.h"
 #include "wiGraphicsDevice_DX11.h"
 #include "wiTranslator.h"
+#include "lightCullingCSInterop.h"
 
 using namespace wiGraphicsTypes;
 
@@ -561,9 +562,6 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(MaterialCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MATERIAL]);
 
-	bd.ByteWidth = sizeof(DirectionalLightCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DIRLIGHT]);
-
 	bd.ByteWidth = sizeof(MiscCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
 
@@ -575,11 +573,6 @@ void wiRenderer::LoadBuffers()
 
 
 	// On demand buffers...
-	bd.ByteWidth = sizeof(PointLightCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_POINTLIGHT]);
-
-	bd.ByteWidth = sizeof(SpotLightCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_SPOTLIGHT]);
 
 	bd.ByteWidth = sizeof(VolumeLightCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOLUMELIGHT]);
@@ -616,7 +609,7 @@ void wiRenderer::LoadBuffers()
 	bd.StructureByteStride = sizeof(ShaderBoneType);
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_BONE]);
 
-	bd.ByteWidth = sizeof(LightArrayType) * 1024;
+	bd.ByteWidth = sizeof(LightArrayType) * MAX_LIGHTS;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(LightArrayType);
@@ -1214,9 +1207,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_MATERIAL], CB_GETBINDSLOT(MaterialCB), threadID);
 
-	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), threadID);
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_DIRLIGHT], CB_GETBINDSLOT(DirectionalLightCB), threadID);
-
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
@@ -1454,6 +1444,12 @@ void wiRenderer::UpdatePerFrameData()
 				Frustum frustum;
 				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
 				wiSPTree::getVisible(spTree_lights->root, frustum, culling.culledLights);
+				UINT i = 0;
+				for (auto& l : culling.culledLights)
+				{
+					((Light*)l)->lightArray_index = i;
+					i++;
+				}
 			}
 		}
 	}
@@ -1591,6 +1587,68 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
 	}
 	
+	// Fill Light Array with lights in the frustum
+	{
+		const FrameCulling& culling = frameCullings[getCamera()];
+		const CulledList& culledLights = culling.culledLights;
+
+		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
+		ZeroMemory(lightArray, sizeof(lightArray));
+
+		XMMATRIX viewMatrix = cam->GetView();
+
+		UINT lightCounter = 0;
+		for (Cullable* c : culledLights)
+		{
+			Light* l = (Light*)c;
+
+			lightArray[lightCounter].posWS = l->translation;
+			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].posWS), viewMatrix));
+			lightArray[lightCounter].distance = l->enerDis.y;
+			lightArray[lightCounter].col = l->color;
+			lightArray[lightCounter].energy = l->enerDis.x;
+			lightArray[lightCounter].type = l->type;
+			lightArray[lightCounter].shadowBias = l->shadowBias;
+			lightArray[lightCounter].shadowMap_index = l->shadowMap_index;
+			switch (l->type)
+			{
+			case Light::DIRECTIONAL:
+			{
+				lightArray[lightCounter].directionWS = l->GetDirection();
+				for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(), ARRAYSIZE(lightArray[lightCounter].shadowMatrix)); ++shmap) {
+					lightArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
+				}
+			}
+			break;
+			case Light::SPOT:
+			{
+				lightArray[lightCounter].coneAngle = (l->enerDis.z * 0.5f);
+				lightArray[lightCounter].coneAngleCos = cosf(lightArray[lightCounter].coneAngle);
+				lightArray[lightCounter].directionWS = l->GetDirection();
+				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&lightArray[lightCounter].directionWS), viewMatrix));
+				if (l->shadow && l->shadowMap_index >= 0)
+				{
+					lightArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
+				}
+			}
+			break;
+			default:
+				break;
+			}
+
+			lightCounter++;
+			if (lightCounter == MAX_LIGHTS)
+			{
+				assert(0 && "Maximum Lightcount exceeded for a single tiled lightculling pass! Please redefine MAX_LIGHTS to fit!");
+				lightCounter--;
+				break;
+			}
+		}
+		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
+		
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
+		GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
+	}
 
 }
 void wiRenderer::UpdateImages(){
@@ -2170,12 +2228,6 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->Draw(3, threadID);
 	}
 
-	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
-
-	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SPOTLIGHT], CB_GETBINDSLOT(SpotLightCB), threadID);
-
 	for(int type=0;type<3;++type){
 
 			
@@ -2214,67 +2266,88 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			
 			if(type==0) //dir
 			{
-				DirectionalLightCB lcb;
-				lcb.direction=XMVector3Normalize(
-					-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
-					);
-				lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
-				//for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
-				//	lcb.mShM[shmap]=l->shadowCam_dirLight[shmap].getVP();
-				//	if(l->shadowMaps_dirLight[shmap].depth)
-				//		GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
-				//}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
+				//DirectionalLightCB lcb;
+				//lcb.direction=XMVector3Normalize(
+				//	-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
+				//	);
+				//lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
+				//lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
+				////for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
+				////	lcb.mShM[shmap]=l->shadowCam_dirLight[shmap].getVP();
+				////	if(l->shadowMaps_dirLight[shmap].depth)
+				////		GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
+				////}
+				//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
+
+				MiscCB miscCb;
+				miscCb.mInt[0] = l->lightArray_index;
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 				GetDevice()->Draw(3, threadID);
 			}
 			else if(type==1) //point
 			{
-				PointLightCB lcb;
-				lcb.pos=l->translation;
-				lcb.col=l->color;
-				lcb.enerdis=l->enerDis;
-				lcb.enerdis.w = 0.f;
+				//PointLightCB lcb;
+				//lcb.pos=l->translation;
+				//lcb.col=l->color;
+				//lcb.enerdis=l->enerDis;
+				//lcb.enerdis.w = 0.f;
 
-				//if (l->shadow && l->shadowMap_index>=0)
-				//{
-				//	lcb.enerdis.w = 1.f;
-				//	if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
-				//		GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
-				//}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
+				////if (l->shadow && l->shadowMap_index>=0)
+				////{
+				////	lcb.enerdis.w = 1.f;
+				////	if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
+				////		GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
+				////}
+				//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
+
+				MiscCB miscCb;
+				miscCb.mInt[0] = l->lightArray_index;
+				float sca = l->enerDis.y + 1;
+				miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca,sca,sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z));
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 				GetDevice()->Draw(240, threadID);
 			}
 			else if(type==2) //spot
 			{
-				SpotLightCB lcb;
-				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
-				XMMATRIX world,rot;
-				world = XMMatrixTranspose(
-						XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
-						XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
-						XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
-						);
-				rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
-				lcb.direction=XMVector3Normalize(
-					-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
-					);
-				lcb.world=world;
-				lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
-				lcb.mShM = XMMatrixIdentity();
-				lcb.col=l->color;
-				lcb.enerdis=l->enerDis;
-				lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
+				//SpotLightCB lcb;
+				//const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
+				//XMMATRIX world,rot;
+				//world = XMMatrixTranspose(
+				//		XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
+				//		XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
+				//		XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
+				//		);
+				//rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
+				//lcb.direction=XMVector3Normalize(
+				//	-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
+				//	);
+				//lcb.world=world;
+				//lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
+				//lcb.mShM = XMMatrixIdentity();
+				//lcb.col=l->color;
+				//lcb.enerdis=l->enerDis;
+				//lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
 
-				//if (l->shadow && l->shadowMap_index>=0)
-				//{
-				//	lcb.mShM = l->shadowCam_spotLight[0].getVP();
-				//	if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
-				//		GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
-				//}
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
+				////if (l->shadow && l->shadowMap_index>=0)
+				////{
+				////	lcb.mShM = l->shadowCam_spotLight[0].getVP();
+				////	if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
+				////		GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
+				////}
+				//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
+
+
+				MiscCB miscCb;
+				miscCb.mInt[0] = l->lightArray_index;
+				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
+				miscCb.mTransform = XMMatrixTranspose(
+					XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
+					XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+					XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+				);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 				GetDevice()->Draw(192, threadID);
 			}
@@ -2741,7 +2814,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 				GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
 				GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
 
-				GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_POINTLIGHT], CB_GETBINDSLOT(PointLightCB), threadID);
 				GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 				//int i = 0;
@@ -2762,10 +2834,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					GetDevice()->BindViewports(1, &vp, threadID);
 					GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
 
-					PointLightCB lcb;
-					lcb.enerdis = l->enerDis;
-					lcb.pos = l->translation;
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
+					MiscCB miscCb;
+					miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, l->enerDis.y);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					CubeMapRenderCB cb;
 					for (unsigned int shcam = 0; shcam < l->shadowCam_pointLight.size(); ++shcam)
@@ -3058,7 +3129,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		
 		if (shaderType == SHADERTYPE_TILEDFORWARD)
 		{
-			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
 			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
 			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
 
@@ -3323,7 +3393,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 		if (shaderType == SHADERTYPE_TILEDFORWARD)
 		{
-			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
 			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
 			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
 		}
@@ -3598,7 +3667,6 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 {
-#include "lightCullingCSInterop.h"
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -3626,71 +3694,10 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)BLOCK_SIZE);
 		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)BLOCK_SIZE);
 		dispatchParams.numThreadGroups[2] = 1;
-
-		// Fill Light Array with lights in the frustum
-		const FrameCulling& culling = frameCullings[getCamera()];
-		const CulledList& culledLights = culling.culledLights;
-
-		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
-		ZeroMemory(lightArray, sizeof(lightArray));
-
-		XMMATRIX viewMatrix = cam->GetView();
-
-		UINT lightCounter = 0;
-		for (Cullable* c : culledLights)
-		{
-			Light* l = (Light*)c;
-
-			lightArray[lightCounter].posWS = l->translation;
-			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].posWS), viewMatrix));
-			lightArray[lightCounter].distance = l->enerDis.y;
-			lightArray[lightCounter].col = l->color;
-			lightArray[lightCounter].energy = l->enerDis.x;
-			lightArray[lightCounter].type = l->type;
-			lightArray[lightCounter].shadowBias = l->shadowBias;
-			lightArray[lightCounter].shadowMap_index = l->shadowMap_index;
-			switch (l->type)
-			{
-			case Light::DIRECTIONAL:
-			{
-				lightArray[lightCounter].directionWS = l->GetDirection();
-				for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(),ARRAYSIZE(lightArray[lightCounter].shadowMatrix)); ++shmap) {
-					lightArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
-				}
-			}
-			break;
-			case Light::SPOT:
-			{
-				lightArray[lightCounter].coneAngle = (l->enerDis.z * 0.5f);
-				lightArray[lightCounter].coneAngleCos = cosf(lightArray[lightCounter].coneAngle);
-				lightArray[lightCounter].directionWS = l->GetDirection();
-				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&lightArray[lightCounter].directionWS), viewMatrix));
-				if (l->shadow && l->shadowMap_index >= 0)
-				{
-					lightArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
-				}
-			}
-			break;
-			default:
-				break;
-			}
-
-			lightCounter++;
-			if (lightCounter == MAX_LIGHTS)
-			{
-				assert(0 && "Maximum Lightcount exceeded for a single tiled lightculling pass! Please redefine MAX_LIGHTS to fit!");
-				lightCounter--;
-				break;
-			}
-		}
-		device->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
-
-		dispatchParams.value0 = lightCounter;
-
+		dispatchParams.value0 = (UINT)frameCullings[getCamera()].culledLights.size();
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
 		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 	}
-
 
 	static GPUBuffer* frustumBuffer = nullptr;
 	if (frustumBuffer == nullptr || _resolutionChanged)
@@ -3807,8 +3814,6 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		device->EventBegin(L"Light Culling", threadID);
 
 		device->UnBindResources(TEXSLOT_LIGHTGRID, SBSLOT_LIGHTINDEXLIST - TEXSLOT_LIGHTGRID + 1, threadID);
-		
-		device->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		

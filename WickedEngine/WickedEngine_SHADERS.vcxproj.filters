@@ -13,9 +13,6 @@
     <None Include="depthConvertHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="dirLightHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="ditherHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -43,9 +40,6 @@
     <None Include="icosphere.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="lightHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="normalsCompressHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -56,9 +50,6 @@
       <Filter>HF</Filter>
     </None>
     <None Include="packHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="pointLightHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="postProcessHF.hlsli">
@@ -77,9 +68,6 @@
       <Filter>HF</Filter>
     </None>
     <None Include="sOHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="spotLightHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="tangentComputeHF.hlsli">
@@ -106,7 +94,10 @@
     <None Include="cullingShaderHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="tiledLightingHF.hlsli">
+    <None Include="lightingHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="deferredLightHF.hlsli">
       <Filter>HF</Filter>
     </None>
   </ItemGroup>

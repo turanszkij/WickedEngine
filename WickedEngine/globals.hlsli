@@ -15,10 +15,8 @@ TEXTURECUBE(texture_env_global, float4, TEXSLOT_ENV_GLOBAL)
 TEXTURECUBE(texture_env0, float4, TEXSLOT_ENV0)
 TEXTURECUBE(texture_env1, float4, TEXSLOT_ENV1)
 TEXTURECUBE(texture_env2, float4, TEXSLOT_ENV2)
-TEXTURE2D(texture_shadow0, float, TEXSLOT_SHADOW0)
-TEXTURE2D(texture_shadow1, float, TEXSLOT_SHADOW1)
-TEXTURE2D(texture_shadow2, float, TEXSLOT_SHADOW2)
-TEXTURECUBE(texture_shadow_cube, float, TEXSLOT_SHADOW_CUBE)
+TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
+TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE)
 TEXTURE2D(texture_0, float4, TEXSLOT_ONDEMAND0)
 TEXTURE2D(texture_1, float4, TEXSLOT_ONDEMAND1)
 TEXTURE2D(texture_2, float4, TEXSLOT_ONDEMAND2)
@@ -30,8 +28,6 @@ TEXTURE2D(texture_7, float4, TEXSLOT_ONDEMAND7)
 TEXTURE2D(texture_8, float4, TEXSLOT_ONDEMAND8)
 TEXTURE2D(texture_9, float4, TEXSLOT_ONDEMAND9)
 
-TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
-TEXTURECUBEARRAY(texture_shadowarray_cube,float,TEXSLOT_SHADOWARRAY_CUBE)
 
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	)
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	)
@@ -96,17 +92,11 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 	float		g_xMat_normalMapStrength;
 	float		g_xMat_parallaxOcclusionMapping;
 };
-CBUFFER(DirectionalLightCB, CBSLOT_RENDERER_DIRLIGHT)
-{
-	float4		g_xDirLight_direction;
-	float4		g_xDirLight_col;
-	float4		g_xDirLight_mBiasResSoftshadow;
-	float4x4	g_xDirLight_ShM[3];
-};
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {
 	float4x4	g_xTransform;
 	float4		g_xColor;
+	int4		g_xMisc_int4;
 };
 CBUFFER(ShadowCB, CBSLOT_RENDERER_SHADOW)
 {

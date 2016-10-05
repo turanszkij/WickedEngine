@@ -778,6 +778,7 @@ struct Light : public Cullable , public Transform
 	static wiGraphicsTypes::Texture2D* shadowMapArray_2D;
 	static wiGraphicsTypes::Texture2D* shadowMapArray_Cube;
 	int shadowMap_index;
+	int lightArray_index;
 
 	vector<SHCAM> shadowCam_pointLight;
 	vector<SHCAM> shadowCam_dirLight;
