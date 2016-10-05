@@ -2517,7 +2517,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						vp.MinDepth = 0.0f;
 						vp.MaxDepth = 1.0f;
 						GetDevice()->BindViewports(1, &vp, threadID);
-						GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index * 3 + index);
+						GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
 
 						const float siz = l->shadowCam_dirLight[index].size * 0.5f;
 						const float f = l->shadowCam_dirLight[index].farplane;

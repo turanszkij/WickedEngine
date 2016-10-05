@@ -1692,9 +1692,20 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 		{
 			if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
 			{
-				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-				shaderResourceViewDesc.TextureCube.MostDetailedMip = 0; //from most detailed...
-				shaderResourceViewDesc.TextureCube.MipLevels = -1; //...to least detailed
+				if (arraySize > 6)
+				{
+					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+					shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = 0;
+					shaderResourceViewDesc.TextureCubeArray.NumCubes = arraySize / 6;
+					shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = 0; //from most detailed...
+					shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
+				}
+				else
+				{
+					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+					shaderResourceViewDesc.TextureCube.MostDetailedMip = 0; //from most detailed...
+					shaderResourceViewDesc.TextureCube.MipLevels = -1; //...to least detailed
+				}
 			}
 			else
 			{
@@ -1736,8 +1747,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
 			// TextureCube, TextureCubeArray...
-			const UINT faces = 6;
-			UINT slices = arraySize / faces;
+			UINT slices = arraySize / 6;
 
 			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
 			renderTargetViewDesc.Texture2DArray.MipSlice = 0;
@@ -1762,8 +1772,8 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 					// independent slices
 					for (UINT i = 0; i < slices; ++i)
 					{
-						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i * faces;
-						renderTargetViewDesc.Texture2DArray.ArraySize = faces;
+						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i * 6;
+						renderTargetViewDesc.Texture2DArray.ArraySize = 6;
 
 						pTexture->renderTargetViews_DX11.push_back(nullptr);
 						hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
@@ -1849,28 +1859,10 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 			break;
 		}
 
-		//if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
-		//{
-		//	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-		//	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-		//	depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
-		//	depthStencilViewDesc.Texture2DArray.ArraySize = 6;
-		//}
-		//else
-		//{
-		//	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-		//	depthStencilViewDesc.ViewDimension = (pTexture->desc.SampleDesc.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS);
-		//	depthStencilViewDesc.Texture2D.MipSlice = 0;
-		//	depthStencilViewDesc.Flags = 0;
-		//}
-
-		//hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilView_DX11);
-
 		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
 			// TextureCube, TextureCubeArray...
-			const UINT faces = 6;
-			UINT slices = arraySize / faces;
+			UINT slices = arraySize / 6;
 
 			depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
 			depthStencilViewDesc.Texture2DArray.MipSlice = 0;
@@ -1895,8 +1887,8 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 					// independent slices
 					for (UINT i = 0; i < slices; ++i)
 					{
-						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i * faces;
-						depthStencilViewDesc.Texture2DArray.ArraySize = faces;
+						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i * 6;
+						depthStencilViewDesc.Texture2DArray.ArraySize = 6;
 
 						pTexture->depthStencilViews_DX11.push_back(nullptr);
 						hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
