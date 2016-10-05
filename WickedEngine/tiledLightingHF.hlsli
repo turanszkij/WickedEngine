@@ -18,7 +18,7 @@ struct LightArrayType
 	uint type;
 	// --
 	float shadowBias;
-	uint shadowMap_index;
+	int shadowMap_index;
 	float coneAngle;
 	float coneAngleCos;
 	// --

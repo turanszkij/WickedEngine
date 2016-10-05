@@ -965,7 +965,7 @@ void wiRenderer::SetUpStates()
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=4;
+	rs.SlopeScaledDepthBias = 4.0f;
 	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
@@ -977,7 +977,7 @@ void wiRenderer::SetUpStates()
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=5.0f;
+	rs.SlopeScaledDepthBias = 5.0f;
 	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
@@ -2369,8 +2369,6 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->EventEnd(threadID);
 	}
 }
-
-
 void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 {
 	const FrameCulling& culling = frameCullings[getCamera()];
@@ -2404,27 +2402,56 @@ void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 
 	}
 }
-void wiRenderer::ClearShadowMaps(GRAPHICSTHREAD threadID){
-	if (GetGameSpeed())
-	{
-		GetDevice()->UnBindResources(TEXSLOT_SHADOW0, 1 + TEXSLOT_SHADOW_CUBE - TEXSLOT_SHADOW0, threadID);
 
-		//for (unsigned int index = 0; index < Light::shadowMaps_pointLight.size(); ++index) {
-		//	Light::shadowMaps_pointLight[index].Activate(threadID);
-		//}
-		//for (unsigned int index = 0; index < Light::shadowMaps_spotLight.size(); ++index) {
-		//	Light::shadowMaps_spotLight[index].Activate(threadID);
-		//}
+void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuality)
+{
+	SHADOWRES_2D = resolution;
+	SHADOWCOUNT_2D = count;
+	SOFTSHADOWQUALITY_2D = softShadowQuality;
 
-		for (UINT i = 0; i < Light::shadowMapArray_2D->GetDesc().ArraySize; ++i)
-		{
-			GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, i);
-		}
-		for (UINT i = 0; i < Light::shadowMapArray_Cube->GetDesc().ArraySize / 6; ++i)
-		{
-			GetDevice()->ClearDepthStencil(Light::shadowMapArray_Cube, CLEAR_DEPTH, 1.0f, 0, threadID, i);
-		}
-	}
+	SAFE_DELETE(Light::shadowMapArray_2D);
+	Light::shadowMapArray_2D = new Texture2D;
+	Light::shadowMapArray_2D->RequestIndepententRenderTargetArraySlices(true);
+
+	Texture2DDesc desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Width = SHADOWRES_2D;
+	desc.Height = SHADOWRES_2D;
+	desc.MipLevels = 1;
+	desc.ArraySize = SHADOWCOUNT_2D;
+	desc.Format = FORMAT_R32_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = USAGE_DEFAULT;
+	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_2D);
+}
+void wiRenderer::SetShadowPropsCube(int resolution, int count)
+{
+	SHADOWRES_CUBE = resolution;
+	SHADOWCOUNT_CUBE = count;
+
+	SAFE_DELETE(Light::shadowMapArray_Cube);
+	Light::shadowMapArray_Cube = new Texture2D;
+	Light::shadowMapArray_Cube->RequestIndepententRenderTargetArraySlices(true);
+	Light::shadowMapArray_Cube->RequestIndepententRenderTargetCubemapFaces(false);
+
+	Texture2DDesc desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Width = SHADOWRES_CUBE;
+	desc.Height = SHADOWRES_CUBE;
+	desc.MipLevels = 1;
+	desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
+	desc.Format = FORMAT_R32_TYPELESS;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = USAGE_DEFAULT;
+	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_Cube);
 }
 void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
@@ -2432,16 +2459,25 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	{
 		GetDevice()->EventBegin(L"ShadowMap Render", threadID);
 
-		GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
-
 		const FrameCulling& culling = frameCullings[getCamera()];
 		const CulledList& culledLights = culling.culledLights;
 
 		ViewPort vp;
 
 
-		if (culledLights.size() > 0)
+		if (!culledLights.empty())
 		{
+
+			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
+
+			for (UINT i = 0; i < Light::shadowMapArray_2D->GetDesc().ArraySize; ++i)
+			{
+				GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, i);
+			}
+			for (UINT i = 0; i < Light::shadowMapArray_Cube->GetDesc().ArraySize / 6; ++i)
+			{
+				GetDevice()->ClearDepthStencil(Light::shadowMapArray_Cube, CLEAR_DEPTH, 1.0f, 0, threadID, i);
+			}
 
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
@@ -2449,7 +2485,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
 
-			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+			GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
 
 			GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
 
@@ -2502,14 +2538,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						CulledList culledObjects;
 						CulledCollection culledRenderer;
 
-						//if (!l->shadowMaps_dirLight[index].IsInitialized() || l->shadowMaps_dirLight[index].depth->GetDesc().Height != SHADOWMAPRES)
-						//{
-						//	// Create the shadow map
-						//	l->shadowMaps_dirLight[index].Initialize(SHADOWMAPRES, SHADOWMAPRES, true, FORMAT_R32_FLOAT, 1, 1, true);
-						//}
-
-						//l->shadowMaps_dirLight[index].Activate(threadID);
-
 						vp.TopLeftX = 0;
 						vp.TopLeftY = 0;
 						vp.Width = (float)SHADOWRES_2D;
@@ -2530,7 +2558,12 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 #pragma region BLOAT
 						{
-							if (!culledObjects.empty()) {
+							if (!culledObjects.empty()) 
+							{
+
+								ShadowCB cb;
+								cb.mVP = l->shadowCam_dirLight[index].getVP();
+								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 								for (Cullable* object : culledObjects) {
 									culledRenderer[((Object*)object)->mesh].insert((Object*)object);
@@ -2547,10 +2580,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										else
 											GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
 
-										//MAPPED_SUBRESOURCE mappedResource;
-										ShadowCB cb;
-										cb.mVP = l->shadowCam_dirLight[index].getVP();
-										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 
 										int k = 0;
@@ -2617,7 +2646,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					CulledList culledObjects;
 					CulledCollection culledRenderer;
 
-					//Light::shadowMaps_spotLight[i].Set(threadID);
 					vp.TopLeftX = 0;
 					vp.TopLeftY = 0;
 					vp.Width = (float)SHADOWRES_2D;
@@ -2634,7 +2662,12 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 #pragma region BLOAT
 					{
-						if (!culledObjects.empty()) {
+						if (!culledObjects.empty()) 
+						{
+
+							ShadowCB cb;
+							cb.mVP = l->shadowCam_spotLight[0].getVP();
+							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
 
 							for (Cullable* object : culledObjects) {
 								culledRenderer[((Object*)object)->mesh].insert((Object*)object);
@@ -2650,12 +2683,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
 									else
 										GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
-
-									//MAPPED_SUBRESOURCE mappedResource;
-									ShadowCB cb;
-									cb.mVP = l->shadowCam_spotLight[0].getVP();
-									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
-
 
 									int k = 0;
 									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
@@ -2726,7 +2753,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					l->shadowMap_index = shadowCounter_Cube;
 					shadowCounter_Cube += 1;
 
-					//Light::shadowMaps_pointLight[i].Set(threadID);
 					vp.TopLeftX = 0;
 					vp.TopLeftY = 0;
 					vp.Width = (float)SHADOWRES_CUBE;
@@ -2736,7 +2762,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					GetDevice()->BindViewports(1, &vp, threadID);
 					GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
 
-					//MAPPED_SUBRESOURCE mappedResource;
 					PointLightCB lcb;
 					lcb.enerdis = l->enerDis;
 					lcb.pos = l->translation;
@@ -2820,151 +2845,16 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 				GetDevice()->BindGS(nullptr, threadID);
 			}
+
+			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+			GetDevice()->BindResourcePS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+			GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 		}
 
 		GetDevice()->EventEnd(threadID);
 	}
-
-	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	GetDevice()->BindResourcePS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
-//void wiRenderer::SetDirectionalLightShadowProps(int resolution, int softShadowQuality)
-//{
-//	SHADOWMAPRES = resolution;
-//	SOFTSHADOW = softShadowQuality;
-//
-//	SAFE_DELETE(Light::dirLightShadowMapArray);
-//	Light::dirLightShadowMapArray = new Texture2D;
-//	Light::dirLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
-//
-//	Texture2DDesc desc;
-//	ZeroMemory(&desc, sizeof(desc));
-//	desc.Width = SHADOWMAPRES;
-//	desc.Height = SHADOWMAPRES;
-//	desc.MipLevels = 1;
-//	desc.ArraySize = 3;
-//	desc.Format = FORMAT_R32_TYPELESS;
-//	desc.SampleDesc.Count = 1;
-//	desc.SampleDesc.Quality = 0;
-//	desc.Usage = USAGE_DEFAULT;
-//	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-//	desc.CPUAccessFlags = 0;
-//	desc.MiscFlags = 0;
-//	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::dirLightShadowMapArray);
-//}
-//void wiRenderer::SetPointLightShadowProps(int shadowMapCount, int resolution)
-//{
-//	POINTLIGHTSHADOW = shadowMapCount;
-//	POINTLIGHTSHADOWRES = resolution;
-//	//Light::shadowMaps_pointLight.clear();
-//	//Light::shadowMaps_pointLight.resize(shadowMapCount);
-//	//for (int i = 0; i < shadowMapCount; ++i)
-//	//{
-//	//	Light::shadowMaps_pointLight[i].InitializeCube(POINTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, true);
-//	//}
-//
-//	SAFE_DELETE(Light::pointLightShadowMapArray);
-//	Light::pointLightShadowMapArray = new Texture2D;
-//	Light::pointLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
-//	Light::pointLightShadowMapArray->RequestIndepententRenderTargetCubemapFaces(false);
-//
-//	Texture2DDesc desc;
-//	ZeroMemory(&desc, sizeof(desc));
-//	desc.Width = POINTLIGHTSHADOWRES;
-//	desc.Height = POINTLIGHTSHADOWRES;
-//	desc.MipLevels = 1;
-//	desc.ArraySize = 6 * POINTLIGHTSHADOW;
-//	desc.Format = FORMAT_R32_TYPELESS;
-//	desc.SampleDesc.Count = 1;
-//	desc.SampleDesc.Quality = 0;
-//	desc.Usage = USAGE_DEFAULT;
-//	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-//	desc.CPUAccessFlags = 0;
-//	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-//	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::pointLightShadowMapArray);
-//}
-//void wiRenderer::SetSpotLightShadowProps(int shadowMapCount, int resolution)
-//{
-//	SPOTLIGHTSHADOW = shadowMapCount;
-//	SPOTLIGHTSHADOWRES = resolution;
-//	//Light::shadowMaps_spotLight.clear();
-//	//Light::shadowMaps_spotLight.resize(shadowMapCount);
-//	//for (int i = 0; i < shadowMapCount; ++i)
-//	//{
-//	//	Light::shadowMaps_spotLight[i].Initialize(SPOTLIGHTSHADOWRES, SPOTLIGHTSHADOWRES, true, FORMAT_R32_FLOAT, 1, 1, true);
-//	//}
-//
-//	SAFE_DELETE(Light::spotLightShadowMapArray);
-//	Light::spotLightShadowMapArray = new Texture2D;
-//	Light::spotLightShadowMapArray->RequestIndepententRenderTargetArraySlices(true);
-//
-//	Texture2DDesc desc;
-//	ZeroMemory(&desc, sizeof(desc));
-//	desc.Width = SPOTLIGHTSHADOWRES;
-//	desc.Height = SPOTLIGHTSHADOWRES;
-//	desc.MipLevels = 1;
-//	desc.ArraySize = SPOTLIGHTSHADOW;
-//	desc.Format = FORMAT_R32_TYPELESS;
-//	desc.SampleDesc.Count = 1;
-//	desc.SampleDesc.Quality = 0;
-//	desc.Usage = USAGE_DEFAULT;
-//	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-//	desc.CPUAccessFlags = 0;
-//	desc.MiscFlags = 0;
-//	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::spotLightShadowMapArray);
-//}
-void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuality)
-{
-	SHADOWRES_2D = resolution;
-	SHADOWCOUNT_2D = count;
-	SOFTSHADOWQUALITY_2D = softShadowQuality;
-	
-	SAFE_DELETE(Light::shadowMapArray_2D);
-	Light::shadowMapArray_2D = new Texture2D;
-	Light::shadowMapArray_2D->RequestIndepententRenderTargetArraySlices(true);
-	
-	Texture2DDesc desc;
-	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = SHADOWRES_2D;
-	desc.Height = SHADOWRES_2D;
-	desc.MipLevels = 1;
-	desc.ArraySize = SHADOWCOUNT_2D;
-	desc.Format = FORMAT_R32_TYPELESS;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = USAGE_DEFAULT;
-	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_2D);
-}
-void wiRenderer::SetShadowPropsCube(int resolution, int count)
-{
-	SHADOWRES_CUBE = resolution;
-	SHADOWCOUNT_CUBE = count;
-	
-	SAFE_DELETE(Light::shadowMapArray_Cube);
-	Light::shadowMapArray_Cube = new Texture2D;
-	Light::shadowMapArray_Cube->RequestIndepententRenderTargetArraySlices(true);
-	Light::shadowMapArray_Cube->RequestIndepententRenderTargetCubemapFaces(false);
-	
-	Texture2DDesc desc;
-	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = SHADOWRES_CUBE;
-	desc.Height = SHADOWRES_CUBE;
-	desc.MipLevels = 1;
-	desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
-	desc.Format = FORMAT_R32_TYPELESS;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = USAGE_DEFAULT;
-	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_Cube);
-}
 
 PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 {

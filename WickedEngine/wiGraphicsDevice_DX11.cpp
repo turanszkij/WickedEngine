@@ -1647,9 +1647,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
 		ZeroMemory(&uav_desc, sizeof(uav_desc));
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-		uav_desc.Buffer.FirstElement = 0;
-		uav_desc.Format = desc.Format;
-		uav_desc.Buffer.NumElements = desc.Width * desc.Height;
+		uav_desc.Texture2D.MipSlice = 0;
 
 		hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->unorderedAccessView_DX11);
 
@@ -1709,18 +1707,34 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 			}
 			else
 			{
-				shaderResourceViewDesc.ViewDimension = (multisampled ? D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY : D3D11_SRV_DIMENSION_TEXTURE2DARRAY);
-				shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
-				shaderResourceViewDesc.Texture2DArray.ArraySize = arraySize;
-				shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0; //from most detailed...
-				shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
+				if (multisampled)
+				{
+					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
+					shaderResourceViewDesc.Texture2DMSArray.FirstArraySlice = 0;
+					shaderResourceViewDesc.Texture2DMSArray.ArraySize = arraySize;
+				}
+				else
+				{
+					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+					shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
+					shaderResourceViewDesc.Texture2DArray.ArraySize = arraySize;
+					shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0; //from most detailed...
+					shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
+				}
 			}
 		}
 		else
 		{
-			shaderResourceViewDesc.ViewDimension = (multisampled ? D3D11_SRV_DIMENSION_TEXTURE2DMS : D3D11_SRV_DIMENSION_TEXTURE2D);
-			shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
-			shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
+			if (multisampled)
+			{
+				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+			}
+			else
+			{
+				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+				shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
+				shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
+			}
 		}
 
 		hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
@@ -1797,10 +1811,19 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 			{
 				for (UINT i = 0; i < arraySize; ++i)
 				{
-					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY : D3D11_RTV_DIMENSION_TEXTURE2DARRAY);
-					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
-					renderTargetViewDesc.Texture2DArray.ArraySize = 1;
-					renderTargetViewDesc.Texture2DArray.MipSlice = 0;
+					if (multisampled)
+					{
+						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
+						renderTargetViewDesc.Texture2DMSArray.FirstArraySlice = i;
+						renderTargetViewDesc.Texture2DMSArray.ArraySize = 1;
+					}
+					else
+					{
+						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
+						renderTargetViewDesc.Texture2DArray.ArraySize = 1;
+						renderTargetViewDesc.Texture2DArray.MipSlice = 0;
+					}
 
 					pTexture->renderTargetViews_DX11.push_back(nullptr);
 					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
@@ -1810,15 +1833,31 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 			{
 				if (arraySize > 1)
 				{
-					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY : D3D11_RTV_DIMENSION_TEXTURE2DARRAY);
-					renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
-					renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
-					renderTargetViewDesc.Texture2DArray.MipSlice = 0;
+					if (multisampled)
+					{
+						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
+						renderTargetViewDesc.Texture2DMSArray.FirstArraySlice = 0;
+						renderTargetViewDesc.Texture2DMSArray.ArraySize = arraySize;
+					}
+					else
+					{
+						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+						renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
+						renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
+						renderTargetViewDesc.Texture2DArray.MipSlice = 0;
+					}
 				}
 				else
 				{
-					renderTargetViewDesc.ViewDimension = (multisampled ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D);
-					renderTargetViewDesc.Texture2D.MipSlice = 0;
+					if (multisampled)
+					{
+						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
+					}
+					else
+					{
+						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+						renderTargetViewDesc.Texture2D.MipSlice = 0;
+					}
 				}
 
 				pTexture->renderTargetViews_DX11.push_back(nullptr);
@@ -1912,10 +1951,19 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 			{
 				for (UINT i = 0; i < arraySize; ++i)
 				{
-					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY : D3D11_DSV_DIMENSION_TEXTURE2DARRAY);
-					depthStencilViewDesc.Texture2DArray.MipSlice = 0;
-					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
-					depthStencilViewDesc.Texture2DArray.ArraySize = 1;
+					if (multisampled)
+					{
+						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
+						depthStencilViewDesc.Texture2DMSArray.FirstArraySlice = i;
+						depthStencilViewDesc.Texture2DMSArray.ArraySize = 1;
+					}
+					else
+					{
+						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+						depthStencilViewDesc.Texture2DArray.MipSlice = 0;
+						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
+						depthStencilViewDesc.Texture2DArray.ArraySize = 1;
+					}
 
 					pTexture->depthStencilViews_DX11.push_back(nullptr);
 					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
@@ -1925,15 +1973,31 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 			{
 				if (arraySize > 1)
 				{
-					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY : D3D11_DSV_DIMENSION_TEXTURE2DARRAY);
-					depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
-					depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
-					depthStencilViewDesc.Texture2DArray.MipSlice = 0;
+					if (multisampled)
+					{
+						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
+						depthStencilViewDesc.Texture2DMSArray.FirstArraySlice = 0;
+						depthStencilViewDesc.Texture2DMSArray.ArraySize = arraySize;
+					}
+					else
+					{
+						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+						depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
+						depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
+						depthStencilViewDesc.Texture2DArray.MipSlice = 0;
+					}
 				}
 				else
 				{
-					depthStencilViewDesc.ViewDimension = (multisampled ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D);
-					depthStencilViewDesc.Texture2D.MipSlice = 0;
+					if (multisampled)
+					{
+						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+					}
+					else
+					{
+						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+						depthStencilViewDesc.Texture2D.MipSlice = 0;
+					}
 				}
 
 				pTexture->depthStencilViews_DX11.push_back(nullptr);

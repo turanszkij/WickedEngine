@@ -305,7 +305,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 					[branch]
 					if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 					{
-						sh *= shadowCascade1(ShPos[0], ShTex.xy, light.shadowBias, 0);
+						sh *= shadowCascade1(ShPos, ShTex.xy, light.shadowBias, light.shadowMap_index);
 					}
 				}
 				result.diffuse *= sh;

@@ -293,7 +293,7 @@ public:
 		XMFLOAT3 directionWS;
 		UINT type;
 		float shadowBias;
-		UINT shadowMap_index;
+		int shadowMap_index;
 		float coneAngle;
 		float coneAngleCos;
 		XMMATRIX shadowMatrix[3];
@@ -419,7 +419,6 @@ public:
 	static void DrawSun(GRAPHICSTHREAD threadID);
 	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID
 		, bool isReflection, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass);
-	static void ClearShadowMaps(GRAPHICSTHREAD threadID);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);
 	static void DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refracRes, wiGraphicsTypes::Texture2D* refRes
 		, wiGraphicsTypes::Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass = false);

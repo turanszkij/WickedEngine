@@ -233,7 +233,6 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	wiRenderer::ClearShadowMaps(threadID);
 	wiRenderer::DrawForShadowMap(threadID);
 }
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
