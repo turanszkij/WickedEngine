@@ -390,6 +390,16 @@ XMFLOAT4 wiRenderer::GetSunColor()
 	}
 	return XMFLOAT4(1,1,1,1);
 }
+int wiRenderer::GetSunArrayIndex()
+{
+	for (Model* model : GetScene().models)
+	{
+		for (Light* l : model->lights)
+			if (l->type == Light::DIRECTIONAL)
+				return l->lightArray_index;
+	}
+	return -1;
+}
 float wiRenderer::GetGameSpeed(){return GameSpeed*overrideGameSpeed;}
 
 void wiRenderer::UpdateSpheres()
@@ -1618,6 +1628,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(), ARRAYSIZE(lightArray[lightCounter].shadowMatrix)); ++shmap) {
 					lightArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
 				}
+				lightArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 			}
 			break;
 			case Light::SPOT:
@@ -1630,6 +1641,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				{
 					lightArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
 				}
+				lightArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+			}
+			break;
+			case Light::POINT:
+			{
+				lightArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
 			}
 			break;
 			default:
@@ -3846,8 +3863,6 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	cb.mHorizon = world.horizon;
 	cb.mZenith = world.zenith;
 	cb.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
-	XMStoreFloat4(&cb.mSun, GetSunPosition());
-	cb.mSunColor = GetSunColor();
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &cb, threadID);
 }
@@ -3859,7 +3874,8 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindTime = wind.time;
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;
-	cb.mWindDirection = wind.direction;
+	cb.mWindDirection = wind.direction; 
+	cb.mSunLightArrayIndex = GetSunArrayIndex();
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }

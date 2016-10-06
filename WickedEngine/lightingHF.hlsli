@@ -14,7 +14,7 @@ struct LightArrayType
 	float energy;
 	// --
 	float3 directionVS;
-	float _pad0;
+	float shadowKernel;
 	// --
 	float3 directionWS;
 	uint type;
@@ -31,20 +31,25 @@ TEXTURE2D(LightGrid, uint2, TEXSLOT_LIGHTGRID);
 STRUCTUREDBUFFER(LightIndexList, uint, SBSLOT_LIGHTINDEXLIST);
 STRUCTUREDBUFFER(LightArray, LightArrayType, SBSLOT_LIGHTARRAY);
 
+inline float3 GetSunColor()
+{
+	return LightArray[g_xFrame_SunLightArrayIndex].color.rgb;
+}
+inline float3 GetSunDirection()
+{
+	return LightArray[g_xFrame_SunLightArrayIndex].directionWS;
+}
+
 struct LightingResult
 {
 	float3 diffuse;
 	float3 specular;
 };
 
-inline float offset_lookup(float2 loc, float2 offset, float scale, float biasedDistance, float slice)
+inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
-	return texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(loc + offset / scale, slice), biasedDistance).r;
-}
-inline float shadowCascade(float4 shadowPos, float2 ShTex, float bias, float slice) {
-	float realDistance = shadowPos.z / shadowPos.w - bias;
+	float realDistance = shadowPos.z - bias;
 	float sum = 0;
-	float scale = 1.0f;
 	float retVal = 1; 
 #ifdef DIRECTIONALLIGHT_SOFT
 	float samples = 0.0f;
@@ -53,13 +58,13 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, float bias, float sli
 	{
 		for (float x = -range; x <= range; x += 1.0f)
 		{
-			sum += offset_lookup(ShTex, float2(x, y), scale, realDistance, slice);
+			sum += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex + float2(x, y) * shadowKernel, slice), realDistance).r;
 			samples++;
 		}
 	}
 	retVal *= sum / samples;
 #else
-	retVal *= offset_lookup(ShTex, float2(0, 0), scale, realDistance, slice);
+	retVal *= texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex, slice), realDistance).r;
 #endif
 	return retVal;
 }
@@ -83,15 +88,18 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 		ShPos[0] = mul(float4(P, 1), light.shadowMat[0]);
 		ShPos[1] = mul(float4(P, 1), light.shadowMat[1]);
 		ShPos[2] = mul(float4(P, 1), light.shadowMat[2]);
+		ShPos[0].xyz /= ShPos[0].w;
+		ShPos[1].xyz /= ShPos[1].w;
+		ShPos[2].xyz /= ShPos[2].w;
 		float3 ShTex[3];
-		ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / ShPos[0].w / 2.0f + 0.5f;
-		ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / ShPos[1].w / 2.0f + 0.5f;
-		ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / ShPos[2].w / 2.0f + 0.5f;
+		ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
+		ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
+		ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
 		[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
 		{
 			const float shadows[] = {
-				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowBias,light.shadowMap_index + 1),
-				shadowCascade(ShPos[2],ShTex[2].xy, light.shadowBias,light.shadowMap_index + 2)
+				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 1),
+				shadowCascade(ShPos[2],ShTex[2].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 2)
 			};
 			const float2 lerpVal = abs(ShTex[2].xy * 2 - 1);
 			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
@@ -99,15 +107,15 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 		else[branch]if ((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
 		{
 			const float shadows[] = {
-				shadowCascade(ShPos[0],ShTex[0].xy, light.shadowBias,light.shadowMap_index + 0),
-				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowBias,light.shadowMap_index + 1),
+				shadowCascade(ShPos[0],ShTex[0].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 0),
+				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 1),
 			};
 			const float2 lerpVal = abs(ShTex[1].xy * 2 - 1);
 			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
 		}
 		else[branch]if ((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
 		{
-			sh *= shadowCascade(ShPos[0], ShTex[0].xy, light.shadowBias, light.shadowMap_index + 0);
+			sh *= shadowCascade(ShPos[0], ShTex[0].xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
 		}
 	}
 
@@ -172,11 +180,12 @@ inline LightingResult SpotLight(in LightArrayType light, in float3 L, in float d
 		if (light.shadowMap_index >= 0)
 		{
 			float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
-			float2 ShTex = ShPos.xy / ShPos.w * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+			ShPos.xyz /= ShPos.w;
+			float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 			[branch]
 			if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 			{
-				sh *= shadowCascade(ShPos, ShTex.xy, light.shadowBias, light.shadowMap_index);
+				sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index);
 			}
 		}
 		result.diffuse *= sh;

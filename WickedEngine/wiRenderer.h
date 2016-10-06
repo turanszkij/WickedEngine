@@ -90,8 +90,6 @@ public:
 	// Persistent buffers:
 	GFX_STRUCT WorldCB
 	{
-		XMFLOAT4 mSun;
-		XMFLOAT4 mSunColor;
 		XMFLOAT3 mHorizon;				float pad0;
 		XMFLOAT3 mZenith;				float pad1;
 		XMFLOAT3 mAmbient;				float pad2;
@@ -110,7 +108,7 @@ public:
 		float mWindTime;
 		float mWindWaveSize;
 		float mWindRandomness;
-		float pad1;
+		int mSunLightArrayIndex;
 		
 		CB_SETBINDSLOT(CBSLOT_RENDERER_FRAME)
 
@@ -256,7 +254,7 @@ public:
 		XMFLOAT3 posWS;
 		float energy;
 		XMFLOAT3 directionVS;
-		float __pad0;
+		float shadowKernel;
 		XMFLOAT3 directionWS;
 		UINT type;
 		float shadowBias;
@@ -412,6 +410,7 @@ public:
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();
+	static int GetSunArrayIndex();
 	static int getVertexCount(){return vertexCount;}
 	static void resetVertexCount(){vertexCount=0;}
 	static int getVisibleObjectCount(){return visibleCount;}

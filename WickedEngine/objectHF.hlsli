@@ -108,7 +108,7 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
-	LightingResult result = DirectionalLight(LightArray[0], N, V, P, roughness, f0);
+	LightingResult result = DirectionalLight(LightArray[g_xFrame_SunLightArrayIndex], N, V, P, roughness, f0);
 	diffuse = result.diffuse;
 	specular = result.specular;
 }

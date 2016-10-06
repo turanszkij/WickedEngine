@@ -42,8 +42,6 @@ SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		)
 
 CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 {
-	float4		g_xWorld_SunDir;
-	float4		g_xWorld_SunColor;
 	float3		g_xWorld_Horizon;				float xPadding0_WorldCB;
 	float3		g_xWorld_Zenith;				float xPadding1_WorldCB;
 	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
@@ -58,7 +56,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindTime;
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
-	float		xPadding1_FrameCB;
+	int			g_xFrame_SunLightArrayIndex;
 };
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 {
@@ -117,8 +115,6 @@ static const float		g_GammaValue = 2.2;
 #define DEGAMMA(x)		pow(abs(x),g_GammaValue)
 #define GAMMA(x)		pow(abs(x),1.0/g_GammaValue)
 
-inline float3 GetSunDirection() { return g_xWorld_SunDir.xyz; }
-inline float3 GetSunColor() { return GAMMA(g_xWorld_SunColor.rgb); }
 inline float3 GetHorizonColor() { return GAMMA(g_xWorld_Horizon.rgb); }
 inline float3 GetZenithColor() { return GAMMA(g_xWorld_Zenith.rgb); }
 inline float3 GetAmbientColor() { return GAMMA(g_xWorld_Ambient.rgb); }
