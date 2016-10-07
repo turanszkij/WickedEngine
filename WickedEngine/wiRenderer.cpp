@@ -1449,15 +1449,50 @@ void wiRenderer::UpdatePerFrameData()
 					culling.culledRenderer[((Object*)object)->mesh].insert((Object*)object);
 				}
 			}
-			if (spTree_lights != nullptr)
+			if (camera==getCamera() && spTree_lights != nullptr) // only the main camera can render lights and write light array properties (yet)!
 			{
 				Frustum frustum;
 				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
-				wiSPTree::getVisible(spTree_lights->root, frustum, culling.culledLights);
-				UINT i = 0;
-				for (auto& l : culling.culledLights)
+				wiSPTree::getVisible(spTree_lights->root, frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
+				//wiSPTree::getAll(spTree_lights->root, culling.culledLights);
+				int i = 0;
+				int shadowCounter_2D = 0;
+				int shadowCounter_Cube = 0;
+				for (auto& c : culling.culledLights)
 				{
-					((Light*)l)->lightArray_index = i;
+					Light* l = (Light*)c;
+					l->lightArray_index = i;
+
+					if (l->shadow)
+					{
+						switch (l->type)
+						{
+						case Light::DIRECTIONAL:
+							if (shadowCounter_2D < SHADOWCOUNT_2D)
+							{
+								l->shadowMap_index = shadowCounter_2D;
+								shadowCounter_2D += 3;
+							}
+							break;
+						case Light::SPOT:
+							if (shadowCounter_2D < SHADOWCOUNT_2D)
+							{
+								l->shadowMap_index = shadowCounter_2D;
+								shadowCounter_2D++;
+							}
+							break;
+						case Light::POINT:
+							if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
+							{
+								l->shadowMap_index = shadowCounter_Cube;
+								shadowCounter_Cube++;
+							}
+							break;
+						default:
+							break;
+						}
+					}
+
 					i++;
 				}
 			}
@@ -2242,10 +2277,10 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID); // just full screen triangle so we can use it
 		GetDevice()->BindPS(pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], threadID);
-		GetDevice()->Draw(3, threadID);
+		GetDevice()->Draw(3, threadID); // full screen triangle
 	}
 
-	for(int type=0;type<3;++type){
+	for(int type=0;type<Light::LIGHTTYPE_COUNT;++type){
 
 			
 		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],threadID);
@@ -2283,79 +2318,24 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			
 			if(type==0) //dir
 			{
-				//DirectionalLightCB lcb;
-				//lcb.direction=XMVector3Normalize(
-				//	-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
-				//	);
-				//lcb.col=XMFLOAT4(l->color.x*l->enerDis.x,l->color.y*l->enerDis.x,l->color.z*l->enerDis.x,1);
-				//lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
-				////for (unsigned int shmap = 0; shmap < l->shadowMaps_dirLight.size(); ++shmap){
-				////	lcb.mShM[shmap]=l->shadowCam_dirLight[shmap].getVP();
-				////	if(l->shadowMaps_dirLight[shmap].depth)
-				////		GetDevice()->BindResourcePS(l->shadowMaps_dirLight[shmap].depth->GetTexture(),TEXSLOT_SHADOW0+shmap,threadID);
-				////}
-				//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DIRLIGHT],&lcb,threadID);
-
 				MiscCB miscCb;
 				miscCb.mInt[0] = l->lightArray_index;
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-				GetDevice()->Draw(3, threadID);
+				GetDevice()->Draw(3, threadID); // full screen triangle
 			}
 			else if(type==1) //point
 			{
-				//PointLightCB lcb;
-				//lcb.pos=l->translation;
-				//lcb.col=l->color;
-				//lcb.enerdis=l->enerDis;
-				//lcb.enerdis.w = 0.f;
-
-				////if (l->shadow && l->shadowMap_index>=0)
-				////{
-				////	lcb.enerdis.w = 1.f;
-				////	if(Light::shadowMaps_pointLight[l->shadowMap_index].depth)
-				////		GetDevice()->BindResourcePS(Light::shadowMaps_pointLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW_CUBE, threadID);
-				////}
-				//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_POINTLIGHT], &lcb, threadID);
-
 				MiscCB miscCb;
 				miscCb.mInt[0] = l->lightArray_index;
 				float sca = l->enerDis.y + 1;
 				miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca,sca,sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z));
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-				GetDevice()->Draw(240, threadID);
+				GetDevice()->Draw(240, threadID); // icosphere
 			}
 			else if(type==2) //spot
 			{
-				//SpotLightCB lcb;
-				//const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
-				//XMMATRIX world,rot;
-				//world = XMMatrixTranspose(
-				//		XMMatrixScaling(coneS*l->enerDis.y,l->enerDis.y,coneS*l->enerDis.y)*
-				//		XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
-				//		XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
-				//		);
-				//rot=XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) );
-				//lcb.direction=XMVector3Normalize(
-				//	-XMVector3Transform( XMVectorSet(0,-1,0,1), rot )
-				//	);
-				//lcb.world=world;
-				//lcb.mBiasResSoftshadow=XMFLOAT4(l->shadowBias,(float)SHADOWRES_2D,(float)SOFTSHADOWQUALITY_2D,0);
-				//lcb.mShM = XMMatrixIdentity();
-				//lcb.col=l->color;
-				//lcb.enerdis=l->enerDis;
-				//lcb.enerdis.z=(float)cos(l->enerDis.z/2.0);
-
-				////if (l->shadow && l->shadowMap_index>=0)
-				////{
-				////	lcb.mShM = l->shadowCam_spotLight[0].getVP();
-				////	if(Light::shadowMaps_spotLight[l->shadowMap_index].depth)
-				////		GetDevice()->BindResourcePS(Light::shadowMaps_spotLight[l->shadowMap_index].depth->GetTexture(), TEXSLOT_SHADOW0, threadID);
-				////}
-				//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SPOTLIGHT], &lcb, threadID);
-
-
 				MiscCB miscCb;
 				miscCb.mInt[0] = l->lightArray_index;
 				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
@@ -2366,7 +2346,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 				);
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-				GetDevice()->Draw(192, threadID);
+				GetDevice()->Draw(192, threadID); // cone
 			}
 		}
 
@@ -2448,9 +2428,9 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT],&lcb,threadID);
 
 					if(type<=1)
-						GetDevice()->Draw(108,threadID);
+						GetDevice()->Draw(108,threadID); // circle
 					else
-						GetDevice()->Draw(192,threadID);
+						GetDevice()->Draw(192,threadID); // cone
 				}
 			}
 
@@ -2554,7 +2534,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 		ViewPort vp;
 
-
 		if (!culledLights.empty())
 		{
 
@@ -2577,78 +2556,80 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 			GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
 
-			GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
-
-			GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
-
-
-			set<Light*, Cullable> orderedSpotLights;
-			set<Light*, Cullable> orderedPointLights;
-			set<Light*, Cullable> dirLights;
-			for (Cullable* c : culledLights) {
-				Light* l = (Light*)c;
-				if (l->shadow)
-				{
-					l->shadowMap_index = -1;
-					l->lastSquaredDistMulThousand = (long)(wiMath::DistanceSquared(l->translation, cam->translation) * 1000);
-					switch (l->type)
-					{
-					case Light::SPOT:
-						if(!l->shadowCam_spotLight.empty())
-							orderedSpotLights.insert(l);
-						break;
-					case Light::POINT:
-						if (!l->shadowCam_pointLight.empty())
-							orderedPointLights.insert(l);
-						break;
-					default:
-						if (!l->shadowCam_dirLight.empty())
-							dirLights.insert(l);
-						break;
-					}
-				}
-			}
-
 			int shadowCounter_2D = 0;
 			int shadowCounter_Cube = 0;
-
-			//DIRLIGHTS
-			if (!dirLights.empty())
+			for (int type = 0; type < Light::LIGHTTYPE_COUNT; ++type)
 			{
-				for (Light* l : dirLights)
+				switch (type)
 				{
-					if (shadowCounter_2D >= SHADOWCOUNT_2D)
-						break;
+				case Light::DIRECTIONAL:
+				case Light::SPOT:
+				{
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)SHADOWRES_2D;
+					vp.Height = (float)SHADOWRES_2D;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					GetDevice()->BindViewports(1, &vp, threadID);
 
-					l->shadowMap_index = shadowCounter_2D;
-					shadowCounter_2D += 3;
+					GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
+					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
+					GetDevice()->BindGS(nullptr, threadID);
+				}
+				break;
+				case Light::POINT:
+				{
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)SHADOWRES_CUBE;
+					vp.Height = (float)SHADOWRES_CUBE;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					GetDevice()->BindViewports(1, &vp, threadID);
 
-					for (int index = 0; index < 3; ++index)
+					GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
+					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
+					GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
+					GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+				}
+				break;
+				default:
+					break;
+				}
+
+				for (Cullable* c : culledLights)
+				{
+					Light* l = (Light*)c;
+					if (l->type != type || !l->shadow)
 					{
-						CulledList culledObjects;
-						CulledCollection culledRenderer;
+						continue;
+					}
 
-						vp.TopLeftX = 0;
-						vp.TopLeftY = 0;
-						vp.Width = (float)SHADOWRES_2D;
-						vp.Height = (float)SHADOWRES_2D;
-						vp.MinDepth = 0.0f;
-						vp.MaxDepth = 1.0f;
-						GetDevice()->BindViewports(1, &vp, threadID);
-						GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
+					if(type==Light::DIRECTIONAL)
+					{
+						if (shadowCounter_2D >= SHADOWCOUNT_2D)
+							break; 
+						shadowCounter_2D += 3;
 
-						const float siz = l->shadowCam_dirLight[index].size * 0.5f;
-						const float f = l->shadowCam_dirLight[index].farplane;
-						AABB boundingbox;
-						boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
-						if (spTree)
-							wiSPTree::getVisible(spTree->root, boundingbox.get(
-								XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))
+						for (int index = 0; index < 3; ++index)
+						{
+							CulledList culledObjects;
+							CulledCollection culledRenderer;
+
+							GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
+
+							const float siz = l->shadowCam_dirLight[index].size * 0.5f;
+							const float f = l->shadowCam_dirLight[index].farplane;
+							AABB boundingbox;
+							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
+							if (spTree)
+								wiSPTree::getVisible(spTree->root, boundingbox.get(
+									XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))
 								), culledObjects);
 
 #pragma region BLOAT
-						{
-							if (!culledObjects.empty()) 
+							if (!culledObjects.empty())
 							{
 
 								ShadowCB cb;
@@ -2690,7 +2671,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 										GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
 
-										for(MeshSubset& subset : mesh->subsets)
+										for (MeshSubset& subset : mesh->subsets)
 										{
 											if (subset.subsetIndices.empty())
 											{
@@ -2714,45 +2695,27 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								}
 
 							}
-						}
 #pragma endregion
+						}
 					}
-				}
-			}
+					else if(type == Light::SPOT)
+					{
+						if (shadowCounter_2D >= SHADOWCOUNT_2D)
+							break;
+						shadowCounter_2D++;
 
+						CulledList culledObjects;
+						CulledCollection culledRenderer;
 
-			//SPOTLIGHTS
-			if (!orderedSpotLights.empty())
-			{
-				//int i = 0;
-				for (Light* l : orderedSpotLights)
-				{
-					if (shadowCounter_2D >= SHADOWCOUNT_2D)
-						break;
+						GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
 
-					l->shadowMap_index = shadowCounter_2D;
-					shadowCounter_2D += 1;
-
-					CulledList culledObjects;
-					CulledCollection culledRenderer;
-
-					vp.TopLeftX = 0;
-					vp.TopLeftY = 0;
-					vp.Width = (float)SHADOWRES_2D;
-					vp.Height = (float)SHADOWRES_2D;
-					vp.MinDepth = 0.0f;
-					vp.MaxDepth = 1.0f;
-					GetDevice()->BindViewports(1, &vp, threadID);
-					GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
-
-					Frustum frustum;
-					frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
-					if (spTree)
-						wiSPTree::getVisible(spTree->root, frustum, culledObjects);
+						Frustum frustum;
+						frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
+						if (spTree)
+							wiSPTree::getVisible(spTree->root, frustum, culledObjects);
 
 #pragma region BLOAT
-					{
-						if (!culledObjects.empty()) 
+						if (!culledObjects.empty())
 						{
 
 							ShadowCB cb;
@@ -2792,7 +2755,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
 									GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
 
-									for (MeshSubset& subset : mesh->subsets) 
+									for (MeshSubset& subset : mesh->subsets)
 									{
 
 										if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
@@ -2814,126 +2777,102 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									}
 								}
 							}
-
 						}
+#pragma endregion
 					}
+					else if(type == Light::POINT)
+					{
+						if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
+							break;
+						shadowCounter_Cube++;
+
+						GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
+
+						MiscCB miscCb;
+						miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, l->enerDis.y);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+						CubeMapRenderCB cb;
+						for (unsigned int shcam = 0; shcam < l->shadowCam_pointLight.size(); ++shcam)
+							cb.mViewProjection[shcam] = l->shadowCam_pointLight[shcam].getVP();
+
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+
+						CulledList culledObjects;
+						CulledCollection culledRenderer;
+
+						if (spTree)
+							wiSPTree::getVisible(spTree->root, l->bounds, culledObjects);
+
+#pragma region BLOAT
+						for (Cullable* object : culledObjects)
+							culledRenderer[((Object*)object)->mesh].insert((Object*)object);
+
+						for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
+						{
+							Mesh* mesh = iter->first;
+							CulledObjectList& visibleInstances = iter->second;
+
+							if (!mesh->isBillboarded && !visibleInstances.empty()) {
+
+								if (!mesh->doubleSided)
+									GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+								else
+									GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
+
+
+
+								int k = 0;
+								for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
+									if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
+										if (mesh->softBody || (*viter)->isArmatureDeformed())
+											Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
+										else
+											Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
+										++k;
+									}
+								}
+								if (k < 1)
+									continue;
+
+								Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
+
+								GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+								GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+
+
+								for (MeshSubset& subset : mesh->subsets)
+								{
+									if (subset.subsetIndices.empty())
+									{
+										continue;
+									}
+									if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
+									{
+										GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+
+
+										GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+
+										MaterialCB mcb;
+										mcb.Create(*subset.material);
+										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+
+										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+
+										GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
+									}
+								}
+							}
+							visibleInstances.clear();
+						}
 #pragma endregion
 
-
-					//i++;
-				}
-			}
-
-			//POINTLIGHTS
-			if(!orderedPointLights.empty())
-			{
-				GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
-				GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
-				GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
-
-				GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
-
-				//int i = 0;
-				for (Light* l : orderedPointLights)
-				{
-					if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
-						break; 
-
-					l->shadowMap_index = shadowCounter_Cube;
-					shadowCounter_Cube += 1;
-
-					vp.TopLeftX = 0;
-					vp.TopLeftY = 0;
-					vp.Width = (float)SHADOWRES_CUBE;
-					vp.Height = (float)SHADOWRES_CUBE;
-					vp.MinDepth = 0.0f;
-					vp.MaxDepth = 1.0f;
-					GetDevice()->BindViewports(1, &vp, threadID);
-					GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
-
-					MiscCB miscCb;
-					miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, l->enerDis.y);
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-
-					CubeMapRenderCB cb;
-					for (unsigned int shcam = 0; shcam < l->shadowCam_pointLight.size(); ++shcam)
-						cb.mViewProjection[shcam] = l->shadowCam_pointLight[shcam].getVP();
-
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-
-					CulledList culledObjects;
-					CulledCollection culledRenderer;
-
-					if (spTree)
-						wiSPTree::getVisible(spTree->root, l->bounds, culledObjects);
-
-					for (Cullable* object : culledObjects)
-						culledRenderer[((Object*)object)->mesh].insert((Object*)object);
-
-					for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
-						Mesh* mesh = iter->first;
-						CulledObjectList& visibleInstances = iter->second;
-
-						if (!mesh->isBillboarded && !visibleInstances.empty()) {
-
-							if (!mesh->doubleSided)
-								GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
-							else
-								GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
-
-
-
-							int k = 0;
-							for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-								if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-									if (mesh->softBody || (*viter)->isArmatureDeformed())
-										Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
-									else
-										Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
-									++k;
-								}
-							}
-							if (k < 1)
-								continue;
-
-							Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
-
-							GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
-							GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
-
-
-							for(MeshSubset& subset : mesh->subsets)
-							{
-								if (subset.subsetIndices.empty())
-								{
-									continue;
-								}
-								if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
-								{
-									GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
-
-
-									GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-									MaterialCB mcb;
-									mcb.Create(*subset.material);
-									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-									GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
-								}
-							}
-						}
-						visibleInstances.clear();
 					}
-
-					//i++;
 				}
-
-				GetDevice()->BindGS(nullptr, threadID);
 			}
 
+			GetDevice()->BindGS(nullptr, threadID);
 			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 			GetDevice()->BindResourcePS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 			GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);

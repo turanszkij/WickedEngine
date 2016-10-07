@@ -790,6 +790,7 @@ struct Light : public Cullable , public Transform
 		DIRECTIONAL,
 		POINT,
 		SPOT,
+		LIGHTTYPE_COUNT,
 	};
 	LightType type;
 
