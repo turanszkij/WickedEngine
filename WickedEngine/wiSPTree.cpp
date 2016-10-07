@@ -111,6 +111,8 @@ void wiSPTree::Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortTy
 	default:
 		break;
 	}
+
+	// unique should be AFTER the sort!!
 	objects.unique();
 }
 
