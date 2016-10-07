@@ -15,7 +15,7 @@ wiSPTree::wiSPTree()
 
 wiSPTree::~wiSPTree()
 {
-	//CleanUp();
+	SAFE_DELETE(root);
 }
 
 void wiSPTree::initialize(const vector<Cullable*>& objects){
@@ -36,16 +36,6 @@ void wiSPTree::initialize(const vector<Cullable*>& objects, const XMFLOAT3& newM
 	this->root = new wiSPTree::Node(NULL,AABB(min,max));
 	AddObjects(this->root,objects);
 }
-
-void wiSPTree::CleanUp()
-{
-	if(root) 
-		root->Release();
-	root=NULL;
-	if(this) 
-		delete this;
-}
-
 
 void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects)
 {
@@ -102,115 +92,184 @@ void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects)
 	
 }
 
-void wiSPTree::getVisible(Node* node, Frustum& frustum, CulledList& objects, SortType sort, CullStrictness type){
-	if(!node) return;
+void wiSPTree::Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortType)
+{
+	switch (sortType)
+	{
+	case wiSPTree::SP_TREE_SORT_NONE:
+		break;
+	case wiSPTree::SP_TREE_SORT_BACK_TO_FRONT:
+		objects.sort([&](const Cullable* a, const Cullable* b) {
+			return wiMath::DistanceSquared(origin, a->bounds.getCenter()) > wiMath::DistanceSquared(origin, b->bounds.getCenter());
+		});
+		break;
+	case wiSPTree::SP_TREE_SORT_FRONT_TO_BACK:
+		objects.sort([&](const Cullable* a, const Cullable* b) {
+			return wiMath::DistanceSquared(origin, a->bounds.getCenter()) < wiMath::DistanceSquared(origin, b->bounds.getCenter());
+		});
+		break;
+	default:
+		break;
+	}
+	objects.unique();
+}
+
+void wiSPTree::getVisible(Frustum& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+{
+	if (node == nullptr)
+	{
+		node = root;
+	}
+
 	int contain_type = frustum.CheckBox(node->box.corners);
-	if(!contain_type) 
+
+	if (!contain_type)
+	{
 		return;
+	}
 	else{
-		for(Cullable* object : node->objects)
-			if(
-				type==SP_TREE_LOOSE_CULL || 
-				(type==SP_TREE_STRICT_CULL &&
-					contain_type==BOX_FRUSTUM_INSIDE ||
-					(contain_type==BOX_FRUSTUM_INTERSECTS && frustum.CheckBox(object->bounds.corners))
+		for (Cullable* object : node->objects)
+		{
+			if (
+				type == SP_TREE_LOOSE_CULL ||
+				(type == SP_TREE_STRICT_CULL &&
+					contain_type == BOX_FRUSTUM_INSIDE ||
+					(contain_type == BOX_FRUSTUM_INTERSECTS && frustum.CheckBox(object->bounds.corners))
+					)
 				)
-			)
 			{
-
-#ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.getCamPos())*1000);
-				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
-					object->lastSquaredDistMulThousand *= -1;
-#endif
-
-				objects.insert(object);
+				objects.push_back(object);
 			}
-		if(node->count){
-			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects,sort,type);
+		}
+		if(node->count)
+		{
+			for (unsigned int i = 0; i < node->children.size(); ++i)
+			{
+				getVisible(frustum, objects, sortType, type, node->children[i]);
+			}
 		}
 	}
+
+	if (node == root)
+	{
+		Sort(frustum.getCamPos(), objects, sortType);
+	}
 }
-void wiSPTree::getVisible(Node* node, AABB& frustum, CulledList& objects, SortType sort, CullStrictness type){
-	if(!node) return;
+void wiSPTree::getVisible(AABB& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+{
+	if (node == nullptr)
+	{
+		node = root;
+	}
+
 	int contain_type = frustum.intersects(node->box);
-	if(!contain_type) 
+	if (!contain_type)
+	{
 		return;
-	else{
-		for(Cullable* object : node->objects)
-			if(
-				type==SP_TREE_LOOSE_CULL || 
-				(type==SP_TREE_STRICT_CULL &&
-					contain_type==AABB::INSIDE ||
-					(contain_type==INTERSECTS && frustum.intersects(object->bounds))
-				)
-			){
-
-#ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.getCenter())*1000);
-				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
-					object->lastSquaredDistMulThousand *= -1;
-#endif
-
-				objects.insert(object);
+	}
+	else
+	{
+		for (Cullable* object : node->objects)
+		{
+			if (
+				type == SP_TREE_LOOSE_CULL ||
+				(type == SP_TREE_STRICT_CULL &&
+					contain_type == AABB::INSIDE ||
+					(contain_type == INTERSECTS && frustum.intersects(object->bounds))
+					)
+				) {
+				objects.push_back(object);
 			}
-		if(node->count){
-			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects, sort,type);
+		}
+		if(node->count)
+		{
+			for (unsigned int i = 0; i < node->children.size(); ++i)
+			{
+				getVisible(frustum, objects, sortType, type, node->children[i]);
+			}
 		}
 	}
+
+	if (node == root)
+	{
+		Sort(frustum.getCenter(), objects, sortType);
+	}
 }
-void wiSPTree::getVisible(Node* node, SPHERE& frustum, CulledList& objects, SortType sort, CullStrictness type){
-	if(!node) return;
+void wiSPTree::getVisible(SPHERE& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+{
+	if (node == nullptr)
+	{
+		node = root;
+	}
+
+	int contain_type = frustum.intersects(node->box);
+
+	if (!contain_type)
+	{
+		return;
+	}
+	else 
+	{
+		for (Cullable* object : node->objects)
+		{
+			if (frustum.intersects(object->bounds))
+			{
+				objects.push_back(object);
+			}
+		}
+		if(node->count)
+		{
+			for (unsigned int i = 0; i < node->children.size(); ++i)
+			{
+				getVisible(frustum, objects, sortType, type, node->children[i]);
+			}
+		}
+	}
+
+	if (node == root)
+	{
+		Sort(frustum.center, objects, sortType);
+	}
+}
+void wiSPTree::getVisible(RAY& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+{
+	if (node == nullptr)
+	{
+		node = root;
+	}
+
 	int contain_type = frustum.intersects(node->box);
 	if(!contain_type) return;
 	else {
 		for(Cullable* object : node->objects)
-			if(frustum.intersects(object->bounds)){
-
-#ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.center)*1000);
-				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
-					object->lastSquaredDistMulThousand *= -1;
-#endif
-
-				objects.insert(object);
+			if(frustum.intersects(object->bounds))
+			{
+				objects.push_back(object);
 			}
 		if(node->count){
 			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects, sort,type);
+				getVisible(frustum,objects, sortType,type,node->children[i]);
 		}
 	}
-}
-void wiSPTree::getVisible(Node* node, RAY& frustum, CulledList& objects, SortType sort, CullStrictness type){
-	if(!node) return;
-	int contain_type = frustum.intersects(node->box);
-	if(!contain_type) return;
-	else {
-		for(Cullable* object : node->objects)
-			if(frustum.intersects(object->bounds)){
 
-#ifdef SORT_SPTREE_CULL
-				object->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(object->bounds.getCenter(),frustum.origin)*1000);
-				if (sort == SP_TREE_SORT_BACK_TO_FRONT)
-					object->lastSquaredDistMulThousand *= -1;
-#endif
-
-				objects.insert(object);
-			}
-		if(node->count){
-			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getVisible(node->children[i],frustum,objects, sort,type);
-		}
+	if (node == root)
+	{
+		Sort(frustum.origin, objects, sortType);
 	}
 }
-void wiSPTree::getAll(Node* node, CulledList& objects){
-	if(node != nullptr){
-		objects.insert(node->objects.begin(),node->objects.end());
-		if(node->count){
-			for (unsigned int i = 0; i<node->children.size(); ++i)
-				getAll(node->children[i],objects);
+void wiSPTree::getAll(CulledList& objects, Node* node)
+{
+	if (node == nullptr)
+	{
+		node = root;
+	}
+
+	objects.insert(objects.end(), node->objects.begin(),node->objects.end());
+	if(node->count)
+	{
+		for (unsigned int i = 0; i < node->children.size(); ++i)
+		{
+			getAll(objects, node->children[i]);
 		}
 	}
 }
@@ -227,7 +286,13 @@ void wiSPTree::Remove(Cullable* value, Node* node)
 	}
 }
 
-wiSPTree* wiSPTree::updateTree(Node* node){
+wiSPTree* wiSPTree::updateTree(Node* node)
+{
+	if (node == nullptr)
+	{
+		node = root;
+	}
+
 	if(this && node)
 	{
 
@@ -252,7 +317,7 @@ wiSPTree* wiSPTree::updateTree(Node* node){
 			}
 			else{
 				CulledList culledItems;
-				getVisible(node,node->box,culledItems);
+				getVisible(node->box, culledItems, SP_TREE_SORT_NONE, SP_TREE_STRICT_CULL, node);
 				for(Cullable* item : culledItems){
 					bad.push_back(item);
 				}

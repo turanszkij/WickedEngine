@@ -357,14 +357,8 @@ void wiRenderer::CleanUpStaticTemp(){
 		x->CleanUp();
 	waterRipples.clear();
 
-	if(spTree) 
-		spTree->CleanUp();
-	spTree = nullptr;
-
-	
-	if(spTree_lights)
-		spTree_lights->CleanUp();
-	spTree_lights=nullptr;
+	SAFE_DELETE(spTree);
+	SAFE_DELETE(spTree_lights);
 
 	cam->detach();
 
@@ -534,15 +528,6 @@ void wiRenderer::UpdateCubes(){
 	//		cubes.push_back(Cube(decal->bounds.getCenter(),decal->bounds.getHalfWidth(),XMFLOAT4A(1,0,1,1)));
 	//	}
 	//}
-}
-void wiRenderer::UpdateSPTree(wiSPTree*& tree){
-	if(tree && tree->root){
-		wiSPTree* newTree = tree->updateTree(tree->root);
-		if(newTree){
-			tree->CleanUp();
-			tree=newTree;
-		}
-	}
 }
 
 
@@ -1420,11 +1405,29 @@ void wiRenderer::Update()
 }
 void wiRenderer::UpdatePerFrameData()
 {
+	// update the space partitioning trees:
 	if (GetGameSpeed() > 0)
 	{
-		UpdateSPTree(spTree);
-		UpdateSPTree(spTree_lights);
+		if (spTree != nullptr && spTree->root != nullptr)
+		{
+			wiSPTree* newTree = spTree->updateTree();
+			if (newTree != nullptr)
+			{
+				SAFE_DELETE(spTree);
+				spTree = newTree;
+			}
+		}
+		if (spTree_lights != nullptr && spTree_lights->root != nullptr)
+		{
+			wiSPTree* newTree = spTree_lights->updateTree();
+			if (newTree != nullptr)
+			{
+				SAFE_DELETE(spTree_lights);
+				spTree_lights = newTree;
+			}
+		}
 	}
+
 	// Perform culling:
 	{
 		for (auto& x : frameCullings)
@@ -1439,8 +1442,8 @@ void wiRenderer::UpdatePerFrameData()
 
 			if (spTree != nullptr)
 			{
-				wiSPTree::getVisible(spTree->root, camera->frustum, culling.culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-				wiSPTree::getVisible(spTree->root, camera->frustum, culling.culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
+				spTree->getVisible(camera->frustum, culling.culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
+				spTree->getVisible(camera->frustum, culling.culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
 				for (Cullable* object : culling.culledObjects)
 				{
 					for (wiHairParticle* hair : ((Object*)object)->hParticleSystems) {
@@ -1453,8 +1456,7 @@ void wiRenderer::UpdatePerFrameData()
 			{
 				Frustum frustum;
 				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
-				wiSPTree::getVisible(spTree_lights->root, frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-				//wiSPTree::getAll(spTree_lights->root, culling.culledLights);
+				spTree_lights->getVisible(frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
 				int i = 0;
 				int shadowCounter_2D = 0;
 				int shadowCounter_Cube = 0;
@@ -2624,7 +2626,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							AABB boundingbox;
 							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
 							if (spTree)
-								wiSPTree::getVisible(spTree->root, boundingbox.get(
+								spTree->getVisible(boundingbox.get(
 									XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))
 								), culledObjects);
 
@@ -2712,7 +2714,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						Frustum frustum;
 						frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
 						if (spTree)
-							wiSPTree::getVisible(spTree->root, frustum, culledObjects);
+							spTree->getVisible(frustum, culledObjects);
 
 #pragma region BLOAT
 						if (!culledObjects.empty())
@@ -2802,7 +2804,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						CulledCollection culledRenderer;
 
 						if (spTree)
-							wiSPTree::getVisible(spTree->root, l->bounds, culledObjects);
+							spTree->getVisible(l->bounds, culledObjects);
 
 #pragma region BLOAT
 						for (Cullable* object : culledObjects)
@@ -3969,7 +3971,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 	wiSPTree* searchTree = spTree;
 	if (searchTree)
 	{
-		wiSPTree::getVisible(searchTree->root, ray, culledObjects);
+		searchTree->getVisible(ray, culledObjects);
 
 		vector<Picked> pickPoints;
 
@@ -4208,7 +4210,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 			XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
 			XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
 
-			wiSPTree::getVisible(searchTree->root, ray, culledObjects);
+			searchTree->getVisible(ray, culledObjects);
 
 			vector<Picked> points;
 
@@ -4423,7 +4425,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 	SPHERE culler = SPHERE(position, getCamera()->zFarP);
 	if (spTree)
-		wiSPTree::getVisible(spTree->root, culler, culledObjects);
+		spTree->getVisible(culler, culledObjects);
 
 	for (Cullable* object : culledObjects)
 		culledRenderer[((Object*)object)->mesh].insert((Object*)object);

@@ -492,7 +492,7 @@ void wiHairParticle::PerformCulling(Camera* camera)
 
 	if (spTree != nullptr)
 	{
-		wiSPTree::getVisible(spTree->root, frustum, culledPatches);
+		spTree->getVisible(frustum, culledPatches, wiSPTree::SP_TREE_SORT_FRONT_TO_BACK);
 
 		for (int i = 0; i<3; ++i) 
 		{

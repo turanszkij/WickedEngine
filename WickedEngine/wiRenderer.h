@@ -314,8 +314,6 @@ public:
 	// Render data that needs to be updated on the main thread!
 	static void UpdatePerFrameData();
 	static void UpdateRenderData(GRAPHICSTHREAD threadID);
-	//static void UpdateSoftBodyPinning();
-	static void UpdateSPTree(wiSPTree*& tree);
 	static void UpdateImages();
 	static void ManageImages();
 	static void PutDecal(Decal* decal);

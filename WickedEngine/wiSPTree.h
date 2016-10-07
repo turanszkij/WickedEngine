@@ -4,14 +4,7 @@
 
 class Frustum;
 
-// TODO: Profile!
-#define SORT_SPTREE_CULL
-
-#ifdef SORT_SPTREE_CULL
-typedef set<Cullable*, Cullable> CulledList;
-#else
-typedef unordered_set<Cullable*> CulledList;
-#endif
+typedef list<Cullable*> CulledList;
 
 typedef unordered_set<Object*> CulledObjectList;
 typedef unordered_map<Mesh*,CulledObjectList> CulledCollection;
@@ -33,28 +26,22 @@ public:
 		vector<Node*> children;
 		Node* parent;
 		int count;
-		list<Cullable*> objects;
+		CulledList objects;
 
 		Node(Node* newParent, const AABB& newBox = AABB(), int newDepth = 0):parent(newParent),box(newBox),depth(newDepth){
 			count=0;
-			objects.resize(0);
+		}
+		~Node()
+		{
+			for (size_t i = 0; i < children.size(); ++i)
+			{
+				SAFE_DELETE(children[i]);
+			}
 		}
 		static void swap(Node*& a, Node*& b){
 			Node* c = a;
 			a=b;
 			b=c;
-		}
-		void Release(){
-			if(this){
-				for(unsigned int i=0;i<children.size();++i){
-					if(children[i])
-						children[i]->Release();
-					children[i]=NULL;
-				}
-				children.clear();
-				objects.clear();
-				delete this;
-			}
 		}
 	};
 	Node* root;
@@ -65,20 +52,23 @@ public:
 	};
 	enum SortType
 	{
+		SP_TREE_SORT_NONE,
 		SP_TREE_SORT_BACK_TO_FRONT,
 		SP_TREE_SORT_FRONT_TO_BACK
 	};
 
-	void AddObjects(Node* node, const vector<Cullable*>& newObjects);
-	static void getVisible(Node* node, Frustum& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
-	static void getVisible(Node* node, AABB& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
-	static void getVisible(Node* node, SPHERE& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
-	static void getVisible(Node* node, RAY& frustum, CulledList& objects, SortType sort = SP_TREE_SORT_FRONT_TO_BACK, CullStrictness type = SP_TREE_STRICT_CULL);
-	static void getAll(Node* node, CulledList& objects);
-	wiSPTree* updateTree(Node* node);
-	void Remove(Cullable* value, Node* node = nullptr);
+	// Sort culled list by their distance to the origin point
+	static void Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortType = SP_TREE_SORT_FRONT_TO_BACK);
 
-	void CleanUp();
+	void AddObjects(Node* node, const vector<Cullable*>& newObjects);
+	void getVisible(Frustum& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_NONE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getVisible(AABB& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_NONE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getVisible(SPHERE& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_NONE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getVisible(RAY& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_NONE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getAll(CulledList& objects, Node* node = nullptr);
+	// Updates the tree. Returns null if successful, returns a new tree if the tree is resized. The old tree can be thrown away then.
+	wiSPTree* updateTree(Node* node = nullptr);
+	void Remove(Cullable* value, Node* node = nullptr);
 };
 
 class Octree : public wiSPTree
