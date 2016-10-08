@@ -11,7 +11,7 @@ ForwardRenderableComponent::ForwardRenderableComponent(){
 
 	setSSREnabled(false);
 	setSSAOEnabled(false);
-	setShadowsEnabled(false);
+	setShadowsEnabled(true);
 
 	setPreferredThreadingCount(0);
 }

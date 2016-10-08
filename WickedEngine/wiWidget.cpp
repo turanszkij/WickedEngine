@@ -471,7 +471,7 @@ void wiSlider::Render(wiGUI* gui)
 	// value
 	stringstream ss("");
 	ss << value;
-	wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+	wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
 }
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
@@ -613,6 +613,7 @@ bool wiCheckBox::GetCheck()
 
 
 
+static const float windowcontrolSize = 20.0f;
 wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 , gui(gui)
 {
@@ -629,14 +630,13 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	SAFE_INIT(resizeDragger_BottomRight);
 	SAFE_INIT(resizeDragger_UpperLeft);
 
-	static const float controlSize = 20.0f;
 
 
 	// Add a grabber onto the title bar
 	moveDragger = new wiButton(name + "_move_dragger");
 	moveDragger->SetText("");
-	moveDragger->SetSize(XMFLOAT2(scale.x - controlSize * 3, controlSize));
-	moveDragger->SetPos(XMFLOAT2(controlSize, 0));
+	moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
+	moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
 	moveDragger->OnDrag([this](wiEventArgs args) {
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 	});
@@ -646,8 +646,8 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	// Add close button to the top right corner
 	closeButton = new wiButton(name + "_close_button");
 	closeButton->SetText("x");
-	closeButton->SetSize(XMFLOAT2(controlSize, controlSize));
-	closeButton->SetPos(XMFLOAT2(translation.x + scale.x - controlSize, translation.y));
+	closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+	closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
 	closeButton->OnClick([this](wiEventArgs args) {
 		this->SetVisible(false);
 	});
@@ -657,8 +657,8 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	// Add minimize button to the top right corner
 	minimizeButton = new wiButton(name + "_minimize_button");
 	minimizeButton->SetText("-");
-	minimizeButton->SetSize(XMFLOAT2(controlSize, controlSize));
-	minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - controlSize*2, translation.y));
+	minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+	minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize *2, translation.y));
 	minimizeButton->OnClick([this](wiEventArgs args) {
 		this->SetMinimized(!this->IsMinimized());
 	});
@@ -668,7 +668,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	// Add a resizer control to the upperleft corner
 	resizeDragger_UpperLeft = new wiButton(name + "_resize_dragger_upper_left");
 	resizeDragger_UpperLeft->SetText("");
-	resizeDragger_UpperLeft->SetSize(XMFLOAT2(controlSize, controlSize));
+	resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
 	resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
 	resizeDragger_UpperLeft->OnDrag([this](wiEventArgs args) {
 		XMFLOAT2 scaleDiff;
@@ -683,8 +683,8 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	// Add a resizer control to the bottom right corner
 	resizeDragger_BottomRight = new wiButton(name + "_resize_dragger_bottom_right");
 	resizeDragger_BottomRight->SetText("");
-	resizeDragger_BottomRight->SetSize(XMFLOAT2(controlSize, controlSize));
-	resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - controlSize, translation.y + scale.y - controlSize));
+	resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
+	resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
 	resizeDragger_BottomRight->OnDrag([this](wiEventArgs args) {
 		XMFLOAT2 scaleDiff;
 		scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
@@ -746,6 +746,33 @@ void wiWindow::Update(wiGUI* gui)
 {
 	wiWidget::Update(gui);
 
+	//// TODO: Override window controls for nicer alignment:
+	//if (moveDragger != nullptr)
+	//{
+	//	moveDragger->scale.y = windowcontrolSize;
+	//}
+	//if (resizeDragger_UpperLeft != nullptr)
+	//{
+	//	resizeDragger_UpperLeft->scale.x = windowcontrolSize;
+	//	resizeDragger_UpperLeft->scale.y = windowcontrolSize;
+	//}
+	//if (resizeDragger_BottomRight != nullptr)
+	//{
+	//	resizeDragger_BottomRight->scale.x = windowcontrolSize;
+	//	resizeDragger_BottomRight->scale.y = windowcontrolSize;
+	//}
+	//if (closeButton != nullptr)
+	//{
+	//	closeButton->scale.x = windowcontrolSize;
+	//	closeButton->scale.y = windowcontrolSize;
+	//}
+	//if (minimizeButton != nullptr)
+	//{
+	//	minimizeButton->scale.x = windowcontrolSize;
+	//	minimizeButton->scale.y = windowcontrolSize;
+	//}
+
+
 	if (!IsEnabled())
 	{
 		return;
@@ -785,7 +812,7 @@ void wiWindow::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y), (int)moveDragger->scale.y, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(),true);
+	wiFont(text, wiFontProps((int)(translation.x + resizeDragger_UpperLeft->scale.x), (int)(translation.y), -1, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
 }
 void wiWindow::SetVisible(bool value)
 {

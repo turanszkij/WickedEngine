@@ -42,8 +42,9 @@ void Editor::Initialize()
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
-	infoDisplay.fpsinfo = false;
-	infoDisplay.cpuinfo = false;
+	infoDisplay.fpsinfo = true;
+	infoDisplay.cpuinfo = true;
+	infoDisplay.resolution = true;
 
 	wiInitializer::InitializeComponents(
 		wiInitializer::WICKEDENGINE_INITIALIZE_RENDERER
@@ -80,8 +81,6 @@ void Editor::Initialize()
 
 	activateComponent(loader);
 
-	this->infoDisplay.fpsinfo = true;
-
 }
 
 void EditorLoadingScreen::Load()
@@ -100,7 +99,7 @@ void EditorLoadingScreen::Compose()
 {
 	__super::Compose();
 
-	wiFont("Loading...", wiFontProps(wiRenderer::GetDevice()->GetScreenWidth() / 2, wiRenderer::GetDevice()->GetScreenHeight() / 2, 22,
+	wiFont("Loading...", wiFontProps(wiRenderer::GetDevice()->GetScreenWidth() / 2, wiRenderer::GetDevice()->GetScreenHeight() / 2, 50,
 		WIFALIGN_MID, WIFALIGN_MID)).Draw();
 }
 void EditorLoadingScreen::Unload()
