@@ -12,7 +12,6 @@ using namespace wiGraphicsTypes;
 
 wiWidget::wiWidget():Transform()
 {
-	SetFontScaling(0.5f);
 	state = IDLE;
 	enabled = true;
 	visible = true;
@@ -126,18 +125,6 @@ wiColor wiWidget::GetColor()
 		retVal = wiColor::lerp(wiColor::Transparent, retVal, 0.5f);
 	}
 	return retVal;
-}
-float wiWidget::GetScaledFontSize()
-{
-	return GetFontScaling() * min(scale.x, scale.y);
-}
-void wiWidget::SetFontScaling(float val)
-{
-	fontScaling = val;
-}
-float wiWidget::GetFontScaling()
-{
-	return fontScaling;
 }
 void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
 {
@@ -284,7 +271,7 @@ void wiButton::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps(translation.x + scale.x*0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), true);
+	wiFont(text, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), true);
 
 }
 void wiButton::OnClick(function<void(wiEventArgs args)> func)
@@ -351,7 +338,7 @@ void wiLabel::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps(translation.x, translation.y, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
+	wiFont(text, wiFontProps((int)translation.x, (int)translation.y, -1, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
 }
 
 
@@ -480,11 +467,11 @@ void wiSlider::Render(wiGUI* gui)
 		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
 	// text
-	wiFont(text, wiFontProps(translation.x - headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+	wiFont(text, wiFontProps((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
 	// value
 	stringstream ss("");
 	ss << value;
-	wiFont(ss.str(), wiFontProps(translation.x + scale.x + headWidth * 0.5f, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+	wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
 }
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
@@ -608,7 +595,7 @@ void wiCheckBox::Render(wiGUI* gui)
 	{
 		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
-	wiFont(text, wiFontProps(translation.x, translation.y + scale.y*0.5f, GetScaledFontSize(), WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
 }
 void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
 {
@@ -798,7 +785,7 @@ void wiWindow::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps(translation.x, translation.y, moveDragger->scale.y, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(),true);
+	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y), (int)moveDragger->scale.y, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(),true);
 }
 void wiWindow::SetVisible(bool value)
 {
@@ -1180,15 +1167,11 @@ void wiColorPicker::Render(wiGUI* gui)
 	wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
 
 	// RGB values:
-	stringstream _r("");
-	stringstream _g("");
-	stringstream _b("");
-	_r << "R: " << (int)(final_color.x * 255);
-	_g << "G: " << (int)(final_color.y * 255);
-	_b << "B: " << (int)(final_color.z * 255);
-	wiFont(_r.str(), wiFontProps(translation.x + 200, translation.y + 200)).Draw(threadID, true);
-	wiFont(_g.str(), wiFontProps(translation.x + 200, translation.y + 210)).Draw(threadID, true);
-	wiFont(_b.str(), wiFontProps(translation.x + 200, translation.y + 220)).Draw(threadID, true);
+	stringstream _rgb("");
+	_rgb << "R: " << (int)(final_color.x * 255) << endl;
+	_rgb << "G: " << (int)(final_color.y * 255) << endl;
+	_rgb << "B: " << (int)(final_color.z * 255) << endl;
+	wiFont(_rgb.str(), wiFontProps((int)(translation.x + 200), (int)(translation.y + 200))).Draw(threadID, true);
 	
 }
 XMFLOAT4 wiColorPicker::GetColor()

@@ -177,7 +177,7 @@ void MainComponent::Compose()
 		{
 			ss << "CPU: " << wiCpuInfo::GetCpuPercentage() << "%" << endl;
 		}
-		wiFont(ss.str(), wiFontProps(0, 0, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, -2)).Draw();
+		wiFont(ss.str(), wiFontProps(0, 0, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw();
 	}
 
 	// Draw the color grading palette

@@ -2,7 +2,7 @@
 #include "LightWindow.h"
 
 
-LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
+LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 {
 	assert(GUI && "Invalid GUI!");
 

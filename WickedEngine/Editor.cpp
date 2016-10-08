@@ -64,7 +64,7 @@ void Editor::Initialize()
 	wiHairParticle::Settings(400, 1000, 2000);
 
 
-	wiFont::addFontStyle("basic");
+	//wiFont::addFontStyle("basic");
 	wiInputManager::GetInstance()->addXInput(new wiXInput());
 
 	renderComponent = new EditorComponent;
@@ -100,7 +100,7 @@ void EditorLoadingScreen::Compose()
 {
 	__super::Compose();
 
-	wiFont("Loading...", wiFontProps(wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 22,
+	wiFont("Loading...", wiFontProps(wiRenderer::GetDevice()->GetScreenWidth() / 2, wiRenderer::GetDevice()->GetScreenHeight() / 2, 22,
 		WIFALIGN_MID, WIFALIGN_MID)).Draw();
 }
 void EditorLoadingScreen::Unload()
@@ -245,7 +245,6 @@ void EditorComponent::Load()
 	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
 	rendererWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	rendererWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	rendererWnd_Toggle->SetFontScaling(0.3f);
 	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
 		rendererWnd->rendererWindow->SetVisible(!rendererWnd->rendererWindow->IsVisible());
 	});
@@ -254,7 +253,6 @@ void EditorComponent::Load()
 	wiButton* worldWnd_Toggle = new wiButton("World");
 	worldWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	worldWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	worldWnd_Toggle->SetFontScaling(0.4f);
 	worldWnd_Toggle->OnClick([=](wiEventArgs args) {
 		worldWnd->worldWindow->SetVisible(!worldWnd->worldWindow->IsVisible());
 	});
@@ -263,7 +261,6 @@ void EditorComponent::Load()
 	wiButton* objectWnd_Toggle = new wiButton("Object");
 	objectWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	objectWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	objectWnd_Toggle->SetFontScaling(0.4f);
 	objectWnd_Toggle->OnClick([=](wiEventArgs args) {
 		objectWnd->objectWindow->SetVisible(!objectWnd->objectWindow->IsVisible());
 	});
@@ -272,7 +269,6 @@ void EditorComponent::Load()
 	wiButton* meshWnd_Toggle = new wiButton("Mesh");
 	meshWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	meshWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	meshWnd_Toggle->SetFontScaling(0.4f);
 	meshWnd_Toggle->OnClick([=](wiEventArgs args) {
 		meshWnd->meshWindow->SetVisible(!meshWnd->meshWindow->IsVisible());
 	});
@@ -281,7 +277,6 @@ void EditorComponent::Load()
 	wiButton* materialWnd_Toggle = new wiButton("Material");
 	materialWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	materialWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	materialWnd_Toggle->SetFontScaling(0.3f);
 	materialWnd_Toggle->OnClick([=](wiEventArgs args) {
 		materialWnd->materialWindow->SetVisible(!materialWnd->materialWindow->IsVisible());
 	});
@@ -290,7 +285,6 @@ void EditorComponent::Load()
 	wiButton* postprocessWnd_Toggle = new wiButton("PostProcess");
 	postprocessWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	postprocessWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	postprocessWnd_Toggle->SetFontScaling(0.22f);
 	postprocessWnd_Toggle->OnClick([=](wiEventArgs args) {
 		postprocessWnd->ppWindow->SetVisible(!postprocessWnd->ppWindow->IsVisible());
 	});
@@ -299,7 +293,6 @@ void EditorComponent::Load()
 	wiButton* cameraWnd_Toggle = new wiButton("Camera");
 	cameraWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	cameraWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	cameraWnd_Toggle->SetFontScaling(0.3f);
 	cameraWnd_Toggle->OnClick([=](wiEventArgs args) {
 		cameraWnd->cameraWindow->SetVisible(!cameraWnd->cameraWindow->IsVisible());
 	});
@@ -308,7 +301,6 @@ void EditorComponent::Load()
 	wiButton* envProbeWnd_Toggle = new wiButton("EnvProbe");
 	envProbeWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	envProbeWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	envProbeWnd_Toggle->SetFontScaling(0.3f);
 	envProbeWnd_Toggle->OnClick([=](wiEventArgs args) {
 		envProbeWnd->envProbeWindow->SetVisible(!envProbeWnd->envProbeWindow->IsVisible());
 	});
@@ -317,7 +309,6 @@ void EditorComponent::Load()
 	wiButton* decalWnd_Toggle = new wiButton("Decal");
 	decalWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	decalWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	decalWnd_Toggle->SetFontScaling(0.3f);
 	decalWnd_Toggle->OnClick([=](wiEventArgs args) {
 		decalWnd->decalWindow->SetVisible(!decalWnd->decalWindow->IsVisible());
 	});
@@ -326,7 +317,6 @@ void EditorComponent::Load()
 	wiButton* lightWnd_Toggle = new wiButton("Light");
 	lightWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	lightWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	lightWnd_Toggle->SetFontScaling(0.3f);
 	lightWnd_Toggle->OnClick([=](wiEventArgs args) {
 		lightWnd->lightWindow->SetVisible(!lightWnd->lightWindow->IsVisible());
 	});
@@ -378,7 +368,6 @@ void EditorComponent::Load()
 	wiButton* saveButton = new wiButton("Save");
 	saveButton->SetPos(XMFLOAT2(screenW - 470, 0));
 	saveButton->SetSize(XMFLOAT2(100, 40));
-	saveButton->SetFontScaling(0.25f);
 	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
 	saveButton->SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveButton->OnClick([=](wiEventArgs args) {
@@ -442,7 +431,6 @@ void EditorComponent::Load()
 	wiButton* modelButton = new wiButton("LoadModel");
 	modelButton->SetPos(XMFLOAT2(screenW - 365, 0));
 	modelButton->SetSize(XMFLOAT2(100, 40));
-	modelButton->SetFontScaling(0.25f);
 	modelButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
 	modelButton->OnClick([=](wiEventArgs args) {
@@ -496,7 +484,6 @@ void EditorComponent::Load()
 	wiButton* skyButton = new wiButton("LoadSky");
 	skyButton->SetPos(XMFLOAT2(screenW - 260, 0));
 	skyButton->SetSize(XMFLOAT2(100, 18));
-	skyButton->SetFontScaling(0.5f);
 	skyButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	skyButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
 	skyButton->OnClick([=](wiEventArgs args) {
@@ -540,7 +527,6 @@ void EditorComponent::Load()
 	wiButton* colorGradingButton = new wiButton("ColorGrading");
 	colorGradingButton->SetPos(XMFLOAT2(screenW - 260, 22));
 	colorGradingButton->SetSize(XMFLOAT2(100, 18));
-	colorGradingButton->SetFontScaling(0.45f);
 	colorGradingButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	colorGradingButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
 	colorGradingButton->OnClick([=](wiEventArgs args) {
@@ -584,7 +570,6 @@ void EditorComponent::Load()
 	wiButton* clearButton = new wiButton("ClearWorld");
 	clearButton->SetPos(XMFLOAT2(screenW - 155, 0));
 	clearButton->SetSize(XMFLOAT2(100, 40));
-	clearButton->SetFontScaling(0.25f);
 	clearButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
 	clearButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
 	clearButton->OnClick([](wiEventArgs args) {
@@ -598,7 +583,6 @@ void EditorComponent::Load()
 	wiButton* exitButton = new wiButton("X");
 	exitButton->SetPos(XMFLOAT2(screenW - 50, 0));
 	exitButton->SetSize(XMFLOAT2(50, 40));
-	exitButton->SetFontScaling(0.25f);
 	exitButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
 	exitButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
 	exitButton->OnClick([](wiEventArgs args) {

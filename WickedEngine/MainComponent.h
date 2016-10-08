@@ -68,10 +68,10 @@ public:
 		// display resolution info
 		bool resolution;
 		// text size
-		float size;
+		int size;
 
 		InfoDisplayer() :active(false), watermark(true), fpsinfo(true), cpuinfo(true), 
-			resolution(false), size(12.f)
+			resolution(false), size(-1)
 		{}
 	};
 	// display all-time engine information text

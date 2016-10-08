@@ -31,10 +31,10 @@ namespace wiBackLog_BindLua
 
 		if (argc > 0)
 		{
-			wiBackLog::font.props.size = wiLua::SGetFloat(L, 1);
+			wiBackLog::font.props.size = wiLua::SGetInt(L, 1);
 		}
 		else
-			wiLua::SError(L, "backlog_fontsize(float val) not enough arguments!");
+			wiLua::SError(L, "backlog_fontsize(int val) not enough arguments!");
 
 		return 0;
 	}
@@ -48,10 +48,10 @@ namespace wiBackLog_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiBackLog::font.props.spacingY = wiLua::SGetFloat(L, 1);
+			wiBackLog::font.props.spacingY = wiLua::SGetInt(L, 1);
 		}
 		else
-			wiLua::SError(L, "backlog_fontrowspacing(float val) not enough arguments!");
+			wiLua::SError(L, "backlog_fontrowspacing(int val) not enough arguments!");
 		return 0;
 	}
 

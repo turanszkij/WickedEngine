@@ -47,7 +47,6 @@ protected:
 	void Activate();
 	void Deactivate();
 	wiColor colors[WIDGETSTATE_COUNT];
-	float GetScaledFontSize();
 	wiGraphicsTypes::Rect scissorRect;
 public:
 	wiWidget();
@@ -67,8 +66,6 @@ public:
 	// last param default: set color for all states
 	void SetColor(const wiColor& color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor();
-	void SetFontScaling(float val);
-	float GetFontScaling();
 	void SetScissorRect(const wiGraphicsTypes::Rect& rect);
 
 	virtual void Update(wiGUI* gui);

@@ -84,9 +84,9 @@ are also displayed here.
 The scripting API provides some functions which manipulate the BackLog. These functions are in he global scope:
 - backlog_clear()
 - backlog_post(string params,,,)
-- backlog_fontsize(float size)
+- backlog_fontsize(int size)
 - backlog_isactive() : boolean result
-- backlog_fontrowspacing(float spacing)
+- backlog_fontrowspacing(int spacing)
 
 ### Renderer
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
@@ -146,7 +146,7 @@ Gives you the ability to render text with a custom font.
 - [constructor]Font(opt string text)
 - SetStyle(string fontstyle)
 - SetText(opt string text)
-- SetSize(float size)
+- SetSize(int size)
 - SetPos(Vector pos)
 - SetSpacing(Vector spacing)
 - SetAlign(WIFALIGN Halign, opt WIFALIGN Valign)
@@ -157,7 +157,7 @@ Gives you the ability to render text with a custom font.
 	- [outer]WIFALIGN_TOP : int
 	- [outer]WIFALIGN_BOTTOM : int
 - GetText() : string result
-- GetSize() : float result
+- GetSize() : int result
 - GetPos() : Vector result
 - GetSpacing() : Vector result
 - GetAlign() : WIFALIGN halign,valign

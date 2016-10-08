@@ -1852,24 +1852,24 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)fonts\basic.dds">
-      <Filter>fonts</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)logo\logo.png">
       <Filter>logo</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
+      <Filter>fonts</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\licenses.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)fonts\basic.wifont">
-      <Filter>fonts</Filter>
-    </Text>
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
     <None Include="$(MSBuildThisFileDirectory)..\ScriptingAPI-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />
+    <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
+      <Filter>fonts</Filter>
+    </None>
   </ItemGroup>
 </Project>
