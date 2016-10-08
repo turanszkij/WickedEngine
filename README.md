@@ -13,8 +13,8 @@ Video: https://www.youtube.com/watch?v=nNlfkrURqZQ <br/>
 Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg
 
 ### Platforms:
-- Windows PC Desktop (tested for version 0.9.0)
-- Universal Windows (tested for version 0.9.0)
+- Windows PC Desktop (tested for version 0.9.11)
+- Universal Windows (tested for version 0.9.11)
 
 ### Requirements:
 
