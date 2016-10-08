@@ -540,14 +540,19 @@ void wiRenderer::LoadBuffers()
 
     GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = USAGE_DYNAMIC;
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
 	//Persistent buffers...
+
+	// Per World Constant buffer will be updated occasionally, so it should reside in DEFAULT GPU memory!
+	bd.CPUAccessFlags = 0;
+	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(WorldCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_WORLD]);
 
+	// The other constant buffers will be updated frequently (>= per frame) so they should reside in DYNAMIC GPU memory!
+	bd.Usage = USAGE_DYNAMIC;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.ByteWidth = sizeof(FrameCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
 
@@ -559,9 +564,6 @@ void wiRenderer::LoadBuffers()
 
 	bd.ByteWidth = sizeof(MiscCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
-
-	bd.ByteWidth = sizeof(ShadowCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_SHADOW]);
 
 	bd.ByteWidth = sizeof(APICB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLIPPLANE]);
@@ -1205,8 +1207,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_SHADOW], CB_GETBINDSLOT(ShadowCB), threadID);
 
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB), threadID);
 }
@@ -2628,9 +2628,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							if (!culledObjects.empty())
 							{
 
-								ShadowCB cb;
+								CameraCB cb;
 								cb.mVP = l->shadowCam_dirLight[index].getVP();
-								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
+								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
 								for (Cullable* object : culledObjects) {
 									culledRenderer[((Object*)object)->mesh].insert((Object*)object);
@@ -2714,9 +2714,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						if (!culledObjects.empty())
 						{
 
-							ShadowCB cb;
+							CameraCB cb;
 							cb.mVP = l->shadowCam_spotLight[0].getVP();
-							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_SHADOW], &cb, threadID);
+							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
 							for (Cullable* object : culledObjects) {
 								culledRenderer[((Object*)object)->mesh].insert((Object*)object);

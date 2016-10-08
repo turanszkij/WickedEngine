@@ -11,14 +11,13 @@
 #define CBSLOT_RENDERER_CAMERA			2
 #define CBSLOT_RENDERER_MATERIAL		3
 #define CBSLOT_RENDERER_MISC			4
-#define CBSLOT_RENDERER_SHADOW			5
 
-#define CBSLOT_IMAGE_IMAGE				6
-#define CBSLOT_IMAGE_POSTPROCESS		7
+#define CBSLOT_IMAGE_IMAGE				5
+#define CBSLOT_IMAGE_POSTPROCESS		6
 
-#define CBSLOT_FONT_FONT				8
+#define CBSLOT_FONT_FONT				7
 
-#define CBSLOT_API						9
+#define CBSLOT_API						8
 
 
 // On demand buffers:

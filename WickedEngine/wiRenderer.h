@@ -166,14 +166,6 @@ public:
 
 		ALIGN_16
 	};
-	GFX_STRUCT ShadowCB
-	{
-		XMMATRIX mVP;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_SHADOW)
-
-		ALIGN_16
-	};
 
 	// On demand buffers:
 	GFX_STRUCT VolumeLightCB
