@@ -671,7 +671,6 @@ void wiRenderer::LoadBasicShaders()
 
 
 	vertexShaders[VSTYPE_OBJECT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vertexShaders[VSTYPE_OBJECT_REFLECTION] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_DIRLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_POINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
@@ -773,8 +772,6 @@ void wiRenderer::LoadSkyShaders()
 {
 	vertexShaders[VSTYPE_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	pixelShaders[PSTYPE_SKY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
-	vertexShaders[VSTYPE_SKY_REFLECTION] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS_reflection.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	pixelShaders[PSTYPE_SKY_REFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_reflection.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 }
 void wiRenderer::LoadShadowShaders()
@@ -1510,10 +1507,7 @@ void wiRenderer::UpdatePerFrameData()
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
-	//UpdateWorldCB(threadID);
 	UpdateFrameCB(threadID);
-	UpdateCameraCB(threadID);
-
 	
 	// Skinning:
 	{
@@ -3072,8 +3066,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 
 	return realPS;
 }
-void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID
-				  , bool isReflection, SHADERTYPE shaderType
+void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType
 				  , Texture2D* refRes, bool grass)
 {
 	tessellation = tessellation && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
@@ -3150,14 +3143,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 				GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT], threadID);
 			else
 			{
-				if (isReflection)
-				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_REFLECTION], threadID);
-				}
-				else
-				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
-				}
+				GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
 			}
 			if (tessellation && tessF)
 			{
@@ -3521,7 +3507,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 }
 
 
-void wiRenderer::DrawSky(GRAPHICSTHREAD threadID, bool isReflection)
+void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 {
 	if (enviroMap == nullptr)
 		return;
@@ -3531,16 +3517,8 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID, bool isReflection)
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,threadID);
 	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 	
-	if (!isReflection)
-	{
-		GetDevice()->BindVS(vertexShaders[VSTYPE_SKY], threadID);
-		GetDevice()->BindPS(pixelShaders[PSTYPE_SKY], threadID);
-	}
-	else
-	{
-		GetDevice()->BindVS(vertexShaders[VSTYPE_SKY_REFLECTION], threadID);
-		GetDevice()->BindPS(pixelShaders[PSTYPE_SKY_REFLECTION], threadID);
-	}
+	GetDevice()->BindVS(vertexShaders[VSTYPE_SKY], threadID);
+	GetDevice()->BindPS(pixelShaders[PSTYPE_SKY], threadID);
 	
 	GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 
@@ -3818,30 +3796,31 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindDirection = wind.direction; 
 	cb.mSunLightArrayIndex = GetSunArrayIndex();
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
-}
-void wiRenderer::UpdateCameraCB(GRAPHICSTHREAD threadID)
-{
-	CameraCB cb;
-
 	auto camera = getCamera();
 	auto prevCam = prevFrameCam;
 	auto reflCam = getRefCamera();
 
-	cb.mView = XMMatrixTranspose(camera->GetView());
-	cb.mProj = XMMatrixTranspose(camera->GetProjection());
-	cb.mVP = XMMatrixTranspose(camera->GetViewProjection());
 	cb.mPrevV = XMMatrixTranspose(prevCam->GetView());
 	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
 	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
 	cb.mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
 	cb.mInvP = XMMatrixTranspose(camera->GetInvProjection());
 	cb.mInvVP = XMMatrixTranspose(camera->GetInvViewProjection());
-	cb.mCamPos = camera->translation;
 	cb.mAt = camera->At;
 	cb.mUp = camera->Up;
 	cb.mZNearP = camera->zNearP;
 	cb.mZFarP = camera->zFarP;
+
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
+}
+void wiRenderer::UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	CameraCB cb;
+
+	cb.mVP = XMMatrixTranspose(camera->GetViewProjection());
+	cb.mView = XMMatrixTranspose(camera->GetView());
+	cb.mProj = XMMatrixTranspose(camera->GetProjection());
+	cb.mCamPos = camera->translation;
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 }
@@ -4633,7 +4612,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			break;
 		}
 		cam->UpdateProps();
-		UpdateCameraCB(threadID);
+		UpdateCameraCB(cam, threadID);
 
 		for (MeshSubset& subset : mesh->subsets)
 		{
@@ -4671,7 +4650,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	mesh->impostorTarget.viewPort = savedViewPort;
 	*cam = savedCam;
-	UpdateCameraCB(threadID);
+	UpdateCameraCB(cam, threadID);
 
 	GetDevice()->UNLOCK();
 }

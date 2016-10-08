@@ -36,7 +36,6 @@ void main(
 	float4 savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 
 	element.tex=float2(1,0);
@@ -46,7 +45,6 @@ void main(
 	savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 
 	element.tex=float2(0,1);
@@ -56,7 +54,6 @@ void main(
 	savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 	
 	element.tex=float2(1,1);
@@ -66,7 +63,6 @@ void main(
 	savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 
 	output.RestartStrip();
@@ -80,7 +76,6 @@ void main(
 	savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 
 	element.tex=float2(1,0);
@@ -90,7 +85,6 @@ void main(
 	savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 
 	element.tex=float2(0,1);
@@ -100,7 +94,6 @@ void main(
 	savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 	
 	element.tex=float2(1,1);
@@ -110,6 +103,5 @@ void main(
 	savedPos = element.pos;
 	element.pos3D = element.pos.xyz;
 	element.pos = element.pos2D = mul(element.pos, g_xCamera_VP);
-	element.pos2DPrev = mul(savedPos, g_xCamera_PrevVP);
 	output.Append(element);
 }

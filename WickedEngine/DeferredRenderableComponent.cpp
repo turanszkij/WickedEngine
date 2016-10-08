@@ -92,6 +92,8 @@ void DeferredRenderableComponent::Render()
 
 void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
+	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
@@ -99,8 +101,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, false
-			, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true);
 
 	}
 

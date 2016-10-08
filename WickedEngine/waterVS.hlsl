@@ -15,7 +15,7 @@ PixelInputType main(Input input)
 	Out.nor = mul(input.nor.xyz, (float3x3)WORLD);
 
 
-	Out.ReflectionMapSamplingPos = mul(pos, g_xCamera_ReflVP);
+	Out.ReflectionMapSamplingPos = mul(pos, g_xFrame_MainCamera_ReflVP);
 
 	return Out;
 }

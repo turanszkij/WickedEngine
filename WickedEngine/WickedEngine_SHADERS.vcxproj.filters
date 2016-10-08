@@ -237,9 +237,6 @@
     <FxCompile Include="skyPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="skyPS_reflection.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="spotLightPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -312,9 +309,6 @@
     <FxCompile Include="objectVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="objectVS_reflection.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="objectVS10.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -331,9 +325,6 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="skyVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="skyVS_reflection.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="sOVS.hlsl">

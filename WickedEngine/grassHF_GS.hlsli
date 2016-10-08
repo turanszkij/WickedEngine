@@ -35,7 +35,6 @@ struct QGS_OUT
 	float2 tex : TEXCOORD;
 	float  fade : DITHERFADE;
 	float4 pos2D : SCREENPOSITION;
-	float4 pos2DPrev : SCREENPOSITIONPREV;
 };
 
 static const float3 MOD[] = {

@@ -53,7 +53,7 @@ struct Frustum
 float4 ClipToView(float4 clip)
 {
 	// View space position.
-	float4 view = mul(clip, g_xCamera_InvP);
+	float4 view = mul(clip, g_xFrame_MainCamera_InvP);
 	// Perspective projection.
 	view = view / view.w;
 

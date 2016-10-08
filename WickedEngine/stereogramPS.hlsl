@@ -16,7 +16,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 		if (uv.x < pWid)
 			break;
 
-		float d = 1.0 - texture_lineardepth.SampleLevel(sampler_linear_clamp, uv / g_xWorld_ScreenWidthHeight.xy, 0).r / g_xCamera_ZFarP;
+		float d = 1.0 - texture_lineardepth.SampleLevel(sampler_linear_clamp, uv / g_xWorld_ScreenWidthHeight.xy, 0).r / g_xFrame_MainCamera_ZFarP;
 
 		uv.x -= pWid - (d * maxStep);
 	}

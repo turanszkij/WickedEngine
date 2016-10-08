@@ -57,26 +57,26 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
 	int			g_xFrame_SunLightArrayIndex;
+	// The following are per frame properties for the main camera:
+	float4x4	g_xFrame_MainCamera_PrevV;
+	float4x4	g_xFrame_MainCamera_PrevP;
+	float4x4	g_xFrame_MainCamera_PrevVP;		// PrevView*PrevProjection
+	float4x4	g_xFrame_MainCamera_ReflVP;		// ReflectionView*ReflectionProjection
+	float4x4	g_xFrame_MainCamera_InvP;		// Inverse Projection
+	float4x4	g_xFrame_MainCamera_InvVP;		// Inverse View-Projection
+	float3		g_xFrame_MainCamera_At;
+	float		g_xFrame_MainCamera_ZNearP;
+	float3		g_xFrame_MainCamera_Up;
+	float		g_xFrame_MainCamera_ZFarP;
 };
-CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
+// The following buffer contains properties for a temporary camera (eg. main camera, reflection camera, shadow camera...)
+CBUFFER(Camera_CommonCB, CBSLOT_RENDERER_CAMERA)
 {
+	float4x4	g_xCamera_VP;					// View*Projection
 	float4x4	g_xCamera_View;
 	float4x4	g_xCamera_Proj;
-	float4x4	g_xCamera_VP;					// View*Projection
-	float4x4	g_xCamera_PrevV;
-	float4x4	g_xCamera_PrevP;
-	float4x4	g_xCamera_PrevVP;				// PrevView*PrevProjection
-	float4x4	g_xCamera_ReflVP;				// ReflectionView*ReflectionProjection
-	float4x4	g_xCamera_InvP;					// Inverse Projection
-	float4x4	g_xCamera_InvVP;				// Inverse View-Projection
-	float3		g_xCamera_CamPos;				float xPadding0_CameraCB;
-	float3		g_xCamera_At;					float xPadding1_CameraCB;
-	float3		g_xCamera_Up;					float xPadding2_CameraCB;
-	float		g_xCamera_ZNearP;
-	float		g_xCamera_ZFarP;
-	float		xPadding3_CameraCB;
-	float		xPadding4_CameraCB;
-};
+	float3		g_xCamera_CamPos;				float xPadding0_Camera_CommonCB;
+}
 CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 {
 	float4		g_xMat_baseColor;

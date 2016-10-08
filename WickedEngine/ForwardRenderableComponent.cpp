@@ -72,14 +72,14 @@ void ForwardRenderableComponent::Render()
 
 void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
+	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+
 	rtMain.Activate(threadID, 0, 0, 0, 0);
 	{
 
 		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID
-			, false, SHADERTYPE_FORWARD
-			, nullptr, true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_FORWARD, nullptr, true);
 		wiRenderer::DrawSky(threadID);
 	}
 

@@ -202,6 +202,8 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 		return;
 	}
 
+	wiRenderer::UpdateCameraCB(wiRenderer::getRefCamera(), threadID);
+
 	rtReflection.Activate(threadID); {
 		// reverse clipping if underwater
 		XMFLOAT4 water = getWaterPlane().getXMFLOAT4();
@@ -214,10 +216,8 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 		wiRenderer::SetClipPlane(water, threadID);
 
-		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID
-			, true, SHADERTYPE_TEXTURE
-			, nullptr, getHairParticlesReflectionEnabled());
-		wiRenderer::DrawSky(threadID,true);
+		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, nullptr, getHairParticlesReflectionEnabled());
+		wiRenderer::DrawSky(threadID);
 	}
 }
 void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
@@ -237,6 +237,8 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 }
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {
+	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+
 	if (getStereogramEnabled())
 	{
 		// We don't need the following for stereograms...
@@ -277,7 +279,7 @@ void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& mainRT, wiRen
 {
 	rtTransparent.Activate(threadID, mainRT.depth); {
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, shadedSceneRT.GetTexture(), rtReflection.GetTexture()
-			, rtWaterRipple.GetTexture(), threadID);
+			, rtWaterRipple.GetTexture(), threadID, false);
 		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
 	}
 }

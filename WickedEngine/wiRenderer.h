@@ -109,6 +109,16 @@ public:
 		float mWindWaveSize;
 		float mWindRandomness;
 		int mSunLightArrayIndex;
+		XMMATRIX mPrevV;
+		XMMATRIX mPrevP;
+		XMMATRIX mPrevVP;
+		XMMATRIX mReflVP;
+		XMMATRIX mInvP;
+		XMMATRIX mInvVP;
+		XMFLOAT3 mAt;
+		float    mZNearP;
+		XMFLOAT3 mUp;
+		float    mZFarP;
 		
 		CB_SETBINDSLOT(CBSLOT_RENDERER_FRAME)
 
@@ -116,22 +126,10 @@ public:
 	};
 	GFX_STRUCT CameraCB
 	{
+		XMMATRIX mVP;
 		XMMATRIX mView;
 		XMMATRIX mProj;
-		XMMATRIX mVP;
-		XMMATRIX mPrevV;
-		XMMATRIX mPrevP;
-		XMMATRIX mPrevVP;
-		XMMATRIX mReflVP;
-		XMMATRIX mInvP;
-		XMMATRIX mInvVP;
-		XMFLOAT3 mCamPos;		float pad0;
-		XMFLOAT3 mAt;			float pad1;
-		XMFLOAT3 mUp;			float pad2;
-		float    mZNearP;
-		float    mZFarP;
-		float	 pad3;
-		float	 pad4;
+		XMFLOAT3 mCamPos;				float pad0;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_CAMERA)
 
@@ -373,18 +371,17 @@ public:
 
 	static void UpdateWorldCB(GRAPHICSTHREAD threadID);
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
-	static void UpdateCameraCB(GRAPHICSTHREAD threadID);
+	static void UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID);
 	static void SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID);
 	static void UpdateGBuffer(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);
 	static void UpdateDepthBuffer(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 	
-	static void DrawSky(GRAPHICSTHREAD threadID, bool isReflection = false);
+	static void DrawSky(GRAPHICSTHREAD threadID);
 	static void DrawSun(GRAPHICSTHREAD threadID);
-	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID
-		, bool isReflection, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass);
+	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);
 	static void DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refracRes, wiGraphicsTypes::Texture2D* refRes
-		, wiGraphicsTypes::Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass = false);
+		, wiGraphicsTypes::Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass);
 	void DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);

@@ -104,7 +104,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.tan=tanbin[0];
 	Out.bin=tanbin[1];*/
 
-	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xCamera_ReflVP);
+	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xFrame_MainCamera_ReflVP);
 	/*Out.ShadowMapSamplingPos[0] = mul(vertexPosition,  xShViewOprojection[0] );
 	Out.ShadowMapSamplingPos[1] = mul(vertexPosition,  xShViewOprojection[1] );
 	Out.ShadowMapSamplingPos[2] = mul(vertexPosition,  xShViewOprojection[2] );*/
