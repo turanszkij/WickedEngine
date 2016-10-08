@@ -540,6 +540,7 @@ void wiRenderer::LoadBuffers()
 
     GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
 
 	//Persistent buffers...
 
@@ -551,7 +552,6 @@ void wiRenderer::LoadBuffers()
 
 	// The other constant buffers will be updated frequently (>= per frame) so they should reside in DYNAMIC GPU memory!
 	bd.Usage = USAGE_DYNAMIC;
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.ByteWidth = sizeof(FrameCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);

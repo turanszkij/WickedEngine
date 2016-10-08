@@ -7,6 +7,7 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiButton;
+class wiColorPicker;
 
 struct Light;
 
@@ -30,5 +31,7 @@ public:
 	wiCheckBox*	shadowCheckBox;
 	wiCheckBox*	haloCheckBox;
 	wiButton*	addLightButton;
+	wiButton*	colorPickerToggleButton;
+	wiColorPicker*	colorPicker;
 };
 

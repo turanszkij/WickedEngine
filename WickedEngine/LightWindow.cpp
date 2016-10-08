@@ -102,6 +102,23 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	lightWindow->AddWidget(addLightButton);
 
 
+	colorPickerToggleButton = new wiButton("Color");
+	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += 30));
+	colorPickerToggleButton->OnClick([&](wiEventArgs args) {
+		colorPicker->SetVisible(!colorPicker->IsVisible());
+	});
+	lightWindow->AddWidget(colorPickerToggleButton);
+
+
+	colorPicker = new wiColorPicker(GUI, "Light Color");
+	colorPicker->SetVisible(false);
+	colorPicker->SetEnabled(false);
+	colorPicker->OnColorChanged([&](wiEventArgs args) {
+		light->color = XMFLOAT4(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f), 1);
+	});
+	GUI->AddWidget(colorPicker);
+
+
 	lightWindow->Translate(XMFLOAT3(30, 30, 0));
 	lightWindow->SetVisible(false);
 }
@@ -117,6 +134,8 @@ LightWindow::~LightWindow()
 	SAFE_DELETE(shadowCheckBox);
 	SAFE_DELETE(haloCheckBox);
 	SAFE_DELETE(addLightButton);
+	SAFE_DELETE(colorPickerToggleButton);
+	SAFE_DELETE(colorPicker);
 }
 
 void LightWindow::SetLight(Light* light)
@@ -150,6 +169,7 @@ void LightWindow::SetLight(Light* light)
 		biasSlider->SetValue(light->shadowBias);
 		shadowCheckBox->SetCheck(light->shadow);
 		haloCheckBox->SetCheck(!light->noHalo);
+		colorPicker->SetEnabled(true);
 	}
 	else
 	{
@@ -158,5 +178,6 @@ void LightWindow::SetLight(Light* light)
 		biasSlider->SetEnabled(false);
 		energySlider->SetEnabled(false);
 		//lightWindow->SetEnabled(false);
+		colorPicker->SetEnabled(false);
 	}
 }
