@@ -484,12 +484,12 @@ struct Object : public Streamable, public Transform
 	int physicsObjectI;
 
 	// Is it deformed with an armature?
-	bool isArmatureDeformed()
+	bool isArmatureDeformed() const
 	{
 		return mesh->hasArmature() && boneParent.empty();
 	}
 	// Is it controlled by the physics engine or an Armature?
-	bool isDynamic()
+	bool isDynamic() const
 	{
 		return ((physicsObjectI >= 0 && !kinematic) || mesh->softBody || isArmatureDeformed());
 	}

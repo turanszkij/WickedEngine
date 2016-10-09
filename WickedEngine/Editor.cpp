@@ -43,7 +43,7 @@ void Editor::Initialize()
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
-	infoDisplay.cpuinfo = true;
+	infoDisplay.cpuinfo = false;
 	infoDisplay.resolution = true;
 
 	wiInitializer::InitializeComponents(

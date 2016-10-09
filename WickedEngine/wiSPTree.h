@@ -6,7 +6,7 @@ class Frustum;
 
 typedef list<Cullable*> CulledList;
 
-typedef unordered_set<Object*> CulledObjectList;
+typedef list<Object*> CulledObjectList;
 typedef unordered_map<Mesh*,CulledObjectList> CulledCollection;
 
 
