@@ -3366,6 +3366,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledList& culledObjec
 				{
 					subsetRenderable = subsetRenderable || material->IsWater();
 				}
+				if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+				{
+					subsetRenderable = subsetRenderable && material->cast_shadow;
+				}
 
 				if (subsetRenderable)
 				{
