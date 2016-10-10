@@ -369,7 +369,7 @@ public:
 	static void UpdateGBuffer(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);
 	static void UpdateDepthBuffer(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 	
-	static void RenderMeshes(Camera* camera, const CulledList& culledObjects, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false, bool grass = false);
+	static void RenderMeshes(const XMFLOAT3& eye, const CulledList& culledObjects, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false);
 	static void DrawSky(GRAPHICSTHREAD threadID);
 	static void DrawSun(GRAPHICSTHREAD threadID);
 	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass);

@@ -2574,9 +2574,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					vp.MaxDepth = 1.0f;
 					GetDevice()->BindViewports(1, &vp, threadID);
 
-					GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
-					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
-					GetDevice()->BindGS(nullptr, threadID);
+					//GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
+					//GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
+					//GetDevice()->BindGS(nullptr, threadID);
 				}
 				break;
 				case Light::POINT:
@@ -2589,9 +2589,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					vp.MaxDepth = 1.0f;
 					GetDevice()->BindViewports(1, &vp, threadID);
 
-					GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
-					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
-					GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
+					//GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
+					//GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
+					//GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
 					GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 				}
 				break;
@@ -2624,79 +2624,88 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							const float f = l->shadowCam_dirLight[index].farplane;
 							AABB boundingbox;
 							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
-							if (spTree)
-								spTree->getVisible(boundingbox.get(
-									XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))
-								), culledObjects);
-
-#pragma region BLOAT
-							if (!culledObjects.empty())
+							if (spTree != nullptr)
 							{
-
+								spTree->getVisible(boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))), culledObjects);
+								for (Cullable* object : culledObjects)
+								{
+									culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
+								}
 								CameraCB cb;
 								cb.mVP = l->shadowCam_dirLight[index].getVP();
 								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-								for (Cullable* object : culledObjects) {
-									culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
-								}
-
-								for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
-									Mesh* mesh = iter->first;
-									CulledObjectList& visibleInstances = iter->second;
-
-									if (visibleInstances.size() && !mesh->isBillboarded) {
-
-										if (!mesh->doubleSided)
-											GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
-										else
-											GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
-
-
-
-										int k = 0;
-										for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-											if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-												if (mesh->softBody || (*viter)->isArmatureDeformed())
-													Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
-												else
-													Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
-												++k;
-											}
-										}
-										if (k < 1)
-											continue;
-
-										Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
-
-										GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
-										GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
-
-										for (MeshSubset& subset : mesh->subsets)
-										{
-											if (subset.subsetIndices.empty())
-											{
-												continue;
-											}
-											if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
-											{
-												GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
-
-												GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-												MaterialCB mcb;
-												mcb.Create(*subset.material);
-												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-
-												GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
-											}
-										}
-									}
-								}
-
+								RenderMeshes(l->shadowCam_dirLight[index].Eye, culledObjects, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 							}
-#pragma endregion
+
+//#pragma region BLOAT
+//							if (!culledObjects.empty())
+//							{
+//
+//								CameraCB cb;
+//								cb.mVP = l->shadowCam_dirLight[index].getVP();
+//								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+//
+//								for (Cullable* object : culledObjects) {
+//									culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
+//								}
+//
+//								for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
+//									Mesh* mesh = iter->first;
+//									CulledObjectList& visibleInstances = iter->second;
+//
+//									if (visibleInstances.size() && !mesh->isBillboarded) {
+//
+//										if (!mesh->doubleSided)
+//											GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+//										else
+//											GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
+//
+//
+//
+//										int k = 0;
+//										for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
+//											if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
+//												if (mesh->softBody || (*viter)->isArmatureDeformed())
+//													Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
+//												else
+//													Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
+//												++k;
+//											}
+//										}
+//										if (k < 1)
+//											continue;
+//
+//										Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
+//
+//										GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+//										GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+//
+//										for (MeshSubset& subset : mesh->subsets)
+//										{
+//											if (subset.subsetIndices.empty())
+//											{
+//												continue;
+//											}
+//											if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
+//											{
+//												GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+//
+//												GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+//
+//												MaterialCB mcb;
+//												mcb.Create(*subset.material);
+//												GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+//
+//
+//												GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
+//											}
+//										}
+//									}
+//								}
+//
+//							}
+//#pragma endregion
 						}
 					}
 					else if(type == Light::SPOT)
@@ -2711,75 +2720,87 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
 
 						Frustum frustum;
-						frustum.ConstructFrustum(wiRenderer::getCamera()->zFarP, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
-						if (spTree)
-							spTree->getVisible(frustum, culledObjects);
-
-#pragma region BLOAT
-						if (!culledObjects.empty())
+						frustum.ConstructFrustum(l->shadowCam_spotLight[0].farplane, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
+						if (spTree != nullptr)
 						{
+							spTree->getVisible(frustum, culledObjects);
+							for (Cullable* object : culledObjects) 
+							{
+								culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
+							}
 
 							CameraCB cb;
 							cb.mVP = l->shadowCam_spotLight[0].getVP();
 							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-							for (Cullable* object : culledObjects) {
-								culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
-							}
-
-							for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
-								Mesh* mesh = iter->first;
-								CulledObjectList& visibleInstances = iter->second;
-
-								if (visibleInstances.size() && !mesh->isBillboarded) {
-
-									if (!mesh->doubleSided)
-										GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
-									else
-										GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
-
-									int k = 0;
-									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-										if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-											if (mesh->softBody || (*viter)->isArmatureDeformed())
-												Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
-											else
-												Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
-											++k;
-										}
-									}
-									if (k < 1)
-										continue;
-
-									Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
-
-									GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
-									GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
-
-									for (MeshSubset& subset : mesh->subsets)
-									{
-
-										if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
-										{
-											GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
-
-											GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-											MaterialCB mcb;
-											mcb.Create(*subset.material);
-											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-
-											GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
-
-										}
-									}
-								}
-							}
+							RenderMeshes(l->translation, culledObjects, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 						}
-#pragma endregion
+
+//#pragma region BLOAT
+//						if (!culledObjects.empty())
+//						{
+//
+//							CameraCB cb;
+//							cb.mVP = l->shadowCam_spotLight[0].getVP();
+//							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+//
+//							for (Cullable* object : culledObjects) {
+//								culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
+//							}
+//
+//							for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) {
+//								Mesh* mesh = iter->first;
+//								CulledObjectList& visibleInstances = iter->second;
+//
+//								if (visibleInstances.size() && !mesh->isBillboarded) {
+//
+//									if (!mesh->doubleSided)
+//										GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+//									else
+//										GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
+//
+//									int k = 0;
+//									for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
+//										if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
+//											if (mesh->softBody || (*viter)->isArmatureDeformed())
+//												Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
+//											else
+//												Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
+//											++k;
+//										}
+//									}
+//									if (k < 1)
+//										continue;
+//
+//									Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
+//
+//									GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+//									GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+//
+//									for (MeshSubset& subset : mesh->subsets)
+//									{
+//
+//										if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
+//										{
+//											GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+//
+//											GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+//
+//											MaterialCB mcb;
+//											mcb.Create(*subset.material);
+//											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+//
+//											GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+//
+//
+//											GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
+//
+//										}
+//									}
+//								}
+//							}
+//						}
+//#pragma endregion
 					}
 					else if(type == Light::POINT)
 					{
@@ -2802,72 +2823,80 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						CulledList culledObjects;
 						CulledCollection culledRenderer;
 
-						if (spTree)
-							spTree->getVisible(l->bounds, culledObjects);
-
-#pragma region BLOAT
-						for (Cullable* object : culledObjects)
-							culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
-
-						for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
+						if (spTree != nullptr)
 						{
-							Mesh* mesh = iter->first;
-							CulledObjectList& visibleInstances = iter->second;
-
-							if (!mesh->isBillboarded && !visibleInstances.empty()) {
-
-								if (!mesh->doubleSided)
-									GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
-								else
-									GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
-
-
-
-								int k = 0;
-								for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-									if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-										if (mesh->softBody || (*viter)->isArmatureDeformed())
-											Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
-										else
-											Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
-										++k;
-									}
-								}
-								if (k < 1)
-									continue;
-
-								Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
-
-								GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
-								GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
-
-
-								for (MeshSubset& subset : mesh->subsets)
-								{
-									if (subset.subsetIndices.empty())
-									{
-										continue;
-									}
-									if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
-									{
-										GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
-
-
-										GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-										MaterialCB mcb;
-										mcb.Create(*subset.material);
-										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-										GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
-									}
-								}
+							spTree->getVisible(l->bounds, culledObjects); 
+							for (Cullable* object : culledObjects)
+							{
+								culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
 							}
-							visibleInstances.clear();
+
+							RenderMeshes(l->translation, culledObjects, culledRenderer, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
 						}
-#pragma endregion
+
+//#pragma region BLOAT
+//						for (Cullable* object : culledObjects)
+//							culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
+//
+//						for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
+//						{
+//							Mesh* mesh = iter->first;
+//							CulledObjectList& visibleInstances = iter->second;
+//
+//							if (!mesh->isBillboarded && !visibleInstances.empty()) {
+//
+//								if (!mesh->doubleSided)
+//									GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+//								else
+//									GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
+//
+//
+//
+//								int k = 0;
+//								for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
+//									if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
+//										if (mesh->softBody || (*viter)->isArmatureDeformed())
+//											Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
+//										else
+//											Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
+//										++k;
+//									}
+//								}
+//								if (k < 1)
+//									continue;
+//
+//								Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
+//
+//								GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+//								GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+//
+//
+//								for (MeshSubset& subset : mesh->subsets)
+//								{
+//									if (subset.subsetIndices.empty())
+//									{
+//										continue;
+//									}
+//									if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow)
+//									{
+//										GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+//
+//
+//										GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+//
+//										MaterialCB mcb;
+//										mcb.Create(*subset.material);
+//										GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+//
+//										//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+//
+//										GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
+//									}
+//								}
+//							}
+//							visibleInstances.clear();
+//						}
+//#pragma endregion
 
 					}
 				}
@@ -2893,10 +2922,6 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 
 	switch (shaderType)
 	{
-	case SHADERTYPE_TEXTURE:
-	case SHADERTYPE_ALPHATESTONLY:
-		realPS = PSTYPE_TEXTUREONLY;
-		break;
 	case SHADERTYPE_DEFERRED:
 		if (material->GetNormalMap() == nullptr)
 		{
@@ -3065,55 +3090,39 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 			}
 		}
 		break;
+	case SHADERTYPE_SHADOW:
+		realPS = PSTYPE_SHADOW;
+		break;
+	case SHADERTYPE_SHADOWCUBE:
+		realPS = PSTYPE_SHADOWCUBEMAPRENDER;
+		break;
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realPS = PSTYPE_ENVMAP;
+		break;
 	default:
+		realPS = PSTYPE_TEXTUREONLY;
 		break;
 	}
 
 	return realPS;
 }
-void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-	bool tessellation, bool grass)
+void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledList& culledObjects, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
+	bool tessellation)
 {
 
 	if (!culledObjects.empty())
 	{
-		GetDevice()->EventBegin(L"DrawWorld", threadID);
+		GetDevice()->EventBegin(L"RenderMeshes", threadID);
 
 		tessellation = tessellation && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
 		DSSTYPES targetDepthStencilState = DSSTYPE_DEFAULT;
-		UINT targetStencilRef = STENCILREF_DEFAULT;
-
-		if (shaderType == SHADERTYPE_TILEDFORWARD)
+		UINT targetStencilRef = STENCILREF_DEFAULT; 
+		
+		if (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE)
 		{
-			if (renderTypeFlags & RENDERTYPE_OPAQUE)
-			{
-				GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
-				GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
-				targetDepthStencilState = DSSTYPE_DEPTHREADEQUAL;
-			}
-			else
-			{
-				GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
-				GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
-			}
+			targetDepthStencilState = DSSTYPE_DEPTHREADEQUAL;
 		}
-
-
-		if (grass)
-		{
-			GetDevice()->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
-			for (Cullable* object : culledObjects) 
-			{
-				for (wiHairParticle* hair : ((Object*)object)->hParticleSystems) 
-				{
-					hair->Draw(camera, shaderType, threadID);
-				}
-			}
-		}
-
-		if (wireRender)
-			GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
 
 		if (shaderType == SHADERTYPE_ALPHATESTONLY)
 		{
@@ -3124,6 +3133,7 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 		}
 
+		bool easyTextureBind = shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_ALPHATESTONLY;
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
 		{
@@ -3138,12 +3148,32 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 
-			if (tessellation && tessF)
-				GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT], threadID);
+			if (shaderType == SHADERTYPE_SHADOW)
+			{
+				GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
+			}
+			else if (shaderType == SHADERTYPE_SHADOWCUBE)
+			{
+				GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
+				GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
+			}
+			else if (shaderType == SHADERTYPE_ENVMAPCAPTURE)
+			{
+				GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
+				GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
+			}
 			else
 			{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
+				if (tessellation && tessF)
+				{
+					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT], threadID);
+				}
+				else
+				{
+					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
+				}
 			}
+
 			if (tessellation && tessF)
 			{
 				TessellationCB tessCB;
@@ -3178,7 +3208,7 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 					if (instance->emitterType != Object::EmitterType::EMITTER_INVISIBLE) 
 					{
 						const float impostorThreshold = instance->bounds.getRadius();
-						float dist = wiMath::Distance(camera->translation, instance->bounds.getCenter());
+						float dist = wiMath::Distance(eye, instance->bounds.getCenter());
 						float dither = instance->transparency;
 						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - impostorDistance) / impostorThreshold, 0, 1));
 						if (dither > 1.0f - FLT_EPSILON)
@@ -3202,7 +3232,14 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 					mcb.metalness = 1.0f;
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
 
-					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+					if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+					{
+						GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+					}
+					else
+					{
+						GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+					}
 
 					GetDevice()->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
 
@@ -3210,36 +3247,68 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 					GetDevice()->BindVertexBuffer(&Mesh::impostorVB, 0, sizeof(Vertex), threadID);
 					GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(1), TEXSLOT_ONDEMAND1, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
-					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
-					switch (shaderType)
+					if (!easyTextureBind)
 					{
-					case SHADERTYPE_TEXTURE:
-					case SHADERTYPE_ALPHATESTONLY:
-						GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
-						break;
-					case SHADERTYPE_DEFERRED:
-						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], threadID);
-						break;
-					case SHADERTYPE_FORWARD:
-						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP], threadID);
-						break;
-					case SHADERTYPE_TILEDFORWARD:
-						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], threadID);
-						break;
-					default:
-						break;
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(1), TEXSLOT_ONDEMAND1, threadID);
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
+					}
+
+					if (wireRender)
+					{
+						GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
+					}
+					else
+					{
+						switch (shaderType)
+						{
+						case SHADERTYPE_DEFERRED:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], threadID);
+							break;
+						case SHADERTYPE_FORWARD:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP], threadID);
+							break;
+						case SHADERTYPE_TILEDFORWARD:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], threadID);
+							break;
+						case SHADERTYPE_SHADOW:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
+							break;
+						case SHADERTYPE_SHADOWCUBE:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
+							break;
+						default:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
+							break;
+						}
 					}
 					GetDevice()->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
 				}
 			}
 
-			if (!mesh->doubleSided)
-				GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+			if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+			{
+				if (!mesh->doubleSided)
+				{
+					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+				}
+				else
+				{
+					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
+				}
+			}
 			else
-				GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
+			{
+				if (!mesh->doubleSided)
+				{
+					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+				}
+				else
+				{
+					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
+				}
+			}
 
 
 			int k = 0;
@@ -3248,7 +3317,7 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 				if (instance->emitterType != Object::EmitterType::EMITTER_INVISIBLE)
 				{
 					const float impostorThreshold = instance->bounds.getRadius();
-					float dist = wiMath::Distance(camera->translation, instance->bounds.getCenter());
+					float dist = wiMath::Distance(eye, instance->bounds.getCenter());
 					float dither = instance->transparency;
 					if (mesh->hasImpostor())
 						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - impostorDistance) / impostorThreshold, 0, 1));
@@ -3319,14 +3388,21 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 					if (!wireRender)
 					{
 						GetDevice()->BindResourcePS(material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-						GetDevice()->BindResourcePS(material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-						GetDevice()->BindResourcePS(material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
-						GetDevice()->BindResourcePS(material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
-						GetDevice()->BindResourcePS(material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
-						GetDevice()->BindResourcePS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
+						if (!easyTextureBind)
+						{
+							GetDevice()->BindResourcePS(material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+							GetDevice()->BindResourcePS(material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
+							GetDevice()->BindResourcePS(material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
+							GetDevice()->BindResourcePS(material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+							GetDevice()->BindResourcePS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
+						}
 
 						PSTYPES realPS = GetPSTYPE(shaderType, material);
 						GetDevice()->BindPS(pixelShaders[realPS], threadID);
+					}
+					else
+					{
+						GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
 					}
 					if (tessellation)
 					{
@@ -3341,6 +3417,7 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 
 
 		GetDevice()->BindPS(nullptr, threadID);
+		GetDevice()->BindGS(nullptr, threadID);
 		GetDevice()->BindVS(nullptr, threadID);
 		GetDevice()->BindDS(nullptr, threadID);
 		GetDevice()->BindHS(nullptr, threadID);
@@ -3348,8 +3425,8 @@ void wiRenderer::RenderMeshes(Camera* camera, const CulledList& culledObjects, c
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 }
-void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType
-				  , Texture2D* refRes, bool grass)
+
+void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, Texture2D* refRes, bool grass)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -3366,7 +3443,25 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 			}
 		}
 
-		RenderMeshes(camera, culledObjects, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, grass);
+		if (shaderType == SHADERTYPE_TILEDFORWARD)
+		{
+			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
+			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
+		}
+
+		if (grass)
+		{
+			GetDevice()->BindDepthStencilState(depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
+			for (Cullable* object : culledObjects)
+			{
+				for (wiHairParticle* hair : ((Object*)object)->hParticleSystems)
+				{
+					hair->Draw(camera, shaderType, threadID);
+				}
+			}
+		}
+
+		RenderMeshes(camera->translation, culledObjects, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
 	}
 
 }
@@ -3387,8 +3482,14 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 			GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7, threadID);
 			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
 		}
+		
+		if (shaderType == SHADERTYPE_TILEDFORWARD)
+		{
+			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
+			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
+		}
 
-		RenderMeshes(camera, culledObjects, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, grass);
+		RenderMeshes(camera->translation, culledObjects, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
 	}
 
 	//if(!culledObjects.empty())
@@ -4425,15 +4526,14 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 	probe->cubeMap.Activate(threadID, 0, 0, 0, 1);
 
-	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+	//GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-	GetDevice()->BindPS(pixelShaders[PSTYPE_ENVMAP], threadID);
-	GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
-	GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
+	//GetDevice()->BindPS(pixelShaders[PSTYPE_ENVMAP], threadID);
+	//GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
+	//GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
 
-	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 
 	vector<SHCAM> cameras;
@@ -4459,82 +4559,89 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	}
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 
 	CulledList culledObjects;
 	CulledCollection culledRenderer;
 
 	SPHERE culler = SPHERE(position, getCamera()->zFarP);
-	if (spTree)
+	if (spTree != nullptr)
+	{
 		spTree->getVisible(culler, culledObjects);
 
-	for (Cullable* object : culledObjects)
-		culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
-
-	for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
-	{
-		Mesh* mesh = iter->first;
-		CulledObjectList& visibleInstances = iter->second;
-
-		if (!mesh->isBillboarded && !visibleInstances.empty()) {
-
-			if (!mesh->doubleSided)
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-			else
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
-
-
-
-			int k = 0;
-			for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
-				if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
-					if (mesh->softBody || (*viter)->isArmatureDeformed())
-						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
-					else
-						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
-					++k;
-				}
-			}
-			if (k < 1)
-				continue;
-
-			Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
-
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
-
-			for(MeshSubset& subset : mesh->subsets)
-			{
-				if (subset.subsetIndices.empty())
-				{
-					continue;
-				}
-				if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow) 
-				{
-					GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
-
-
-					if (subset.material->shadeless)
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, threadID);
-					if (subset.material->subsurfaceScattering > 0)
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
-					else
-						GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
-
-					GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-
-					MaterialCB mcb;
-					mcb.Create(*subset.material);
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
-
-					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
-				}
-			}
+		for (Cullable* object : culledObjects)
+		{
+			culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
 		}
-		visibleInstances.clear();
+
+		RenderMeshes(probe->translation, culledObjects, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
 	}
+
+	//for (CulledCollection::iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
+	//{
+	//	Mesh* mesh = iter->first;
+	//	CulledObjectList& visibleInstances = iter->second;
+
+	//	if (!mesh->isBillboarded && !visibleInstances.empty()) {
+
+	//		if (!mesh->doubleSided)
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//		else
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
+
+
+
+	//		int k = 0;
+	//		for (CulledObjectList::iterator viter = visibleInstances.begin(); viter != visibleInstances.end(); ++viter) {
+	//			if ((*viter)->emitterType != Object::EmitterType::EMITTER_INVISIBLE) {
+	//				if (mesh->softBody || (*viter)->isArmatureDeformed())
+	//					Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(), (*viter)->transparency), k, threadID);
+	//				else
+	//					Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&(*viter)->world)), (*viter)->transparency), k, threadID);
+	//				++k;
+	//			}
+	//		}
+	//		if (k < 1)
+	//			continue;
+
+	//		Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
+
+	//		GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+	//		GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
+
+	//		for(MeshSubset& subset : mesh->subsets)
+	//		{
+	//			if (subset.subsetIndices.empty())
+	//			{
+	//				continue;
+	//			}
+	//			if (!wireRender && !subset.material->isSky && !subset.material->water && subset.material->cast_shadow) 
+	//			{
+	//				GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+
+
+	//				if (subset.material->shadeless)
+	//					GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SHADELESS, threadID);
+	//				if (subset.material->subsurfaceScattering > 0)
+	//					GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_SKIN, threadID);
+	//				else
+	//					GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
+
+	//				GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+
+	//				MaterialCB mcb;
+	//				mcb.Create(*subset.material);
+	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+
+	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+
+	//				GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
+	//			}
+	//		}
+	//	}
+	//	visibleInstances.clear();
+	//}
 
 
 
