@@ -106,7 +106,12 @@ static const float		PI = 3.14159265358979323846;
 
 #define sqr( a )		(a)*(a)
 
+#ifdef DISABLE_ALPHATEST
+#define ALPHATEST(x)
+#else
 #define ALPHATEST(x)	clip((x)-0.1);
+#endif
+
 static const float		g_GammaValue = 2.2;
 #define DEGAMMA(x)		pow(abs(x),g_GammaValue)
 #define GAMMA(x)		pow(abs(x),1.0/g_GammaValue)

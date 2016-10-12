@@ -212,6 +212,7 @@ struct Material
 	bool IsTransparent() const { return alpha < 1.0f; }
 	bool IsWater() const { return water; }
 	bool HasPlanarReflection() const { return planar_reflections; }
+	bool IsCastingShadow() const { return cast_shadow; }
 	RENDERTYPE GetRenderType() const
 	{
 		if (IsWater())
@@ -523,7 +524,8 @@ struct Object : public Streamable, public Transform
 	}
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
-	int GetRenderTypes();
+	bool IsCastingShadow() const;
+	int GetRenderTypes() const;
 	virtual void UpdateTransform();
 	void UpdateObject();
 	void Serialize(wiArchive& archive);

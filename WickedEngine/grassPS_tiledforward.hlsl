@@ -4,10 +4,6 @@
 
 float4 main(GS_OUT PSIn) : SV_Target
 {
-#ifdef GRASS_FADE_DITHER
-	clip(dither(PSIn.pos.xy) - PSIn.fade);
-#endif
-
 	float4 color = float4(PSIn.col,1);
 	color = DEGAMMA(color);
 	float3 P = PSIn.pos3D;

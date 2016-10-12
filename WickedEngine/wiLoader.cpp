@@ -3955,7 +3955,18 @@ void Object::UpdateObject()
 		wiRenderer::emitterSystems.push_back(x);
 	}
 }
-int Object::GetRenderTypes()
+bool Object::IsCastingShadow() const
+{
+	for (auto& x : mesh->subsets)
+	{
+		if (x.material->IsCastingShadow())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+int Object::GetRenderTypes() const
 {
 	int retVal = RENDERTYPE::RENDERTYPE_VOID;
 	for (auto& x : mesh->subsets)
