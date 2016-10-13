@@ -87,7 +87,7 @@ int wiCpuInfo::GetCpuPercentage()
 	}
 	else
 	{
-		usage = 0;
+		usage = -1;
 	}
 
 	return usage;

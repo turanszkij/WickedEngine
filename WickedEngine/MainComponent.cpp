@@ -175,7 +175,17 @@ void MainComponent::Compose()
 		}
 		if (infoDisplay.cpuinfo)
 		{
-			ss << "CPU: " << wiCpuInfo::GetCpuPercentage() << "%" << endl;
+			int cpupercentage = wiCpuInfo::GetCpuPercentage();
+			ss << "CPU: ";
+			if (cpupercentage >= 0)
+			{
+				ss << cpupercentage << "%";
+			}
+			else
+			{
+				ss << "Query failed";
+			}
+			ss << endl;
 		}
 		wiFont(ss.str(), wiFontProps(0, 0, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw();
 	}

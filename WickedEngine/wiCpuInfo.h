@@ -32,7 +32,7 @@ public:
 	static void Initialize(){}
 	static void Shutdown(){}
 	static void Frame(){}
-	static int GetCpuPercentage(){ return 0; }
+	static int GetCpuPercentage(){ return -1; }
 #endif
 };
 
