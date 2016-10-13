@@ -43,7 +43,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtMain.Set(threadID);
 	{
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, nullptr, true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, rtReflection.GetTexture(), true);
 		wiRenderer::DrawSky(threadID);
 	}
 }

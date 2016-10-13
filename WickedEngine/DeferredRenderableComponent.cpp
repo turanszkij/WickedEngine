@@ -237,19 +237,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.process.clear();
 		}
 	}
-
-	//if (getMotionBlurEnabled()){ //MOTIONBLUR
-	//	rtMotionBlur.Activate(threadID);
-	//	fx.process.setMotionBlur(true);
-	//	fx.blendFlag = BLENDMODE_OPAQUE;
-	//	if (getSSREnabled()){
-	//		wiImage::Draw(rtSSR.GetTexture(), fx, threadID);
-	//	}
-	//	else{
-	//		wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
-	//	}
-	//	fx.process.clear();
-	//}
 }
 
 wiRenderTarget& DeferredRenderableComponent::GetFinalRT()
