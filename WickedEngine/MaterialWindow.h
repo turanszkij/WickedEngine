@@ -25,6 +25,7 @@ public:
 	wiLabel*	materialLabel;
 	wiCheckBox* waterCheckBox;
 	wiCheckBox* planarReflCheckBox;
+	wiCheckBox* shadowCasterCheckBox;
 	wiSlider*	normalMapSlider;
 	wiSlider*	roughnessSlider;
 	wiSlider*	reflectanceSlider;
@@ -34,6 +35,8 @@ public:
 	wiSlider*	emissiveSlider;
 	wiSlider*	sssSlider;
 	wiSlider*	pomSlider;
+	wiSlider*	movingTexSliderU;
+	wiSlider*	movingTexSliderV;
 	wiButton*	colorPickerToggleButton;
 	wiColorPicker* colorPicker;
 };

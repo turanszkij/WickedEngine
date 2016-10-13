@@ -2659,12 +2659,14 @@ void Model::FinishLoading()
 }
 void Model::UpdateModel()
 {
-	for (MaterialCollection::iterator iter = materials.begin(); iter != materials.end(); ++iter) {
+	for (MaterialCollection::iterator iter = materials.begin(); iter != materials.end(); ++iter)
+	{
 		Material* iMat = iter->second;
 		iMat->framesToWaitForTexCoordOffset -= 1.0f;
-		if (iMat->framesToWaitForTexCoordOffset <= 0) {
-			iMat->texMulAdd.z += iMat->movingTex.x*wiRenderer::GetGameSpeed();
-			iMat->texMulAdd.w += iMat->movingTex.y*wiRenderer::GetGameSpeed();
+		if (iMat->framesToWaitForTexCoordOffset <= 0) 
+		{
+			iMat->texMulAdd.z = fmodf(iMat->texMulAdd.z + iMat->movingTex.x*wiRenderer::GetGameSpeed(), 1);
+			iMat->texMulAdd.w = fmodf(iMat->texMulAdd.w + iMat->movingTex.y*wiRenderer::GetGameSpeed(), 1);
 			iMat->framesToWaitForTexCoordOffset = iMat->movingTex.z*wiRenderer::GetGameSpeed();
 		}
 	}
