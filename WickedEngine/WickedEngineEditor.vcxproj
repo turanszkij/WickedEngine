@@ -203,6 +203,12 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="fonts\basic.dds" />
+    <Image Include="images\leaf.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="images\ripple.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
     <Image Include="Resource\directional_light.dds" />
     <Image Include="Resource\pointlight.dds" />
     <Image Include="Resource\spotlight.dds" />

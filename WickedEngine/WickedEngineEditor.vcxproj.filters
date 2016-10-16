@@ -19,6 +19,9 @@
     <Filter Include="Resource">
       <UniqueIdentifier>{301fff70-6331-4cf4-8db0-1023546019f9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="images">
+      <UniqueIdentifier>{e1f824f0-bb57-4a4d-af91-24cafaef11df}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -126,6 +129,12 @@
     </Image>
     <Image Include="Resource\pointlight.dds">
       <Filter>Resource</Filter>
+    </Image>
+    <Image Include="images\leaf.png">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="images\ripple.png">
+      <Filter>images</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

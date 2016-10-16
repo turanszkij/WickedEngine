@@ -605,6 +605,8 @@ void EditorComponent::Update()
 {
 	if (!wiBackLog::isActive())
 	{
+
+		// Camera control:
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
 		XMFLOAT4 currentMouse = wiInputManager::GetInstance()->getpointer();
 		float xDif = 0, yDif = 0;
@@ -664,6 +666,29 @@ void EditorComponent::Update()
 			}
 		}
 
+		// Interact:
+		if (hovered.object != nullptr)
+		{
+			if (hovered.object->GetRenderTypes() & RENDERTYPE_WATER)
+			{
+				if (wiInputManager::GetInstance()->down(VK_LBUTTON))
+				{
+					// if water, then put a water ripple onto it:
+					wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position, getWaterPlane());
+				}
+			}
+			else
+			{
+				if (wiInputManager::GetInstance()->press(VK_LBUTTON))
+				{
+					// if not water, put a decal instead:
+					Decal* decal = new Decal(hovered.position, XMFLOAT3(4,4,4), wiRenderer::getCamera()->rotation,
+						wiHelper::GetOriginalWorkingDirectory() + "images/leaf.png");
+					decal->attachTo(hovered.object);
+					wiRenderer::PutDecal(decal);
+				}
+			}
+		}
 
 		// Select...
 		hovered = wiRenderer::Pick((long)currentMouse.x, (long)currentMouse.y, rendererWnd->GetPickType());
