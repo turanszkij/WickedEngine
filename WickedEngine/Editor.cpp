@@ -667,7 +667,7 @@ void EditorComponent::Update()
 		}
 
 		// Interact:
-		if (hovered.object != nullptr)
+		if (hovered.object != nullptr && selected.empty())
 		{
 			if (hovered.object->GetRenderTypes() & RENDERTYPE_WATER)
 			{
