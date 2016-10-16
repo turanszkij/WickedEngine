@@ -411,7 +411,8 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		device->BindPS(_ps,threadID);
 		device->BindVS(vs,threadID);
 
-		if(texture){
+		if(texture)
+		{
 			device->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
 			device->BindResourceGS(texture,TEXSLOT_ONDEMAND0,threadID);
 
@@ -432,21 +433,26 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		// use the depthstencil of the drawworld instead!
 		//device->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
 
-		for(int i=0;i<3;++i)
+		for (int i = 0; i < 3; ++i)
 		{
-			if(texture)
+			if (culling.renderPoints[i].empty())
 			{
-				device->BindGS(i<2?qgs[0]:qgs[1],threadID);
-				device->BindRasterizerState(i<2?ncrs:rs,threadID);
+				continue;
+			}
+
+			if (texture)
+			{
+				device->BindGS(i < 2 ? qgs[0] : qgs[1], threadID);
+				device->BindRasterizerState(i < 2 ? ncrs : rs, threadID);
 			}
 			else
 			{
 				device->BindGS(gs[i], threadID);
 			}
 
-			device->UpdateBuffer(vb[i],culling.renderPoints[i].data(),threadID,(int)(sizeof(Point)*culling.renderPoints[i].size()));
-			device->BindVertexBuffer(vb[i],0,sizeof(Point),threadID);
-			device->Draw((int)culling.renderPoints[i].size(),threadID);
+			device->UpdateBuffer(vb[i], culling.renderPoints[i].data(), threadID, (int)(sizeof(Point)*culling.renderPoints[i].size()));
+			device->BindVertexBuffer(vb[i], 0, sizeof(Point), threadID);
+			device->Draw((int)culling.renderPoints[i].size(), threadID);
 		}
 
 		device->BindGS(nullptr,threadID);
@@ -500,20 +506,22 @@ void wiHairParticle::PerformCulling(Camera* camera)
 			renderPoints.clear();
 			renderPoints.reserve(MAX_PARTICLES);
 
-			CulledList::iterator iter = culledPatches.begin();
-			while (iter != culledPatches.end()) {
-				Cullable* culled = *iter;
+			for(auto& culled : culledPatches)
+			{
+				if (culled == nullptr)
+				{
+					continue;
+				}
+
 				Patch* patch = ((PatchHolder*)culled)->patch;
 
 				float dis = wiMath::Distance(eye, ((PatchHolder*)culled)->bounds.getCenter());
 
-				if (dis<LOD[i]) {
-					culledPatches.erase(iter++);
-					culled = NULL;
+				if (dis<LOD[i])
+				{
+					culled = nullptr;
 					renderPoints.insert(renderPoints.end(), patch->p.begin(), patch->p.end());
 				}
-				else
-					++iter;
 			}
 		}
 	}

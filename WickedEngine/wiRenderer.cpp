@@ -1439,6 +1439,7 @@ void wiRenderer::UpdatePerFrameData()
 			culling.culledRenderer_transparent.clear();
 			culling.culledHairParticleSystems.clear();
 			culling.culledLights.clear();
+			culling.culledLight_count = 0;
 
 			if (spTree != nullptr)
 			{
@@ -1456,7 +1457,7 @@ void wiRenderer::UpdatePerFrameData()
 					}
 					if (object->GetRenderTypes() & RENDERTYPE_OPAQUE)
 					{
-						culling.culledRenderer[object->mesh].push_back(object);
+						culling.culledRenderer[object->mesh].push_front(object);
 					}
 				}
 				for (Cullable* x : culledObjects_transparent)
@@ -1464,7 +1465,7 @@ void wiRenderer::UpdatePerFrameData()
 					Object* object = (Object*)x;
 					if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
 					{
-						culling.culledRenderer_transparent[object->mesh].push_back(object);
+						culling.culledRenderer_transparent[object->mesh].push_front(object);
 					}
 				}
 			}
@@ -1478,6 +1479,7 @@ void wiRenderer::UpdatePerFrameData()
 				int shadowCounter_Cube = 0;
 				for (auto& c : culling.culledLights)
 				{
+					culling.culledLight_count++;
 					Light* l = (Light*)c;
 					l->lightArray_index = i;
 
@@ -2633,7 +2635,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									Object* object = (Object*)x;
 									if (object->IsCastingShadow())
 									{
-										culledRenderer[object->mesh].push_back(object);
+										culledRenderer[object->mesh].push_front(object);
 									}
 								}
 								if (!culledRenderer.empty())
@@ -2667,7 +2669,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								Object* object = (Object*)x;
 								if (object->IsCastingShadow())
 								{
-									culledRenderer[object->mesh].push_back(object);
+									culledRenderer[object->mesh].push_front(object);
 								}
 							}
 							if (!culledRenderer.empty())
@@ -2698,7 +2700,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								Object* object = (Object*)x;
 								if (object->IsCastingShadow())
 								{
-									culledRenderer[object->mesh].push_back(object);
+									culledRenderer[object->mesh].push_front(object);
 								}
 							}
 							if (!culledRenderer.empty())
@@ -3040,7 +3042,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				if (k > 0)
 				{
-					Mesh::UpdateRenderableInstances((int)visibleInstances.size(), threadID);
+					Mesh::UpdateRenderableInstances(k, threadID);
 
 					MaterialCB mcb;
 					ZeroMemory(&mcb, sizeof(mcb));
@@ -3436,7 +3438,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)BLOCK_SIZE);
 		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)BLOCK_SIZE);
 		dispatchParams.numThreadGroups[2] = 1;
-		dispatchParams.value0 = (UINT)frameCullings[getCamera()].culledLights.size();
+		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count; // light count (forward_list does not have size())
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
 		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 	}
@@ -4205,7 +4207,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 
 		for (Cullable* object : culledObjects)
 		{
-			culledRenderer[((Object*)object)->mesh].push_back((Object*)object);
+			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
 		}
 
 		RenderMeshes(probe->translation, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);

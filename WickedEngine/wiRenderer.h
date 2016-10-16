@@ -355,6 +355,7 @@ public:
 		CulledCollection culledRenderer_transparent;
 		vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
+		UINT culledLight_count; // because forward_list doesn't have size()
 	};
 	static unordered_map<Camera*, FrameCulling> frameCullings;
 	

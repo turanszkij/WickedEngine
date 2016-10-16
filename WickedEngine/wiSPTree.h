@@ -4,9 +4,9 @@
 
 class Frustum;
 
-typedef list<Cullable*> CulledList;
+typedef forward_list<Cullable*> CulledList;
 
-typedef list<Object*> CulledObjectList;
+typedef forward_list<Object*> CulledObjectList;
 typedef unordered_map<Mesh*,CulledObjectList> CulledCollection;
 
 

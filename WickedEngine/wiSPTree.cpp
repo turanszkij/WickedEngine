@@ -39,9 +39,10 @@ void wiSPTree::initialize(const vector<Cullable*>& objects, const XMFLOAT3& newM
 
 void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects)
 {
-	for(Cullable* object : newObjects){
+	for(Cullable* object : newObjects)
+	{
 		
-		node->objects.push_back(object);
+		node->objects.push_front(object);
 	}
 
 	if(newObjects.size()>SP_TREE_OBJECT_PER_NODE && node->depth<SP_TREE_MAX_DEPTH){
@@ -140,7 +141,7 @@ void wiSPTree::getVisible(Frustum& frustum, CulledList& objects, SortType sortTy
 					)
 				)
 			{
-				objects.push_back(object);
+				objects.push_front(object);
 			}
 		}
 		if(node->count)
@@ -180,7 +181,7 @@ void wiSPTree::getVisible(AABB& frustum, CulledList& objects, SortType sortType,
 					(contain_type == INTERSECTS && frustum.intersects(object->bounds))
 					)
 				) {
-				objects.push_back(object);
+				objects.push_front(object);
 			}
 		}
 		if(node->count)
@@ -216,7 +217,7 @@ void wiSPTree::getVisible(SPHERE& frustum, CulledList& objects, SortType sortTyp
 		{
 			if (frustum.intersects(object->bounds))
 			{
-				objects.push_back(object);
+				objects.push_front(object);
 			}
 		}
 		if(node->count)
@@ -246,7 +247,7 @@ void wiSPTree::getVisible(RAY& frustum, CulledList& objects, SortType sortType, 
 		for(Cullable* object : node->objects)
 			if(frustum.intersects(object->bounds))
 			{
-				objects.push_back(object);
+				objects.push_front(object);
 			}
 		if(node->count){
 			for (unsigned int i = 0; i<node->children.size(); ++i)
@@ -266,7 +267,7 @@ void wiSPTree::getAll(CulledList& objects, Node* node)
 		node = root;
 	}
 
-	objects.insert(objects.end(), node->objects.begin(),node->objects.end());
+	objects.insert_after(objects.end(), node->objects.begin(),node->objects.end());
 	if(node->count)
 	{
 		for (unsigned int i = 0; i < node->children.size(); ++i)
