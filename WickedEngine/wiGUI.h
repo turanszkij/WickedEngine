@@ -13,6 +13,7 @@ private:
 	list<wiWidget*> widgets;
 	wiWidget* activeWidget;
 	GRAPHICSTHREAD threadID;
+	bool focus;
 public:
 	wiGUI(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	~wiGUI();
@@ -29,6 +30,9 @@ public:
 	wiWidget* GetActiveWidget();
 	// true if another widget is currently active
 	bool IsWidgetDisabled(wiWidget* widget);
+
+	// returns true if any gui element has the focus
+	bool HasFocus();
 
 	GRAPHICSTHREAD GetGraphicsThread() { return threadID; }
 };

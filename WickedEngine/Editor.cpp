@@ -603,7 +603,7 @@ void EditorComponent::Start()
 }
 void EditorComponent::Update()
 {
-	if (!wiBackLog::isActive())
+	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
 
 		// Camera control:

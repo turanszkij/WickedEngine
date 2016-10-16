@@ -12,7 +12,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(600, 550));
+	materialWindow->SetSize(XMFLOAT2(600, 570));
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 

@@ -4,7 +4,7 @@
 #include "wiRenderer.h"
 
 
-wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr)
+wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false)
 {
 }
 
@@ -18,6 +18,12 @@ void wiGUI::Update()
 {
 	if (activeWidget != nullptr)
 	{
+		// place to the end of the list to render on top
+		std::iter_swap(
+			std::find(widgets.begin(),widgets.end(),widgets.back()),
+			std::find(widgets.begin(), widgets.end(),activeWidget)
+		);
+
 		if (!activeWidget->IsEnabled() || !activeWidget->IsVisible())
 		{
 			// deactivate active widget if it became invisible or disabled
@@ -25,9 +31,14 @@ void wiGUI::Update()
 		}
 	}
 
-	for (auto&x : widgets)
+	focus = false;
+	for (list<wiWidget*>::reverse_iterator it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
-		x->Update(this);
+		(*it)->Update(this);
+		if ((*it)->IsEnabled() && (*it)->IsVisible() && (*it)->GetState() > wiWidget::WIDGETSTATE::IDLE)
+		{
+			focus = true;
+		}
 	}
 }
 
@@ -88,4 +99,8 @@ wiWidget* wiGUI::GetActiveWidget()
 bool wiGUI::IsWidgetDisabled(wiWidget* widget)
 {
 	return (activeWidget != nullptr && activeWidget != widget);
+}
+bool wiGUI::HasFocus()
+{
+	return focus;
 }
