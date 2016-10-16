@@ -1861,8 +1861,9 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)..\licenses.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
