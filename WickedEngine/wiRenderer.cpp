@@ -3260,6 +3260,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (!culledRenderer.empty() || (grass && culling.culledHairParticleSystems.empty()))
 	{
+		GetDevice()->EventBegin(L"DrawWorld");
+
 		if (!wireRender)
 		{
 			if (refRes != nullptr)
@@ -3284,6 +3286,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		}
 
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
+
+		GetDevice()->EventEnd();
 	}
 
 }
@@ -3297,6 +3301,8 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (!culledRenderer.empty())
 	{
+		GetDevice()->EventBegin(L"DrawWorld");
+
 		if (!wireRender)
 		{
 			GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6, threadID);
@@ -3311,6 +3317,8 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 		}
 
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
+
+		GetDevice()->EventEnd();
 	}
 }
 
