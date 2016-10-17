@@ -309,7 +309,7 @@ public:
 	static void UpdateImages();
 	static void ManageImages();
 	static void PutDecal(Decal* decal);
-	static void PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane);
+	static void PutWaterRipple(const string& image, const XMFLOAT3& pos);
 	static void ManageWaterRipples();
 	static void DrawWaterRipples(GRAPHICSTHREAD threadID);
 	static void SetGameSpeed(float value){GameSpeed=value; if(GameSpeed<0) GameSpeed=0;};

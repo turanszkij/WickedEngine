@@ -1748,7 +1748,8 @@ void wiRenderer::PutDecal(Decal* decal)
 {
 	GetScene().GetWorldNode()->decals.push_back(decal);
 }
-void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos, const wiWaterPlane& waterPlane){
+void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos)
+{
 	wiSprite* img=new wiSprite("","",image);
 	img->anim.fad=0.01f;
 	img->anim.scaleX=0.2f;
