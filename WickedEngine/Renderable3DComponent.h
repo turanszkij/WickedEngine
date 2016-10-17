@@ -23,8 +23,6 @@ private:
 	float dofFocus;
 	float dofStrength;
 
-	wiWaterPlane waterPlane;
-
 	bool fxaaEnabled;
 	bool ssaoEnabled;
 	bool ssrEnabled;
@@ -92,8 +90,6 @@ public:
 	inline float getDepthOfFieldFocus(){ return dofFocus; }
 	inline float getDepthOfFieldStrength(){ return dofStrength; }
 
-	wiWaterPlane getWaterPlane(){ return waterPlane; }
-
 	inline bool getSSAOEnabled(){ return ssaoEnabled; }
 	inline bool getSSREnabled(){ return ssrEnabled; }
 	inline bool getShadowsEnabled(){ return shadowsEnabled; }
@@ -130,8 +126,6 @@ public:
 	inline void setSSAOBlur(float value){ ssaoBlur = value; }
 	inline void setDepthOfFieldFocus(float value){ dofFocus = value; }
 	inline void setDepthOfFieldStrength(float value){ dofStrength = value; }
-
-	inline void setWaterPlane(const wiWaterPlane& value){ waterPlane = value; }
 
 	inline void setSSAOEnabled(bool value){ ssaoEnabled = value; }
 	inline void setSSREnabled(bool value){ ssrEnabled = value; }

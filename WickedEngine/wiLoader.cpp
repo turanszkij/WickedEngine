@@ -3968,6 +3968,17 @@ bool Object::IsCastingShadow() const
 	}
 	return false;
 }
+bool Object::IsReflector() const
+{
+	for (auto& x : mesh->subsets)
+	{
+		if (x.material->HasPlanarReflection())
+		{
+			return true;
+		}
+	}
+	return false;
+}
 int Object::GetRenderTypes() const
 {
 	int retVal = RENDERTYPE::RENDERTYPE_VOID;

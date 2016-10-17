@@ -19,8 +19,6 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
 	{
-		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
-
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_ALPHATESTONLY, nullptr, true);
 	}
 

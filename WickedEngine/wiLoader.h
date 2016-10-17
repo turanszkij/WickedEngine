@@ -211,7 +211,7 @@ struct Material
 
 	bool IsTransparent() const { return alpha < 1.0f; }
 	bool IsWater() const { return water; }
-	bool HasPlanarReflection() const { return planar_reflections; }
+	bool HasPlanarReflection() const { return planar_reflections || IsWater(); }
 	bool IsCastingShadow() const { return cast_shadow; }
 	RENDERTYPE GetRenderType() const
 	{
@@ -525,6 +525,7 @@ struct Object : public Streamable, public Transform
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
 	bool IsCastingShadow() const;
+	bool IsReflector() const;
 	int GetRenderTypes() const;
 	virtual void UpdateTransform();
 	void UpdateObject();
@@ -922,11 +923,11 @@ struct Camera:public Transform{
 		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye = this->GetEye();
 
 		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
-		At = XMVector3Transform(At, camRot);
-		Up = XMVector3Transform(Up, camRot);
+		At = XMVector3TransformNormal(At, camRot);
+		Up = XMVector3TransformNormal(Up, camRot);
 
-		At = XMVector3Transform(At, reflectMatrix);
-		Up = XMVector3Transform(Up, reflectMatrix);
+		At = XMVector3TransformNormal(At, reflectMatrix);
+		Up = XMVector3TransformNormal(Up, reflectMatrix);
 		Eye = XMVectorSetW(Eye, 1);
 		Eye = XMVector4Transform(Eye, reflectMatrix);
 

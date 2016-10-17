@@ -33,7 +33,6 @@ void Renderable3DComponent::setProperties()
 	setBloomStrength(19.3f);
 	setBloomThreshold(0.99f);
 	setBloomSaturation(-3.86f);
-	setWaterPlane(wiWaterPlane());
 	setDepthOfFieldFocus(10.f);
 	setDepthOfFieldStrength(2.2f);
 
@@ -206,8 +205,8 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 	rtReflection.Activate(threadID); {
 		// reverse clipping if underwater
-		XMFLOAT4 water = getWaterPlane().getXMFLOAT4();
-		if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&getWaterPlane().getXMFLOAT4()), wiRenderer::getCamera()->GetEye())) < 0 )
+		XMFLOAT4 water = wiRenderer::GetWaterPlane().getXMFLOAT4();
+		if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&water), wiRenderer::getCamera()->GetEye())) < 0 )
 		{
 			water.x *= -1;
 			water.y *= -1;
@@ -218,6 +217,8 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, nullptr, getHairParticlesReflectionEnabled());
 		wiRenderer::DrawSky(threadID);
+
+		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 	}
 }
 void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)

@@ -674,7 +674,7 @@ void EditorComponent::Update()
 				if (wiInputManager::GetInstance()->down(VK_LBUTTON))
 				{
 					// if water, then put a water ripple onto it:
-					wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position, getWaterPlane());
+					wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position, wiRenderer::GetWaterPlane());
 				}
 			}
 			else

@@ -98,9 +98,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
-
-		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
-
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true);
 
 	}

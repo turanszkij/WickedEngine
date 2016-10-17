@@ -83,6 +83,8 @@ vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
 
 unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
 
+wiWaterPlane wiRenderer::waterPlane;
+
 #pragma endregion
 
 wiRenderer::wiRenderer()
@@ -394,7 +396,7 @@ int wiRenderer::GetSunArrayIndex()
 	}
 	return -1;
 }
-float wiRenderer::GetGameSpeed(){return GameSpeed*overrideGameSpeed;}
+float wiRenderer::GetGameSpeed() { return GameSpeed*overrideGameSpeed; }
 
 void wiRenderer::UpdateSpheres()
 {
@@ -1401,7 +1403,6 @@ void wiRenderer::Update()
 
 	GetScene().Update();
 
-	refCam->Reflect(cam);
 }
 void wiRenderer::UpdatePerFrameData()
 {
@@ -1428,7 +1429,7 @@ void wiRenderer::UpdatePerFrameData()
 		}
 	}
 
-	// Perform culling:
+	// Perform culling and obtain closest reflector:
 	{
 		for (auto& x : frameCullings)
 		{
@@ -1443,10 +1444,10 @@ void wiRenderer::UpdatePerFrameData()
 
 			if (spTree != nullptr)
 			{
+				bool foundClosestReflector = false;
+
 				CulledList culledObjects;
 				spTree->getVisible(camera->frustum, culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-				CulledList culledObjects_transparent;
-				spTree->getVisible(camera->frustum, culledObjects_transparent, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
 				for (Cullable* x : culledObjects)
 				{
 					Object* object = (Object*)x;
@@ -1459,8 +1460,18 @@ void wiRenderer::UpdatePerFrameData()
 					{
 						culling.culledRenderer[object->mesh].push_front(object);
 					}
+					if (!foundClosestReflector && camera == getCamera() && object->IsReflector())
+					{
+						// If it is the main camera's culling, then obtain the reflectors:
+						XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object->bounds.getCenter()), XMVectorSet(0, 1, 0, 0));
+						XMFLOAT4 plane;
+						XMStoreFloat4(&plane, _refPlane);
+						waterPlane = wiWaterPlane(plane.x, plane.y, plane.z, plane.w);
+						foundClosestReflector = true;
+					}
 				}
-				for (Cullable* x : culledObjects_transparent)
+				wiSPTree::Sort(camera->translation, culledObjects, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
+				for (Cullable* x : culledObjects)
 				{
 					Object* object = (Object*)x;
 					if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
@@ -1518,7 +1529,7 @@ void wiRenderer::UpdatePerFrameData()
 			}
 		}
 	}
-
+	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
 
 	UpdateBoneLines();
 	UpdateCubes();
@@ -3756,6 +3767,11 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 	}
 
 	return nullptr;
+}
+
+wiWaterPlane wiRenderer::GetWaterPlane()
+{
+	return waterPlane;
 }
 
 wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,

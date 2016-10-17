@@ -292,6 +292,8 @@ protected:
 
 	static Scene* scene;
 
+	static wiWaterPlane waterPlane;
+
 public:
 	static string SHADERPATH;
 
@@ -330,7 +332,7 @@ public:
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }
 	static wiGraphicsTypes::Texture2D* GetEnviromentMap(){ return enviroMap; }
 	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
-
+	static wiWaterPlane GetWaterPlane();
 
 	static Transform* getTransformByName(const string& name);
 	static Armature* getArmatureByName(const string& get);
