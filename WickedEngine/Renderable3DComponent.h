@@ -42,6 +42,7 @@ private:
 	bool stereogramEnabled;
 	bool eyeAdaptionEnabled;
 	bool tessellationEnabled;
+	bool hairParticleAlphaComposition;
 
 	UINT msaaSampleCount;
 
@@ -109,6 +110,7 @@ public:
 	inline bool getStereogramEnabled() { return stereogramEnabled; }
 	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
 	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
+	inline bool getHairParticleAlphaCompositionEnabled() { return hairParticleAlphaComposition; }
 
 	inline UINT getMSAASampleCount() { return msaaSampleCount; }
 
@@ -146,6 +148,8 @@ public:
 	inline void setStereogramEnabled(bool value) { stereogramEnabled = value; }
 	inline void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
 	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
+	// Render hair particle systems in two passes to achieve smooth alpha blending (tiledforward only yet)
+	inline void setHairParticleAlphaCompositionEnabled(bool value) { hairParticleAlphaComposition = value; }
 
 	inline void setMSAASampleCount(UINT value) { msaaSampleCount = value; }
 

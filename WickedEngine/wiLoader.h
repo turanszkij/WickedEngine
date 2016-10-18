@@ -152,6 +152,8 @@ struct Material
 
 	bool planar_reflections;
 
+	float alphaRef;
+
 
 	Material()
 	{
@@ -207,6 +209,8 @@ struct Material
 		parallaxOcclusionMapping = 0.0f;
 
 		planar_reflections = false;
+
+		alphaRef = 0.75f;
 	}
 
 	bool IsTransparent() const { return alpha < 1.0f; }

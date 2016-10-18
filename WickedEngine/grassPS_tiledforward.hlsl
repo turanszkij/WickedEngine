@@ -2,6 +2,7 @@
 #include "grassHF_PS.hlsli"
 #include "ditherHF.hlsli"
 
+[earlydepthstencil]
 float4 main(GS_OUT PSIn) : SV_Target
 {
 	float4 color = float4(PSIn.col,1);

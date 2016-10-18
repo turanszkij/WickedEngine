@@ -201,6 +201,10 @@ public:
 	GFX_STRUCT APICB
 	{
 		XMFLOAT4 clipPlane;
+		float	alphaRef;
+		float	pad[3];
+
+		APICB(const XMFLOAT4& clipPlane, float alphaRef) :clipPlane(clipPlane), alphaRef(alphaRef) {}
 
 		CB_SETBINDSLOT(CBSLOT_API)
 
@@ -368,6 +372,8 @@ public:
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	static void UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID);
 	static void SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID);
+	static void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
+	static void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
 	static void UpdateGBuffer(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);
 	static void UpdateDepthBuffer(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 	

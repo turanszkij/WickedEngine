@@ -568,7 +568,7 @@ void wiRenderer::LoadBuffers()
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
 
 	bd.ByteWidth = sizeof(APICB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLIPPLANE]);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_API]);
 
 
 	// On demand buffers...
@@ -1118,6 +1118,12 @@ void wiRenderer::SetUpStates()
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREADEQUAL]);
 
 
+	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_LESS;
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_HAIRALPHACOMPOSITION]);
+
+
 	for (int i = 0; i < BSTYPE_LAST; ++i)
 	{
 		blendStates[i] = new BlendState;
@@ -1210,7 +1216,8 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 	GetDevice()->BindConstantBufferCS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 
-	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_CLIPPLANE], CB_GETBINDSLOT(APICB), threadID);
+	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 
 	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
 	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
@@ -2943,7 +2950,6 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation)
 {
-
 	if (!culledRenderer.empty())
 	{
 		GetDevice()->EventBegin(L"RenderMeshes", threadID);
@@ -3247,6 +3253,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						GetDevice()->BindResourceDS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
 					}
 
+					SetAlphaRef(material->alphaRef, threadID);
+
 					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 				}
 			}
@@ -3260,6 +3268,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		GetDevice()->BindDS(nullptr, threadID);
 		GetDevice()->BindHS(nullptr, threadID);
 
+		ResetAlphaRef(threadID);
+
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 }
@@ -3270,10 +3280,26 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledCollection& culledRenderer = culling.culledRenderer;
 
+	GetDevice()->EventBegin(L"DrawWorld");
+
+	if (shaderType == SHADERTYPE_TILEDFORWARD)
+	{
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
+		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
+	}
+
+	if (grass)
+	{
+		GetDevice()->BindDepthStencilState(depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+		for (wiHairParticle* hair : culling.culledHairParticleSystems)
+		{
+			hair->Draw(camera, shaderType, threadID);
+		}
+	}
+
 	if (!culledRenderer.empty() || (grass && culling.culledHairParticleSystems.empty()))
 	{
-		GetDevice()->EventBegin(L"DrawWorld");
-
 		if (!wireRender)
 		{
 			if (refRes != nullptr)
@@ -3282,25 +3308,10 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 			}
 		}
 
-		if (shaderType == SHADERTYPE_TILEDFORWARD)
-		{
-			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
-			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
-		}
-
-		if (grass)
-		{
-			GetDevice()->BindDepthStencilState(depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
-			for (wiHairParticle* hair : culling.culledHairParticleSystems)
-			{
-				hair->Draw(camera, shaderType, threadID);
-			}
-		}
-
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
-
-		GetDevice()->EventEnd();
 	}
+
+	GetDevice()->EventEnd();
 
 }
 
@@ -3311,9 +3322,26 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledCollection& culledRenderer = culling.culledRenderer_transparent;
 
+	GetDevice()->EventBegin(L"DrawWorldTransparent");
+
+	if (shaderType == SHADERTYPE_TILEDFORWARD)
+	{
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
+		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
+	}
+
+	if (grass)
+	{
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_HAIRALPHACOMPOSITION], STENCILREF_DEFAULT, threadID); // minimizes overdraw by depthcomp = less
+		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+		for (wiHairParticle* hair : culling.culledHairParticleSystems)
+		{
+			hair->Draw(camera, shaderType, threadID);
+		}
+	}
+
 	if (!culledRenderer.empty())
 	{
-		GetDevice()->EventBegin(L"DrawWorld");
 
 		if (!wireRender)
 		{
@@ -3321,17 +3349,11 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 			GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7, threadID);
 			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
 		}
-		
-		if (shaderType == SHADERTYPE_TILEDFORWARD)
-		{
-			GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
-			GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
-		}
 
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
-
-		GetDevice()->EventEnd();
 	}
+
+	GetDevice()->EventEnd();
 }
 
 
@@ -3652,9 +3674,19 @@ void wiRenderer::UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID)
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 }
+wiRenderer::APICB* apiCB = new wiRenderer::APICB(XMFLOAT4(0, 0, 0, 0), 0.75f);
 void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CLIPPLANE], &clipPlane, threadID);
+	apiCB->clipPlane = clipPlane;
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], apiCB, threadID);
+}
+void wiRenderer::SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
+{
+	if (alphaRef != apiCB->alphaRef)
+	{
+		apiCB->alphaRef = alphaRef;
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], apiCB, threadID);
+	}
 }
 void wiRenderer::UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
 {

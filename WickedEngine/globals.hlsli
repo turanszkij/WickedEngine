@@ -100,6 +100,8 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 CBUFFER(APICB, CBSLOT_API)
 {
 	float4		g_xClipPlane;
+	float		g_xAlphaRef;
+	float3		g_xPadding0_APICB;
 };
 
 static const float		PI = 3.14159265358979323846;
@@ -109,7 +111,7 @@ static const float		PI = 3.14159265358979323846;
 #ifdef DISABLE_ALPHATEST
 #define ALPHATEST(x)
 #else
-#define ALPHATEST(x)	clip((x)-0.1);
+#define ALPHATEST(x)	clip((x) - (1.0f - g_xAlphaRef));
 #endif
 
 static const float		g_GammaValue = 2.2;

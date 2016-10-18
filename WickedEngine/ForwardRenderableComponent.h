@@ -9,10 +9,12 @@ protected:
 
 	wiRenderTarget rtMain;
 
+
 	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 public:
 	ForwardRenderableComponent();
 	virtual ~ForwardRenderableComponent();
+
 
 	virtual void setPreferredThreadingCount(unsigned short value) override;
 

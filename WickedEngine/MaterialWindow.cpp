@@ -12,7 +12,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(600, 570));
+	materialWindow->SetSize(XMFLOAT2(600, 600));
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
@@ -85,6 +85,14 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		material->alpha = args.fValue;
 	});
 	materialWindow->AddWidget(alphaSlider);
+
+	alphaRefSlider = new wiSlider(0, 1, 1.0f, 1000, "AlphaRef: ");
+	alphaRefSlider->SetSize(XMFLOAT2(100, 30));
+	alphaRefSlider->SetPos(XMFLOAT2(x, y += step));
+	alphaRefSlider->OnSlide([&](wiEventArgs args) {
+		material->alphaRef = args.fValue;
+	});
+	materialWindow->AddWidget(alphaRefSlider);
 
 	refractionIndexSlider = new wiSlider(0, 1.0f, 0.02f, 1000, "Refraction Index: ");
 	refractionIndexSlider->SetSize(XMFLOAT2(100, 30));
@@ -177,6 +185,7 @@ MaterialWindow::~MaterialWindow()
 	SAFE_DELETE(movingTexSliderV);
 	SAFE_DELETE(colorPickerToggleButton);
 	SAFE_DELETE(colorPicker);
+	SAFE_DELETE(alphaRefSlider);
 }
 
 
@@ -201,6 +210,7 @@ void MaterialWindow::SetMaterial(Material* mat)
 		pomSlider->SetValue(material->parallaxOcclusionMapping);
 		movingTexSliderU->SetValue(material->movingTex.x);
 		movingTexSliderU->SetValue(material->movingTex.x);
+		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
 		colorPicker->SetEnabled(true);
 	}

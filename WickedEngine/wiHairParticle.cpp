@@ -415,8 +415,6 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		{
 			device->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
 			device->BindResourceGS(texture,TEXSLOT_ONDEMAND0,threadID);
-
-			device->BindBlendState(bs,threadID);
 		}
 		else
 			device->BindRasterizerState(ncrs,threadID);

@@ -6,11 +6,14 @@
 
 using namespace wiGraphicsTypes;
 
-TiledForwardRenderableComponent::TiledForwardRenderableComponent() {
+TiledForwardRenderableComponent::TiledForwardRenderableComponent() 
+{
 	ForwardRenderableComponent::setProperties();
 	setShadowsEnabled(true);
+	setHairParticleAlphaCompositionEnabled(true);
 }
-TiledForwardRenderableComponent::~TiledForwardRenderableComponent() {
+TiledForwardRenderableComponent::~TiledForwardRenderableComponent() 
+{
 }
 
 void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
@@ -19,6 +22,10 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
 	{
+		if (getHairParticleAlphaCompositionEnabled())
+		{
+			wiRenderer::SetAlphaRef(0.1f, threadID);
+		}
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_ALPHATESTONLY, nullptr, true);
 	}
 
@@ -47,9 +54,10 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 }
 void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {
-	rtTransparent.Activate(threadID, mainRT.depth); {
+	rtTransparent.Activate(threadID, mainRT.depth); 
+	{
 		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, shadedSceneRT.GetTexture(), rtReflection.GetTexture()
-			, rtWaterRipple.GetTexture(), threadID, false);
+			, rtWaterRipple.GetTexture(), threadID, getHairParticleAlphaCompositionEnabled());
 		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
 	}
 }

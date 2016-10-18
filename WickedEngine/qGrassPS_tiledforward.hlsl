@@ -7,7 +7,6 @@ float4 main(QGS_OUT PSIn) : SV_Target
 {
 	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
 	color = DEGAMMA(color);
-	color.a = 1; // do not blend
 	float3 P = PSIn.pos3D;
 	float3 V = normalize(g_xCamera_CamPos - P);
 	float emissive = 0;

@@ -6,16 +6,18 @@
 
 using namespace wiGraphicsTypes;
 
-ForwardRenderableComponent::ForwardRenderableComponent(){
+ForwardRenderableComponent::ForwardRenderableComponent()
+{
 	Renderable3DComponent::setProperties();
 
 	setSSREnabled(false);
 	setSSAOEnabled(false);
-	setShadowsEnabled(true);
+	setShadowsEnabled(false);
 
 	setPreferredThreadingCount(0);
 }
-ForwardRenderableComponent::~ForwardRenderableComponent(){
+ForwardRenderableComponent::~ForwardRenderableComponent()
+{
 }
 void ForwardRenderableComponent::Initialize()
 {

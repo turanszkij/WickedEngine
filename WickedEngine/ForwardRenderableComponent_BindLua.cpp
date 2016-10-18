@@ -49,6 +49,8 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(Renderable3DComponent_BindLua, SetStereogramEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetTessellationEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetMSAASampleCount),
+	lunamethod(Renderable3DComponent_BindLua, SetHairParticleAlphaCompositionEnabled),
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),

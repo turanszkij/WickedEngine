@@ -9,15 +9,18 @@
 
 using namespace wiGraphicsTypes;
 
-DeferredRenderableComponent::DeferredRenderableComponent(){
+DeferredRenderableComponent::DeferredRenderableComponent()
+{
 	Renderable3DComponent::setProperties();
 
 	setSSREnabled(true);
 	setSSAOEnabled(true);
+	setHairParticleAlphaCompositionEnabled(false);
 
 	setPreferredThreadingCount(0);
 }
-DeferredRenderableComponent::~DeferredRenderableComponent(){
+DeferredRenderableComponent::~DeferredRenderableComponent()
+{
 }
 void DeferredRenderableComponent::Initialize()
 {

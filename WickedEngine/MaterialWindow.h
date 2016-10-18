@@ -39,5 +39,6 @@ public:
 	wiSlider*	movingTexSliderV;
 	wiButton*	colorPickerToggleButton;
 	wiColorPicker* colorPicker;
+	wiSlider*	alphaRefSlider;
 };
 
