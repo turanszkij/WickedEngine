@@ -16,28 +16,30 @@
 // DEFINITIONS
 //////////////////
 
-#define xBaseColorMap		texture_0
-#define xNormalMap			texture_1
-#define xRoughnessMap		texture_2
-#define xReflectanceMap		texture_3
-#define xMetalnessMap		texture_4
-#define xDisplacementMap	texture_5
+#define xBaseColorMap			texture_0
+#define xNormalMap				texture_1
+#define xRoughnessMap			texture_2
+#define xReflectanceMap			texture_3
+#define xMetalnessMap			texture_4
+#define xDisplacementMap		texture_5
 
-#define xReflection			texture_6
-#define xRefraction			texture_7
-#define	xWaterRipples		texture_8
+#define xReflection				texture_6
+#define xRefraction				texture_7
+#define	xWaterRipples			texture_8
+
+#define sampler_objectshader	sampler_aniso_wrap
 
 struct PixelInputType
 {
 	float4 pos								: SV_POSITION;
 	float  clip								: SV_ClipDistance0;
+	float  ao								: AMBIENT_OCCLUSION;
 	float2 tex								: TEXCOORD0;
 	float3 nor								: NORMAL;
 	float4 pos2D							: SCREENPOSITION;
 	float3 pos3D							: WORLDPOSITION;
 	float4 pos2DPrev						: SCREENPOSITIONPREV;
 	float4 ReflectionMapSamplingPos			: TEXCOORD1;
-	float  ao								: AMBIENT_OCCLUSION;
 	nointerpolation float  dither			: DITHER;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	float2 nor2D							: NORMAL2D;
@@ -58,7 +60,7 @@ struct GBUFFEROutputType
 
 inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, inout float3 bumpColor)
 {
-	float4 nortex = xNormalMap.Sample(sampler_aniso_wrap, UV);
+	float4 nortex = xNormalMap.Sample(sampler_objectshader, UV);
 	bumpColor = 2.0f * nortex.rgb - 1.0f;
 	bumpColor *= nortex.a;
 	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMat_normalMapStrength));
@@ -80,17 +82,17 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	float curLayerHeight = 0;
 	float2 dtex = g_xMat_parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
 	float2 currentTextureCoords = UV;
-	float heightFromTexture = 1 - xDisplacementMap.Sample(sampler_aniso_wrap, currentTextureCoords).r;
+	float heightFromTexture = 1 - xDisplacementMap.Sample(sampler_objectshader, currentTextureCoords).r;
 	[unroll(NUM_PARALLAX_OCCLUSION_STEPS)]
 	while (heightFromTexture > curLayerHeight)
 	{
 		curLayerHeight += layerHeight;
 		currentTextureCoords -= dtex;
-		heightFromTexture = 1 - xDisplacementMap.Sample(sampler_aniso_wrap, currentTextureCoords).r;
+		heightFromTexture = 1 - xDisplacementMap.Sample(sampler_objectshader, currentTextureCoords).r;
 	}
 	float2 prevTCoords = currentTextureCoords + dtex;
 	float nextH = heightFromTexture - curLayerHeight;
-	float prevH = xDisplacementMap.Sample(sampler_aniso_wrap, prevTCoords).r
+	float prevH = xDisplacementMap.Sample(sampler_objectshader, prevTCoords).r
 		- curLayerHeight + layerHeight;
 	float weight = nextH / (nextH - prevH);
 	float2 finalTexCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
@@ -196,12 +198,12 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
 
 #define OBJECT_PS_SAMPLETEXTURES											\
-	baseColor *= xBaseColorMap.Sample(sampler_aniso_wrap, UV);				\
+	baseColor *= xBaseColorMap.Sample(sampler_objectshader, UV);				\
 	ALPHATEST(baseColor.a);													\
 	color = baseColor;														\
-	roughness *= xRoughnessMap.Sample(sampler_aniso_wrap, UV).r;			\
-	metalness *= xMetalnessMap.Sample(sampler_aniso_wrap, UV).r;			\
-	reflectance *= xReflectanceMap.Sample(sampler_aniso_wrap, UV).r;
+	roughness *= xRoughnessMap.Sample(sampler_objectshader, UV).r;			\
+	metalness *= xMetalnessMap.Sample(sampler_objectshader, UV).r;			\
+	reflectance *= xReflectanceMap.Sample(sampler_objectshader, UV).r;
 
 #define OBJECT_PS_NORMALMAPPING												\
 	NormalMapping(UV, P, N, TBN, bumpColor);

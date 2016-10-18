@@ -92,7 +92,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.clip = dot(vertexPosition, g_xClipPlane);
 
 	////DISPLACEMENT
-	//if(xDisplace[(uint)patch[0].tex.z]) vertexPosition.xyz += vertexNormal * (-1+dispMap.SampleLevel( sampler_aniso_wrap,vertexTex,0 ).r) *0.4;
+	//if(xDisplace[(uint)patch[0].tex.z]) vertexPosition.xyz += vertexNormal * (-1+dispMap.SampleLevel( sampler_objectshader,vertexTex,0 ).r) *0.4;
 	//
 
 	
