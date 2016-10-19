@@ -61,7 +61,6 @@ wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Ob
 	rotation = newRot;
 
 	bounding_box=new AABB();
-	lastSquaredDistMulThousand=0;
 	light=nullptr;
 	CreateLight();
 
@@ -294,63 +293,64 @@ void wiEmittedParticle::Burst(float num)
 	burst-=(int)burst;
 }
 
-
-void wiEmittedParticle::Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG)
+void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
-	if(!points.empty()){
-		
-
-		if(camera->frustum.CheckBox(bounding_box->corners))
-		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
-			device->EventBegin(L"EmittedParticle", threadID);
-			
-			vector<Point> renderPoints=vector<Point>(points.begin(),points.end());
-			device->UpdateBuffer(vertexBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
-
-			bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
-
-			device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
-			device->BindVertexLayout(vertexLayout,threadID);
-			device->BindPS(wireRender?simplestPS:pixelShader,threadID);
-			device->BindVS(vertexShader,threadID);
-			device->BindGS(geometryShader,threadID);
-		
-			//device->BindResourcePS(depth,1,threadID);
-
-			ConstantBuffer cb;
-			cb.mAdd.x = additive;
-			cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
-			cb.mMotionBlurAmount = motionBlurAmount;
-		
-
-			device->UpdateBuffer(constantBuffer,&cb,threadID);
-			device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
-
-			device->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);
-			device->BindDepthStencilState(depthStencilState,1,threadID);
-	
-			device->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
-
-			device->BindVertexBuffer(vertexBuffer,0,sizeof(Point),threadID);
-
-			if(!wireRender && material->texture) 
-				device->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
-			device->Draw((int)renderPoints.size(),threadID);
-
-
-			device->BindGS(nullptr,threadID);
-			device->EventEnd(threadID);
-		}
+	if (!points.empty())
+	{
+		vector<Point> renderPoints = vector<Point>(points.begin(), points.end());
+		wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
 	}
 }
-void wiEmittedParticle::DrawPremul(Camera* camera, GRAPHICSTHREAD threadID, int FLAG){
-	if(material->premultipliedTexture)
-		Draw(camera,threadID,FLAG);
+
+void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
+{
+	if(!points.empty())
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->EventBegin(L"EmittedParticle", threadID);
+
+		bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
+
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
+		device->BindVertexLayout(vertexLayout,threadID);
+		device->BindPS(wireRender?simplestPS:pixelShader,threadID);
+		device->BindVS(vertexShader,threadID);
+		device->BindGS(geometryShader,threadID);
+		
+		//device->BindResourcePS(depth,1,threadID);
+
+		ConstantBuffer cb;
+		cb.mAdd.x = additive;
+		cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
+		cb.mMotionBlurAmount = motionBlurAmount;
+		
+
+		device->UpdateBuffer(constantBuffer,&cb,threadID);
+		device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+
+		device->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);
+		device->BindDepthStencilState(depthStencilState,1,threadID);
+	
+		device->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
+
+		device->BindVertexBuffer(vertexBuffer,0,sizeof(Point),threadID);
+
+		if(!wireRender && material->texture) 
+			device->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
+		device->Draw((int)points.size(),threadID);
+
+
+		device->BindGS(nullptr,threadID);
+		device->EventEnd(threadID);
+	}
 }
-void wiEmittedParticle::DrawNonPremul(Camera* camera, GRAPHICSTHREAD threadID, int FLAG){
+void wiEmittedParticle::DrawPremul(GRAPHICSTHREAD threadID, int FLAG){
+	if(material->premultipliedTexture)
+		Draw(threadID,FLAG);
+}
+void wiEmittedParticle::DrawNonPremul(GRAPHICSTHREAD threadID, int FLAG){
 	if(!material->premultipliedTexture)
-		Draw(camera,threadID,FLAG);
+		Draw(threadID,FLAG);
 }
 
 
@@ -483,20 +483,20 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	bd.IndependentBlendEnable=true;
+	bd.IndependentBlendEnable=false;
 	blendStateAlpha = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAlpha);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	bd.IndependentBlendEnable=true;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.IndependentBlendEnable=false;
 	blendStateAdd = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAdd);
 }

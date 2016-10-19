@@ -104,11 +104,13 @@ public:
 	void Update(float gamespeed);
 	void Burst(float num);
 
+	void UpdateRenderData(GRAPHICSTHREAD threadID);
+
 #define DRAW_DEFAULT 0
 #define DRAW_DARK 1
-	void Draw(Camera* camera, GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
-	void DrawPremul(Camera* camera, GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
-	void DrawNonPremul(Camera* camera, GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
+	void Draw(GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
+	void DrawPremul(GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
+	void DrawNonPremul(GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
 	void CleanUp();
 
 	string name;
@@ -119,7 +121,6 @@ public:
 	string lightName;
 	
 	AABB* bounding_box;
-	long lastSquaredDistMulThousand;
 
 	float size,random_factor,normal_factor;
 	float count,life,random_life;

@@ -1448,6 +1448,7 @@ void wiRenderer::UpdatePerFrameData()
 			culling.culledHairParticleSystems.clear();
 			culling.culledLights.clear();
 			culling.culledLight_count = 0;
+			culling.culledEmittedParticleSystems.clear();
 
 			if (spTree != nullptr)
 			{
@@ -1534,6 +1535,16 @@ void wiRenderer::UpdatePerFrameData()
 					i++;
 				}
 			}
+			for (auto& x : emitterSystems)
+			{
+				if (camera->frustum.CheckBox(x->bounding_box->corners))
+				{
+					culling.culledEmittedParticleSystems.push_back(x);
+				}
+			}
+			std::sort(culling.culledEmittedParticleSystems.begin(), culling.culledEmittedParticleSystems.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {
+				return wiMath::DistanceSquared(camera->translation, a->bounding_box->getCenter()) > wiMath::DistanceSquared(camera->translation,b->bounding_box->getCenter());
+			});
 		}
 	}
 	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
@@ -1666,11 +1677,13 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		GetDevice()->BindResourcePS(envMaps[0], TEXSLOT_ENV0, threadID);
 		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
 	}
+
+	
+	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
 	
 	// Fill Light Array with lights in the frustum
 	{
-		const FrameCulling& culling = frameCullings[getCamera()];
-		const CulledList& culledLights = culling.culledLights;
+		const CulledList& culledLights = mainCameraCulling.culledLights;
 
 		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
 		ZeroMemory(lightArray, sizeof(lightArray));
@@ -1732,6 +1745,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 		}
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
+	}
+
+	// Update visible particlesystem vertices:
+	for (auto& x : mainCameraCulling.culledEmittedParticleSystems)
+	{
+		x->UpdateRenderData(threadID);
 	}
 
 }
@@ -2140,27 +2159,20 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark)
 {
-	struct particlesystem_comparator {
-		bool operator() (const wiEmittedParticle* a, const wiEmittedParticle* b) const{
-			return a->lastSquaredDistMulThousand>b->lastSquaredDistMulThousand;
-		}
-	};
+	FrameCulling& culling = frameCullings[camera];
 
-	set<wiEmittedParticle*,particlesystem_comparator> psystems;
-	for(wiEmittedParticle* e : emitterSystems){
-		e->lastSquaredDistMulThousand=(long)(wiMath::DistanceSquared(e->bounding_box->getCenter(),camera->translation)*1000);
-		psystems.insert(e);
-	}
-
-	for(wiEmittedParticle* e:psystems){
-		e->DrawNonPremul(camera,threadID,dark);
+	for (wiEmittedParticle* e : culling.culledEmittedParticleSystems)
+	{
+		e->DrawNonPremul(threadID, dark);
 	}
 }
 void wiRenderer::DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark)
 {
-	for (wiEmittedParticle* e : emitterSystems)
+	FrameCulling& culling = frameCullings[camera];
+
+	for (wiEmittedParticle* e : culling.culledEmittedParticleSystems)
 	{
-		e->DrawPremul(camera, threadID, dark);
+		e->DrawPremul(threadID, dark);
 	}
 }
 void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
@@ -2968,9 +2980,13 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		{
 			GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
 		}
-		else
+		else if(renderTypeFlags & RENDERTYPE_OPAQUE)
 		{
 			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+		}
+		else
+		{
+			GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 		}
 
 		bool easyTextureBind = shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_ALPHATESTONLY;

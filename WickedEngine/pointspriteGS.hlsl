@@ -19,7 +19,7 @@ struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
 	float2 tex				: TEXCOORD0;
-	float4 opaAddDarkSiz	: TEXCOORD1;
+	nointerpolation float4 opaAddDarkSiz	: TEXCOORD1;
 	//float3 col				: TEXCOORD2;
 	float4 pp				: TEXCOORD2;
 };

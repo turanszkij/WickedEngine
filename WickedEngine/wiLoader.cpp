@@ -1520,6 +1520,10 @@ void Material::Serialize(wiArchive& archive)
 		{
 			archive >> parallaxOcclusionMapping;
 		}
+		if (archive.GetVersion() >= 4)
+		{
+			archive >> alphaRef;
+		}
 
 		string texturesDir = archive.GetSourceDirectory() + "textures/";
 		if (!refMapName.empty())
@@ -1579,6 +1583,10 @@ void Material::Serialize(wiArchive& archive)
 		if (archive.GetVersion() >= 3)
 		{
 			archive << parallaxOcclusionMapping;
+		}
+		if (archive.GetVersion() >= 4)
+		{
+			archive << alphaRef;
 		}
 	}
 }

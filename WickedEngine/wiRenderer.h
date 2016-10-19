@@ -362,6 +362,7 @@ public:
 		vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
 		UINT culledLight_count; // because forward_list doesn't have size()
+		vector<wiEmittedParticle*> culledEmittedParticleSystems;
 	};
 	static unordered_map<Camera*, FrameCulling> frameCullings;
 	

@@ -52,13 +52,9 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 }
-void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
+void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {
-	rtTransparent.Activate(threadID, mainRT.depth); 
-	{
-		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, shadedSceneRT.GetTexture(), rtReflection.GetTexture()
-			, rtWaterRipple.GetTexture(), threadID, getHairParticleAlphaCompositionEnabled());
-		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
-	}
+	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
+		, rtWaterRipple.GetTexture(), threadID, getHairParticleAlphaCompositionEnabled());
 }
 

@@ -84,7 +84,7 @@ void Renderable3DComponent::Initialize()
 		wiRenderer::GetDevice()->GetScreenWidth()
 		, wiRenderer::GetDevice()->GetScreenHeight()
 		, false, FORMAT_R8G8B8A8_SNORM);
-	rtTransparent.Initialize(
+	rtSceneCopy.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false, FORMAT_R16G16B16A16_FLOAT,1,getMSAASampleCount());
 	rtVolumeLight.Initialize(
@@ -238,6 +238,9 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 }
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+
+
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
 	if (getStereogramEnabled())
@@ -273,16 +276,22 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawWaterRipples(threadID);
 	}
 
-	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
-	RenderTransparentScene(mainRT, shadedSceneRT, threadID);
-}
-void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
-{
-	rtTransparent.Activate(threadID, mainRT.depth); {
-		wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, shadedSceneRT.GetTexture(), rtReflection.GetTexture()
-			, rtWaterRipple.GetTexture(), threadID, false);
-		wiRenderer::DrawTrails(threadID, shadedSceneRT.GetTexture());
+	rtSceneCopy.Activate(threadID, 0, 0, 0, 0); {
+		fx.blendFlag = BLENDMODE_OPAQUE;
+		fx.presentFullScreen = true;
+		wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
 	}
+
+	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	shadedSceneRT.Set(threadID, mainRT.depth); {
+		RenderTransparentScene(rtSceneCopy, threadID);
+		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
+	}
+}
+void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
+{
+	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
+		, rtWaterRipple.GetTexture(), threadID, false);
 }
 void Renderable3DComponent::RenderBloom(GRAPHICSTHREAD threadID)
 {
@@ -377,7 +386,6 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, GR
 
 
 	fx.blendFlag = BLENDMODE_ALPHA;
-	wiImage::Draw(rtTransparent.GetTexture(), fx, threadID);
 	if (getEmittedParticlesEnabled()){
 		wiImage::Draw(rtParticle.GetTexture(), fx, threadID);
 	}
@@ -396,7 +404,8 @@ void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, GR
 		wiImage::Draw(rtLensFlare.GetTexture(), fx, threadID);
 	}
 }
-void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID){
+void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID)
+{
 	if (getStereogramEnabled())
 	{
 		// We don't need the following for stereograms...
