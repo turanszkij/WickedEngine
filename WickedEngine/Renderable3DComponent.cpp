@@ -87,20 +87,14 @@ void Renderable3DComponent::Initialize()
 	rtSceneCopy.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false, FORMAT_R16G16B16A16_FLOAT,1,getMSAASampleCount());
-	rtVolumeLight.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R8G8B8A8_UNORM, 1, getMSAASampleCount());
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
 		, true, FORMAT_R16G16B16A16_FLOAT);
 	rtFinal[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R16G16B16A16_FLOAT);
-	rtFinal[1].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false);
-	rtFinal[2].Initialize(
+	rtFinal[1].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false,FORMAT_R8G8B8A8_UNORM,1,getMSAASampleCount());
 
@@ -249,18 +243,29 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		return;
 	}
 
+	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(wiRenderer::GetSunPosition(), wiRenderer::getCamera()->GetAt())) > 0)
+	{
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+		rtSun[0].Activate(threadID, mainRT.depth); {
+			wiRenderer::DrawSun(threadID);
+		}
+
+		rtSun[1].Activate(threadID); {
+			wiImageEffects fxs = fx;
+			fxs.blendFlag = BLENDMODE_ADDITIVE;
+			XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+			{
+				XMStoreFloat2(&fxs.sunPos, sunPos);
+				wiImage::Draw(rtSun[0].GetTexture(), fxs, threadID);
+			}
+		}
+	}
+
 	if (getLensFlareEnabled())
 	{
 		rtLensFlare.Activate(threadID);
 		if (!wiRenderer::IsWireRender())
 			wiRenderer::DrawLensFlares(threadID);
-	}
-
-	if (getVolumeLightsEnabled())
-	{
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
-		rtVolumeLight.Activate(threadID, mainRT.depth);
-		wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
 	}
 
 	if (getEmittedParticlesEnabled())
@@ -280,12 +285,38 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.presentFullScreen = true;
 		wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
+		if (getVolumeLightsEnabled())
+		{
+			// first draw light volumes to refraction target
+			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
+		}
 	}
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	shadedSceneRT.Set(threadID, mainRT.depth); {
 		RenderTransparentScene(rtSceneCopy, threadID);
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
+		if (getVolumeLightsEnabled())
+		{
+			// second draw volume lights on top of transparent scene
+			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
+		}
+		fx.presentFullScreen = true;
+		fx.blendFlag = BLENDMODE_ALPHA;
+		if (getEmittedParticlesEnabled()) {
+			wiImage::Draw(rtParticle.GetTexture(), fx, threadID);
+		}
+
+		fx.blendFlag = BLENDMODE_ADDITIVE;
+		if (getEmittedParticlesEnabled()) {
+			wiImage::Draw(rtParticleAdditive.GetTexture(), fx, threadID);
+		}
+		if (getLightShaftsEnabled()) {
+			wiImage::Draw(rtSun.back().GetTexture(), fx, threadID);
+		}
+		if (getLensFlareEnabled()) {
+			wiImage::Draw(rtLensFlare.GetTexture(), fx, threadID);
+		}
 	}
 }
 void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
@@ -293,7 +324,7 @@ void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT,
 	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
 		, rtWaterRipple.GetTexture(), threadID, false);
 }
-void Renderable3DComponent::RenderBloom(GRAPHICSTHREAD threadID)
+void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID)
 {
 	if (getStereogramEnabled())
 	{
@@ -301,136 +332,70 @@ void Renderable3DComponent::RenderBloom(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
-	rtBloom[0].Activate(threadID);
+	if (getBloomEnabled())
 	{
-		fx.bloom.separate = true;
-		fx.bloom.saturation = getBloomSaturation();
-		fx.bloom.threshold = getBloomThreshold();
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
-	}
-
-
-	rtBloom[1].Activate(threadID); //horizontal
-	{
-		wiRenderer::GetDevice()->GenerateMips(rtBloom[0].GetTexture(), threadID);
-		//wiRenderer::GetDevice()->GenerateMips(rtBloom[0].shaderResource[0], threadID);
-		fx.mipLevel = 5.32f;
-		fx.blur = getBloomStrength();
-		fx.blurDir = 0;
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		wiImage::Draw(rtBloom[0].GetTexture(), fx, threadID);
-	}
-	rtBloom[2].Activate(threadID); //vertical
-	{
-		fx.blur = getBloomStrength();
-		fx.blurDir = 1;
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		wiImage::Draw(rtBloom[1].GetTexture(), fx, threadID);
-	}
-}
-void Renderable3DComponent::RenderLightShafts(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID)
-{
-	if (getStereogramEnabled())
-	{
-		// We don't need the following for stereograms...
-		return;
-	}
-
-	if (!getLightShaftsEnabled())
-	{
-		return;
-	}
-
-	if (XMVectorGetX(XMVector3Dot(wiRenderer::GetSunPosition(), wiRenderer::getCamera()->GetAt())) < 0)
-	{
-		return;
-	}
-
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-
-	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
-	rtSun[0].Activate(threadID, mainRT.depth); {
-		wiRenderer::DrawSun(threadID);
-	}
-
-	rtSun[1].Activate(threadID); {
-		wiImageEffects fxs = fx;
-		fxs.blendFlag = BLENDMODE_ADDITIVE;
-		XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+		wiRenderer::GetDevice()->EventBegin(L"Bloom", threadID);
+		fx.process.clear();
+		fx.presentFullScreen = false;
+		rtBloom[0].Activate(threadID); // separate bright parts
 		{
-			XMStoreFloat2(&fxs.sunPos, sunPos);
-			wiImage::Draw(rtSun[0].GetTexture(), fxs, threadID);
+			fx.bloom.separate = true;
+			fx.bloom.saturation = getBloomSaturation();
+			fx.bloom.threshold = getBloomThreshold();
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			fx.sampleFlag = SAMPLEMODE_CLAMP;
+			wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
 		}
-	}
-}
-void Renderable3DComponent::RenderComposition1(wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
-{
-	if (getStereogramEnabled())
-	{
-		// We don't need the following for stereograms...
-		return;
-	}
 
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-	fx.presentFullScreen = true;
+		rtBloom[1].Activate(threadID); //horizontal
+		{
+			wiRenderer::GetDevice()->GenerateMips(rtBloom[0].GetTexture(), threadID);
+			fx.mipLevel = 5.32f;
+			fx.blur = getBloomStrength();
+			fx.blurDir = 0;
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			wiImage::Draw(rtBloom[0].GetTexture(), fx, threadID);
+		}
+		rtBloom[2].Activate(threadID); //vertical
+		{
+			fx.blur = getBloomStrength();
+			fx.blurDir = 1;
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			wiImage::Draw(rtBloom[1].GetTexture(), fx, threadID);
+		}
+		fx.bloom.clear();
+		fx.blur = 0;
+		fx.blurDir = 0;
 
-	rtFinal[0].Activate(threadID);
-
-	fx.blendFlag = BLENDMODE_OPAQUE;
-	wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
-
-
-	fx.blendFlag = BLENDMODE_ALPHA;
-	if (getEmittedParticlesEnabled()){
-		wiImage::Draw(rtParticle.GetTexture(), fx, threadID);
+		shadedSceneRT.Set(threadID); { // add to the scene
+			fx.blendFlag = BLENDMODE_ADDITIVE;
+			fx.presentFullScreen = true;
+			fx.process.clear();
+			wiImage::Draw(rtBloom.back().GetTexture(), fx, threadID);
+			fx.presentFullScreen = false;
+		}
+		wiRenderer::GetDevice()->EventEnd();
 	}
-
-	fx.blendFlag = BLENDMODE_ADDITIVE;
-	if (getVolumeLightsEnabled()){
-		wiImage::Draw(rtVolumeLight.GetTexture(), fx, threadID);
-	}
-	if (getEmittedParticlesEnabled()){
-		wiImage::Draw(rtParticleAdditive.GetTexture(), fx, threadID);
-	}
-	if (getLightShaftsEnabled()){
-		wiImage::Draw(rtSun.back().GetTexture(), fx, threadID);
-	}
-	if (getLensFlareEnabled()){
-		wiImage::Draw(rtLensFlare.GetTexture(), fx, threadID);
-	}
-}
-void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICSTHREAD threadID)
-{
-	if (getStereogramEnabled())
-	{
-		// We don't need the following for stereograms...
-		return;
-	}
-
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
 	if (getMotionBlurEnabled()) {
 		rtMotionBlur.Activate(threadID);
 		fx.process.setMotionBlur(true);
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.presentFullScreen = false;
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
 		fx.process.clear();
 	}
 
 
 	fx.blendFlag = BLENDMODE_OPAQUE;
 
-	rtFinal[1].Activate(threadID);
+	rtFinal[0].Activate(threadID);
 	fx.process.setToneMap(true);
 	if (getEyeAdaptionEnabled())
 	{
-		fx.setMaskMap(wiRenderer::GetLuminance(rtFinal[0].GetTexture(), threadID));
+		fx.setMaskMap(wiRenderer::GetLuminance(shadedSceneRT.GetTexture(), threadID));
 	}
 	else
 	{
@@ -442,7 +407,7 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 	}
 	else
 	{
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
 	}
 	fx.process.clear();
 
@@ -453,7 +418,7 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 		rtDof[0].Activate(threadID);
 		fx.blur = getDepthOfFieldStrength();
 		fx.blurDir = 0;
-		wiImage::Draw(rtFinal[1].GetTexture(), fx, threadID);
+		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
 
 		rtDof[1].Activate(threadID);
 		fx.blurDir = 1;
@@ -466,27 +431,20 @@ void Renderable3DComponent::RenderComposition2(wiRenderTarget& mainRT, GRAPHICST
 		fx.process.setDOF(getDepthOfFieldFocus());
 		fx.setMaskMap(rtDof[1].GetTexture());
 		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
-		wiImage::Draw(rtFinal[1].GetTexture(), fx, threadID);
+		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
 		fx.setMaskMap(nullptr);
 		//fx.setDepthMap(nullptr);
 		fx.process.clear();
 	}
 
 
-	rtFinal[2].Activate(threadID, mainRT.depth);
+	rtFinal[1].Activate(threadID, mainRT.depth);
 	fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
 	else
-		wiImage::Draw(rtFinal[1].GetTexture(), fx, threadID);
+		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
 	fx.process.clear();
-
-	if (getBloomEnabled())
-	{
-		fx.blendFlag = BLENDMODE_ADDITIVE;
-		fx.presentFullScreen = true;
-		wiImage::Draw(rtBloom.back().GetTexture(), fx, threadID);
-	}
 
 	wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
 	wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
@@ -528,7 +486,7 @@ void Renderable3DComponent::RenderColorGradedComposition(){
 		fx.presentFullScreen = true;
 	}
 
-	wiImage::Draw(rtFinal[2].GetTexture(), fx);
+	wiImage::Draw(rtFinal[1].GetTexture(), fx);
 }
 
 
