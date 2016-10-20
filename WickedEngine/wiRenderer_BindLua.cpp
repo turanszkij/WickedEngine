@@ -371,37 +371,26 @@ namespace wiRenderer_BindLua
 		wiHairParticle::Settings(lod0, lod1, lod2);
 		return 0;
 	}
-	int SetDirectionalLightShadowProps(lua_State* L)
+	int SetShadowProps2D(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			//wiRenderer::SetDirectionalLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			wiRenderer::SetShadowProps2D(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2), wiLua::SGetInt(L, 3));
 		}
 		else
-			wiLua::SError(L, "SetDirectionalLightShadowProps(int resolution, int softshadowQuality) not enough arguments!");
+			wiLua::SError(L, "SetShadowProps2D(int resolution, int count, int softShadowQuality) not enough arguments!");
 		return 0;
 	}
-	int SetPointLightShadowProps(lua_State* L)
+	int SetShadowPropsCube(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			//wiRenderer::SetPointLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			wiRenderer::SetShadowPropsCube(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
 		}
 		else
-			wiLua::SError(L, "SetPointLightShadowProps(int shadowMapCount, int resolution) not enough arguments!");
-		return 0;
-	}
-	int SetSpotLightShadowProps(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
-		{
-			//wiRenderer::SetSpotLightShadowProps(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
-		}
-		else
-			wiLua::SError(L, "SetSpotLightShadowProps(int shadowMapCount, int resolution) not enough arguments!");
+			wiLua::SError(L, "SetShadowPropsCube(int resolution, int count) not enough arguments!");
 		return 0;
 	}
 	int SetDebugPartitionTreeEnabled(lua_State* L)
@@ -638,9 +627,8 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
 			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
-			wiLua::GetGlobal()->RegisterFunc("SetDirectionalLightShadowProps", SetDirectionalLightShadowProps);
-			wiLua::GetGlobal()->RegisterFunc("SetPointLightShadowProps", SetPointLightShadowProps);
-			wiLua::GetGlobal()->RegisterFunc("SetSpotLightShadowProps", SetSpotLightShadowProps);
+			wiLua::GetGlobal()->RegisterFunc("SetShadowProps2D", SetShadowProps2D);
+			wiLua::GetGlobal()->RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);

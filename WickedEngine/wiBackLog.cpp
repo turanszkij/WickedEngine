@@ -57,10 +57,10 @@ void wiBackLog::Update(){
 		state = DISABLED; 
 		pos = -(float)wiRenderer::GetDevice()->GetScreenHeight(); 
 	}
-	else if(pos>0) 
+	else if (pos > 0)
 	{
-		state=IDLE; 
-		pos=0;
+		state = IDLE;
+		pos = 0;
 	}
 }
 void wiBackLog::Draw(){

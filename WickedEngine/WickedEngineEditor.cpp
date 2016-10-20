@@ -114,6 +114,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Store instance handle in our global variable
 
    int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
+   bool borderless = false;
    string voidStr = "";
 
    ifstream file("config.ini");
@@ -123,7 +124,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   file >> voidStr >> enabled;
 	   if (enabled != 0)
 	   {
-		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> editor.fullscreen;
+		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> editor.fullscreen >> voidStr >> borderless;
 		   editor.screenW = w;
 		   editor.screenH = h;
 	   }
@@ -131,24 +132,25 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    file.close();
 
    HWND hWnd = NULL;
-   //if (editor.fullscreen)
-   //{
+
+   if (borderless)
+   {
 	   hWnd = CreateWindowEx(WS_EX_APPWINDOW,
-		   szWindowClass,
-		   szTitle,
-		   WS_POPUP,
-		   x, y, w, h,
-		   NULL,
-		   NULL,
-		   hInstance,
-		   NULL
-	   );
-   //}
-   //else
-   //{
-	  // hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-	  //  x, y, w, h, NULL, NULL, hInstance, NULL);
-   //}
+		     szWindowClass,
+		     szTitle,
+		     WS_POPUP,
+		     x, y, w, h,
+		     NULL,
+		     NULL,
+		     hInstance,
+		     NULL
+		    );
+   }
+   else
+   {
+	   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		   x, y, w, h, NULL, NULL, hInstance, NULL);
+   }
 
    if (!hWnd)
    {
