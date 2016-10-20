@@ -16,10 +16,11 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 	float x = 200;
 	float y = 0;
+	float step = 30;
 
 	fogStartSlider = new wiSlider(0, 5000, 0, 100000, "Fog Start: ");
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
-	fogStartSlider->SetPos(XMFLOAT2(x, y += 30));
+	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.fogSEH.x = args.fValue;
 		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
@@ -28,7 +29,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 	fogEndSlider = new wiSlider(1, 5000, 1000, 10000, "Fog End: ");
 	fogEndSlider->SetSize(XMFLOAT2(100, 30));
-	fogEndSlider->SetPos(XMFLOAT2(x, y += 30));
+	fogEndSlider->SetPos(XMFLOAT2(x, y += step));
 	fogEndSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.fogSEH.y = args.fValue;
 		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
@@ -37,12 +38,70 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 	fogHeightSlider = new wiSlider(-1000, 1000, 40, 10000, "Fog Height: ");
 	fogHeightSlider->SetSize(XMFLOAT2(100, 30));
-	fogHeightSlider->SetPos(XMFLOAT2(x, y += 30));
+	fogHeightSlider->SetPos(XMFLOAT2(x, y += step));
 	fogHeightSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.fogSEH.z = args.fValue;
 		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	worldWindow->AddWidget(fogHeightSlider);
+
+
+
+
+	ambientColorPickerToggleButton = new wiButton("Ambient Color");
+	ambientColorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
+	ambientColorPickerToggleButton->OnClick([&](wiEventArgs args) {
+		ambientColorPicker->SetVisible(!ambientColorPicker->IsVisible());
+	});
+	worldWindow->AddWidget(ambientColorPickerToggleButton);
+
+
+	ambientColorPicker = new wiColorPicker(GUI, "Ambient Color");
+	ambientColorPicker->SetVisible(false);
+	ambientColorPicker->SetEnabled(true);
+	ambientColorPicker->OnColorChanged([&](wiEventArgs args) {
+		wiRenderer::GetScene().worldInfo.ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
+	});
+	GUI->AddWidget(ambientColorPicker);
+
+
+
+	horizonColorPickerToggleButton = new wiButton("Horizon Color");
+	horizonColorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
+	horizonColorPickerToggleButton->OnClick([&](wiEventArgs args) {
+		horizonColorPicker->SetVisible(!ambientColorPicker->IsVisible());
+	});
+	worldWindow->AddWidget(horizonColorPickerToggleButton);
+
+
+	horizonColorPicker = new wiColorPicker(GUI, "Horizon Color");
+	horizonColorPicker->SetVisible(false);
+	horizonColorPicker->SetEnabled(true);
+	horizonColorPicker->OnColorChanged([&](wiEventArgs args) {
+		wiRenderer::GetScene().worldInfo.horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
+	});
+	GUI->AddWidget(horizonColorPicker);
+
+
+
+	zenithColorPickerToggleButton = new wiButton("Zenith Color");
+	zenithColorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
+	zenithColorPickerToggleButton->OnClick([&](wiEventArgs args) {
+		zenithColorPicker->SetVisible(!zenithColorPicker->IsVisible());
+	});
+	worldWindow->AddWidget(zenithColorPickerToggleButton);
+
+
+	zenithColorPicker = new wiColorPicker(GUI, "Zenith Color");
+	zenithColorPicker->SetVisible(false);
+	zenithColorPicker->SetEnabled(true);
+	zenithColorPicker->OnColorChanged([&](wiEventArgs args) {
+		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
+	});
+	GUI->AddWidget(zenithColorPicker);
 
 
 
@@ -58,6 +117,12 @@ WorldWindow::~WorldWindow()
 	SAFE_DELETE(fogStartSlider);
 	SAFE_DELETE(fogEndSlider);
 	SAFE_DELETE(fogHeightSlider);
+	SAFE_DELETE(ambientColorPickerToggleButton);
+	SAFE_DELETE(ambientColorPicker);
+	SAFE_DELETE(horizonColorPickerToggleButton);
+	SAFE_DELETE(horizonColorPicker);
+	SAFE_DELETE(zenithColorPickerToggleButton);
+	SAFE_DELETE(zenithColorPicker);
 }
 
 void WorldWindow::UpdateFromRenderer()

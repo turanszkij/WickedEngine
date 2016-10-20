@@ -246,7 +246,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	color.rgb += baseColor.rgb * GetEmissive(emissive);
 
 #define OBJECT_PS_FOG																								\
-	color.rgb = applyFog(color.rgb, getFog(getLinearDepth(depth)));
+	color.rgb = applyFog(color.rgb, getFog(distance(g_xCamera_CamPos,P)));
 
 #define OBJECT_PS_OUT_GBUFFER																						\
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\

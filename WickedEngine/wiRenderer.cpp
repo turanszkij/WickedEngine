@@ -1501,6 +1501,7 @@ void wiRenderer::UpdatePerFrameData()
 					culling.culledLight_count++;
 					Light* l = (Light*)c;
 					l->lightArray_index = i;
+					l->shadowMap_index = -1;
 
 					if (l->shadow)
 					{
@@ -3069,14 +3070,13 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - impostorDistance) / impostorThreshold, 0, 1));
 						if (dither > 1.0f - FLT_EPSILON)
 							continue;
-						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)),
-							dither, instance->color), k, threadID);
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
 						++k;
 					}
 				}
 				if (k > 0)
 				{
-					Mesh::UpdateRenderableInstances(k, threadID);
+					mesh->UpdateRenderableInstances(k, threadID);
 
 					MaterialCB mcb;
 					ZeroMemory(&mcb, sizeof(mcb));
@@ -3101,7 +3101,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
 					GetDevice()->BindVertexBuffer(&Mesh::impostorVB, 0, sizeof(Vertex), threadID);
-					GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+					GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
 					if (!easyTextureBind)
 					{
@@ -3180,11 +3180,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
 					if (mesh->softBody || instance->isArmatureDeformed())
-						Mesh::AddRenderableInstance(Instance(XMMatrixIdentity(),
-							dither, instance->color), k, threadID);
+						mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), dither, instance->color), k, threadID);
 					else
-						Mesh::AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&instance->world)),
-							dither, instance->color), k, threadID);
+						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
 					++k;
 				}
 			}
@@ -3193,10 +3191,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				continue;
 			}
 
-			Mesh::UpdateRenderableInstances(k, threadID);
+			mesh->UpdateRenderableInstances(k, threadID);
 
 			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+			GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
 
 			for (MeshSubset& subset : mesh->subsets)
 			{
@@ -4343,10 +4341,10 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	GetDevice()->LOCK();
 
 
-	Mesh::AddRenderableInstance(Instance(XMMatrixIdentity()), 0, threadID);
-	Mesh::UpdateRenderableInstances(1, threadID);
+	mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), 0, threadID);
+	mesh->UpdateRenderableInstances(1, threadID);
 	GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
-	GetDevice()->BindVertexBuffer(&Mesh::instanceBuffer, 1, sizeof(Instance), threadID);
+	GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
 
 
 	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);

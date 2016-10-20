@@ -1636,7 +1636,6 @@ void VertexGroup::Serialize(wiArchive& archive)
 
 #pragma region MESH
 
-GPUBuffer Mesh::instanceBuffer;
 GPUBuffer Mesh::impostorVB;
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
@@ -1946,7 +1945,7 @@ void Mesh::CreateBuffers(Object* object) {
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(Instance) * 2;
+			bd.ByteWidth = sizeof(Instance);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBuffer);

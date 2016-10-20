@@ -350,7 +350,7 @@ struct Mesh{
 
 	wiGraphicsTypes::GPUBuffer			vertexBuffer;
 	wiGraphicsTypes::GPUBuffer			streamoutBuffer;
-	static wiGraphicsTypes::GPUBuffer	instanceBuffer;
+	wiGraphicsTypes::GPUBuffer			instanceBuffer;
 
 	bool renderable,doubleSided;
 	STENCILREF stencilRef;
@@ -397,8 +397,8 @@ struct Mesh{
 	static void CreateImpostorVB();
 	bool arraysComplete;
 	void CreateVertexArrays();
-	static void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
-	static void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
+	void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
+	void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
 	void init(){
 		parent="";
 		indices.resize(0);

@@ -6,6 +6,7 @@ class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
+class wiColorPicker;
 
 class WorldWindow
 {
@@ -17,9 +18,15 @@ public:
 
 	wiGUI* GUI;
 
-	wiWindow* worldWindow;
-	wiSlider* fogStartSlider;
-	wiSlider* fogEndSlider;
-	wiSlider* fogHeightSlider;
+	wiWindow*		worldWindow;
+	wiSlider*		fogStartSlider;
+	wiSlider*		fogEndSlider;
+	wiSlider*		fogHeightSlider;
+	wiButton*		ambientColorPickerToggleButton;
+	wiColorPicker*	ambientColorPicker;
+	wiButton*		horizonColorPickerToggleButton;
+	wiColorPicker*	horizonColorPicker;
+	wiButton*		zenithColorPickerToggleButton;
+	wiColorPicker*	zenithColorPicker;
 };
 
