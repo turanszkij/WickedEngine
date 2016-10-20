@@ -56,7 +56,6 @@ protected:
 		, rtLinearDepth
 		, rtParticle
 		, rtParticleAdditive
-		, rtLensFlare
 		, rtFinal[2]
 		, rtDof[3]
 		;

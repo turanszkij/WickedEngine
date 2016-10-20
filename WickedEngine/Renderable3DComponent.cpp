@@ -128,7 +128,6 @@ void Renderable3DComponent::Initialize()
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getLightShaftQuality())
 		, false, FORMAT_R8G8B8A8_UNORM, 1,getMSAASampleCount()
 		);
-	rtLensFlare.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false);
 
 	rtBloom.resize(3);
 	rtBloom[0].Initialize(
@@ -261,13 +260,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		}
 	}
 
-	if (getLensFlareEnabled())
-	{
-		rtLensFlare.Activate(threadID);
-		if (!wiRenderer::IsWireRender())
-			wiRenderer::DrawLensFlares(threadID);
-	}
-
 	if (getEmittedParticlesEnabled())
 	{
 		rtParticle.Activate(threadID, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
@@ -314,8 +306,10 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		if (getLightShaftsEnabled()) {
 			wiImage::Draw(rtSun.back().GetTexture(), fx, threadID);
 		}
-		if (getLensFlareEnabled()) {
-			wiImage::Draw(rtLensFlare.GetTexture(), fx, threadID);
+		if (getLensFlareEnabled())
+		{
+			if (!wiRenderer::IsWireRender())
+				wiRenderer::DrawLensFlares(threadID);
 		}
 	}
 }
