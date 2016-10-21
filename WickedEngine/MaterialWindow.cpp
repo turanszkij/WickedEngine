@@ -12,7 +12,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(600, 600));
+	materialWindow->SetSize(XMFLOAT2(600, 670));
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
@@ -142,6 +142,22 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	});
 	materialWindow->AddWidget(movingTexSliderV);
 
+	texMulSliderX = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize X: ");
+	texMulSliderX->SetSize(XMFLOAT2(100, 30));
+	texMulSliderX->SetPos(XMFLOAT2(x, y += step));
+	texMulSliderX->OnSlide([&](wiEventArgs args) {
+		material->texMulAdd.x = args.fValue;
+	});
+	materialWindow->AddWidget(texMulSliderX);
+
+	texMulSliderY = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize Y: ");
+	texMulSliderY->SetSize(XMFLOAT2(100, 30));
+	texMulSliderY->SetPos(XMFLOAT2(x, y += step));
+	texMulSliderY->OnSlide([&](wiEventArgs args) {
+		material->texMulAdd.y = args.fValue;
+	});
+	materialWindow->AddWidget(texMulSliderY);
+
 
 	colorPickerToggleButton = new wiButton("Color");
 	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
@@ -183,6 +199,8 @@ MaterialWindow::~MaterialWindow()
 	SAFE_DELETE(pomSlider);
 	SAFE_DELETE(movingTexSliderU);
 	SAFE_DELETE(movingTexSliderV);
+	SAFE_DELETE(texMulSliderX);
+	SAFE_DELETE(texMulSliderY);
 	SAFE_DELETE(colorPickerToggleButton);
 	SAFE_DELETE(colorPicker);
 	SAFE_DELETE(alphaRefSlider);
@@ -210,6 +228,8 @@ void MaterialWindow::SetMaterial(Material* mat)
 		pomSlider->SetValue(material->parallaxOcclusionMapping);
 		movingTexSliderU->SetValue(material->movingTex.x);
 		movingTexSliderU->SetValue(material->movingTex.x);
+		texMulSliderX->SetValue(material->texMulAdd.x);
+		texMulSliderY->SetValue(material->texMulAdd.y);
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
 		colorPicker->SetEnabled(true);

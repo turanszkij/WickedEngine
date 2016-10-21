@@ -37,6 +37,8 @@ public:
 	wiSlider*	pomSlider;
 	wiSlider*	movingTexSliderU;
 	wiSlider*	movingTexSliderV;
+	wiSlider*	texMulSliderX;
+	wiSlider*	texMulSliderY;
 	wiButton*	colorPickerToggleButton;
 	wiColorPicker* colorPicker;
 	wiSlider*	alphaRefSlider;
