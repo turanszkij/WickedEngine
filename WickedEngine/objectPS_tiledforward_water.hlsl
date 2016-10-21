@@ -20,8 +20,8 @@ float4 main(PixelInputType input) : SV_TARGET
 	float2 bumpColor0 = 0;
 	float2 bumpColor1 = 0;
 	float2 bumpColor2 = 0;
-	bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader,input.tex - g_xMat_texMulAdd.ww).rg - 1.0f;
-	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader,input.tex + g_xMat_texMulAdd.zw).rg - 1.0f;
+	bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader,UV - g_xMat_texMulAdd.ww).rg - 1.0f;
+	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader,UV + g_xMat_texMulAdd.zw).rg - 1.0f;
 	bumpColor2 = xWaterRipples.Sample(sampler_objectshader,ScreenCoord).rg;
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2,1)  * g_xMat_refractionIndex;
 	N = normalize(lerp(N, mul(normalize(bumpColor), TBN), g_xMat_normalMapStrength));

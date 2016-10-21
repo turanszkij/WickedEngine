@@ -1798,11 +1798,13 @@ void wiRenderer::ManageWaterRipples(){
 		)
 		waterRipples.pop_front();
 }
-void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID){
-	//wiImage::BatchBegin(threadID);
+void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID)
+{
+	GetDevice()->EventBegin(L"Water Ripples");
 	for(wiSprite* i:waterRipples){
 		i->DrawNormal(threadID);
 	}
+	GetDevice()->EventEnd();
 }
 
 void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)

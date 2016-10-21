@@ -1038,7 +1038,7 @@ void EditorComponent::Compose()
 		{
 			for (auto& y : x->lights)
 			{
-				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.1f;
+				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
 
 				wiImageEffects fx;
 				fx.pos = y->translation;

@@ -44,6 +44,7 @@ void wiGUI::Update()
 
 void wiGUI::Render()
 {
+	wiRenderer::GetDevice()->EventBegin(L"GUI");
 	for (auto&x : widgets)
 	{
 		x->Render(this);
@@ -55,6 +56,7 @@ void wiGUI::Render()
 	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());
 	scissor[0].top = (LONG)(0);
 	wiRenderer::GetDevice()->SetScissorRects(1, scissor, GetGraphicsThread());
+	wiRenderer::GetDevice()->EventEnd();
 }
 
 void wiGUI::AddWidget(wiWidget* widget)
