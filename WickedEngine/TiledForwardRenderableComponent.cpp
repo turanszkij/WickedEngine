@@ -24,7 +24,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	{
 		if (getHairParticleAlphaCompositionEnabled())
 		{
-			wiRenderer::SetAlphaRef(0.1f, threadID);
+			wiRenderer::SetAlphaRef(0.25f, threadID);
 		}
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_ALPHATESTONLY, nullptr, true);
 	}

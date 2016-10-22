@@ -1227,7 +1227,6 @@ void wiRenderer::RebindPersistentState(GRAPHICSTHREAD threadID)
 	BindPersistentState(threadID);
 
 	wiImage::BindPersistentState(threadID);
-	wiFont::BindPersistentState(threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const string& get)

@@ -22,6 +22,18 @@
     <Filter Include="images">
       <UniqueIdentifier>{e1f824f0-bb57-4a4d-af91-24cafaef11df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Scene">
+      <UniqueIdentifier>{a886bde5-f8cc-4595-b75f-a13adbbb91df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scene\Sample">
+      <UniqueIdentifier>{5c3f7c56-d21c-4a0a-a2cd-d09103f75c0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scene\Sample\textures">
+      <UniqueIdentifier>{0d3c931a-2562-4176-904c-4fac464cb707}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scene\Sample\rims">
+      <UniqueIdentifier>{2bef054b-1e99-4186-a5f4-9e4bc182e910}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -136,6 +148,96 @@
     <Image Include="images\ripple.png">
       <Filter>images</Filter>
     </Image>
+    <Image Include="Scene\Sample\colorGrading.dds">
+      <Filter>Scene\Sample</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\billboardredflowers.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\Bricks_01_Diffuse.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\Clay_01_Diffuse.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\flame.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\Foliage_Bark_01_Diffuse_01.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\Foliage_Bark_01_Normal_01.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\Foliage_Leaves_01_DiffuseMask_01.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\grassbb.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\grass-texture-2.jpg">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\Rocks02_DiffuseAtlas_01.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\Rocks02_NormalAtlas_01.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\RoofTiles_01_Diffuse.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\waterNor.jpg">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_base_COL.jpg">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_base_NOR.jpg">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_base_SPEC.jpg">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_lopatky_COL.jpg">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_lopatky_NOR.jpg">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\WoodenPlain_01_Diffuse.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\textures\WoodenPlanks_01_Diffuse_01.png">
+      <Filter>Scene\Sample\textures</Filter>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare0.jpg">
+      <Filter>Scene\Sample\rims</Filter>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare1.jpg">
+      <Filter>Scene\Sample\rims</Filter>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare2.jpg">
+      <Filter>Scene\Sample\rims</Filter>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare3.jpg">
+      <Filter>Scene\Sample\rims</Filter>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare4.jpg">
+      <Filter>Scene\Sample\rims</Filter>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare5.jpg">
+      <Filter>Scene\Sample\rims</Filter>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare6.jpg">
+      <Filter>Scene\Sample\rims</Filter>
+    </Image>
+    <Image Include="Scene\Sample\sky.dds">
+      <Filter>Scene\Sample</Filter>
+    </Image>
+    <Image Include="Scene\Sample\sky_night.dds">
+      <Filter>Scene\Sample</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WickedEngineEditor.rc">
@@ -150,5 +252,11 @@
   <ItemGroup>
     <None Include="config.ini" />
     <None Include="startup.lua" />
+    <None Include="Scene\Sample\scene.wimf">
+      <Filter>Scene\Sample</Filter>
+    </None>
+    <None Include="Scene\Sample\scene.wiw">
+      <Filter>Scene\Sample</Filter>
+    </None>
   </ItemGroup>
 </Project>

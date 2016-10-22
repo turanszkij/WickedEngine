@@ -184,7 +184,6 @@ int historyCount = 0;
 int historyPos = -1;
 enum HistoryOperationType
 {
-	HISTORYOP_SELECTION,
 	HISTORYOP_TRANSLATOR,
 	HISTORYOP_DELETE,
 	HISTORYOP_PASTE,
@@ -694,11 +693,6 @@ void EditorComponent::Update()
 		hovered = wiRenderer::Pick((long)currentMouse.x, (long)currentMouse.y, rendererWnd->GetPickType());
 		if (wiInputManager::GetInstance()->press(VK_RBUTTON))
 		{
-			history = new wiArchive(AdvanceHistory(), false);
-			*history << __editorVersion;
-			*history << (int)HISTORYOP_SELECTION;
-
-
 			wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
 
 			if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
@@ -713,17 +707,11 @@ void EditorComponent::Update()
 				}
 				if (it==selected.end() && picked->transform != nullptr)
 				{
-					*history << (int)0; // add sel
-					*history << picked->transform->GetID();
-
 					selected.push_back(picked);
 					savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
 				}
 				else
 				{
-					*history << (int)1; // remove from sel
-					*history << (*it)->transform->GetID();
-
 					EndTranslate();
 					selected.erase(it);
 					savedParents.erase((*it)->transform);
@@ -731,8 +719,6 @@ void EditorComponent::Update()
 			}
 			else
 			{
-				*history << (int)2; // clear sel, new sel
-
 				EndTranslate();
 				ClearSelected();
 				selected.push_back(picked);
@@ -741,8 +727,6 @@ void EditorComponent::Update()
 					savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
 				}
 			}
-
-			SAFE_DELETE(history);
 
 			objectWnd->SetObject(picked->object);
 
@@ -926,6 +910,8 @@ void EditorComponent::Update()
 			// Duplicate Instances
 			if (wiInputManager::GetInstance()->press('D'))
 			{
+				EndTranslate();
+
 				for (auto& x : selected)
 				{
 					if (x->object != nullptr)
@@ -933,14 +919,20 @@ void EditorComponent::Update()
 						Object* o = new Object(*x->object);
 						o->detach();
 						wiRenderer::Add(o);
+						x->transform = o;
+						x->object = o;
 					}
 					if (x->light != nullptr)
 					{
 						Light* l = new Light(*x->light);
 						l->detach();
 						wiRenderer::Add(l);
+						x->transform = l;
+						x->light = l;
 					}
 				}
+
+				BeginTranslate();
 			}
 			// Undo
 			if (wiInputManager::GetInstance()->press('Z'))
@@ -1129,55 +1121,6 @@ void ConsumeHistoryOperation(bool undo)
 
 		switch (type)
 		{
-		case HISTORYOP_SELECTION:
-			{
-				int selOpType;
-				*history >> selOpType;
-				switch (selOpType)
-				{
-					case 0: // add sel
-					{
-						unsigned long long selID;
-						*history >> selID;
-						if (undo)
-						{
-							for (auto& x : selected)
-							{
-								if (x->transform->GetID() == selID)
-								{
-									selected.remove(x);
-									break;
-								}
-							}
-						}
-						else
-						{
-							wiRenderer::Picked* p = new wiRenderer::Picked;
-							p->transform = wiRenderer::GetScene().GetWorldNode()->find(selID);
-							if (p->transform != nullptr)
-							{
-								selected.push_back(p);
-							}
-						}
-					}
-					break;
-				case 1: // remove from sel
-					{
-						unsigned long long selID;
-						*history >> selID;
-					}
-					break;
-				case 2: // clear sel, new sel
-					{
-						unsigned long long selID;
-						*history >> selID;
-					}
-					break;
-				default:
-					break;
-				}
-			}
-			break;
 		case HISTORYOP_TRANSLATOR:
 			{
 				XMFLOAT4X4 start, end;

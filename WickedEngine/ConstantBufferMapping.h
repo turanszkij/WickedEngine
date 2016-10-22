@@ -15,8 +15,6 @@
 #define CBSLOT_IMAGE_IMAGE				5
 #define CBSLOT_IMAGE_POSTPROCESS		6
 
-#define CBSLOT_FONT_FONT				7
-
 #define CBSLOT_API						8
 
 

@@ -15,7 +15,6 @@ VertexLayout		*wiFont::vertexLayout = nullptr;
 VertexShader		*wiFont::vertexShader = nullptr;
 PixelShader			*wiFont::pixelShader = nullptr;
 BlendState			*wiFont::blendState = nullptr;
-GPUBuffer           *wiFont::constantBuffer = nullptr;
 RasterizerState		*wiFont::rasterizerState = nullptr;
 RasterizerState		*wiFont::rasterizerState_Scissor = nullptr;
 DepthStencilState	*wiFont::depthStencilState = nullptr;
@@ -102,21 +101,6 @@ void wiFont::SetUpStates()
 	blendState = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
 }
-void wiFont::SetUpCB()
-{
-	GPUBufferDesc bd;
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	constantBuffer = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, constantBuffer );
-
-	wiRenderer::GetDevice()->LOCK();
-	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-	wiRenderer::GetDevice()->UNLOCK();
-}
 void wiFont::LoadShaders()
 {
 
@@ -139,7 +123,6 @@ void wiFont::LoadShaders()
 void wiFont::SetUpStaticComponents()
 {
 	SetUpStates();
-	SetUpCB();
 	LoadShaders();
 	LoadVertexBuffer();
 	LoadIndices();
@@ -161,7 +144,6 @@ void wiFont::CleanUpStatic()
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(pixelShader);
 	SAFE_DELETE(blendState);
-	SAFE_DELETE(constantBuffer);
 	SAFE_DELETE(rasterizerState_Scissor);
 	SAFE_DELETE(rasterizerState);
 	SAFE_DELETE(depthStencilState);
@@ -169,11 +151,6 @@ void wiFont::CleanUpStatic()
 	SAFE_DELETE(vertexBuffer);
 	SAFE_DELETE(vertexBuffer);
 	SAFE_DELETE(vertexBuffer);
-}
-
-void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
-{
-	wiRenderer::GetDevice()->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer), threadID);
 }
 
 
@@ -307,24 +284,39 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 		device->BindPS(pixelShader,threadID);
 
 
-		ConstantBuffer cb;
+		device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
+		device->BindDepthStencilState(depthStencilState, 1, threadID);
+
+		device->BindBlendState(blendState, threadID);
+		device->BindVertexBuffer(vertexBuffer, 0, sizeof(Vertex), threadID);
+		device->BindIndexBuffer(indexBuffer, threadID);
+
+		device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND0, threadID);
+
+		wiRenderer::MiscCB cb;
+
+		if (newProps.shadowColor.w > 0)
+		{
+			// font shadow render:
+			cb.mTransform = XMMatrixTranspose(
+				XMMatrixTranslation((float)newProps.posX+1, (float)newProps.posY+1, 0)
+				* device->GetScreenProjection()
+			);
+			cb.mColor = newProps.shadowColor;
+			device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+			device->DrawIndexed((int)text.length() * 6, threadID);
+		}
+
+		// font base render:
 		cb.mTransform = XMMatrixTranspose(
 			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 			* device->GetScreenProjection()
 		);
-		
-		device->UpdateBuffer(constantBuffer,&cb,threadID);
+		cb.mColor = newProps.color;
+		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC],&cb,threadID);
 
-
-		device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
-		device->BindDepthStencilState(depthStencilState,1,threadID);
-
-		device->BindBlendState(blendState,threadID);
-		device->BindVertexBuffer(vertexBuffer,0,sizeof(Vertex),threadID);
-		device->BindIndexBuffer(indexBuffer,threadID);
-
-		device->BindResourcePS(fontStyles[style].texture,TEXSLOT_ONDEMAND0,threadID);
-		device->DrawIndexed((int)text.length()*6,threadID);
+		device->DrawIndexed((int)text.length() * 6, threadID);
 
 		device->EventEnd(threadID);
 	}

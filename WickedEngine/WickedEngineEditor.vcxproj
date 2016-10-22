@@ -212,6 +212,94 @@
     <Image Include="Resource\directional_light.dds" />
     <Image Include="Resource\pointlight.dds" />
     <Image Include="Resource\spotlight.dds" />
+    <Image Include="Scene\Sample\colorGrading.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\sky.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare0.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare1.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare2.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare3.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare4.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare5.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\rims\flare6.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\sky_night.dds" />
+    <Image Include="Scene\Sample\textures\billboardredflowers.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\Bricks_01_Diffuse.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\Clay_01_Diffuse.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\flame.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\Foliage_Bark_01_Diffuse_01.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\Foliage_Bark_01_Normal_01.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\Foliage_Leaves_01_DiffuseMask_01.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\grass-texture-2.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\grassbb.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\Rocks02_DiffuseAtlas_01.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\Rocks02_NormalAtlas_01.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\RoofTiles_01_Diffuse.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\waterNor.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_base_COL.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_base_NOR.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_base_SPEC.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_lopatky_COL.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\windmill_001_lopatky_NOR.jpg">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\WoodenPlain_01_Diffuse.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="Scene\Sample\textures\WoodenPlanks_01_Diffuse_01.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
     <Image Include="small.ico" />
     <Image Include="WickedEngineEditor.ico" />
   </ItemGroup>
@@ -223,6 +311,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="config.ini" />
+    <None Include="Scene\Sample\scene.wimf">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Scene\Sample\scene.wiw">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="startup.lua" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

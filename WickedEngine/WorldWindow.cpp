@@ -70,7 +70,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	horizonColorPickerToggleButton = new wiButton("Horizon Color");
 	horizonColorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
 	horizonColorPickerToggleButton->OnClick([&](wiEventArgs args) {
-		horizonColorPicker->SetVisible(!ambientColorPicker->IsVisible());
+		horizonColorPicker->SetVisible(!horizonColorPicker->IsVisible());
 	});
 	worldWindow->AddWidget(horizonColorPickerToggleButton);
 

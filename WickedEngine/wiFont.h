@@ -25,10 +25,12 @@ public:
 	int spacingX, spacingY;
 	int posX, posY;
 	wiFontAlign h_align, v_align;
+	XMFLOAT4 color;
+	XMFLOAT4 shadowColor;
 
 	wiFontProps(int posX = 0, int posY = 0, int size = -1, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
 		, int spacingX = 2, int spacingY = 1)
-		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY)
+		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(XMFLOAT4(1,1,1,1)), shadowColor(XMFLOAT4(0,0,0,0))
 	{}
 };
 
@@ -43,30 +45,19 @@ protected:
 		ALIGN_16
 	};
 	static vector<Vertex> vertexList;
-	GFX_STRUCT ConstantBuffer
-	{
-		XMMATRIX mTransform;
-
-		CB_SETBINDSLOT(CBSLOT_FONT_FONT)
-		
-		ALIGN_16
-	};
 	static wiGraphicsTypes::GPUBuffer           *vertexBuffer, *indexBuffer;
 
 	static wiGraphicsTypes::VertexLayout		*vertexLayout;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
 	static wiGraphicsTypes::PixelShader			*pixelShader;
 	static wiGraphicsTypes::BlendState			*blendState;
-	static wiGraphicsTypes::GPUBuffer			*constantBuffer;
 	static wiGraphicsTypes::RasterizerState		*rasterizerState;
 	static wiGraphicsTypes::RasterizerState		*rasterizerState_Scissor;
 	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
 	
 	static void SetUpStates();
-	static void SetUpCB();
 public:
 	static void LoadShaders();
-	static void BindPersistentState(GRAPHICSTHREAD threadID);
 private:
 	static void LoadVertexBuffer();
 	static void LoadIndices();

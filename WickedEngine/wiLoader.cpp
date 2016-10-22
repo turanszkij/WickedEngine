@@ -3399,9 +3399,11 @@ void Armature::UpdateTransform()
 }
 void Armature::UpdateArmature()
 {
-
 	for (auto& x : animationLayers)
 	{
+		if (x == nullptr)
+			continue;
+
 		AnimationLayer& anim = *x;
 
 		// current action
