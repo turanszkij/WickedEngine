@@ -1,3 +1,4 @@
+#define DIRECTIONALLIGHT_SOFT
 #define DISABLE_ALPHATEST
 #include "objectHF.hlsli"
 

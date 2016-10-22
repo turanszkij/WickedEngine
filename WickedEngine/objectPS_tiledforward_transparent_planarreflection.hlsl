@@ -1,3 +1,4 @@
+#define DIRECTIONALLIGHT_SOFT
 #include "objectHF.hlsli"
 
 float4 main(PixelInputType input) : SV_TARGET
