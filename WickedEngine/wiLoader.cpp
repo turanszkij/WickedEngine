@@ -2276,11 +2276,19 @@ void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHI
 	{
 		meshInstances[threadID].resize((meshInstances[threadID].size() + 1) * 2);
 	}
-	meshInstances[threadID][numerator] = instance;
+	if (!instanceBufferIsUpToDate || memcmp(&meshInstances[threadID][numerator], &instance, sizeof(Instance)) != 0)
+	{
+		instanceBufferIsUpToDate = false;
+		meshInstances[threadID][numerator] = instance;
+	}
 }
 void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
+	if (!instanceBufferIsUpToDate)
+	{
+		instanceBufferIsUpToDate = true;
+		wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
+	}
 }
 void Mesh::Serialize(wiArchive& archive)
 {

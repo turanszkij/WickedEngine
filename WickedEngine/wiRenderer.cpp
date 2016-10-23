@@ -608,6 +608,8 @@ void wiRenderer::LoadBuffers()
 	bd.StructureByteStride = sizeof(ShaderBoneType);
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_BONE]);
 
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.ByteWidth = sizeof(LightArrayType) * MAX_LIGHTS;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -1557,6 +1559,7 @@ void wiRenderer::UpdatePerFrameData()
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
+	UpdateWorldCB(threadID); // only commits when parameters are changed
 	UpdateFrameCB(threadID);
 	
 	// Skinning:
@@ -3087,7 +3090,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					mcb.roughness = 1.0f;
 					mcb.reflectance = 1.0f;
 					mcb.metalness = 1.0f;
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+					UpdateMaterialCB(mcb, threadID);
 
 					if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 					{
@@ -3240,9 +3243,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 					GetDevice()->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
 
-					MaterialCB mcb;
-					mcb.Create(*material);
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+					UpdateMaterialCB(MaterialCB(*material), threadID);
 
 					if (!wireRender)
 					{
@@ -3377,6 +3378,8 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	if (enviroMap == nullptr)
 		return;
 
+	GetDevice()->EventBegin(L"DrawSky", threadID);
+
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,threadID);
@@ -3390,9 +3393,13 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	GetDevice()->BindVertexBuffer(nullptr,0,0,threadID);
 	GetDevice()->BindVertexLayout(nullptr, threadID);
 	GetDevice()->Draw(240,threadID);
+
+	GetDevice()->EventEnd();
 }
 void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 {
+	GetDevice()->EventBegin(L"DrawSun", threadID);
+
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
@@ -3404,6 +3411,8 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 	GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 	GetDevice()->BindVertexLayout(nullptr, threadID);
 	GetDevice()->Draw(240, threadID);
+
+	GetDevice()->EventEnd();
 }
 
 void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
@@ -3639,16 +3648,21 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 {
-	WorldCB cb;
+	static WorldCB prevcb[GRAPHICSTHREAD_COUNT];
 
+	WorldCB value;
 	auto& world = GetScene().worldInfo;
-	cb.mAmbient = world.ambient;
-	cb.mFog = world.fogSEH;
-	cb.mHorizon = world.horizon;
-	cb.mZenith = world.zenith;
-	cb.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
+	value.mAmbient = world.ambient;
+	value.mFog = world.fogSEH;
+	value.mHorizon = world.horizon;
+	value.mZenith = world.zenith;
+	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &cb, threadID);
+	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)
+	{
+		prevcb[threadID] = value;
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &prevcb[threadID], threadID);
+	}
 }
 void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
@@ -3689,18 +3703,27 @@ void wiRenderer::UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID)
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 }
-wiRenderer::APICB* apiCB = new wiRenderer::APICB(XMFLOAT4(0, 0, 0, 0), 0.75f);
+void wiRenderer::UpdateMaterialCB(const MaterialCB& value, GRAPHICSTHREAD threadID)
+{
+	static MaterialCB prevcb[GRAPHICSTHREAD_COUNT];
+	if (memcmp(&prevcb[threadID],&value,sizeof(MaterialCB)) != 0)
+	{
+		prevcb[threadID] = value;
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &value, threadID);
+	}
+}
+wiRenderer::APICB apiCB[GRAPHICSTHREAD_COUNT];
 void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID)
 {
-	apiCB->clipPlane = clipPlane;
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], apiCB, threadID);
+	apiCB[threadID].clipPlane = clipPlane;
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 }
 void wiRenderer::SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 {
-	if (alphaRef != apiCB->alphaRef)
+	if (alphaRef != apiCB[threadID].alphaRef)
 	{
-		apiCB->alphaRef = alphaRef;
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], apiCB, threadID);
+		apiCB[threadID].alphaRef = alphaRef;
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 	}
 }
 void wiRenderer::UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
@@ -4433,9 +4456,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			{
 				GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
 
-				MaterialCB mcb;
-				mcb.Create(*subset.material);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MATERIAL], &mcb, threadID);
+				UpdateMaterialCB(MaterialCB(*subset.material), threadID);
 
 				GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 				GetDevice()->BindResourcePS(subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);

@@ -334,7 +334,11 @@ struct MeshSubset
 	MeshSubset();
 	~MeshSubset();
 };
-struct Mesh{
+struct Mesh
+{
+private:
+	bool instanceBufferIsUpToDate;
+public:
 	string name;
 	string parent;
 	// Full vertex info with bones
@@ -399,7 +403,9 @@ struct Mesh{
 	void CreateVertexArrays();
 	void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
 	void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
-	void init(){
+	void init()
+	{
+		instanceBufferIsUpToDate = false;
 		parent="";
 		indices.resize(0);
 		renderable=false;

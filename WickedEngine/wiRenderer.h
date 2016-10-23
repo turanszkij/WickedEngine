@@ -204,7 +204,7 @@ public:
 		float	alphaRef;
 		float	pad[3];
 
-		APICB(const XMFLOAT4& clipPlane, float alphaRef) :clipPlane(clipPlane), alphaRef(alphaRef) {}
+		APICB(const XMFLOAT4& clipPlane = XMFLOAT4(0, 0, 0, 0), float alphaRef = 0.75f) :clipPlane(clipPlane), alphaRef(alphaRef) {}
 
 		CB_SETBINDSLOT(CBSLOT_API)
 
@@ -372,6 +372,7 @@ public:
 	static void UpdateWorldCB(GRAPHICSTHREAD threadID);
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	static void UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID);
+	static void UpdateMaterialCB(const MaterialCB& value, GRAPHICSTHREAD threadID);
 	static void SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID);
 	static void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
 	static void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }

@@ -23,7 +23,6 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.fogSEH.x = args.fValue;
-		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	worldWindow->AddWidget(fogStartSlider);
 
@@ -32,7 +31,6 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogEndSlider->SetPos(XMFLOAT2(x, y += step));
 	fogEndSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.fogSEH.y = args.fValue;
-		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	worldWindow->AddWidget(fogEndSlider);
 
@@ -41,7 +39,6 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogHeightSlider->SetPos(XMFLOAT2(x, y += step));
 	fogHeightSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.fogSEH.z = args.fValue;
-		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	worldWindow->AddWidget(fogHeightSlider);
 
@@ -61,7 +58,6 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	ambientColorPicker->SetEnabled(true);
 	ambientColorPicker->OnColorChanged([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
-		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	GUI->AddWidget(ambientColorPicker);
 
@@ -80,7 +76,6 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	horizonColorPicker->SetEnabled(true);
 	horizonColorPicker->OnColorChanged([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
-		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	GUI->AddWidget(horizonColorPicker);
 
@@ -99,7 +94,6 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	zenithColorPicker->SetEnabled(true);
 	zenithColorPicker->OnColorChanged([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
-		wiRenderer::UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	GUI->AddWidget(zenithColorPicker);
 

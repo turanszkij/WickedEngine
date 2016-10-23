@@ -1663,6 +1663,11 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D()
 }
 HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 {
+	if (pTexture->shaderResourceView_DX11 != nullptr)
+	{
+		return E_FAIL;
+	}
+
 	HRESULT hr = E_FAIL;
 	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 	{
@@ -1746,6 +1751,11 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 }
 HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 {
+	if (!pTexture->renderTargetViews_DX11.empty())
+	{
+		return E_FAIL;
+	}
+
 	HRESULT hr = E_FAIL;
 	if (pTexture->desc.BindFlags & D3D11_BIND_RENDER_TARGET)
 	{
@@ -1872,6 +1882,11 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 }
 HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 {
+	if (!pTexture->depthStencilViews_DX11.empty())
+	{
+		return E_FAIL;
+	}
+
 	HRESULT hr = E_FAIL;
 	if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
 	{
