@@ -9,11 +9,14 @@ float4 main(QGS_OUT PSIn) : SV_Target
 #endif
 
 	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
+	float opacity = color.a;
 	ALPHATEST(color.a)
 	color = DEGAMMA(color);
 	color.a = 1; // do not blend
 	float3 P = PSIn.pos3D;
-	float3 V = normalize(g_xCamera_CamPos - P);
+	float3 V = g_xCamera_CamPos - P;
+	float dist = length(V);
+	V /= dist;
 	float emissive = 0;
 	float3 N = PSIn.nor;
 	float roughness = 1;

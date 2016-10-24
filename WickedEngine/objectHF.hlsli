@@ -99,12 +99,12 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	UV = finalTexCoords;
 }
 
-inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float alpha, inout float3 albedo)
+inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float3 albedo, inout float4 color)
 {
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
 	float4 refractiveColor = (xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, 0));
-	albedo.rgb = lerp(refractiveColor.rgb, albedo.rgb, alpha);
-	alpha = 1;
+	albedo.rgb = lerp(refractiveColor.rgb, albedo.rgb, color.a);
+	color.a = 1;
 }
 
 inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
@@ -170,10 +170,13 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #define OBJECT_PS_MAKE_COMMON												\
 	float3 N = input.nor;													\
 	float3 P = input.pos3D;													\
-	float3 V = normalize(g_xCamera_CamPos - P);								\
+	float3 V = g_xCamera_CamPos - P;										\
+	float dist = length(V);													\
+	V /= dist;																\
 	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
 	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
 	float4 color = baseColor;												\
+	float opacity = color.a;												\
 	float roughness = g_xMat_roughness;										\
 	roughness = saturate(roughness);										\
 	float metalness = g_xMat_metalness;										\
@@ -198,9 +201,10 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
 
 #define OBJECT_PS_SAMPLETEXTURES											\
-	baseColor *= xBaseColorMap.Sample(sampler_objectshader, UV);				\
+	baseColor *= xBaseColorMap.Sample(sampler_objectshader, UV);			\
 	ALPHATEST(baseColor.a);													\
 	color = baseColor;														\
+	opacity = color.a;														\
 	roughness *= xRoughnessMap.Sample(sampler_objectshader, UV).r;			\
 	metalness *= xMetalnessMap.Sample(sampler_objectshader, UV).r;			\
 	reflectance *= xReflectanceMap.Sample(sampler_objectshader, UV).r;
@@ -215,6 +219,9 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float3 diffuse, specular;																						\
 	BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
 
+#define OBJECT_PS_REFRACTION																						\
+	Refraction(ScreenCoord, input.nor2D, bumpColor, albedo, color);
+
 #define OBJECT_PS_LIGHT_DIRECTIONAL																					\
 	DirectionalLight(N, V, P, f0, albedo, roughness, diffuse, specular);
 
@@ -222,7 +229,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_LIGHT_END																							\
-	color.rgb = (GetAmbientColor() * ao + diffuse) * albedo + specular;
+	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * albedo + specular;
 
 #define OBJECT_PS_DITHER																							\
 	clip(dither(input.pos.xy) - input.dither);
@@ -232,9 +239,6 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 #define OBJECT_PS_ENVIRONMENTREFLECTIONS																			\
 	specular += EnvironmentReflection(N, V, P, roughness, f0);
-
-#define OBJECT_PS_REFRACTION																						\
-	Refraction(ScreenCoord, input.nor2D, bumpColor, color.a, albedo);
 
 #define OBJECT_PS_DEGAMMA																							\
 	color = DEGAMMA(color);
@@ -246,7 +250,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	color.rgb += baseColor.rgb * GetEmissive(emissive);
 
 #define OBJECT_PS_FOG																								\
-	color.rgb = applyFog(color.rgb, getFog(distance(g_xCamera_CamPos,P)));
+	color.rgb = applyFog(color.rgb, getFog(dist));
 
 #define OBJECT_PS_OUT_GBUFFER																						\
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
