@@ -24,7 +24,7 @@ wiInputManager::wiInputManager()
 		while (true)
 		{
 			Update();
-			Sleep(10);
+			Sleep(1);
 		}
 
 	}).detach();

@@ -1240,6 +1240,10 @@ Transform* wiRenderer::getTransformByName(const string& get)
 	//}
 	return GetScene().GetWorldNode()->find(get);
 }
+Transform* wiRenderer::getTransformByID(unsigned long long id)
+{
+	return GetScene().GetWorldNode()->find(id);
+}
 Armature* wiRenderer::getArmatureByName(const string& get)
 {
 	for (Model* model : GetScene().models)

@@ -117,13 +117,19 @@ void BeginTranslate()
 	translator_active = true;
 	translator->Clear();
 
-	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
-	float count = 0;
+	set<Transform*> uniqueTransforms;
 	for (auto& x : selected)
 	{
-		if (x->transform != nullptr)
+		uniqueTransforms.insert(x->transform);
+	}
+
+	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
+	float count = 0;
+	for (auto& x : uniqueTransforms)
+	{
+		if (x != nullptr)
 		{
-			centerV = XMVectorAdd(centerV, XMLoadFloat3(&x->transform->translation));
+			centerV = XMVectorAdd(centerV, XMLoadFloat3(&x->translation));
 			count += 1.0f;
 		}
 	}
@@ -695,43 +701,42 @@ void EditorComponent::Update()
 		{
 			wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
 
-			if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
+			if (picked->transform != nullptr)
 			{
-				list<wiRenderer::Picked*>::iterator it = selected.begin();
-				for (; it != selected.end(); ++it)
+				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
 				{
-					if ((*it) == picked)
+					list<wiRenderer::Picked*>::iterator it = selected.begin();
+					for (; it != selected.end(); ++it)
 					{
-						break;
+						if ((*it) == picked)
+						{
+							break;
+						}
 					}
-				}
-				if (it==selected.end() && picked->transform != nullptr)
-				{
-					selected.push_back(picked);
-					savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
+					if (it == selected.end() && picked->transform != nullptr)
+					{
+						selected.push_back(picked);
+						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
+					}
+					else
+					{
+						EndTranslate();
+						selected.erase(it);
+						savedParents.erase((*it)->transform);
+					}
 				}
 				else
 				{
 					EndTranslate();
-					selected.erase(it);
-					savedParents.erase((*it)->transform);
+					ClearSelected();
+					selected.push_back(picked);
+					if (picked->transform != nullptr)
+					{
+						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
+					}
 				}
-			}
-			else
-			{
-				EndTranslate();
-				ClearSelected();
-				selected.push_back(picked);
-				if (picked->transform != nullptr)
-				{
-					savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
-				}
-			}
 
-			objectWnd->SetObject(picked->object);
 
-			if (picked->transform != nullptr)
-			{
 				EndTranslate();
 
 				if (picked->object != nullptr)
@@ -766,7 +771,6 @@ void EditorComponent::Update()
 				decalWnd->SetDecal(picked->decal);
 
 				BeginTranslate();
-
 			}
 			else
 			{
@@ -776,6 +780,8 @@ void EditorComponent::Update()
 				EndTranslate();
 				ClearSelected();
 			}
+
+			objectWnd->SetObject(picked->object);
 		}
 
 		// Delete

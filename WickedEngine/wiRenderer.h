@@ -339,6 +339,7 @@ public:
 	static wiWaterPlane GetWaterPlane();
 
 	static Transform* getTransformByName(const string& name);
+	static Transform* getTransformByID(unsigned long long id);
 	static Armature* getArmatureByName(const string& get);
 	static int getActionByName(Armature* armature, const string& get);
 	static int getBoneByName(Armature* armature, const string& get);
