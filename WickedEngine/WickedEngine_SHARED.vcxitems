@@ -235,6 +235,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersectables.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.h" />
@@ -310,7 +311,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHitbox2D.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.h" />
@@ -646,12 +646,12 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHitbox2D.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp" />

@@ -124,7 +124,7 @@ void wiSPTree::getVisible(Frustum& frustum, CulledList& objects, SortType sortTy
 		node = root;
 	}
 
-	int contain_type = frustum.CheckBox(node->box.corners);
+	int contain_type = frustum.CheckBox(node->box);
 
 	if (!contain_type)
 	{
@@ -137,7 +137,7 @@ void wiSPTree::getVisible(Frustum& frustum, CulledList& objects, SortType sortTy
 				type == SP_TREE_LOOSE_CULL ||
 				(type == SP_TREE_STRICT_CULL &&
 					contain_type == BOX_FRUSTUM_INSIDE ||
-					(contain_type == BOX_FRUSTUM_INTERSECTS && frustum.CheckBox(object->bounds.corners))
+					(contain_type == BOX_FRUSTUM_INTERSECTS && frustum.CheckBox(object->bounds))
 					)
 				)
 			{

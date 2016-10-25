@@ -1543,7 +1543,7 @@ void wiRenderer::UpdatePerFrameData()
 			}
 			for (auto& x : emitterSystems)
 			{
-				if (camera->frustum.CheckBox(x->bounding_box->corners))
+				if (camera->frustum.CheckBox(*x->bounding_box))
 				{
 					culling.culledEmittedParticleSystems.push_back(x);
 				}
@@ -3446,7 +3446,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 		for (Decal* decal : model->decals) {
 
-			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds.corners)) {
+			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
 
 				GetDevice()->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
 				GetDevice()->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);

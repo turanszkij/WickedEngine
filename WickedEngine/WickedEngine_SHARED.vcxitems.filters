@@ -1047,9 +1047,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiHitbox2D.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h">
       <Filter>ENGINE\Input</Filter>
     </ClInclude>
@@ -1076,6 +1073,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersectables.h">
+      <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1823,9 +1823,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHitbox2D.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
@@ -1849,6 +1846,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp">
+      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

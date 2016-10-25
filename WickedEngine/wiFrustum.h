@@ -1,6 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
 
+struct AABB;
+
 class Frustum
 {
 private:
@@ -18,7 +20,7 @@ public:
 
 #define BOX_FRUSTUM_INTERSECTS 1
 #define BOX_FRUSTUM_INSIDE 2
-	int CheckBox(XMFLOAT3[8]);
+	int CheckBox(const AABB& box);
 
 	XMFLOAT4 getFarPlane();
 	XMFLOAT4 getNearPlane();

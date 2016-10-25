@@ -1,5 +1,5 @@
 #include "wiFrustum.h"
-
+#include "wiIntersectables.h"
 
 Frustum::Frustum()
 {
@@ -96,15 +96,17 @@ bool Frustum::CheckSphere(const XMFLOAT3& center, float radius)
 
 	return true;
 }
-int Frustum::CheckBox(XMFLOAT3 corners[8]){
+int Frustum::CheckBox(const AABB& box)
+{
 	int iTotalIn = 0;
-	for(int p = 0; p < 6; ++p) {
+	for(int p = 0; p < 6; ++p) 
+	{
 	
 		int iInCount = 8;
 		int iPtIn = 1;
 
 		for(int i = 0; i < 8; ++i) {
-			if(XMVectorGetX( XMPlaneDotCoord(XMLoadFloat4(&m_planesNorm[p]), XMLoadFloat3(&corners[i])) ) < 0.0f)
+			if(XMVectorGetX( XMPlaneDotCoord(XMLoadFloat4(&m_planesNorm[p]), XMLoadFloat3(&box.corners[i])) ) < 0.0f)
 			{
 				iPtIn=0;
 				--iInCount;

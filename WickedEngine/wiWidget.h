@@ -2,9 +2,9 @@
 #include "CommonInclude.h"
 #include "wiTransform.h"
 #include "wiHashString.h"
-#include "wiHitBox2D.h"
 #include "wiColor.h"
 #include "wiGraphicsAPI.h"
+#include "wiIntersectables.h"
 
 class wiGUI;
 
