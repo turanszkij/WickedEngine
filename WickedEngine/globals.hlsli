@@ -94,7 +94,6 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {
 	float4x4	g_xTransform;
 	float4		g_xColor;
-	int4		g_xMisc_int4;
 };
 
 CBUFFER(APICB, CBSLOT_API)

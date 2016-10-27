@@ -11,221 +11,6 @@
 
 namespace wiGraphicsTypes
 {
-
-GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
-{
-	FULLSCREEN = fullscreen;
-
-	HRESULT hr = S_OK;
-
-	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
-		SAFE_INIT(commandLists[i]);
-		SAFE_INIT(deviceContexts[i]);
-	}
-
-	UINT createDeviceFlags = 0;
-#ifdef _DEBUG
-#ifndef WINSTORE_SUPPORT
-	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-#endif
-
-	D3D_DRIVER_TYPE driverTypes[] =
-	{
-		D3D_DRIVER_TYPE_HARDWARE,
-		D3D_DRIVER_TYPE_WARP,
-		D3D_DRIVER_TYPE_REFERENCE,
-	};
-	UINT numDriverTypes = ARRAYSIZE(driverTypes);
-
-	D3D_FEATURE_LEVEL featureLevels[] =
-	{
-		D3D_FEATURE_LEVEL_11_1,
-		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
-		//D3D_FEATURE_LEVEL_10_0,
-	};
-	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
-
-#ifndef WINSTORE_SUPPORT
-	RECT rect = RECT();
-	GetClientRect(window, &rect);
-	SCREENWIDTH = rect.right - rect.left;
-	SCREENHEIGHT = rect.bottom - rect.top;
-
-	DXGI_SWAP_CHAIN_DESC sd;
-	ZeroMemory(&sd, sizeof(sd));
-	sd.BufferCount = 2;
-	sd.BufferDesc.Width = SCREENWIDTH;
-	sd.BufferDesc.Height = SCREENHEIGHT;
-	sd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-	sd.BufferDesc.RefreshRate.Numerator = 60;
-	sd.BufferDesc.RefreshRate.Denominator = 1;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.OutputWindow = window;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.Windowed = !fullscreen;
-#endif
-
-	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
-	{
-		driverType = driverTypes[driverTypeIndex];
-#ifndef WINSTORE_SUPPORT
-		hr = D3D11CreateDeviceAndSwapChain(NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
-			D3D11_SDK_VERSION, &sd, &swapChain, &device, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
-#else
-		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
-			, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
-#endif
-
-		if (SUCCEEDED(hr))
-			break;
-	}
-	if (FAILED(hr)) {
-		wiHelper::messageBox("SwapChain Creation Failed!", "Error!");
-#ifdef BACKLOG
-		wiBackLog::post("SwapChain Creation Failed!");
-#endif
-		exit(1);
-	}
-	DX11 = ((device->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0) ? true : false);
-
-
-#ifdef WINSTORE_SUPPORT
-	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
-	sd.Width = SCREENWIDTH = (int)window->Bounds.Width;
-	sd.Height = SCREENHEIGHT = (int)window->Bounds.Height;
-	sd.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // This is the most common swap chain format.
-	sd.Stereo = false;
-	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
-	sd.SampleDesc.Quality = 0;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.BufferCount = 2; // Use double-buffering to minimize latency.
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
-	sd.Flags = 0;
-	sd.Scaling = DXGI_SCALING_STRETCH;
-	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-
-	IDXGIDevice2 * pDXGIDevice;
-	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
-
-	IDXGIAdapter * pDXGIAdapter;
-	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void **)&pDXGIAdapter);
-
-	IDXGIFactory2 * pIDXGIFactory;
-	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&pIDXGIFactory);
-
-
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device, reinterpret_cast<IUnknown*>(window), &sd
-		, nullptr, &swapChain);
-
-	if (FAILED(hr)) {
-		wiHelper::messageBox("Swap chain creation failed!", "Error!");
-		exit(1);
-	}
-
-	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-	// ensures that the application will only render after each VSync, minimizing power consumption.
-	hr = pDXGIDevice->SetMaximumFrameLatency(1);
-#endif
-
-	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]),
-		reinterpret_cast<void**>(&userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]));
-
-	DEFERREDCONTEXT_SUPPORT = false;
-	D3D11_FEATURE_DATA_THREADING threadingFeature;
-	device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
-	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists) {
-		DEFERREDCONTEXT_SUPPORT = true;
-		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
-			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
-				continue;
-			hr = device->CreateDeferredContext(0, &deviceContexts[i]);
-			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
-				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
-		}
-	}
-	else {
-		DEFERREDCONTEXT_SUPPORT = false;
-	}
-
-
-	// Create a render target view
-	backBuffer = NULL;
-	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
-	if (FAILED(hr)) {
-		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
-		exit(0);
-	}
-
-	hr = device->CreateRenderTargetView(backBuffer, NULL, &renderTargetView);
-	//pBackBuffer->Release();
-	if (FAILED(hr)) {
-		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
-		exit(0);
-	}
-
-
-	// Setup the main viewport
-	viewPort.Width = (FLOAT)SCREENWIDTH;
-	viewPort.Height = (FLOAT)SCREENHEIGHT;
-	viewPort.MinDepth = 0.0f;
-	viewPort.MaxDepth = 1.0f;
-	viewPort.TopLeftX = 0;
-	viewPort.TopLeftY = 0;
-
-}
-GraphicsDevice_DX11::~GraphicsDevice_DX11()
-{
-	SAFE_RELEASE(renderTargetView);
-	SAFE_RELEASE(swapChain);
-
-	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
-		SAFE_RELEASE(commandLists[i]);
-		SAFE_RELEASE(deviceContexts[i]);
-	}
-
-	SAFE_RELEASE(device);
-}
-
-void GraphicsDevice_DX11::SetScreenWidth(int value)
-{
-	SCREENWIDTH = value;
-	// TODO: resize backbuffer
-}
-void GraphicsDevice_DX11::SetScreenHeight(int value)
-{
-	SCREENHEIGHT = value;
-	// TODO: resize backbuffer
-}
-
-Texture2D GraphicsDevice_DX11::GetBackBuffer()
-{
-	Texture2D result;
-	result.texture2D_DX11 = backBuffer;
-	backBuffer->AddRef();
-	return result;
-}
-
-bool GraphicsDevice_DX11::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
-{
-	switch (capability)
-	{
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
-		return DX11;
-		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
-		return DEFERREDCONTEXT_SUPPORT;
-		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_COUNT:
-		break;
-	default:
-		break;
-	}
-	return false;
-}
-
 // Engine -> Native converters
 
 inline UINT _ParseBindFlags(UINT value)
@@ -1505,24 +1290,242 @@ inline USAGE _ConvertUsage_Inv(D3D11_USAGE value)
 }
 
 inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
-{
-	Texture2DDesc desc;
-	desc.Width = pDesc->Width;
-	desc.Height = pDesc->Height;
-	desc.MipLevels = pDesc->MipLevels;
-	desc.ArraySize = pDesc->ArraySize;
-	desc.Format = _ConvertFormat_Inv(pDesc->Format);
-	desc.SampleDesc.Count = pDesc->SampleDesc.Count;
-	desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
-	desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
-	desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
-	desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
-	desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
+	{
+		Texture2DDesc desc;
+		desc.Width = pDesc->Width;
+		desc.Height = pDesc->Height;
+		desc.MipLevels = pDesc->MipLevels;
+		desc.ArraySize = pDesc->ArraySize;
+		desc.Format = _ConvertFormat_Inv(pDesc->Format);
+		desc.SampleDesc.Count = pDesc->SampleDesc.Count;
+		desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
+		desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
+		desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
+		desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
+		desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
 
-	return desc;
-}
+		return desc;
+	}
+
+
+
 
 // Engine functions
+
+GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
+{
+	FULLSCREEN = fullscreen;
+
+	HRESULT hr = S_OK;
+
+	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
+	{
+		SAFE_INIT(commandLists[i]);
+		SAFE_INIT(deviceContexts[i]);
+	}
+
+	UINT createDeviceFlags = 0;
+#ifdef _DEBUG
+#ifndef WINSTORE_SUPPORT
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+#endif
+
+	D3D_DRIVER_TYPE driverTypes[] =
+	{
+		D3D_DRIVER_TYPE_HARDWARE,
+		D3D_DRIVER_TYPE_WARP,
+		D3D_DRIVER_TYPE_REFERENCE,
+	};
+	UINT numDriverTypes = ARRAYSIZE(driverTypes);
+
+	D3D_FEATURE_LEVEL featureLevels[] =
+	{
+		D3D_FEATURE_LEVEL_11_1,
+		D3D_FEATURE_LEVEL_11_0,
+		D3D_FEATURE_LEVEL_10_1,
+		//D3D_FEATURE_LEVEL_10_0,
+	};
+	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
+
+#ifndef WINSTORE_SUPPORT
+	RECT rect = RECT();
+	GetClientRect(window, &rect);
+	SCREENWIDTH = rect.right - rect.left;
+	SCREENHEIGHT = rect.bottom - rect.top;
+
+	DXGI_SWAP_CHAIN_DESC sd;
+	ZeroMemory(&sd, sizeof(sd));
+	sd.BufferCount = 2;
+	sd.BufferDesc.Width = SCREENWIDTH;
+	sd.BufferDesc.Height = SCREENHEIGHT;
+	sd.BufferDesc.Format = _ConvertFormat(GetBackBufferFormat());
+	sd.BufferDesc.RefreshRate.Numerator = 60;
+	sd.BufferDesc.RefreshRate.Denominator = 1;
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.OutputWindow = window;
+	sd.SampleDesc.Count = 1;
+	sd.SampleDesc.Quality = 0;
+	sd.Windowed = !fullscreen;
+#endif
+
+	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
+	{
+		driverType = driverTypes[driverTypeIndex];
+#ifndef WINSTORE_SUPPORT
+		hr = D3D11CreateDeviceAndSwapChain(NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
+			D3D11_SDK_VERSION, &sd, &swapChain, &device, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
+#else
+		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
+			, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
+#endif
+
+		if (SUCCEEDED(hr))
+			break;
+	}
+	if (FAILED(hr)) {
+		wiHelper::messageBox("SwapChain Creation Failed!", "Error!");
+#ifdef BACKLOG
+		wiBackLog::post("SwapChain Creation Failed!");
+#endif
+		exit(1);
+	}
+	DX11 = ((device->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0) ? true : false);
+
+
+#ifdef WINSTORE_SUPPORT
+	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
+	sd.Width = SCREENWIDTH = (int)window->Bounds.Width;
+	sd.Height = SCREENHEIGHT = (int)window->Bounds.Height;
+	sd.Format = _ConvertFormat(GetBackBufferFormat());
+	sd.Stereo = false;
+	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
+	sd.SampleDesc.Quality = 0;
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.BufferCount = 2; // Use double-buffering to minimize latency.
+	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
+	sd.Flags = 0;
+	sd.Scaling = DXGI_SCALING_STRETCH;
+	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+
+	IDXGIDevice2 * pDXGIDevice;
+	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
+
+	IDXGIAdapter * pDXGIAdapter;
+	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void **)&pDXGIAdapter);
+
+	IDXGIFactory2 * pIDXGIFactory;
+	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&pIDXGIFactory);
+
+
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device, reinterpret_cast<IUnknown*>(window), &sd
+		, nullptr, &swapChain);
+
+	if (FAILED(hr)) {
+		wiHelper::messageBox("Swap chain creation failed!", "Error!");
+		exit(1);
+	}
+
+	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
+	// ensures that the application will only render after each VSync, minimizing power consumption.
+	hr = pDXGIDevice->SetMaximumFrameLatency(1);
+#endif
+
+	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]),
+		reinterpret_cast<void**>(&userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]));
+
+	DEFERREDCONTEXT_SUPPORT = false;
+	D3D11_FEATURE_DATA_THREADING threadingFeature;
+	device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
+	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists) {
+		DEFERREDCONTEXT_SUPPORT = true;
+		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
+			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
+				continue;
+			hr = device->CreateDeferredContext(0, &deviceContexts[i]);
+			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
+				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
+		}
+	}
+	else {
+		DEFERREDCONTEXT_SUPPORT = false;
+	}
+
+
+	// Create a render target view
+	backBuffer = NULL;
+	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
+	if (FAILED(hr)) {
+		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
+		exit(0);
+	}
+
+	hr = device->CreateRenderTargetView(backBuffer, NULL, &renderTargetView);
+	//pBackBuffer->Release();
+	if (FAILED(hr)) {
+		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
+		exit(0);
+	}
+
+
+	// Setup the main viewport
+	viewPort.Width = (FLOAT)SCREENWIDTH;
+	viewPort.Height = (FLOAT)SCREENHEIGHT;
+	viewPort.MinDepth = 0.0f;
+	viewPort.MaxDepth = 1.0f;
+	viewPort.TopLeftX = 0;
+	viewPort.TopLeftY = 0;
+
+}
+GraphicsDevice_DX11::~GraphicsDevice_DX11()
+{
+	SAFE_RELEASE(renderTargetView);
+	SAFE_RELEASE(swapChain);
+
+	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
+		SAFE_RELEASE(commandLists[i]);
+		SAFE_RELEASE(deviceContexts[i]);
+	}
+
+	SAFE_RELEASE(device);
+}
+
+void GraphicsDevice_DX11::SetScreenWidth(int value)
+{
+	SCREENWIDTH = value;
+	// TODO: resize backbuffer
+}
+void GraphicsDevice_DX11::SetScreenHeight(int value)
+{
+	SCREENHEIGHT = value;
+	// TODO: resize backbuffer
+}
+
+Texture2D GraphicsDevice_DX11::GetBackBuffer()
+{
+	Texture2D result;
+	result.texture2D_DX11 = backBuffer;
+	backBuffer->AddRef();
+	return result;
+}
+
+bool GraphicsDevice_DX11::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
+{
+	switch (capability)
+	{
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
+		return DX11;
+		break;
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
+		return DEFERREDCONTEXT_SUPPORT;
+		break;
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_COUNT:
+		break;
+	default:
+		break;
+	}
+	return false;
+}
 
 HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
 {

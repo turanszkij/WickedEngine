@@ -9,6 +9,6 @@ VertexToPixel main(uint vid : SV_VERTEXID)
 	float4 pos = float4(CONE[vid],1);
 	pos = mul( pos, g_xTransform );
 	Out.pos = Out.pos2D = mul(pos,g_xCamera_VP);
-	Out.lightIndex = g_xMisc_int4[0];
+	Out.lightIndex = (int)g_xColor.x;
 	return Out;
 }

@@ -16,6 +16,8 @@ private:
 	window_type window;
 
 public:
+	wiWindowRegistration() :window(nullptr) {}
+
 	window_type GetRegisteredWindow() {
 		return window;
 	}

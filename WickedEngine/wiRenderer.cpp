@@ -1476,7 +1476,7 @@ void wiRenderer::UpdatePerFrameData()
 					if (!foundClosestReflector && camera == getCamera() && object->IsReflector())
 					{
 						// If it is the main camera's culling, then obtain the reflectors:
-						XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object->bounds.getCenter()), XMVectorSet(0, 1, 0, 0));
+						XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object->/*bounds.getCenter()*/translation), XMVectorSet(0, 1, 0, 0));
 						XMFLOAT4 plane;
 						XMStoreFloat4(&plane, _refPlane);
 						waterPlane = wiWaterPlane(plane.x, plane.y, plane.z, plane.w);
@@ -1929,7 +1929,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
@@ -2116,24 +2116,25 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		static GPUBuffer* grid = nullptr;
 		if (grid == nullptr)
 		{
+			const float h = 0.01f; // avoid z-fight with zero plane
 			const int a = 20;
 			XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
 
 			int count = 0;
 			for (int i = 0; i <= a; ++i)
 			{
-				verts[count++] = XMFLOAT4(i - a*0.5f, 0, -a*0.5f, 1);
+				verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
 				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 
-				verts[count++] = XMFLOAT4(i - a*0.5f, 0, +a*0.5f, 1);
+				verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
 				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 			}
 			for (int j = 0; j <= a; ++j)
 			{
-				verts[count++] = XMFLOAT4(-a*0.5f, 0, j - a*0.5f, 1);
+				verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
 				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 
-				verts[count++] = XMFLOAT4(+a*0.5f, 0, j - a*0.5f, 1);
+				verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
 				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 			}
 
@@ -2373,7 +2374,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			if(type==0) //dir
 			{
 				MiscCB miscCb;
-				miscCb.mInt[0] = l->lightArray_index;
+				miscCb.mColor.x = (float)l->lightArray_index;
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 				GetDevice()->Draw(3, threadID); // full screen triangle
@@ -2381,7 +2382,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			else if(type==1) //point
 			{
 				MiscCB miscCb;
-				miscCb.mInt[0] = l->lightArray_index;
+				miscCb.mColor.x = (float)l->lightArray_index;
 				float sca = l->enerDis.y + 1;
 				miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca,sca,sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z));
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
@@ -2391,7 +2392,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			else if(type==2) //spot
 			{
 				MiscCB miscCb;
-				miscCb.mInt[0] = l->lightArray_index;
+				miscCb.mColor.x = (float)l->lightArray_index;
 				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
 				miscCb.mTransform = XMMatrixTranspose(
 					XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*

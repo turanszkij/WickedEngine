@@ -160,7 +160,6 @@ public:
 	{
 		XMMATRIX mTransform;
 		XMFLOAT4 mColor;
-		int mInt[4];
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_MISC)
 

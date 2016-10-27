@@ -16,6 +16,7 @@ namespace wiGraphicsTypes
 		bool VSYNC;
 		int SCREENWIDTH, SCREENHEIGHT;
 		bool FULLSCREEN;
+		static FORMAT BACKBUFFER_FORMAT;
 	public:
 		GraphicsDevice() :FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0), FULLSCREEN(false) {}
 
@@ -71,6 +72,7 @@ namespace wiGraphicsTypes
 		{
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
 		}
+		static FORMAT GetBackBufferFormat();
 
 		///////////////Thread-sensitive////////////////////////
 

@@ -9,8 +9,8 @@ float4 main(QGS_OUT PSIn) : SV_Target
 #endif
 
 	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
-	float opacity = color.a;
 	ALPHATEST(color.a)
+	float opacity = 1; // keep edge diffuse shading
 	color = DEGAMMA(color);
 	color.a = 1; // do not blend
 	float3 P = PSIn.pos3D;

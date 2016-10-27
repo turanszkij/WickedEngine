@@ -65,6 +65,8 @@ void Renderable3DComponent::Initialize()
 {
 	Renderable2DComponent::Initialize();
 
+	FORMAT defaultTextureFormat = GraphicsDevice::GetBackBufferFormat();
+
 	rtSSR.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
 		, false, FORMAT_R16G16B16A16_FLOAT);
@@ -93,20 +95,20 @@ void Renderable3DComponent::Initialize()
 		, true, FORMAT_R16G16B16A16_FLOAT);
 	rtFinal[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false);
+		, false, defaultTextureFormat);
 	rtFinal[1].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false,FORMAT_R8G8B8A8_UNORM,1,getMSAASampleCount());
+		, false, defaultTextureFormat,1,getMSAASampleCount());
 
 	rtDof[0].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
-		, false);
+		, false, defaultTextureFormat);
 	rtDof[1].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
-		, false);
+		, false, defaultTextureFormat);
 	rtDof[2].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false);
+		, false, defaultTextureFormat);
 
 	dtDepthCopy.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), getMSAASampleCount());
 
@@ -121,24 +123,24 @@ void Renderable3DComponent::Initialize()
 	rtSun[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth()
 		, wiRenderer::GetDevice()->GetScreenHeight()
-		, true
+		, true, defaultTextureFormat
 		);
 	rtSun[1].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getLightShaftQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getLightShaftQuality())
-		, false, FORMAT_R8G8B8A8_UNORM, 1,getMSAASampleCount()
+		, false, defaultTextureFormat, 1,getMSAASampleCount()
 		);
 
 	rtBloom.resize(3);
 	rtBloom[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth()
 		, wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R8G8B8A8_UNORM, 0);
+		, false, defaultTextureFormat, 0);
 	for (unsigned int i = 1; i<rtBloom.size(); ++i)
 		rtBloom[i].Initialize(
 			(UINT)(wiRenderer::GetDevice()->GetScreenWidth() / getBloomDownSample())
 			, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() / getBloomDownSample())
-			, false);
+			, false, defaultTextureFormat);
 }
 
 void Renderable3DComponent::Load()
