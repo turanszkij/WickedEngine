@@ -993,6 +993,10 @@ static const int RESOLUTION = 36;
 struct EnvironmentProbe : public Transform
 {
 	wiRenderTarget cubeMap;
+	bool realTime;
+	bool isUpToDate;
+
+	EnvironmentProbe() :realTime(false), isUpToDate(false) {}
 };
 
 struct Model : public Transform

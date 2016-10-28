@@ -7,7 +7,7 @@ float4 main(QGS_OUT PSIn) : SV_Target
 {
 	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
 	clip(color.a - 1.0f / 256.0f); // cancel heaviest overdraw for the alpha composition effect
-	float opacity = color.a;
+	float opacity = 1;
 	color = DEGAMMA(color);
 	float3 P = PSIn.pos3D;
 	float3 V = g_xCamera_CamPos - P;
