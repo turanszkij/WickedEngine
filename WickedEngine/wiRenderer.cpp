@@ -1760,6 +1760,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		x->UpdateRenderData(threadID);
 	}
 
+	RefreshEnvProbes(threadID);
+
 }
 void wiRenderer::UpdateImages(){
 	for (wiSprite* x : images)
@@ -3480,6 +3482,96 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 	}
 }
 
+void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
+{
+	GetDevice()->EventBegin(L"EnvironmentProbe Refresh");
+
+	for (EnvironmentProbe* probe : GetScene().environmentProbes)
+	{
+		if (probe->isUpToDate)
+		{
+			continue;
+		}
+		if(!probe->realTime)
+		{
+			probe->isUpToDate = true;
+		}
+
+		probe->cubeMap.Activate(threadID, 0, 0, 0, 1);
+
+		vector<SHCAM> cameras;
+		{
+			cameras.clear();
+
+			cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+x
+			cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-x
+
+			cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+y
+			cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-y
+
+			cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+z
+			cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-z
+		}
+
+
+		CubeMapRenderCB cb;
+		for (unsigned int i = 0; i < cameras.size(); ++i)
+		{
+			cameras[i].Update(XMLoadFloat3(&probe->translation));
+			cb.mViewProjection[i] = cameras[i].getVP();
+		}
+
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+		GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+
+
+		CulledList culledObjects;
+		CulledCollection culledRenderer;
+
+		SPHERE culler = SPHERE(probe->translation, getCamera()->zFarP);
+		if (spTree != nullptr)
+		{
+			spTree->getVisible(culler, culledObjects);
+
+			for (Cullable* object : culledObjects)
+			{
+				culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
+			}
+
+			RenderMeshes(probe->translation, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
+		}
+
+		// sky
+		{
+			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
+			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+
+			GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], threadID);
+			GetDevice()->BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], threadID);
+			GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], threadID);
+
+			GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+
+			GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
+			GetDevice()->BindVertexLayout(nullptr, threadID);
+			GetDevice()->Draw(240, threadID);
+		}
+
+
+		GetDevice()->BindGS(nullptr, threadID);
+
+
+		probe->cubeMap.Deactivate(threadID);
+
+		GetDevice()->GenerateMips(probe->cubeMap.GetTexture(), threadID);
+
+	}
+
+	GetDevice()->EventEnd();
+}
+
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 {
 
@@ -3926,6 +4018,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 				{
 					Picked pick = Picked();
 					pick.transform = x;
+					pick.envProbe = x;
 					pick.distance = wiMath::Distance(x->translation, ray.origin);
 					pickPoints.push_back(pick);
 				}
@@ -4266,80 +4359,6 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	probe->cubeMap.InitializeCube(resolution, true, FORMAT_R16G16B16A16_FLOAT, 0);
 
 	GetDevice()->LOCK();
-
-	GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
-
-	probe->cubeMap.Activate(threadID, 0, 0, 0, 1);
-
-	vector<SHCAM> cameras;
-	{
-		cameras.clear();
-
-		cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+x
-		cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-x
-
-		cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+y
-		cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-y
-
-		cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+z
-		cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-z
-	}
-
-
-	CubeMapRenderCB cb;
-	for (unsigned int i = 0; i < cameras.size(); ++i)
-	{
-		cameras[i].Update(XMLoadFloat3(&position));
-		cb.mViewProjection[i] = cameras[i].getVP();
-	}
-
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-	GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
-
-
-	CulledList culledObjects;
-	CulledCollection culledRenderer;
-
-	SPHERE culler = SPHERE(position, getCamera()->zFarP);
-	if (spTree != nullptr)
-	{
-		spTree->getVisible(culler, culledObjects);
-
-		for (Cullable* object : culledObjects)
-		{
-			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
-		}
-
-		RenderMeshes(probe->translation, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
-	}
-
-	// sky
-	{
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-
-		GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], threadID);
-		GetDevice()->BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], threadID);
-		GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], threadID);
-
-		GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
-
-		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
-		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->Draw(240, threadID);
-	}
-
-
-	GetDevice()->BindGS(nullptr, threadID);
-
-
-	probe->cubeMap.Deactivate(threadID);
-
-	GetDevice()->GenerateMips(probe->cubeMap.GetTexture(), threadID);
-
-	//enviroMap = probe->cubeMap.GetTexture();
 
 	scene->environmentProbes.push_back(probe);
 

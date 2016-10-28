@@ -404,6 +404,7 @@ public:
 	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);
+	static void RefreshEnvProbes(GRAPHICSTHREAD threadID);
 
 	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
 	
@@ -452,6 +453,7 @@ public:
 		Object* object;
 		Light* light;
 		Decal* decal;
+		EnvironmentProbe* envProbe;
 		XMFLOAT3 position,normal;
 		float distance;
 		int subsetIndex;
@@ -462,6 +464,7 @@ public:
 			SAFE_INIT(object);
 			SAFE_INIT(light);
 			SAFE_INIT(decal);
+			SAFE_INIT(envProbe);
 		}
 
 		// Subset index, position, normal, distance don't distinguish between pickeds! 
@@ -471,7 +474,8 @@ public:
 				transform == other.transform &&
 				object == other.object &&
 				light == other.light &&
-				decal == other.decal
+				decal == other.decal &&
+				envProbe == other.envProbe
 				;
 		}
 	};

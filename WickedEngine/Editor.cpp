@@ -769,6 +769,10 @@ void EditorComponent::Update()
 				{
 				}
 				decalWnd->SetDecal(picked->decal);
+				if (picked->envProbe != nullptr)
+				{
+				}
+				envProbeWnd->SetProbe(picked->envProbe);
 
 				BeginTranslate();
 			}
@@ -776,6 +780,9 @@ void EditorComponent::Update()
 			{
 				meshWnd->SetMesh(nullptr);
 				materialWnd->SetMaterial(nullptr);
+				lightWnd->SetLight(nullptr);
+				decalWnd->SetDecal(nullptr);
+				envProbeWnd->SetProbe(nullptr);
 
 				EndTranslate();
 				ClearSelected();

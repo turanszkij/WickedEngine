@@ -15,9 +15,14 @@ public:
 
 	wiGUI* GUI;
 
+	EnvironmentProbe* probe;
+	void SetProbe(EnvironmentProbe* value);
+
 	wiWindow*	envProbeWindow;
 
 	wiSlider*	resolutionSlider;
+	wiCheckBox*	realTimeCheckBox;
 	wiButton*	generateButton;
+	wiButton*	refreshButton;
 };
 
