@@ -490,12 +490,21 @@ It inherits functions from Renderable2DComponent, so it can render a 2D overlay.
 - SetDepthOfFieldFocus(float value)
 - SetDepthOfFieldStrength(float value)
 - SetPreferredThreadingCount(int value)
+- SetTessellationEnabled(bool value)
+- SetMSAASampleCount(int count)
+- SetHairParticleAlphaCompositionEnabled(bool value)
 
 ##### ForwardRenderableComponent
 It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
 It inherits functions from Renderable3DComponent.
 - [constructor]ForwardRenderableComponent()
+
+##### TiledForwardRenderableComponent
+It renders the scene contained by the Renderer in a tiled forward render path. The component does not hold the scene information, 
+only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
+It inherits functions from ForwardRenderable3DComponent.
+- [constructor]TiledForwardRenderableComponent()
 
 ##### DeferredRenderableComponent
 It renders the scene contained by the Renderer in a deferred render path. The component does not hold the scene information, 

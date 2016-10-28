@@ -1,8 +1,8 @@
-#include "DeferredRenderableComponent_BindLua.h"
+#include "TiledForwardRenderableComponent_BindLua.h"
 
-const char DeferredRenderableComponent_BindLua::className[] = "DeferredRenderableComponent";
+const char TiledForwardRenderableComponent_BindLua::className[] = "TiledForwardRenderableComponent";
 
-Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableComponent_BindLua::methods[] = {
+Luna<TiledForwardRenderableComponent_BindLua>::FunctionType TiledForwardRenderableComponent_BindLua::methods[] = {
 	lunamethod(Renderable2DComponent_BindLua, AddSprite),
 	lunamethod(Renderable2DComponent_BindLua, AddFont),
 	lunamethod(Renderable2DComponent_BindLua, RemoveSprite),
@@ -18,15 +18,15 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(Renderable2DComponent_BindLua, SetSpriteOrder),
 	lunamethod(Renderable2DComponent_BindLua, SetFontOrder),
 
-	lunamethod(DeferredRenderableComponent_BindLua, GetContent),
-	lunamethod(DeferredRenderableComponent_BindLua, Initialize),
-	lunamethod(DeferredRenderableComponent_BindLua, Load),
-	lunamethod(DeferredRenderableComponent_BindLua, Unload),
-	lunamethod(DeferredRenderableComponent_BindLua, Start),
-	lunamethod(DeferredRenderableComponent_BindLua, Stop),
-	lunamethod(DeferredRenderableComponent_BindLua, Update),
-	lunamethod(DeferredRenderableComponent_BindLua, Render),
-	lunamethod(DeferredRenderableComponent_BindLua, Compose),
+	lunamethod(ForwardRenderableComponent_BindLua, GetContent),
+	lunamethod(ForwardRenderableComponent_BindLua, Initialize),
+	lunamethod(ForwardRenderableComponent_BindLua, Load),
+	lunamethod(ForwardRenderableComponent_BindLua, Unload),
+	lunamethod(ForwardRenderableComponent_BindLua, Start),
+	lunamethod(ForwardRenderableComponent_BindLua, Stop),
+	lunamethod(ForwardRenderableComponent_BindLua, Update),
+	lunamethod(ForwardRenderableComponent_BindLua, Render),
+	lunamethod(ForwardRenderableComponent_BindLua, Compose),
 	lunamethod(RenderableComponent_BindLua, OnStart),
 	lunamethod(RenderableComponent_BindLua, OnStop),
 
@@ -49,6 +49,7 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(Renderable3DComponent_BindLua, SetStereogramEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetTessellationEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetMSAASampleCount),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticleAlphaCompositionEnabled),
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
@@ -57,31 +58,31 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(Renderable3DComponent_BindLua, SetPreferredThreadingCount),
 	{ NULL, NULL }
 };
-Luna<DeferredRenderableComponent_BindLua>::PropertyType DeferredRenderableComponent_BindLua::properties[] = {
+Luna<TiledForwardRenderableComponent_BindLua>::PropertyType TiledForwardRenderableComponent_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-DeferredRenderableComponent_BindLua::DeferredRenderableComponent_BindLua(DeferredRenderableComponent* component)
+TiledForwardRenderableComponent_BindLua::TiledForwardRenderableComponent_BindLua(TiledForwardRenderableComponent* component)
 {
 	this->component = component;
 }
 
-DeferredRenderableComponent_BindLua::DeferredRenderableComponent_BindLua(lua_State *L)
+TiledForwardRenderableComponent_BindLua::TiledForwardRenderableComponent_BindLua(lua_State *L)
 {
-	component = new DeferredRenderableComponent();
+	component = new TiledForwardRenderableComponent();
 }
 
 
-DeferredRenderableComponent_BindLua::~DeferredRenderableComponent_BindLua()
+TiledForwardRenderableComponent_BindLua::~TiledForwardRenderableComponent_BindLua()
 {
 }
 
-void DeferredRenderableComponent_BindLua::Bind()
+void TiledForwardRenderableComponent_BindLua::Bind()
 {
 	static bool initialized = false;
 	if (!initialized)
 	{
 		initialized = true;
-		//Luna<DeferredRenderableComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<TiledForwardRenderableComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

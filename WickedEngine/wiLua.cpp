@@ -8,6 +8,7 @@
 #include "Renderable3DComponent_BindLua.h"
 #include "DeferredRenderableComponent_BindLua.h"
 #include "ForwardRenderableComponent_BindLua.h"
+#include "TiledForwardRenderableComponent_BindLua.h"
 #include "Texture_BindLua.h"
 #include "wiRenderer_BindLua.h"
 #include "wiSound_BindLua.h"
@@ -56,6 +57,7 @@ wiLua* wiLua::GetGlobal()
 		Renderable3DComponent_BindLua::Bind();
 		DeferredRenderableComponent_BindLua::Bind();
 		ForwardRenderableComponent_BindLua::Bind();
+		TiledForwardRenderableComponent_BindLua::Bind();
 		Texture_BindLua::Bind();
 		wiRenderer_BindLua::Bind();
 		wiSound_BindLua::Bind();
