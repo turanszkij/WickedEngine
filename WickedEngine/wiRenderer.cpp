@@ -1657,6 +1657,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	}
 
+	RefreshEnvProbes(threadID);
+
 	// Environment probe setup:
 	{
 		Texture2D* envMaps[] = { enviroMap, enviroMap };
@@ -1759,8 +1761,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		x->UpdateRenderData(threadID);
 	}
-
-	RefreshEnvProbes(threadID);
 
 }
 void wiRenderer::UpdateImages(){
