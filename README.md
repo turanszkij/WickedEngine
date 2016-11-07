@@ -10,7 +10,8 @@ Demos are available at: https://github.com/turanszkij/WickedEngineDemos
 From now on you can easily set up a game project by using the component templates. (see the demos for examples)
 
 Video: https://www.youtube.com/watch?v=nNlfkrURqZQ <br/>
-Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg
+Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
+Devblog: https://turanszkij.wordpress.com/
 
 ### Platforms:
 - Windows PC Desktop (tested for version 0.9.11)
@@ -58,6 +59,7 @@ Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole projec
 - ./WickedEngine/BULLET/					- Bullet 2.82 Source files; 
 - ./WickedEngine/LUA/					- Lua 5.3.1 Source files; 
 - ./WickedEngine/shaders/					- Binary shaders output; 
+- ./WickedEngine/Scene/Sample					- Sample scene files
 - ./WickedEngine/ 						- C++ and shader source files; 
 - ./WickedEngine/Utility 					- C++ source files for utility helpers;
 - ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene; 
