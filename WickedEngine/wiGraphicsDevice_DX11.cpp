@@ -1356,7 +1356,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	DXGI_SWAP_CHAIN_DESC sd;
 	ZeroMemory(&sd, sizeof(sd));
-	sd.BufferCount = 2;
+	sd.BufferCount = 1;
 	sd.BufferDesc.Width = SCREENWIDTH;
 	sd.BufferDesc.Height = SCREENHEIGHT;
 	sd.BufferDesc.Format = _ConvertFormat(GetBackBufferFormat());
@@ -1457,14 +1457,14 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
 	if (FAILED(hr)) {
 		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
-		exit(0);
+		exit(1);
 	}
 
 	hr = device->CreateRenderTargetView(backBuffer, NULL, &renderTargetView);
 	//pBackBuffer->Release();
 	if (FAILED(hr)) {
 		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
-		exit(0);
+		exit(1);
 	}
 
 
