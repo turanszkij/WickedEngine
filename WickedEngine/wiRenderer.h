@@ -297,6 +297,8 @@ protected:
 
 	static wiWaterPlane waterPlane;
 
+	static bool debugLightCulling;
+
 public:
 	static string SHADERPATH;
 
@@ -330,6 +332,8 @@ public:
 	static void SetToDrawDebugEnvProbes(bool value) { debugEnvProbes = value; }
 	static bool GetToDrawGridHelper() { return gridHelper; }
 	static void SetToDrawGridHelper(bool value) { gridHelper = value; }
+	static void SetDebugLightCulling(bool enabled) { debugLightCulling = enabled; }
+	static bool GetDebugLightCulling() { return debugLightCulling; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }

@@ -52,6 +52,7 @@ bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRendere
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
+bool wiRenderer::debugLightCulling = false;
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
@@ -738,6 +739,7 @@ void wiRenderer::LoadBasicShaders()
 	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEFRUSTUMS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	
 }
 void wiRenderer::LoadLineShaders()
@@ -3723,10 +3725,15 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		
-		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
-#ifdef DEBUG_TILEDLIGHTCULLING
-		device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
-#endif
+		if (GetDebugLightCulling())
+		{
+			device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
+			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
+		}
+		else
+		{
+			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
+		}
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Opaque, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE, threadID);
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Transparent, UAVSLOT_LIGHTINDEXCOUNTERHELPER_TRANSPARENT, threadID);
 		device->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], UAVSLOT_LIGHTINDEXLIST_OPAQUE, threadID);

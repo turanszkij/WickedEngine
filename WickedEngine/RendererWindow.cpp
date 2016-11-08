@@ -54,6 +54,14 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wireFrameCheckBox->SetCheck(wiRenderer::IsWireRender());
 	rendererWindow->AddWidget(wireFrameCheckBox);
 
+	debugLightCullingCheckBox = new wiCheckBox("Debug Light Culling: ");
+	debugLightCullingCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugLightCullingCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetDebugLightCulling(args.bValue);
+	});
+	debugLightCullingCheckBox->SetCheck(wiRenderer::IsWireRender());
+	rendererWindow->AddWidget(debugLightCullingCheckBox);
+
 	tessellationCheckBox = new wiCheckBox("Tessellation Enabled: ");
 	tessellationCheckBox->SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox->OnClick([=](wiEventArgs args) {
@@ -122,6 +130,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);
+	SAFE_DELETE(debugLightCullingCheckBox);
 	SAFE_DELETE(tessellationCheckBox);
 	SAFE_DELETE(envProbesCheckBox);
 	SAFE_DELETE(gridHelperCheckBox);

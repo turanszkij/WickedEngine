@@ -174,12 +174,16 @@ void Renderable3DComponent::FixedUpdate(float dt) {
 	Renderable2DComponent::FixedUpdate(dt);
 }
 
-void Renderable3DComponent::Compose(){
+void Renderable3DComponent::Compose()
+{
 	RenderableComponent::Compose();
 
 	RenderColorGradedComposition();
 
-	//wiImage::Draw((Texture2D*)wiRenderer::textures[TEXTYPE_2D_DEBUGUAV], wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()));
+	if (wiRenderer::GetDebugLightCulling())
+	{
+		wiImage::Draw((Texture2D*)wiRenderer::textures[TEXTYPE_2D_DEBUGUAV], wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()));
+	}
 
 	Renderable2DComponent::Compose();
 }

@@ -206,6 +206,6 @@ void main(ComputeShaderInput IN)
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-	DebugTexture[texCoord] = float4((float)_counter / (float)lightCount,0,0,0.75);
+	DebugTexture[texCoord] = float4((float)_counter / (float)lightCount,0,0,1);
 #endif
 }
