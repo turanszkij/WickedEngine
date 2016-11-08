@@ -69,8 +69,7 @@ namespace wiGraphicsTypes
 		virtual void ExecuteDeferredContexts() override;
 		virtual void FinishCommandList(GRAPHICSTHREAD thread) override;
 
-		virtual void SetScreenWidth(int value) override;
-		virtual void SetScreenHeight(int value) override;
+		virtual void SetResolution(int width, int height) override;
 
 		virtual Texture2D GetBackBuffer() override;
 

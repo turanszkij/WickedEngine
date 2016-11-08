@@ -9,6 +9,7 @@ protected:
 
 	wiRenderTarget rtMain;
 
+	virtual void ResizeBuffers();
 
 	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 public:

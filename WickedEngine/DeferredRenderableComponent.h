@@ -8,6 +8,8 @@ class DeferredRenderableComponent :
 protected:
 	wiRenderTarget rtGBuffer, rtDeferred, rtLight, rtSSS[2];
 
+	virtual void ResizeBuffers();
+
 	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 	wiRenderTarget& GetFinalRT();
 

@@ -1467,7 +1467,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		exit(1);
 	}
 
-
 	// Setup the main viewport
 	viewPort.Width = (FLOAT)SCREENWIDTH;
 	viewPort.Height = (FLOAT)SCREENHEIGHT;
@@ -1490,15 +1489,15 @@ GraphicsDevice_DX11::~GraphicsDevice_DX11()
 	SAFE_RELEASE(device);
 }
 
-void GraphicsDevice_DX11::SetScreenWidth(int value)
+void GraphicsDevice_DX11::SetResolution(int width, int height)
 {
-	SCREENWIDTH = value;
-	// TODO: resize backbuffer
-}
-void GraphicsDevice_DX11::SetScreenHeight(int value)
-{
-	SCREENHEIGHT = value;
-	// TODO: resize backbuffer
+	if (width != SCREENWIDTH || height != SCREENHEIGHT)
+	{
+		SCREENWIDTH = width;
+		SCREENHEIGHT = height;
+		swapChain->ResizeBuffers(2, width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+		RESOLUTIONCHANGED = true;
+	}
 }
 
 Texture2D GraphicsDevice_DX11::GetBackBuffer()
@@ -2199,6 +2198,8 @@ void GraphicsDevice_DX11::PresentEnd()
 	UnBindResources(0, TEXSLOT_COUNT, GRAPHICSTHREAD_IMMEDIATE);
 
 	FRAMECOUNT++;
+
+	RESOLUTIONCHANGED = false;
 
 	UNLOCK();
 }

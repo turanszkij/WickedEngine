@@ -21,10 +21,14 @@ Renderable2DComponent::~Renderable2DComponent()
 	Unload();
 }
 
+void Renderable2DComponent::ResizeBuffers()
+{
+	rtFinal.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false);
+}
+
 void Renderable2DComponent::Initialize()
 {
-	rtFinal.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false);
+	ResizeBuffers();
 
 	RenderableComponent::Initialize();
 }

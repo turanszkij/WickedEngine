@@ -16,6 +16,7 @@ namespace wiGraphicsTypes
 		bool VSYNC;
 		int SCREENWIDTH, SCREENHEIGHT;
 		bool FULLSCREEN;
+		bool RESOLUTIONCHANGED;
 		static FORMAT BACKBUFFER_FORMAT;
 	public:
 		GraphicsDevice() :FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0), FULLSCREEN(false) {}
@@ -54,9 +55,11 @@ namespace wiGraphicsTypes
 
 		int GetScreenWidth() { return SCREENWIDTH; }
 		int GetScreenHeight() { return SCREENHEIGHT; }
+		bool ResolutionChanged() { return RESOLUTIONCHANGED; }
 
-		virtual void SetScreenWidth(int value) = 0;
-		virtual void SetScreenHeight(int value) = 0;
+
+		virtual void SetResolution(int width, int height) = 0;
+		
 
 		virtual Texture2D GetBackBuffer() = 0;
 

@@ -3574,7 +3574,6 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 {
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	int _width = device->GetScreenWidth();
@@ -3583,7 +3582,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 	static int _savedWidth = 0;
 	static int _savedHeight = 0;
-	bool _resolutionChanged = false;
+	bool _resolutionChanged = GetDevice()->ResolutionChanged();
 	if (_savedWidth != _width || _savedHeight != _height)
 	{
 		_resolutionChanged = true;

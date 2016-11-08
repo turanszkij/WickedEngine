@@ -442,6 +442,19 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
+	int SetResolution(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			wiRenderer::GetDevice()->SetResolution(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+		}
+		else
+		{
+			wiLua::SError(L, "SetResolution(int width,height) not enough arguments!");
+		}
+		return 0;
+	}
 
 	int Pick(lua_State* L)
 	{
@@ -634,6 +647,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetPhysicsParams", SetPhysicsParams);
+			wiLua::GetGlobal()->RegisterFunc("SetResolution", SetResolution);
 
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);

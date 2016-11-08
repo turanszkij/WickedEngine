@@ -46,6 +46,9 @@ private:
 	float m_spriteSpeed;
 	wiRenderTarget rtFinal;
 	wiGUI GUI;
+
+protected:
+	virtual void ResizeBuffers();
 public:
 	Renderable2DComponent();
 	virtual ~Renderable2DComponent();

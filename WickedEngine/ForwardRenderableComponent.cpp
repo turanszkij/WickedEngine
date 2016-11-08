@@ -19,13 +19,19 @@ ForwardRenderableComponent::ForwardRenderableComponent()
 ForwardRenderableComponent::~ForwardRenderableComponent()
 {
 }
-void ForwardRenderableComponent::Initialize()
+
+void ForwardRenderableComponent::ResizeBuffers()
 {
-	Renderable3DComponent::Initialize();
+	Renderable3DComponent::ResizeBuffers();
 
 	rtMain.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), true, FORMAT_R16G16B16A16_FLOAT, 1, getMSAASampleCount(), false);
+}
 
-	Renderable2DComponent::Initialize();
+void ForwardRenderableComponent::Initialize()
+{
+	ResizeBuffers();
+
+	Renderable3DComponent::Initialize();
 }
 void ForwardRenderableComponent::Load()
 {

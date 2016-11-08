@@ -22,9 +22,10 @@ DeferredRenderableComponent::DeferredRenderableComponent()
 DeferredRenderableComponent::~DeferredRenderableComponent()
 {
 }
-void DeferredRenderableComponent::Initialize()
+
+void DeferredRenderableComponent::ResizeBuffers()
 {
-	Renderable3DComponent::Initialize();
+	Renderable3DComponent::ResizeBuffers();
 
 	rtGBuffer.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
@@ -47,8 +48,13 @@ void DeferredRenderableComponent::Initialize()
 	rtSSS[1].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false, FORMAT_R11G11B10_FLOAT);
+}
 
-	Renderable2DComponent::Initialize();
+void DeferredRenderableComponent::Initialize()
+{
+	ResizeBuffers();
+
+	Renderable3DComponent::Initialize();
 }
 void DeferredRenderableComponent::Load()
 {

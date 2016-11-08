@@ -46,6 +46,7 @@ private:
 
 	UINT msaaSampleCount;
 
+
 protected:
 	wiRenderTarget
 		rtReflection
@@ -61,6 +62,8 @@ protected:
 		;
 	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
 	wiDepthTarget dtDepthCopy;
+
+	virtual void ResizeBuffers() override;
 
 	vector<wiTaskThread*> workerThreads;
 
