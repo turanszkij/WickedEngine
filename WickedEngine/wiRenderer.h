@@ -298,6 +298,7 @@ protected:
 	static wiWaterPlane waterPlane;
 
 	static bool debugLightCulling;
+	static bool occlusionCulling;
 
 public:
 	static string SHADERPATH;
@@ -311,6 +312,8 @@ public:
 	// Render data that needs to be updated on the main thread!
 	static void UpdatePerFrameData();
 	static void UpdateRenderData(GRAPHICSTHREAD threadID);
+	static void OcclusionCulling_Render(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	static void OcclusionCulling_Read();
 	static void UpdateImages();
 	static void ManageImages();
 	static void PutDecal(Decal* decal);
@@ -334,6 +337,8 @@ public:
 	static void SetToDrawGridHelper(bool value) { gridHelper = value; }
 	static void SetDebugLightCulling(bool enabled) { debugLightCulling = enabled; }
 	static bool GetDebugLightCulling() { return debugLightCulling; }
+	static void SetOcclusionCullingEnabled(bool enabled) { occlusionCulling = enabled; }
+	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }
@@ -383,7 +388,7 @@ public:
 	static void UpdateGBuffer(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);
 	static void UpdateDepthBuffer(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 	
-	static void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false);
+	static void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false, bool disableOcclusionCulling = true);
 	static void DrawSky(GRAPHICSTHREAD threadID);
 	static void DrawSun(GRAPHICSTHREAD threadID);
 	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass);

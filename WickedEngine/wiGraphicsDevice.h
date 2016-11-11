@@ -42,6 +42,7 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) = 0;
 		virtual HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) = 0;
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) = 0;
+		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
 
 		virtual void PresentBegin() = 0;
 		virtual void PresentEnd() = 0;
@@ -131,6 +132,9 @@ namespace wiGraphicsTypes
 		virtual void Map(GPUBuffer* resource, UINT subResource, MAP mapType, UINT mapFlags, MappedSubresource* mappedResource, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void Unmap(GPUBuffer* resource, UINT subResource = 0, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void SetScissorRects(UINT numRects, const Rect* rects = nullptr, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
 		virtual HRESULT CreateTextureFromFile(const string& fileName, Texture2D **ppTexture, bool mipMaps = true, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual HRESULT SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;

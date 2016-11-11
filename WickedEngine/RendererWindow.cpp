@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(600, 400));
+	rendererWindow->SetSize(XMFLOAT2(400, 460));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -29,6 +29,14 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	vsyncCheckBox->SetCheck(wiRenderer::GetDevice()->GetVSyncEnabled());
 	rendererWindow->AddWidget(vsyncCheckBox);
+
+	occlusionCullingCheckBox = new wiCheckBox("Occlusion Culling: ");
+	occlusionCullingCheckBox->SetPos(XMFLOAT2(x, y += step));
+	occlusionCullingCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetOcclusionCullingEnabled(args.bValue);
+	});
+	occlusionCullingCheckBox->SetCheck(wiRenderer::GetOcclusionCullingEnabled());
+	rendererWindow->AddWidget(occlusionCullingCheckBox);
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -126,6 +134,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 RendererWindow::~RendererWindow()
 {
 	SAFE_DELETE(rendererWindow);
+	SAFE_DELETE(vsyncCheckBox);
 	SAFE_DELETE(vsyncCheckBox);
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);

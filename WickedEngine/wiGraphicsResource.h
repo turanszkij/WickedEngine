@@ -22,6 +22,8 @@ interface ID3D11ClassLinkage;
 interface ID3D11RenderTargetView;
 interface ID3D11DepthStencilView;
 interface ID3D11Texture2D;
+interface ID3D11Query;
+interface ID3D11Predicate;
 
 namespace wiGraphicsTypes
 {
@@ -254,6 +256,29 @@ namespace wiGraphicsTypes
 		virtual ~Texture2D();
 
 		Texture2DDesc GetDesc() { return desc; }
+	};
+
+
+
+
+	class GPUQuery
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11Query*				resource_DX11;
+		GPUQueryDesc				desc;
+		bool						active;
+	public:
+		GPUQuery();
+		virtual ~GPUQuery();
+
+		bool IsValid() { return resource_DX11 != nullptr; }
+		bool IsActive() { return active; }
+		void SetActive(bool value) { active = value; }
+		GPUQueryDesc GetDesc() { return desc; }
+
+		BOOL	result_passed;
+		UINT64	result_passed_sample_count;
 	};
 }
 

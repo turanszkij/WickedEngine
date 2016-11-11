@@ -275,6 +275,11 @@ namespace wiGraphicsTypes
 		MAP_WRITE_DISCARD,
 		MAP_WRITE_NO_OVERWRITE
 	};
+	enum GPU_QUERY_TYPE
+	{
+		GPU_QUERY_TYPE_OCCLUSION, // how many samples passed depthstencil test?
+		GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
+	};
 
 	// Flags ////////////////////////////////////////////
 	enum CLEAR_FLAG
@@ -430,6 +435,11 @@ namespace wiGraphicsTypes
 		UINT CPUAccessFlags;
 		UINT MiscFlags;
 		UINT StructureByteStride;
+	};
+	struct GPUQueryDesc
+	{
+		GPU_QUERY_TYPE Type;
+		UINT MiscFlags;
 	};
 	struct SubresourceData
 	{

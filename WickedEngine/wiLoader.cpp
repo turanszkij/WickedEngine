@@ -3669,6 +3669,20 @@ void Camera::UpdateTransform()
 #pragma endregion
 
 #pragma region OBJECT
+Object::Object(const string& name) :Transform()
+{
+	this->name = name;
+	init();
+
+	GPUQueryDesc desc;
+	desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
+	desc.MiscFlags = 0;
+	for (int i = 0; i < ARRAYSIZE(occlusionQueries); ++i)
+	{
+		wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQueries[i]);
+		occlusionQueries[i].result_passed = TRUE;
+	}
+}
 Object::~Object() {
 }
 void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {

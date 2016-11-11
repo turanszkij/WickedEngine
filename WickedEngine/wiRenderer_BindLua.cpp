@@ -468,6 +468,19 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
+	int SetOcclusionCullingEnabled(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::SetOcclusionCullingEnabled(wiLua::SGetBool(L, 1));
+		}
+		else
+		{
+			wiLua::SError(L, "SetOcclusionCullingEnabled(bool enabled) not enough arguments!");
+		}
+		return 0;
+	}
 
 	int Pick(lua_State* L)
 	{
@@ -662,6 +675,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetPhysicsParams", SetPhysicsParams);
 			wiLua::GetGlobal()->RegisterFunc("SetResolution", SetResolution);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
+			wiLua::GetGlobal()->RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
 
 			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);

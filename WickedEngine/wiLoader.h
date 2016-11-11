@@ -443,6 +443,9 @@ struct Object : public Streamable, public Transform
 
 	int physicsObjectI;
 
+	// occlusion results for the previous 3 frames
+	wiGraphicsTypes::GPUQuery occlusionQueries[3];
+
 	// Is it deformed with an armature?
 	bool isArmatureDeformed() const
 	{
@@ -454,13 +457,7 @@ struct Object : public Streamable, public Transform
 		return ((physicsObjectI >= 0 && !kinematic) || mesh->softBody || isArmatureDeformed());
 	}
 
-	Object():Transform(){
-		init();
-	};
-	Object(string newName):Transform(){
-		name=newName;
-		init();
-	}
+	Object(const string& newName = "");
 	virtual ~Object();
 	void init()
 	{

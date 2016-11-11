@@ -43,8 +43,6 @@ GPUBuffer			*wiRenderer::constantBuffers[CBTYPE_LAST];
 GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 Texture				*wiRenderer::textures[TEXTYPE_LAST];
 
-//int wiRenderer::SHADOWMAPRES=1024,wiRenderer::SOFTSHADOW=2
-//	,wiRenderer::POINTLIGHTSHADOW=2,wiRenderer::POINTLIGHTSHADOWRES=256, wiRenderer::SPOTLIGHTSHADOW=2, wiRenderer::SPOTLIGHTSHADOWRES=512;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
@@ -53,6 +51,7 @@ bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRendere
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
+bool wiRenderer::occlusionCulling = true;
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
@@ -100,6 +99,7 @@ void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fulls
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
 {
+	OcclusionCulling_Read();
 
 	GetDevice()->PresentBegin();
 	
@@ -109,8 +109,6 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 		drawToScreen2();
 	if(drawToScreen3!=nullptr)
 		drawToScreen3();
-	
-
 
 	wiFrameRate::Frame();
 
@@ -764,6 +762,10 @@ void wiRenderer::LoadLineShaders()
 	VertexShaderInfo* vsinfoSphere = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereVS.cso", wiResourceManager::VERTEXSHADER));
 	if (vsinfoSphere != nullptr) {
 		vertexShaders[VSTYPE_SPHERE] = vsinfoSphere->vertexShader;
+	}
+	VertexShaderInfo* vsinfoCube = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeVS.cso", wiResourceManager::VERTEXSHADER));
+	if (vsinfoCube != nullptr) {
+		vertexShaders[VSTYPE_CUBE] = vsinfoCube->vertexShader;
 	}
 
 
@@ -1764,6 +1766,99 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		x->UpdateRenderData(threadID);
 	}
 
+}
+void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
+{
+	if (!GetOcclusionCullingEnabled())
+	{
+		return;
+	}
+
+	const FrameCulling& culling = frameCullings[getCamera()];
+	const CulledCollection& culledRenderer = culling.culledRenderer;
+
+	if (!culledRenderer.empty())
+	{
+		GetDevice()->EventBegin(L"Occlusion Culling Render");
+
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_DEFAULT, threadID);
+		GetDevice()->BindVertexLayout(nullptr, threadID);
+		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_CUBE], threadID);
+		GetDevice()->BindPS(nullptr, threadID);
+
+		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
+		{
+			Mesh* mesh = iter->first;
+			const CulledObjectList& visibleInstances = iter->second;
+
+			MiscCB cb;
+			for (Object* instance : visibleInstances)
+			{
+				GPUQuery& query = instance->occlusionQueries[0];
+
+				if (instance->bounds.intersects(getCamera()->translation))
+				{
+					// if the camera is inside the bounding box, then the object is most likely visible, so skip occlusion query
+					query.result_passed = true;
+					query.SetActive(false);
+				}
+				else
+				{
+					// render bounding box to later read the occlusion status
+					GetDevice()->QueryBegin(&query, threadID);
+					cb.mTransform = XMMatrixTranspose(instance->bounds.getAsBoxMatrix());
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+					GetDevice()->Draw(36, threadID);
+					GetDevice()->QueryEnd(&query, threadID);
+					query.SetActive(true);
+				}
+			}
+		}
+
+		GetDevice()->EventEnd();
+	}
+}
+void wiRenderer::OcclusionCulling_Read()
+{
+	if (!GetOcclusionCullingEnabled())
+	{
+		return;
+	}
+
+	const FrameCulling& culling = frameCullings[getCamera()];
+	const CulledCollection& culledRenderer = culling.culledRenderer;
+
+	if (!culledRenderer.empty())
+	{
+		GetDevice()->EventBegin(L"Occlusion Culling Read");
+
+		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
+		{
+			Mesh* mesh = iter->first;
+			const CulledObjectList& visibleInstances = iter->second;
+
+			for (Object* instance : visibleInstances)
+			{
+				GPUQuery& query = instance->occlusionQueries[0];
+				if (!query.IsActive())
+				{
+					continue;
+				}
+
+				int queryFailCount = 0;
+				while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE))
+				{
+					queryFailCount++;
+				}
+				query.SetActive(false);
+			}
+		}
+
+		GetDevice()->EventEnd();
+	}
 }
 void wiRenderer::UpdateImages(){
 	for (wiSprite* x : images)
@@ -2974,7 +3069,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 	return realPS;
 }
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-	bool tessellation)
+	bool tessellation, bool disableOcclusionCulling)
 {
 	if (!culledRenderer.empty())
 	{
@@ -3083,8 +3178,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - impostorDistance) / impostorThreshold, 0, 1));
 						if (dither > 1.0f - FLT_EPSILON)
 							continue;
-						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
-						++k;
+
+						if (disableOcclusionCulling || instance->occlusionQueries[0].result_passed == TRUE)
+						{
+							mesh->AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
+							++k;
+						}
 					}
 				}
 				if (k > 0)
@@ -3192,11 +3291,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - impostorDistance) / impostorThreshold, 0, 1));
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
-					if (mesh->softBody || instance->isArmatureDeformed())
-						mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), dither, instance->color), k, threadID);
-					else
-						mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
-					++k;
+
+					if (disableOcclusionCulling || instance->occlusionQueries[0].result_passed == TRUE)
+					{
+						if (mesh->softBody || instance->isArmatureDeformed())
+							mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), dither, instance->color), k, threadID);
+						else
+							mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
+						++k;
+					}
 				}
 			}
 			if (k < 1)
@@ -3333,7 +3436,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 			}
 		}
 
-		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
+		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, !GetOcclusionCullingEnabled());
 	}
 
 	GetDevice()->EventEnd();
@@ -3375,7 +3478,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
 		}
 
-		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
+		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, !GetOcclusionCullingEnabled());
 	}
 
 	GetDevice()->EventEnd();

@@ -190,4 +190,13 @@ namespace wiGraphicsTypes
 	{
 		SAFE_RELEASE(texture2D_DX11);
 	}
+
+	GPUQuery::GPUQuery()
+	{
+		SAFE_INIT(resource_DX11);
+	}
+	GPUQuery::~GPUQuery()
+	{
+		SAFE_RELEASE(resource_DX11);
+	}
 }

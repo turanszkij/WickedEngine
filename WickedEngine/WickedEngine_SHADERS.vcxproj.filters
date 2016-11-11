@@ -477,6 +477,9 @@
     <FxCompile Include="lightCullingCS_DEBUG.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="cubeVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

@@ -2176,6 +2176,19 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 	pSamplerState->desc = *pSamplerDesc;
 	return device->CreateSamplerState(&desc, &pSamplerState->resource_DX11);
 }
+HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
+{
+	pQuery->desc = *pDesc;
+
+	D3D11_QUERY_DESC desc;
+	desc.MiscFlags = 0;
+	desc.Query = D3D11_QUERY_OCCLUSION_PREDICATE;
+	if (pDesc->Type == GPU_QUERY_TYPE_OCCLUSION)
+	{
+		desc.Query = D3D11_QUERY_OCCLUSION;
+	}
+	return device->CreateQuery(&desc, &pQuery->resource_DX11);
+}
 
 
 void GraphicsDevice_DX11::PresentBegin()
@@ -2503,29 +2516,30 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 {
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 	HRESULT hr;
-	if (dataSize > (int)buffer->desc.ByteWidth) {
-		// recreate the buffer if new datasize exceeds buffer size with double capacity
+	if (dataSize > (int)buffer->desc.ByteWidth) 
+	{
+		// grow the buffer if new datasize exceeds buffer size
 		buffer->resource_DX11->Release();
 		buffer->desc.ByteWidth = dataSize * 2;
 		hr = CreateBuffer(&buffer->desc, nullptr, buffer);
+		assert(SUCCEEDED(hr) && "GPUBuffer growing failed!");
 	}
-	//else
+
+	if (buffer->desc.Usage == USAGE_DYNAMIC) 
 	{
-		if (buffer->desc.Usage == USAGE_DYNAMIC) {
-			D3D11_MAPPED_SUBRESOURCE mappedResource;
-			hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-			memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
-			deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
-		}
-		else {
-			deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, nullptr, data, 0, 0);
-		}
+		D3D11_MAPPED_SUBRESOURCE mappedResource;
+		hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
+		memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
+		deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
+	}
+	else 
+	{
+		deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, nullptr, data, 0, 0);
 	}
 }
-GPUBuffer* GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) {
-	if (deviceContexts[threadID] == nullptr)
-		return nullptr;
-
+GPUBuffer* GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) 
+{
 	GPUBuffer* debugbuf = new GPUBuffer;
 
 	GPUBufferDesc desc = buffer->GetDesc();
@@ -2592,6 +2606,33 @@ void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAP
 	{
 		deviceContexts[threadID]->RSSetScissorRects(numRects, nullptr);
 	}
+}
+void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
+{
+	//query->result_passed = FALSE;
+	//query->result_passed_sample_count = 0;
+	deviceContexts[threadID]->Begin(query->resource_DX11);
+}
+void GraphicsDevice_DX11::QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID)
+{
+	deviceContexts[threadID]->End(query->resource_DX11);
+}
+bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
+{
+	assert(threadID == GRAPHICSTHREAD_IMMEDIATE && "A query can only be read on the immediate graphics thread!");
+	HRESULT hr = S_OK;
+	switch (query->desc.Type)
+	{
+	case GPU_QUERY_TYPE_OCCLUSION:
+		hr = deviceContexts[threadID]->GetData(query->resource_DX11, &query->result_passed_sample_count, sizeof(query->result_passed_sample_count), 0/*D3D11_ASYNC_GETDATA_DONOTFLUSH*/);
+		query->result_passed = query->result_passed_sample_count != 0;
+		break;
+	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+	default:
+		hr = deviceContexts[threadID]->GetData(query->resource_DX11, &query->result_passed, sizeof(query->result_passed), 0/*D3D11_ASYNC_GETDATA_DONOTFLUSH*/);
+		break;
+	}
+	return SUCCEEDED(hr);
 }
 
 

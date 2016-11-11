@@ -191,6 +191,9 @@ void Renderable3DComponent::Compose()
 void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 {
 	wiRenderer::UpdateRenderData(threadID);
+
+	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, dtDepthCopy.GetTexture(), threadID);
+	wiRenderer::OcclusionCulling_Render(threadID);
 }
 void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 {
