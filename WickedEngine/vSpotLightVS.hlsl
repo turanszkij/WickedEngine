@@ -5,7 +5,7 @@ VertexToPixel main(uint vID : SV_VertexID)
 {
 	VertexToPixel Out = (VertexToPixel)0;
 		
-	float4 pos = float4(CONE[vID],1);
+	float4 pos = CONE[vID];
 	pos = mul( pos,lightWorld );
 	Out.pos = mul(pos,g_xCamera_VP);
 	Out.col=lerp(

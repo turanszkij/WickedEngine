@@ -28,6 +28,7 @@ void wiRenderTarget::CleanUp() {
 	{
 		SAFE_DELETE(renderTargets[i]);
 	}
+	renderTargets.clear();
 	SAFE_DELETE(depth);
 }
 

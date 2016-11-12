@@ -11,7 +11,7 @@ struct VSOut_Sphere
 VSOut_Sphere main( uint vID : SV_VERTEXID )
 {
 	VSOut_Sphere o = (VSOut_Sphere)0;
-	o.pos = float4(UVSPHERE[vID],1);
+	o.pos = UVSPHERE[vID];
 	o.nor = o.pos.xyz;
 	o.pos = mul(o.pos, g_xTransform);
 	o.pos3D = o.pos.xyz;

@@ -49,6 +49,7 @@
 #include "wiWindowRegistration.h"
 #include "wiTranslator.h"
 #include "wiArchive.h"
+#include "wiSpinLock.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

@@ -3,6 +3,7 @@
 #include "wiDirectInput.h"
 #include "wiRawInput.h"
 #include "wiWindowRegistration.h"
+#include "wiHelper.h"
 
 #ifndef WINSTORE_SUPPORT
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
@@ -24,7 +25,7 @@ wiInputManager::wiInputManager()
 		while (true)
 		{
 			Update();
-			Sleep(1);
+			wiHelper::Sleep(16.f);
 		}
 
 	}).detach();

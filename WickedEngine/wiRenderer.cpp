@@ -100,8 +100,6 @@ void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fulls
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
 {
-	OcclusionCulling_Read();
-
 	GetDevice()->PresentBegin();
 	
 	if(drawToScreen1!=nullptr)
@@ -112,6 +110,8 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 		drawToScreen3();
 
 	GetDevice()->PresentEnd();
+
+	OcclusionCulling_Read();
 
 	*prevFrameCam = *cam;
 
@@ -1744,15 +1744,19 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 					query.result_passed = true;
 					instance->skipOcclusionQuery = true;
 				}
-				else if(!instance->skipOcclusionQuery)
+				else
 				{
+					if (instance->skipOcclusionQuery)
+					{
+						instance->skipOcclusionQuery = false;
+						continue;
+					}
 					// render bounding box to later read the occlusion status
 					GetDevice()->QueryBegin(&query, threadID);
-					cb.mTransform = XMMatrixTranspose(instance->bounds.getAsBoxMatrix());
+					cb.mTransform = XMMatrixTranspose(instance->GetOBB()*getCamera()->GetViewProjection());
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 					GetDevice()->Draw(36, threadID);
 					GetDevice()->QueryEnd(&query, threadID);
-					instance->skipOcclusionQuery = false;
 				}
 			}
 		}

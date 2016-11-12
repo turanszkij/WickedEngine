@@ -340,6 +340,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiServer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSound_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSpinLock.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h" />

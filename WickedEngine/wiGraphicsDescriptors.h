@@ -440,6 +440,8 @@ namespace wiGraphicsTypes
 	{
 		GPU_QUERY_TYPE Type;
 		UINT MiscFlags;
+		// 0 for immediate access!
+		UINT async_latency;
 	};
 	struct SubresourceData
 	{

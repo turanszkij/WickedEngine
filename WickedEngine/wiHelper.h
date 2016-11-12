@@ -30,6 +30,8 @@ namespace wiHelper
 	string GetFileNameFromPath(const string& fullPath);
 
 	string GetDirectoryFromPath(const string& fullPath);
+
+	void Sleep(float milliseconds);
 };
 
 #endif

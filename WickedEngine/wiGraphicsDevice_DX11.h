@@ -58,7 +58,7 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) override;
 		virtual HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
-		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery, bool async = true) override;
+		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 
 		virtual void PresentBegin() override;
 		virtual void PresentEnd() override;

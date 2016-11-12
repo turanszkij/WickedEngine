@@ -3677,7 +3677,8 @@ Object::Object(const string& name) :Transform()
 	GPUQueryDesc desc;
 	desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
 	desc.MiscFlags = 0;
-	wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQuery, true);
+	desc.async_latency = 1;
+	wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQuery);
 	occlusionQuery.result_passed = TRUE;
 }
 Object::~Object() {
@@ -3807,6 +3808,14 @@ int Object::GetRenderTypes() const
 		retVal |= x.material->GetRenderType();
 	}
 	return retVal;
+}
+XMMATRIX Object::GetOBB() const
+{
+	if (mesh == nullptr)
+	{
+		return XMMatrixIdentity();
+	}
+	return mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&world);
 }
 void Object::Serialize(wiArchive& archive)
 {

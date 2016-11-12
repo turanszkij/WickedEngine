@@ -70,6 +70,8 @@ public:
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;
+
+	wiWidget* container;
 };
 
 // Clickable, draggable box

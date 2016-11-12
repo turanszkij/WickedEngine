@@ -14,15 +14,18 @@ wiThreadSafeManager::~wiThreadSafeManager()
 
 void wiThreadSafeManager::LOCK()
 {
-	MUTEX.lock();
+	//MUTEX.lock();
+	spinlock.lock();
 }
 bool wiThreadSafeManager::TRY_LOCK()
 {
-	return MUTEX.try_lock();
+	//return MUTEX.try_lock();
+	return spinlock.try_lock();
 }
 void wiThreadSafeManager::UNLOCK()
 {
-	MUTEX.unlock();
+	//MUTEX.unlock();
+	spinlock.unlock();
 }
 
 void wiThreadSafeManager::LOCK_STATIC()

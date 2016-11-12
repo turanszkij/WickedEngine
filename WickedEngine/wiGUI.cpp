@@ -2,9 +2,10 @@
 #include "wiWidget.h"
 #include "wiHashString.h"
 #include "wiRenderer.h"
+#include "wiInputManager.h"
 
 
-wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false)
+wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), pointerpos(XMFLOAT2(0,0))
 {
 }
 
@@ -16,6 +17,10 @@ wiGUI::~wiGUI()
 
 void wiGUI::Update()
 {
+	XMFLOAT4 _p = wiInputManager::GetInstance()->getpointer();
+	pointerpos.x = _p.x;
+	pointerpos.y = _p.y;
+
 	if (activeWidget != nullptr)
 	{
 		// place to the end of the list to render on top
@@ -34,7 +39,12 @@ void wiGUI::Update()
 	focus = false;
 	for (list<wiWidget*>::reverse_iterator it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
-		(*it)->Update(this);
+		if ((*it)->container == nullptr)
+		{
+			// the contained child widgets will be updated by the containers
+			(*it)->Update(this);
+		}
+
 		if ((*it)->IsEnabled() && (*it)->IsVisible() && (*it)->GetState() > wiWidget::WIDGETSTATE::IDLE)
 		{
 			focus = true;
@@ -47,7 +57,11 @@ void wiGUI::Render()
 	wiRenderer::GetDevice()->EventBegin(L"GUI");
 	for (auto&x : widgets)
 	{
-		x->Render(this);
+		if (x->container == nullptr)
+		{
+			// the contained child widgets will be rendered by the containers
+			x->Render(this);
+		}
 	}
 
 	wiGraphicsTypes::Rect scissor[1];

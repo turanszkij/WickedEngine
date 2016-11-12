@@ -1310,8 +1310,6 @@ inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc
 
 // Local Helpers:
 const void* const __nullBlob[1024] = { 0 }; // this is initialized to nullptrs!
-#define REQUESTQUERYID	((GetFrameCount() + GPUQuery::ASYNC_LATENCY - 1) % GPUQuery::ASYNC_LATENCY)
-#define READQUERYID		((GetFrameCount()) % GPUQuery::ASYNC_LATENCY)
 
 
 
@@ -1340,7 +1338,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -2169,10 +2167,10 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 	pSamplerState->desc = *pSamplerDesc;
 	return device->CreateSamplerState(&desc, &pSamplerState->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery, bool async)
+HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 {
 	pQuery->desc = *pDesc;
-	pQuery->async = async;
+	pQuery->async_frameshift = pQuery->desc.async_latency;
 
 	D3D11_QUERY_DESC desc;
 	desc.MiscFlags = 0;
@@ -2183,9 +2181,11 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 	}
 
 	HRESULT hr = E_FAIL;
-	if (async)
+	if (pQuery->desc.async_latency > 0)
 	{
-		for (int i = 0; i < GPUQuery::ASYNC_LATENCY; ++i)
+		pQuery->resource_DX11.resize(pQuery->desc.async_latency + 1);
+		pQuery->active.resize(pQuery->desc.async_latency + 1);
+		for (size_t i = 0; i < pQuery->resource_DX11.size(); ++i)
 		{
 			hr = device->CreateQuery(&desc, &pQuery->resource_DX11[i]);
 			assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
@@ -2193,6 +2193,8 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 	}
 	else
 	{
+		pQuery->resource_DX11.resize(1);
+		pQuery->active.resize(1);
 		hr = device->CreateQuery(&desc, &pQuery->resource_DX11[0]);
 		assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
 	}
@@ -2619,20 +2621,19 @@ void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAP
 
 void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
 {
-	const int _requestQueryID = (query->async ? REQUESTQUERYID : 0);
-	deviceContexts[threadID]->Begin(query->resource_DX11[_requestQueryID]);
-	query->active[_requestQueryID] = true;
+	deviceContexts[threadID]->Begin(query->resource_DX11[query->async_frameshift]);
+	query->active[query->async_frameshift] = true;
 }
 void GraphicsDevice_DX11::QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID)
 {
-	const int _requestQueryID = (query->async ? REQUESTQUERYID : 0);
-	deviceContexts[threadID]->End(query->resource_DX11[_requestQueryID]);
-	query->active[_requestQueryID] = true;
+	deviceContexts[threadID]->End(query->resource_DX11[query->async_frameshift]);
+	query->active[query->async_frameshift] = true;
 }
 bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 {
-	const int _readQueryID = (query->async ? READQUERYID : 0);
-	const UINT _flags = (query->async ? D3D11_ASYNC_GETDATA_DONOTFLUSH : 0);
+	query->async_frameshift = (query->async_frameshift + 1) % (query->desc.async_latency + 1);
+	const int _readQueryID = query->async_frameshift;
+	const UINT _flags = (query->desc.async_latency > 0 ? D3D11_ASYNC_GETDATA_DONOTFLUSH : 0);
 
 	if (!query->active[_readQueryID])
 	{

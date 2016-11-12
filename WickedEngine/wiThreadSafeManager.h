@@ -1,11 +1,13 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiSpinLock.h"
 
 class wiThreadSafeManager
 {
 protected:
-	mutex MUTEX;
+	//mutex MUTEX;
 	static mutex STATICMUTEX;
+	wiSpinLock spinlock;
 public:
 	wiThreadSafeManager();
 	~wiThreadSafeManager();

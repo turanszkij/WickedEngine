@@ -14,6 +14,8 @@ private:
 	wiWidget* activeWidget;
 	GRAPHICSTHREAD threadID;
 	bool focus;
+
+	XMFLOAT2 pointerpos;
 public:
 	wiGUI(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	~wiGUI();
@@ -35,5 +37,11 @@ public:
 	bool HasFocus();
 
 	GRAPHICSTHREAD GetGraphicsThread() { return threadID; }
+
+
+	const XMFLOAT2& GetPointerPos() const
+	{
+		return pointerpos;
+	}
 };
 

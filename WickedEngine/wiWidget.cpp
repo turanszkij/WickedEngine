@@ -1,11 +1,11 @@
 #include "wiWidget.h"
 #include "wiGUI.h"
-#include "wiInputManager.h"
 #include "wiImage.h"
 #include "wiTextureHelper.h"
 #include "wiFont.h"
 #include "wiMath.h"
 #include "wiHelper.h"
+#include "wiInputManager.h"
 
 using namespace wiGraphicsTypes;
 
@@ -23,6 +23,7 @@ wiWidget::wiWidget():Transform()
 	scissorRect.left = 0;
 	scissorRect.right = 0;
 	scissorRect.top = 0;
+	container = nullptr;
 }
 wiWidget::~wiWidget()
 {
@@ -173,8 +174,7 @@ void wiButton::Update(wiGUI* gui)
 	hitBox.siz.x = Transform::scale.x;
 	hitBox.siz.y = Transform::scale.y;
 
-	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
-	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointerPos.x, pointerPos.y), XMFLOAT2(1, 1));
+	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
 	if (state == FOCUS)
 	{
@@ -389,8 +389,7 @@ void wiSlider::Update(wiGUI* gui)
 	hitBox.siz.x = Transform::scale.x + headWidth;
 	hitBox.siz.y = Transform::scale.y;
 
-	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
-	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointerPos.x, pointerPos.y), XMFLOAT2(1, 1));
+	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
 	bool dragged = false;
 
@@ -526,8 +525,7 @@ void wiCheckBox::Update(wiGUI* gui)
 	hitBox.siz.x = Transform::scale.x;
 	hitBox.siz.y = Transform::scale.y;
 
-	XMFLOAT4 pointerPos = wiInputManager::GetInstance()->getpointer();
-	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointerPos.x, pointerPos.y), XMFLOAT2(1, 1));
+	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
 	bool clicked = false;
 	// hover the button
@@ -714,6 +712,7 @@ void wiWindow::AddWidget(wiWidget* widget)
 	widget->SetVisible(this->IsVisible());
 	gui->AddWidget(widget);
 	widget->attachTo(this);
+	widget->container = this;
 
 	childrenWidgets.push_back(widget);
 }
@@ -780,6 +779,7 @@ void wiWindow::Update(wiGUI* gui)
 
 	for (auto& x : childrenWidgets)
 	{
+		x->Update(gui);
 		x->SetScissorRect(scissorRect);
 	}
 
@@ -806,6 +806,10 @@ void wiWindow::Render(wiGUI* gui)
 			, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 	}
 
+	for (auto& x : childrenWidgets)
+	{
+		x->Render(gui);
+	}
 
 	scissorRect.bottom = (LONG)(translation.y + scale.y);
 	scissorRect.left = (LONG)(translation.x);
@@ -913,8 +917,7 @@ void wiColorPicker::Update(wiGUI* gui)
 	}
 
 	XMFLOAT2 center = XMFLOAT2(translation.x + __colorpicker_center, translation.y + __colorpicker_center);
-	XMFLOAT4 pointer4 = wiInputManager::GetInstance()->getpointer();
-	XMFLOAT2 pointer = XMFLOAT2(pointer4.x, pointer4.y);
+	XMFLOAT2 pointer = gui->GetPointerPos();
 	float distance = wiMath::Distance(center, pointer);
 	bool hover_hue = (distance > __colorpicker_radius) && (distance < __colorpicker_radius + __colorpicker_width);
 

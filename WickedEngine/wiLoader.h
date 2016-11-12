@@ -478,7 +478,7 @@ struct Object : public Streamable, public Transform
 		color = XMFLOAT3(1, 1, 1);
 		trailDistortTex = nullptr;
 		trailTex = nullptr;
-		skipOcclusionQuery;
+		skipOcclusionQuery = true;
 	}
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
@@ -487,6 +487,7 @@ struct Object : public Streamable, public Transform
 	int GetRenderTypes() const;
 	virtual void UpdateTransform();
 	void UpdateObject();
+	XMMATRIX GetOBB() const;
 	void Serialize(wiArchive& archive);
 };
 // AutoSerialized!
