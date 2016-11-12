@@ -443,8 +443,9 @@ struct Object : public Streamable, public Transform
 
 	int physicsObjectI;
 
-	// occlusion results for the previous 3 frames
-	wiGraphicsTypes::GPUQuery occlusionQueries[3];
+	// occlusion result
+	wiGraphicsTypes::GPUQuery occlusionQuery;
+	bool skipOcclusionQuery;
 
 	// Is it deformed with an armature?
 	bool isArmatureDeformed() const
@@ -477,6 +478,7 @@ struct Object : public Streamable, public Transform
 		color = XMFLOAT3(1, 1, 1);
 		trailDistortTex = nullptr;
 		trailTex = nullptr;
+		skipOcclusionQuery;
 	}
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();

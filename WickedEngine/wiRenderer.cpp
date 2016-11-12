@@ -87,6 +87,7 @@ wiWaterPlane wiRenderer::waterPlane;
 
 #pragma endregion
 
+
 wiRenderer::wiRenderer()
 {
 }
@@ -110,11 +111,11 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 	if(drawToScreen3!=nullptr)
 		drawToScreen3();
 
-	wiFrameRate::Frame();
-
 	GetDevice()->PresentEnd();
 
 	*prevFrameCam = *cam;
+
+	wiFrameRate::Frame();
 }
 
 
@@ -1389,6 +1390,7 @@ void wiRenderer::UpdatePerFrameData()
 			FrameCulling& culling = x.second;
 
 			culling.culledRenderer.clear();
+			culling.culledRenderer_opaque.clear();
 			culling.culledRenderer_transparent.clear();
 			culling.culledHairParticleSystems.clear();
 			culling.culledLights.clear();
@@ -1404,6 +1406,7 @@ void wiRenderer::UpdatePerFrameData()
 				for (Cullable* x : culledObjects)
 				{
 					Object* object = (Object*)x;
+					culling.culledRenderer[object->mesh].push_front(object);
 					for (wiHairParticle* hair : object->hParticleSystems)
 					{
 						culling.culledHairParticleSystems.push_back(hair);
@@ -1411,7 +1414,7 @@ void wiRenderer::UpdatePerFrameData()
 					}
 					if (object->GetRenderTypes() & RENDERTYPE_OPAQUE)
 					{
-						culling.culledRenderer[object->mesh].push_front(object);
+						culling.culledRenderer_opaque[object->mesh].push_front(object);
 					}
 					if (!foundClosestReflector && camera == getCamera() && object->IsReflector())
 					{
@@ -1733,15 +1736,15 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 			MiscCB cb;
 			for (Object* instance : visibleInstances)
 			{
-				GPUQuery& query = instance->occlusionQueries[0];
+				GPUQuery& query = instance->occlusionQuery;
 
 				if (instance->bounds.intersects(getCamera()->translation))
 				{
 					// if the camera is inside the bounding box, then the object is most likely visible, so skip occlusion query
 					query.result_passed = true;
-					query.SetActive(false);
+					instance->skipOcclusionQuery = true;
 				}
-				else
+				else if(!instance->skipOcclusionQuery)
 				{
 					// render bounding box to later read the occlusion status
 					GetDevice()->QueryBegin(&query, threadID);
@@ -1749,7 +1752,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 					GetDevice()->Draw(36, threadID);
 					GetDevice()->QueryEnd(&query, threadID);
-					query.SetActive(true);
+					instance->skipOcclusionQuery = false;
 				}
 			}
 		}
@@ -1778,18 +1781,8 @@ void wiRenderer::OcclusionCulling_Read()
 
 			for (Object* instance : visibleInstances)
 			{
-				GPUQuery& query = instance->occlusionQueries[0];
-				if (!query.IsActive())
-				{
-					continue;
-				}
-
-				int queryFailCount = 0;
-				while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE))
-				{
-					queryFailCount++;
-				}
-				query.SetActive(false);
+				GPUQuery& query = instance->occlusionQuery;
+				while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
 			}
 		}
 
@@ -3115,7 +3108,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						if (dither > 1.0f - FLT_EPSILON)
 							continue;
 
-						if (disableOcclusionCulling || instance->occlusionQueries[0].result_passed == TRUE)
+						if (disableOcclusionCulling || instance->occlusionQuery.result_passed == TRUE)
 						{
 							mesh->AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
 							++k;
@@ -3228,7 +3221,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
 
-					if (disableOcclusionCulling || instance->occlusionQueries[0].result_passed == TRUE)
+					if (disableOcclusionCulling || instance->occlusionQuery.result_passed == TRUE)
 					{
 						if (mesh->softBody || instance->isArmatureDeformed())
 							mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), dither, instance->color), k, threadID);
@@ -3342,7 +3335,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 {
 
 	const FrameCulling& culling = frameCullings[camera];
-	const CulledCollection& culledRenderer = culling.culledRenderer;
+	const CulledCollection& culledRenderer = culling.culledRenderer_opaque;
 
 	GetDevice()->EventBegin(L"DrawWorld");
 
@@ -3999,7 +3992,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 
 		vector<Picked> pickPoints;
 
-		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable);
+		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable, true);
 
 		for (auto& model : GetScene().models)
 		{
@@ -4104,7 +4097,7 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 }
 
 void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
-	int pickType, bool dynamicObjects, const string& layer, const string& layerDisable)
+	int pickType, bool dynamicObjects, const string& layer, const string& layerDisable, bool onlyVisible)
 {
 	if (culledObjects.empty())
 	{
@@ -4125,7 +4118,8 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
 	XMVECTOR& rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
-	for (Cullable* culled : culledObjects){
+	for (Cullable* culled : culledObjects)
+	{
 		Object* object = (Object*)culled;
 
 		if (!(pickType & object->GetRenderTypes()))
@@ -4133,6 +4127,10 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			continue;
 		}
 		if (!dynamicObjects && object->isDynamic())
+		{
+			continue;
+		}
+		if (onlyVisible && object->occlusionQuery.result_passed != TRUE)
 		{
 			continue;
 		}

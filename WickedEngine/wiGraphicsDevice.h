@@ -42,7 +42,8 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState) = 0;
 		virtual HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) = 0;
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) = 0;
-		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
+		// async: don't flush GPU pipeline when performing query, but introduce latency of two frames
+		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery, bool async = true) = 0;
 
 		virtual void PresentBegin() = 0;
 		virtual void PresentEnd() = 0;

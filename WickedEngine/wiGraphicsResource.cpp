@@ -193,10 +193,18 @@ namespace wiGraphicsTypes
 
 	GPUQuery::GPUQuery()
 	{
-		SAFE_INIT(resource_DX11);
+		for (int i = 0; i < ASYNC_LATENCY; ++i)
+		{
+			SAFE_INIT(resource_DX11[i]);
+			active[i] = false;
+		}
+		async = false;
 	}
 	GPUQuery::~GPUQuery()
 	{
-		SAFE_RELEASE(resource_DX11);
+		for (int i = 0; i < ASYNC_LATENCY; ++i)
+		{
+			SAFE_RELEASE(resource_DX11[i]);
+		}
 	}
 }

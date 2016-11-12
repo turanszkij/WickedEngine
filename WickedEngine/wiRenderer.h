@@ -76,13 +76,9 @@ public:
 	static wiGraphicsTypes::Texture				*textures[TEXTYPE_LAST];
 
 	
-	//static int SHADOWMAPRES,SOFTSHADOW,POINTLIGHTSHADOW,POINTLIGHTSHADOWRES,SPOTLIGHTSHADOW,SPOTLIGHTSHADOWRES;
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 
-	//static void SetDirectionalLightShadowProps(int resolution, int softShadowQuality);
-	//static void SetPointLightShadowProps(int shadowMapCount, int resolution);
-	//static void SetSpotLightShadowProps(int count, int resolution);
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
 
@@ -361,6 +357,7 @@ public:
 	struct FrameCulling
 	{
 		CulledCollection culledRenderer;
+		CulledCollection culledRenderer_opaque;
 		CulledCollection culledRenderer_transparent;
 		vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
@@ -491,7 +488,7 @@ public:
 	static Picked Pick(RAY& ray, int pickType = PICK_OPAQUE, const string& layer = "", const string& layerDisable = "");
 	static RAY getPickRay(long cursorX, long cursorY);
 	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
-		int pickType = PICK_OPAQUE, bool dynamicObjects = true, const string& layer = "", const string& layerDisable = "");
+		int pickType = PICK_OPAQUE, bool dynamicObjects = true, const string& layer = "", const string& layerDisable = "", bool onlyVisible = false);
 	static void CalculateVertexAO(Object* object);
 
 	static PHYSICS* physicsEngine;

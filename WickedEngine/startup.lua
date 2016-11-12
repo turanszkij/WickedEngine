@@ -44,6 +44,10 @@ runProcess(function()
 		if(input.Press(VK_F6)) then
 			main.GetActiveComponent().SetPreferredThreadingCount(4);
 		end
+
+		if(input.Press(VK_F7)) then
+			LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\Scene\\Sample\\","scene");
+		end
 		
 		update()
 	end

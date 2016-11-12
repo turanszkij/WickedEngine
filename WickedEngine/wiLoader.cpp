@@ -3677,11 +3677,8 @@ Object::Object(const string& name) :Transform()
 	GPUQueryDesc desc;
 	desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
 	desc.MiscFlags = 0;
-	for (int i = 0; i < ARRAYSIZE(occlusionQueries); ++i)
-	{
-		wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQueries[i]);
-		occlusionQueries[i].result_passed = TRUE;
-	}
+	wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQuery, true);
+	occlusionQuery.result_passed = TRUE;
 }
 Object::~Object() {
 }

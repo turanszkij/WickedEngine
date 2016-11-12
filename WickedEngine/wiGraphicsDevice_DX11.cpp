@@ -1308,6 +1308,11 @@ inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc
 	}
 
 
+// Local Helpers:
+const void* const __nullBlob[1024] = { 0 }; // this is initialized to nullptrs!
+#define REQUESTQUERYID	((GetFrameCount() + GPUQuery::ASYNC_LATENCY - 1) % GPUQuery::ASYNC_LATENCY)
+#define READQUERYID		((GetFrameCount()) % GPUQuery::ASYNC_LATENCY)
+
 
 
 // Engine functions
@@ -1335,11 +1340,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-#ifdef _DEBUG
-#ifndef WINSTORE_SUPPORT
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-#endif
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -1532,7 +1533,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 
 	ppBuffer->desc = *pDesc;
 	HRESULT hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11);
-	assert(SUCCEEDED(hr) && "GPUBuffer Creation failed!");
+	assert(SUCCEEDED(hr) && "GPUBuffer creation failed!");
 
 	if (SUCCEEDED(hr))
 	{
@@ -1627,7 +1628,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 	HRESULT hr = S_OK;
 	
 	hr = device->CreateTexture2D(&desc, data, &((*ppTexture2D)->texture2D_DX11));
-	assert(SUCCEEDED(hr) && "Texture2D creating failed!");
+	assert(SUCCEEDED(hr) && "Texture2D creation failed!");
 	if (FAILED(hr))
 		return hr;
 
@@ -2168,9 +2169,10 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 	pSamplerState->desc = *pSamplerDesc;
 	return device->CreateSamplerState(&desc, &pSamplerState->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
+HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery, bool async)
 {
 	pQuery->desc = *pDesc;
+	pQuery->async = async;
 
 	D3D11_QUERY_DESC desc;
 	desc.MiscFlags = 0;
@@ -2179,7 +2181,23 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 	{
 		desc.Query = D3D11_QUERY_OCCLUSION;
 	}
-	return device->CreateQuery(&desc, &pQuery->resource_DX11);
+
+	HRESULT hr = E_FAIL;
+	if (async)
+	{
+		for (int i = 0; i < GPUQuery::ASYNC_LATENCY; ++i)
+		{
+			hr = device->CreateQuery(&desc, &pQuery->resource_DX11[i]);
+			assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
+		}
+	}
+	else
+	{
+		hr = device->CreateQuery(&desc, &pQuery->resource_DX11[0]);
+		assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
+	}
+
+	return hr;
 }
 
 
@@ -2308,7 +2326,6 @@ void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUUnorderedResour
 	if (resource != nullptr)
 		deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->unorderedAccessView_DX11, nullptr);
 }
-const void* const __nullBlob[1024] = { 0 }; // this is initialized to nullptrs!
 void GraphicsDevice_DX11::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
@@ -2599,31 +2616,46 @@ void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAP
 		deviceContexts[threadID]->RSSetScissorRects(numRects, nullptr);
 	}
 }
+
 void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
 {
-	//query->result_passed = FALSE;
-	//query->result_passed_sample_count = 0;
-	deviceContexts[threadID]->Begin(query->resource_DX11);
+	const int _requestQueryID = (query->async ? REQUESTQUERYID : 0);
+	deviceContexts[threadID]->Begin(query->resource_DX11[_requestQueryID]);
+	query->active[_requestQueryID] = true;
 }
 void GraphicsDevice_DX11::QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID)
 {
-	deviceContexts[threadID]->End(query->resource_DX11);
+	const int _requestQueryID = (query->async ? REQUESTQUERYID : 0);
+	deviceContexts[threadID]->End(query->resource_DX11[_requestQueryID]);
+	query->active[_requestQueryID] = true;
 }
 bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 {
+	const int _readQueryID = (query->async ? READQUERYID : 0);
+	const UINT _flags = (query->async ? D3D11_ASYNC_GETDATA_DONOTFLUSH : 0);
+
+	if (!query->active[_readQueryID])
+	{
+		return true;
+	}
+
 	assert(threadID == GRAPHICSTHREAD_IMMEDIATE && "A query can only be read on the immediate graphics thread!");
+
 	HRESULT hr = S_OK;
 	switch (query->desc.Type)
 	{
 	case GPU_QUERY_TYPE_OCCLUSION:
-		hr = deviceContexts[threadID]->GetData(query->resource_DX11, &query->result_passed_sample_count, sizeof(query->result_passed_sample_count), 0/*D3D11_ASYNC_GETDATA_DONOTFLUSH*/);
+		hr = deviceContexts[threadID]->GetData(query->resource_DX11[_readQueryID], &query->result_passed_sample_count, sizeof(query->result_passed_sample_count), _flags);
 		query->result_passed = query->result_passed_sample_count != 0;
 		break;
 	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 	default:
-		hr = deviceContexts[threadID]->GetData(query->resource_DX11, &query->result_passed, sizeof(query->result_passed), 0/*D3D11_ASYNC_GETDATA_DONOTFLUSH*/);
+		hr = deviceContexts[threadID]->GetData(query->resource_DX11[_readQueryID], &query->result_passed, sizeof(query->result_passed), _flags);
 		break;
 	}
+
+	query->active[_readQueryID] = false;
+
 	return SUCCEEDED(hr);
 }
 

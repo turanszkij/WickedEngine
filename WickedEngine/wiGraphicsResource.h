@@ -264,17 +264,22 @@ namespace wiGraphicsTypes
 	class GPUQuery
 	{
 		friend class GraphicsDevice_DX11;
+	public:
+		static const int ASYNC_LATENCY = 4;
 	private:
-		ID3D11Query*				resource_DX11;
+		ID3D11Query*				resource_DX11[ASYNC_LATENCY];
 		GPUQueryDesc				desc;
-		bool						active;
+		bool						active[ASYNC_LATENCY];
+
+		// async: shift query frames to avoid pipeline stalls from waiting for the GPU:
+		//		we always request queries for some frames forward in time (QueryBegin, QueryEnd)
+		//		so we always read the query which occured some frames behind because of that (QueryRead)
+		bool						async;
 	public:
 		GPUQuery();
 		virtual ~GPUQuery();
 
-		bool IsValid() { return resource_DX11 != nullptr; }
-		bool IsActive() { return active; }
-		void SetActive(bool value) { active = value; }
+		bool IsValid() { return resource_DX11[0] != nullptr; }
 		GPUQueryDesc GetDesc() { return desc; }
 
 		BOOL	result_passed;
