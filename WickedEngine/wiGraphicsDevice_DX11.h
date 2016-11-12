@@ -23,11 +23,7 @@ namespace wiGraphicsTypes
 		ID3D11Device*				device;
 		D3D_DRIVER_TYPE				driverType;
 		D3D_FEATURE_LEVEL			featureLevel;
-#ifndef WINSTORE_SUPPORT
-		IDXGISwapChain*				swapChain;
-#else
 		IDXGISwapChain1*			swapChain;
-#endif
 		ID3D11RenderTargetView*		renderTargetView;
 		ID3D11Texture2D*			backBuffer;
 		ViewPort					viewPort;

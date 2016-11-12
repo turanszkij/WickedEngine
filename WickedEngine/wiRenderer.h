@@ -276,13 +276,7 @@ protected:
 
 	static wiGraphicsTypes::Texture2D* enviroMap,*colorGrading;
 	static void LoadBuffers();
-	static void LoadBasicShaders();
-	static void LoadLineShaders();
-	static void LoadTessShaders();
-	static void LoadSkyShaders();
-	static void LoadShadowShaders();
-	static void LoadWaterShaders();
-	static void LoadTrailShaders();
+	static void LoadShaders();
 	static void SetUpStates();
 	static int vertexCount;
 	static int visibleCount;

@@ -1316,7 +1316,17 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 {
 	FULLSCREEN = fullscreen;
 
-	HRESULT hr = S_OK;
+#ifndef WINSTORE_SUPPORT
+	RECT rect = RECT();
+	GetClientRect(window, &rect);
+	SCREENWIDTH = rect.right - rect.left;
+	SCREENHEIGHT = rect.bottom - rect.top;
+#else WINSTORE_SUPPORT
+	SCREENWIDTH = (int)window->Bounds.Width;
+	SCREENHEIGHT = (int)window->Bounds.Height;
+#endif
+
+	HRESULT hr = E_FAIL;
 
 	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
 	{
@@ -1348,65 +1358,21 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	};
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 
-#ifndef WINSTORE_SUPPORT
-	RECT rect = RECT();
-	GetClientRect(window, &rect);
-	SCREENWIDTH = rect.right - rect.left;
-	SCREENHEIGHT = rect.bottom - rect.top;
-
-	DXGI_SWAP_CHAIN_DESC sd;
-	ZeroMemory(&sd, sizeof(sd));
-	sd.BufferCount = 1;
-	sd.BufferDesc.Width = SCREENWIDTH;
-	sd.BufferDesc.Height = SCREENHEIGHT;
-	sd.BufferDesc.Format = _ConvertFormat(GetBackBufferFormat());
-	sd.BufferDesc.RefreshRate.Numerator = 60;
-	sd.BufferDesc.RefreshRate.Denominator = 1;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.OutputWindow = window;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.Windowed = !fullscreen;
-#endif
-
 	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
 	{
 		driverType = driverTypes[driverTypeIndex];
-#ifndef WINSTORE_SUPPORT
-		hr = D3D11CreateDeviceAndSwapChain(NULL, driverType, NULL, createDeviceFlags, featureLevels, numFeatureLevels,
-			D3D11_SDK_VERSION, &sd, &swapChain, &device, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
-#else
 		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
 			, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
-#endif
 
 		if (SUCCEEDED(hr))
 			break;
 	}
-	if (FAILED(hr)) {
-		wiHelper::messageBox("SwapChain Creation Failed!", "Error!");
-#ifdef BACKLOG
-		wiBackLog::post("SwapChain Creation Failed!");
-#endif
+	if (FAILED(hr)) 
+	{
+		wiHelper::messageBox("Failed to create the graphics device!", "Error!");
 		exit(1);
 	}
 	DX11 = ((device->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0) ? true : false);
-
-
-#ifdef WINSTORE_SUPPORT
-	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
-	sd.Width = SCREENWIDTH = (int)window->Bounds.Width;
-	sd.Height = SCREENHEIGHT = (int)window->Bounds.Height;
-	sd.Format = _ConvertFormat(GetBackBufferFormat());
-	sd.Stereo = false;
-	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
-	sd.SampleDesc.Quality = 0;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.BufferCount = 2; // Use double-buffering to minimize latency.
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
-	sd.Flags = 0;
-	sd.Scaling = DXGI_SCALING_STRETCH;
-	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
 	IDXGIDevice2 * pDXGIDevice;
 	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
@@ -1418,18 +1384,45 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void **)&pIDXGIFactory);
 
 
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device, reinterpret_cast<IUnknown*>(window), &sd
-		, nullptr, &swapChain);
+	DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
+	sd.Width = SCREENWIDTH;
+	sd.Height = SCREENHEIGHT;
+	sd.Format = _ConvertFormat(GetBackBufferFormat());
+	sd.Stereo = false;
+	sd.SampleDesc.Count = 1; // Don't use multi-sampling.
+	sd.SampleDesc.Quality = 0;
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.BufferCount = 2; // Use double-buffering to minimize latency.
+	sd.Flags = 0;
+	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
-	if (FAILED(hr)) {
-		wiHelper::messageBox("Swap chain creation failed!", "Error!");
+#ifndef WINSTORE_SUPPORT
+	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+	sd.Scaling = DXGI_SCALING_STRETCH;
+
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+	fullscreenDesc.RefreshRate.Numerator = 60;
+	fullscreenDesc.RefreshRate.Denominator = 1;
+	fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
+	fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+	fullscreenDesc.Windowed = !fullscreen;
+	hr = pIDXGIFactory->CreateSwapChainForHwnd(device, window, &sd, &fullscreenDesc, nullptr, &swapChain);
+#else
+	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
+	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+
+	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device, reinterpret_cast<IUnknown*>(window), &sd, nullptr, &swapChain);
+#endif
+
+	if (FAILED(hr)) 
+	{
+		wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
 		exit(1);
 	}
 
 	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
 	// ensures that the application will only render after each VSync, minimizing power consumption.
 	hr = pDXGIDevice->SetMaximumFrameLatency(1);
-#endif
 
 	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]),
 		reinterpret_cast<void**>(&userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]));
@@ -1461,7 +1454,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	hr = device->CreateRenderTargetView(backBuffer, NULL, &renderTargetView);
-	//pBackBuffer->Release();
 	if (FAILED(hr)) {
 		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
 		exit(1);
