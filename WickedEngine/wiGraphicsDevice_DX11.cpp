@@ -2519,9 +2519,7 @@ void GraphicsDevice_DX11::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID
 }
 void GraphicsDevice_DX11::CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
 {
-	SAFE_RELEASE(pDst->shaderResourceView_DX11);
 	deviceContexts[threadID]->CopyResource(pDst->texture2D_DX11, pSrc->texture2D_DX11);
-	CreateShaderResourceView(pDst);
 }
 void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 {
