@@ -18,15 +18,15 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(Renderable2DComponent_BindLua, SetSpriteOrder),
 	lunamethod(Renderable2DComponent_BindLua, SetFontOrder),
 
-	lunamethod(ForwardRenderableComponent_BindLua, GetContent),
-	lunamethod(ForwardRenderableComponent_BindLua, Initialize),
-	lunamethod(ForwardRenderableComponent_BindLua, Load),
-	lunamethod(ForwardRenderableComponent_BindLua, Unload),
-	lunamethod(ForwardRenderableComponent_BindLua, Start),
-	lunamethod(ForwardRenderableComponent_BindLua, Stop),
-	lunamethod(ForwardRenderableComponent_BindLua, Update),
-	lunamethod(ForwardRenderableComponent_BindLua, Render),
-	lunamethod(ForwardRenderableComponent_BindLua, Compose),
+	lunamethod(RenderableComponent_BindLua, GetContent),
+	lunamethod(RenderableComponent_BindLua, Initialize),
+	lunamethod(RenderableComponent_BindLua, Load),
+	lunamethod(RenderableComponent_BindLua, Unload),
+	lunamethod(RenderableComponent_BindLua, Start),
+	lunamethod(RenderableComponent_BindLua, Stop),
+	lunamethod(RenderableComponent_BindLua, Update),
+	lunamethod(RenderableComponent_BindLua, Render),
+	lunamethod(RenderableComponent_BindLua, Compose),
 	lunamethod(RenderableComponent_BindLua, OnStart),
 	lunamethod(RenderableComponent_BindLua, OnStop),
 
@@ -83,6 +83,6 @@ void ForwardRenderableComponent_BindLua::Bind()
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<ForwardRenderableComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		//Luna<ForwardRenderableComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

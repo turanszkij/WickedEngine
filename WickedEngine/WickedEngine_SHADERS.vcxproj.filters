@@ -480,6 +480,9 @@
     <FxCompile Include="cubeVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="resolveMSAADepthStencilCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

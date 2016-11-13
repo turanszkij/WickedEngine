@@ -85,19 +85,19 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 
+	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
+
 	rtLinearDepth.Activate(threadID); {
 		wiImageEffects fx;
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
 		fx.process.setLinDepth(true);
-		//wiImage::BatchBegin(threadID);
-		wiImage::Draw(rtMain.depth->GetTexture(), fx, threadID);
+		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
 	}
 	rtLinearDepth.Deactivate(threadID);
-	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
 
-	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
+	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
 }
 
 

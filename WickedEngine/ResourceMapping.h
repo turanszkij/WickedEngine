@@ -84,6 +84,8 @@
 
 #define TEXTURE2D_X(name, type, slot) Texture2D< type > name : register(t ## slot);
 #define TEXTURE2D(name, type, slot) TEXTURE2D_X(name, type, slot)
+#define TEXTURE2DMS_X(name, type, slot) Texture2DMS< type > name : register(t ## slot);
+#define TEXTURE2DMS(name, type, slot) TEXTURE2DMS_X(name, type, slot)
 #define TEXTURE2DARRAY_X(name, type, slot) Texture2DArray< type > name : register(t ## slot);
 #define TEXTURE2DARRAY(name, type, slot) TEXTURE2DARRAY_X(name, type, slot)
 #define RWTEXTURE2D_X(name, type, slot) RWTexture2D< type > name : register(u ## slot);

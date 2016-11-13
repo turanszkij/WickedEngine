@@ -1,8 +1,10 @@
 #pragma once
-#include "ForwardRenderableComponent_BindLua.h"
+#include "wiLua.h"
+#include "wiLuna.h"
 #include "TiledForwardRenderableComponent.h"
+#include "Renderable3DComponent_BindLua.h"
 
-class TiledForwardRenderableComponent_BindLua : public ForwardRenderableComponent_BindLua
+class TiledForwardRenderableComponent_BindLua : public Renderable3DComponent_BindLua
 {
 public:
 	static const char className[];

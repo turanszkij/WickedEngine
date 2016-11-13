@@ -29,18 +29,19 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_ALPHATESTONLY, nullptr, true);
 	}
 
+	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
+
 	rtLinearDepth.Activate(threadID); {
 		wiImageEffects fx;
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
 		fx.process.setLinDepth(true);
-		wiImage::Draw(rtMain.depth->GetTexture(), fx, threadID);
+		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
 	}
 	rtLinearDepth.Deactivate(threadID);
-	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
 
-	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
+	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
 
 	wiRenderer::ComputeTiledLightCulling(threadID);
 

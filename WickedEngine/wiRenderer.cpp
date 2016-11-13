@@ -756,6 +756,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEFRUSTUMS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -3783,6 +3784,25 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 	}
 
 	//return debugTexture;
+}
+void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
+{
+	GetDevice()->EventBegin(L"Resolve MSAA DepthBuffer");
+
+	GetDevice()->BindResourceCS(src, TEXSLOT_ONDEMAND0, threadID);
+	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
+
+	Texture2DDesc desc = src->GetDesc();
+
+	GetDevice()->BindCS(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
+	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
+	GetDevice()->BindCS(nullptr, threadID);
+
+
+	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+
+	GetDevice()->EventEnd();
 }
 
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)

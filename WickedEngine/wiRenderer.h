@@ -407,6 +407,7 @@ public:
 	static void RefreshEnvProbes(GRAPHICSTHREAD threadID);
 
 	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
+	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();

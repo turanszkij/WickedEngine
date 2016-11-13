@@ -48,7 +48,7 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, FORMAT_R8G8B8A8_SNORM);
 	rtSceneCopy.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R16G16B16A16_FLOAT, 1, getMSAASampleCount());
+		, false, FORMAT_R16G16B16A16_FLOAT, 1);
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
@@ -58,7 +58,7 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, defaultTextureFormat);
 	rtFinal[1].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, defaultTextureFormat, 1, getMSAASampleCount());
+		, false, defaultTextureFormat, 1);
 
 	rtDof[0].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
@@ -83,12 +83,12 @@ void Renderable3DComponent::ResizeBuffers()
 	rtSun[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth()
 		, wiRenderer::GetDevice()->GetScreenHeight()
-		, true, defaultTextureFormat
+		, true, defaultTextureFormat, 1, getMSAASampleCount()
 	);
 	rtSun[1].Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getLightShaftQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getLightShaftQuality())
-		, false, defaultTextureFormat, 1, getMSAASampleCount()
+		, false, defaultTextureFormat
 	);
 
 	rtBloom.resize(3);
@@ -270,7 +270,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 			{
 				XMStoreFloat2(&fxs.sunPos, sunPos);
-				wiImage::Draw(rtSun[0].GetTexture(), fxs, threadID);
+				wiImage::Draw(rtSun[0].GetTextureResolvedMSAA(threadID), fxs, threadID);
 			}
 		}
 		wiRenderer::GetDevice()->EventEnd();
@@ -293,7 +293,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventBegin(L"Refraction Target");
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.presentFullScreen = true;
-		wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
+		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		if (getVolumeLightsEnabled())
 		{
 			// first draw light volumes to refraction target
@@ -337,6 +337,15 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			if (!wiRenderer::IsWireRender())
 				wiRenderer::DrawLensFlares(threadID);
 		}
+
+		wiRenderer::GetDevice()->EventBegin(L"Debug Geometry", threadID);
+		wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
+		wiRenderer::GetDevice()->EventEnd();
 	}
 }
 void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
@@ -366,7 +375,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 			fx.bloom.threshold = getBloomThreshold();
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
-			wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
+			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		}
 
 		rtBloom[1].Activate(threadID); //horizontal
@@ -405,7 +414,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		fx.process.setMotionBlur(true);
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.presentFullScreen = false;
-		wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
+		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		fx.process.clear();
 		wiRenderer::GetDevice()->EventEnd();
 	}
@@ -417,7 +426,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	fx.process.setToneMap(true);
 	if (getEyeAdaptionEnabled())
 	{
-		fx.setMaskMap(wiRenderer::GetLuminance(shadedSceneRT.GetTexture(), threadID));
+		fx.setMaskMap(wiRenderer::GetLuminance(shadedSceneRT.GetTextureResolvedMSAA(threadID), threadID));
 	}
 	else
 	{
@@ -429,7 +438,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	}
 	else
 	{
-		wiImage::Draw(shadedSceneRT.GetTexture(), fx, threadID);
+		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 	}
 	fx.process.clear();
 	wiRenderer::GetDevice()->EventEnd();
@@ -463,7 +472,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	}
 
 
-	rtFinal[1].Activate(threadID, mainRT.depth);
+	rtFinal[1].Activate(threadID);
 	wiRenderer::GetDevice()->EventBegin(L"FXAA", threadID);
 	fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
@@ -471,15 +480,6 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	else
 		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
 	fx.process.clear();
-	wiRenderer::GetDevice()->EventEnd();
-
-	wiRenderer::GetDevice()->EventBegin(L"Debug Geometry", threadID);
-	wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
-	wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
-	wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
-	wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
-	wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
-	wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
 	wiRenderer::GetDevice()->EventEnd();
 }
 void Renderable3DComponent::RenderColorGradedComposition(){

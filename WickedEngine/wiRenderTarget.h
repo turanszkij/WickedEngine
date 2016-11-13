@@ -10,6 +10,8 @@ class wiRenderTarget
 private:
 	int numViews;
 	vector<wiGraphicsTypes::Texture2D*>		renderTargets;
+	vector<wiGraphicsTypes::Texture2D*>		renderTargets_resolvedMSAA;
+	bool resolvedMSAAUptodate;
 public:
 	wiGraphicsTypes::ViewPort	viewPort;
 	wiDepthTarget*				depth;
@@ -30,7 +32,8 @@ public:
 	void Set(GRAPHICSTHREAD threadID, bool disableColor = false);
 	void Set(GRAPHICSTHREAD threadID, wiDepthTarget*, bool disableColor = false);
 
-	wiGraphicsTypes::Texture2D* GetTexture(int viewID = 0) const{ return renderTargets[viewID]; }
+	wiGraphicsTypes::Texture2D* GetTexture(int viewID = 0) const { return renderTargets[viewID]; }
+	wiGraphicsTypes::Texture2D* GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int viewID = 0);
 	wiGraphicsTypes::Texture2DDesc GetDesc(int viewID = 0) const { assert(viewID < numViews); return GetTexture(viewID)->GetDesc(); }
 	UINT GetMipCount();
 	bool IsInitialized() const { return (numViews > 0 || depth != nullptr); }

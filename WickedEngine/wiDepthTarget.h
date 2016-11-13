@@ -6,6 +6,8 @@ class wiDepthTarget
 {
 private:
 	wiGraphicsTypes::Texture2D*		texture;
+	wiGraphicsTypes::Texture2D*		texture_resolvedMSAA;
+	bool resolvedMSAAUptodate;
 public:
 
 	wiDepthTarget();
@@ -17,6 +19,7 @@ public:
 	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);
 
 	wiGraphicsTypes::Texture2D* GetTexture() const { return texture; }
+	wiGraphicsTypes::Texture2D* GetTextureResolvedMSAA(GRAPHICSTHREAD threadID);
 	wiGraphicsTypes::Texture2DDesc GetDesc() const { return GetTexture()->GetDesc(); }
 };
 
