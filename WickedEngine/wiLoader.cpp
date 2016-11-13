@@ -2889,7 +2889,7 @@ void Model::Serialize(wiArchive& archive)
 				if (it != materials.end())
 				{
 					y->material = it->second;
-					y->SetUpPatches();
+					y->Generate();
 				}
 			}
 		}

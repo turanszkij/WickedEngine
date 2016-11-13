@@ -11,6 +11,7 @@ TiledForwardRenderableComponent::TiledForwardRenderableComponent()
 	ForwardRenderableComponent::setProperties();
 	setShadowsEnabled(true);
 	setHairParticleAlphaCompositionEnabled(true);
+	//setMSAASampleCount(8);
 }
 TiledForwardRenderableComponent::~TiledForwardRenderableComponent() 
 {

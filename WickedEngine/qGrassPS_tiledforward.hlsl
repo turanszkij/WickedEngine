@@ -6,6 +6,7 @@
 float4 main(QGS_OUT PSIn) : SV_Target
 {
 	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
+	color.a *= 1.0 - PSIn.fade;
 	clip(color.a - 1.0f / 256.0f); // cancel heaviest overdraw for the alpha composition effect
 	float opacity = 1;
 	color = DEGAMMA(color);

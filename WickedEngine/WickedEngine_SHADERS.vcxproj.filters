@@ -126,25 +126,10 @@
     <FxCompile Include="envMapGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
-    <FxCompile Include="grassL0GS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="grassL1GS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="grassL2GS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
     <FxCompile Include="lensFlareGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="pointspriteGS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="qGrassLCloseGS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="qGrassLDistGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="sOGS.hlsl">
@@ -482,6 +467,12 @@
     </FxCompile>
     <FxCompile Include="resolveMSAADepthStencilCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="qgrassGS.hlsl">
+      <Filter>GS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

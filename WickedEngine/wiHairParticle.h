@@ -20,21 +20,15 @@ public:
 
 		ALIGN_16
 	};
-	struct Patch
-	{
-		vector<Point> p;
-		XMFLOAT3 min, max;
-		//GPUBuffer vb;
-		Patch();
-		void add(const Point&);
-		void CleanUp();
-	};
 private:
 	GFX_STRUCT ConstantBuffer
 	{
 		XMMATRIX mWorld;
-		XMFLOAT3 color;
-		float drawdistance;
+		XMFLOAT3 color; float __pad0;
+		float LOD0;
+		float LOD1;
+		float LOD2;
+		float __pad1;
 
 		CB_SETBINDSLOT(CBSLOT_OTHER_HAIRPARTICLE)
 
@@ -43,7 +37,7 @@ private:
 	static wiGraphicsTypes::VertexLayout *il;
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT], *qps[SHADERTYPE_COUNT];
-	static wiGraphicsTypes::GeometryShader *gs[3],*qgs[2];
+	static wiGraphicsTypes::GeometryShader *gs,*qgs;
 	static wiGraphicsTypes::GPUBuffer *cbgs;
 	static wiGraphicsTypes::DepthStencilState *dss;
 	static wiGraphicsTypes::RasterizerState *rs,*ncrs;
@@ -51,14 +45,6 @@ private:
 	static int LOD[3];
 public:
 	static void LoadShaders();
-private:
-	struct FrameCulling
-	{
-		CulledList		culledPatches;
-		vector<Point>	renderPoints[3]; // per lod
-		XMFLOAT4X4		renderMatrix;
-	};
-	unordered_map<Camera*, FrameCulling> frameCullings;
 
 public:
 	wiHairParticle();
@@ -66,9 +52,8 @@ public:
 		, const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup);
 	void CleanUp();
 
-	void SetUpPatches();
+	void Generate();
 	void Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID);
-	void PerformCulling(Camera* camera);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
@@ -80,9 +65,8 @@ public:
 	Material* material;
 	XMFLOAT4X4 OriginalMatrix_Inverse;
 	Object* object;
-	vector<Patch*> patches;
-	wiSPTree* spTree;
-	wiGraphicsTypes::GPUBuffer *vb[3];
+	vector<Point> points;
+	wiGraphicsTypes::GPUBuffer *vb;
 
 	void Serialize(wiArchive& archive);
 };

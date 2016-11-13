@@ -1411,7 +1411,6 @@ void wiRenderer::UpdatePerFrameData()
 					for (wiHairParticle* hair : object->hParticleSystems)
 					{
 						culling.culledHairParticleSystems.push_back(hair);
-						hair->PerformCulling(camera);
 					}
 					if (object->GetRenderTypes() & RENDERTYPE_OPAQUE)
 					{

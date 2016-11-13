@@ -13,7 +13,7 @@ using namespace wiGraphicsTypes;
 VertexLayout *wiHairParticle::il;
 VertexShader *wiHairParticle::vs;
 PixelShader *wiHairParticle::ps[],*wiHairParticle::qps[];
-GeometryShader *wiHairParticle::gs[],*wiHairParticle::qgs[];
+GeometryShader *wiHairParticle::gs,*wiHairParticle::qgs;
 GPUBuffer *wiHairParticle::cbgs;
 DepthStencilState *wiHairParticle::dss;
 RasterizerState *wiHairParticle::rs, *wiHairParticle::ncrs;
@@ -22,6 +22,7 @@ int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
 {
+	vb = nullptr;
 	name = "";
 	densityG = "";
 	lenG = "";
@@ -34,6 +35,7 @@ wiHairParticle::wiHairParticle()
 wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 						   , const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup)
 {
+	vb = nullptr;
 	name=newName;
 	densityG=densityGroup;
 	lenG=lengthGroup;
@@ -53,21 +55,19 @@ wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
 	
 	if (material)
 	{
-		SetUpPatches();
+		Generate();
 	}
 }
 
 
-void wiHairParticle::CleanUp(){
-	for (unsigned int i = 0; i<patches.size(); ++i)
-		patches[i]->CleanUp();
-	patches.clear();
-	SAFE_DELETE(vb[0]);
-	SAFE_DELETE(vb[1]);
-	SAFE_DELETE(vb[2]);
+void wiHairParticle::CleanUp()
+{
+	points.clear();
+	SAFE_DELETE(vb);
 }
 
-void wiHairParticle::CleanUpStatic(){
+void wiHairParticle::CleanUpStatic()
+{
 	SAFE_DELETE(il);
 	SAFE_DELETE(vs);
 	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
@@ -75,11 +75,8 @@ void wiHairParticle::CleanUpStatic(){
 		SAFE_DELETE(ps[i]);
 		SAFE_DELETE(qps[i]);
 	}
-	SAFE_DELETE(gs[0]);
-	SAFE_DELETE(gs[1]);
-	SAFE_DELETE(gs[2]);
-	SAFE_DELETE(qgs[0]);
-	SAFE_DELETE(qgs[1]);
+	SAFE_DELETE(gs);
+	SAFE_DELETE(qgs);
 	SAFE_DELETE(cbgs);
 	SAFE_DELETE(dss);
 	SAFE_DELETE(rs);
@@ -118,15 +115,12 @@ void wiHairParticle::LoadShaders()
 	qps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
 	qps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
-	gs[0] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL0GS.cso", wiResourceManager::GEOMETRYSHADER));
-	gs[1] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL1GS.cso", wiResourceManager::GEOMETRYSHADER));
-	gs[2] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassL2GS.cso", wiResourceManager::GEOMETRYSHADER));
-
-	qgs[0] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLCloseGS.cso", wiResourceManager::GEOMETRYSHADER));
-	qgs[1] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassLDistGS.cso", wiResourceManager::GEOMETRYSHADER));
+	gs = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassGS.cso", wiResourceManager::GEOMETRYSHADER));
+	qgs = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qgrassGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 }
-void wiHairParticle::SetUpStatic(){
+void wiHairParticle::SetUpStatic()
+{
 	Settings(10,25,120);
 
 	LoadShaders();
@@ -214,49 +208,25 @@ void wiHairParticle::Settings(int l0,int l1,int l2)
 	LOD[2]=l2;
 }
 
-struct PatchHolder:public Cullable
+
+void wiHairParticle::Generate()
 {
-	wiHairParticle::Patch* patch;
-	PatchHolder(){}
-	PatchHolder(wiHairParticle::Patch* p){patch=p;}
-};
-
-void wiHairParticle::SetUpPatches()
-{
-	GPUBufferDesc bd;
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(Point)*MAX_PARTICLES;
-	bd.BindFlags = BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	vb[0] = new GPUBuffer;
-	vb[1] = new GPUBuffer;
-	vb[2] = new GPUBuffer;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vb[0] );
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vb[1] );
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vb[2] );
-
-	const int triangleperpatch = 4;
-	int currentTris=0;
-
-	vector<PatchHolder*> pholder;
-	patches.push_back(new Patch());
-	pholder.push_back(new PatchHolder(patches.back()));
+	points.clear();
 
 	Mesh* mesh = object->mesh;
 
 	XMMATRIX matr = object->getMatrix();
 
-	int dVG=-1,lVG=-1;
-	if(densityG.compare("")){
-		for (unsigned int i = 0; i<mesh->vertexGroups.size(); ++i)
-			if(!mesh->vertexGroups[i].name.compare(densityG))
-				dVG=i;
+	int dVG = -1, lVG = -1;
+	if (densityG.compare("")) {
+		for (unsigned int i = 0; i < mesh->vertexGroups.size(); ++i)
+			if (!mesh->vertexGroups[i].name.compare(densityG))
+				dVG = i;
 	}
-	if(lenG.compare("")){
-		for (unsigned int i = 0; i<mesh->vertexGroups.size(); ++i)
-			if(!mesh->vertexGroups[i].name.compare(lenG))
-				lVG=i;
+	if (lenG.compare("")) {
+		for (unsigned int i = 0; i < mesh->vertexGroups.size(); ++i)
+			if (!mesh->vertexGroups[i].name.compare(lenG))
+				lVG = i;
 	}
 	
 	float avgPatchSize;
@@ -268,51 +238,52 @@ void wiHairParticle::SetUpPatches()
 	if (mesh->indices.size() < 4)
 		return;
 
-	for (unsigned int i = 0; i<mesh->indices.size() - 3; i += 3){
+	for (unsigned int i = 0; i<mesh->indices.size() - 3; i += 3)
+	{
 
 		unsigned int vi[]={mesh->indices[i],mesh->indices[i+1],mesh->indices[i+2]};
 		float denMod[]={1,1,1},lenMod[]={1,1,1};
-		if(dVG>=0){
+		if (dVG >= 0) {
 			auto found = mesh->vertexGroups[dVG].vertices.find(vi[0]);
-			if(found!=mesh->vertexGroups[dVG].vertices.end())
-				denMod[0]=found->second;
+			if (found != mesh->vertexGroups[dVG].vertices.end())
+				denMod[0] = found->second;
 			else
 				continue;
 
 			found = mesh->vertexGroups[dVG].vertices.find(vi[1]);
-			if(found!=mesh->vertexGroups[dVG].vertices.end())
-				denMod[1]=found->second;
+			if (found != mesh->vertexGroups[dVG].vertices.end())
+				denMod[1] = found->second;
 			else
 				continue;
 
 			found = mesh->vertexGroups[dVG].vertices.find(vi[2]);
-			if(found!=mesh->vertexGroups[dVG].vertices.end())
-				denMod[2]=found->second;
+			if (found != mesh->vertexGroups[dVG].vertices.end())
+				denMod[2] = found->second;
 			else
 				continue;
 		}
-		if(lVG>=0){
+		if (lVG >= 0) {
 			auto found = mesh->vertexGroups[lVG].vertices.find(vi[0]);
-			if(found != mesh->vertexGroups[lVG].vertices.end())
-				lenMod[0]=found->second;
+			if (found != mesh->vertexGroups[lVG].vertices.end())
+				lenMod[0] = found->second;
 			else
 				continue;
 
 			found = mesh->vertexGroups[lVG].vertices.find(vi[1]);
-			if(found != mesh->vertexGroups[lVG].vertices.end())
-				lenMod[1]=found->second;
+			if (found != mesh->vertexGroups[lVG].vertices.end())
+				lenMod[1] = found->second;
 			else
 				continue;
 
 			found = mesh->vertexGroups[lVG].vertices.find(vi[2]);
-			if(found != mesh->vertexGroups[lVG].vertices.end())
-				lenMod[2]=found->second;
+			if (found != mesh->vertexGroups[lVG].vertices.end())
+				lenMod[2] = found->second;
 			else
 				continue;
 		}
-		for(int m=0;m<3;++m){
-			if(denMod[m]<0) denMod[m]=0;
-			if(lenMod[m]<0) lenMod[m]=0;
+		for (int m = 0; m < 3; ++m) {
+			if (denMod[m] < 0) denMod[m] = 0;
+			if (lenMod[m] < 0) lenMod[m] = 0;
 		}
 
 		SkinnedVertex* v[] = {
@@ -331,9 +302,11 @@ void wiHairParticle::SetUpPatches()
 			density += (wiRandom::getRandom(0, 99)) <= rdense;
 			int PATCHSIZE = material->texture?(int)density:(int)density*10;
 			  
-			if(PATCHSIZE){
+			if(PATCHSIZE)
+			{
 
-				for(int p=0;p<PATCHSIZE;++p){
+				for(int p=0;p<PATCHSIZE;++p)
+				{
 					float f = wiRandom::getRandom(0, 1000) * 0.001f, g = wiRandom::getRandom(0, 1000) * 0.001f;
 					if (f + g > 1)
 					{
@@ -368,29 +341,26 @@ void wiHairParticle::SetUpPatches()
 					float lbar = lenMod[0] + f*(lenMod[1]-lenMod[0]) + g*(lenMod[2]-lenMod[0]);
 					addP.normalLen.w = length*lbar + (float)(wiRandom::getRandom(0, 1000) - 500)*0.001f*length*lbar;
 					addP.posRand.w = (float)wiRandom::getRandom(0, 1000);
-					patches.back()->add(addP);
-				
-					XMFLOAT3 posN = XMFLOAT3(addP.posRand.x,addP.posRand.y,addP.posRand.z);
-					patches.back()->min=wiMath::Min(patches.back()->min,posN);
-					patches.back()->max=wiMath::Max(patches.back()->max,posN);
+					points.push_back(addP);
 				}
-
-				if(currentTris>=triangleperpatch){
-					pholder.back()->bounds.create(patches.back()->min,patches.back()->max);
-					currentTris=0;
-
-					patches.push_back(new Patch());
-					pholder.push_back(new PatchHolder(patches.back()));
-				}
-				else
-					currentTris++;
 
 			}
 		}
 	}
 
-	GenerateSPTree(spTree,vector<Cullable*>(pholder.begin(),pholder.end()),SPTREE_GENERATE_OCTREE);
-	return;
+
+	SAFE_DELETE(vb);
+
+	GPUBufferDesc bd;
+	ZeroMemory(&bd, sizeof(bd));
+	bd.Usage = USAGE_DYNAMIC;
+	bd.ByteWidth = (UINT)(sizeof(Point) * points.size());
+	bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	SubresourceData data = {};
+	data.pSysMem = points.data();
+	vb = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, vb);
 }
 void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
@@ -398,8 +368,6 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 	PixelShader* _ps = texture != nullptr ? qps[shaderType] : ps[shaderType];
 	if (_ps == nullptr)
 		return;
-
-	const FrameCulling& culling = frameCullings[camera];
 
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -416,130 +384,38 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 			device->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
 			device->BindResourceGS(texture,TEXSLOT_ONDEMAND0,threadID);
 		}
-		else
-			device->BindRasterizerState(ncrs,threadID);
 
+		device->BindRasterizerState(ncrs, threadID);
+
+		XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
+		XMMATRIX renderMatrix = inverseMat * object->getMatrix();
 
 		ConstantBuffer gcb;
-		gcb.mWorld = XMMatrixTranspose(XMLoadFloat4x4(&culling.renderMatrix));
-		gcb.color=material->diffuseColor;
-		gcb.drawdistance = (float)LOD[2];
+		gcb.mWorld = XMMatrixTranspose(renderMatrix);
+		gcb.color = material->baseColor;
+		gcb.LOD0 = (float)LOD[0];
+		gcb.LOD1 = (float)LOD[1];
+		gcb.LOD2 = (float)LOD[2];
 		
 		device->UpdateBuffer(cbgs,&gcb,threadID);
 		device->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		// use the depthstencil of the drawworld instead!
-		//device->BindDepthStencilState(dss,STENCILREF_DEFAULT,threadID);
-
-		for (int i = 0; i < 3; ++i)
+		if (texture)
 		{
-			if (culling.renderPoints[i].empty())
-			{
-				continue;
-			}
-
-			if (texture)
-			{
-				device->BindGS(i < 2 ? qgs[0] : qgs[1], threadID);
-				device->BindRasterizerState(i < 2 ? ncrs : rs, threadID);
-			}
-			else
-			{
-				device->BindGS(gs[i], threadID);
-			}
-
-			device->UpdateBuffer(vb[i], culling.renderPoints[i].data(), threadID, (int)(sizeof(Point)*culling.renderPoints[i].size()));
-			device->BindVertexBuffer(vb[i], 0, sizeof(Point), threadID);
-			device->Draw((int)culling.renderPoints[i].size(), threadID);
+			device->BindGS(qgs, threadID);
 		}
+		else
+		{
+			device->BindGS(gs, threadID);
+		}
+
+		device->BindVertexBuffer(vb, 0, sizeof(Point), threadID);
+		device->Draw((int)points.size(), threadID);
 
 		device->BindGS(nullptr,threadID);
 
 		device->EventEnd(threadID);
 	}
-}
-void wiHairParticle::PerformCulling(Camera* camera)
-{
-	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
-	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
-	XMMATRIX inverseRenderMat = XMMatrixInverse(nullptr, renderMatrix);
-
-	Frustum frustum;
-
-	// Culling camera needs to be transformed according to hair ps transform (inverse) 
-	XMFLOAT4X4 cull_View;
-	XMFLOAT3 eye;
-	{
-		XMMATRIX View;
-		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye;
-
-		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation));
-		At = XMVector3Normalize(XMVector3Transform(XMVector3Transform(At, camRot), inverseRenderMat));
-		Up = XMVector3Normalize(XMVector3Transform(XMVector3Transform(Up, camRot), inverseRenderMat));
-		Eye = XMVector4Transform(camera->GetEye(), inverseRenderMat);
-
-		View = XMMatrixLookToLH(Eye, At, Up);
-
-		XMStoreFloat4x4(&cull_View, View);
-		XMStoreFloat3(&eye, Eye);
-	}
-
-	frustum.ConstructFrustum((float)LOD[2], camera->Projection, cull_View);
-
-
-
-	FrameCulling& culling = frameCullings[camera];
-	CulledList& culledPatches = culling.culledPatches;
-
-	culling.culledPatches.clear();
-	XMStoreFloat4x4(&culling.renderMatrix, renderMatrix);
-
-	if (spTree != nullptr)
-	{
-		spTree->getVisible(frustum, culledPatches, wiSPTree::SP_TREE_SORT_FRONT_TO_BACK);
-
-		for (int i = 0; i<3; ++i) 
-		{
-			vector<Point>& renderPoints = culling.renderPoints[i];
-			renderPoints.clear();
-			renderPoints.reserve(MAX_PARTICLES);
-
-			for(auto& culled : culledPatches)
-			{
-				if (culled == nullptr)
-				{
-					continue;
-				}
-
-				Patch* patch = ((PatchHolder*)culled)->patch;
-
-				float dis = wiMath::Distance(eye, ((PatchHolder*)culled)->bounds.getCenter());
-
-				if (dis<LOD[i])
-				{
-					culled = nullptr;
-					renderPoints.insert(renderPoints.end(), patch->p.begin(), patch->p.end());
-				}
-			}
-		}
-	}
-
-}
-
-wiHairParticle::Patch::Patch(){
-	p.resize(0);
-	min=XMFLOAT3(FLOAT32_MAX,FLOAT32_MAX,FLOAT32_MAX);
-	max=XMFLOAT3(-FLOAT32_MAX,-FLOAT32_MAX,-FLOAT32_MAX);
-	//vb=NULL;
-}
-void wiHairParticle::Patch::add(const Point& pp){
-	p.push_back(pp);
-}
-void wiHairParticle::Patch::CleanUp(){
-	p.clear();
-	//if(vb)
-	//	vb->Release();
-	//vb=NULL;
 }
 
 
