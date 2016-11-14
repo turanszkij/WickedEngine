@@ -1751,10 +1751,11 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 						instance->skipOcclusionQuery = false;
 						continue;
 					}
-					// render bounding box to later read the occlusion status
-					GetDevice()->QueryBegin(&query, threadID);
 					cb.mTransform = XMMatrixTranspose(instance->GetOBB()*getCamera()->GetViewProjection());
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+					// render bounding box to later read the occlusion status
+					GetDevice()->QueryBegin(&query, threadID);
 					GetDevice()->Draw(36, threadID);
 					GetDevice()->QueryEnd(&query, threadID);
 				}

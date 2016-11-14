@@ -43,7 +43,6 @@ struct QGS_OUT
 
 inline bool IsVisible(in float3 root, in float length)
 {
-
 	// culling:
 	// View space eye position is always at the origin.
 	const float3 eyePos = float3(0, 0, 0);
