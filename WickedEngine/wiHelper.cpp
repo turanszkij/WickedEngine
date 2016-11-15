@@ -197,13 +197,15 @@ namespace wiHelper
 	
 	void Sleep(float milliseconds)
 	{
+		//::Sleep((DWORD)milliseconds);
+		milliseconds /= 1000.0f;
 		chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 		double ms = 0;
 		while (ms < milliseconds)
 		{
 			chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
 			chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
-			ms = time_span.count() / 1000.0;
+			ms = time_span.count();
 		}
 	}
 }

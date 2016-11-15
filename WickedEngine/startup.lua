@@ -40,6 +40,12 @@ runProcess(function()
 			PutEnvProbe(GetCamera().GetPosition(),256);
 		end
 		
+		if(input.Press(VK_F4)) then
+			main.GetActiveComponent().SetPreferredThreadingCount(2);
+		end
+		if(input.Press(VK_F5)) then
+			main.GetActiveComponent().SetPreferredThreadingCount(3);
+		end
 		if(input.Press(VK_F6)) then
 			main.GetActiveComponent().SetPreferredThreadingCount(4);
 		end
