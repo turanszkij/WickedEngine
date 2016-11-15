@@ -154,4 +154,19 @@ bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)
 	return result;
 }
 
+
+
+static const float4 frustumCorners[4] = {
+	float4(-1, -1, 1, 1),
+	float4(1, -1, 1, 1),
+	float4(-1, 1, 1, 1),
+	float4(1, 1, 1, 1)
+};
+static const Frustum frustum = {
+	ComputePlane(float3(0,0,0), frustumCorners[2].xyz, frustumCorners[0].xyz),
+	ComputePlane(float3(0,0,0), frustumCorners[1].xyz, frustumCorners[3].xyz),
+	ComputePlane(float3(0,0,0), frustumCorners[0].xyz, frustumCorners[1].xyz),
+	ComputePlane(float3(0,0,0), frustumCorners[3].xyz, frustumCorners[2].xyz)
+};
+
 #endif // _CULLING_SHADER_HF_

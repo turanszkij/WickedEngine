@@ -9,7 +9,8 @@ void main(
 	float grassLength = input[0].nor.w;
 	float3 root = mul(float4(input[0].pos.xyz, 1), xWorld).xyz;
 
-	if (!IsVisible(root, grassLength))
+	Sphere sphere = { mul(float4(root,1), g_xCamera_View).xyz, grassLength };
+	if (!SphereInsideFrustum(sphere, frustum, 1, LOD2))
 	{
 		return;
 	}

@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "cullingShaderHF.hlsli"
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
@@ -25,8 +26,16 @@ struct VertextoPixel
 };
 
 [maxvertexcount(4)]
-void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
+void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream, uint vid : SV_PrimitiveID)
 {
+	float quadLength = p[0].inSizOpMir.x*0.5f;
+
+	Sphere sphere = { mul(float4(p[0].pos.xyz,1), g_xCamera_View).xyz, quadLength };
+	if (!SphereInsideFrustum(sphere, frustum, 1, g_xFrame_MainCamera_ZFarP))
+	{
+		return;
+	}
+
 	VertextoPixel p1 = (VertextoPixel)0;
 	float2x2 rot = float2x2(
 		cos(p[0].rot),-sin(p[0].rot),
@@ -49,7 +58,6 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream)
 	p[0].vel				= mul(p[0].vel, (float3x3)g_xCamera_View);
 
 
-	float quadLength = p[0].inSizOpMir.x*0.5f;
 
 	//p1.col = p[0].color;
 	p1.opaAddDarkSiz = float4(saturate(p[0].inSizOpMir.y),xAdd.x,xAdd.y,p[0].inSizOpMir.x);

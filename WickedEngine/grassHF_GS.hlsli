@@ -41,40 +41,6 @@ struct QGS_OUT
 	float4 pos2D : SCREENPOSITION;
 };
 
-inline bool IsVisible(in float3 root, in float length)
-{
-	// culling:
-	// View space eye position is always at the origin.
-	const float3 eyePos = float3(0, 0, 0);
-
-	// Compute 4 points on the far clipping plane to use as the 
-	// frustum vertices.
-	float4 corners[4];
-	// Top left point
-	corners[0] = float4(-1, -1, 1, 1);
-	// Top right point
-	corners[1] = float4(1, -1, 1, 1);
-	// Bottom left point
-	corners[2] = float4(-1, 1, 1, 1);
-	// Bottom right point
-	corners[3] = float4(1, 1, 1, 1);
-
-	// Now build the frustum planes from the view space points
-	Frustum frustum;
-
-	// Left plane
-	frustum.planes[0] = ComputePlane(eyePos, corners[2].xyz, corners[0].xyz);
-	// Right plane
-	frustum.planes[1] = ComputePlane(eyePos, corners[1].xyz, corners[3].xyz);
-	// Top plane
-	frustum.planes[2] = ComputePlane(eyePos, corners[0].xyz, corners[1].xyz);
-	// Bottom plane
-	frustum.planes[3] = ComputePlane(eyePos, corners[3].xyz, corners[2].xyz);
-
-	Sphere sphere = { mul(float4(root,1), g_xCamera_View).xyz, length };
-	return SphereInsideFrustum(sphere, frustum, 1, LOD2);
-}
-
 static const float3 MOD[] = {
 	float3(-0.010735935, 0.01647018, 0.0062425877),
 	float3(-0.06533369, 0.3647007, -0.13746321),
