@@ -1731,6 +1731,10 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
 			Mesh* mesh = iter->first;
+			if (!mesh->renderable)
+			{
+				continue;
+			}
 			const CulledObjectList& visibleInstances = iter->second;
 
 			MiscCB cb;
@@ -1782,6 +1786,11 @@ void wiRenderer::OcclusionCulling_Read()
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
 			Mesh* mesh = iter->first;
+			if (!mesh->renderable)
+			{
+				continue;
+			}
+
 			const CulledObjectList& visibleInstances = iter->second;
 
 			for (Object* instance : visibleInstances)
@@ -3037,6 +3046,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
 		{
 			Mesh* mesh = iter->first;
+			if (!mesh->renderable)
+			{
+				continue;
+			}
+
 			const CulledObjectList& visibleInstances = iter->second;
 
 			float tessF = mesh->getTessellationFactor();

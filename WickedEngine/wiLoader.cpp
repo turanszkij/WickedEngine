@@ -1936,9 +1936,18 @@ void Mesh::Optimize()
 {
 	//TODO
 }
-void Mesh::CreateBuffers(Object* object) {
+void Mesh::CreateBuffers(Object* object) 
+{
 	if (!buffersComplete) 
 	{
+		if (vertices.empty())
+		{
+			renderable = false;
+		}
+		if (!renderable)
+		{
+			return;
+		}
 
 		GPUBufferDesc bd;
 		if (!instanceBuffer.IsValid())
@@ -1979,31 +1988,28 @@ void Mesh::CreateBuffers(Object* object) {
 			InitData.pSysMem = vertices_Complete.data();
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer);
 
-		if (renderable)
-		{
-			if (object->isArmatureDeformed() && !softBody) {
-				ZeroMemory(&bd, sizeof(bd));
-				bd.Usage = USAGE_DEFAULT;
-				bd.ByteWidth = (UINT)(sizeof(Vertex) * vertices_Complete.size());
-				bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
-				bd.CPUAccessFlags = 0;
-				bd.StructureByteStride = 0;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer);
-			}
+		if (object->isArmatureDeformed() && !softBody) {
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = (UINT)(sizeof(Vertex) * vertices_Complete.size());
+			bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			bd.StructureByteStride = 0;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer);
+		}
 
-			//PHYSICALMAPPING
-			if (!physicsverts.empty() && physicalmapGP.empty())
-			{
-				for (unsigned int i = 0; i < vertices.size(); ++i) {
-					for (unsigned int j = 0; j < physicsverts.size(); ++j) {
-						if (fabs(vertices[i].pos.x - physicsverts[j].x) < FLT_EPSILON
-							&&	fabs(vertices[i].pos.y - physicsverts[j].y) < FLT_EPSILON
-							&&	fabs(vertices[i].pos.z - physicsverts[j].z) < FLT_EPSILON
-							)
-						{
-							physicalmapGP.push_back(j);
-							break;
-						}
+		//PHYSICALMAPPING
+		if (!physicsverts.empty() && physicalmapGP.empty())
+		{
+			for (unsigned int i = 0; i < vertices.size(); ++i) {
+				for (unsigned int j = 0; j < physicsverts.size(); ++j) {
+					if (fabs(vertices[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+						&&	fabs(vertices[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+						&&	fabs(vertices[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+						)
+					{
+						physicalmapGP.push_back(j);
+						break;
 					}
 				}
 			}
