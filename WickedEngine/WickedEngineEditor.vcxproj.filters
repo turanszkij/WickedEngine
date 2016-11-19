@@ -1,23 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="fonts">
       <UniqueIdentifier>{f93c7868-4453-4ef8-94c9-db6da54fddd8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Resource">
-      <UniqueIdentifier>{301fff70-6331-4cf4-8db0-1023546019f9}</UniqueIdentifier>
     </Filter>
     <Filter Include="images">
       <UniqueIdentifier>{e1f824f0-bb57-4a4d-af91-24cafaef11df}</UniqueIdentifier>
@@ -34,93 +23,96 @@
     <Filter Include="Scene\Sample\rims">
       <UniqueIdentifier>{2bef054b-1e99-4186-a5f4-9e4bc182e910}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Code">
+      <UniqueIdentifier>{314039e9-0e24-4816-b0cf-d87020800f22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WickedEngineEditor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Editor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MaterialWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ObjectWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MeshWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WorldWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PostprocessWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CameraWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RendererWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EnvProbeWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LightWindow.h">
-      <Filter>Header Files</Filter>
+      <Filter>Code</Filter>
     </ClInclude>
     <ClInclude Include="DecalWindow.h">
-      <Filter>Header Files</Filter>
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="Editor.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="EnvProbeWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="LightWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="MaterialWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="PostprocessWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="RendererWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="WickedEngineEditor.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="WorldWindow.h">
+      <Filter>Code</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WickedEngineEditor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Editor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MaterialWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ObjectWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MeshWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WorldWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PostprocessWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="CameraWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RendererWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EnvProbeWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LightWindow.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="DecalWindow.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="Editor.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="EnvProbeWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="LightWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="MaterialWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="ObjectWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="PostprocessWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="RendererWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="WickedEngineEditor.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="WorldWindow.cpp">
+      <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -132,15 +124,6 @@
     </Image>
     <Image Include="fonts\basic.dds">
       <Filter>fonts</Filter>
-    </Image>
-    <Image Include="Resource\spotlight.dds">
-      <Filter>Resource</Filter>
-    </Image>
-    <Image Include="Resource\directional_light.dds">
-      <Filter>Resource</Filter>
-    </Image>
-    <Image Include="Resource\pointlight.dds">
-      <Filter>Resource</Filter>
     </Image>
     <Image Include="images\leaf.png">
       <Filter>images</Filter>
@@ -237,6 +220,15 @@
     </Image>
     <Image Include="Scene\Sample\sky_night.dds">
       <Filter>Scene\Sample</Filter>
+    </Image>
+    <Image Include="images\directional_light.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="images\pointlight.dds">
+      <Filter>images</Filter>
+    </Image>
+    <Image Include="images\spotlight.dds">
+      <Filter>images</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

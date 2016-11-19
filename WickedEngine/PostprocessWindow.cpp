@@ -17,7 +17,7 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	ppWindow->SetSize(XMFLOAT2(360, 450));
 	GUI->AddWidget(ppWindow);
 
-	float x = 200;
+	float x = 110;
 	float y = 0;
 
 	lensFlareCheckBox = new wiCheckBox("LensFlare: ");
@@ -83,6 +83,15 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 		component->setDepthOfFieldEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(depthOfFieldCheckBox);
+
+	motionBlurFocusSlider = new wiSlider(0, 1000, 100, 10000, "Focus: ");
+	motionBlurFocusSlider->SetSize(XMFLOAT2(100, 20));
+	motionBlurFocusSlider->SetPos(XMFLOAT2(x + 100, y));
+	motionBlurFocusSlider->SetValue(component->getDepthOfFieldFocus());
+	motionBlurFocusSlider->OnSlide([&](wiEventArgs args) {
+		component->setDepthOfFieldFocus(args.fValue);
+	});
+	ppWindow->AddWidget(motionBlurFocusSlider);
 
 	bloomCheckBox = new wiCheckBox("Bloom: ");
 	bloomCheckBox->SetPos(XMFLOAT2(x, y += 35));

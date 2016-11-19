@@ -632,9 +632,9 @@ void EditorComponent::Load()
 
 	
 
-	pointLightTex = *(Texture2D*)Content.add("Resource/pointlight.dds");
-	spotLightTex = *(Texture2D*)Content.add("Resource/spotlight.dds");
-	dirLightTex = *(Texture2D*)Content.add("Resource/directional_light.dds");
+	pointLightTex = *(Texture2D*)Content.add("images/pointlight.dds");
+	spotLightTex = *(Texture2D*)Content.add("images/spotlight.dds");
+	dirLightTex = *(Texture2D*)Content.add("images/directional_light.dds");
 }
 void EditorComponent::Start()
 {
