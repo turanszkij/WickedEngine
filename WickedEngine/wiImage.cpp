@@ -17,12 +17,12 @@ VertexShader     *wiImage::vertexShader = nullptr,*wiImage::screenVS = nullptr;
 PixelShader      *wiImage::pixelShader = nullptr, *wiImage::blurHPS = nullptr, *wiImage::blurVPS = nullptr, *wiImage::shaftPS = nullptr, *wiImage::outlinePS = nullptr
 	, *wiImage::dofPS = nullptr, *wiImage::motionBlurPS = nullptr, *wiImage::bloomSeparatePS = nullptr, *wiImage::fxaaPS = nullptr, *wiImage::ssaoPS = nullptr, *wiImage::deferredPS = nullptr
 	, *wiImage::ssssPS = nullptr, *wiImage::linDepthPS = nullptr, *wiImage::colorGradePS = nullptr, *wiImage::ssrPS = nullptr, *wiImage::screenPS = nullptr, *wiImage::stereogramPS = nullptr
-	, *wiImage::tonemapPS = nullptr;
+	, *wiImage::tonemapPS = nullptr, *wiImage::reprojectDepthBufferPS = nullptr;
 	
 
 RasterizerState		*wiImage::rasterizerState = nullptr;
 DepthStencilState	*wiImage::depthStencilStateGreater = nullptr, *wiImage::depthStencilStateLess = nullptr, *wiImage::depthStencilStateEqual = nullptr
-	,*wiImage::depthNoStencilState = nullptr;
+	, *wiImage::depthNoStencilState = nullptr, *wiImage::depthStencilStateDepthWrite = nullptr;
 
 #pragma endregion
 
@@ -79,6 +79,7 @@ void wiImage::LoadShaders()
 	screenPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenPS.cso", wiResourceManager::PIXELSHADER));
 	stereogramPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "stereogramPS.cso", wiResourceManager::PIXELSHADER));
 	tonemapPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "toneMapPS.cso", wiResourceManager::PIXELSHADER));
+	reprojectDepthBufferPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "reprojectDepthBufferPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiImage::SetUpStates()
@@ -150,6 +151,16 @@ void wiImage::SetUpStates()
 	dsd.StencilEnable = false;
 	depthNoStencilState = new DepthStencilState;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthNoStencilState);
+
+
+	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	dsd.DepthFunc = COMPARISON_ALWAYS;
+
+	dsd.StencilEnable = false;
+	// Create the depth stencil state.
+	depthStencilStateDepthWrite = new DepthStencilState;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateDepthWrite);
 
 	
 	BlendStateDesc bd;
@@ -363,8 +374,13 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				device->BindPS(tonemapPS, threadID);
 			else if(effects.process.ssss.x + effects.process.ssss.y > 0)
 				device->BindPS(ssssPS,threadID);
-			else if(effects.bloom.separate)
-				device->BindPS(bloomSeparatePS,threadID);
+			else if (effects.bloom.separate)
+				device->BindPS(bloomSeparatePS, threadID);
+			else if (effects.process.reprojectDepthBuffer)
+			{
+				device->BindPS(reprojectDepthBufferPS, threadID);
+				device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
+			}
 			else 
 				wiHelper::messageBox("Postprocess branch not implemented!");
 			
@@ -511,6 +527,7 @@ void wiImage::CleanUp()
 	SAFE_DELETE(depthStencilStateLess);
 	SAFE_DELETE(depthStencilStateEqual);
 	SAFE_DELETE(depthNoStencilState);
+	SAFE_DELETE(depthStencilStateDepthWrite);
 
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(screenVS);
@@ -532,4 +549,5 @@ void wiImage::CleanUp()
 	SAFE_DELETE(screenPS);
 	SAFE_DELETE(stereogramPS);
 	SAFE_DELETE(tonemapPS);
+	SAFE_DELETE(reprojectDepthBufferPS);
 }

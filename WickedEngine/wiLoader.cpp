@@ -3815,6 +3815,10 @@ int Object::GetRenderTypes() const
 	}
 	return retVal;
 }
+bool Object::IsOccluded() const
+{
+	return !skipOcclusionQuery && occlusionQuery.result_passed == FALSE;
+}
 XMMATRIX Object::GetOBB() const
 {
 	if (mesh == nullptr)

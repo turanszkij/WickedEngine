@@ -61,7 +61,7 @@ protected:
 		, rtDof[3]
 		;
 	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
-	wiDepthTarget dtDepthCopy;
+	wiDepthTarget dtDepthCopy, dtReprojectedDepth;
 
 	virtual void ResizeBuffers() override;
 

@@ -474,6 +474,9 @@
     <FxCompile Include="qgrassGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
+    <FxCompile Include="reprojectDepthBufferPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

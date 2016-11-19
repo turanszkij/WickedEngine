@@ -485,6 +485,7 @@ struct Object : public Streamable, public Transform
 	bool IsCastingShadow() const;
 	bool IsReflector() const;
 	int GetRenderTypes() const;
+	bool IsOccluded() const;
 	virtual void UpdateTransform();
 	void UpdateObject();
 	XMMATRIX GetOBB() const;

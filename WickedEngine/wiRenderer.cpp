@@ -969,6 +969,18 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable=false;
 	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_BACK]);
 
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_BACK;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = -100;
+	rs.DepthBiasClamp = 100;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.ScissorEnable = false;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_OCCLUDEE]);
+
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
 	{
 		depthStencils[i] = new DepthStencilState;
@@ -1720,13 +1732,14 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 	{
 		GetDevice()->EventBegin(L"Occlusion Culling Render");
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_OCCLUDEE], threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_DEFAULT, threadID);
 		GetDevice()->BindVertexLayout(nullptr, threadID);
 		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_CUBE], threadID);
 		GetDevice()->BindPS(nullptr, threadID);
+		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST);
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
@@ -1744,7 +1757,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 				if (instance->bounds.intersects(getCamera()->translation))
 				{
-					// if the camera is inside the bounding box, then the object is most likely visible, so skip occlusion query
+					// if the camera is inside the bounding box, then the object is most likely visible, so skip occlusion query and mark it as visible:
 					query.result_passed = true;
 					instance->skipOcclusionQuery = true;
 				}
@@ -1755,7 +1768,8 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 						instance->skipOcclusionQuery = false;
 						continue;
 					}
-					cb.mTransform = XMMatrixTranspose(instance->GetOBB()*getCamera()->GetViewProjection());
+					// previous frame view*projection because these are drawn against the previous depth buffer:
+					cb.mTransform = XMMatrixTranspose(instance->GetOBB()*prevFrameCam->GetViewProjection()); 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 					// render bounding box to later read the occlusion status
@@ -3127,7 +3141,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						if (dither > 1.0f - FLT_EPSILON)
 							continue;
 
-						if (disableOcclusionCulling || instance->occlusionQuery.result_passed == TRUE)
+						if (disableOcclusionCulling || !instance->IsOccluded())
 						{
 							mesh->AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
 							++k;
@@ -3240,7 +3254,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
 
-					if (disableOcclusionCulling || instance->occlusionQuery.result_passed == TRUE)
+					if (disableOcclusionCulling || !instance->IsOccluded())
 					{
 						if (mesh->softBody || instance->isArmatureDeformed())
 							mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), dither, instance->color), k, threadID);
@@ -3855,6 +3869,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mPrevV = XMMatrixTranspose(prevCam->GetView());
 	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
 	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
+	cb.mPrevInvVP = XMMatrixTranspose(prevCam->GetInvViewProjection());
 	cb.mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
 	cb.mInvP = XMMatrixTranspose(camera->GetInvProjection());
 	cb.mInvVP = XMMatrixTranspose(camera->GetInvViewProjection());

@@ -71,6 +71,7 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, defaultTextureFormat);
 
 	dtDepthCopy.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), getMSAASampleCount());
+	//dtReprojectedDepth.Initialize(wiRenderer::GetDevice()->GetScreenWidth() / 4, wiRenderer::GetDevice()->GetScreenHeight() / 4, 1);
 
 	rtSSAO.resize(3);
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
@@ -192,6 +193,20 @@ void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 {
 	wiRenderer::UpdateRenderData(threadID);
 
+	//ViewPort viewPort;
+	//viewPort.TopLeftX = 0.0f;
+	//viewPort.TopLeftY = 0.0f;
+	//viewPort.Width = (float)dtReprojectedDepth.GetDesc().Width;
+	//viewPort.Height = (float)dtReprojectedDepth.GetDesc().Height;
+	//viewPort.MinDepth = 0.0f;
+	//viewPort.MaxDepth = 1.0f;
+	//wiImageEffects fx;
+	//fx.process.setDepthBufferReprojection(true);
+
+	//wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
+	//dtReprojectedDepth.Clear(threadID);
+	//wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, dtReprojectedDepth.GetTexture(), threadID);
+	//wiImage::Draw(dtDepthCopy.GetTexture(), fx, threadID);
 	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, dtDepthCopy.GetTexture(), threadID);
 	wiRenderer::OcclusionCulling_Render(threadID);
 }

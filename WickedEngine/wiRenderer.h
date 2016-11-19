@@ -108,6 +108,7 @@ public:
 		XMMATRIX mPrevV;
 		XMMATRIX mPrevP;
 		XMMATRIX mPrevVP;
+		XMMATRIX mPrevInvVP;
 		XMMATRIX mReflVP;
 		XMMATRIX mInvP;
 		XMMATRIX mInvVP;
