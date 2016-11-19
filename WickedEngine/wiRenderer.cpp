@@ -4237,7 +4237,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				picked.object = object;
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
-				picked.distance = wiMath::Distance(pos, rayOrigin);
+				picked.distance = /*wiMath::Distance(pos, rayOrigin)*/distance;
 				picked.subsetIndex = (int)v0.tex.z;
 				points.push_back(picked);
 			}
