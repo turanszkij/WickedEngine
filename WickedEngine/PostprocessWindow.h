@@ -25,8 +25,9 @@ public:
 	wiCheckBox* sssCheckBox;
 	wiCheckBox* eyeAdaptionCheckBox;
 	wiCheckBox* motionBlurCheckBox;
-	wiSlider*	motionBlurFocusSlider;
 	wiCheckBox* depthOfFieldCheckBox;
+	wiSlider*	depthOfFieldFocusSlider;
+	wiSlider*	depthOfFieldStrengthSlider;
 	wiCheckBox* bloomCheckBox;
 	wiCheckBox* fxaaCheckBox;
 	wiCheckBox* stereogramCheckBox;

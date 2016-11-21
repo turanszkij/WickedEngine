@@ -14,7 +14,7 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(360, 450));
+	ppWindow->SetSize(XMFLOAT2(360, 500));
 	GUI->AddWidget(ppWindow);
 
 	float x = 110;
@@ -84,14 +84,23 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	});
 	ppWindow->AddWidget(depthOfFieldCheckBox);
 
-	motionBlurFocusSlider = new wiSlider(0, 1000, 100, 10000, "Focus: ");
-	motionBlurFocusSlider->SetSize(XMFLOAT2(100, 20));
-	motionBlurFocusSlider->SetPos(XMFLOAT2(x + 100, y));
-	motionBlurFocusSlider->SetValue(component->getDepthOfFieldFocus());
-	motionBlurFocusSlider->OnSlide([&](wiEventArgs args) {
+	depthOfFieldFocusSlider = new wiSlider(0.01f, 600, 100, 10000, "Focus: ");
+	depthOfFieldFocusSlider->SetSize(XMFLOAT2(100, 20));
+	depthOfFieldFocusSlider->SetPos(XMFLOAT2(x + 100, y));
+	depthOfFieldFocusSlider->SetValue(component->getDepthOfFieldFocus());
+	depthOfFieldFocusSlider->OnSlide([&](wiEventArgs args) {
 		component->setDepthOfFieldFocus(args.fValue);
 	});
-	ppWindow->AddWidget(motionBlurFocusSlider);
+	ppWindow->AddWidget(depthOfFieldFocusSlider);
+
+	depthOfFieldStrengthSlider = new wiSlider(0.01f, 4, 100, 1000, "Strength: ");
+	depthOfFieldStrengthSlider->SetSize(XMFLOAT2(100, 20));
+	depthOfFieldStrengthSlider->SetPos(XMFLOAT2(x + 100, y += 35));
+	depthOfFieldStrengthSlider->SetValue(component->getDepthOfFieldStrength());
+	depthOfFieldStrengthSlider->OnSlide([&](wiEventArgs args) {
+		component->setDepthOfFieldStrength(args.fValue);
+	});
+	ppWindow->AddWidget(depthOfFieldStrengthSlider);
 
 	bloomCheckBox = new wiCheckBox("Bloom: ");
 	bloomCheckBox->SetPos(XMFLOAT2(x, y += 35));
@@ -143,6 +152,8 @@ PostprocessWindow::~PostprocessWindow()
 	SAFE_DELETE(eyeAdaptionCheckBox);
 	SAFE_DELETE(motionBlurCheckBox);
 	SAFE_DELETE(depthOfFieldCheckBox);
+	SAFE_DELETE(depthOfFieldFocusSlider);
+	SAFE_DELETE(depthOfFieldStrengthSlider);
 	SAFE_DELETE(bloomCheckBox);
 	SAFE_DELETE(fxaaCheckBox);
 	SAFE_DELETE(colorGradingCheckBox);
