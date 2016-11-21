@@ -63,6 +63,10 @@ void wiGUI::Render()
 			x->Render(this);
 		}
 	}
+	for (auto&x : widgets)
+	{
+		x->RenderTooltip(this);
+	}
 
 	wiGraphicsTypes::Rect scissor[1];
 	scissor[0].bottom = (LONG)(wiRenderer::GetDevice()->GetScreenHeight());

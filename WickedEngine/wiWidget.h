@@ -37,9 +37,11 @@ public:
 	};
 private:
 	float fontScaling;
+	int tooltipTimer;
 protected:
 	wiHashString fastName;
 	string text;
+	string tooltip;
 	bool enabled;
 	bool visible;
 
@@ -56,6 +58,7 @@ public:
 	void SetName(const string& value);
 	string GetText();
 	void SetText(const string& value);
+	void SetTooltip(const string& value);
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState();
@@ -70,6 +73,7 @@ public:
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;
+	void RenderTooltip(wiGUI* gui);
 
 	wiWidget* container;
 };

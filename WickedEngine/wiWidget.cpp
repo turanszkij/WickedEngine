@@ -24,6 +24,7 @@ wiWidget::wiWidget():Transform()
 	scissorRect.right = 0;
 	scissorRect.top = 0;
 	container = nullptr;
+	tooltipTimer = 0;
 }
 wiWidget::~wiWidget()
 {
@@ -32,11 +33,44 @@ void wiWidget::Update(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
+	if (GetState() == WIDGETSTATE::FOCUS && !tooltip.empty())
+	{
+		tooltipTimer++;
+	}
+	else
+	{
+		tooltipTimer = 0;
+	}
+
 	// Only do the updatetransform if it has no parent because if it has, its transform
 	// will be updated down the chain anyway
 	if (Transform::parent == nullptr)
 	{
 		Transform::UpdateTransform();
+	}
+}
+void wiWidget::RenderTooltip(wiGUI* gui)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (tooltipTimer > 60)
+	{
+		XMFLOAT2 tooltipPos = XMFLOAT2(gui->pointerpos.x, gui->pointerpos.y);
+		if (tooltipPos.y > wiRenderer::GetDevice()->GetScreenHeight()*0.8f)
+		{
+			tooltipPos.y -= 30;
+		}
+		else
+		{
+			tooltipPos.y += 40;
+		}
+		wiFontProps fontProps = wiFontProps((int)tooltipPos.x, (int)tooltipPos.y, -1, WIFALIGN_CENTER, WIFALIGN_CENTER);
+		fontProps.color = XMFLOAT4(0.1f, 0.1f, 0.1f, 1);
+		wiFont tooltipFont = wiFont(tooltip, fontProps);
+		float fontWidth = (float)tooltipFont.textWidth() + 4;
+		float fontHeight = (float)tooltipFont.textHeight() + 4;
+		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(255,234,165)), wiImageEffects(tooltipPos.x - fontWidth*0.5f, tooltipPos.y - fontHeight*0.5f, fontWidth, fontHeight), gui->GetGraphicsThread());
+		tooltipFont.Draw(gui->GetGraphicsThread());
 	}
 }
 wiHashString wiWidget::GetName()
@@ -64,6 +98,10 @@ string wiWidget::GetText()
 void wiWidget::SetText(const string& value)
 {
 	text = value;
+}
+void wiWidget::SetTooltip(const string& value)
+{
+	tooltip = value;
 }
 void wiWidget::SetPos(const XMFLOAT2& value)
 {
@@ -339,6 +377,7 @@ void wiLabel::Render(wiGUI* gui)
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	wiFont(text, wiFontProps((int)translation.x, (int)translation.y, -1, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
+
 }
 
 
@@ -471,6 +510,8 @@ void wiSlider::Render(wiGUI* gui)
 	stringstream ss("");
 	ss << value;
 	wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+
+
 }
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
@@ -594,6 +635,7 @@ void wiCheckBox::Render(wiGUI* gui)
 		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
 	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+
 }
 void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
 {
@@ -817,6 +859,7 @@ void wiWindow::Render(wiGUI* gui)
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	wiFont(text, wiFontProps((int)(translation.x + resizeDragger_UpperLeft->scale.x), (int)(translation.y), -1, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
+
 }
 void wiWindow::SetVisible(bool value)
 {

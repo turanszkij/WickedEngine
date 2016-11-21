@@ -247,6 +247,7 @@ void EditorComponent::Load()
 	float step = 105, x = -step;
 
 	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
+	rendererWnd_Toggle->SetTooltip("Renderer settings");
 	rendererWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	rendererWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -332,6 +333,7 @@ void EditorComponent::Load()
 
 
 	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
+	translatorCheckBox->SetTooltip("Enable the translator tool");
 	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25, 0));
 	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	translatorCheckBox->OnClick([=](wiEventArgs args) {
@@ -342,6 +344,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(translatorCheckBox);
 
 	wiCheckBox* isScalatorCheckBox = new wiCheckBox("S:");
+	isScalatorCheckBox->SetTooltip("Scale");
 	isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25 - 40 * 2, 22));
 	isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	isScalatorCheckBox->OnClick([=](wiEventArgs args) {
@@ -351,6 +354,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(isScalatorCheckBox);
 
 	wiCheckBox* isRotatorCheckBox = new wiCheckBox("R:");
+	isRotatorCheckBox->SetTooltip("Rotate");
 	isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25 - 40 * 1, 22));
 	isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	isRotatorCheckBox->OnClick([=](wiEventArgs args) {
@@ -360,6 +364,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(isRotatorCheckBox);
 
 	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T:");
+	isTranslatorCheckBox->SetTooltip("Translate");
 	isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25, 22));
 	isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	isTranslatorCheckBox->OnClick([=](wiEventArgs args) {
@@ -370,6 +375,7 @@ void EditorComponent::Load()
 
 
 	wiButton* saveButton = new wiButton("Save");
+	saveButton->SetTooltip("Save the current scene as a model");
 	saveButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 5, 0));
 	saveButton->SetSize(XMFLOAT2(100, 40));
 	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -433,6 +439,7 @@ void EditorComponent::Load()
 
 
 	wiButton* modelButton = new wiButton("Load Model");
+	modelButton->SetTooltip("Load a model into the editor...");
 	modelButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 4, 0));
 	modelButton->SetSize(XMFLOAT2(100, 40));
 	modelButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -486,6 +493,7 @@ void EditorComponent::Load()
 
 
 	wiButton* skyButton = new wiButton("Load Sky");
+	skyButton->SetTooltip("Load a skybox cubemap texture...");
 	skyButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 3, 0));
 	skyButton->SetSize(XMFLOAT2(100, 18));
 	skyButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -529,6 +537,7 @@ void EditorComponent::Load()
 
 
 	wiButton* colorGradingButton = new wiButton("Color Grading");
+	colorGradingButton->SetTooltip("Load a color grading lookup texture...");
 	colorGradingButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 3, 22));
 	colorGradingButton->SetSize(XMFLOAT2(100, 18));
 	colorGradingButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -572,6 +581,7 @@ void EditorComponent::Load()
 
 
 	wiButton* scriptButton = new wiButton("Load Script");
+	scriptButton->SetTooltip("Load a Lua script...");
 	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 2, 0));
 	scriptButton->SetSize(XMFLOAT2(100, 40));
 	scriptButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -606,6 +616,7 @@ void EditorComponent::Load()
 
 
 	wiButton* clearButton = new wiButton("Clear World");
+	clearButton->SetTooltip("Delete every model from the scene");
 	clearButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 1, 0));
 	clearButton->SetSize(XMFLOAT2(100, 40));
 	clearButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -619,6 +630,7 @@ void EditorComponent::Load()
 
 
 	wiButton* exitButton = new wiButton("X");
+	exitButton->SetTooltip("Exit");
 	exitButton->SetPos(XMFLOAT2(screenW - 50, 0));
 	exitButton->SetSize(XMFLOAT2(50, 40));
 	exitButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
