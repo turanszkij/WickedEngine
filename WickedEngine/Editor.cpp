@@ -247,7 +247,7 @@ void EditorComponent::Load()
 	float step = 105, x = -step;
 
 	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
-	rendererWnd_Toggle->SetTooltip("Renderer settings");
+	rendererWnd_Toggle->SetTooltip("Renderer settings window");
 	rendererWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	rendererWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -256,6 +256,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(rendererWnd_Toggle);
 
 	wiButton* worldWnd_Toggle = new wiButton("World");
+	worldWnd_Toggle->SetTooltip("World settings window");
 	worldWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	worldWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	worldWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -264,6 +265,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(worldWnd_Toggle);
 
 	wiButton* objectWnd_Toggle = new wiButton("Object");
+	objectWnd_Toggle->SetTooltip("Object settings window");
 	objectWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	objectWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	objectWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -272,6 +274,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(objectWnd_Toggle);
 
 	wiButton* meshWnd_Toggle = new wiButton("Mesh");
+	meshWnd_Toggle->SetTooltip("Mesh settings window");
 	meshWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	meshWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	meshWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -280,6 +283,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(meshWnd_Toggle);
 
 	wiButton* materialWnd_Toggle = new wiButton("Material");
+	materialWnd_Toggle->SetTooltip("Material settings window");
 	materialWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	materialWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	materialWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -288,6 +292,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(materialWnd_Toggle);
 
 	wiButton* postprocessWnd_Toggle = new wiButton("PostProcess");
+	postprocessWnd_Toggle->SetTooltip("Postprocess settings window");
 	postprocessWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	postprocessWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	postprocessWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -296,6 +301,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(postprocessWnd_Toggle);
 
 	wiButton* cameraWnd_Toggle = new wiButton("Camera");
+	cameraWnd_Toggle->SetTooltip("Camera settings window");
 	cameraWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	cameraWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	cameraWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -304,6 +310,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(cameraWnd_Toggle);
 
 	wiButton* envProbeWnd_Toggle = new wiButton("EnvProbe");
+	envProbeWnd_Toggle->SetTooltip("Environment probe settings window");
 	envProbeWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	envProbeWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	envProbeWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -312,6 +319,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(envProbeWnd_Toggle);
 
 	wiButton* decalWnd_Toggle = new wiButton("Decal");
+	decalWnd_Toggle->SetTooltip("Decal settings window");
 	decalWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	decalWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	decalWnd_Toggle->OnClick([=](wiEventArgs args) {
@@ -320,6 +328,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(decalWnd_Toggle);
 
 	wiButton* lightWnd_Toggle = new wiButton("Light");
+	lightWnd_Toggle->SetTooltip("Light settings window");
 	lightWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
 	lightWnd_Toggle->SetSize(XMFLOAT2(100, 40));
 	lightWnd_Toggle->OnClick([=](wiEventArgs args) {

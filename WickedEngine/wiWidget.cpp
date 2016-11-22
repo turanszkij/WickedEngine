@@ -53,7 +53,7 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
-	if (tooltipTimer > 60)
+	if (tooltipTimer > 25)
 	{
 		XMFLOAT2 tooltipPos = XMFLOAT2(gui->pointerpos.x, gui->pointerpos.y);
 		if (tooltipPos.y > wiRenderer::GetDevice()->GetScreenHeight()*0.8f)
@@ -680,8 +680,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	moveDragger->OnDrag([this](wiEventArgs args) {
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 	});
-	gui->AddWidget(moveDragger);
-	moveDragger->attachTo(this);
+	AddWidget(moveDragger);
 
 	// Add close button to the top right corner
 	closeButton = new wiButton(name + "_close_button");
@@ -691,8 +690,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	closeButton->OnClick([this](wiEventArgs args) {
 		this->SetVisible(false);
 	});
-	gui->AddWidget(closeButton);
-	closeButton->attachTo(this);
+	AddWidget(closeButton);
 
 	// Add minimize button to the top right corner
 	minimizeButton = new wiButton(name + "_minimize_button");
@@ -702,8 +700,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	minimizeButton->OnClick([this](wiEventArgs args) {
 		this->SetMinimized(!this->IsMinimized());
 	});
-	gui->AddWidget(minimizeButton);
-	minimizeButton->attachTo(this);
+	AddWidget(minimizeButton);
 
 	// Add a resizer control to the upperleft corner
 	resizeDragger_UpperLeft = new wiButton(name + "_resize_dragger_upper_left");
@@ -717,8 +714,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 	});
-	gui->AddWidget(resizeDragger_UpperLeft);
-	resizeDragger_UpperLeft->attachTo(this);
+	AddWidget(resizeDragger_UpperLeft);
 
 	// Add a resizer control to the bottom right corner
 	resizeDragger_BottomRight = new wiButton(name + "_resize_dragger_bottom_right");
@@ -731,8 +727,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 		scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 	});
-	gui->AddWidget(resizeDragger_BottomRight);
-	resizeDragger_BottomRight->attachTo(this);
+	AddWidget(resizeDragger_BottomRight);
 
 
 	SetEnabled(true);
@@ -858,7 +853,7 @@ void wiWindow::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)(translation.x + resizeDragger_UpperLeft->scale.x), (int)(translation.y), -1, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
+	wiFont(text, wiFontProps((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y), -1, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw(gui->GetGraphicsThread(), true);
 
 }
 void wiWindow::SetVisible(bool value)
