@@ -3619,7 +3619,7 @@ void Decal::UpdateTransform()
 	XMVECTOR eye = XMLoadFloat3(&translation);
 	XMStoreFloat4x4(&world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&scale))*rotMat*XMMatrixTranslationFromVector(eye));
 
-	bounds.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(scale.x*0.5f, scale.y*0.5f, scale.z*0.5f));
+	bounds.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(scale.x*0.25f, scale.y*0.25f, scale.z*0.25f));
 	bounds = bounds.get(XMLoadFloat4x4(&world_rest));
 
 }

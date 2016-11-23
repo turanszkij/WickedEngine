@@ -4171,6 +4171,10 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
 	XMVECTOR& rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
+	static size_t _arraySize = 10000;
+	static XMVECTOR* _vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
+	static int* _materialIndices = new int[_arraySize];
+
 	for (Cullable* culled : culledObjects)
 	{
 		Object* object = (Object*)culled;
@@ -4204,32 +4208,46 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		}
 
 		Mesh* mesh = object->mesh;
+		if (mesh->vertices.size() >= _arraySize)
+		{
+			_mm_free(_vertices);
+			SAFE_DELETE_ARRAY(_materialIndices);
+			_arraySize *= 2;
+			_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
+			_materialIndices = new int[_arraySize];
+		}
+
 		XMMATRIX& objectMat = object->getMatrix();
-		XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+		XMMATRIX& objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
 		XMVECTOR& rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 		XMVECTOR& rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-		for (unsigned int i = 0; i<mesh->indices.size(); i += 3){
-			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-			Vertex v0, v1, v2;
+		for (size_t i = 0; i < mesh->vertices.size(); ++i)
+		{
 			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
 			{
-				v0 = TransformVertex(mesh, mesh->vertices[i0], objectMat_Inverse);
-				v1 = TransformVertex(mesh, mesh->vertices[i1], objectMat_Inverse);
-				v2 = TransformVertex(mesh, mesh->vertices[i2], objectMat_Inverse);
+				Vertex& v = TransformVertex(mesh, mesh->vertices[i], objectMat_Inverse);
+				_vertices[i] = XMLoadFloat4(&v.pos);
+				_materialIndices[i] = (int)v.tex.z;
 			}
 			else
 			{
-				v0 = mesh->vertices_Complete[i0];
-				v1 = mesh->vertices_Complete[i1];
-				v2 = mesh->vertices_Complete[i2];
+				Vertex& v = mesh->vertices_Complete[i];
+				_vertices[i] = XMLoadFloat4(&v.pos);
+				_materialIndices[i] = (int)v.tex.z;
 			}
-			XMVECTOR& V0 = XMLoadFloat4(&v0.pos);
-			XMVECTOR& V1 = XMLoadFloat4(&v1.pos);
-			XMVECTOR& V2 = XMLoadFloat4(&v2.pos);
+		}
+
+		for (size_t i = 0; i<mesh->indices.size(); i += 3)
+		{
+			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
+			XMVECTOR& V0 = _vertices[i0];
+			XMVECTOR& V1 = _vertices[i1];
+			XMVECTOR& V2 = _vertices[i2];
 			float distance = 0;
-			if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, V0, V1, V2, distance)){
+			if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, V0, V1, V2, distance))
+			{
 				XMVECTOR& pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
 				XMVECTOR& nor = XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0))), objectMat);
 				Picked picked = Picked();
@@ -4237,8 +4255,8 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				picked.object = object;
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
-				picked.distance = /*wiMath::Distance(pos, rayOrigin)*/distance;
-				picked.subsetIndex = (int)v0.tex.z;
+				picked.distance = wiMath::Distance(pos, rayOrigin);
+				picked.subsetIndex = _materialIndices[i0];
 				points.push_back(picked);
 			}
 		}

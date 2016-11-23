@@ -416,9 +416,30 @@ void wiSlider::Update(wiGUI* gui)
 		return;
 	}
 
+	bool dragged = false;
+
+	if (state == FOCUS)
+	{
+		state = IDLE;
+	}
 	if (state == DEACTIVATING)
 	{
 		state = IDLE;
+	}
+	if (state == ACTIVE)
+	{
+		if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+		{
+			if (state == ACTIVE)
+			{
+				// continue drag if already grabbed wheter it is intersecting or not
+				dragged = true;
+			}
+		}
+		else
+		{
+			gui->DeactivateWidget(this);
+		}
 	}
 
 	float headWidth = scale.x*0.05f;
@@ -430,7 +451,6 @@ void wiSlider::Update(wiGUI* gui)
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
-	bool dragged = false;
 
 	if (pointerHitbox.intersects(hitBox))
 	{
@@ -450,14 +470,6 @@ void wiSlider::Update(wiGUI* gui)
 		}
 	}
 
-	if(wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
-	{
-		if (state == ACTIVE)
-		{
-			// continue drag if already grabbed wheter it is intersecting or not
-			dragged = true;
-		}
-	}
 
 	if (dragged)
 	{
@@ -472,10 +484,6 @@ void wiSlider::Update(wiGUI* gui)
 		args.fValue = value;
 		onSlide(args);
 		gui->ActivateWidget(this);
-	}
-	else if(state != IDLE)
-	{
-		gui->DeactivateWidget(this);
 	}
 
 }

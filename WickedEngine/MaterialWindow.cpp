@@ -26,6 +26,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	float step = 35;
 
 	waterCheckBox = new wiCheckBox("Water: ");
+	waterCheckBox->SetTooltip("Set material as special water material.");
 	waterCheckBox->SetPos(XMFLOAT2(470, y += step));
 	waterCheckBox->OnClick([&](wiEventArgs args) {
 		material->water = args.bValue;
@@ -33,6 +34,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(waterCheckBox);
 
 	planarReflCheckBox = new wiCheckBox("Planar Reflections: ");
+	planarReflCheckBox->SetTooltip("Enable planar reflections. The mesh should be a single plane for best results.");
 	planarReflCheckBox->SetPos(XMFLOAT2(470, y += step));
 	planarReflCheckBox->OnClick([&](wiEventArgs args) {
 		material->planar_reflections = args.bValue;
@@ -40,6 +42,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(planarReflCheckBox);
 
 	shadowCasterCheckBox = new wiCheckBox("Cast Shadow: ");
+	shadowCasterCheckBox->SetTooltip("The subset will contribute to the scene shadows if enabled.");
 	shadowCasterCheckBox->SetPos(XMFLOAT2(470, y += step));
 	shadowCasterCheckBox->OnClick([&](wiEventArgs args) {
 		material->cast_shadow = args.bValue;
@@ -47,6 +50,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(shadowCasterCheckBox);
 
 	normalMapSlider = new wiSlider(0, 4, 1, 4000, "Normalmap: ");
+	normalMapSlider->SetTooltip("How much the normal map should distort the face normals (bumpiness).");
 	normalMapSlider->SetSize(XMFLOAT2(100, 30));
 	normalMapSlider->SetPos(XMFLOAT2(x, y += step));
 	normalMapSlider->OnSlide([&](wiEventArgs args) {
@@ -55,6 +59,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(normalMapSlider);
 
 	roughnessSlider = new wiSlider(0, 1, 0.5f, 1000, "Roughness: ");
+	roughnessSlider->SetTooltip("Adjust the surface roughness. Rough surfaces are less shiny, more matte.");
 	roughnessSlider->SetSize(XMFLOAT2(100, 30));
 	roughnessSlider->SetPos(XMFLOAT2(x, y += step));
 	roughnessSlider->OnSlide([&](wiEventArgs args) {
@@ -63,6 +68,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(roughnessSlider);
 
 	reflectanceSlider = new wiSlider(0, 1, 0.5f, 1000, "Reflectance: ");
+	reflectanceSlider->SetTooltip("Adjust the overall surface reflectivity.");
 	reflectanceSlider->SetSize(XMFLOAT2(100, 30));
 	reflectanceSlider->SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider->OnSlide([&](wiEventArgs args) {
@@ -71,6 +77,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(reflectanceSlider);
 
 	metalnessSlider = new wiSlider(0, 1, 0.0f, 1000, "Metalness: ");
+	metalnessSlider->SetTooltip("The more metal-like the surface is, the more the its color will contribute to the reflection color.");
 	metalnessSlider->SetSize(XMFLOAT2(100, 30));
 	metalnessSlider->SetPos(XMFLOAT2(x, y += step));
 	metalnessSlider->OnSlide([&](wiEventArgs args) {
@@ -79,6 +86,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(metalnessSlider);
 
 	alphaSlider = new wiSlider(0, 1, 1.0f, 1000, "Alpha: ");
+	alphaSlider->SetTooltip("Adjusts the overall transparency of the surface.");
 	alphaSlider->SetSize(XMFLOAT2(100, 30));
 	alphaSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaSlider->OnSlide([&](wiEventArgs args) {
@@ -87,6 +95,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(alphaSlider);
 
 	alphaRefSlider = new wiSlider(0, 1, 1.0f, 1000, "AlphaRef: ");
+	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold.");
 	alphaRefSlider->SetSize(XMFLOAT2(100, 30));
 	alphaRefSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider->OnSlide([&](wiEventArgs args) {
@@ -95,6 +104,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(alphaRefSlider);
 
 	refractionIndexSlider = new wiSlider(0, 1.0f, 0.02f, 1000, "Refraction Index: ");
+	refractionIndexSlider->SetTooltip("Adjust the IOR (index of refraction). It controls the amount of distortion of the scene visible through the transparent object.");
 	refractionIndexSlider->SetSize(XMFLOAT2(100, 30));
 	refractionIndexSlider->SetPos(XMFLOAT2(x, y += step));
 	refractionIndexSlider->OnSlide([&](wiEventArgs args) {
@@ -103,6 +113,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(refractionIndexSlider);
 
 	emissiveSlider = new wiSlider(0, 1, 0.0f, 1000, "Emissive: ");
+	emissiveSlider->SetTooltip("Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.");
 	emissiveSlider->SetSize(XMFLOAT2(100, 30));
 	emissiveSlider->SetPos(XMFLOAT2(x, y += step));
 	emissiveSlider->OnSlide([&](wiEventArgs args) {
@@ -111,6 +122,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(emissiveSlider);
 
 	sssSlider = new wiSlider(0, 1, 0.0f, 1000, "Subsurface Scattering: ");
+	sssSlider->SetTooltip("Adjust how much the light is scattered when entered inside the surface of the object. (SSS postprocess must be enabled)");
 	sssSlider->SetSize(XMFLOAT2(100, 30));
 	sssSlider->SetPos(XMFLOAT2(x, y += step));
 	sssSlider->OnSlide([&](wiEventArgs args) {
@@ -119,6 +131,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(sssSlider);
 
 	pomSlider = new wiSlider(0, 0.1f, 0.0f, 1000, "Parallax Occlusion Mapping: ");
+	pomSlider->SetTooltip("Adjust how much the bump map should affect the object (slow).");
 	pomSlider->SetSize(XMFLOAT2(100, 30));
 	pomSlider->SetPos(XMFLOAT2(x, y += step));
 	pomSlider->OnSlide([&](wiEventArgs args) {
@@ -127,6 +140,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(pomSlider);
 
 	movingTexSliderU = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim U: ");
+	movingTexSliderU->SetTooltip("Adjust the texture animation speed along the U direction in texture space.");
 	movingTexSliderU->SetSize(XMFLOAT2(100, 30));
 	movingTexSliderU->SetPos(XMFLOAT2(x, y += step));
 	movingTexSliderU->OnSlide([&](wiEventArgs args) {
@@ -135,6 +149,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(movingTexSliderU);
 
 	movingTexSliderV = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim V: ");
+	movingTexSliderV->SetTooltip("Adjust the texture animation speed along the V direction in texture space.");
 	movingTexSliderV->SetSize(XMFLOAT2(100, 30));
 	movingTexSliderV->SetPos(XMFLOAT2(x, y += step));
 	movingTexSliderV->OnSlide([&](wiEventArgs args) {
@@ -143,6 +158,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(movingTexSliderV);
 
 	texMulSliderX = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize X: ");
+	texMulSliderX->SetTooltip("Adjust the texture mapping size.");
 	texMulSliderX->SetSize(XMFLOAT2(100, 30));
 	texMulSliderX->SetPos(XMFLOAT2(x, y += step));
 	texMulSliderX->OnSlide([&](wiEventArgs args) {
@@ -151,6 +167,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(texMulSliderX);
 
 	texMulSliderY = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize Y: ");
+	texMulSliderY->SetTooltip("Adjust the texture mapping size.");
 	texMulSliderY->SetSize(XMFLOAT2(100, 30));
 	texMulSliderY->SetPos(XMFLOAT2(x, y += step));
 	texMulSliderY->OnSlide([&](wiEventArgs args) {
@@ -160,6 +177,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 
 	colorPickerToggleButton = new wiButton("Color");
+	colorPickerToggleButton->SetTooltip("Adjust the material color.");
 	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
 	colorPickerToggleButton->OnClick([&](wiEventArgs args) {
 		colorPicker->SetVisible(!colorPicker->IsVisible());
