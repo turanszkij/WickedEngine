@@ -107,7 +107,7 @@ void MainComponent::run()
 		Update();
 	}
 
-	getActiveComponent()->FixedUpdate((float)elapsedTime);
+	getActiveComponent()->Update((float)elapsedTime);
 
 	Render();
 
@@ -127,7 +127,7 @@ void MainComponent::Update()
 
 	wiLua::GetGlobal()->Update();
 
-	getActiveComponent()->Update();
+	getActiveComponent()->FixedUpdate();
 
 
 	fadeManager.Update();

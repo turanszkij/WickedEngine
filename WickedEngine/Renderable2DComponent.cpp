@@ -62,7 +62,7 @@ void Renderable2DComponent::Start()
 {
 	RenderableComponent::Start();
 }
-void Renderable2DComponent::Update()
+void Renderable2DComponent::FixedUpdate()
 {
 	
 	for (auto& x : layers)
@@ -82,7 +82,7 @@ void Renderable2DComponent::Update()
 
 	GetGUI().Update();
 
-	RenderableComponent::Update();
+	RenderableComponent::FixedUpdate();
 }
 void Renderable2DComponent::Render()
 {

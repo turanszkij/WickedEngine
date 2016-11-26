@@ -24,6 +24,7 @@ Luna<ForwardRenderableComponent_BindLua>::FunctionType ForwardRenderableComponen
 	lunamethod(RenderableComponent_BindLua, Unload),
 	lunamethod(RenderableComponent_BindLua, Start),
 	lunamethod(RenderableComponent_BindLua, Stop),
+	lunamethod(RenderableComponent_BindLua, FixedUpdate),
 	lunamethod(RenderableComponent_BindLua, Update),
 	lunamethod(RenderableComponent_BindLua, Render),
 	lunamethod(RenderableComponent_BindLua, Compose),

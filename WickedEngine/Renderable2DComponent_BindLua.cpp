@@ -25,6 +25,7 @@ Luna<Renderable2DComponent_BindLua>::FunctionType Renderable2DComponent_BindLua:
 	lunamethod(Renderable2DComponent_BindLua, Unload),
 	lunamethod(Renderable2DComponent_BindLua, Start),
 	lunamethod(Renderable2DComponent_BindLua, Stop),
+	lunamethod(Renderable2DComponent_BindLua, FixedUpdate),
 	lunamethod(Renderable2DComponent_BindLua, Update),
 	lunamethod(Renderable2DComponent_BindLua, Render),
 	lunamethod(Renderable2DComponent_BindLua, Compose),

@@ -162,17 +162,19 @@ void Renderable3DComponent::Start()
 	Renderable2DComponent::Start();
 }
 
-void Renderable3DComponent::Update(){
+void Renderable3DComponent::FixedUpdate()
+{
 	wiRenderer::Update();
 	wiRenderer::UpdateImages();
 
-	Renderable2DComponent::Update();
+	Renderable2DComponent::FixedUpdate();
 }
 
-void Renderable3DComponent::FixedUpdate(float dt) {
+void Renderable3DComponent::Update(float dt)
+{
 	wiRenderer::SynchronizeWithPhysicsEngine(dt);
 
-	Renderable2DComponent::FixedUpdate(dt);
+	Renderable2DComponent::Update(dt);
 }
 
 void Renderable3DComponent::Compose()

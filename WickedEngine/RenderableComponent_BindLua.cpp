@@ -10,6 +10,7 @@ Luna<RenderableComponent_BindLua>::FunctionType RenderableComponent_BindLua::met
 	lunamethod(RenderableComponent_BindLua, Unload),
 	lunamethod(RenderableComponent_BindLua, Start),
 	lunamethod(RenderableComponent_BindLua, Stop),
+	lunamethod(RenderableComponent_BindLua, FixedUpdate),
 	lunamethod(RenderableComponent_BindLua, Update),
 	lunamethod(RenderableComponent_BindLua, Render),
 	lunamethod(RenderableComponent_BindLua, Compose),
@@ -101,14 +102,30 @@ int RenderableComponent_BindLua::Stop(lua_State* L)
 	return 0;
 }
 
+int RenderableComponent_BindLua::FixedUpdate(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "FixedUpdate() component is null!");
+		return 0;
+	}
+	component->FixedUpdate();
+	return 0;
+}
+
 int RenderableComponent_BindLua::Update(lua_State* L)
 {
 	if (component == nullptr)
 	{
-		wiLua::SError(L, "Update() component is null!");
+		wiLua::SError(L, "Update(opt float dt = 0) component is null!");
 		return 0;
 	}
-	component->Update();
+	float dt = 0.f;
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		dt = wiLua::SGetFloat(L, 1);
+	}
+	component->Update(dt);
 	return 0;
 }
 

@@ -3357,6 +3357,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		GetDevice()->BindVS(nullptr, threadID);
 		GetDevice()->BindDS(nullptr, threadID);
 		GetDevice()->BindHS(nullptr, threadID);
+		GetDevice()->BindVertexBuffer(nullptr, 1, 0, threadID); // unbind the instance buffer
 
 		ResetAlphaRef(threadID);
 

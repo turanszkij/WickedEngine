@@ -661,7 +661,7 @@ void EditorComponent::Start()
 {
 	__super::Start();
 }
-void EditorComponent::Update()
+void EditorComponent::FixedUpdate()
 {
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
@@ -1028,7 +1028,7 @@ void EditorComponent::Update()
 		SAFE_DELETE(history);
 	}
 
-	__super::Update();
+	__super::FixedUpdate();
 }
 void EditorComponent::Render()
 {

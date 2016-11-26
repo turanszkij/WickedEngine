@@ -4,6 +4,7 @@
 #include "Renderable2DComponent_BindLua.h"
 #include "DeferredRenderableComponent_BindLua.h"
 #include "ForwardRenderableComponent_BindLua.h"
+#include "TiledForwardRenderableComponent_BindLua.h"
 #include "LoadingScreenComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
 
@@ -62,6 +63,14 @@ int MainComponent_BindLua::GetActiveComponent(lua_State *L)
 	if (compDef3D != nullptr)
 	{
 		Luna<DeferredRenderableComponent_BindLua>::push(L, new DeferredRenderableComponent_BindLua(compDef3D));
+		return 1;
+	}
+
+	//return tiled forward 3d component if the active one is of that type
+	TiledForwardRenderableComponent* compTFwd3D = dynamic_cast<TiledForwardRenderableComponent*>(component->getActiveComponent());
+	if (compTFwd3D != nullptr)
+	{
+		Luna<TiledForwardRenderableComponent_BindLua>::push(L, new TiledForwardRenderableComponent_BindLua(compTFwd3D));
 		return 1;
 	}
 

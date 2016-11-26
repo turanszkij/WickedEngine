@@ -7,6 +7,9 @@
 
 class RenderableComponent
 {
+protected:
+	// create resolution dependant resources
+	virtual void ResizeBuffers() {}
 public:
 	wiCVars Params;
 	wiResourceManager Content;
@@ -28,9 +31,9 @@ public:
 	// unload temporary resources
 	virtual void Stop();
 	// update logic
-	virtual void Update() {}
+	virtual void FixedUpdate() {}
 	// update physics
-	virtual void FixedUpdate(float dt) {}
+	virtual void Update(float dt);
 	// Render to layers, rendertargets, etc
 	// This will be rendered offscreen
 	virtual void Render() {}

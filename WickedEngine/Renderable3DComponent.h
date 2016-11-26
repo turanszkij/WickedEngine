@@ -161,8 +161,8 @@ public:
 	virtual void Initialize() override;
 	virtual void Load() override;
 	virtual void Start() override;
-	virtual void Update() override;
-	virtual void FixedUpdate(float dt) override;
+	virtual void FixedUpdate() override;
+	virtual void Update(float dt) override;
 	virtual void Compose() override;
 };
 

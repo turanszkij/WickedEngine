@@ -22,6 +22,7 @@ public:
 	virtual int Unload(lua_State* L);
 	virtual int Start(lua_State* L);
 	virtual int Stop(lua_State* L);
+	virtual int FixedUpdate(lua_State* L);
 	virtual int Update(lua_State* L);
 	virtual int Render(lua_State* L);
 	virtual int Compose(lua_State* L);
