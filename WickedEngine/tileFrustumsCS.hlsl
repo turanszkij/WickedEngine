@@ -33,13 +33,13 @@ void main(ComputeShaderInput IN)
 	Frustum frustum;
 
 	// Left plane
-	frustum.planes[0] = ComputePlane(eyePos, viewSpace[2], viewSpace[0]);
+	frustum.planes[0] = ComputePlane(viewSpace[2], eyePos, viewSpace[0]);
 	// Right plane
-	frustum.planes[1] = ComputePlane(eyePos, viewSpace[1], viewSpace[3]);
+	frustum.planes[1] = ComputePlane(viewSpace[1], eyePos, viewSpace[3]);
 	// Top plane
-	frustum.planes[2] = ComputePlane(eyePos, viewSpace[0], viewSpace[1]);
+	frustum.planes[2] = ComputePlane(viewSpace[0], eyePos, viewSpace[1]);
 	// Bottom plane
-	frustum.planes[3] = ComputePlane(eyePos, viewSpace[3], viewSpace[2]);
+	frustum.planes[3] = ComputePlane(viewSpace[3], eyePos, viewSpace[2]);
 
 	// Store the computed frustum in global memory (if our thread ID is in bounds of the grid).
 	if (IN.dispatchThreadID.x < xDispatchParams_numThreads.x && IN.dispatchThreadID.y < xDispatchParams_numThreads.y)
