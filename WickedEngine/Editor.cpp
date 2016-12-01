@@ -343,7 +343,7 @@ void EditorComponent::Load()
 
 	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
 	translatorCheckBox->SetTooltip("Enable the translator tool");
-	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25, 0));
+	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25, 0));
 	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	translatorCheckBox->OnClick([=](wiEventArgs args) {
 		if(!args.bValue)
@@ -354,7 +354,7 @@ void EditorComponent::Load()
 
 	wiCheckBox* isScalatorCheckBox = new wiCheckBox("S:");
 	isScalatorCheckBox->SetTooltip("Scale");
-	isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25 - 40 * 2, 22));
+	isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 2, 22));
 	isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	isScalatorCheckBox->OnClick([=](wiEventArgs args) {
 		translator->isScalator = args.bValue;
@@ -364,7 +364,7 @@ void EditorComponent::Load()
 
 	wiCheckBox* isRotatorCheckBox = new wiCheckBox("R:");
 	isRotatorCheckBox->SetTooltip("Rotate");
-	isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25 - 40 * 1, 22));
+	isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 1, 22));
 	isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	isRotatorCheckBox->OnClick([=](wiEventArgs args) {
 		translator->isRotator = args.bValue;
@@ -374,7 +374,7 @@ void EditorComponent::Load()
 
 	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T:");
 	isTranslatorCheckBox->SetTooltip("Translate");
-	isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 5 - 25, 22));
+	isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25, 22));
 	isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	isTranslatorCheckBox->OnClick([=](wiEventArgs args) {
 		translator->isTranslator = args.bValue;
@@ -385,7 +385,7 @@ void EditorComponent::Load()
 
 	wiButton* saveButton = new wiButton("Save");
 	saveButton->SetTooltip("Save the current scene as a model");
-	saveButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 5, 0));
+	saveButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 6, 0));
 	saveButton->SetSize(XMFLOAT2(100, 40));
 	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
 	saveButton->SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -449,7 +449,7 @@ void EditorComponent::Load()
 
 	wiButton* modelButton = new wiButton("Load Model");
 	modelButton->SetTooltip("Load a model into the editor...");
-	modelButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 4, 0));
+	modelButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 5, 0));
 	modelButton->SetSize(XMFLOAT2(100, 40));
 	modelButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -503,7 +503,7 @@ void EditorComponent::Load()
 
 	wiButton* skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");
-	skyButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 3, 0));
+	skyButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 4, 0));
 	skyButton->SetSize(XMFLOAT2(100, 18));
 	skyButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	skyButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -547,7 +547,7 @@ void EditorComponent::Load()
 
 	wiButton* colorGradingButton = new wiButton("Color Grading");
 	colorGradingButton->SetTooltip("Load a color grading lookup texture...");
-	colorGradingButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 3, 22));
+	colorGradingButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 4, 22));
 	colorGradingButton->SetSize(XMFLOAT2(100, 18));
 	colorGradingButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	colorGradingButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -591,7 +591,7 @@ void EditorComponent::Load()
 
 	wiButton* scriptButton = new wiButton("Load Script");
 	scriptButton->SetTooltip("Load a Lua script...");
-	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 2, 0));
+	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 3, 0));
 	scriptButton->SetSize(XMFLOAT2(100, 40));
 	scriptButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
 	scriptButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -622,6 +622,41 @@ void EditorComponent::Load()
 
 	});
 	GetGUI().AddWidget(scriptButton);
+
+
+	wiButton* shaderButton = new wiButton("Load Shaders");
+	shaderButton->SetTooltip("Load shaders from the specified directory...");
+	shaderButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 2, 0));
+	shaderButton->SetSize(XMFLOAT2(100, 40));
+	shaderButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
+	shaderButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
+	shaderButton->OnClick([=](wiEventArgs args) {
+		thread([&] {
+			char szFile[260];
+
+			OPENFILENAMEA ofn;
+			ZeroMemory(&ofn, sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = nullptr;
+			ofn.lpstrFile = szFile;
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// use the contents of szFile to initialize itself.
+			ofn.lpstrFile[0] = '\0';
+			ofn.nMaxFile = sizeof(szFile);
+			ofn.lpstrFilter = "Compiled shader object file\0*.cso\0";
+			ofn.nFilterIndex = 1;
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = NULL;
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+			if (GetOpenFileNameA(&ofn) == TRUE) {
+				string fileName = ofn.lpstrFile;
+				wiRenderer::ReloadShaders(wiHelper::GetDirectoryFromPath(fileName));
+			}
+		}).detach();
+
+	});
+	GetGUI().AddWidget(shaderButton);
 
 
 	wiButton* clearButton = new wiButton("Clear World");
