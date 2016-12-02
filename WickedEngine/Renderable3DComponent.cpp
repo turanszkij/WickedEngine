@@ -209,6 +209,15 @@ void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 	//dtReprojectedDepth.Clear(threadID);
 	//wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, dtReprojectedDepth.GetTexture(), threadID);
 	//wiImage::Draw(dtDepthCopy.GetTexture(), fx, threadID);
+	
+	ViewPort viewPort;
+	viewPort.TopLeftX = 0.0f;
+	viewPort.TopLeftY = 0.0f;
+	viewPort.Width = (float)dtDepthCopy.GetDesc().Width;
+	viewPort.Height = (float)dtDepthCopy.GetDesc().Height;
+	viewPort.MinDepth = 0.0f;
+	viewPort.MaxDepth = 1.0f;
+	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, dtDepthCopy.GetTexture(), threadID);
 	wiRenderer::OcclusionCulling_Render(threadID);
 }
