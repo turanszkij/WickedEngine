@@ -154,6 +154,18 @@ bool ConeInsideFrustum(Cone cone, Frustum frustum, float zNear, float zFar)
 	return result;
 }
 
+struct AABB
+{
+	float3 c; // center
+	float3 e; // half extents
+};
+bool SphereIntersectsAABB(in Sphere sphere, in AABB aabb)
+{
+	float3 delta = max(0, abs(aabb.c - sphere.c) - aabb.e);
+	float distSq = dot(delta, delta);
+	return distSq <= sphere.r * sphere.r;
+}
+
 
 
 static const float4 frustumCorners[4] = {

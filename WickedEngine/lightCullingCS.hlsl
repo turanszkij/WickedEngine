@@ -4,7 +4,7 @@
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);
-groupshared uint _counter = 0;
+groupshared uint3 _counter = 0;
 #endif
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
@@ -30,6 +30,7 @@ RWTEXTURE2D(t_LightGrid, uint2, UAVSLOT_LIGHTGRID_TRANSPARENT);
 groupshared uint uMinDepth;
 groupshared uint uMaxDepth;
 groupshared Frustum GroupFrustum;
+groupshared AABB GroupAABB;
 
 // Opaque geometry light lists.
 groupshared uint o_LightCount;
@@ -101,6 +102,16 @@ void main(ComputeShaderInput IN)
 	float fMinDepth = asfloat(uMinDepth);
 	float fMaxDepth = asfloat(uMaxDepth);
 
+	if (IN.groupIndex == 0)
+	{
+		float3 minAABB = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f));
+		float3 maxAABB = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMaxDepth, 1.0f));
+
+		GroupAABB.c = (minAABB + maxAABB)*0.5f;
+		GroupAABB.e = abs(maxAABB - GroupAABB.c);
+	}
+	GroupMemoryBarrierWithGroupSync();
+
 	// Convert depth values to view space.
 	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
 	float maxDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1)).z;
@@ -114,64 +125,65 @@ void main(ComputeShaderInput IN)
 	// Each thread in a group will cull 1 light until all lights have been culled.
 	for (uint i = IN.groupIndex; i < lightCount; i += BLOCK_SIZE * BLOCK_SIZE)
 	{
-		//if (Lights[i].Enabled)
+		LightArrayType light = Lights[i];
+
+		switch (light.type)
 		{
-			LightArrayType light = Lights[i];
-
-			switch (light.type)
+		case 1/*POINT_LIGHT*/:
+		{
+			Sphere sphere = { light.positionVS.xyz, light.range }; 
+			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-			case 1/*POINT_LIGHT*/:
-			{
-				Sphere sphere = { light.positionVS.xyz, light.range };
-				if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-				{
-					//// Add light to light list for transparent geometry.
-					t_AppendLight(i); 
-					
-					//InterlockedAdd(_counter, 1);
-
-					if (!SphereInsidePlane(sphere, minPlane))
-					{
-						// Add light to light list for opaque geometry.
-						o_AppendLight(i);
-
-#ifdef DEBUG_TILEDLIGHTCULLING
-						InterlockedAdd(_counter, 1);
-#endif
-					}
-
-				}
-			}
-			break;
-			case 2/*SPOT_LIGHT*/:
-			{
-				float coneRadius = tan(/*radians*/(light.coneAngle)) * light.range;
-				Cone cone = { light.positionVS.xyz, light.range, -light.directionVS.xyz, coneRadius };
-				if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
-				{
-					// Add light to light list for transparent geometry.
-					t_AppendLight(i);
-#ifdef DEBUG_TILEDLIGHTCULLING
-					InterlockedAdd(_counter, 1);
-#endif
-
-					if (!ConeInsidePlane(cone, minPlane))
-					{
-						// Add light to light list for opaque geometry.
-						o_AppendLight(i);
-					}
-				}
-			}
-			break;
-			case 0/*DIRECTIONAL_LIGHT*/:
-			{
-				// Directional lights always get added to our light list.
-				// (Hopefully there are not too many directional lights!)
+				// Add light to light list for transparent geometry.
 				t_AppendLight(i);
-				o_AppendLight(i);
+
+#ifdef DEBUG_TILEDLIGHTCULLING
+				InterlockedAdd(_counter.z, 1);
+#endif
+
+				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than just frustum culling
+				{
+					// Add light to light list for opaque geometry.
+					o_AppendLight(i);
+
+#ifdef DEBUG_TILEDLIGHTCULLING
+					InterlockedAdd(_counter.x, 1);
+#endif
+				}
 			}
-			break;
+		}
+		break;
+		case 2/*SPOT_LIGHT*/:
+		{
+			float coneRadius = tan(/*radians*/(light.coneAngle)) * light.range;
+			Cone cone = { light.positionVS.xyz, light.range, -light.directionVS.xyz, coneRadius };
+			if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
+			{
+				// Add light to light list for transparent geometry.
+				t_AppendLight(i);
+#ifdef DEBUG_TILEDLIGHTCULLING
+				InterlockedAdd(_counter.z, 1);
+#endif
+
+				if (!ConeInsidePlane(cone, minPlane))
+				{
+					// Add light to light list for opaque geometry.
+					o_AppendLight(i);
+#ifdef DEBUG_TILEDLIGHTCULLING
+					//InterlockedAdd(_counter.x, 1);
+#endif
+				}
 			}
+		}
+		break;
+		case 0/*DIRECTIONAL_LIGHT*/:
+		{
+			// Directional lights always get added to our light list.
+			// (Hopefully there are not too many directional lights!)
+			t_AppendLight(i);
+			o_AppendLight(i);
+		}
+		break;
 		}
 	}
 
@@ -206,6 +218,6 @@ void main(ComputeShaderInput IN)
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-	DebugTexture[texCoord] = float4((float)_counter / (float)lightCount,0,0,1);
+	DebugTexture[texCoord] = float4((float3)_counter / (float)lightCount,1);
 #endif
 }
