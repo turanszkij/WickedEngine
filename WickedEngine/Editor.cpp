@@ -798,7 +798,7 @@ void EditorComponent::FixedUpdate()
 					list<wiRenderer::Picked*>::iterator it = selected.begin();
 					for (; it != selected.end(); ++it)
 					{
-						if ((*it) == picked)
+						if ((**it) == *picked)
 						{
 							break;
 						}
@@ -807,12 +807,6 @@ void EditorComponent::FixedUpdate()
 					{
 						selected.push_back(picked);
 						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
-					}
-					else
-					{
-						EndTranslate();
-						selected.erase(it);
-						savedParents.erase((*it)->transform);
 					}
 				}
 				else
