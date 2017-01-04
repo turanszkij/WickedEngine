@@ -99,10 +99,13 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	UV = finalTexCoords;
 }
 
-inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout float3 albedo, inout float4 color)
+inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, in float roughness, inout float3 albedo, inout float4 color)
 {
+	float2 size;
+	float mipLevels;
+	xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
-	float4 refractiveColor = (xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, 0));
+	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, roughness * mipLevels);
 	albedo.rgb = lerp(refractiveColor.rgb, albedo.rgb, color.a);
 	color.a = 1;
 }
@@ -220,7 +223,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
 
 #define OBJECT_PS_REFRACTION																						\
-	Refraction(ScreenCoord, input.nor2D, bumpColor, albedo, color);
+	Refraction(ScreenCoord, input.nor2D, bumpColor, roughness, albedo, color);
 
 #define OBJECT_PS_LIGHT_DIRECTIONAL																					\
 	DirectionalLight(N, V, P, f0, albedo, roughness, diffuse, specular);

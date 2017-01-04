@@ -48,7 +48,7 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, FORMAT_R8G8B8A8_SNORM);
 	rtSceneCopy.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R16G16B16A16_FLOAT, 1);
+		, false, FORMAT_R16G16B16A16_FLOAT, 5);
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
@@ -330,6 +330,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	shadedSceneRT.Set(threadID, mainRT.depth); {
+		wiRenderer::GetDevice()->GenerateMips(rtSceneCopy.GetTextureResolvedMSAA(threadID), threadID); // todo: create smoother mipchain for refraction
 		RenderTransparentScene(rtSceneCopy, threadID);
 
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
