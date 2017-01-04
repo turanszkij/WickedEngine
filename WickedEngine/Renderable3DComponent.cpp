@@ -331,7 +331,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	shadedSceneRT.Set(threadID, mainRT.depth); {
-		wiRenderer::GetDevice()->GenerateMips(rtSceneCopy.GetTextureResolvedMSAA(threadID), threadID); // todo: create smoother mipchain for refraction
+		wiRenderer::GetDevice()->GenerateMips(rtSceneCopy.GetTexture(), threadID); // todo: create smoother mipchain for refraction
 		RenderTransparentScene(rtSceneCopy, threadID);
 
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
