@@ -274,6 +274,31 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		}
 	}
 
+	if (effects.quality == QUALITY_NEAREST) {
+		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
+		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, threadID);
+		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+	}
+	else if (effects.quality == QUALITY_BILINEAR) {
+		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
+		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, threadID);
+		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+	}
+	else if (effects.quality == QUALITY_ANISOTROPIC) {
+		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
+		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, threadID);
+		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, threadID);
+	}
+
 	if (effects.presentFullScreen)
 	{
 		device->BindVS(screenVS, threadID);
@@ -444,33 +469,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		device->UpdateBuffer(processCb, &prcb, threadID);
 
 	}
-
-
-	if(effects.quality==QUALITY_NEAREST){
-		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
-		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, threadID);
-		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
-	}
-	else if(effects.quality==QUALITY_BILINEAR){
-		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
-		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, threadID);
-		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
-	}
-	else if(effects.quality==QUALITY_ANISOTROPIC){
-		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
-		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, threadID);
-		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, threadID);
-	}
-
 	
 	device->Draw((fullScreenEffect ? 3 : 4), threadID);
 

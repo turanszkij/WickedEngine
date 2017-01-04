@@ -318,6 +318,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	rtSceneCopy.Activate(threadID, 0, 0, 0, 0); {
 		wiRenderer::GetDevice()->EventBegin(L"Refraction Target");
 		fx.blendFlag = BLENDMODE_OPAQUE;
+		fx.quality = QUALITY_NEAREST;
 		fx.presentFullScreen = true;
 		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		if (getVolumeLightsEnabled())
