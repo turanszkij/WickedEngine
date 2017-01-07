@@ -251,6 +251,7 @@ public:
 		int shadowMap_index;
 		float coneAngle;
 		float coneAngleCos;
+		XMFLOAT4 texMulAdd;
 		XMMATRIX shadowMatrix[3];
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_LIGHTARRAY)
@@ -364,6 +365,7 @@ public:
 		CulledList culledLights;
 		UINT culledLight_count; // because forward_list doesn't have size()
 		vector<wiEmittedParticle*> culledEmittedParticleSystems;
+		list<Decal*> culledDecals;
 	};
 	static unordered_map<Camera*, FrameCulling> frameCullings;
 	
@@ -409,6 +411,8 @@ public:
 
 	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
+
+	static void ManageDecalAtlas(GRAPHICSTHREAD threadID);
 	
 	static XMVECTOR GetSunPosition();
 	static XMFLOAT4 GetSunColor();

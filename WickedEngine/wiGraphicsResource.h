@@ -255,7 +255,7 @@ namespace wiGraphicsTypes
 		Texture2D();
 		virtual ~Texture2D();
 
-		Texture2DDesc GetDesc() { return desc; }
+		Texture2DDesc GetDesc() const { return desc; }
 	};
 
 

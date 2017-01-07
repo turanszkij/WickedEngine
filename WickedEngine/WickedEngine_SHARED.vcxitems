@@ -332,6 +332,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRectPacker.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h" />
@@ -667,6 +668,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRectPacker.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp" />

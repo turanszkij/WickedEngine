@@ -119,7 +119,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 }
 
 
-inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
+inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P, in float3 f0, inout float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
 	uint2 tileIndex = uint2(floor(pixel / BLOCK_SIZE));
@@ -137,7 +137,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 		float3 L = light.positionWS - P;
 		float lightDistance = length(L);
-		if (light.type > 0 && lightDistance > light.range)
+		if (light.type > 0 && light.type != 100 && lightDistance > light.range)
 			continue;
 		L /= lightDistance;
 
@@ -159,6 +159,26 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			result = SpotLight(light, L, lightDistance, N, V, P, roughness, f0);
 		}
 		break;
+#ifndef DISABLE_DECALS
+		case 100/*DECAL*/:
+		{
+			float3 clipSpace = mul(float4(P, 1), light.shadowMat[0]).xyz;
+			float3 projTex = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+			[branch]
+			if ((saturate(projTex.x) == projTex.x) && (saturate(projTex.y) == projTex.y) && (saturate(projTex.z) == projTex.z))
+			{ 
+				// can't do mipmapping here because of the variable length loop :(
+				float4 decalColor = texture_decalatlas.SampleLevel(sampler_linear_clamp, projTex.xy*light.texMulAdd.xy + light.texMulAdd.zw, 0);
+				float3 edgeBlend = clipSpace.xyz;
+				edgeBlend = saturate(abs(edgeBlend));
+				decalColor.a *= 1 - pow(max(max(edgeBlend.x, edgeBlend.y), edgeBlend.z), 8);
+				decalColor *= light.color;
+				albedo.rgb = lerp(albedo.rgb, decalColor.rgb, decalColor.a);
+			}
+		}
+		break;
+#endif
+		default:break;
 		}
 
 		diffuse += max(0.0f, result.diffuse);

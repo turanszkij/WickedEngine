@@ -1,6 +1,9 @@
 #ifndef WICKEDENGINE_COMMONINCLUDE_H
 #define WICKEDENGINE_COMMONINCLUDE_H
 
+// NOTE:
+// Do not include engine features in this file!
+
 #include <SDKDDKVer.h>
 #include <DirectXMath.h>
 #include <DirectXCollision.h>

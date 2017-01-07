@@ -1,3 +1,4 @@
+#define DISABLE_DECALS
 #include "grassHF_GS.hlsli"
 #include "grassHF_PS.hlsli"
 #include "ditherHF.hlsli"

@@ -24,6 +24,8 @@ struct LightArrayType
 	float coneAngle;
 	float coneAngleCos;
 	// --
+	float4 texMulAdd;
+	// --
 	float4x4 shadowMat[3];
 };
 

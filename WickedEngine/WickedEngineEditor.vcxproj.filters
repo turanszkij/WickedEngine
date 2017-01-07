@@ -230,6 +230,9 @@
     <Image Include="images\spotlight.dds">
       <Filter>images</Filter>
     </Image>
+    <Image Include="images\blood1.png">
+      <Filter>images</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WickedEngineEditor.rc">

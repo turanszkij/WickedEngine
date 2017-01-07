@@ -104,8 +104,8 @@ void main(ComputeShaderInput IN)
 
 	if (IN.groupIndex == 0)
 	{
-		float3 minAABB = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f));
-		float3 maxAABB = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMaxDepth, 1.0f));
+		float3 minAABB = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		float3 maxAABB = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
 
 		GroupAABB.c = (minAABB + maxAABB)*0.5f;
 		GroupAABB.e = abs(maxAABB - GroupAABB.c);
@@ -170,7 +170,7 @@ void main(ComputeShaderInput IN)
 					// Add light to light list for opaque geometry.
 					o_AppendLight(i);
 #ifdef DEBUG_TILEDLIGHTCULLING
-					//InterlockedAdd(_counter.x, 1);
+					InterlockedAdd(_counter.x, 1);
 #endif
 				}
 			}
@@ -182,6 +182,30 @@ void main(ComputeShaderInput IN)
 			// (Hopefully there are not too many directional lights!)
 			t_AppendLight(i);
 			o_AppendLight(i);
+		}
+		break;
+		case 100:/*DECAL*/
+		{
+			Sphere sphere = { light.positionVS.xyz, light.range };
+			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+			{
+				// Add decal to light list for transparent geometry.
+				t_AppendLight(i);
+
+#ifdef DEBUG_TILEDLIGHTCULLING
+				InterlockedAdd(_counter.z, 1);
+#endif
+
+				if (SphereInsideFrustum(sphere, GroupFrustum, minDepthVS, maxDepthVS))
+				{
+					// Add decal to light list for opaque geometry.
+					o_AppendLight(i);
+
+#ifdef DEBUG_TILEDLIGHTCULLING
+					InterlockedAdd(_counter.x, 1);
+#endif
+				}
+			}
 		}
 		break;
 		}

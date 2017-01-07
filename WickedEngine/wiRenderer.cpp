@@ -23,6 +23,8 @@
 #include "wiGraphicsDevice_DX11.h"
 #include "wiTranslator.h"
 #include "lightCullingCSInterop.h"
+#include "wiRectPacker.h"
+#include "wiBackLog.h"
 
 using namespace wiGraphicsTypes;
 
@@ -1409,6 +1411,7 @@ void wiRenderer::UpdatePerFrameData()
 			culling.culledLights.clear();
 			culling.culledLight_count = 0;
 			culling.culledEmittedParticleSystems.clear();
+			culling.culledDecals.clear();
 
 			if (spTree != nullptr)
 			{
@@ -1506,6 +1509,20 @@ void wiRenderer::UpdatePerFrameData()
 			std::sort(culling.culledEmittedParticleSystems.begin(), culling.culledEmittedParticleSystems.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {
 				return wiMath::DistanceSquared(camera->translation, a->bounding_box->getCenter()) > wiMath::DistanceSquared(camera->translation,b->bounding_box->getCenter());
 			});
+
+			for (Model* model : GetScene().models)
+			{
+				if (model->decals.empty())
+					continue;
+
+				for (Decal* decal : model->decals)
+				{
+					if ((decal->texture || decal->normal) && getCamera()->frustum.CheckBox(decal->bounds))
+					{
+						x.second.culledDecals.push_back(decal);
+					}
+				}
+			}
 		}
 	}
 	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
@@ -1644,6 +1661,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	
 	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
+
+	ManageDecalAtlas(threadID);
 	
 	// Fill Light Array with lights in the frustum
 	{
@@ -1703,11 +1722,30 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			lightCounter++;
 			if (lightCounter == MAX_LIGHTS)
 			{
-				assert(0 && "Maximum Lightcount exceeded for a single tiled lightculling pass! Please redefine MAX_LIGHTS to fit!");
 				lightCounter--;
 				break;
 			}
 		}
+		if (lightCounter < MAX_LIGHTS)
+		{
+			for (Decal* decal : mainCameraCulling.culledDecals)
+			{
+				XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
+				lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
+				lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
+				lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
+				lightArray[lightCounter].col = XMFLOAT4(1, 1, 1, decal->GetOpacity());
+				lightArray[lightCounter].type = 100;
+
+				lightCounter++;
+				if (lightCounter == MAX_LIGHTS)
+				{
+					lightCounter--;
+					break;
+				}
+			}
+		}
+		assert(lightCounter < MAX_LIGHTS && "Maximum Lightcount exceeded for a single tiled lightculling pass! Please redefine MAX_LIGHTS to fit!");
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
 	}
 
@@ -1817,7 +1855,8 @@ void wiRenderer::OcclusionCulling_Read()
 		GetDevice()->EventEnd();
 	}
 }
-void wiRenderer::UpdateImages(){
+void wiRenderer::UpdateImages()
+{
 	for (wiSprite* x : images)
 		x->Update(GameSpeed);
 	for (wiSprite* x : waterRipples)
@@ -1826,12 +1865,13 @@ void wiRenderer::UpdateImages(){
 	ManageImages();
 	ManageWaterRipples();
 }
-void wiRenderer::ManageImages(){
-		while(	
-				!images.empty() && 
-				(images.front()->effects.opacity <= 0 + FLT_EPSILON || images.front()->effects.fade==1)
-			)
-			images.pop_front();
+void wiRenderer::ManageImages()
+{
+	while (!images.empty() &&
+		(images.front()->effects.opacity <= 0 + FLT_EPSILON || images.front()->effects.fade == 1))
+	{
+		images.pop_front();
+	}
 }
 void wiRenderer::PutDecal(Decal* decal)
 {
@@ -3492,41 +3532,43 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 
 void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = GetDevice();
+
 	bool boundCB = false;
 	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
 			continue;
 
-		GetDevice()->EventBegin(L"Decals", threadID);
+		device->EventBegin(L"Decals", threadID);
 
 		if (!boundCB)
 		{
 			boundCB = true;
-			GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
+			device->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
 		}
 
-		//BindResourcePS(depth, 1, threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_DECAL], threadID);
-		GetDevice()->BindPS(pixelShaders[PSTYPE_DECAL], threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD_MATCH], STENCILREF::STENCILREF_DEFAULT, threadID);
-		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
+		device->BindVS(vertexShaders[VSTYPE_DECAL], threadID);
+		device->BindPS(pixelShaders[PSTYPE_DECAL], threadID);
+		device->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+		device->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+		device->BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD_MATCH], STENCILREF::STENCILREF_DEFAULT, threadID);
+		device->BindVertexLayout(nullptr, threadID);
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
 
-		for (Decal* decal : model->decals) {
+		for (Decal* decal : model->decals) 
+		{
 
 			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
 
-				GetDevice()->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
-				GetDevice()->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
+				device->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
 
 				XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
 
 				MiscCB dcbvs;
 				dcbvs.mTransform =XMMatrixTranspose(decalWorld*camera->GetViewProjection());
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
 				DecalCB dcbps;
 				dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld));
@@ -3536,17 +3578,17 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 				if (decal->normal != nullptr)
 					dcbps.hasTexNor |= 0x0000010;
 				XMStoreFloat3(&dcbps.eye, camera->GetEye());
-				dcbps.opacity = wiMath::Clamp((decal->life <= -2 ? 1 : decal->life < decal->fadeStart ? decal->life / decal->fadeStart : 1), 0, 1);
+				dcbps.opacity = decal->GetOpacity();
 				dcbps.front = decal->front;
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
 
-				GetDevice()->Draw(36, threadID);
+				device->Draw(36, threadID);
 
 			}
 
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 }
 
@@ -3668,7 +3710,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)BLOCK_SIZE);
 		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)BLOCK_SIZE);
 		dispatchParams.numThreadGroups[2] = 1;
-		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count; // light count (forward_list does not have size())
+		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count + (UINT)frameCullings[getCamera()].culledDecals.size(); // light count (forward_list does not have size())
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
 		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 	}
@@ -3832,6 +3874,83 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
 	GetDevice()->EventEnd();
+}
+
+void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	static Texture2D* atlasTexture = nullptr;
+
+	for (Model* model : GetScene().models)
+	{
+		if (model->decals.empty())
+			continue;
+
+		for (Decal* decal : model->decals)
+		{
+			using namespace wiRectPacker;
+			static map<Texture2D*, rect_xywhf> storedTextures;
+
+			if (storedTextures.find(decal->texture) == storedTextures.end())
+			{
+				// we need to pack this decal texture into the atlas
+				rect_xywhf newRect = rect_xywhf(0, 0, decal->texture->GetDesc().Width, decal->texture->GetDesc().Height);
+				storedTextures[decal->texture] = newRect;
+
+				rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+				int i = 0;
+				for (auto& it : storedTextures)
+				{
+					out_rects[i] = &it.second;
+					i++;
+				}
+
+				vector<bin> bins;
+				if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
+				{
+					assert(bins.size() == 1 && "Decal atlas packing into single texture failed!");
+
+					SAFE_DELETE(atlasTexture);
+
+					Texture2DDesc desc;
+					ZeroMemory(&desc, sizeof(desc));
+					desc.Width = (UINT)bins[0].size.w;
+					desc.Height = (UINT)bins[0].size.h;
+					desc.MipLevels = 1;
+					desc.ArraySize = 1;
+					desc.Format = FORMAT_B8G8R8A8_UNORM; // png decals are loaded into this format! todo: DXT!
+					desc.SampleDesc.Count = 1;
+					desc.SampleDesc.Quality = 0;
+					desc.Usage = USAGE_DEFAULT;
+					desc.BindFlags = BIND_SHADER_RESOURCE;
+					desc.CPUAccessFlags = 0;
+					desc.MiscFlags = 0;
+
+					device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+
+					for (auto& it : storedTextures)
+					{
+						device->CopyTexture2D_Region(atlasTexture, 0, it.second.x, it.second.y, it.first, 0, threadID);
+					}
+				}
+				else
+				{
+					wiBackLog::post("Decal atlas packing failed!");
+				}
+			}
+			
+			rect_xywhf rect = storedTextures[decal->texture];
+			Texture2DDesc desc = atlasTexture->GetDesc();
+			decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+		}
+
+	}
+
+	if (atlasTexture != nullptr)
+	{
+		device->BindResourcePS(atlasTexture, TEXSLOT_DECALATLAS, threadID);
+	}
 }
 
 void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)

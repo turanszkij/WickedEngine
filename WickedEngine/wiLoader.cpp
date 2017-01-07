@@ -3594,6 +3594,8 @@ Decal::Decal(const XMFLOAT3& tra, const XMFLOAT3& sca, const XMFLOAT4& rot, cons
 
 	life = -2; //persistent
 	fadeStart=0;
+
+	atlasMulAdd = XMFLOAT4(1, 1, 0, 0);
 }
 Decal::~Decal() {
 	wiResourceManager::GetGlobal()->del(texName);
@@ -3628,6 +3630,10 @@ void Decal::UpdateDecal()
 	if (life>-2) {
 		life -= wiRenderer::GetGameSpeed();
 	}
+}
+float Decal::GetOpacity() const
+{
+	return wiMath::Clamp((life <= -2 ? 1 : life < fadeStart ? life / fadeStart : 1), 0, 1);
 }
 void Decal::Serialize(wiArchive& archive)
 {

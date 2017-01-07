@@ -1,6 +1,11 @@
 #ifndef WICKED_ENGINE
 #define WICKED_ENGINE
 
+// NOTE:
+// The purpose of this file is to expose all engine features.
+// It should be included in the engine's implementing project not the engine itself!
+// It should be included in the precompiled header if available.
+
 #include "CommonInclude.h"
 
 #include "wiVersion.h"
@@ -50,6 +55,7 @@
 #include "wiTranslator.h"
 #include "wiArchive.h"
 #include "wiSpinLock.h"
+#include "wiRectPacker.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

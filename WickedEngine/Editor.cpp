@@ -20,7 +20,7 @@
 int __editorVersion = 0;
 
 using namespace wiGraphicsTypes;
-
+using namespace wiRectPacker;
 
 Editor::Editor()
 {
@@ -777,8 +777,10 @@ void EditorComponent::FixedUpdate()
 				if (wiInputManager::GetInstance()->press(VK_LBUTTON))
 				{
 					// if not water, put a decal instead:
+					static int decalselector = 0;
+					decalselector = (decalselector + 1) % 2;
 					Decal* decal = new Decal(hovered.position, XMFLOAT3(4,4,4), wiRenderer::getCamera()->rotation,
-						wiHelper::GetOriginalWorkingDirectory() + "images/leaf.png");
+						wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.png" : "images/blood1.png"));
 					decal->attachTo(hovered.object);
 					wiRenderer::PutDecal(decal);
 				}

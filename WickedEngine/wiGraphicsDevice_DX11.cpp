@@ -2521,6 +2521,11 @@ void GraphicsDevice_DX11::CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, 
 {
 	deviceContexts[threadID]->CopyResource(pDst->texture2D_DX11, pSrc->texture2D_DX11);
 }
+void GraphicsDevice_DX11::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
+{
+	deviceContexts[threadID]->CopySubresourceRegion(pDst->texture2D_DX11, D3D11CalcSubresource(dstMip, 0, pDst->GetDesc().MipLevels), dstX, dstY, 0, 
+		pSrc->texture2D_DX11, D3D11CalcSubresource(srcMip, 0, pSrc->GetDesc().MipLevels), nullptr);
+}
 void GraphicsDevice_DX11::MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->ResolveSubresource(pDst->texture2D_DX11, 0, pSrc->texture2D_DX11, 0, _ConvertFormat(pDst->desc.Format));

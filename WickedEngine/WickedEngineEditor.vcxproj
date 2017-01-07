@@ -203,6 +203,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="fonts\basic.dds" />
+    <Image Include="images\blood1.png" />
     <Image Include="images\directional_light.dds" />
     <Image Include="images\leaf.png">
       <DeploymentContent>true</DeploymentContent>

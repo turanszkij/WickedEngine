@@ -771,6 +771,7 @@ struct Decal : public Cullable, public Transform
 	wiGraphicsTypes::Texture2D* texture,*normal;
 	XMFLOAT3 front;
 	float life,fadeStart;
+	XMFLOAT4 atlasMulAdd;
 
 	Decal(const XMFLOAT3& tra=XMFLOAT3(0,0,0), const XMFLOAT3& sca=XMFLOAT3(1,1,1), const XMFLOAT4& rot=XMFLOAT4(0,0,0,1), const string& tex="", const string& nor="");
 	virtual ~Decal();
@@ -779,6 +780,7 @@ struct Decal : public Cullable, public Transform
 	void addNormal(const string& nor);
 	virtual void UpdateTransform();
 	void UpdateDecal();
+	float GetOpacity() const;
 	void Serialize(wiArchive& archive);
 };
 struct WorldInfo{
