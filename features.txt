@@ -58,3 +58,5 @@ Dynamic environment mapping
 Impostor system
 Tiled forward (Forward+) rendering
 Occlusion culling with gpu queries
+Texture atlas packing
+Tiled decals

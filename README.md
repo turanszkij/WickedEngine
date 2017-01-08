@@ -15,7 +15,7 @@ Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
 Devblog: https://turanszkij.wordpress.com/
 
 ### Platforms:
-- Windows PC Desktop (tested for version 0.9.11)
+- Windows PC Desktop (tested for version 0.9.52)
 - Universal Windows (tested for version 0.9.11)
 
 ### Requirements:
@@ -76,6 +76,9 @@ For further details, please check the scripting API documentation: [Wicked Engin
 The editor is now available but also work in progress. Just build the editor project and run it, then you will be presented with a blank scene.
 You can import files exported from Blender (.wio) with the scipt described below. You can also save models into the .wimf format from the Editor
 and open them.
+
+
+### Model import/export:
 
 You can export models from Blender with the provided python script: io_export_wicked_wi_bin.py
 Notes on exporting:
