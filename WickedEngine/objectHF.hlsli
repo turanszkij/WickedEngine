@@ -126,8 +126,6 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	uint startOffset = LightGrid[tileIndex].x;
 	uint lightCount = LightGrid[tileIndex].y;
 
-	LightingResult result = (LightingResult)0;
-
 	specular = 0;
 	diffuse = 0;
 	for (uint i = 0; i < lightCount; i++)
@@ -140,6 +138,9 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		if (light.type > 0 && light.type != 100 && lightDistance > light.range)
 			continue;
 		L /= lightDistance;
+
+
+		LightingResult result = (LightingResult)0;
 
 		[branch]
 		switch (light.type)
