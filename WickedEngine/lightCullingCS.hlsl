@@ -241,6 +241,50 @@ void main(ComputeShaderInput IN)
 		t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
 	}
 
+
+	// Sort the decals:
+	//	The sorting *could be optimized* when it is needed, now this should work
+	//	TODO: Try some other algorithms and choose fastest
+	GroupMemoryBarrierWithGroupSync();
+	// first thread sorts opaques
+	if (IN.groupIndex == 0 && o_LightCount > 0)
+	{
+		for (i = 0; i < o_LightCount - 1; ++i)
+		{
+			if (Lights[o_LightIndexList[o_LightIndexStartOffset + i]].type == 100) /*DECAL*/
+			{
+				for (uint j = i + 1; j < o_LightCount; ++j)
+				{
+					if (o_LightIndexList[o_LightIndexStartOffset + i] > o_LightIndexList[o_LightIndexStartOffset + j])
+					{
+						uint swap = o_LightIndexList[o_LightIndexStartOffset + i];
+						o_LightIndexList[o_LightIndexStartOffset + i] = o_LightIndexList[o_LightIndexStartOffset + j];
+						o_LightIndexList[o_LightIndexStartOffset + j] = swap;
+					}
+				}
+			}
+		}
+	}
+	// second thread sorts transparents
+	if (IN.groupIndex == 1 && t_LightCount > 0)
+	{
+		for (i = 0; i < t_LightCount - 1; ++i)
+		{
+			if (Lights[t_LightIndexList[t_LightIndexStartOffset + i]].type == 100) /*DECAL*/
+			{
+				for (uint j = i + 1; j < t_LightCount; ++j)
+				{
+					if (t_LightIndexList[t_LightIndexStartOffset + i] > t_LightIndexList[t_LightIndexStartOffset + j])
+					{
+						uint swap = t_LightIndexList[t_LightIndexStartOffset + i];
+						t_LightIndexList[t_LightIndexStartOffset + i] = t_LightIndexList[t_LightIndexStartOffset + j];
+						t_LightIndexList[t_LightIndexStartOffset + j] = swap;
+					}
+				}
+			}
+		}
+	}
+
 #ifdef DEBUG_TILEDLIGHTCULLING
 	DebugTexture[texCoord] = float4((float3)_counter / (float)lightCount,1);
 #endif
