@@ -227,6 +227,43 @@ void main(ComputeShaderInput IN)
 		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
 	}
 
+
+	// Sort the decals:
+	//	TODO: Optimize for parallel sorting! (Merge sort?)
+	GroupMemoryBarrierWithGroupSync();
+	// first thread sorts opaques
+	if (IN.groupIndex == 0 && o_LightCount > 0)
+	{
+		for (i = 0; i < o_LightCount - 1; ++i)
+		{
+			for (uint j = i + 1; j < o_LightCount; ++j)
+			{
+				if (o_LightList[i] > o_LightList[j])
+				{
+					uint swap = o_LightList[i];
+					o_LightList[i] = o_LightList[j];
+					o_LightList[j] = swap;
+				}
+			}
+		}
+	}
+	// second thread sorts transparents
+	if (IN.groupIndex == 0 && t_LightCount > 0)
+	{
+		for (i = 0; i < t_LightCount - 1; ++i)
+		{
+			for (uint j = i + 1; j < t_LightCount; ++j)
+			{
+				if (t_LightList[i] > t_LightList[j])
+				{
+					uint swap = t_LightList[i];
+					t_LightList[i] = t_LightList[j];
+					t_LightList[j] = swap;
+				}
+			}
+		}
+	}
+
 	GroupMemoryBarrierWithGroupSync();
 
 	// Now update the light index list (all threads).
@@ -239,50 +276,6 @@ void main(ComputeShaderInput IN)
 	for (i = IN.groupIndex; i < t_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
 	{
 		t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
-	}
-
-
-	// Sort the decals:
-	//	The sorting *could be optimized* when it is needed, now this should work
-	//	TODO: Try some other algorithms and choose fastest
-	GroupMemoryBarrierWithGroupSync();
-	// first thread sorts opaques
-	if (IN.groupIndex == 0 && o_LightCount > 0)
-	{
-		for (i = 0; i < o_LightCount - 1; ++i)
-		{
-			if (Lights[o_LightIndexList[o_LightIndexStartOffset + i]].type == 100) /*DECAL*/
-			{
-				for (uint j = i + 1; j < o_LightCount; ++j)
-				{
-					if (o_LightIndexList[o_LightIndexStartOffset + i] > o_LightIndexList[o_LightIndexStartOffset + j])
-					{
-						uint swap = o_LightIndexList[o_LightIndexStartOffset + i];
-						o_LightIndexList[o_LightIndexStartOffset + i] = o_LightIndexList[o_LightIndexStartOffset + j];
-						o_LightIndexList[o_LightIndexStartOffset + j] = swap;
-					}
-				}
-			}
-		}
-	}
-	// second thread sorts transparents
-	if (IN.groupIndex == 1 && t_LightCount > 0)
-	{
-		for (i = 0; i < t_LightCount - 1; ++i)
-		{
-			if (Lights[t_LightIndexList[t_LightIndexStartOffset + i]].type == 100) /*DECAL*/
-			{
-				for (uint j = i + 1; j < t_LightCount; ++j)
-				{
-					if (t_LightIndexList[t_LightIndexStartOffset + i] > t_LightIndexList[t_LightIndexStartOffset + j])
-					{
-						uint swap = t_LightIndexList[t_LightIndexStartOffset + i];
-						t_LightIndexList[t_LightIndexStartOffset + i] = t_LightIndexList[t_LightIndexStartOffset + j];
-						t_LightIndexList[t_LightIndexStartOffset + j] = swap;
-					}
-				}
-			}
-		}
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING
