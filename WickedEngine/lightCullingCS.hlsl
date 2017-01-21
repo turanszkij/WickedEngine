@@ -64,6 +64,76 @@ void t_AppendLight(uint lightIndex)
 	}
 }
 
+// Decals NEED correct order, so a sorting is required on the LDS light array!
+void o_BitonicSort( in uint localIdxFlattened )
+{
+	uint numArray = o_LightCount;
+
+	// Round the number of particles up to the nearest power of two
+	uint numArrayPowerOfTwo = 1;
+	while( numArrayPowerOfTwo < numArray )
+		numArrayPowerOfTwo <<= 1;
+
+	GroupMemoryBarrierWithGroupSync();
+
+	for( uint nMergeSize = 2; nMergeSize <= numArrayPowerOfTwo; nMergeSize = nMergeSize * 2 )
+	{
+		for( uint nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 0; nMergeSubSize = nMergeSubSize >> 1 )
+		{
+			uint tmp_index = localIdxFlattened;
+			uint index_low = tmp_index & ( nMergeSubSize - 1 );
+			uint index_high = 2 * ( tmp_index - index_low );
+			uint index = index_high + index_low;
+
+			uint nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + ( 2 * nMergeSubSize - 1 ) - index_low : index_high + nMergeSubSize + index_low;
+			if( nSwapElem < numArray && index < numArray )
+			{
+				if( o_LightList[ index ] > o_LightList[ nSwapElem ] )
+				{
+					uint uTemp = o_LightList[ index ];
+					o_LightList[ index ] = o_LightList[ nSwapElem ];
+					o_LightList[ nSwapElem ] = uTemp;
+				}
+			}
+			GroupMemoryBarrierWithGroupSync();
+		}
+	}
+}
+void t_BitonicSort( in uint localIdxFlattened )
+{
+	uint numArray = t_LightCount;
+
+	// Round the number of particles up to the nearest power of two
+	uint numArrayPowerOfTwo = 1;
+	while( numArrayPowerOfTwo < numArray )
+		numArrayPowerOfTwo <<= 1;
+
+	GroupMemoryBarrierWithGroupSync();
+
+	for( uint nMergeSize = 2; nMergeSize <= numArrayPowerOfTwo; nMergeSize = nMergeSize * 2 )
+	{
+		for( uint nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 0; nMergeSubSize = nMergeSubSize >> 1 )
+		{
+			uint tmp_index = localIdxFlattened;
+			uint index_low = tmp_index & ( nMergeSubSize - 1 );
+			uint index_high = 2 * ( tmp_index - index_low );
+			uint index = index_high + index_low;
+
+			uint nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + ( 2 * nMergeSubSize - 1 ) - index_low : index_high + nMergeSubSize + index_low;
+			if( nSwapElem < numArray && index < numArray )
+			{
+				if( t_LightList[ index ] > t_LightList[ nSwapElem ] )
+				{
+					uint uTemp = t_LightList[ index ];
+					t_LightList[ index ] = t_LightList[ nSwapElem ];
+					t_LightList[ nSwapElem ] = uTemp;
+				}
+			}
+			GroupMemoryBarrierWithGroupSync();
+		}
+	}
+}
+
 
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void main(ComputeShaderInput IN)
@@ -221,48 +291,16 @@ void main(ComputeShaderInput IN)
 		// Update light grid for opaque geometry.
 		InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
 		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
-
+	}
+	else if(IN.groupIndex == 1)
+	{
 		// Update light grid for transparent geometry.
 		InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
 		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
 	}
 
-
-	// Sort the decals:
-	//	TODO: Optimize for parallel sorting! (Merge sort?)
-	GroupMemoryBarrierWithGroupSync();
-	// first thread sorts opaques
-	if (IN.groupIndex == 0 && o_LightCount > 0)
-	{
-		for (i = 0; i < o_LightCount - 1; ++i)
-		{
-			for (uint j = i + 1; j < o_LightCount; ++j)
-			{
-				if (o_LightList[i] > o_LightList[j])
-				{
-					uint swap = o_LightList[i];
-					o_LightList[i] = o_LightList[j];
-					o_LightList[j] = swap;
-				}
-			}
-		}
-	}
-	// second thread sorts transparents
-	if (IN.groupIndex == 0 && t_LightCount > 0)
-	{
-		for (i = 0; i < t_LightCount - 1; ++i)
-		{
-			for (uint j = i + 1; j < t_LightCount; ++j)
-			{
-				if (t_LightList[i] > t_LightList[j])
-				{
-					uint swap = t_LightList[i];
-					t_LightList[i] = t_LightList[j];
-					t_LightList[j] = swap;
-				}
-			}
-		}
-	}
+	o_BitonicSort(IN.groupIndex);
+	t_BitonicSort(IN.groupIndex);
 
 	GroupMemoryBarrierWithGroupSync();
 
