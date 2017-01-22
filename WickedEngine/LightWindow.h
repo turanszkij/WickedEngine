@@ -8,6 +8,7 @@ class wiCheckBox;
 class wiSlider;
 class wiButton;
 class wiColorPicker;
+class wiComboBox;
 
 struct Light;
 
@@ -20,6 +21,7 @@ public:
 	wiGUI* GUI;
 
 	void SetLight(Light* light);
+	void SetLightType(Light::LightType type);
 
 	Light* light;
 
@@ -33,5 +35,6 @@ public:
 	wiButton*	addLightButton;
 	wiButton*	colorPickerToggleButton;
 	wiColorPicker*	colorPicker;
+	wiComboBox*	typeSelectorComboBox;
 };
 

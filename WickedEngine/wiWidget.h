@@ -16,6 +16,7 @@ struct wiEventArgs
 	XMFLOAT2 endPos;
 	float fValue;
 	bool bValue;
+	int iValue;
 	XMFLOAT4 color;
 };
 
@@ -158,6 +159,47 @@ public:
 	virtual void Render(wiGUI* gui) override;
 
 	void OnClick(function<void(wiEventArgs args)> func);
+};
+
+// Drop-down list
+class wiComboBox :public wiWidget
+{
+protected:
+	function<void(wiEventArgs args)> onSelect;
+	Hitbox2D hitBox;
+	int selected;
+
+	// While the widget is active (rolled down) these are the inner states that control behaviour
+	enum COMBOSTATE
+	{
+		// When the list is just being dropped down, or the widget is not active
+		COMBOSTATE_INACTIVE,
+		// The widget is in drop-down state with the last item hovered highlited
+		COMBOSTATE_HOVER,
+		// The hovered item is clicked
+		COMBOSTATE_SELECTING,
+		COMBOSTATE_COUNT,
+	} combostate;
+	int hovered;
+
+	vector<string> items;
+
+	const float _GetItemOffset(int index) const;
+public:
+	wiComboBox(const string& name = "");
+	virtual ~wiComboBox();
+
+	void AddItem(const string& item);
+	void RemoveItem(int index);
+	void ClearItems();
+
+	void SetSelected(int index);
+	int GetSelected();
+
+	virtual void Update(wiGUI* gui) override;
+	virtual void Render(wiGUI* gui) override;
+
+	void OnSelect(function<void(wiEventArgs args)> func);
 };
 
 // Widget container

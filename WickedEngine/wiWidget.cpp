@@ -661,6 +661,247 @@ bool wiCheckBox::GetCheck()
 
 
 
+
+wiComboBox::wiComboBox(const string& name) :wiWidget()
+, selected(-1), combostate(COMBOSTATE_INACTIVE), hovered(-1)
+{
+	SetName(name);
+	SetText(fastName.GetString());
+	OnSelect([](wiEventArgs args) {});
+	SetSize(XMFLOAT2(100, 20));
+}
+wiComboBox::~wiComboBox()
+{
+
+}
+const float wiComboBox::_GetItemOffset(int index) const
+{
+	return scale.y * (index + 1) + 1;
+}
+void wiComboBox::Update(wiGUI* gui)
+{
+	wiWidget::Update(gui);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
+
+	if (state == FOCUS)
+	{
+		state = IDLE;
+	}
+	if (state == DEACTIVATING)
+	{
+		state = IDLE;
+	}
+	if (state == ACTIVE && combostate == COMBOSTATE_SELECTING)
+	{
+		gui->DeactivateWidget(this);
+	}
+
+	hitBox.pos.x = Transform::translation.x;
+	hitBox.pos.y = Transform::translation.y;
+	hitBox.siz.x = Transform::scale.x + scale.y + 1; // + drop-down indicator arrow + little offset
+	hitBox.siz.y = Transform::scale.y;
+
+	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+
+	bool clicked = false;
+	// hover the button
+	if (pointerHitbox.intersects(hitBox))
+	{
+		if (state == IDLE)
+		{
+			state = FOCUS;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		// activate
+		clicked = true;
+	}
+
+	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == DEACTIVATING)
+		{
+			// Keep pressed until mouse is released
+			gui->ActivateWidget(this);
+		}
+	}
+
+
+	if (clicked && state == FOCUS)
+	{
+		gui->ActivateWidget(this);
+	}
+
+
+	if (state == ACTIVE)
+	{
+		if (combostate == COMBOSTATE_INACTIVE)
+		{
+			combostate = COMBOSTATE_HOVER;
+		}
+		else if (combostate == COMBOSTATE_SELECTING)
+		{
+			gui->DeactivateWidget(this);
+			combostate = COMBOSTATE_INACTIVE;
+		}
+		else
+		{
+			hovered = -1;
+			for (size_t i = 0; i < items.size(); ++i)
+			{
+				Hitbox2D itembox;
+				itembox.pos.x = Transform::translation.x;
+				itembox.pos.y = Transform::translation.y + _GetItemOffset((int)i);
+				itembox.siz.x = Transform::scale.x;
+				itembox.siz.y = Transform::scale.y;
+				if (pointerHitbox.intersects(itembox))
+				{
+					hovered = (int)i;
+					break;
+				}
+			}
+
+			if (clicked)
+			{
+				combostate = COMBOSTATE_SELECTING;
+				if (hovered >= 0)
+				{
+					SetSelected(hovered);
+				}
+			}
+		}
+	}
+
+}
+void wiComboBox::Render(wiGUI* gui)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
+	wiColor color = GetColor();
+	if (combostate != COMBOSTATE_INACTIVE)
+	{
+		color = colors[FOCUS];
+	}
+
+	// control-base
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+	// control-arrow
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		, wiImageEffects(translation.x+scale.x+1, translation.y, scale.y, scale.y), gui->GetGraphicsThread());
+	wiFont("V", wiFontProps((int)(translation.x+scale.x+scale.y*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), false);
+
+
+	if (parent != nullptr)
+	{
+		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	}
+	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+
+	if (selected >= 0)
+	{
+		wiFont(items[selected], wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), parent != nullptr);
+	}
+
+	// drop-down
+	if (state == ACTIVE)
+	{
+		// control-list
+		int i = 0;
+		for (auto& x : items)
+		{
+			wiColor col = colors[IDLE];
+			if (hovered == i)
+			{
+				if (combostate == COMBOSTATE_HOVER)
+				{
+					col = colors[FOCUS];
+				}
+				else if (combostate == COMBOSTATE_SELECTING)
+				{
+					col = colors[ACTIVE];
+				}
+			}
+			wiImage::Draw(wiTextureHelper::getInstance()->getColor(col)
+				, wiImageEffects(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), gui->GetGraphicsThread());
+			wiFont(x, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f +_GetItemOffset(i)), -1, WIFALIGN_CENTER, WIFALIGN_CENTER)).Draw(gui->GetGraphicsThread(), false);
+			i++;
+		}
+	}
+}
+void wiComboBox::OnSelect(function<void(wiEventArgs args)> func)
+{
+	onSelect = move(func);
+}
+void wiComboBox::AddItem(const string& item)
+{
+	items.push_back(item);
+
+	if (selected < 0)
+	{
+		selected = 0;
+	}
+}
+void wiComboBox::RemoveItem(int index)
+{
+	vector<string> newItems(0);
+	newItems.reserve(items.size());
+	for (size_t i = 0; i < items.size(); ++i)
+	{
+		if (i != index)
+		{
+			newItems.push_back(items[i]);
+		}
+	}
+	items = newItems;
+
+	if (items.empty())
+	{
+		selected = -1;
+	}
+	else if (selected > index)
+	{
+		selected--;
+	}
+}
+void wiComboBox::ClearItems()
+{
+	items.clear();
+
+	selected = -1;
+}
+void wiComboBox::SetSelected(int index)
+{
+	selected = index;
+
+	wiEventArgs args;
+	args.iValue = selected;
+	onSelect(args);
+}
+int wiComboBox::GetSelected()
+{
+	return selected;
+}
+
+
+
+
 static const float windowcontrolSize = 20.0f;
 wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 , gui(gui)

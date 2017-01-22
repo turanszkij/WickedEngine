@@ -10,16 +10,17 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	lightWindow = new wiWindow(GUI, "Light Window");
-	lightWindow->SetSize(XMFLOAT2(400, 300));
+	lightWindow->SetSize(XMFLOAT2(400, 420));
 	//lightWindow->SetEnabled(false);
 	GUI->AddWidget(lightWindow);
 
 	float x = 200;
 	float y = 0;
+	float step = 35;
 
 	energySlider = new wiSlider(0.1f, 64, 0, 100000, "Energy: ");
 	energySlider->SetSize(XMFLOAT2(100, 30));
-	energySlider->SetPos(XMFLOAT2(x, y += 30));
+	energySlider->SetPos(XMFLOAT2(x, y += step));
 	energySlider->OnSlide([&](wiEventArgs args) {
 		if (light != nullptr)
 		{
@@ -27,11 +28,12 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		}
 	});
 	energySlider->SetEnabled(false);
+	energySlider->SetTooltip("Adjust the light radiation amount inside the maximum range");
 	lightWindow->AddWidget(energySlider);
 
 	distanceSlider = new wiSlider(1, 1000, 0, 100000, "Distance: ");
 	distanceSlider->SetSize(XMFLOAT2(100, 30));
-	distanceSlider->SetPos(XMFLOAT2(x, y += 30));
+	distanceSlider->SetPos(XMFLOAT2(x, y += step));
 	distanceSlider->OnSlide([&](wiEventArgs args) {
 		if (light != nullptr)
 		{
@@ -39,11 +41,12 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		}
 	});
 	distanceSlider->SetEnabled(false);
+	distanceSlider->SetTooltip("Adjust the maximum range the light can affect.");
 	lightWindow->AddWidget(distanceSlider);
 
 	fovSlider = new wiSlider(0.1f, XM_PI - 0.01f, 0, 100000, "FOV: ");
 	fovSlider->SetSize(XMFLOAT2(100, 30));
-	fovSlider->SetPos(XMFLOAT2(x, y += 30));
+	fovSlider->SetPos(XMFLOAT2(x, y += step));
 	fovSlider->OnSlide([&](wiEventArgs args) {
 		if (light != nullptr)
 		{
@@ -51,11 +54,12 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		}
 	});
 	fovSlider->SetEnabled(false);
+	fovSlider->SetTooltip("Adjust the cone aperture for spotlight.");
 	lightWindow->AddWidget(fovSlider);
 
 	biasSlider = new wiSlider(0.0f, 0.01f, 0, 100000, "ShadowBias: ");
 	biasSlider->SetSize(XMFLOAT2(100, 30));
-	biasSlider->SetPos(XMFLOAT2(x, y += 30));
+	biasSlider->SetPos(XMFLOAT2(x, y += step));
 	biasSlider->OnSlide([&](wiEventArgs args) {
 		if (light != nullptr)
 		{
@@ -63,10 +67,11 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		}
 	});
 	biasSlider->SetEnabled(false);
+	biasSlider->SetTooltip("Adjust the shadow bias if shadow artifacts occur.");
 	lightWindow->AddWidget(biasSlider);
 
 	shadowCheckBox = new wiCheckBox("Shadow: ");
-	shadowCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	shadowCheckBox->SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox->OnClick([&](wiEventArgs args) {
 		if (light != nullptr)
 		{
@@ -74,10 +79,11 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		}
 	});
 	shadowCheckBox->SetEnabled(false);
+	shadowCheckBox->SetTooltip("Set light as shadow caster. Many shadow casters can affect performance!");
 	lightWindow->AddWidget(shadowCheckBox);
 
 	haloCheckBox = new wiCheckBox("Halo: ");
-	haloCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	haloCheckBox->SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox->OnClick([&](wiEventArgs args) {
 		if (light != nullptr)
 		{
@@ -85,10 +91,11 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		}
 	});
 	haloCheckBox->SetEnabled(false);
+	haloCheckBox->SetTooltip("Visualize light source emission");
 	lightWindow->AddWidget(haloCheckBox);
 
 	addLightButton = new wiButton("Add Light");
-	addLightButton->SetPos(XMFLOAT2(x, y += 30));
+	addLightButton->SetPos(XMFLOAT2(x, y += step));
 	addLightButton->SetSize(XMFLOAT2(180, 30));
 	addLightButton->OnClick([&](wiEventArgs args) {
 		Model* model = new Model;
@@ -99,14 +106,16 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		model->lights.push_back(light);
 		wiRenderer::AddModel(model);
 	});
+	addLightButton->SetTooltip("Add a light to the scene. It will be added to the origin.");
 	lightWindow->AddWidget(addLightButton);
 
 
 	colorPickerToggleButton = new wiButton("Color");
-	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += 30));
+	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
 	colorPickerToggleButton->OnClick([&](wiEventArgs args) {
 		colorPicker->SetVisible(!colorPicker->IsVisible());
 	});
+	colorPickerToggleButton->SetTooltip("Toggle the light color picker.");
 	lightWindow->AddWidget(colorPickerToggleButton);
 
 
@@ -118,9 +127,27 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	});
 	GUI->AddWidget(colorPicker);
 
+	typeSelectorComboBox = new wiComboBox("Type: ");
+	typeSelectorComboBox->SetPos(XMFLOAT2(x, y += step));
+	typeSelectorComboBox->OnSelect([&](wiEventArgs args) {
+		if (light != nullptr && args.iValue >= 0)
+		{
+			light->type = (Light::LightType)args.iValue;
+			SetLightType(light->type); // for the gui changes to apply to the new type
+		}
+	});
+	typeSelectorComboBox->SetEnabled(false);
+	typeSelectorComboBox->AddItem("Directional");
+	typeSelectorComboBox->AddItem("Point");
+	typeSelectorComboBox->AddItem("Spot");
+	typeSelectorComboBox->SetTooltip("Choose the light source type...");
+	lightWindow->AddWidget(typeSelectorComboBox);
+
 
 	lightWindow->Translate(XMFLOAT3(30, 30, 0));
 	lightWindow->SetVisible(false);
+
+	SetLight(nullptr);
 }
 
 
@@ -136,6 +163,7 @@ LightWindow::~LightWindow()
 	SAFE_DELETE(addLightButton);
 	SAFE_DELETE(colorPickerToggleButton);
 	SAFE_DELETE(colorPicker);
+	SAFE_DELETE(typeSelectorComboBox);
 }
 
 void LightWindow::SetLight(Light* light)
@@ -146,38 +174,50 @@ void LightWindow::SetLight(Light* light)
 		//lightWindow->SetEnabled(true);
 		energySlider->SetEnabled(true);
 		energySlider->SetValue(light->enerDis.x);
-		if (light->type == Light::DIRECTIONAL)
-		{
-			distanceSlider->SetEnabled(false);
-			fovSlider->SetEnabled(false);
-		}
-		else
-		{
-			distanceSlider->SetEnabled(true);
-			distanceSlider->SetValue(light->enerDis.y);
-			if (light->type == Light::SPOT)
-			{
-				fovSlider->SetEnabled(true);
-				fovSlider->SetValue(light->enerDis.z);
-			}
-			else
-			{
-				fovSlider->SetEnabled(false);
-			}
-		}
+		distanceSlider->SetValue(light->enerDis.y);
+		fovSlider->SetValue(light->enerDis.z);
 		biasSlider->SetEnabled(true);
 		biasSlider->SetValue(light->shadowBias);
+		shadowCheckBox->SetEnabled(true);
 		shadowCheckBox->SetCheck(light->shadow);
+		haloCheckBox->SetEnabled(true);
 		haloCheckBox->SetCheck(!light->noHalo);
 		colorPicker->SetEnabled(true);
+		typeSelectorComboBox->SetEnabled(true);
+		typeSelectorComboBox->SetSelected((int)light->type);
+		
+		SetLightType(light->type);
 	}
 	else
 	{
 		distanceSlider->SetEnabled(false);
 		fovSlider->SetEnabled(false);
 		biasSlider->SetEnabled(false);
+		shadowCheckBox->SetEnabled(false);
+		haloCheckBox->SetEnabled(false);
 		energySlider->SetEnabled(false);
-		//lightWindow->SetEnabled(false);
 		colorPicker->SetEnabled(false);
+		typeSelectorComboBox->SetEnabled(false);
+		//lightWindow->SetEnabled(false);
+	}
+}
+void LightWindow::SetLightType(Light::LightType type)
+{
+	if (type == Light::DIRECTIONAL)
+	{
+		distanceSlider->SetEnabled(false);
+		fovSlider->SetEnabled(false);
+	}
+	else
+	{
+		distanceSlider->SetEnabled(true);
+		if (type == Light::SPOT)
+		{
+			fovSlider->SetEnabled(true);
+		}
+		else
+		{
+			fovSlider->SetEnabled(false);
+		}
 	}
 }
