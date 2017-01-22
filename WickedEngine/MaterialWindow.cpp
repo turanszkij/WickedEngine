@@ -197,6 +197,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->Translate(XMFLOAT3(30, 30, 0));
 	materialWindow->SetVisible(false);
 
+	SetMaterial(nullptr);
 }
 
 MaterialWindow::~MaterialWindow()

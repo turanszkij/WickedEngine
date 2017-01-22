@@ -21,33 +21,29 @@ DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 	opacitySlider->SetSize(XMFLOAT2(100, 30));
 	opacitySlider->SetPos(XMFLOAT2(x, y += 30));
 	opacitySlider->OnSlide([&](wiEventArgs args) {
+		if (decal != nullptr)
+		{
+			decal->color.w = args.fValue;
+		}
 	});
 	decalWindow->AddWidget(opacitySlider);
-
-	edgeBlendSlider = new wiSlider(0.1f, 64, 16, 100000, "Edge Blend: ");
-	edgeBlendSlider->SetSize(XMFLOAT2(100, 30));
-	edgeBlendSlider->SetPos(XMFLOAT2(x, y += 30));
-	edgeBlendSlider->OnSlide([&](wiEventArgs args) {
-	});
-	decalWindow->AddWidget(edgeBlendSlider);
-
-	orientationBlendSlider = new wiSlider(0.1f, 64, 16, 100000, "Orientation Blend: ");
-	orientationBlendSlider->SetSize(XMFLOAT2(100, 30));
-	orientationBlendSlider->SetPos(XMFLOAT2(x, y += 30));
-	orientationBlendSlider->OnSlide([&](wiEventArgs args) {
-	});
-	decalWindow->AddWidget(orientationBlendSlider);
 
 	emissiveSlider = new wiSlider(0, 100, 0, 100000, "Emissive: ");
 	emissiveSlider->SetSize(XMFLOAT2(100, 30));
 	emissiveSlider->SetPos(XMFLOAT2(x, y += 30));
 	emissiveSlider->OnSlide([&](wiEventArgs args) {
+		if (decal != nullptr)
+		{
+			decal->emissive = args.fValue;
+		}
 	});
 	decalWindow->AddWidget(emissiveSlider);
 
 
 	decalWindow->Translate(XMFLOAT3(30, 30, 0));
 	decalWindow->SetVisible(false);
+
+	SetDecal(nullptr);
 }
 
 
@@ -55,8 +51,6 @@ DecalWindow::~DecalWindow()
 {
 	SAFE_DELETE(decalWindow);
 	SAFE_DELETE(opacitySlider);
-	SAFE_DELETE(edgeBlendSlider);
-	SAFE_DELETE(orientationBlendSlider);
 	SAFE_DELETE(emissiveSlider);
 }
 
@@ -65,6 +59,8 @@ void DecalWindow::SetDecal(Decal* decal)
 	this->decal = decal;
 	if (decal != nullptr)
 	{
+		opacitySlider->SetValue(decal->color.w);
+		emissiveSlider->SetValue(decal->emissive);
 		decalWindow->SetEnabled(true);
 	}
 	else

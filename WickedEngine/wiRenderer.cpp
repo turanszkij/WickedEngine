@@ -1734,7 +1734,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
 				lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
 				lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
-				lightArray[lightCounter].col = XMFLOAT4(1, 1, 1, decal->GetOpacity());
+				lightArray[lightCounter].col = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
+				lightArray[lightCounter].energy = decal->emissive;
 				lightArray[lightCounter].type = 100;
 
 				lightCounter++;

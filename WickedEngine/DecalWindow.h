@@ -23,8 +23,6 @@ public:
 
 	wiWindow*	decalWindow;
 	wiSlider*	opacitySlider;
-	wiSlider*	edgeBlendSlider;
-	wiSlider*	orientationBlendSlider;
 	wiSlider*	emissiveSlider;
 };
 

@@ -939,6 +939,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	closeButton->OnClick([this](wiEventArgs args) {
 		this->SetVisible(false);
 	});
+	closeButton->SetTooltip("Close window");
 	AddWidget(closeButton);
 
 	// Add minimize button to the top right corner
@@ -949,6 +950,7 @@ wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
 	minimizeButton->OnClick([this](wiEventArgs args) {
 		this->SetMinimized(!this->IsMinimized());
 	});
+	minimizeButton->SetTooltip("Minimize window");
 	AddWidget(minimizeButton);
 
 	// Add a resizer control to the upperleft corner
@@ -1109,26 +1111,6 @@ void wiWindow::SetVisible(bool value)
 {
 	wiWidget::SetVisible(value);
 	SetMinimized(!value);
-	if (closeButton != nullptr)
-	{
-		closeButton->SetVisible(value);
-	}
-	if (minimizeButton != nullptr)
-	{
-		minimizeButton->SetVisible(value);
-	}
-	if (moveDragger != nullptr)
-	{
-		moveDragger->SetVisible(value);
-	}
-	if (resizeDragger_BottomRight != nullptr)
-	{
-		resizeDragger_BottomRight->SetVisible(value);
-	}
-	if (resizeDragger_UpperLeft != nullptr)
-	{
-		resizeDragger_UpperLeft->SetVisible(value);
-	}
 	for (auto& x : childrenWidgets)
 	{
 		x->SetVisible(value);
@@ -1136,9 +1118,17 @@ void wiWindow::SetVisible(bool value)
 }
 void wiWindow::SetEnabled(bool value)
 {
-	wiWidget::SetEnabled(value);
+	//wiWidget::SetEnabled(value);
 	for (auto& x : childrenWidgets)
 	{
+		if (x == moveDragger)
+			continue;
+		if (x == minimizeButton)
+			continue;
+		if (x == closeButton)
+			continue;
+		if (x == resizeDragger_UpperLeft)
+			continue;
 		x->SetEnabled(value);
 	}
 }
@@ -1152,6 +1142,14 @@ void wiWindow::SetMinimized(bool value)
 	}
 	for (auto& x : childrenWidgets)
 	{
+		if (x == moveDragger)
+			continue;
+		if (x == minimizeButton)
+			continue;
+		if (x == closeButton)
+			continue;
+		if (x == resizeDragger_UpperLeft)
+			continue;
 		x->SetVisible(!value);
 	}
 }

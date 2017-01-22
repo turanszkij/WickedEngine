@@ -3596,6 +3596,9 @@ Decal::Decal(const XMFLOAT3& tra, const XMFLOAT3& sca, const XMFLOAT4& rot, cons
 	fadeStart=0;
 
 	atlasMulAdd = XMFLOAT4(1, 1, 0, 0);
+
+	color = XMFLOAT4(1, 1, 1, 1);
+	emissive = 0;
 }
 Decal::~Decal() {
 	wiResourceManager::GetGlobal()->del(texName);
@@ -3633,7 +3636,7 @@ void Decal::UpdateDecal()
 }
 float Decal::GetOpacity() const
 {
-	return wiMath::Clamp((life <= -2 ? 1 : life < fadeStart ? life / fadeStart : 1), 0, 1);
+	return color.w * wiMath::Clamp((life <= -2 ? 1 : life < fadeStart ? life / fadeStart : 1), 0, 1);
 }
 void Decal::Serialize(wiArchive& archive)
 {
@@ -3646,6 +3649,11 @@ void Decal::Serialize(wiArchive& archive)
 		archive >> norName;
 		archive >> life;
 		archive >> fadeStart;
+		if (archive.GetVersion() >= 5)
+		{
+			archive >> color;
+			archive >> emissive;
+		}
 
 		string texturesDir = archive.GetSourceDirectory() + "textures/";
 		if (!texName.empty())
@@ -3666,6 +3674,11 @@ void Decal::Serialize(wiArchive& archive)
 		archive << wiHelper::GetFileNameFromPath(norName);
 		archive << life;
 		archive << fadeStart;
+		if (archive.GetVersion() >= 5)
+		{
+			archive << color;
+			archive << emissive;
+		}
 	}
 }
 #pragma endregion

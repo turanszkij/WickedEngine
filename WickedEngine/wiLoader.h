@@ -772,6 +772,8 @@ struct Decal : public Cullable, public Transform
 	XMFLOAT3 front;
 	float life,fadeStart;
 	XMFLOAT4 atlasMulAdd;
+	XMFLOAT4 color;
+	float emissive;
 
 	Decal(const XMFLOAT3& tra=XMFLOAT3(0,0,0), const XMFLOAT3& sca=XMFLOAT3(1,1,1), const XMFLOAT4& rot=XMFLOAT4(0,0,0,1), const string& tex="", const string& nor="");
 	virtual ~Decal();

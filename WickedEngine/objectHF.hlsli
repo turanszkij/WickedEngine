@@ -170,11 +170,11 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			{ 
 				// can't do mipmapping here because of the variable length loop :(
 				float4 decalColor = texture_decalatlas.SampleLevel(sampler_linear_clamp, projTex.xy*light.texMulAdd.xy + light.texMulAdd.zw, 0);
-				float3 edgeBlend = clipSpace.xyz;
-				edgeBlend = saturate(abs(edgeBlend));
-				decalColor.a *= 1 - pow(max(max(edgeBlend.x, edgeBlend.y), edgeBlend.z), 8);
+				float edgeBlend = 1 - pow8(saturate(abs(clipSpace.z))); // blend out if close to cube Z
+				decalColor.a *= edgeBlend;
 				decalColor *= light.color;
 				albedo.rgb = lerp(albedo.rgb, decalColor.rgb, decalColor.a);
+				result.specular = decalColor.rgb * light.energy * edgeBlend; // apply emissive (light.energy = decal.emissive)
 			}
 		}
 		break;
