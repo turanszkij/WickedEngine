@@ -128,77 +128,99 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 	result.specular = max(0.0f, result.specular);
 	return result;
 }
-inline LightingResult PointLight(in LightArrayType light, in float3 L, in float distance, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult PointLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
-	float3 lightColor = light.color.rgb*light.energy;
 
-	BRDF_MAKE(N, L, V);
-	result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
-	result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
-
-	float att = (light.energy * (light.range / (light.range + 1 + distance)));
-	float attenuation = (att * (light.range - distance) / light.range);
-	result.diffuse *= attenuation;
-	result.specular *= attenuation;
-
-	float sh = max(NdotL, 0);
-	[branch]
-	if (light.shadowMap_index >= 0) {
-		static const float bias = 0.025;
-		sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), distance / light.range - bias).r;
-	}
-	result.diffuse *= sh;
-	result.specular *= sh;
-
-	result.diffuse = max(0.0f, result.diffuse);
-	result.specular = max(0.0f, result.specular);
-	return result;
-}
-inline LightingResult SpotLight(in LightArrayType light, in float3 L, in float distance, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
-{
-	LightingResult result = (LightingResult)0;
-	float3 lightColor = light.color.rgb*light.energy;
-
-	float SpotFactor = dot(L, light.directionWS);
-	float spotCutOff = light.coneAngleCos;
+	float3 L = light.positionWS - P;
+	float dist = length(L);
 
 	[branch]
-	if (SpotFactor > spotCutOff)
+	if (dist < light.range)
 	{
+		L /= dist;
+
+		float3 lightColor = light.color.rgb*light.energy;
 
 		BRDF_MAKE(N, L, V);
 		result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
 		result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
-		float att = (light.energy * (light.range / (light.range + 1 + distance)));
-		float attenuation = (att * (light.range - distance) / light.range);
-		attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+		float att = (light.energy * (light.range / (light.range + 1 + dist)));
+		float attenuation = (att * (light.range - dist) / light.range);
 		result.diffuse *= attenuation;
 		result.specular *= attenuation;
 
 		float sh = max(NdotL, 0);
 		[branch]
-		if (light.shadowMap_index >= 0)
-		{
-			float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
-			ShPos.xyz /= ShPos.w;
-			float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
-			[branch]
-			if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
-			{
-				sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index);
-			}
+		if (light.shadowMap_index >= 0) {
+			static const float bias = 0.025;
+			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / light.range - bias).r;
 		}
 		result.diffuse *= sh;
 		result.specular *= sh;
 
-		result.diffuse = max(result.diffuse, 0);
-		result.specular = max(result.specular, 0);
+		result.diffuse = max(0.0f, result.diffuse);
+		result.specular = max(0.0f, result.specular);
 	}
 
-	result.diffuse = max(0.0f, result.diffuse);
-	result.specular = max(0.0f, result.specular);
+	return result;
+}
+inline LightingResult SpotLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+{
+	LightingResult result = (LightingResult)0;
+
+	float3 L = light.positionWS - P;
+	float dist = length(L);
+
+	[branch]
+	if (dist < light.range)
+	{
+		L /= dist;
+
+		float3 lightColor = light.color.rgb*light.energy;
+
+		float SpotFactor = dot(L, light.directionWS);
+		float spotCutOff = light.coneAngleCos;
+
+		[branch]
+		if (SpotFactor > spotCutOff)
+		{
+
+			BRDF_MAKE(N, L, V);
+			result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
+			result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
+
+			float att = (light.energy * (light.range / (light.range + 1 + dist)));
+			float attenuation = (att * (light.range - dist) / light.range);
+			attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+			result.diffuse *= attenuation;
+			result.specular *= attenuation;
+
+			float sh = max(NdotL, 0);
+			[branch]
+			if (light.shadowMap_index >= 0)
+			{
+				float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+				ShPos.xyz /= ShPos.w;
+				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+				[branch]
+				if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+				{
+					sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index);
+				}
+			}
+			result.diffuse *= sh;
+			result.specular *= sh;
+
+			result.diffuse = max(result.diffuse, 0);
+			result.specular = max(result.specular, 0);
+		}
+
+		result.diffuse = max(0.0f, result.diffuse);
+		result.specular = max(0.0f, result.specular);
+	}
+
 	return result;
 }
 

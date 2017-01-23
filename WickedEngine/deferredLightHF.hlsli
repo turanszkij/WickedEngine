@@ -39,10 +39,7 @@ struct LightOutputType
 	float metalness = g3.z;																\
 	BRDF_HELPER_MAKEINPUTS( baseColor, reflectance, metalness )							\
 	float3 P = getPosition(screenPos, depth);											\
-	float3 V = normalize(g_xCamera_CamPos - P);											\
-	float3 L = light.positionWS - P;													\
-	float lightDistance = length(L);													\
-	L /= lightDistance;
+	float3 V = normalize(g_xCamera_CamPos - P);
 
 
 #define DEFERREDLIGHT_ENVIRONMENTALLIGHT												\
@@ -55,12 +52,12 @@ struct LightOutputType
 	specular = result.specular;
 
 #define DEFERREDLIGHT_SPOT																\
-	LightingResult result = SpotLight(light, L, lightDistance, N, V, P, roughness, f0);	\
+	LightingResult result = SpotLight(light, N, V, P, roughness, f0);	\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
 #define DEFERREDLIGHT_POINT																\
-	LightingResult result = PointLight(light, L, lightDistance, N, V, P, roughness, f0);\
+	LightingResult result = PointLight(light, N, V, P, roughness, f0);\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 

@@ -128,21 +128,15 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 	specular = 0;
 	diffuse = 0;
+
+	[loop]
 	for (uint i = 0; i < lightCount; i++)
 	{
 		uint lightIndex = LightIndexList[startOffset + i];
 		LightArrayType light = LightArray[lightIndex];
 
-		float3 L = light.positionWS - P;
-		float lightDistance = length(L);
-		if (light.type > 0 && light.type != 100 && lightDistance > light.range)
-			continue;
-		L /= lightDistance;
-
-
 		LightingResult result = (LightingResult)0;
 
-		[branch]
 		switch (light.type)
 		{
 		case 0/*DIRECTIONAL*/:
@@ -152,12 +146,12 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		break;
 		case 1/*POINT*/:
 		{
-			result = PointLight(light, L, lightDistance, N, V, P, roughness, f0);
+			result = PointLight(light, N, V, P, roughness, f0);
 		}
 		break;
 		case 2/*SPOT*/:
 		{
-			result = SpotLight(light, L, lightDistance, N, V, P, roughness, f0);
+			result = SpotLight(light, N, V, P, roughness, f0);
 		}
 		break;
 #ifndef DISABLE_DECALS
