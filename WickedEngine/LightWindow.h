@@ -28,6 +28,9 @@ public:
 	wiWindow*	lightWindow;
 	wiSlider*	energySlider;
 	wiSlider*	distanceSlider;
+	wiSlider*	radiusSlider;
+	wiSlider*	widthSlider;
+	wiSlider*	heightSlider;
 	wiSlider*	fovSlider;
 	wiSlider*	biasSlider;
 	wiCheckBox*	shadowCheckBox;

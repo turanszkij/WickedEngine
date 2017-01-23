@@ -3926,6 +3926,9 @@ Light::Light():Transform() {
 	shadowMap_index = -1;
 	lightArray_index = 0;
 	shadowBias = 0.0001f;
+	radius = 1.0f;
+	width = 1.0f;
+	height = 1.0f;
 }
 Light::~Light() {
 	for (string x : lensFlareNames)
@@ -4068,6 +4071,13 @@ void Light::Serialize(wiArchive& archive)
 				lensFlareNames.push_back(rim);
 			}
 		}
+
+		if (archive.GetVersion() >= 6)
+		{
+			archive >> radius;
+			archive >> width;
+			archive >> height;
+		}
 	}
 	else
 	{
@@ -4081,6 +4091,13 @@ void Light::Serialize(wiArchive& archive)
 		for (auto& x : lensFlareNames)
 		{
 			archive << wiHelper::GetFileNameFromPath(x);
+		}
+
+		if (archive.GetVersion() >= 6)
+		{
+			archive << radius;
+			archive << width;
+			archive << height;
 		}
 	}
 }

@@ -10,7 +10,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	lightWindow = new wiWindow(GUI, "Light Window");
-	lightWindow->SetSize(XMFLOAT2(400, 420));
+	lightWindow->SetSize(XMFLOAT2(400, 500));
 	//lightWindow->SetEnabled(false);
 	GUI->AddWidget(lightWindow);
 
@@ -43,6 +43,45 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	distanceSlider->SetEnabled(false);
 	distanceSlider->SetTooltip("Adjust the maximum range the light can affect.");
 	lightWindow->AddWidget(distanceSlider);
+
+	radiusSlider = new wiSlider(0.01f, 100, 0, 100000, "Radius: ");
+	radiusSlider->SetSize(XMFLOAT2(100, 30));
+	radiusSlider->SetPos(XMFLOAT2(x, y += step));
+	radiusSlider->OnSlide([&](wiEventArgs args) {
+		if (light != nullptr)
+		{
+			light->radius = args.fValue;
+		}
+	});
+	radiusSlider->SetEnabled(false);
+	radiusSlider->SetTooltip("Adjust the radius of an area light.");
+	lightWindow->AddWidget(radiusSlider);
+
+	widthSlider = new wiSlider(1, 100, 0, 100000, "Width: ");
+	widthSlider->SetSize(XMFLOAT2(100, 30));
+	widthSlider->SetPos(XMFLOAT2(x, y += step));
+	widthSlider->OnSlide([&](wiEventArgs args) {
+		if (light != nullptr)
+		{
+			light->width = args.fValue;
+		}
+	});
+	widthSlider->SetEnabled(false);
+	widthSlider->SetTooltip("Adjust the width of an area light.");
+	lightWindow->AddWidget(widthSlider);
+
+	heightSlider = new wiSlider(1, 100, 0, 100000, "Height: ");
+	heightSlider->SetSize(XMFLOAT2(100, 30));
+	heightSlider->SetPos(XMFLOAT2(x, y += step));
+	heightSlider->OnSlide([&](wiEventArgs args) {
+		if (light != nullptr)
+		{
+			light->height = args.fValue;
+		}
+	});
+	heightSlider->SetEnabled(false);
+	heightSlider->SetTooltip("Adjust the height of an area light.");
+	lightWindow->AddWidget(heightSlider);
 
 	fovSlider = new wiSlider(0.1f, XM_PI - 0.01f, 0, 100000, "FOV: ");
 	fovSlider->SetSize(XMFLOAT2(100, 30));
@@ -133,6 +172,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		if (light != nullptr && args.iValue >= 0)
 		{
 			light->type = (Light::LightType)args.iValue;
+			light->UpdateLight();
 			SetLightType(light->type); // for the gui changes to apply to the new type
 		}
 	});
@@ -140,6 +180,10 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	typeSelectorComboBox->AddItem("Directional");
 	typeSelectorComboBox->AddItem("Point");
 	typeSelectorComboBox->AddItem("Spot");
+	typeSelectorComboBox->AddItem("Sphere");
+	typeSelectorComboBox->AddItem("Disc");
+	typeSelectorComboBox->AddItem("Rectangle");
+	typeSelectorComboBox->AddItem("Tube");
 	typeSelectorComboBox->SetTooltip("Choose the light source type...");
 	lightWindow->AddWidget(typeSelectorComboBox);
 
@@ -156,6 +200,9 @@ LightWindow::~LightWindow()
 	SAFE_DELETE(lightWindow);
 	SAFE_DELETE(energySlider);
 	SAFE_DELETE(distanceSlider);
+	SAFE_DELETE(radiusSlider);
+	SAFE_DELETE(widthSlider);
+	SAFE_DELETE(heightSlider);
 	SAFE_DELETE(fovSlider);
 	SAFE_DELETE(biasSlider);
 	SAFE_DELETE(shadowCheckBox);
@@ -175,6 +222,9 @@ void LightWindow::SetLight(Light* light)
 		energySlider->SetEnabled(true);
 		energySlider->SetValue(light->enerDis.x);
 		distanceSlider->SetValue(light->enerDis.y);
+		radiusSlider->SetValue(light->radius);
+		widthSlider->SetValue(light->width);
+		heightSlider->SetValue(light->height);
 		fovSlider->SetValue(light->enerDis.z);
 		biasSlider->SetEnabled(true);
 		biasSlider->SetValue(light->shadowBias);
@@ -191,6 +241,9 @@ void LightWindow::SetLight(Light* light)
 	else
 	{
 		distanceSlider->SetEnabled(false);
+		radiusSlider->SetEnabled(false);
+		widthSlider->SetEnabled(false);
+		heightSlider->SetEnabled(false);
 		fovSlider->SetEnabled(false);
 		biasSlider->SetEnabled(false);
 		shadowCheckBox->SetEnabled(false);
@@ -210,14 +263,29 @@ void LightWindow::SetLightType(Light::LightType type)
 	}
 	else
 	{
-		distanceSlider->SetEnabled(true);
-		if (type == Light::SPOT)
+		if (type == Light::SPHERE || type == Light::DISC || type == Light::RECTANGLE || type == Light::TUBE)
 		{
-			fovSlider->SetEnabled(true);
+			distanceSlider->SetEnabled(false);
+			radiusSlider->SetEnabled(true);
+			widthSlider->SetEnabled(true);
+			heightSlider->SetEnabled(true);
+			fovSlider->SetEnabled(false);
 		}
 		else
 		{
-			fovSlider->SetEnabled(false);
+			distanceSlider->SetEnabled(true);
+			radiusSlider->SetEnabled(false);
+			widthSlider->SetEnabled(false);
+			heightSlider->SetEnabled(false);
+			if (type == Light::SPOT)
+			{
+				fovSlider->SetEnabled(true);
+			}
+			else
+			{
+				fovSlider->SetEnabled(false);
+			}
 		}
 	}
+
 }

@@ -1715,6 +1715,18 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				lightArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
 			}
 			break;
+			case Light::SPHERE:
+			case Light::DISC:
+			case Light::RECTANGLE:
+			case Light::TUBE:
+			{
+				XMMATRIX lightMat = XMLoadFloat4x4(&l->world);
+				XMStoreFloat3(&lightArray[lightCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // left dir
+				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
+				XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
+				lightArray[lightCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
+			}
+			break;
 			default:
 				break;
 			}

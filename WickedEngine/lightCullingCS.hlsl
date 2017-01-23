@@ -247,9 +247,11 @@ void main(ComputeShaderInput IN)
 		}
 		break;
 		case 0/*DIRECTIONAL_LIGHT*/:
+		case 3/*SPHERE_LIGHT*/:
+		case 4/*DISC_LIGHT*/:
+		case 5/*RECTANGLE_LIGHT*/:
+		case 6/*TUBE_LIGHT*/:
 		{
-			// Directional lights always get added to our light list.
-			// (Hopefully there are not too many directional lights!)
 			t_AppendLight(i);
 			o_AppendLight(i);
 		}

@@ -749,10 +749,17 @@ struct Light : public Cullable , public Transform
 
 	float shadowBias;
 
+	// area light props:
+	float radius, width, height;
+
 	enum LightType{
 		DIRECTIONAL,
 		POINT,
 		SPOT,
+		SPHERE,
+		DISC,
+		RECTANGLE,
+		TUBE,
 		LIGHTTYPE_COUNT,
 	};
 	LightType type;

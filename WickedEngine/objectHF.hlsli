@@ -154,6 +154,26 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			result = SpotLight(light, N, V, P, roughness, f0);
 		}
 		break;
+		case 3/*SPHERE*/:
+		{
+			result = SphereLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 4/*DISC*/:
+		{
+			result = DiscLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 5/*RECTANGLE*/:
+		{
+			result = RectangleLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 6/*TUBE*/:
+		{
+			result = TubeLight(light, N, V, P, roughness, f0);
+		}
+		break;
 #ifndef DISABLE_DECALS
 		case 100/*DECAL*/:
 		{
@@ -186,7 +206,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 ////////////
 
 #define OBJECT_PS_MAKE_COMMON												\
-	float3 N = input.nor;													\
+	float3 N = normalize(input.nor);										\
 	float3 P = input.pos3D;													\
 	float3 V = g_xCamera_CamPos - P;										\
 	float dist = length(V);													\

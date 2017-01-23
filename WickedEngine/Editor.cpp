@@ -691,6 +691,7 @@ void EditorComponent::Load()
 	pointLightTex = *(Texture2D*)Content.add("images/pointlight.dds");
 	spotLightTex = *(Texture2D*)Content.add("images/spotlight.dds");
 	dirLightTex = *(Texture2D*)Content.add("images/directional_light.dds");
+	areaLightTex = *(Texture2D*)Content.add("images/arealight.dds");
 }
 void EditorComponent::Start()
 {
@@ -1161,6 +1162,9 @@ void EditorComponent::Compose()
 					break;
 				case Light::DIRECTIONAL:
 					wiImage::Draw(&dirLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+					break;
+				default:
+					wiImage::Draw(&areaLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 					break;
 				}
 			}

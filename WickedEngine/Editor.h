@@ -29,7 +29,7 @@ class EditorComponent
 	: public TiledForwardRenderableComponent
 {
 private:
-	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex;
+	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex;
 public:
 	MaterialWindow*			materialWnd;
 	PostprocessWindow*		postprocessWnd;
