@@ -413,7 +413,7 @@ inline LightingResult SphereLight(in LightArrayType light, in float3 N, in float
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
-		float3 r = reflect(V, N);
+		float3 r = reflect(-V, N);
 		r = getSpecularDominantDirArea(N, r, roughness);
 
 		float3 centerToRay = dot(Lunormalized, r) * r - Lunormalized;
@@ -454,7 +454,7 @@ inline LightingResult DiscLight(in LightArrayType light, in float3 N, in float3 
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
-		float3 r = reflect(V, N);
+		float3 r = reflect(-V, N);
 		r = getSpecularDominantDirArea(N, r, roughness);
 
 		float t = Trace_plane(P, r, light.positionWS, lightPlaneNormal);
@@ -634,7 +634,7 @@ inline LightingResult TubeLight(in LightArrayType light, in float3 N, in float3 
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
-		float3 r = reflect(V, N);
+		float3 r = reflect(-V, N);
 		r = getSpecularDominantDirArea(N, r, roughness);
 
 		// First, the closest point to the ray on the segment
