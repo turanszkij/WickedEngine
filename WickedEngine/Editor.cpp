@@ -1152,7 +1152,7 @@ void EditorComponent::Compose()
 					}
 				}
 
-				switch (y->type)
+				switch (y->GetType())
 				{
 				case Light::POINT:
 					wiImage::Draw(&pointLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);

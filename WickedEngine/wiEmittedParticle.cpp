@@ -105,7 +105,7 @@ void wiEmittedParticle::CreateLight()
 		light->color.x = material->baseColor.x;
 		light->color.y = material->baseColor.y;
 		light->color.z = material->baseColor.z;
-		light->type = Light::POINT;
+		light->SetType(Light::POINT);
 		light->name = name + "_pslight";
 		light->shadow = true;
 		lightName = light->name;

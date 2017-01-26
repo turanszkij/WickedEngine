@@ -731,6 +731,17 @@ struct SHCAM{
 };
 struct Light : public Cullable , public Transform
 {
+	enum LightType {
+		DIRECTIONAL,
+		POINT,
+		SPOT,
+		SPHERE,
+		DISC,
+		RECTANGLE,
+		TUBE,
+		LIGHTTYPE_COUNT,
+	};
+
 	XMFLOAT4 color;
 	XMFLOAT4 enerDis;
 	bool noHalo;
@@ -752,25 +763,19 @@ struct Light : public Cullable , public Transform
 	// area light props:
 	float radius, width, height;
 
-	enum LightType{
-		DIRECTIONAL,
-		POINT,
-		SPOT,
-		SPHERE,
-		DISC,
-		RECTANGLE,
-		TUBE,
-		LIGHTTYPE_COUNT,
-	};
-	LightType type;
-
-	XMFLOAT3 GetDirection();
+	XMFLOAT3 GetDirection() const;
+	float GetRange() const;
 
 	Light();
 	virtual ~Light();
 	virtual void UpdateTransform();
 	void UpdateLight();
+	void SetType(LightType type);
+	LightType GetType() const { return type; }
 	void Serialize(wiArchive& archive);
+
+private:
+	LightType type;
 };
 struct Decal : public Cullable, public Transform
 {

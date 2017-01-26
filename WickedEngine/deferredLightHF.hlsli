@@ -61,6 +61,26 @@ struct LightOutputType
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
+#define DEFERREDLIGHT_SPHERE															\
+	LightingResult result = SphereLight(light, N, V, P, roughness, f0);					\
+	diffuse = result.diffuse;															\
+	specular = result.specular;
+
+#define DEFERREDLIGHT_DISC																\
+	LightingResult result = DiscLight(light, N, V, P, roughness, f0);					\
+	diffuse = result.diffuse;															\
+	specular = result.specular;
+
+#define DEFERREDLIGHT_RECTANGLE															\
+	LightingResult result = RectangleLight(light, N, V, P, roughness, f0);				\
+	diffuse = result.diffuse;															\
+	specular = result.specular;
+
+#define DEFERREDLIGHT_TUBE																\
+	LightingResult result = TubeLight(light, N, V, P, roughness, f0);					\
+	diffuse = result.diffuse;															\
+	specular = result.specular;
+
 
 #define DEFERREDLIGHT_RETURN															\
 	LightOutputType Out = (LightOutputType)0;											\

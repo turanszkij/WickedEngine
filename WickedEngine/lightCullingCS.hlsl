@@ -4,7 +4,6 @@
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);
-groupshared uint3 _counter = 0;
 #endif
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
@@ -207,18 +206,10 @@ void main(ComputeShaderInput IN)
 				// Add light to light list for transparent geometry.
 				t_AppendLight(i);
 
-#ifdef DEBUG_TILEDLIGHTCULLING
-				InterlockedAdd(_counter.z, 1);
-#endif
-
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than just frustum culling
 				{
 					// Add light to light list for opaque geometry.
 					o_AppendLight(i);
-
-#ifdef DEBUG_TILEDLIGHTCULLING
-					InterlockedAdd(_counter.x, 1);
-#endif
 				}
 			}
 		}
@@ -231,17 +222,11 @@ void main(ComputeShaderInput IN)
 			{
 				// Add light to light list for transparent geometry.
 				t_AppendLight(i);
-#ifdef DEBUG_TILEDLIGHTCULLING
-				InterlockedAdd(_counter.z, 1);
-#endif
 
 				if (!ConeInsidePlane(cone, minPlane))
 				{
 					// Add light to light list for opaque geometry.
 					o_AppendLight(i);
-#ifdef DEBUG_TILEDLIGHTCULLING
-					InterlockedAdd(_counter.x, 1);
-#endif
 				}
 			}
 		}
@@ -264,18 +249,10 @@ void main(ComputeShaderInput IN)
 				// Add decal to light list for transparent geometry.
 				t_AppendLight(i);
 
-#ifdef DEBUG_TILEDLIGHTCULLING
-				InterlockedAdd(_counter.z, 1);
-#endif
-
 				if (SphereInsideFrustum(sphere, GroupFrustum, minDepthVS, maxDepthVS))
 				{
 					// Add decal to light list for opaque geometry.
 					o_AppendLight(i);
-
-#ifdef DEBUG_TILEDLIGHTCULLING
-					InterlockedAdd(_counter.x, 1);
-#endif
 				}
 			}
 		}
@@ -319,6 +296,20 @@ void main(ComputeShaderInput IN)
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-	DebugTexture[texCoord] = float4((float3)_counter / (float)lightCount,1);
+	const float3 mapTex[] = {
+		float3(0,0,0),
+		float3(0,0,1),
+		float3(0,1,1),
+		float3(0,1,0),
+		float3(1,1,0),
+		float3(1,0,0),
+	};
+	const uint mapTexLen = 5;
+	const uint maxHeat = 64;
+	float l = saturate((float)o_LightCount / maxHeat) * mapTexLen;
+	float3 a = mapTex[floor(l)];
+	float3 b = mapTex[ceil(l)];
+	float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
+	DebugTexture[texCoord] = heatmap;
 #endif
 }

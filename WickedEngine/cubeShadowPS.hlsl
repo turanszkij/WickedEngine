@@ -11,5 +11,5 @@ struct VertextoPixel
 float main(VertextoPixel PSIn) : SV_DEPTH
 {
 	ALPHATEST(xBaseColorMap.Sample(sampler_linear_wrap,PSIn.tex).a);
-	return distance(PSIn.pos3D.xyz, g_xColor.xyz) / g_xColor.w;
+	return distance(PSIn.pos3D.xyz, g_xColor.xyz) * g_xColor.w; // g_xColor.w = 1.0 / range
 }

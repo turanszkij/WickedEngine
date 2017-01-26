@@ -341,7 +341,7 @@ XMVECTOR wiRenderer::GetSunPosition()
 	for (Model* model : GetScene().models)
 	{
 		for (Light* l : model->lights)
-			if (l->type == Light::DIRECTIONAL)
+			if (l->GetType() == Light::DIRECTIONAL)
 				return -XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)));
 	}
 	return XMVectorSet(0, 1, 0, 1);
@@ -351,7 +351,7 @@ XMFLOAT4 wiRenderer::GetSunColor()
 	for (Model* model : GetScene().models)
 	{
 		for (Light* l : model->lights)
-			if (l->type == Light::DIRECTIONAL)
+			if (l->GetType() == Light::DIRECTIONAL)
 				return l->color;
 	}
 	return XMFLOAT4(1,1,1,1);
@@ -361,7 +361,7 @@ int wiRenderer::GetSunArrayIndex()
 	for (Model* model : GetScene().models)
 	{
 		for (Light* l : model->lights)
-			if (l->type == Light::DIRECTIONAL)
+			if (l->GetType() == Light::DIRECTIONAL)
 				return l->lightArray_index;
 	}
 	return -1;
@@ -684,6 +684,10 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOLUMESPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOLUMEPOINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOLUMESPHERELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSphereLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOLUMEDISCLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vDiscLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOLUMERECTANGLELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vRectangleLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOLUMETUBELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vTubeLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_DECAL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
@@ -735,6 +739,10 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SPHERELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DISCLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "discLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_RECTANGLELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "rectangleLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_TUBELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tubeLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
@@ -1466,9 +1474,10 @@ void wiRenderer::UpdatePerFrameData()
 					l->lightArray_index = i;
 					l->shadowMap_index = -1;
 
+					// Link shadowmaps to lights till there are free slots
 					if (l->shadow)
 					{
-						switch (l->type)
+						switch (l->GetType())
 						{
 						case Light::DIRECTIONAL:
 							if (shadowCounter_2D < SHADOWCOUNT_2D)
@@ -1485,6 +1494,10 @@ void wiRenderer::UpdatePerFrameData()
 							}
 							break;
 						case Light::POINT:
+						case Light::SPHERE:
+						case Light::DISC:
+						case Light::RECTANGLE:
+						case Light::TUBE:
 							if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
 							{
 								l->shadowMap_index = shadowCounter_Cube;
@@ -1664,7 +1677,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	ManageDecalAtlas(threadID);
 	
-	// Fill Light Array with lights in the frustum
+	// Fill Light Array with lights + decals in the frustum
 	{
 		const CulledList& culledLights = mainCameraCulling.culledLights;
 
@@ -1674,8 +1687,33 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		XMMATRIX viewMatrix = cam->GetView();
 
 		UINT lightCounter = 0;
+		for (Decal* decal : mainCameraCulling.culledDecals)
+		{
+			if (lightCounter == MAX_LIGHTS)
+			{
+				assert(0); // too much lights!
+				lightCounter--;
+				break;
+			}
+			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
+			lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
+			lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
+			lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
+			lightArray[lightCounter].col = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
+			lightArray[lightCounter].energy = decal->emissive;
+			lightArray[lightCounter].type = 100;
+
+			lightCounter++;
+		}
 		for (Cullable* c : culledLights)
 		{
+			if (lightCounter == MAX_LIGHTS)
+			{
+				assert(0); // too much lights!
+				lightCounter--;
+				break;
+			}
+
 			Light* l = (Light*)c;
 
 			lightArray[lightCounter].posWS = l->translation;
@@ -1683,10 +1721,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			lightArray[lightCounter].distance = l->enerDis.y;
 			lightArray[lightCounter].col = l->color;
 			lightArray[lightCounter].energy = l->enerDis.x;
-			lightArray[lightCounter].type = l->type;
+			lightArray[lightCounter].type = l->GetType();
 			lightArray[lightCounter].shadowBias = l->shadowBias;
 			lightArray[lightCounter].shadowMap_index = l->shadowMap_index;
-			switch (l->type)
+			switch (l->GetType())
 			{
 			case Light::DIRECTIONAL:
 			{
@@ -1727,38 +1765,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				lightArray[lightCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
 			}
 			break;
-			default:
-				break;
 			}
 
 			lightCounter++;
-			if (lightCounter == MAX_LIGHTS)
-			{
-				lightCounter--;
-				break;
-			}
 		}
-		if (lightCounter < MAX_LIGHTS)
-		{
-			for (Decal* decal : mainCameraCulling.culledDecals)
-			{
-				XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
-				lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
-				lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
-				lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
-				lightArray[lightCounter].col = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
-				lightArray[lightCounter].energy = decal->emissive;
-				lightArray[lightCounter].type = 100;
-
-				lightCounter++;
-				if (lightCounter == MAX_LIGHTS)
-				{
-					lightCounter--;
-					break;
-				}
-			}
-		}
-		assert(lightCounter < MAX_LIGHTS && "Maximum Lightcount exceeded for a single tiled lightculling pass! Please redefine MAX_LIGHTS to fit!");
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
 	}
 
@@ -2444,14 +2454,13 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->Draw(3, threadID); // full screen triangle
 	}
 
-	for(int type=0;type<Light::LIGHTTYPE_COUNT;++type){
-
-			
-		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT + type],threadID);
+	for (int type = 0; type < Light::LIGHTTYPE_COUNT; ++type)
+	{
 
 		switch (type)
 		{
-		case 0:
+		case Light::DIRECTIONAL:
+			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
 			if (SOFTSHADOWQUALITY_2D)
 			{
 				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
@@ -2462,55 +2471,86 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			}
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
 			break;
-		case 1:
+		case Light::POINT:
+			GetDevice()->BindVS(vertexShaders[VSTYPE_POINTLIGHT], threadID);
 			GetDevice()->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
 			break;
-		case 2:
+		case Light::SPOT:
+			GetDevice()->BindVS(vertexShaders[VSTYPE_SPOTLIGHT], threadID);
 			GetDevice()->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
 			break;
-		default:
+		case Light::SPHERE:
+			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+			GetDevice()->BindPS(pixelShaders[PSTYPE_SPHERELIGHT], threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+			break;
+		case Light::DISC:
+			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+			GetDevice()->BindPS(pixelShaders[PSTYPE_DISCLIGHT], threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+			break;
+		case Light::RECTANGLE:
+			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+			GetDevice()->BindPS(pixelShaders[PSTYPE_RECTANGLELIGHT], threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+			break;
+		case Light::TUBE:
+			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+			GetDevice()->BindPS(pixelShaders[PSTYPE_TUBELIGHT], threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
 			break;
 		}
 
 
-		for(Cullable* c : culledLights){
+		for (Cullable* c : culledLights)
+		{
 			Light* l = (Light*)c;
-			if (l->type != type)
+			if (l->GetType() != type)
 				continue;
-			
-			if(type==0) //dir
-			{
-				MiscCB miscCb;
-				miscCb.mColor.x = (float)l->lightArray_index;
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-				GetDevice()->Draw(3, threadID); // full screen triangle
-			}
-			else if(type==1) //point
+			switch (type)
 			{
-				MiscCB miscCb;
-				miscCb.mColor.x = (float)l->lightArray_index;
-				float sca = l->enerDis.y + 1;
-				miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca,sca,sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z));
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+			case Light::DIRECTIONAL:
+			case Light::SPHERE:
+			case Light::DISC:
+			case Light::RECTANGLE:
+			case Light::TUBE:
+				{
+					MiscCB miscCb;
+					miscCb.mColor.x = (float)l->lightArray_index;
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-				GetDevice()->Draw(240, threadID); // icosphere
-			}
-			else if(type==2) //spot
-			{
-				MiscCB miscCb;
-				miscCb.mColor.x = (float)l->lightArray_index;
-				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
-				miscCb.mTransform = XMMatrixTranspose(
-					XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
-					XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-					XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
-				);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					GetDevice()->Draw(3, threadID); // full screen triangle
+				}
+				break;
+			case Light::POINT:
+				{
+					MiscCB miscCb;
+					miscCb.mColor.x = (float)l->lightArray_index;
+					float sca = l->enerDis.y + 1;
+					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z));
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-				GetDevice()->Draw(192, threadID); // cone
+					GetDevice()->Draw(240, threadID); // icosphere
+				}
+				break;
+			case Light::SPOT:
+				{
+					MiscCB miscCb;
+					miscCb.mColor.x = (float)l->lightArray_index;
+					const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
+					miscCb.mTransform = XMMatrixTranspose(
+						XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+					);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+					GetDevice()->Draw(192, threadID); // cone
+				}
+				break;
 			}
 		}
 
@@ -2533,7 +2573,6 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindIndexBuffer(nullptr, threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED],threadID);
 
 		
 		GetDevice()->BindPS(pixelShaders[PSTYPE_VOLUMELIGHT],threadID);
@@ -2542,59 +2581,120 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
 
-		for(int type=1;type<3;++type){
-
-			
-			if(type<=1){
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT],threadID);
+		for (int type = Light::POINT; type < Light::LIGHTTYPE_COUNT; ++type)
+		{
+			switch (type)
+			{
+			case Light::POINT:
+				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT], threadID);
+				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+				break;
+			case Light::SPOT:
+				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT], threadID);
+				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
+				break;
+			case Light::SPHERE:
+				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPHERELIGHT], threadID);
+				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+				break;
+			case Light::DISC:
+				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEDISCLIGHT], threadID);
+				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+				break;
+			case Light::RECTANGLE:
+				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMERECTANGLELIGHT], threadID);
+				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+				break;
+			case Light::TUBE:
+				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMETUBELIGHT], threadID);
+				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+				break;
 			}
-			else{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT],threadID);
-			}
 
-			for(Cullable* c : culledLights){
+			for (Cullable* c : culledLights) 
+			{
 				Light* l = (Light*)c;
-				if(l->type==type && l->noHalo==false){
+				if (l->GetType() == type && l->noHalo == false) {
 
 					VolumeLightCB lcb;
-					XMMATRIX world;
-					float sca=1;
-					//if(type<1){ //sun
-					//	sca = 10000;
-					//	world = XMMatrixTranspose(
-					//		XMMatrixScaling(sca,sca,sca)*
-					//		XMMatrixRotationX(wiRenderer::getCamera()->updownRot)*XMMatrixRotationY(wiRenderer::getCamera()->leftrightRot)*
-					//		XMMatrixTranslationFromVector( XMVector3Transform(wiRenderer::getCamera()->Eye+XMVectorSet(0,100000,0,0),XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))) )
-					//		);
-					//}
-					if(type==1){ //point
-						sca = l->enerDis.y*l->enerDis.x*0.01f;
-						world = XMMatrixTranspose(
-							XMMatrixScaling(sca,sca,sca)*
+					lcb.col = l->color;
+					lcb.enerdis = l->enerDis;
+
+					if (type == Light::POINT) 
+					{
+						lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.01f; // scale
+						lcb.world = XMMatrixTranspose(
+							XMMatrixScaling(lcb.enerdis.w, lcb.enerdis.w, lcb.enerdis.w)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
-							XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
-							);
-					}
-					else{ //spot
-						float coneS=(float)(l->enerDis.z/0.7853981852531433);
-						sca = l->enerDis.y*l->enerDis.x*0.03f;
-						world = XMMatrixTranspose(
-							XMMatrixScaling(coneS*sca,sca,coneS*sca)*
-							XMMatrixRotationQuaternion( XMLoadFloat4( &l->rotation ) )*
-							XMMatrixTranslationFromVector( XMLoadFloat3(&l->translation) )
-							);
-					}
-					lcb.world=world;
-					lcb.col=l->color;
-					lcb.enerdis=l->enerDis;
-					lcb.enerdis.w=sca;
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+						);
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT],&lcb,threadID);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-					if(type<=1)
-						GetDevice()->Draw(108,threadID); // circle
-					else
-						GetDevice()->Draw(192,threadID); // cone
+						GetDevice()->Draw(108, threadID); // circle
+					}
+					else if(type == Light::SPOT)
+					{
+						float coneS = (float)(l->enerDis.z / 0.7853981852531433);
+						lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.03f; // scale
+						lcb.world = XMMatrixTranspose(
+							XMMatrixScaling(coneS*lcb.enerdis.w, lcb.enerdis.w, coneS*lcb.enerdis.w)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+						);
+
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+
+						GetDevice()->Draw(192, threadID); // cone
+					}
+					else if (type == Light::SPHERE)
+					{
+						lcb.world = XMMatrixTranspose(
+							XMMatrixScaling(l->radius, l->radius, l->radius)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+						);
+
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+
+						GetDevice()->Draw(2880, threadID); // uv-sphere
+					}
+					else if (type == Light::DISC)
+					{
+						lcb.world = XMMatrixTranspose(
+							XMMatrixScaling(l->radius, l->radius, l->radius)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+						);
+
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+
+						GetDevice()->Draw(108, threadID); // circle
+					}
+					else if (type == Light::RECTANGLE)
+					{
+						lcb.world = XMMatrixTranspose(
+							XMMatrixScaling(l->width * 0.5f, l->height * 0.5f, 0.5f)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+						);
+
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+
+						GetDevice()->Draw(6, threadID); // quad
+					}
+					else if (type == Light::TUBE)
+					{
+						lcb.world = XMMatrixTranspose(
+							XMMatrixScaling(max(l->width * 0.5f, l->radius), l->radius, l->radius)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+						);
+
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+
+						GetDevice()->Draw(384, threadID); // cylinder
+					}
 				}
 			}
 
@@ -2617,14 +2717,14 @@ void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 
 			XMVECTOR POS;
 
-			if(l->type==Light::POINT || l->type==Light::SPOT){
-				POS=XMLoadFloat3(&l->translation);
+			if(l->GetType() ==Light::POINT || l->GetType() ==Light::SPOT){
+				POS = XMLoadFloat3(&l->translation);
 			}
 
 			else{
-				POS=XMVector3Normalize(
-							-XMVector3Transform( XMVectorSet(0,-1,0,1), XMMatrixRotationQuaternion( XMLoadFloat4(&l->rotation) ) )
-							)*100000;
+				POS = XMVector3Normalize(
+					-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)))
+				) * 100000;
 			}
 			
 			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetDevice()->GetScreenWidth(),(float)GetDevice()->GetScreenHeight(),0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
@@ -2700,7 +2800,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 		if (!culledLights.empty())
 		{
-
 			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
 			for (UINT i = 0; i < Light::shadowMapArray_2D->GetDesc().ArraySize; ++i)
@@ -2739,6 +2838,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 				}
 				break;
 				case Light::POINT:
+				case Light::SPHERE:
+				case Light::DISC:
+				case Light::RECTANGLE:
+				case Light::TUBE:
 				{
 					vp.TopLeftX = 0;
 					vp.TopLeftY = 0;
@@ -2758,15 +2861,17 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 				for (Cullable* c : culledLights)
 				{
 					Light* l = (Light*)c;
-					if (l->type != type || !l->shadow)
+					if (l->GetType() != type || !l->shadow)
 					{
 						continue;
 					}
 
-					if(type==Light::DIRECTIONAL)
+					switch (type)
+					{
+					case Light::DIRECTIONAL:
 					{
 						if (shadowCounter_2D >= SHADOWCOUNT_2D)
-							break; 
+							break;
 						shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
 						for (int index = 0; index < 3; ++index)
@@ -2801,7 +2906,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							}
 						}
 					}
-					else if(type == Light::SPOT)
+					break;
+					case Light::SPOT:
 					{
 						if (shadowCounter_2D >= SHADOWCOUNT_2D)
 							break;
@@ -2814,7 +2920,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							CulledList culledObjects;
 							CulledCollection culledRenderer;
 							spTree->getVisible(frustum, culledObjects);
-							for (Cullable* x : culledObjects) 
+							for (Cullable* x : culledObjects)
 							{
 								Object* object = (Object*)x;
 								if (object->IsCastingShadow())
@@ -2834,7 +2940,12 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							}
 						}
 					}
-					else if(type == Light::POINT)
+					break;
+					case Light::POINT:
+					case Light::SPHERE:
+					case Light::DISC:
+					case Light::RECTANGLE:
+					case Light::TUBE:
 					{
 						if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
 							break;
@@ -2844,7 +2955,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						{
 							CulledList culledObjects;
 							CulledCollection culledRenderer;
-							spTree->getVisible(l->bounds, culledObjects); 
+							spTree->getVisible(l->bounds, culledObjects);
 							for (Cullable* x : culledObjects)
 							{
 								Object* object = (Object*)x;
@@ -2858,7 +2969,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
 
 								MiscCB miscCb;
-								miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, l->enerDis.y);
+								miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, 1.0f / l->GetRange()); // reciprocal range, to avoid division in shader
 								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 								CubeMapRenderCB cb;
@@ -2871,6 +2982,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							}
 						}
 					}
+					break;
+					} // terminate switch
 				}
 			}
 
@@ -4499,7 +4612,7 @@ void wiRenderer::LoadDefaultLighting()
 {
 	Light* defaultLight = new Light();
 	defaultLight->name = "_WickedEngine_DefaultLight_";
-	defaultLight->type = Light::DIRECTIONAL;
+	defaultLight->SetType(Light::DIRECTIONAL);
 	defaultLight->color = XMFLOAT4(1, 1, 1, 1);
 	defaultLight->enerDis = XMFLOAT4(1, 0, 0, 0);
 	XMStoreFloat4(&defaultLight->rotation_rest, XMQuaternionRotationRollPitchYaw(0, -XM_PIDIV4, XM_PIDIV4));

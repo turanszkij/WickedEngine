@@ -44,7 +44,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	distanceSlider->SetTooltip("Adjust the maximum range the light can affect.");
 	lightWindow->AddWidget(distanceSlider);
 
-	radiusSlider = new wiSlider(0.01f, 100, 0, 100000, "Radius: ");
+	radiusSlider = new wiSlider(0.01f, 10, 0, 100000, "Radius: ");
 	radiusSlider->SetSize(XMFLOAT2(100, 30));
 	radiusSlider->SetPos(XMFLOAT2(x, y += step));
 	radiusSlider->OnSlide([&](wiEventArgs args) {
@@ -57,7 +57,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	radiusSlider->SetTooltip("Adjust the radius of an area light.");
 	lightWindow->AddWidget(radiusSlider);
 
-	widthSlider = new wiSlider(1, 100, 0, 100000, "Width: ");
+	widthSlider = new wiSlider(1, 10, 0, 100000, "Width: ");
 	widthSlider->SetSize(XMFLOAT2(100, 30));
 	widthSlider->SetPos(XMFLOAT2(x, y += step));
 	widthSlider->OnSlide([&](wiEventArgs args) {
@@ -70,7 +70,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	widthSlider->SetTooltip("Adjust the width of an area light.");
 	lightWindow->AddWidget(widthSlider);
 
-	heightSlider = new wiSlider(1, 100, 0, 100000, "Height: ");
+	heightSlider = new wiSlider(1, 10, 0, 100000, "Height: ");
 	heightSlider->SetSize(XMFLOAT2(100, 30));
 	heightSlider->SetPos(XMFLOAT2(x, y += step));
 	heightSlider->OnSlide([&](wiEventArgs args) {
@@ -96,7 +96,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	fovSlider->SetTooltip("Adjust the cone aperture for spotlight.");
 	lightWindow->AddWidget(fovSlider);
 
-	biasSlider = new wiSlider(0.0f, 0.01f, 0, 100000, "ShadowBias: ");
+	biasSlider = new wiSlider(0.0f, 0.2f, 0, 100000, "ShadowBias: ");
 	biasSlider->SetSize(XMFLOAT2(100, 30));
 	biasSlider->SetPos(XMFLOAT2(x, y += step));
 	biasSlider->OnSlide([&](wiEventArgs args) {
@@ -121,7 +121,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	shadowCheckBox->SetTooltip("Set light as shadow caster. Many shadow casters can affect performance!");
 	lightWindow->AddWidget(shadowCheckBox);
 
-	haloCheckBox = new wiCheckBox("Halo: ");
+	haloCheckBox = new wiCheckBox("Visualizer: ");
 	haloCheckBox->SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox->OnClick([&](wiEventArgs args) {
 		if (light != nullptr)
@@ -141,11 +141,12 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 		Light* light = new Light;
 		light->enerDis = XMFLOAT4(2, 60, XM_PIDIV4, 0);
 		light->color = XMFLOAT4(1, 1, 1, 1);
-		light->type = Light::SPOT;
+		light->Translate(XMFLOAT3(0, 3, 0));
+		light->SetType(Light::POINT);
 		model->lights.push_back(light);
 		wiRenderer::AddModel(model);
 	});
-	addLightButton->SetTooltip("Add a light to the scene. It will be added to the origin.");
+	addLightButton->SetTooltip("Add a light to the scene.");
 	lightWindow->AddWidget(addLightButton);
 
 
@@ -171,9 +172,9 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	typeSelectorComboBox->OnSelect([&](wiEventArgs args) {
 		if (light != nullptr && args.iValue >= 0)
 		{
-			light->type = (Light::LightType)args.iValue;
-			light->UpdateLight();
-			SetLightType(light->type); // for the gui changes to apply to the new type
+			light->SetType((Light::LightType)args.iValue);
+			SetLightType(light->GetType());
+			biasSlider->SetValue(light->shadowBias);
 		}
 	});
 	typeSelectorComboBox->SetEnabled(false);
@@ -234,9 +235,9 @@ void LightWindow::SetLight(Light* light)
 		haloCheckBox->SetCheck(!light->noHalo);
 		colorPicker->SetEnabled(true);
 		typeSelectorComboBox->SetEnabled(true);
-		typeSelectorComboBox->SetSelected((int)light->type);
+		typeSelectorComboBox->SetSelected((int)light->GetType());
 		
-		SetLightType(light->type);
+		SetLightType(light->GetType());
 	}
 	else
 	{
