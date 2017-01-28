@@ -51,7 +51,7 @@ runProcess(function()
 		end
 
 		if(input.Press(VK_F7)) then
-			LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\Scene\\Sample\\","scene");
+			LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\Scene\\Sponza\\","sponza");
 		end
 		
 		update()
