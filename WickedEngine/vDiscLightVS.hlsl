@@ -8,7 +8,7 @@ VertexToPixel main(uint vID : SV_VertexID)
 	float4 pos = CIRCLE[vID];
 	pos = mul(pos, lightWorld);
 	Out.pos = mul(pos, g_xCamera_VP);
-	Out.col = float4(lightColor.rgb, 1);
+	Out.col = float4(lightColor.rgb * lightEnerdis.x, 1);
 
 	return Out;
 }

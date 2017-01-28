@@ -2571,7 +2571,6 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexLayout(nullptr);
 		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 		GetDevice()->BindIndexBuffer(nullptr, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE],threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,threadID);
 
 		
@@ -2586,26 +2585,32 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 			switch (type)
 			{
 			case Light::POINT:
+				GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT], threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 				break;
 			case Light::SPOT:
+				GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT], threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
 				break;
 			case Light::SPHERE:
+				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPHERELIGHT], threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 				break;
 			case Light::DISC:
+				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEDISCLIGHT], threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 				break;
 			case Light::RECTANGLE:
+				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMERECTANGLELIGHT], threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
 				break;
 			case Light::TUBE:
+				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMETUBELIGHT], threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 				break;
