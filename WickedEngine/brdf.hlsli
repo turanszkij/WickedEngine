@@ -43,7 +43,6 @@ float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG)
 
 	// This is the optimize version 
 	float alphaG2 = alphaG * alphaG;
-	alphaG2 = alphaG2 + 0.0000001; // cg miatt
 
 								   // Caution: the "NdotL *" and "NdotV *" are explicitely inversed , this is not a mistake. 
 	float Lambda_GGXV = NdotL * sqrt((-NdotV * alphaG2 + NdotV) * NdotV + alphaG2);
