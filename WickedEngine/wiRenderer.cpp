@@ -2530,7 +2530,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 					MiscCB miscCb;
 					miscCb.mColor.x = (float)l->lightArray_index;
 					float sca = l->enerDis.y + 1;
-					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z));
+					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z) * camera->GetViewProjection());
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					GetDevice()->Draw(240, threadID); // icosphere
@@ -2544,7 +2544,8 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 					miscCb.mTransform = XMMatrixTranspose(
 						XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
 						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) *
+						camera->GetViewProjection()
 					);
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
@@ -2657,7 +2658,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 						lcb.world = XMMatrixTranspose(
 							XMMatrixScaling(l->radius, l->radius, l->radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+							camera->GetViewProjection()
 						);
 
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -2669,7 +2671,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 						lcb.world = XMMatrixTranspose(
 							XMMatrixScaling(l->radius, l->radius, l->radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+							camera->GetViewProjection()
 						);
 
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -2681,7 +2684,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 						lcb.world = XMMatrixTranspose(
 							XMMatrixScaling(l->width * 0.5f, l->height * 0.5f, 0.5f)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+							camera->GetViewProjection()
 						);
 
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -2693,7 +2697,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 						lcb.world = XMMatrixTranspose(
 							XMMatrixScaling(max(l->width * 0.5f, l->radius), l->radius, l->radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+							camera->GetViewProjection()
 						);
 
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);

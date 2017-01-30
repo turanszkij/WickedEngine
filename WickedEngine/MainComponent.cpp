@@ -187,7 +187,7 @@ void MainComponent::Compose()
 			}
 			ss << endl;
 		}
-		wiFont(ss.str(), wiFontProps(0, 0, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw();
+		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw();
 	}
 
 	// Draw the color grading palette
