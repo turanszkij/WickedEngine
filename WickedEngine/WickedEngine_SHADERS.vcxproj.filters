@@ -504,6 +504,9 @@
     <FxCompile Include="vRectangleLightVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="objectPS_alphatestonly.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

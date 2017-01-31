@@ -734,6 +734,7 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
@@ -3193,6 +3194,9 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 		break;
 	case SHADERTYPE_ENVMAPCAPTURE:
 		realPS = PSTYPE_ENVMAP;
+		break;
+	case SHADERTYPE_ALPHATESTONLY:
+		realPS = PSTYPE_ALPHATESTONLY;
 		break;
 	default:
 		realPS = PSTYPE_TEXTUREONLY;
