@@ -3835,6 +3835,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 {
+	wiProfiler::GetInstance().BeginRange("Tiled Light Culling", wiProfiler::DOMAIN_GPU, threadID);
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	int _width = device->GetScreenWidth();
@@ -4005,7 +4006,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		device->EventEnd(threadID);
 	}
 
-	//return debugTexture;
+	wiProfiler::GetInstance().EndRange(threadID);
 }
 void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
 {

@@ -66,7 +66,7 @@ void wiProfiler::BeginRange(const std::string& name, PROFILER_DOMAIN domain, GRA
 		case wiProfiler::DOMAIN_GPU:
 			{
 				GPUQueryDesc desc;
-				desc.async_latency = 5;
+				desc.async_latency = 4;
 				desc.MiscFlags = 0;
 				desc.Type = GPU_QUERY_TYPE_TIMESTAMP;
 				wiRenderer::GetDevice()->CreateQuery(&desc, &range->gpuBegin);
@@ -159,7 +159,7 @@ wiProfiler::wiProfiler()
 	ranges.reserve(100);
 
 	GPUQueryDesc desc;
-	desc.async_latency = 5;
+	desc.async_latency = 4;
 	desc.MiscFlags = 0;
 	desc.Type = GPU_QUERY_TYPE_TIMESTAMP_DISJOINT;
 	wiRenderer::GetDevice()->CreateQuery(&desc, &disjoint);
