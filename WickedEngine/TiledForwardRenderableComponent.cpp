@@ -3,6 +3,7 @@
 #include "wiImage.h"
 #include "wiImageEffects.h"
 #include "wiHelper.h"
+#include "wiProfiler.h"
 
 using namespace wiGraphicsTypes;
 
@@ -19,6 +20,8 @@ TiledForwardRenderableComponent::~TiledForwardRenderableComponent()
 
 void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
+	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
@@ -53,10 +56,16 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, rtReflection.GetTexture(), true);
 		wiRenderer::DrawSky(threadID);
 	}
+
+	wiProfiler::GetInstance().EndRange(); // Opaque Scene
 }
 void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {
+	wiProfiler::GetInstance().BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
+
 	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
 		, rtWaterRipple.GetTexture(), threadID, getHairParticleAlphaCompositionEnabled());
+
+	wiProfiler::GetInstance().EndRange(); // Transparent Scene
 }
 

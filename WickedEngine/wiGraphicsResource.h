@@ -278,6 +278,9 @@ namespace wiGraphicsTypes
 
 		BOOL	result_passed;
 		UINT64	result_passed_sample_count;
+		UINT64	result_timestamp;
+		UINT64	result_timestamp_frequency;
+		BOOL	result_disjoint;
 	};
 }
 

@@ -1,6 +1,7 @@
 #ifndef _GRAPHICSDEVICE_H_
 #define _GRAPHICSDEVICE_H_
 
+#include "CommonInclude.h"
 #include "wiThreadSafeManager.h"
 #include "wiEnums.h"
 #include "wiGraphicsDescriptors.h"
@@ -142,9 +143,9 @@ namespace wiGraphicsTypes
 		virtual HRESULT SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual HRESULT SaveTextureDDS(const string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
-		virtual void EventBegin(const wchar_t* name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void EventBegin(const string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual void EventEnd(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void SetMarker(const wchar_t* name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void SetMarker(const string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 	};
 
 }

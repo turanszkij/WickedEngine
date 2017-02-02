@@ -34,7 +34,7 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector
 	if(!rims.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin(L"LensFlare", threadID);
+		device->EventBegin("LensFlare", threadID);
 
 		device->BindPrimitiveTopology(POINTLIST,threadID);
 		device->BindVertexLayout(inputLayout,threadID);

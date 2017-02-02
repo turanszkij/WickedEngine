@@ -3,6 +3,7 @@
 #include "wiImage.h"
 #include "wiImageEffects.h"
 #include "wiHelper.h"
+#include "wiProfiler.h"
 
 using namespace wiGraphicsTypes;
 
@@ -77,6 +78,8 @@ void ForwardRenderableComponent::Render()
 
 void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
+	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
 	rtMain.Activate(threadID, 0, 0, 0, 0);
@@ -98,6 +101,8 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	rtLinearDepth.Deactivate(threadID);
 
 	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
+
+	wiProfiler::GetInstance().EndRange(); // Opaque Scene
 }
 
 

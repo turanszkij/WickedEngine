@@ -11,6 +11,7 @@
 #include "wiImageEffects.h"
 #include "wiTextureHelper.h"
 #include "wiFrameRate.h"
+#include "wiProfiler.h"
 
 MainComponent::MainComponent()
 {
@@ -79,6 +80,9 @@ void MainComponent::activateComponent(RenderableComponent* component, int fadeFr
 
 void MainComponent::run()
 {
+	wiProfiler::GetInstance().BeginFrame();
+	wiProfiler::GetInstance().BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
+
 	static wiTimer timer = wiTimer();
 	static double accumulator = 0.0;
 	const double elapsedTime = timer.elapsed() / 1000.0;
@@ -86,6 +90,7 @@ void MainComponent::run()
 
 	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
 
+	wiProfiler::GetInstance().BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
 	if (frameskip)
 	{
 		accumulator += elapsedTime;
@@ -106,10 +111,17 @@ void MainComponent::run()
 	{
 		Update();
 	}
+	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
+	wiProfiler::GetInstance().BeginRange("Update", wiProfiler::DOMAIN_CPU);
 	getActiveComponent()->Update((float)elapsedTime);
+	wiProfiler::GetInstance().EndRange(); // Update
 
+	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	Render();
+	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
+
+	wiProfiler::GetInstance().EndRange(); // CPU Frame
 
 	wiRenderer::Present(bind(&MainComponent::Compose, this));
 
@@ -118,6 +130,8 @@ void MainComponent::run()
 		wiLua::GetGlobal()->RunFile("startup.lua");
 		startupScriptProcessed = true;
 	}
+
+	wiProfiler::GetInstance().EndFrame();
 }
 
 void MainComponent::Update()
@@ -187,8 +201,11 @@ void MainComponent::Compose()
 			}
 			ss << endl;
 		}
+		ss.precision(2);
 		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw();
 	}
+
+	wiProfiler::GetInstance().DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);
 
 	// Draw the color grading palette
 	if (colorGradingPaletteDisplayEnabled)

@@ -6,6 +6,7 @@
 #include "wiTextureHelper.h"
 #include "wiSprite.h"
 #include "ResourceMapping.h"
+#include "wiProfiler.h"
 
 using namespace wiGraphicsTypes;
 
@@ -98,6 +99,8 @@ void DeferredRenderableComponent::Render()
 
 void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
+	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
@@ -240,6 +243,8 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.process.clear();
 		}
 	}
+
+	wiProfiler::GetInstance().EndRange(); // Opaque Scene
 }
 
 wiRenderTarget& DeferredRenderableComponent::GetFinalRT()

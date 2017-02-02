@@ -54,7 +54,7 @@ void wiGUI::Update()
 
 void wiGUI::Render()
 {
-	wiRenderer::GetDevice()->EventBegin(L"GUI");
+	wiRenderer::GetDevice()->EventBegin("GUI");
 	for (auto&x : widgets)
 	{
 		if (x->container == nullptr)

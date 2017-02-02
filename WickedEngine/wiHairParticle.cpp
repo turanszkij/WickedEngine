@@ -371,7 +371,7 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin(L"HairParticle", threadID);
+		device->EventBegin("HairParticle", threadID);
 
 
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);

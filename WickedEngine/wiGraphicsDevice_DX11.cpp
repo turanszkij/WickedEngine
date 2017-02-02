@@ -2179,6 +2179,14 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 	{
 		desc.Query = D3D11_QUERY_OCCLUSION;
 	}
+	else if (pDesc->Type == GPU_QUERY_TYPE_TIMESTAMP)
+	{
+		desc.Query = D3D11_QUERY_TIMESTAMP;
+	}
+	else if (pDesc->Type == GPU_QUERY_TYPE_TIMESTAMP_DISJOINT)
+	{
+		desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+	}
 
 	HRESULT hr = E_FAIL;
 	if (pQuery->desc.async_latency > 0)
@@ -2652,6 +2660,17 @@ bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 	HRESULT hr = S_OK;
 	switch (query->desc.Type)
 	{
+	case GPU_QUERY_TYPE_TIMESTAMP:
+		hr = deviceContexts[threadID]->GetData(query->resource_DX11[_readQueryID], &query->result_timestamp, sizeof(query->result_timestamp), _flags);
+		break;
+	case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
+		{
+			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT _temp;
+			hr = deviceContexts[threadID]->GetData(query->resource_DX11[_readQueryID], &_temp, sizeof(_temp), _flags);
+			query->result_disjoint = _temp.Disjoint;
+			query->result_timestamp_frequency = _temp.Frequency;
+		}
+		break;
 	case GPU_QUERY_TYPE_OCCLUSION:
 		hr = deviceContexts[threadID]->GetData(query->resource_DX11[_readQueryID], &query->result_passed_sample_count, sizeof(query->result_passed_sample_count), _flags);
 		query->result_passed = query->result_passed_sample_count != 0;
@@ -2664,7 +2683,7 @@ bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 
 	query->active[_readQueryID] = false;
 
-	return SUCCEEDED(hr);
+	return hr != S_FALSE;
 }
 
 
@@ -2718,17 +2737,17 @@ HRESULT GraphicsDevice_DX11::SaveTextureDDS(const string& fileName, Texture *pTe
 	return E_FAIL;
 }
 
-void GraphicsDevice_DX11::EventBegin(const wchar_t* name, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::EventBegin(const string& name, GRAPHICSTHREAD threadID)
 {
-	userDefinedAnnotations[threadID]->BeginEvent(name);
+	userDefinedAnnotations[threadID]->BeginEvent(wstring(name.begin(), name.end()).c_str());
 }
 void GraphicsDevice_DX11::EventEnd(GRAPHICSTHREAD threadID)
 {
 	userDefinedAnnotations[threadID]->EndEvent();
 }
-void GraphicsDevice_DX11::SetMarker(const wchar_t* name, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::SetMarker(const string& name, GRAPHICSTHREAD threadID)
 {
-	userDefinedAnnotations[threadID]->SetMarker(name);
+	userDefinedAnnotations[threadID]->SetMarker(wstring(name.begin(),name.end()).c_str());
 }
 
 }

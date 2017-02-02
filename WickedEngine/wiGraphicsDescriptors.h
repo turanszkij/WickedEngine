@@ -279,6 +279,8 @@ namespace wiGraphicsTypes
 	{
 		GPU_QUERY_TYPE_OCCLUSION, // how many samples passed depthstencil test?
 		GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
+		GPU_QUERY_TYPE_TIMESTAMP,
+		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,
 	};
 
 	// Flags ////////////////////////////////////////////

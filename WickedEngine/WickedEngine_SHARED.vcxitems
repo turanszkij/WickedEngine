@@ -330,6 +330,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRectPacker.h" />
@@ -666,6 +667,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiParticle.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiProfiler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRectPacker.cpp" />

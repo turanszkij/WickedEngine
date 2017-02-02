@@ -61,3 +61,4 @@ Occlusion culling with gpu queries
 Texture atlas packing
 Tiled decals
 Area lights: Sphere, Disc, Rectangle, Tube
+Frame Profiler

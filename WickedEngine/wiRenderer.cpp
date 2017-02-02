@@ -25,6 +25,7 @@
 #include "lightCullingCSInterop.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
+#include "wiProfiler.h"
 
 using namespace wiGraphicsTypes;
 
@@ -118,6 +119,7 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 	*prevFrameCam = *cam;
 
 	wiFrameRate::Frame();
+
 }
 
 
@@ -1384,6 +1386,7 @@ void wiRenderer::Update()
 void wiRenderer::UpdatePerFrameData()
 {
 	// update the space partitioning trees:
+	wiProfiler::GetInstance().BeginRange("SPTree Update", wiProfiler::DOMAIN_CPU);
 	if (GetGameSpeed() > 0)
 	{
 		if (spTree != nullptr && spTree->root != nullptr)
@@ -1405,8 +1408,10 @@ void wiRenderer::UpdatePerFrameData()
 			}
 		}
 	}
+	wiProfiler::GetInstance().EndRange(); // SPTree Update
 
 	// Perform culling and obtain closest reflector:
+	wiProfiler::GetInstance().BeginRange("SPTree Culling", wiProfiler::DOMAIN_CPU);
 	{
 		for (auto& x : frameCullings)
 		{
@@ -1539,6 +1544,8 @@ void wiRenderer::UpdatePerFrameData()
 			}
 		}
 	}
+	wiProfiler::GetInstance().EndRange(); // SPTree Culling
+
 	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
 
 	UpdateBoneLines();
@@ -1567,7 +1574,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					&& mesh->streamoutBuffer.IsValid() && mesh->vertexBuffer.IsValid())
 				{
 #ifdef USE_GPU_SKINNING
-					GetDevice()->EventBegin(L"Skinning", threadID);
+					GetDevice()->EventBegin("Skinning", threadID);
 
 					if (!streamOutSetUp)
 					{
@@ -1792,7 +1799,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 	if (!culledRenderer.empty())
 	{
-		GetDevice()->EventBegin(L"Occlusion Culling Render");
+		GetDevice()->EventBegin("Occlusion Culling Render");
 
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_OCCLUDEE], threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
@@ -1852,12 +1859,14 @@ void wiRenderer::OcclusionCulling_Read()
 		return;
 	}
 
+	wiProfiler::GetInstance().BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
+
 	const FrameCulling& culling = frameCullings[getCamera()];
 	const CulledCollection& culledRenderer = culling.culledRenderer;
 
 	if (!culledRenderer.empty())
 	{
-		GetDevice()->EventBegin(L"Occlusion Culling Read");
+		GetDevice()->EventBegin("Occlusion Culling Read");
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
@@ -1878,6 +1887,8 @@ void wiRenderer::OcclusionCulling_Read()
 
 		GetDevice()->EventEnd();
 	}
+
+	wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
 }
 void wiRenderer::UpdateImages()
 {
@@ -1926,7 +1937,7 @@ void wiRenderer::ManageWaterRipples(){
 }
 void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin(L"Water Ripples");
+	GetDevice()->EventBegin("Water Ripples");
 	for(wiSprite* i:waterRipples){
 		i->DrawNormal(threadID);
 	}
@@ -1978,7 +1989,7 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
 void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugBoneLines){
-		GetDevice()->EventBegin(L"DebugBoneLines", threadID);
+		GetDevice()->EventBegin("DebugBoneLines", threadID);
 
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
@@ -2010,7 +2021,7 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 	if (linesTemp.empty())
 		return;
 
-	GetDevice()->EventBegin(L"DebugLines", threadID);
+	GetDevice()->EventBegin("DebugLines", threadID);
 
 	GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
@@ -2043,7 +2054,7 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(debugPartitionTree || !renderableBoxes.empty()){
-		GetDevice()->EventBegin(L"DebugBoxes", threadID);
+		GetDevice()->EventBegin("DebugBoxes", threadID);
 
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
@@ -2088,7 +2099,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(!renderableTranslators.empty()){
-		GetDevice()->EventBegin(L"Translators", threadID);
+		GetDevice()->EventBegin("Translators", threadID);
 
 
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
@@ -2180,7 +2191,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if (debugEnvProbes && !GetScene().environmentProbes.empty()) {
-		GetDevice()->EventBegin(L"Debug EnvProbes", threadID);
+		GetDevice()->EventBegin("Debug EnvProbes", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
@@ -2215,7 +2226,7 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	if(gridHelper){
-		GetDevice()->EventBegin(L"GridHelper", threadID);
+		GetDevice()->EventBegin("GridHelper", threadID);
 
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
@@ -2312,7 +2323,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 		return;
 	}
 
-	GetDevice()->EventBegin(L"RibbonTrails", threadID);
+	GetDevice()->EventBegin("RibbonTrails", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
@@ -2435,7 +2446,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledList& culledLights = culling.culledLights;
 
-	GetDevice()->EventBegin(L"Light Render", threadID);
+	GetDevice()->EventBegin("Light Render", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
@@ -2567,7 +2578,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 	if(!culledLights.empty())
 	{
-		GetDevice()->EventBegin(L"Light Volume Render", threadID);
+		GetDevice()->EventBegin("Light Volume Render", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 		GetDevice()->BindVertexLayout(nullptr);
@@ -2802,7 +2813,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
 	if (GameSpeed) 
 	{
-		GetDevice()->EventBegin(L"ShadowMap Render", threadID);
+		GetDevice()->EventBegin("ShadowMap Render", threadID);
 
 		const FrameCulling& culling = frameCullings[getCamera()];
 		const CulledList& culledLights = culling.culledLights;
@@ -3210,7 +3221,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 {
 	if (!culledRenderer.empty())
 	{
-		GetDevice()->EventBegin(L"RenderMeshes", threadID);
+		GetDevice()->EventBegin("RenderMeshes", threadID);
 
 		tessellation = tessellation && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
@@ -3551,7 +3562,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledCollection& culledRenderer = culling.culledRenderer_opaque;
 
-	GetDevice()->EventBegin(L"DrawWorld");
+	GetDevice()->EventBegin("DrawWorld");
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
@@ -3593,7 +3604,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledCollection& culledRenderer = culling.culledRenderer_transparent;
 
-	GetDevice()->EventBegin(L"DrawWorldTransparent");
+	GetDevice()->EventBegin("DrawWorldTransparent");
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
@@ -3633,7 +3644,7 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	if (enviroMap == nullptr)
 		return;
 
-	GetDevice()->EventBegin(L"DrawSky", threadID);
+	GetDevice()->EventBegin("DrawSky", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
@@ -3653,7 +3664,7 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin(L"DrawSun", threadID);
+	GetDevice()->EventBegin("DrawSun", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
@@ -3680,7 +3691,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 		if (model->decals.empty())
 			continue;
 
-		device->EventBegin(L"Decals", threadID);
+		device->EventBegin("Decals", threadID);
 
 		if (!boundCB)
 		{
@@ -3734,7 +3745,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin(L"EnvironmentProbe Refresh");
+	GetDevice()->EventBegin("EnvironmentProbe Refresh");
 
 	for (EnvironmentProbe* probe : GetScene().environmentProbes)
 	{
@@ -3967,7 +3978,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 	// Perform the culling
 	{
 
-		device->EventBegin(L"Light Culling", threadID);
+		device->EventBegin("Light Culling", threadID);
 
 		device->UnBindResources(TEXSLOT_LIGHTGRID, SBSLOT_LIGHTINDEXLIST - TEXSLOT_LIGHTGRID + 1, threadID);
 
@@ -3998,7 +4009,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin(L"Resolve MSAA DepthBuffer");
+	GetDevice()->EventBegin("Resolve MSAA DepthBuffer");
 
 	GetDevice()->BindResourceCS(src, TEXSLOT_ONDEMAND0, threadID);
 	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);

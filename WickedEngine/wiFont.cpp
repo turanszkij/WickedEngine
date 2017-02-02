@@ -276,7 +276,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 	if(text.length()>0)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin(L"Font", threadID);
+		device->EventBegin("Font", threadID);
 	
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 		device->BindVertexLayout(vertexLayout,threadID);

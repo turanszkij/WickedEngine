@@ -228,7 +228,7 @@ void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin(L"Image", threadID);
+	device->EventBegin("Image", threadID);
 
 	bool fullScreenEffect = false;
 
@@ -480,7 +480,7 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin(L"DeferredComposition", threadID);
+	device->EventBegin("DeferredComposition", threadID);
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 	device->BindRasterizerState(rasterizerState,threadID);

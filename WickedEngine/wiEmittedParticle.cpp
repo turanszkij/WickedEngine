@@ -307,7 +307,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 	if(!points.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin(L"EmittedParticle", threadID);
+		device->EventBegin("EmittedParticle", threadID);
 
 		bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
