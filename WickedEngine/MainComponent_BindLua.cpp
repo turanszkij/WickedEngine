@@ -7,6 +7,7 @@
 #include "TiledForwardRenderableComponent_BindLua.h"
 #include "LoadingScreenComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
+#include "wiProfiler.h"
 
 const char MainComponent_BindLua::className[] = "MainComponent";
 
@@ -310,12 +311,28 @@ int MainComponent_BindLua::SetColorGradePaletteDisplay(lua_State* L)
 	return 0;
 }
 
+
+int SetProfilerEnabled(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		wiProfiler::GetInstance().ENABLED = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetProfilerEnabled(bool active) not enough arguments!");
+
+	return 0;
+}
+
 void MainComponent_BindLua::Bind()
 {
 	static bool initialized = false;
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<MainComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<MainComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState()); 
+		
+		wiLua::GetGlobal()->RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
 	}
 }

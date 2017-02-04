@@ -42,6 +42,8 @@ public:
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
 	void DrawData(int x, int y, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
+	bool ENABLED;
+
 private:
 	wiProfiler();
 	~wiProfiler();
@@ -49,7 +51,5 @@ private:
 	std::unordered_map<std::string, Range*> ranges;
 	std::stack<std::string> rangeStack;
 	wiGraphicsTypes::GPUQuery disjoint;
-
-	bool ENABLED;
 };
 

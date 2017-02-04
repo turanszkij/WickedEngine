@@ -24,6 +24,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
+	wiProfiler::GetInstance().BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
 	{
 		if (getHairParticleAlphaCompositionEnabled())
@@ -32,6 +33,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		}
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_ALPHATESTONLY, nullptr, true);
 	}
+	wiProfiler::GetInstance().EndRange(threadID);
 
 	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
 

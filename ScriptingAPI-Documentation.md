@@ -435,6 +435,7 @@ The main component which holds information and manages the running of the curren
 - SetFPSDisplay(bool active)
 - SetCPUDisplay(bool active)
 - SetColorGradePaletteDisplay(bool active)
+- [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderableComponent
 A RenderableComponent describes a scene wich can render itself.
