@@ -18,6 +18,7 @@ struct wiEventArgs
 	bool bValue;
 	int iValue;
 	XMFLOAT4 color;
+	string sValue;
 };
 
 class wiWidget : public Transform
@@ -195,6 +196,7 @@ public:
 
 	void SetSelected(int index);
 	int GetSelected();
+	string GetItemText(int index);
 
 	virtual void Update(wiGUI* gui) override;
 	virtual void Render(wiGUI* gui) override;

@@ -2243,6 +2243,16 @@ void Mesh::CreateVertexArrays()
 		vertices_Complete.resize(vertices.size());
 		for (size_t i = 0; i < vertices.size(); ++i) 
 		{
+			// normalize bone weights:
+			float len = vertices[i].wei.x + vertices[i].wei.y + vertices[i].wei.z + vertices[i].wei.w;
+			if (len > 0)
+			{
+				vertices[i].wei.x /= len;
+				vertices[i].wei.y /= len;
+				vertices[i].wei.z /= len;
+				vertices[i].wei.w /= len;
+			}
+			// copy the vertex to the unskinned vertex array:
 			vertices_Complete[i].pos = vertices[i].pos;
 			vertices_Complete[i].nor = vertices[i].nor;
 			vertices_Complete[i].tex = vertices[i].tex;

@@ -892,7 +892,16 @@ void wiComboBox::SetSelected(int index)
 
 	wiEventArgs args;
 	args.iValue = selected;
+	args.sValue = GetItemText(selected);
 	onSelect(args);
+}
+string wiComboBox::GetItemText(int index)
+{
+	if (index >= 0)
+	{
+		return items[index];
+	}
+	return "";
 }
 int wiComboBox::GetSelected()
 {

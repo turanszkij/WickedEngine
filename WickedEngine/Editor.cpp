@@ -12,6 +12,7 @@
 #include "EnvProbeWindow.h"
 #include "DecalWindow.h"
 #include "LightWindow.h"
+#include "AnimationWindow.h"
 
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -240,6 +241,7 @@ void EditorComponent::Load()
 	envProbeWnd = new EnvProbeWindow(&GetGUI());
 	decalWnd = new DecalWindow(&GetGUI());
 	lightWnd = new LightWindow(&GetGUI());
+	animWnd = new AnimationWindow(&GetGUI());
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
@@ -335,6 +337,15 @@ void EditorComponent::Load()
 		lightWnd->lightWindow->SetVisible(!lightWnd->lightWindow->IsVisible());
 	});
 	GetGUI().AddWidget(lightWnd_Toggle);
+
+	wiButton* animWnd_Toggle = new wiButton("Animation");
+	animWnd_Toggle->SetTooltip("Animation inspector window");
+	animWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
+	animWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	animWnd_Toggle->OnClick([=](wiEventArgs args) {
+		animWnd->animWindow->SetVisible(!animWnd->animWindow->IsVisible());
+	});
+	GetGUI().AddWidget(animWnd_Toggle);
 
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -840,12 +851,14 @@ void EditorComponent::FixedUpdate()
 						savedParents.erase(picked->object);
 						picked->transform = picked->object->mesh->armature;
 						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
+						animWnd->SetArmature(picked->object->mesh->armature);
 					}
 				}
 				else
 				{
 					meshWnd->SetMesh(nullptr);
 					materialWnd->SetMaterial(nullptr);
+					animWnd->SetArmature(nullptr);
 				}
 
 				if (picked->light != nullptr)
@@ -1183,6 +1196,7 @@ void EditorComponent::Unload()
 	SAFE_DELETE(cameraWnd);
 	SAFE_DELETE(decalWnd);
 	SAFE_DELETE(lightWnd);
+	SAFE_DELETE(animWnd);
 
 	SAFE_DELETE(translator);
 

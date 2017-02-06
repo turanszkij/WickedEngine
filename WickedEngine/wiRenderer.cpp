@@ -1308,68 +1308,62 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex
 		,vertex.bon.z
 		,vertex.bon.w};
 	XMMATRIX sump;
-	if(inWei[0] || inWei[1] || inWei[2] || inWei[3]){
-		sump = XMMATRIX(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
-		float sumw = 0;
-		for(unsigned int i=0;i<4;i++){
-			sumw += inWei[i];
-			sump += XMLoadFloat4x4( &mesh->armature->boneCollection[int(inBon[i])]->boneRelativity ) * inWei[i];
+	if (inWei[0] || inWei[1] || inWei[2] || inWei[3]) 
+	{
+		sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		for (unsigned int i = 0; i < 4; i++)
+		{
+			sump += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
 		}
-		if(sumw) sump/=sumw;
-
-		//sump = XMMatrixTranspose(sump);
 	}
 	else
+	{
 		sump = XMMatrixIdentity();
+	}
 
-	//sump*=mat;
 	sump = XMMatrixMultiply(sump, mat);
 
 	XMFLOAT3 transformedP,transformedN;
-	XMStoreFloat3( &transformedP,XMVector3Transform(pos,sump) );
+	XMStoreFloat3(&transformedP, XMVector3Transform(pos, sump));
 	
-	sump.r[3]=XMVectorSetX(sump.r[3],0);
-	sump.r[3]=XMVectorSetY(sump.r[3],0);
-	sump.r[3]=XMVectorSetZ(sump.r[3],0);
-	//sump.r[3].m128_f32[0]=sump.r[3].m128_f32[1]=sump.r[3].m128_f32[2]=0;
-	XMStoreFloat3( &transformedN,XMVector3Normalize(XMVector3Transform(nor,sump)));
+	XMStoreFloat3(&transformedN, XMVector3Normalize(XMVector3TransformNormal(nor, sump)));
 
 	Vertex retV(transformedP);
-	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z,retV.nor.w);
+	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
 	retV.tex = vertex.tex;
-	retV.pre=XMFLOAT4(0,0,0,1);
+	retV.pre = XMFLOAT4(0, 0, 0, 1);
 
 	return retV;
 }
-XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, const int& vertexI){
-	XMVECTOR pos = XMLoadFloat4( &mesh->vertices[vertexI].pos );
-	float inWei[4]={mesh->vertices[vertexI].wei.x
+XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, const int& vertexI)
+{
+	XMVECTOR pos = XMLoadFloat4(&mesh->vertices[vertexI].pos);
+	float inWei[4] = { mesh->vertices[vertexI].wei.x
 		,mesh->vertices[vertexI].wei.y
 		,mesh->vertices[vertexI].wei.z
-		,mesh->vertices[vertexI].wei.w};
-	float inBon[4]={mesh->vertices[vertexI].bon.x
+		,mesh->vertices[vertexI].wei.w };
+	float inBon[4] = { mesh->vertices[vertexI].bon.x
 		,mesh->vertices[vertexI].bon.y
 		,mesh->vertices[vertexI].bon.z
-		,mesh->vertices[vertexI].bon.w};
+		,mesh->vertices[vertexI].bon.w };
 	XMMATRIX sump;
 	XMMATRIX sumpPrev;
-	if(inWei[0] || inWei[1] || inWei[2] || inWei[3]){
-		sump = sumpPrev = XMMATRIX(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
-		float sumw = 0;
-		for(unsigned int i=0;i<4;i++){
-			sumw += inWei[i];
-			sump += XMLoadFloat4x4( &mesh->armature->boneCollection[int(inBon[i])]->boneRelativity ) * inWei[i];
-			sumpPrev += XMLoadFloat4x4( &mesh->armature->boneCollection[int(inBon[i])]->boneRelativityPrev ) * inWei[i];
-		}
-		if(sumw){
-			sump/=sumw;
-			sumpPrev/=sumw;
+	if (inWei[0] || inWei[1] || inWei[2] || inWei[3]) 
+	{
+		sump = sumpPrev = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		for (unsigned int i = 0; i < 4; i++)
+		{
+			sump += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
+			sumpPrev += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativityPrev) * inWei[i];
 		}
 	}
 	else
+	{
 		sump = sumpPrev = XMMatrixIdentity();
+	}
+
 	XMFLOAT3 velocity;
-	XMStoreFloat3( &velocity,GetGameSpeed()*XMVectorSubtract(XMVector3Transform(pos,sump),XMVector3Transform(pos,sumpPrev)) );
+	XMStoreFloat3(&velocity, GetGameSpeed()*XMVectorSubtract(XMVector3Transform(pos, sump), XMVector3Transform(pos, sumpPrev)));
 	return velocity;
 }
 void wiRenderer::Update()

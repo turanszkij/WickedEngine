@@ -11,6 +11,7 @@ class RendererWindow;
 class EnvProbeWindow;
 class DecalWindow;
 class LightWindow;
+class AnimationWindow;
 
 class EditorLoadingScreen : public LoadingScreenComponent
 {
@@ -41,6 +42,7 @@ public:
 	EnvProbeWindow*			envProbeWnd;
 	DecalWindow*			decalWnd;
 	LightWindow*			lightWnd;
+	AnimationWindow*		animWnd;
 
 	Editor*					main;
 	EditorLoadingScreen*	loader;

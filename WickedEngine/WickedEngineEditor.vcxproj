@@ -165,6 +165,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AnimationWindow.h" />
     <ClInclude Include="CameraWindow.h" />
     <ClInclude Include="DecalWindow.h" />
     <ClInclude Include="Editor.h" />
@@ -182,6 +183,7 @@
     <ClInclude Include="WorldWindow.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AnimationWindow.cpp" />
     <ClCompile Include="CameraWindow.cpp" />
     <ClCompile Include="DecalWindow.cpp" />
     <ClCompile Include="Editor.cpp" />
