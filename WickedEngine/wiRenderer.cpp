@@ -1599,8 +1599,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						bonebuf = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
 					}
 					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
-						bonebuf[k].pose = mesh->armature->boneCollection[k]->boneRelativity;
-						bonebuf[k].prev = mesh->armature->boneCollection[k]->boneRelativityPrev;
+						bonebuf[k].pose = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativity));
+						bonebuf[k].prev = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativityPrev));
 					}
 					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf, threadID, (int)(sizeof(ShaderBoneType) * mesh->armature->boneCollection.size()));
 

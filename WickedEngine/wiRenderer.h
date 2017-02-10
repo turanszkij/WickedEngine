@@ -229,7 +229,7 @@ public:
 	// Resource Buffers:
 	GFX_STRUCT ShaderBoneType
 	{
-		XMFLOAT4X4 pose, prev;
+		XMMATRIX pose, prev;
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_BONE)
 

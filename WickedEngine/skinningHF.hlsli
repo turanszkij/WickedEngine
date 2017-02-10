@@ -2,29 +2,34 @@
 
 #define SKINNING_ON
 
-typedef row_major matrix<float,4,4> bonetype;
-
 struct Bone
 {
-	bonetype pose, prev;
+	float4x4 pose, prev;
 };
 
 STRUCTUREDBUFFER(boneBuffer, Bone, SBSLOT_BONE);
 
-inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 inNor, in float4 inBon, in float4 inWei)
+inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, in float4 inBon, in float4 inWei)
 {
-	[branch]
-	if(any(inWei))
+	float4 p = 0, pp = 0;
+	float3 n = 0;
+	float4x4 m, mp;
+	float3x3 m3;
+
+	[unroll]
+	for (uint i = 0; i < 4; i++)
 	{
-		bonetype sump = 0, sumpPrev = 0;
-		[unroll]
-		for (uint i = 0; i < 4; i++)
-		{
-			sump += boneBuffer[(uint)inBon[i]].pose * inWei[i];
-			sumpPrev += boneBuffer[(uint)inBon[i]].prev * inWei[i];
-		}
-		pos = mul(pos, sump);
-		posPrev = mul(posPrev, sumpPrev);
-		inNor.xyz = mul(inNor.xyz, (float3x3)sump);
+		m = boneBuffer[(uint)inBon[i]].pose;
+		mp = boneBuffer[(uint)inBon[i]].prev;
+		m3 = (float3x3)m;
+
+		p += mul(pos, m)*inWei[i];
+		pp += mul(posPrev, mp)*inWei[i];
+		n += mul(nor.xyz, m3)*inWei[i];
 	}
+
+	bool w = any(inWei);
+	pos = w ? p : pos;
+	posPrev = w ? pp : posPrev;
+	nor.xyz = w ? n : nor.xyz;
 }
