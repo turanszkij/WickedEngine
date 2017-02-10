@@ -158,12 +158,57 @@ struct AABB
 {
 	float3 c; // center
 	float3 e; // half extents
+
+	float3 getMin() { return c - e; }
+	float3 getMax() { return c + e; }
+	void fromMinMax(float3 _min, float3 _max)
+	{
+		c = (_min + _max) * 0.5f;
+		e = abs(_max - c);
+	}
+	void transform(float4x4 mat)
+	{
+		float3 _min = getMin();
+		float3 _max = getMax();
+		float3 corners[8];
+		corners[0] = _min;
+		corners[1] = float3(_min.x, _max.y, _min.z);
+		corners[2] = float3(_min.x, _max.y, _max.z);
+		corners[3] = float3(_min.x, _min.y, _max.z);
+		corners[4] = float3(_max.x, _min.y, _min.z);
+		corners[5] = float3(_max.x, _max.y, _min.z);
+		corners[6] = _max;
+		corners[7] = float3(_max.x, _min.y, _max.z);
+		_min = 1000000;
+		_max = -1000000;
+
+		[unroll]
+		for (uint i = 0; i < 8; ++i)
+		{
+			corners[i] = mul(float4(corners[i], 1), mat).xyz;
+			_min = min(_min, corners[i]);
+			_max = max(_max, corners[i]);
+		}
+
+		fromMinMax(_min, _max);
+	}
 };
 bool SphereIntersectsAABB(in Sphere sphere, in AABB aabb)
 {
-	float3 delta = max(0, abs(aabb.c - sphere.c) - aabb.e);
-	float distSq = dot(delta, delta);
-	return distSq <= sphere.r * sphere.r;
+	float3 vDelta = max(0, abs(aabb.c - sphere.c) - aabb.e);
+	float fDistSq = dot(vDelta, vDelta);
+	return fDistSq <= sphere.r * sphere.r;
+}
+bool IntersectAABB(AABB a, AABB b)
+{
+	if (abs(a.c[0] - b.c[0]) > (a.e[0] + b.e[0]))
+		return false;
+	if (abs(a.c[1] - b.c[1]) > (a.e[1] + b.e[1]))
+		return false;
+	if (abs(a.c[2] - b.c[2]) > (a.e[2] + b.e[2]))
+		return false;
+
+	return true;
 }
 
 

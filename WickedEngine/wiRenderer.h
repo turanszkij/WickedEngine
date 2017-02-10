@@ -110,6 +110,7 @@ public:
 		XMMATRIX mPrevVP;
 		XMMATRIX mPrevInvVP;
 		XMMATRIX mReflVP;
+		XMMATRIX mInvV;
 		XMMATRIX mInvP;
 		XMMATRIX mInvVP;
 		XMFLOAT3 mAt;

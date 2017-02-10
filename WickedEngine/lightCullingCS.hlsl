@@ -28,25 +28,29 @@ RWTEXTURE2D(t_LightGrid, uint2, UAVSLOT_LIGHTGRID_TRANSPARENT);
 // Group shared variables.
 groupshared uint uMinDepth;
 groupshared uint uMaxDepth;
-groupshared Frustum GroupFrustum;
-groupshared AABB GroupAABB;
+groupshared Frustum GroupFrustum;	// precomputed tile frustum
+groupshared AABB GroupAABB;			// frustum AABB around min-max depth in View Space
+groupshared AABB GroupAABB_WS;		// frustum AABB in world space
+groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
+
+#define MAX_LIGHTS_PER_TILE 1024
 
 // Opaque geometry light lists.
 groupshared uint o_LightCount;
 groupshared uint o_LightIndexStartOffset;
-groupshared uint o_LightList[MAX_LIGHTS];
+groupshared uint o_LightList[MAX_LIGHTS_PER_TILE];
 
 // Transparent geometry light lists.
 groupshared uint t_LightCount;
 groupshared uint t_LightIndexStartOffset;
-groupshared uint t_LightList[MAX_LIGHTS];
+groupshared uint t_LightList[MAX_LIGHTS_PER_TILE];
 
 // Add the light to the visible light list for opaque geometry.
 void o_AppendLight(uint lightIndex)
 {
 	uint index; // Index into the visible lights array.
 	InterlockedAdd(o_LightCount, 1, index);
-	if (index < MAX_LIGHTS)
+	if (index < MAX_LIGHTS_PER_TILE)
 	{
 		o_LightList[index] = lightIndex;
 	}
@@ -57,7 +61,7 @@ void t_AppendLight(uint lightIndex)
 {
 	uint index; // Index into the visible lights array.
 	InterlockedAdd(t_LightCount, 1, index);
-	if (index < MAX_LIGHTS)
+	if (index < MAX_LIGHTS_PER_TILE)
 	{
 		t_LightList[index] = lightIndex;
 	}
@@ -133,6 +137,25 @@ void t_BitonicSort( in uint localIdxFlattened )
 	}
 }
 
+inline uint ContructLightMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)
+{
+	// We create a light mask to decide if the light is really touching something
+	// If we do an OR operation with the depth slices mask, we instantly get if the light is contributing or not
+	// we do this in view space
+
+	uint uLightMask = 0;
+	const float fLightMin = bounds.c.z - bounds.r;
+	const float fLightMax = bounds.c.z + bounds.r;
+	const uint __lightmaskcellindexSTART = max(0, min(32, floor((fLightMin - depthRangeMin) * depthRangeRecip)));
+	const uint __lightmaskcellindexEND = max(0, min(32, floor((fLightMax - depthRangeMin) * depthRangeRecip)));
+
+	for (uint c = __lightmaskcellindexSTART; c <= __lightmaskcellindexEND; ++c) // TODO: maybe better way?
+	{
+		uLightMask |= 1 << c;
+	}
+
+	return uLightMask;
+}
 
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void main(ComputeShaderInput IN)
@@ -173,11 +196,45 @@ void main(ComputeShaderInput IN)
 
 	if (IN.groupIndex == 0)
 	{
-		float3 minAABB = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
-		float3 maxAABB = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		// I construct an AABB around the minmax depth bounds to perform tighter culling:
+		// The frustum is asymmetric so we must consider all corners!
 
-		GroupAABB.c = (minAABB + maxAABB)*0.5f;
-		GroupAABB.e = abs(maxAABB - GroupAABB.c);
+		float3 viewSpace[8];
+
+		// Top left point, near
+		viewSpace[0] = ScreenToView(float4(IN.groupID.xy * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		// Top right point, near
+		viewSpace[1] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		// Bottom left point, near
+		viewSpace[2] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		// Bottom right point, near
+		viewSpace[3] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+
+		// Top left point, far
+		viewSpace[4] = ScreenToView(float4(IN.groupID.xy * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		// Top right point, far
+		viewSpace[5] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		// Bottom left point, far
+		viewSpace[6] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		// Bottom right point, far
+		viewSpace[7] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+
+		float3 minAABB = 10000000;
+		float3 maxAABB = -10000000;
+		[unroll]
+		for (uint i = 0; i < 8; ++i)
+		{
+			minAABB = min(minAABB, viewSpace[i]);
+			maxAABB = max(maxAABB, viewSpace[i]);
+		}
+
+		GroupAABB.fromMinMax(minAABB, maxAABB);
+
+		// We can perform coarse AABB intersection tests with this:
+		GroupAABB_WS = GroupAABB;
+		GroupAABB_WS.transform(g_xFrame_MainCamera_InvV);
+
+		uDepthMask = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -189,6 +246,16 @@ void main(ComputeShaderInput IN)
 	// Clipping plane for minimum depth value 
 	// (used for testing lights within the bounds of opaque geometry).
 	Plane minPlane = { float3(0, 0, 1), minDepthVS };
+
+
+	// We divide the minmax depth bounds to 32 equal slices
+	// then we mark the occupied depth slices with atomic or from each thread
+	// we do all this in linear (view) space
+	float realDepthVS = ScreenToView(float4(0, 0, fDepth, 1)).z;
+	const float __depthRangeRecip = 32.0f / (maxDepthVS - minDepthVS);
+	const uint __depthmaskcellindex = max(0, min(32, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
+	InterlockedOr(uDepthMask, 1 << __depthmaskcellindex);
+	GroupMemoryBarrierWithGroupSync();
 
 	// Cull lights
 	// Each thread in a group will cull 1 light until all lights have been culled.
@@ -209,25 +276,46 @@ void main(ComputeShaderInput IN)
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than just frustum culling
 				{
 					// Add light to light list for opaque geometry.
-					o_AppendLight(i);
+					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+					{
+						o_AppendLight(i);
+					}
 				}
 			}
 		}
 		break;
 		case 2/*SPOT_LIGHT*/:
 		{
-			float coneRadius = tan(/*radians*/(light.coneAngle)) * light.range;
-			Cone cone = { light.positionVS.xyz, light.range, -light.directionVS.xyz, coneRadius };
-			if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
+			//// This is a cone culling for the spotlights:
+			//float coneRadius = tan(/*radians*/(light.coneAngle)) * light.range;
+			//Cone cone = { light.positionVS.xyz, light.range, -light.directionVS.xyz, coneRadius };
+			//if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
+			//{
+			//	// Add light to light list for transparent geometry.
+			//	t_AppendLight(i);
+			//	if (!ConeInsidePlane(cone, minPlane))
+			//	{
+			//		// Add light to light list for opaque geometry.
+			//		o_AppendLight(i);
+			//	}
+			//}
+
+			// Instead of cone culling, I construct a tight fitting sphere around the spotlight cone:
+			const float r = light.range * 0.5f / (light.coneAngleCos * light.coneAngleCos);
+			Sphere sphere = { light.positionVS.xyz - light.directionVS * r, r };
+			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
 				// Add light to light list for transparent geometry.
 				t_AppendLight(i);
 
-				if (!ConeInsidePlane(cone, minPlane))
+				if (SphereIntersectsAABB(sphere, GroupAABB))
 				{
-					// Add light to light list for opaque geometry.
-					o_AppendLight(i);
+					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+					{
+						o_AppendLight(i);
+					}
 				}
+
 			}
 		}
 		break;
@@ -246,13 +334,23 @@ void main(ComputeShaderInput IN)
 			Sphere sphere = { light.positionVS.xyz, light.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				// Add decal to light list for transparent geometry.
 				t_AppendLight(i);
 
-				if (SphereInsideFrustum(sphere, GroupFrustum, minDepthVS, maxDepthVS))
+				// unit AABB: 
+				AABB a;
+				a.c = 0;
+				a.e = 1.0;
+
+				// frustum AABB in world space transformed into the space of the probe/decal OBB:
+				AABB b = GroupAABB_WS;
+				b.transform(light.shadowMat[0]); // shadowMat[0] : decal inverse box matrix!
+
+				if (IntersectAABB(a, b))
 				{
-					// Add decal to light list for opaque geometry.
-					o_AppendLight(i);
+					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+					{
+						o_AppendLight(i);
+					}
 				}
 			}
 		}
@@ -305,7 +403,7 @@ void main(ComputeShaderInput IN)
 		float3(1,0,0),
 	};
 	const uint mapTexLen = 5;
-	const uint maxHeat = 64;
+	const uint maxHeat = 50;
 	float l = saturate((float)o_LightCount / maxHeat) * mapTexLen;
 	float3 a = mapTex[floor(l)];
 	float3 b = mapTex[ceil(l)];

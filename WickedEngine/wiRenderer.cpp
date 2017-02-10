@@ -4137,6 +4137,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
 	cb.mPrevInvVP = XMMatrixTranspose(prevCam->GetInvViewProjection());
 	cb.mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
+	cb.mInvV = XMMatrixTranspose(camera->GetInvView());
 	cb.mInvP = XMMatrixTranspose(camera->GetInvProjection());
 	cb.mInvVP = XMMatrixTranspose(camera->GetInvViewProjection());
 	cb.mAt = camera->At;
