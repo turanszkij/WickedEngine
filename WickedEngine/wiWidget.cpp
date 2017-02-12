@@ -1127,7 +1127,11 @@ void wiWindow::Render(wiGUI* gui)
 
 	for (auto& x : childrenWidgets)
 	{
-		x->Render(gui);
+		if (x != gui->GetActiveWidget())
+		{
+			// the gui will render the active on on top of everything!
+			x->Render(gui);
+		}
 	}
 
 	scissorRect.bottom = (LONG)(translation.y + scale.y);

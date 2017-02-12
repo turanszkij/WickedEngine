@@ -2571,11 +2571,11 @@ void Model::FinishLoading()
 
 	for (Armature* x : armatures)
 	{
-		if (x->actions.size() > 1)
-		{
-			// If it has actions besides the identity, activate the first by default
-			x->GetPrimaryAnimation()->ChangeAction(1);
-		}
+		//if (x->actions.size() > 1)
+		//{
+		//	// If it has actions besides the identity, activate the first by default
+		//	x->GetPrimaryAnimation()->ChangeAction(1);
+		//}
 		transforms.push_back(x);
 	}
 	for (Object* x : objects) {

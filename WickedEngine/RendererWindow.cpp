@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 460));
+	rendererWindow->SetSize(XMFLOAT2(400, 520));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -138,9 +138,87 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	rendererWindow->AddWidget(speedMultiplierSlider);
 
+	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution:");
+	shadowProps2DComboBox->SetSize(XMFLOAT2(100, 20));
+	shadowProps2DComboBox->SetPos(XMFLOAT2(x, y += step));
+	shadowProps2DComboBox->AddItem("128");
+	shadowProps2DComboBox->AddItem("256");
+	shadowProps2DComboBox->AddItem("512");
+	shadowProps2DComboBox->AddItem("1024");
+	shadowProps2DComboBox->AddItem("2048");
+	shadowProps2DComboBox->AddItem("4096");
+	shadowProps2DComboBox->OnSelect([&](wiEventArgs args) {
+		switch (args.iValue)
+		{
+		case 0:
+			wiRenderer::SetShadowProps2D(128, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			break;
+		case 1:
+			wiRenderer::SetShadowProps2D(256, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			break;
+		case 2:
+			wiRenderer::SetShadowProps2D(512, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			break;
+		case 3:
+			wiRenderer::SetShadowProps2D(1024, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			break;
+		case 4:
+			wiRenderer::SetShadowProps2D(2048, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			break;
+		case 5:
+			wiRenderer::SetShadowProps2D(4096, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			break;
+		default:
+			break;
+		}
+	});
+	shadowProps2DComboBox->SetSelected(3);
+	shadowProps2DComboBox->SetEnabled(true);
+	shadowProps2DComboBox->SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights...");
+	rendererWindow->AddWidget(shadowProps2DComboBox);
+
+	shadowPropsCubeComboBox = new wiComboBox("Cube Shadowmap resolution:");
+	shadowPropsCubeComboBox->SetSize(XMFLOAT2(100, 20));
+	shadowPropsCubeComboBox->SetPos(XMFLOAT2(x, y += step));
+	shadowPropsCubeComboBox->AddItem("128");
+	shadowPropsCubeComboBox->AddItem("256");
+	shadowPropsCubeComboBox->AddItem("512");
+	shadowPropsCubeComboBox->AddItem("1024");
+	shadowPropsCubeComboBox->AddItem("2048");
+	shadowPropsCubeComboBox->AddItem("4096");
+	shadowPropsCubeComboBox->OnSelect([&](wiEventArgs args) {
+		switch (args.iValue)
+		{
+		case 0:
+			wiRenderer::SetShadowPropsCube(128, wiRenderer::SHADOWCOUNT_CUBE);
+			break;
+		case 1:
+			wiRenderer::SetShadowPropsCube(256, wiRenderer::SHADOWCOUNT_CUBE);
+			break;
+		case 2:
+			wiRenderer::SetShadowPropsCube(512, wiRenderer::SHADOWCOUNT_CUBE);
+			break;
+		case 3:
+			wiRenderer::SetShadowPropsCube(1024, wiRenderer::SHADOWCOUNT_CUBE);
+			break;
+		case 4:
+			wiRenderer::SetShadowPropsCube(2048, wiRenderer::SHADOWCOUNT_CUBE);
+			break;
+		case 5:
+			wiRenderer::SetShadowPropsCube(4096, wiRenderer::SHADOWCOUNT_CUBE);
+			break;
+		default:
+			break;
+		}
+	});
+	shadowPropsCubeComboBox->SetSelected(1);
+	shadowPropsCubeComboBox->SetEnabled(true);
+	shadowPropsCubeComboBox->SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
+	rendererWindow->AddWidget(shadowPropsCubeComboBox);
 
 
-	rendererWindow->Translate(XMFLOAT3(30, 30, 0));
+
+	rendererWindow->Translate(XMFLOAT3(100, 30, 0));
 	rendererWindow->SetVisible(false);
 }
 
@@ -162,6 +240,8 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(pickTypeLightCheckBox);
 	SAFE_DELETE(pickTypeDecalCheckBox);
 	SAFE_DELETE(speedMultiplierSlider);
+	SAFE_DELETE(shadowProps2DComboBox);
+	SAFE_DELETE(shadowPropsCubeComboBox);
 }
 
 int RendererWindow::GetPickType()

@@ -90,6 +90,13 @@ void MainComponent::run()
 
 	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
 
+	// Variable-timed update:
+	wiProfiler::GetInstance().BeginRange("Update", wiProfiler::DOMAIN_CPU);
+	getActiveComponent()->Update((float)elapsedTime);
+	wiProfiler::GetInstance().EndRange(); // Update
+
+
+	// Fixed time update:
 	wiProfiler::GetInstance().BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
 	if (frameskip)
 	{
@@ -113,13 +120,11 @@ void MainComponent::run()
 	}
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
-	wiProfiler::GetInstance().BeginRange("Update", wiProfiler::DOMAIN_CPU);
-	getActiveComponent()->Update((float)elapsedTime);
-	wiProfiler::GetInstance().EndRange(); // Update
-
+	// Rendering:
 	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	Render();
 	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
+
 
 	wiProfiler::GetInstance().EndRange(); // CPU Frame
 

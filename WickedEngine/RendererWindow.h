@@ -6,6 +6,7 @@ class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
+class wiComboBox;
 
 class RendererWindow
 {
@@ -30,6 +31,8 @@ public:
 	wiCheckBox* pickTypeLightCheckBox;
 	wiCheckBox* pickTypeDecalCheckBox;
 	wiSlider*	speedMultiplierSlider;
+	wiComboBox* shadowProps2DComboBox;
+	wiComboBox* shadowPropsCubeComboBox;
 
 	int GetPickType();
 };

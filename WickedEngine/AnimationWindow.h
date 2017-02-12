@@ -21,5 +21,11 @@ public:
 	wiWindow*	animWindow;
 	wiComboBox*	actionsComboBox;
 	wiSlider*	blendSlider;
+	wiCheckBox* loopedCheckBox;
+
+	wiComboBox*	actionsComboBox1;
+	wiSlider*	blendSlider1;
+	wiSlider*	weightSlider1;
+	wiCheckBox* loopedCheckBox1;
 };
 

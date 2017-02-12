@@ -137,14 +137,12 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
 	addLightButton->SetSize(XMFLOAT2(180, 30));
 	addLightButton->OnClick([&](wiEventArgs args) {
-		Model* model = new Model;
 		Light* light = new Light;
 		light->enerDis = XMFLOAT4(2, 60, XM_PIDIV4, 0);
 		light->color = XMFLOAT4(1, 1, 1, 1);
 		light->Translate(XMFLOAT3(0, 3, 0));
 		light->SetType(Light::POINT);
-		model->lights.push_back(light);
-		wiRenderer::AddModel(model);
+		wiRenderer::Add(light);
 	});
 	addLightButton->SetTooltip("Add a light to the scene.");
 	lightWindow->AddWidget(addLightButton);

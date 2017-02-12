@@ -23,12 +23,6 @@ void wiGUI::Update()
 
 	if (activeWidget != nullptr)
 	{
-		// place to the end of the list to render on top
-		std::iter_swap(
-			std::find(widgets.begin(),widgets.end(),widgets.back()),
-			std::find(widgets.begin(), widgets.end(),activeWidget)
-		);
-
 		if (!activeWidget->IsEnabled() || !activeWidget->IsVisible())
 		{
 			// deactivate active widget if it became invisible or disabled
@@ -57,12 +51,18 @@ void wiGUI::Render()
 	wiRenderer::GetDevice()->EventBegin("GUI");
 	for (auto&x : widgets)
 	{
-		if (x->container == nullptr)
+		if (x->container == nullptr && x != activeWidget)
 		{
 			// the contained child widgets will be rendered by the containers
 			x->Render(this);
 		}
 	}
+	if (activeWidget != nullptr)
+	{
+		// render the active widget on top of everything
+		activeWidget->Render(this);
+	}
+
 	for (auto&x : widgets)
 	{
 		x->RenderTooltip(this);

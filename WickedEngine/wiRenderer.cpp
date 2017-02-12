@@ -573,8 +573,8 @@ void wiRenderer::LoadBuffers()
 		resourceBuffers[i] = new GPUBuffer;
 	}
 
-	bd.Usage = USAGE_DEFAULT;
-	bd.CPUAccessFlags = 0;
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
 	bd.ByteWidth = sizeof(ShaderBoneType) * 100;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
@@ -582,8 +582,6 @@ void wiRenderer::LoadBuffers()
 	bd.StructureByteStride = sizeof(ShaderBoneType);
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_BONE]);
 
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.ByteWidth = sizeof(LightArrayType) * MAX_LIGHTS;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -1556,6 +1554,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	UpdateFrameCB(threadID);
 	
 	// Skinning:
+	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
+	GetDevice()->EventBegin("Skinning", threadID);
 	{
 		bool streamOutSetUp = false;
 
@@ -1570,7 +1570,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					&& mesh->streamoutBuffer.IsValid() && mesh->vertexBuffer.IsValid())
 				{
 #ifdef USE_GPU_SKINNING
-					GetDevice()->EventBegin("Skinning", threadID);
 
 					if (!streamOutSetUp)
 					{
@@ -1611,7 +1610,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->BindStreamOutTarget(&mesh->streamoutBuffer, threadID);
 					GetDevice()->Draw((int)mesh->vertices.size(), threadID);
 
-					GetDevice()->EventEnd(threadID);
 #else
 					// Doing skinning on the CPU
 					for (int vi = 0; vi < mesh->skinnedVertices.size(); ++vi)
@@ -1645,6 +1643,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 
 	}
+	GetDevice()->EventEnd(threadID);
+	wiProfiler::GetInstance().EndRange(threadID); // skinning
+
 
 	RefreshEnvProbes(threadID);
 
@@ -1793,6 +1794,8 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 	const FrameCulling& culling = frameCullings[getCamera()];
 	const CulledCollection& culledRenderer = culling.culledRenderer;
 
+	wiProfiler::GetInstance().BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
+
 	if (!culledRenderer.empty())
 	{
 		GetDevice()->EventBegin("Occlusion Culling Render");
@@ -1847,6 +1850,8 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 		GetDevice()->EventEnd();
 	}
+
+	wiProfiler::GetInstance().EndRange(threadID); // Occlusion Culling Render
 }
 void wiRenderer::OcclusionCulling_Read()
 {
@@ -2888,7 +2893,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					{
 					case Light::DIRECTIONAL:
 					{
-						if (shadowCounter_2D >= SHADOWCOUNT_2D)
+						if (shadowCounter_2D >= SHADOWCOUNT_2D || l->shadowMap_index < 0 || l->shadowCam_dirLight.empty())
 							break;
 						shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
@@ -2927,7 +2932,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					break;
 					case Light::SPOT:
 					{
-						if (shadowCounter_2D >= SHADOWCOUNT_2D)
+						if (shadowCounter_2D >= SHADOWCOUNT_2D || l->shadowMap_index < 0 || l->shadowCam_spotLight.empty())
 							break;
 						shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
@@ -2965,7 +2970,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					case Light::RECTANGLE:
 					case Light::TUBE:
 					{
-						if (shadowCounter_Cube >= SHADOWCOUNT_CUBE)
+						if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || l->shadowMap_index < 0 || l->shadowCam_pointLight.empty())
 							break;
 						shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 

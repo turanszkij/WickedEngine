@@ -216,171 +216,116 @@
       <DeploymentContent>true</DeploymentContent>
     </Image>
     <Image Include="images\spotlight.dds" />
-    <Image Include="Scene\Sample\colorGrading.dds">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\sky.dds">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\rims\flare0.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\rims\flare1.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\rims\flare2.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\rims\flare3.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\rims\flare4.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\rims\flare5.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\rims\flare6.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\sky_night.dds" />
-    <Image Include="Scene\Sample\textures\billboardredflowers.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\Bricks_01_Diffuse.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\Clay_01_Diffuse.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\flame.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\Foliage_Bark_01_Diffuse_01.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\Foliage_Bark_01_Normal_01.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\Foliage_Leaves_01_DiffuseMask_01.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\grass-texture-2.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\grassbb.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\Rocks02_DiffuseAtlas_01.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\Rocks02_NormalAtlas_01.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\RoofTiles_01_Diffuse.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\waterNor.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\windmill_001_base_COL.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\windmill_001_base_NOR.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\windmill_001_base_SPEC.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\windmill_001_lopatky_COL.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\windmill_001_lopatky_NOR.jpg">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\WoodenPlain_01_Diffuse.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sample\textures\WoodenPlanks_01_Diffuse_01.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
-    <Image Include="Scene\Sponza\sky.dds" />
-    <Image Include="Scene\Sponza\textures\background.png" />
-    <Image Include="Scene\Sponza\textures\backgroundBGR.png" />
-    <Image Include="Scene\Sponza\textures\background_bump.png" />
-    <Image Include="Scene\Sponza\textures\background_ddn.png" />
-    <Image Include="Scene\Sponza\textures\chain_texture.png" />
-    <Image Include="Scene\Sponza\textures\chain_texture_bump.png" />
-    <Image Include="Scene\Sponza\textures\chain_texture_ddn.png" />
-    <Image Include="Scene\Sponza\textures\chain_texture_mask.png" />
-    <Image Include="Scene\Sponza\textures\gi_flag.png" />
-    <Image Include="Scene\Sponza\textures\lion.png" />
-    <Image Include="Scene\Sponza\textures\lion2_bump.png" />
-    <Image Include="Scene\Sponza\textures\lion2_ddn.png" />
-    <Image Include="Scene\Sponza\textures\lion_bump.png" />
-    <Image Include="Scene\Sponza\textures\lion_ddn.png" />
-    <Image Include="Scene\Sponza\textures\spnza_bricks_a_bump.png" />
-    <Image Include="Scene\Sponza\textures\spnza_bricks_a_ddn.png" />
-    <Image Include="Scene\Sponza\textures\spnza_bricks_a_diff.png" />
-    <Image Include="Scene\Sponza\textures\spnza_bricks_a_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_arch_bump.png" />
-    <Image Include="Scene\Sponza\textures\sponza_arch_ddn.png" />
-    <Image Include="Scene\Sponza\textures\sponza_arch_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_arch_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_arch_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_ceiling_a_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_ceiling_a_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_ceiling_a_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_a_bump.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_a_ddn.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_a_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_a_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_b_bump.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_b_ddn.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_b_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_b_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_c_bump.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_c_ddn.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_c_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_column_c_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_curtain_blue_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_curtain_blue_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_curtain_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_curtain_green_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_details_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_details_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_details_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_fabric_blue_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_fabric_blue_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_fabric_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_fabric_green_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_fabric_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_flagpole_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_flagpole_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_flagpole_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_floor_a_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_floor_a_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_floor_a_spec.png" />
-    <Image Include="Scene\Sponza\textures\sponza_roof_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_roof_diff_NRM.png" />
-    <Image Include="Scene\Sponza\textures\sponza_thorn_bump.png" />
-    <Image Include="Scene\Sponza\textures\sponza_thorn_ddn.png" />
-    <Image Include="Scene\Sponza\textures\sponza_thorn_diff.png" />
-    <Image Include="Scene\Sponza\textures\sponza_thorn_mask.png" />
-    <Image Include="Scene\Sponza\textures\sponza_thorn_spec.png" />
-    <Image Include="Scene\Sponza\textures\vase_bump.png" />
-    <Image Include="Scene\Sponza\textures\vase_ddn.png" />
-    <Image Include="Scene\Sponza\textures\vase_dif.png" />
-    <Image Include="Scene\Sponza\textures\vase_hanging.png" />
-    <Image Include="Scene\Sponza\textures\vase_hanging_NRM.png" />
-    <Image Include="Scene\Sponza\textures\vase_plant.png" />
-    <Image Include="Scene\Sponza\textures\vase_plant_mask.png" />
-    <Image Include="Scene\Sponza\textures\vase_plant_NRM.png" />
-    <Image Include="Scene\Sponza\textures\vase_plant_spec.png" />
-    <Image Include="Scene\Sponza\textures\vase_round.png" />
-    <Image Include="Scene\Sponza\textures\vase_round_bump.png" />
-    <Image Include="Scene\Sponza\textures\vase_round_ddn.png" />
-    <Image Include="Scene\Sponza\textures\vase_round_spec.png" />
+    <Image Include="models\Sample\colorGrading.dds" />
+    <Image Include="models\Sample\rims\flare0.jpg" />
+    <Image Include="models\Sample\rims\flare1.jpg" />
+    <Image Include="models\Sample\rims\flare2.jpg" />
+    <Image Include="models\Sample\rims\flare3.jpg" />
+    <Image Include="models\Sample\rims\flare4.jpg" />
+    <Image Include="models\Sample\rims\flare5.jpg" />
+    <Image Include="models\Sample\rims\flare6.jpg" />
+    <Image Include="models\Sample\sky.dds" />
+    <Image Include="models\Sample\sky_night.dds" />
+    <Image Include="models\Sample\textures\billboardredflowers.png" />
+    <Image Include="models\Sample\textures\Bricks_01_Diffuse.png" />
+    <Image Include="models\Sample\textures\Clay_01_Diffuse.png" />
+    <Image Include="models\Sample\textures\flame.png" />
+    <Image Include="models\Sample\textures\Foliage_Bark_01_Diffuse_01.png" />
+    <Image Include="models\Sample\textures\Foliage_Bark_01_Normal_01.png" />
+    <Image Include="models\Sample\textures\Foliage_Leaves_01_DiffuseMask_01.png" />
+    <Image Include="models\Sample\textures\grass-texture-2.jpg" />
+    <Image Include="models\Sample\textures\grassbb.png" />
+    <Image Include="models\Sample\textures\Rocks02_DiffuseAtlas_01.png" />
+    <Image Include="models\Sample\textures\Rocks02_NormalAtlas_01.png" />
+    <Image Include="models\Sample\textures\RoofTiles_01_Diffuse.png" />
+    <Image Include="models\Sample\textures\waterNor.jpg" />
+    <Image Include="models\Sample\textures\windmill_001_base_COL.jpg" />
+    <Image Include="models\Sample\textures\windmill_001_base_NOR.jpg" />
+    <Image Include="models\Sample\textures\windmill_001_base_SPEC.jpg" />
+    <Image Include="models\Sample\textures\windmill_001_lopatky_COL.jpg" />
+    <Image Include="models\Sample\textures\windmill_001_lopatky_NOR.jpg" />
+    <Image Include="models\Sample\textures\WoodenPlain_01_Diffuse.png" />
+    <Image Include="models\Sample\textures\WoodenPlanks_01_Diffuse_01.png" />
+    <Image Include="models\Sponza\sky.dds" />
+    <Image Include="models\Sponza\textures\background.png" />
+    <Image Include="models\Sponza\textures\backgroundBGR.png" />
+    <Image Include="models\Sponza\textures\background_bump.png" />
+    <Image Include="models\Sponza\textures\background_ddn.png" />
+    <Image Include="models\Sponza\textures\chain_texture.png" />
+    <Image Include="models\Sponza\textures\chain_texture_bump.png" />
+    <Image Include="models\Sponza\textures\chain_texture_ddn.png" />
+    <Image Include="models\Sponza\textures\chain_texture_mask.png" />
+    <Image Include="models\Sponza\textures\gi_flag.png" />
+    <Image Include="models\Sponza\textures\lion.png" />
+    <Image Include="models\Sponza\textures\lion2_bump.png" />
+    <Image Include="models\Sponza\textures\lion2_ddn.png" />
+    <Image Include="models\Sponza\textures\lion_bump.png" />
+    <Image Include="models\Sponza\textures\lion_ddn.png" />
+    <Image Include="models\Sponza\textures\spnza_bricks_a_bump.png" />
+    <Image Include="models\Sponza\textures\spnza_bricks_a_ddn.png" />
+    <Image Include="models\Sponza\textures\spnza_bricks_a_diff.png" />
+    <Image Include="models\Sponza\textures\spnza_bricks_a_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_arch_bump.png" />
+    <Image Include="models\Sponza\textures\sponza_arch_ddn.png" />
+    <Image Include="models\Sponza\textures\sponza_arch_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_arch_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_arch_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_ceiling_a_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_ceiling_a_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_ceiling_a_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_column_a_bump.png" />
+    <Image Include="models\Sponza\textures\sponza_column_a_ddn.png" />
+    <Image Include="models\Sponza\textures\sponza_column_a_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_column_a_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_column_b_bump.png" />
+    <Image Include="models\Sponza\textures\sponza_column_b_ddn.png" />
+    <Image Include="models\Sponza\textures\sponza_column_b_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_column_b_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_column_c_bump.png" />
+    <Image Include="models\Sponza\textures\sponza_column_c_ddn.png" />
+    <Image Include="models\Sponza\textures\sponza_column_c_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_column_c_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_curtain_blue_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_curtain_blue_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_curtain_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_curtain_green_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_details_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_details_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_details_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_fabric_blue_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_fabric_blue_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_fabric_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_fabric_green_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_fabric_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_flagpole_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_flagpole_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_flagpole_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_floor_a_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_floor_a_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_floor_a_spec.png" />
+    <Image Include="models\Sponza\textures\sponza_roof_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_roof_diff_NRM.png" />
+    <Image Include="models\Sponza\textures\sponza_thorn_bump.png" />
+    <Image Include="models\Sponza\textures\sponza_thorn_ddn.png" />
+    <Image Include="models\Sponza\textures\sponza_thorn_diff.png" />
+    <Image Include="models\Sponza\textures\sponza_thorn_mask.png" />
+    <Image Include="models\Sponza\textures\sponza_thorn_spec.png" />
+    <Image Include="models\Sponza\textures\vase_bump.png" />
+    <Image Include="models\Sponza\textures\vase_ddn.png" />
+    <Image Include="models\Sponza\textures\vase_dif.png" />
+    <Image Include="models\Sponza\textures\vase_hanging.png" />
+    <Image Include="models\Sponza\textures\vase_hanging_NRM.png" />
+    <Image Include="models\Sponza\textures\vase_plant.png" />
+    <Image Include="models\Sponza\textures\vase_plant_mask.png" />
+    <Image Include="models\Sponza\textures\vase_plant_NRM.png" />
+    <Image Include="models\Sponza\textures\vase_plant_spec.png" />
+    <Image Include="models\Sponza\textures\vase_round.png" />
+    <Image Include="models\Sponza\textures\vase_round_bump.png" />
+    <Image Include="models\Sponza\textures\vase_round_ddn.png" />
+    <Image Include="models\Sponza\textures\vase_round_spec.png" />
+    <Image Include="models\Stormtrooper\textures\Stormtrooper_D.dds" />
+    <Image Include="models\Stormtrooper\textures\Stormtrooper_N.dds" />
+    <Image Include="models\Stormtrooper\textures\Stormtrooper_S.dds" />
     <Image Include="small.ico" />
     <Image Include="WickedEngineEditor.ico" />
   </ItemGroup>
@@ -392,14 +337,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="config.ini" />
-    <None Include="Scene\Sample\scene.wimf">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="Scene\Sample\scene.wiw">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="Scene\Sponza\sponza.wimf" />
-    <None Include="Scene\Sponza\sponza.wiw" />
+    <None Include="models\Sample\scene.wimf" />
+    <None Include="models\Sample\scene.wiw" />
+    <None Include="models\Sponza\sponza.wimf" />
+    <None Include="models\Sponza\sponza.wiw" />
+    <None Include="models\Stormtrooper\Stormtrooper.wimf" />
     <None Include="startup.lua" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
