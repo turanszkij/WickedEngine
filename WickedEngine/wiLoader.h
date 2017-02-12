@@ -459,27 +459,9 @@ struct Object : public Streamable, public Transform
 	}
 
 	Object(const string& newName = "");
+	Object(const Object& other);
 	virtual ~Object();
-	void init()
-	{
-		XMStoreFloat4x4(&world, XMMatrixIdentity());
-		XMStoreFloat4x4(&worldPrev, XMMatrixIdentity());
-		trail.resize(0);
-		emitterType = NO_EMITTER;
-		eParticleSystems.resize(0);
-		hParticleSystems.resize(0);
-		mesh = nullptr;
-		rigidBody = kinematic = false;
-		collisionShape = "";
-		mass = friction = restitution = damping = 1.0f;
-		physicsType = "ACTIVE";
-		physicsObjectI = -1;
-		transparency = 0.0f;
-		color = XMFLOAT3(1, 1, 1);
-		trailDistortTex = nullptr;
-		trailTex = nullptr;
-		skipOcclusionQuery = true;
-	}
+	void init();
 	void EmitTrail(const XMFLOAT3& color, float fadeSpeed = 0.06f);
 	void FadeTrail();
 	bool IsCastingShadow() const;

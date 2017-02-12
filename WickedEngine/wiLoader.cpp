@@ -1322,10 +1322,16 @@ void SkinnedVertex::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region SCENE
+Model* _CreateWorldNode()
+{
+	Model* world = new Model;
+	world->name = "[WickedEngine-default]{WorldNode}";
+	return world;
+}
+
 Scene::Scene()
 {
-	models.push_back(new Model);
-	models.back()->name = "[WickedEngine-default]{WorldNode}";
+	models.push_back(_CreateWorldNode());
 }
 Scene::~Scene()
 {
@@ -1336,23 +1342,19 @@ Scene::~Scene()
 }
 void Scene::ClearWorld()
 {
-	Model* world = GetWorldNode();
-	int i = 0;
 	for (auto& x : models)
 	{
-		if (i == 0)
-			continue;
 		SAFE_DELETE(x);
-		i++;
 	}
 	models.clear();
-	models.push_back(world);
 
 	for (auto& x : environmentProbes)
 	{
 		SAFE_DELETE(x);
 	}
 	environmentProbes.clear();
+
+	models.push_back(_CreateWorldNode());
 }
 Model* Scene::GetWorldNode()
 {
@@ -1383,7 +1385,7 @@ void Cullable::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region STREAMABLE
-Streamable::Streamable():directory(""),meshfile(""),materialfile(""),loaded(false){}
+Streamable::Streamable():directory(""),meshfile(""),materialfile(""),loaded(false),mesh(nullptr){}
 void Streamable::StreamIn()
 {
 }
@@ -3698,14 +3700,46 @@ Object::Object(const string& name) :Transform()
 	this->name = name;
 	init();
 
+}
+Object::Object(const Object& other):Streamable(other),Transform(other)
+{
+	init();
+
+	name = other.name;
+	mass = other.mass;
+	collisionShape = other.collisionShape;
+	friction = other.friction;
+	restitution = other.restitution;
+	damping = other.damping;
+	physicsType = other.physicsType;
+	transparency = other.transparency;
+	color = other.color;
+}
+Object::~Object() {
+}
+void Object::init()
+{
+	trail.resize(0);
+	emitterType = NO_EMITTER;
+	eParticleSystems.resize(0);
+	hParticleSystems.resize(0);
+	rigidBody = kinematic = false;
+	collisionShape = "";
+	mass = friction = restitution = damping = 1.0f;
+	physicsType = "ACTIVE";
+	physicsObjectI = -1;
+	transparency = 0.0f;
+	color = XMFLOAT3(1, 1, 1);
+	trailDistortTex = nullptr;
+	trailTex = nullptr;
+	skipOcclusionQuery = true;
+
 	GPUQueryDesc desc;
 	desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
 	desc.MiscFlags = 0;
 	desc.async_latency = 1;
 	wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQuery);
 	occlusionQuery.result_passed = TRUE;
-}
-Object::~Object() {
 }
 void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 	if (mesh != nullptr)

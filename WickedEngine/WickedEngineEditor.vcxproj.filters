@@ -79,7 +79,9 @@
     <ClInclude Include="WorldWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
-    <ClInclude Include="AnimationWindow.h" />
+    <ClInclude Include="AnimationWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -121,7 +123,9 @@
     <ClCompile Include="WorldWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="AnimationWindow.cpp" />
+    <ClCompile Include="AnimationWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="small.ico">

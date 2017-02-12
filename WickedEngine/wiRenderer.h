@@ -465,13 +465,9 @@ public:
 		float distance;
 		int subsetIndex;
 
-		Picked():distance(0),subsetIndex(-1)
+		Picked()
 		{
-			SAFE_INIT(transform);
-			SAFE_INIT(object);
-			SAFE_INIT(light);
-			SAFE_INIT(decal);
-			SAFE_INIT(envProbe);
+			Clear();
 		}
 
 		// Subset index, position, normal, distance don't distinguish between pickeds! 
@@ -484,6 +480,16 @@ public:
 				decal == other.decal &&
 				envProbe == other.envProbe
 				;
+		}
+		void Clear()
+		{
+			distance = 0;
+			subsetIndex = -1;
+			SAFE_INIT(transform);
+			SAFE_INIT(object);
+			SAFE_INIT(light);
+			SAFE_INIT(decal);
+			SAFE_INIT(envProbe);
 		}
 	};
 

@@ -314,7 +314,9 @@ void wiRenderer::CleanUpStatic()
 
 	SAFE_DELETE(graphicsDevice);
 }
-void wiRenderer::CleanUpStaticTemp(){
+void wiRenderer::CleanUpStaticTemp()
+{
+	emitterSystems.clear();
 	
 	if (physicsEngine)
 		physicsEngine->ClearWorld();

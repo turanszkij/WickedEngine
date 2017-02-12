@@ -50,7 +50,7 @@ public:
 	void Initialize() override;
 	void Load() override;
 	void Start() override;
-	void FixedUpdate() override;
+	void Update(float dt) override;
 	void Render() override;
 	void Compose() override;
 	void Unload() override;

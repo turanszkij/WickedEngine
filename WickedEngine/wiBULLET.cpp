@@ -720,7 +720,7 @@ void wiBULLET::registerObject(Object* object){
 		}
 	}
 
-	if(object->mesh->softBody && softBodyPhysicsEnabled){
+	if(object->mesh != nullptr && object->mesh->softBody && softBodyPhysicsEnabled){
 		XMFLOAT3 s,t;
 		XMFLOAT4 r;
 		if(object->mesh->hasArmature()){

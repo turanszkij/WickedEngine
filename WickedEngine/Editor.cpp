@@ -167,6 +167,8 @@ void EndTranslate()
 			}
 		}
 	}
+
+	hovered.Clear();
 }
 void ClearSelected()
 {
@@ -429,24 +431,27 @@ void EditorComponent::Load()
 			wiArchive archive(fileName, false);
 			if (archive.IsOpen())
 			{
+				const Scene& scene = wiRenderer::GetScene();
+
 				Model* fullModel = new Model;
-				auto& children = wiRenderer::GetScene().GetWorldNode()->children;
-				for(auto& x : children)
+				for(auto& x : scene.models)
 				{
-					Model* model = dynamic_cast<Model*>(x);
-					if (model != nullptr)
+					if (x != nullptr)
 					{
-						fullModel->Add(model);
+						fullModel->Add(x);
 					}
 				}
 				fullModel->Serialize(archive);
 
+				// Clear out the temporary model so that resources won't be deleted on destruction:
 				fullModel->objects.clear();
 				fullModel->lights.clear();
 				fullModel->decals.clear();
 				fullModel->meshes.clear();
 				fullModel->materials.clear();
+				fullModel->armatures.clear();
 				SAFE_DELETE(fullModel);
+
 				ResetHistory();
 			}
 			else
@@ -708,7 +713,7 @@ void EditorComponent::Start()
 {
 	__super::Start();
 }
-void EditorComponent::FixedUpdate()
+void EditorComponent::Update(float dt)
 {
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
@@ -1073,7 +1078,7 @@ void EditorComponent::FixedUpdate()
 		SAFE_DELETE(history);
 	}
 
-	__super::FixedUpdate();
+	__super::Update(dt);
 }
 void EditorComponent::Render()
 {
