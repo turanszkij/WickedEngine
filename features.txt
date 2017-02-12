@@ -56,7 +56,7 @@ Color Grading
 Lua Scripting
 Dynamic environment mapping
 Impostor system
-Tiled forward (Forward+) rendering
+Tiled forward (Forward+) rendering (+2.5D culling)
 Occlusion culling with gpu queries
 Texture atlas packing
 Tiled decals
