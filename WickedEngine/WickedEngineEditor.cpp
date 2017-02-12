@@ -206,6 +206,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_MBUTTONUP:
 		ShowCursor(true);
 		break;
+	case WM_MOUSEWHEEL:
+		{
+		XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
+		float delta = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		wiInputManager::GetInstance()->setpointer(XMFLOAT4(pointer.x, pointer.y, delta, 0));
+		}
+		break;
 	case WM_KEYDOWN:
 		switch (wParam)
 		{

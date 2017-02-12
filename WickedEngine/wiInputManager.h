@@ -60,9 +60,9 @@ public:
 	bool press(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
 	//check if a button is held down
 	bool hold(DWORD button, DWORD frames = 30, bool continuous = false, InputType inputType = InputType::KEYBOARD, short playerIndex = 0);
-	//get pointer position (eg. mouse pointer) + 2 unused
+	//get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + 1 unused (.w)
 	XMFLOAT4 getpointer();
-	//set pointer position (eg. mouse pointer)
+	//set pointer position (eg. mouse pointer) + scroll delta (.z)
 	void setpointer(const XMFLOAT4& props);
 	//hide pointer
 	void hidepointer(bool value);

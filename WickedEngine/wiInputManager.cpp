@@ -13,6 +13,7 @@
 #define KEY_TOGGLE(vk_code) (((int)Windows::UI::Core::CoreWindow::GetForCurrentThread()->GetAsyncKeyState((Windows::System::VirtualKey)vk_code) & 1) != 0)
 #endif //WINSTORE_SUPPORT
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
+static float mousewheel_scrolled = 0.0f;
 
 wiInputManager::wiInputManager()
 {
@@ -101,6 +102,8 @@ void wiInputManager::Update()
 
 	touches.clear();
 
+	mousewheel_scrolled = 0.0f;
+
 	UNLOCK();
 }
 
@@ -185,10 +188,10 @@ XMFLOAT4 wiInputManager::getpointer()
 	POINT p;
 	GetCursorPos(&p);
 	ScreenToClient(wiWindowRegistration::GetInstance()->GetRegisteredWindow(), &p);
-	return XMFLOAT4((float)p.x, (float)p.y, 0, 0);
+	return XMFLOAT4((float)p.x, (float)p.y, mousewheel_scrolled, 0);
 #else
 	auto& p = Windows::UI::Core::CoreWindow::GetForCurrentThread()->PointerPosition;
-	return XMFLOAT4(p.X, p.Y, 0, 0);
+	return XMFLOAT4(p.X, p.Y, mousewheel_scrolled, 0);
 #endif
 }
 void wiInputManager::setpointer(const XMFLOAT4& props)
@@ -200,6 +203,8 @@ void wiInputManager::setpointer(const XMFLOAT4& props)
 	ClientToScreen(wiWindowRegistration::GetInstance()->GetRegisteredWindow(), &p);
 	SetCursorPos(p.x, p.y);
 #endif
+
+	mousewheel_scrolled = props.z;
 }
 void wiInputManager::hidepointer(bool value)
 {

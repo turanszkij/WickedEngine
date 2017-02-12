@@ -169,6 +169,8 @@ protected:
 	function<void(wiEventArgs args)> onSelect;
 	Hitbox2D hitBox;
 	int selected;
+	int maxVisibleItemCount;
+	int firstItemVisible;
 
 	// While the widget is active (rolled down) these are the inner states that control behaviour
 	enum COMBOSTATE
@@ -193,6 +195,7 @@ public:
 	void AddItem(const string& item);
 	void RemoveItem(int index);
 	void ClearItems();
+	void SetMaxVisibleItemCount(int value);
 
 	void SetSelected(int index);
 	int GetSelected();

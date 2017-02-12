@@ -669,6 +669,8 @@ wiComboBox::wiComboBox(const string& name) :wiWidget()
 	SetText(fastName.GetString());
 	OnSelect([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(100, 20));
+	SetMaxVisibleItemCount(8);
+	firstItemVisible = 0;
 }
 wiComboBox::~wiComboBox()
 {
@@ -676,6 +678,7 @@ wiComboBox::~wiComboBox()
 }
 const float wiComboBox::_GetItemOffset(int index) const
 {
+	index = max(firstItemVisible, index) - firstItemVisible;
 	return scale.y * (index + 1) + 1;
 }
 void wiComboBox::Update(wiGUI* gui)
@@ -757,9 +760,18 @@ void wiComboBox::Update(wiGUI* gui)
 		}
 		else
 		{
+			int scroll = (int)wiInputManager::GetInstance()->getpointer().z;
+			firstItemVisible -= scroll;
+			firstItemVisible = max(0, min((int)items.size() - maxVisibleItemCount, firstItemVisible));
+
 			hovered = -1;
 			for (size_t i = 0; i < items.size(); ++i)
 			{
+				if (i<firstItemVisible || i>firstItemVisible + maxVisibleItemCount)
+				{
+					continue;
+				}
+
 				Hitbox2D itembox;
 				itembox.pos.x = Transform::translation.x;
 				itembox.pos.y = Transform::translation.y + _GetItemOffset((int)i);
@@ -826,6 +838,12 @@ void wiComboBox::Render(wiGUI* gui)
 		int i = 0;
 		for (auto& x : items)
 		{
+			if (i<firstItemVisible || i>firstItemVisible + maxVisibleItemCount)
+			{
+				i++;
+				continue;
+			}
+
 			wiColor col = colors[IDLE];
 			if (hovered == i)
 			{
@@ -885,6 +903,10 @@ void wiComboBox::ClearItems()
 	items.clear();
 
 	selected = -1;
+}
+void wiComboBox::SetMaxVisibleItemCount(int value)
+{
+	maxVisibleItemCount = value;
 }
 void wiComboBox::SetSelected(int index)
 {
