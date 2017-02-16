@@ -507,6 +507,9 @@
     <FxCompile Include="objectPS_alphatestonly.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="downsampleDepthBuffer4xPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

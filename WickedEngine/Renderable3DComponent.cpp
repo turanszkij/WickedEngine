@@ -12,10 +12,14 @@ using namespace wiGraphicsTypes;
 
 Renderable3DComponent::Renderable3DComponent()
 {
+	SAFE_INIT(smallDepth);
+
 	Renderable2DComponent();
 }
 Renderable3DComponent::~Renderable3DComponent()
 {
+	SAFE_DELETE(smallDepth);
+
 	for (auto& wt : workerThreads)
 	{
 		delete wt;
@@ -72,7 +76,7 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, defaultTextureFormat);
 
 	dtDepthCopy.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), getMSAASampleCount());
-	//dtReprojectedDepth.Initialize(wiRenderer::GetDevice()->GetScreenWidth() / 4, wiRenderer::GetDevice()->GetScreenHeight() / 4, 1);
+	//dtSmallDepth.Initialize(wiRenderer::GetDevice()->GetScreenWidth() / 4, wiRenderer::GetDevice()->GetScreenHeight() / 4, 1);
 
 	rtSSAO.resize(3);
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
@@ -103,6 +107,22 @@ void Renderable3DComponent::ResizeBuffers()
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() / getBloomDownSample())
 			, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() / getBloomDownSample())
 			, false, defaultTextureFormat);
+
+
+	SAFE_DELETE(smallDepth);
+	Texture2DDesc desc;
+	desc.ArraySize = 1;
+	desc.BindFlags = BIND_DEPTH_STENCIL;
+	desc.CPUAccessFlags = 0;
+	desc.Format = FORMAT_D16_UNORM;
+	desc.Width = wiRenderer::GetDevice()->GetScreenWidth() / 4;
+	desc.Height = wiRenderer::GetDevice()->GetScreenHeight() / 4;
+	desc.MipLevels = 1;
+	desc.MiscFlags = 0;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage = USAGE_DEFAULT;
+	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &smallDepth);
 }
 
 void Renderable3DComponent::setProperties()
@@ -199,12 +219,18 @@ void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 	ViewPort viewPort;
 	viewPort.TopLeftX = 0.0f;
 	viewPort.TopLeftY = 0.0f;
-	viewPort.Width = (float)dtDepthCopy.GetDesc().Width;
-	viewPort.Height = (float)dtDepthCopy.GetDesc().Height;
+	viewPort.Width = (float)smallDepth->GetDesc().Width;
+	viewPort.Height = (float)smallDepth->GetDesc().Height;
 	viewPort.MinDepth = 0.0f;
 	viewPort.MaxDepth = 1.0f;
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, dtDepthCopy.GetTexture(), threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
+
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	fx.process.setDepthBufferDownsampling(true);
+	wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
+	fx.process.clear();
+
 	wiRenderer::OcclusionCulling_Render(threadID);
 }
 void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
@@ -269,6 +295,24 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 {
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
+	wiRenderer::GetDevice()->EventBegin("Downsample Depth Buffer");
+	{
+		// Downsample the depth buffer for the occlusion culling phase...
+		ViewPort viewPort;
+		viewPort.TopLeftX = 0.0f;
+		viewPort.TopLeftY = 0.0f;
+		viewPort.Width = (float)smallDepth->GetDesc().Width;
+		viewPort.Height = (float)smallDepth->GetDesc().Height;
+		viewPort.MinDepth = 0.0f;
+		viewPort.MaxDepth = 1.0f;
+		wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
+
+		fx.process.setDepthBufferDownsampling(true);
+		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
+		fx.process.clear();
+	}
+	wiRenderer::GetDevice()->EventEnd();
 
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 

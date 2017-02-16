@@ -61,7 +61,8 @@ protected:
 		, rtDof[3]
 		;
 	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
-	wiDepthTarget dtDepthCopy, dtReprojectedDepth;
+	wiDepthTarget dtDepthCopy;
+	wiGraphicsTypes::Texture2D* smallDepth;
 
 	virtual void ResizeBuffers() override;
 
