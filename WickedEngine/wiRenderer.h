@@ -271,6 +271,7 @@ protected:
 
 
 	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, gridHelper;
+	static bool requestReflectionRendering;
 
 
 	static wiGraphicsTypes::Texture2D* enviroMap,*colorGrading;
@@ -332,6 +333,7 @@ public:
 	static bool GetDebugLightCulling() { return debugLightCulling; }
 	static void SetOcclusionCullingEnabled(bool enabled) { occlusionCulling = enabled; }
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
+	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }

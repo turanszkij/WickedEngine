@@ -49,7 +49,7 @@ Texture				*wiRenderer::textures[TEXTYPE_LAST];
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
-, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false;
+, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::requestReflectionRendering = false;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -1405,6 +1405,7 @@ void wiRenderer::UpdatePerFrameData()
 	wiProfiler::GetInstance().EndRange(); // SPTree Update
 
 	// Perform culling and obtain closest reflector:
+	requestReflectionRendering = false;
 	wiProfiler::GetInstance().BeginRange("SPTree Culling", wiProfiler::DOMAIN_CPU);
 	{
 		for (auto& x : frameCullings)
@@ -1423,8 +1424,6 @@ void wiRenderer::UpdatePerFrameData()
 
 			if (spTree != nullptr)
 			{
-				bool foundClosestReflector = false;
-
 				CulledList culledObjects;
 				spTree->getVisible(camera->frustum, culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
 				for (Cullable* x : culledObjects)
@@ -1439,14 +1438,14 @@ void wiRenderer::UpdatePerFrameData()
 					{
 						culling.culledRenderer_opaque[object->mesh].push_front(object);
 					}
-					if (!foundClosestReflector && camera == getCamera() && object->IsReflector())
+					if (!requestReflectionRendering && camera == getCamera() && object->IsReflector())
 					{
 						// If it is the main camera's culling, then obtain the reflectors:
 						XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object->/*bounds.getCenter()*/translation), XMVectorSet(0, 1, 0, 0));
 						XMFLOAT4 plane;
 						XMStoreFloat4(&plane, _refPlane);
 						waterPlane = wiWaterPlane(plane.x, plane.y, plane.z, plane.w);
-						foundClosestReflector = true;
+						requestReflectionRendering = true;
 					}
 				}
 				wiSPTree::Sort(camera->translation, culledObjects, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);

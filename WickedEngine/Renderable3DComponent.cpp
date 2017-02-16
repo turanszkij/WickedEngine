@@ -221,24 +221,27 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 	}
 	wiProfiler::GetInstance().BeginRange("Reflection rendering", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::UpdateCameraCB(wiRenderer::getRefCamera(), threadID);
+	if (wiRenderer::IsRequestedReflectionRendering())
+	{
+		wiRenderer::UpdateCameraCB(wiRenderer::getRefCamera(), threadID);
 
-	rtReflection.Activate(threadID); {
-		// reverse clipping if underwater
-		XMFLOAT4 water = wiRenderer::GetWaterPlane().getXMFLOAT4();
-		if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&water), wiRenderer::getCamera()->GetEye())) < 0 )
-		{
-			water.x *= -1;
-			water.y *= -1;
-			water.z *= -1;
+		rtReflection.Activate(threadID); {
+			// reverse clipping if underwater
+			XMFLOAT4 water = wiRenderer::GetWaterPlane().getXMFLOAT4();
+			if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&water), wiRenderer::getCamera()->GetEye())) < 0)
+			{
+				water.x *= -1;
+				water.y *= -1;
+				water.z *= -1;
+			}
+
+			wiRenderer::SetClipPlane(water, threadID);
+
+			wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, nullptr, getHairParticlesReflectionEnabled());
+			wiRenderer::DrawSky(threadID);
+
+			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 		}
-
-		wiRenderer::SetClipPlane(water, threadID);
-
-		wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, nullptr, getHairParticlesReflectionEnabled());
-		wiRenderer::DrawSky(threadID);
-
-		wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
 	}
 
 	wiProfiler::GetInstance().EndRange(); // Reflection Rendering
