@@ -409,7 +409,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			}
 			else if (effects.process.downsampleDepthBuffer4x)
 			{
-				device->BindPS(reprojectDepthBufferPS, threadID);
+				device->BindPS(downsampleDepthBufferPS, threadID);
 				device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
 			}
 			else 
