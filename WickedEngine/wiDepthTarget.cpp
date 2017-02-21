@@ -63,7 +63,7 @@ void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 	depthGPUBufferDesc.Height = size;
 	depthGPUBufferDesc.MipLevels = 1;
 	depthGPUBufferDesc.ArraySize = 6;
-	depthGPUBufferDesc.Format = FORMAT_R32_TYPELESS;
+	depthGPUBufferDesc.Format = FORMAT_R16_TYPELESS;
 	depthGPUBufferDesc.SampleDesc.Count = 1;
 	depthGPUBufferDesc.SampleDesc.Quality = 0;
 	depthGPUBufferDesc.Usage = USAGE_DEFAULT;

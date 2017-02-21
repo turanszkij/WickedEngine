@@ -2775,7 +2775,7 @@ void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuali
 	desc.Height = SHADOWRES_2D;
 	desc.MipLevels = 1;
 	desc.ArraySize = SHADOWCOUNT_2D;
-	desc.Format = FORMAT_R32_TYPELESS;
+	desc.Format = FORMAT_R16_TYPELESS;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = USAGE_DEFAULT;
@@ -2800,7 +2800,7 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 	desc.Height = SHADOWRES_CUBE;
 	desc.MipLevels = 1;
 	desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
-	desc.Format = FORMAT_R32_TYPELESS;
+	desc.Format = FORMAT_R16_TYPELESS;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = USAGE_DEFAULT;

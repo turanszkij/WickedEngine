@@ -585,7 +585,6 @@ void Renderable3DComponent::RenderColorGradedComposition()
 	if (getColorGradingEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Color Graded Composition");
-		fx.quality = QUALITY_BILINEAR;
 		if (wiRenderer::GetColorGrading() != nullptr){
 			fx.process.setColorGrade(true);
 			fx.setMaskMap(wiRenderer::GetColorGrading());

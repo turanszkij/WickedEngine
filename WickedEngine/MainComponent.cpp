@@ -181,7 +181,11 @@ void MainComponent::Compose()
 		stringstream ss("");
 		if (infoDisplay.watermark)
 		{
-			ss << string("Wicked Engine ") + wiVersion::GetVersionString() << endl;
+			ss << string("Wicked Engine ") + wiVersion::GetVersionString();
+#ifdef _DEBUG
+			ss << " [DEBUG]";
+#endif
+			ss << endl;
 		}
 		if (infoDisplay.resolution)
 		{

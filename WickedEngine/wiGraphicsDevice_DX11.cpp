@@ -1673,6 +1673,9 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 		// Try to resolve shader resource format:
 		switch (pTexture->desc.Format)
 		{
+		case FORMAT_R16_TYPELESS:
+			shaderResourceViewDesc.Format = DXGI_FORMAT_R16_UNORM;
+			break;
 		case FORMAT_R32_TYPELESS:
 			shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
 			break;
@@ -1895,6 +1898,9 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 		// Try to resolve depth stencil format:
 		switch (pTexture->desc.Format)
 		{
+		case FORMAT_R16_TYPELESS:
+			depthStencilViewDesc.Format = DXGI_FORMAT_D16_UNORM;
+			break;
 		case FORMAT_R32_TYPELESS:
 			depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
 			break;
