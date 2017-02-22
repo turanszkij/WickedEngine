@@ -15,10 +15,10 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 		return;
 	}
 
-	float result = 1;
+	float result = 0;
 	for (uint i = 0; i < sampleCount; ++i)
 	{
-		result = min(result, input.Load(dispatchThreadId.xy, i).r);
+		result = max(result, input.Load(dispatchThreadId.xy, i).r);
 	}
 
 	output[dispatchThreadId.xy] = result;

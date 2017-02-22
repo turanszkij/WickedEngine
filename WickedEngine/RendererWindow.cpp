@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 520));
+	rendererWindow->SetSize(XMFLOAT2(400, 550));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -216,6 +216,37 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	shadowPropsCubeComboBox->SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
 	rendererWindow->AddWidget(shadowPropsCubeComboBox);
 
+	MSAAComboBox = new wiComboBox("MSAA:");
+	MSAAComboBox->SetSize(XMFLOAT2(100, 20));
+	MSAAComboBox->SetPos(XMFLOAT2(x, y += step));
+	MSAAComboBox->AddItem("Off");
+	MSAAComboBox->AddItem("2");
+	MSAAComboBox->AddItem("4");
+	MSAAComboBox->AddItem("8");
+	MSAAComboBox->OnSelect([=](wiEventArgs args) {
+		switch (args.iValue)
+		{
+		case 0:
+			component->setMSAASampleCount(1);
+			break;
+		case 1:
+			component->setMSAASampleCount(2);
+			break;
+		case 2:
+			component->setMSAASampleCount(4);
+			break;
+		case 3:
+			component->setMSAASampleCount(8);
+			break;
+		default:
+			break;
+		}
+	});
+	MSAAComboBox->SetSelected(0);
+	MSAAComboBox->SetEnabled(true);
+	MSAAComboBox->SetTooltip("Multisampling Anti Aliasing quality. It is only available for Forward render paths.");
+	rendererWindow->AddWidget(MSAAComboBox);
+
 
 
 	rendererWindow->Translate(XMFLOAT3(100, 30, 0));
@@ -242,6 +273,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(speedMultiplierSlider);
 	SAFE_DELETE(shadowProps2DComboBox);
 	SAFE_DELETE(shadowPropsCubeComboBox);
+	SAFE_DELETE(MSAAComboBox);
 }
 
 int RendererWindow::GetPickType()

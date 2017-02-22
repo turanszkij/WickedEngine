@@ -150,7 +150,7 @@ public:
 	// Render hair particle systems in two passes to achieve smooth alpha blending (tiledforward only yet)
 	inline void setHairParticleAlphaCompositionEnabled(bool value) { hairParticleAlphaComposition = value; }
 
-	inline void setMSAASampleCount(UINT value) { msaaSampleCount = value; }
+	inline void setMSAASampleCount(UINT value) { msaaSampleCount = value; ResizeBuffers(); }
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

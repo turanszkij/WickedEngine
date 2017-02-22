@@ -226,11 +226,6 @@ void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
 
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-	fx.process.setDepthBufferDownsampling(true);
-	wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
-	fx.process.clear();
-
 	wiRenderer::OcclusionCulling_Render(threadID);
 }
 void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)

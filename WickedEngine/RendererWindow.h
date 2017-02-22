@@ -33,6 +33,7 @@ public:
 	wiSlider*	speedMultiplierSlider;
 	wiComboBox* shadowProps2DComboBox;
 	wiComboBox* shadowPropsCubeComboBox;
+	wiComboBox* MSAAComboBox;
 
 	int GetPickType();
 };
