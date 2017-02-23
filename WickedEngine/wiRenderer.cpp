@@ -1471,9 +1471,11 @@ void wiRenderer::UpdatePerFrameData()
 					culling.culledLight_count++;
 					Light* l = (Light*)c;
 					l->lightArray_index = i;
-					l->shadowMap_index = -1;
 
 					// Link shadowmaps to lights till there are free slots
+
+					l->shadowMap_index = -1;
+
 					if (l->shadow)
 					{
 						switch (l->GetType())
@@ -2811,7 +2813,11 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 }
 void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
-	if (GameSpeed) 
+	// We need to render shadows even if the gamespeed is 0 for these reasons:
+	// 1.) Shadow cascades is updated every time according to camera
+	// 2.) We can move any other light, or object, too
+
+	//if (GetGameSpeed() > 0) 
 	{
 		GetDevice()->EventBegin("ShadowMap Render", threadID);
 
@@ -2823,15 +2829,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 		if (!culledLights.empty())
 		{
 			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
-
-			for (UINT i = 0; i < Light::shadowMapArray_2D->GetDesc().ArraySize; ++i)
-			{
-				GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, i);
-			}
-			for (UINT i = 0; i < Light::shadowMapArray_Cube->GetDesc().ArraySize / 6; ++i)
-			{
-				GetDevice()->ClearDepthStencil(Light::shadowMapArray_Cube, CLEAR_DEPTH, 1.0f, 0, threadID, i);
-			}
 
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
@@ -2918,6 +2915,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								if (!culledRenderer.empty())
 								{
 									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
+									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, l->shadowMap_index + index);
 
 									CameraCB cb;
 									cb.mVP = l->shadowCam_dirLight[index].getVP();
@@ -2953,6 +2951,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							if (!culledRenderer.empty())
 							{
 								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
+								GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, l->shadowMap_index);
 
 								CameraCB cb;
 								cb.mVP = l->shadowCam_spotLight[0].getVP();
@@ -2989,6 +2988,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							if (!culledRenderer.empty())
 							{
 								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
+								GetDevice()->ClearDepthStencil(Light::shadowMapArray_Cube, CLEAR_DEPTH, 1.0f, 0, threadID, l->shadowMap_index);
 
 								MiscCB miscCb;
 								miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, 1.0f / l->GetRange()); // reciprocal range, to avoid division in shader
@@ -3011,12 +3011,13 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 			GetDevice()->BindGS(nullptr, threadID);
 			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-			GetDevice()->BindResourcePS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-			GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 		}
 
 		GetDevice()->EventEnd(threadID);
 	}
+
+	GetDevice()->BindResourcePS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
 

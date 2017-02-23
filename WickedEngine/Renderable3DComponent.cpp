@@ -302,7 +302,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		viewPort.MaxDepth = 1.0f;
 		wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 		wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
-		wiRenderer::GetDevice()->ClearDepthStencil(smallDepth, CLEAR_DEPTH, 1.0f, 0, threadID);
+		// This depth buffer is not cleared because we don't have to (we overwrite it anyway because depthfunc is ALWAYS)
 
 		fx.process.setDepthBufferDownsampling(true);
 		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
