@@ -10,13 +10,16 @@ void wiProfiler::BeginFrame()
 	if (!ENABLED)
 		return;
 
+	wiRenderer::GetDevice()->LOCK();
 	wiRenderer::GetDevice()->QueryBegin(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->UNLOCK();
 }
 void wiProfiler::EndFrame()
 {
 	if (!ENABLED)
 		return;
 
+	wiRenderer::GetDevice()->LOCK();
 	wiRenderer::GetDevice()->QueryEnd(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
 	while(!wiRenderer::GetDevice()->QueryRead(&disjoint, GRAPHICSTHREAD_IMMEDIATE));
 
@@ -43,6 +46,7 @@ void wiProfiler::EndFrame()
 			}
 		}
 	}
+	wiRenderer::GetDevice()->UNLOCK();
 }
 
 void wiProfiler::BeginRange(const std::string& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID)

@@ -21,7 +21,9 @@ interface ID3D11RasterizerState;
 interface ID3D11ClassLinkage;
 interface ID3D11RenderTargetView;
 interface ID3D11DepthStencilView;
+interface ID3D11Texture1D;
 interface ID3D11Texture2D;
+interface ID3D11Texture3D;
 interface ID3D11Query;
 interface ID3D11Predicate;
 
@@ -230,7 +232,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		vector<ID3D11RenderTargetView*>		renderTargetViews_DX11;
-		vector<ID3D11DepthStencilView*>		depthStencilViews_DX11;
 		bool								independentRTVArraySlices;
 		bool								independentRTVCubemapFaces;
 	public:
@@ -245,10 +246,24 @@ namespace wiGraphicsTypes
 		bool IsIndepententRenderTargetCubemapFaces();
 	};
 
+	class Texture1D : public Texture
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11Texture1D*			texture1D_DX11;
+		Texture1DDesc				desc;
+	public:
+		Texture1D();
+		virtual ~Texture1D();
+
+		Texture1DDesc GetDesc() const { return desc; }
+	};
+
 	class Texture2D : public Texture
 	{
 		friend class GraphicsDevice_DX11;
 	private:
+		vector<ID3D11DepthStencilView*>		depthStencilViews_DX11;
 		ID3D11Texture2D*			texture2D_DX11;
 		Texture2DDesc				desc;
 	public:
@@ -256,6 +271,19 @@ namespace wiGraphicsTypes
 		virtual ~Texture2D();
 
 		Texture2DDesc GetDesc() const { return desc; }
+	};
+
+	class Texture3D : public Texture
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		ID3D11Texture3D*			texture3D_DX11;
+		Texture3DDesc				desc;
+	public:
+		Texture3D();
+		virtual ~Texture3D();
+
+		Texture3DDesc GetDesc() const { return desc; }
 	};
 
 
@@ -266,7 +294,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		vector<ID3D11Query*>		resource_DX11;
-		vector<bool>				active;
+		vector<int>					active;
 		GPUQueryDesc				desc;
 		int							async_frameshift;
 	public:

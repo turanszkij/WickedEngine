@@ -183,13 +183,13 @@ void wiRenderTarget::Deactivate(GRAPHICSTHREAD threadID)
 void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor)
 {
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
 	resolvedMSAAUptodate = false;
 }
 void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor)
 {
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
 	resolvedMSAAUptodate = false;
 }
 

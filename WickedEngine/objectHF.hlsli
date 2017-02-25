@@ -110,6 +110,24 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	color.a = 1;
 }
 
+inline void VoxelRadiance(in float3 P, inout float ao)
+{
+	[branch]
+	if (g_xWorld_VoxelRadianceScale > 0)
+	{
+		float3 dim;
+		float mips;
+		texture_voxelradiance.GetDimensions(0, dim.x, dim.y, dim.z, mips);
+		float3 diff = (P - floor(g_xCamera_CamPos)) * g_xWorld_VoxelRadianceScale;
+		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		float4 radiance = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, 0);
+		diff = abs(diff);
+		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
+
+		ao *= lerp(radiance.a, 1, blend);
+	}
+}
+
 inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
@@ -265,6 +283,9 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 #define OBJECT_PS_LIGHT_TILED																						\
 	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);
+
+#define OBJECT_PS_VOXELRADIANCE																						\
+	VoxelRadiance(P, ao);
 
 #define OBJECT_PS_LIGHT_END																							\
 	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * albedo + specular;

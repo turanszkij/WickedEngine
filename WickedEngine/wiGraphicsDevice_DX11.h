@@ -38,12 +38,9 @@ namespace wiGraphicsTypes
 		~GraphicsDevice_DX11();
 
 		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) override;
-		virtual HRESULT CreateTexture1D() override;
+		virtual HRESULT CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D) override;
 		virtual HRESULT CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D) override;
-		virtual HRESULT CreateTexture3D() override;
-		virtual HRESULT CreateShaderResourceView(Texture2D* pTexture) override;
-		virtual HRESULT CreateRenderTargetView(Texture2D* pTexture) override;
-		virtual HRESULT CreateDepthStencilView(Texture2D* pTexture) override;
+		virtual HRESULT CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D) override;
 		virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
 			const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout) override;
 		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, VertexShader *pVertexShader) override;
@@ -75,8 +72,8 @@ namespace wiGraphicsTypes
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
-		virtual void ClearRenderTarget(Texture2D* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
+		virtual void BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
+		virtual void ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
 		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
 		virtual void BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 		virtual void BindResourceVS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
@@ -139,6 +136,14 @@ namespace wiGraphicsTypes
 		virtual void EventBegin(const string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 		virtual void EventEnd(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 		virtual void SetMarker(const string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
+
+	private:
+		HRESULT CreateShaderResourceView(Texture1D* pTexture);
+		HRESULT CreateShaderResourceView(Texture2D* pTexture);
+		HRESULT CreateShaderResourceView(Texture3D* pTexture);
+		HRESULT CreateRenderTargetView(Texture2D* pTexture);
+		HRESULT CreateRenderTargetView(Texture3D* pTexture);
+		HRESULT CreateDepthStencilView(Texture2D* pTexture);
 	};
 
 }

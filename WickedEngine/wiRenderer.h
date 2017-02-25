@@ -91,7 +91,7 @@ public:
 		XMFLOAT3 mAmbient;				float pad2;
 		XMFLOAT3 mFog;					float pad3;
 		XMFLOAT2 mScreenWidthHeight;
-		float pad4;
+		float mVoxelRadianceScale;
 		float pad5;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
@@ -293,6 +293,7 @@ protected:
 
 	static bool debugLightCulling;
 	static bool occlusionCulling;
+	static bool voxelRadiance;
 
 public:
 	static string SHADERPATH;
@@ -333,6 +334,8 @@ public:
 	static bool GetDebugLightCulling() { return debugLightCulling; }
 	static void SetOcclusionCullingEnabled(bool enabled) { occlusionCulling = enabled; }
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
+	static void SetVoxelRadianceEnabled(bool enabled) { voxelRadiance = enabled; }
+	static bool GetVoxelRadianceEnabled() { return voxelRadiance; }
 	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
@@ -411,9 +414,11 @@ public:
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);
 	static void RefreshEnvProbes(GRAPHICSTHREAD threadID);
+	static void VoxelizeScene(GRAPHICSTHREAD threadID);
 
 	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
+	static void ComputeVoxelRadiance(GRAPHICSTHREAD threadID);
 
 	static void ManageDecalAtlas(GRAPHICSTHREAD threadID);
 	

@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 550));
+	rendererWindow->SetSize(XMFLOAT2(400, 580));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -39,6 +39,15 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	occlusionCullingCheckBox->SetCheck(wiRenderer::GetOcclusionCullingEnabled());
 	rendererWindow->AddWidget(occlusionCullingCheckBox);
+
+	voxelRadianceCheckBox = new wiCheckBox("Voxel Radiance: ");
+	voxelRadianceCheckBox->SetTooltip("Toggle voxel radiance computation (EXPERIMENTAL).");
+	voxelRadianceCheckBox->SetPos(XMFLOAT2(x, y += step));
+	voxelRadianceCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceEnabled(args.bValue);
+	});
+	voxelRadianceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceEnabled());
+	rendererWindow->AddWidget(voxelRadianceCheckBox);
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
@@ -259,6 +268,8 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(rendererWindow);
 	SAFE_DELETE(vsyncCheckBox);
 	SAFE_DELETE(vsyncCheckBox);
+	SAFE_DELETE(occlusionCullingCheckBox);
+	SAFE_DELETE(voxelRadianceCheckBox);
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);

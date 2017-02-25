@@ -820,6 +820,20 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	return DXGI_FORMAT_UNKNOWN;
 }
 
+inline D3D11_TEXTURE1D_DESC _ConvertTexture1DDesc(const Texture1DDesc* pDesc)
+{
+	D3D11_TEXTURE1D_DESC desc;
+	desc.Width = pDesc->Width;
+	desc.MipLevels = pDesc->MipLevels;
+	desc.ArraySize = pDesc->ArraySize;
+	desc.Format = _ConvertFormat(pDesc->Format);
+	desc.Usage = _ConvertUsage(pDesc->Usage);
+	desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
+	desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
+	desc.MiscFlags = _ParseResourceMiscFlags(pDesc->MiscFlags);
+
+	return desc;
+}
 inline D3D11_TEXTURE2D_DESC _ConvertTexture2DDesc(const Texture2DDesc* pDesc)
 {
 	D3D11_TEXTURE2D_DESC desc;
@@ -830,6 +844,21 @@ inline D3D11_TEXTURE2D_DESC _ConvertTexture2DDesc(const Texture2DDesc* pDesc)
 	desc.Format = _ConvertFormat(pDesc->Format);
 	desc.SampleDesc.Count = pDesc->SampleDesc.Count;
 	desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
+	desc.Usage = _ConvertUsage(pDesc->Usage);
+	desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
+	desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
+	desc.MiscFlags = _ParseResourceMiscFlags(pDesc->MiscFlags);
+
+	return desc;
+}
+inline D3D11_TEXTURE3D_DESC _ConvertTexture3DDesc(const Texture3DDesc* pDesc)
+{
+	D3D11_TEXTURE3D_DESC desc;
+	desc.Width = pDesc->Width;
+	desc.Height = pDesc->Height;
+	desc.Depth = pDesc->Depth;
+	desc.MipLevels = pDesc->MipLevels;
+	desc.Format = _ConvertFormat(pDesc->Format);
 	desc.Usage = _ConvertUsage(pDesc->Usage);
 	desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
 	desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
@@ -1289,23 +1318,52 @@ inline USAGE _ConvertUsage_Inv(D3D11_USAGE value)
 	return USAGE_DEFAULT;
 }
 
-inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
-	{
-		Texture2DDesc desc;
-		desc.Width = pDesc->Width;
-		desc.Height = pDesc->Height;
-		desc.MipLevels = pDesc->MipLevels;
-		desc.ArraySize = pDesc->ArraySize;
-		desc.Format = _ConvertFormat_Inv(pDesc->Format);
-		desc.SampleDesc.Count = pDesc->SampleDesc.Count;
-		desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
-		desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
-		desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
-		desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
-		desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
+inline Texture1DDesc _ConvertTexture1DDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc)
+{
+	Texture1DDesc desc;
+	desc.Width = pDesc->Width;
+	desc.MipLevels = pDesc->MipLevels;
+	desc.ArraySize = pDesc->ArraySize;
+	desc.Format = _ConvertFormat_Inv(pDesc->Format);
+	desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
+	desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
+	desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
+	desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
 
-		return desc;
-	}
+	return desc;
+}
+inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
+{
+	Texture2DDesc desc;
+	desc.Width = pDesc->Width;
+	desc.Height = pDesc->Height;
+	desc.MipLevels = pDesc->MipLevels;
+	desc.ArraySize = pDesc->ArraySize;
+	desc.Format = _ConvertFormat_Inv(pDesc->Format);
+	desc.SampleDesc.Count = pDesc->SampleDesc.Count;
+	desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
+	desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
+	desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
+	desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
+	desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
+
+	return desc;
+}
+inline Texture3DDesc _ConvertTexture3DDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc)
+{
+	Texture3DDesc desc;
+	desc.Width = pDesc->Width;
+	desc.Height = pDesc->Height;
+	desc.Depth = pDesc->Depth;
+	desc.MipLevels = pDesc->MipLevels;
+	desc.Format = _ConvertFormat_Inv(pDesc->Format);
+	desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
+	desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
+	desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
+	desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
+
+	return desc;
+}
 
 
 // Local Helpers:
@@ -1595,10 +1653,41 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture1D()
+HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 {
-	// TODO
-	return E_FAIL;
+	if ((*ppTexture1D) == nullptr)
+	{
+		(*ppTexture1D) = new Texture1D;
+	}
+	(*ppTexture1D)->desc = *pDesc;
+
+	D3D11_TEXTURE1D_DESC desc = _ConvertTexture1DDesc(&(*ppTexture1D)->desc);
+	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
+
+	HRESULT hr = S_OK;
+
+	hr = device->CreateTexture1D(&desc, data, &((*ppTexture1D)->texture1D_DX11));
+	assert(SUCCEEDED(hr) && "Texture1D creation failed!");
+	if (FAILED(hr))
+		return hr;
+
+	CreateShaderResourceView(*ppTexture1D);
+
+	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+	{
+		assert((*ppTexture1D)->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
+
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+		ZeroMemory(&uav_desc, sizeof(uav_desc));
+		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE1D;
+		uav_desc.Texture2D.MipSlice = 0;
+
+		hr = device->CreateUnorderedAccessView((*ppTexture1D)->texture1D_DX11, &uav_desc, &(*ppTexture1D)->unorderedAccessView_DX11);
+
+		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture1D could not be created!");
+	}
+
+	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 {
@@ -1637,6 +1726,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
+		assert((*ppTexture2D)->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
+
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
 		ZeroMemory(&uav_desc, sizeof(uav_desc));
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
@@ -1649,10 +1740,81 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture3D()
+HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 {
-	// TODO
-	return E_FAIL;
+	if ((*ppTexture3D) == nullptr)
+	{
+		(*ppTexture3D) = new Texture3D;
+	}
+	(*ppTexture3D)->desc = *pDesc;
+
+	D3D11_TEXTURE3D_DESC desc = _ConvertTexture3DDesc(&(*ppTexture3D)->desc);
+	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
+
+	HRESULT hr = S_OK;
+
+	hr = device->CreateTexture3D(&desc, data, &((*ppTexture3D)->texture3D_DX11));
+	assert(SUCCEEDED(hr) && "Texture3D creation failed!");
+	if (FAILED(hr))
+		return hr;
+
+	CreateShaderResourceView(*ppTexture3D);
+	CreateRenderTargetView(*ppTexture3D);
+
+
+	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+	{
+		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+		ZeroMemory(&uav_desc, sizeof(uav_desc));
+		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
+		uav_desc.Texture3D.MipSlice = 0;
+		uav_desc.Texture3D.FirstWSlice = 0;
+		uav_desc.Texture3D.WSize = desc.Depth;
+
+		hr = device->CreateUnorderedAccessView((*ppTexture3D)->texture3D_DX11, &uav_desc, &(*ppTexture3D)->unorderedAccessView_DX11);
+
+		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+	}
+
+	return hr;
+}
+HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture1D* pTexture)
+{
+	if (pTexture->shaderResourceView_DX11 != nullptr)
+	{
+		return E_FAIL;
+	}
+
+	HRESULT hr = E_FAIL;
+	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	{
+		UINT arraySize = pTexture->desc.ArraySize;
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+		ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
+		shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
+
+		if (arraySize > 1)
+		{
+			shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1DARRAY;
+			shaderResourceViewDesc.Texture1DArray.FirstArraySlice = 0;
+			shaderResourceViewDesc.Texture1DArray.ArraySize = arraySize;
+			shaderResourceViewDesc.Texture1DArray.MostDetailedMip = 0; //from most detailed...
+			shaderResourceViewDesc.Texture1DArray.MipLevels = -1; //...to least detailed
+		}
+		else
+		{
+			shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1D;
+			shaderResourceViewDesc.Texture1D.MostDetailedMip = 0; //from most detailed...
+			shaderResourceViewDesc.Texture1D.MipLevels = -1; //...to least detailed
+		}
+
+		hr = device->CreateShaderResourceView(pTexture->texture1D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
+
+		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+	}
+
+	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 {
@@ -1739,6 +1901,31 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 		}
 
 		hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
+
+		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+	}
+
+	return hr;
+}
+HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture3D* pTexture)
+{
+	if (pTexture->shaderResourceView_DX11 != nullptr)
+	{
+		return E_FAIL;
+	}
+
+	HRESULT hr = E_FAIL;
+	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	{
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+		ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
+		shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
+		shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+		shaderResourceViewDesc.Texture3D.MostDetailedMip = 0; //from most detailed...
+		shaderResourceViewDesc.Texture3D.MipLevels = -1; //...to least detailed
+
+		hr = device->CreateShaderResourceView(pTexture->texture3D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
 
 		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 	}
@@ -1871,6 +2058,50 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 			}
 		}
 		
+		assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
+	}
+
+	return hr;
+}
+HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
+{
+	if (!pTexture->renderTargetViews_DX11.empty())
+	{
+		return E_FAIL;
+	}
+
+	HRESULT hr = E_FAIL;
+	if (pTexture->desc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	{
+
+		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
+		ZeroMemory(&renderTargetViewDesc, sizeof(renderTargetViewDesc));
+		renderTargetViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
+
+		if (pTexture->independentRTVArraySlices)
+		{
+			for (UINT i = 0; i < pTexture->GetDesc().Depth; ++i)
+			{
+				renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
+				renderTargetViewDesc.Texture3D.MipSlice = 0;
+				renderTargetViewDesc.Texture3D.FirstWSlice = i;
+				renderTargetViewDesc.Texture3D.WSize = 1;
+
+				pTexture->renderTargetViews_DX11.push_back(nullptr);
+				hr = device->CreateRenderTargetView(pTexture->texture3D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
+			}
+		}
+		else
+		{
+			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
+			renderTargetViewDesc.Texture3D.MipSlice = 0;
+			renderTargetViewDesc.Texture3D.FirstWSlice = 0;
+			renderTargetViewDesc.Texture3D.WSize = pTexture->GetDesc().Depth;
+
+			pTexture->renderTargetViews_DX11.push_back(nullptr);
+			hr = device->CreateRenderTargetView(pTexture->texture3D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[0]);
+		}
+
 		assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 	}
 
@@ -2279,20 +2510,20 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	deviceContexts[threadID]->RSSetViewports(NumViewports, pd3dViewPorts);
 	SAFE_DELETE_ARRAY(pd3dViewPorts);
 }
-void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargetViews, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, UINT arrayIndex)
+void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
 	ID3D11RenderTargetView* renderTargetViews[8];
 	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
-		assert(ppRenderTargetViews[i]->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
-		renderTargetViews[i] = ppRenderTargetViews[i]->renderTargetViews_DX11[arrayIndex];
+		assert(ppRenderTargets[i]->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+		renderTargetViews[i] = ppRenderTargets[i]->renderTargetViews_DX11[arrayIndex];
 	}
 	assert(depthStencilTexture == nullptr || depthStencilTexture->depthStencilViews_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
 	ID3D11DepthStencilView* depthStencilView = (depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilViews_DX11[arrayIndex]);
 	deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews, depthStencilView);
 }
-void GraphicsDevice_DX11::ClearRenderTarget(Texture2D* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, UINT arrayIndex)
+void GraphicsDevice_DX11::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
 	assert(pTexture->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
 	deviceContexts[threadID]->ClearRenderTargetView(pTexture->renderTargetViews_DX11[arrayIndex], ColorRGBA);

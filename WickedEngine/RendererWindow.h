@@ -19,6 +19,7 @@ public:
 	wiWindow*	rendererWindow;
 	wiCheckBox* vsyncCheckBox;
 	wiCheckBox* occlusionCullingCheckBox;
+	wiCheckBox* voxelRadianceCheckBox;
 	wiCheckBox* partitionBoxesCheckBox;
 	wiCheckBox* boneLinesCheckBox;
 	wiCheckBox* wireFrameCheckBox;

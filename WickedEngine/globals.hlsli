@@ -15,9 +15,11 @@ TEXTURECUBE(texture_env_global, float4, TEXSLOT_ENV_GLOBAL)
 TEXTURECUBE(texture_env0, float4, TEXSLOT_ENV0)
 TEXTURECUBE(texture_env1, float4, TEXSLOT_ENV1)
 TEXTURECUBE(texture_env2, float4, TEXSLOT_ENV2)
+TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS)
 TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE)
-TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS)
+TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE)
+
 TEXTURE2D(texture_0, float4, TEXSLOT_ONDEMAND0)
 TEXTURE2D(texture_1, float4, TEXSLOT_ONDEMAND1)
 TEXTURE2D(texture_2, float4, TEXSLOT_ONDEMAND2)
@@ -48,7 +50,7 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
 	float3		g_xWorld_Fog;					float xPadding3_WorldCB;
 	float2		g_xWorld_ScreenWidthHeight;
-	float		xPadding4_WorldCB;
+	float		g_xWorld_VoxelRadianceScale;
 	float		xPadding5_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)

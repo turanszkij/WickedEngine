@@ -355,6 +355,17 @@ namespace wiGraphicsTypes
 		UINT Count;
 		UINT Quality;
 	};
+	struct Texture1DDesc
+	{
+		UINT Width;
+		UINT MipLevels;
+		UINT ArraySize;
+		FORMAT Format;
+		USAGE Usage;
+		UINT BindFlags;
+		UINT CPUAccessFlags;
+		UINT MiscFlags;
+	};
 	struct Texture2DDesc
 	{
 		UINT Width;
@@ -363,6 +374,18 @@ namespace wiGraphicsTypes
 		UINT ArraySize;
 		FORMAT Format;
 		SampleDesc SampleDesc;
+		USAGE Usage;
+		UINT BindFlags;
+		UINT CPUAccessFlags;
+		UINT MiscFlags;
+	};
+	struct Texture3DDesc
+	{
+		UINT Width;
+		UINT Height;
+		UINT Depth;
+		UINT MipLevels;
+		FORMAT Format;
 		USAGE Usage;
 		UINT BindFlags;
 		UINT CPUAccessFlags;

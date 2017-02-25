@@ -120,11 +120,7 @@ void MainComponent::run()
 	}
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
-	// Rendering:
-	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	Render();
-	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
-
 
 	wiProfiler::GetInstance().EndRange(); // CPU Frame
 
@@ -157,7 +153,9 @@ void MainComponent::Render()
 	wiLua::GetGlobal()->Render();
 
 	wiRenderer::GetDevice()->LOCK();
+	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	getActiveComponent()->Render();
+	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
 	wiRenderer::GetDevice()->UNLOCK();
 }
 

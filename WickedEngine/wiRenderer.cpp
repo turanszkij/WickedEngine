@@ -55,6 +55,7 @@ Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = true;
+bool wiRenderer::voxelRadiance = false;
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
@@ -770,6 +771,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELRADIANCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelRadianceCS.cso", wiResourceManager::COMPUTESHADER));
 	
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -1015,7 +1017,6 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	// Create the depth stencil state.
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEFAULT]);
 
 
@@ -1033,7 +1034,6 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	// Create the depth stencil state.
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DIRLIGHT]);
 
 
@@ -1051,12 +1051,12 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	// Create the depth stencil state.
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_LIGHT]);
 
 	
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
+	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
 	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
@@ -1551,6 +1551,12 @@ void wiRenderer::UpdatePerFrameData()
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
+	//if(GetDevice()->GetFrameCount() % 30 == 0)
+	{
+		VoxelizeScene(threadID);
+		ComputeVoxelRadiance(threadID);
+	}
+
 	UpdateWorldCB(threadID); // only commits when parameters are changed
 	UpdateFrameCB(threadID);
 	
@@ -1747,7 +1753,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				lightArray[lightCounter].coneAngleCos = cosf(lightArray[lightCounter].coneAngle);
 				lightArray[lightCounter].directionWS = l->GetDirection();
 				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&lightArray[lightCounter].directionWS), viewMatrix));
-				if (l->shadow && l->shadowMap_index >= 0)
+				if (l->shadow && l->shadowMap_index >= 0 && !l->shadowCam_spotLight.empty())
 				{
 					lightArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
 				}
@@ -1783,7 +1789,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		x->UpdateRenderData(threadID);
 	}
-
 }
 void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {
@@ -3834,6 +3839,100 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd();
 }
 
+static float voxelRadianceScale = 0; // 0 is disabled
+void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
+{
+	if (!GetVoxelRadianceEnabled())
+	{
+		voxelRadianceScale = 0;
+		return;
+	}
+
+	GetDevice()->EventBegin("Voxelize Scene", threadID);
+	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
+
+	static const int res = 32;
+	static const float scale = 2.0f; 
+	voxelRadianceScale = 1.0f / (res * scale);
+	if (textures[TEXTYPE_3D_VOXELSCENE] == nullptr)
+	{
+		Texture3DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = res;
+		desc.Height = res;
+		desc.Depth = res;
+		desc.MipLevels = 1;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.Usage = USAGE_DEFAULT;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
+
+		textures[TEXTYPE_3D_VOXELSCENE] = new Texture3D;
+		textures[TEXTYPE_3D_VOXELSCENE]->RequestIndepententRenderTargetArraySlices(true);
+		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE]);
+		assert(SUCCEEDED(hr));
+	}
+
+	CulledList culledObjects;
+	CulledCollection culledRenderer;
+
+	AABB bbox;
+	XMFLOAT3 extents = XMFLOAT3(res * scale, res * scale, res * scale);
+	XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x), floorf(cam->translation.y), floorf(cam->translation.z));
+	bbox.createFromHalfWidth(center, extents);
+	if (spTree != nullptr)
+	{
+		spTree->getVisible(bbox, culledObjects);
+
+		for (Cullable* object : culledObjects)
+		{
+			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
+		}
+
+		ViewPort VP;
+		VP.TopLeftX = 0;
+		VP.TopLeftY = 0;
+		VP.Width = (float)res;
+		VP.Height = (float)res;
+		VP.MinDepth = 0.0f;
+		VP.MaxDepth = 1.0f;
+		GetDevice()->BindViewports(1, &VP, threadID);
+
+		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+
+		Camera savedCam = *cam;
+
+
+		for (int i = 0; i < res; ++i)
+		{
+			GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_3D_VOXELSCENE], nullptr, threadID, i);
+			static const float color[] = { 0,0,0,0 };
+			GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE], color, threadID, i);
+
+			cam->Clear();
+			cam->Translate(bbox.getCenter());
+
+			XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&center), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
+			XMStoreFloat4x4(&cam->View, view);
+			XMMATRIX projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * scale * 2, -extents.z + (i + 1) * scale * 2);
+			XMStoreFloat4x4(&cam->Projection, projection);
+			XMStoreFloat4x4(&cam->VP, XMMatrixMultiply(view, projection));
+
+			UpdateCameraCB(cam, threadID);
+
+			RenderMeshes(cam->translation, culledRenderer, SHADERTYPE_TEXTURE, RENDERTYPE_OPAQUE, threadID);
+		}
+
+
+		*cam = savedCam;
+		UpdateCameraCB(cam, threadID);
+	}
+
+	wiProfiler::GetInstance().EndRange(threadID);
+	GetDevice()->EventEnd();
+}
+
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Tiled Light Culling", wiProfiler::DOMAIN_GPU, threadID);
@@ -4028,6 +4127,61 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 
 	GetDevice()->EventEnd();
 }
+void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
+{
+	if (!GetVoxelRadianceEnabled())
+	{
+		return;
+	}
+
+	if (textures[TEXTYPE_3D_VOXELSCENE] == nullptr)
+	{
+		assert(0);
+		return;
+	}
+
+	GetDevice()->EventBegin("Compute Voxel Radiance", threadID);
+	wiProfiler::GetInstance().BeginRange("Compute Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
+
+
+	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
+	{
+		Texture3DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE])->GetDesc().Width;
+		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE])->GetDesc().Height;
+		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE])->GetDesc().Depth;
+		desc.MipLevels = 1;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.Usage = USAGE_DEFAULT;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
+
+		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
+		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
+		assert(SUCCEEDED(hr));
+	}
+
+	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE], 0, threadID);
+	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
+
+	Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
+
+	GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCE], threadID);
+	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 4.f), (UINT)ceilf(desc.Height / 4.f), (UINT)ceilf(desc.Depth / 4.f), threadID);
+	GetDevice()->BindCS(nullptr, threadID);
+
+
+	GetDevice()->UnBindResources(0, 1, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+
+	GetDevice()->BindResourcePS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+
+	wiProfiler::GetInstance().EndRange(threadID);
+	GetDevice()->EventEnd();
+}
 
 void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 {
@@ -4117,6 +4271,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mHorizon = world.horizon;
 	value.mZenith = world.zenith;
 	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
+	value.mVoxelRadianceScale = voxelRadianceScale;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)
 	{
@@ -4132,7 +4287,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindTime = wind.time;
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;
-	cb.mWindDirection = wind.direction; 
+	cb.mWindDirection = wind.direction;
 	cb.mSunLightArrayIndex = GetSunArrayIndex();
 
 	auto camera = getCamera();
@@ -4764,7 +4919,6 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	const XMFLOAT3 extents = bbox.getHalfWidth();
 	if (!mesh->impostorTarget.IsInitialized())
 	{
-		// TODO: Validate MRT format mismatch??? (Seems to work on Nvidia GT525M)
 		mesh->impostorTarget.Initialize(res * 6, res, true, FORMAT_R8G8B8A8_UNORM, 0);
 		mesh->impostorTarget.Add(FORMAT_R8G8B8A8_UNORM);	// normal
 		mesh->impostorTarget.Add(FORMAT_R8_UNORM);			// roughness

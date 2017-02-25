@@ -160,10 +160,6 @@ namespace wiGraphicsTypes
 		{
 			SAFE_RELEASE(x);
 		}
-		for (auto& x : depthStencilViews_DX11)
-		{
-			SAFE_RELEASE(x);
-		}
 	}
 	void Texture::RequestIndepententRenderTargetArraySlices(bool value)
 	{
@@ -182,6 +178,15 @@ namespace wiGraphicsTypes
 		return independentRTVCubemapFaces;
 	}
 
+	Texture1D::Texture1D() :Texture()
+	{
+		SAFE_INIT(texture1D_DX11);
+	}
+	Texture1D::~Texture1D()
+	{
+		SAFE_RELEASE(texture1D_DX11);
+	}
+
 	Texture2D::Texture2D() :Texture()
 	{
 		SAFE_INIT(texture2D_DX11);
@@ -189,6 +194,19 @@ namespace wiGraphicsTypes
 	Texture2D::~Texture2D()
 	{
 		SAFE_RELEASE(texture2D_DX11);
+		for (auto& x : depthStencilViews_DX11)
+		{
+			SAFE_RELEASE(x);
+		}
+	}
+
+	Texture3D::Texture3D() :Texture()
+	{
+		SAFE_INIT(texture3D_DX11);
+	}
+	Texture3D::~Texture3D()
+	{
+		SAFE_RELEASE(texture3D_DX11);
 	}
 
 	GPUQuery::GPUQuery()
