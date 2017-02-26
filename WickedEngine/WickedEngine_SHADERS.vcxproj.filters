@@ -519,6 +519,15 @@
     <FxCompile Include="voxelPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="objectGS_voxelizer.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS_voxelizer.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_voxelizer.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

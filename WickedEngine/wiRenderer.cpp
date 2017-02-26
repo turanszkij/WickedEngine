@@ -1,4 +1,5 @@
 #include "wiRenderer.h"
+#include "ShaderInterop.h"
 #include "wiFrameRate.h"
 #include "wiHairParticle.h"
 #include "wiEmittedParticle.h"
@@ -57,6 +58,7 @@ float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = true;
 bool wiRenderer::voxelRadiance = false;
+float wiRenderer::voxelRadianceVoxelSize = 1.0f;
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
@@ -564,6 +566,9 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(DispatchParamsCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
 
+	bd.ByteWidth = sizeof(XMMATRIX) * SCENE_VOXELIZATION_RESOLUTION;
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOXELIZER]);
+
 
 
 
@@ -589,8 +594,6 @@ void wiRenderer::LoadBuffers()
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(LightArrayType);
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTARRAY]);
-
-
 }
 
 void wiRenderer::LoadShaders()
@@ -701,6 +704,7 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
 
@@ -762,12 +766,14 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_SHADOW] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
 
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_VOXELIZER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectGS_voxelizer.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
@@ -2357,8 +2363,7 @@ void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
-		GetDevice()->DrawInstanced(36, desc.Width * desc.Height * desc.Depth, threadID); // cube
+		GetDevice()->DrawInstanced(36, voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, threadID); // cube
 
 
 		GetDevice()->EventEnd(threadID);
@@ -3275,6 +3280,9 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 	case SHADERTYPE_ALPHATESTONLY:
 		realPS = PSTYPE_ALPHATESTONLY;
 		break;
+	case SHADERTYPE_VOXELIZE:
+		realPS = PSTYPE_VOXELIZER;
+		break;
 	default:
 		realPS = PSTYPE_TEXTUREONLY;
 		break;
@@ -3332,7 +3340,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 
-			if (shaderType == SHADERTYPE_SHADOW)
+			if (shaderType == SHADERTYPE_VOXELIZE)
+			{
+				GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
+				GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
+			}
+			else if (shaderType == SHADERTYPE_SHADOW)
 			{
 				GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
 			}
@@ -3914,19 +3927,16 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	GetDevice()->EventBegin("Voxelize Scene", threadID);
-	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	static const int res = 64;
-	static const float voxelsize = 1.0f; 
-	voxelSceneData.res = res;
+	voxelSceneData.res = SCENE_VOXELIZATION_RESOLUTION;
+	voxelSceneData.voxelsize = voxelRadianceVoxelSize;
 	if (textures[TEXTYPE_3D_VOXELSCENE] == nullptr)
 	{
 		Texture3DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = res;
-		desc.Height = res;
-		desc.Depth = res;
+		desc.Width = voxelSceneData.res;
+		desc.Height = voxelSceneData.res;
+		desc.Depth = voxelSceneData.res;
 		desc.MipLevels = 1;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
@@ -3935,7 +3945,6 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		desc.MiscFlags = 0;
 
 		textures[TEXTYPE_3D_VOXELSCENE] = new Texture3D;
-		textures[TEXTYPE_3D_VOXELSCENE]->RequestIndepententRenderTargetArraySlices(true);
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE]);
 		assert(SUCCEEDED(hr));
 	}
@@ -3944,11 +3953,11 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	CulledCollection culledRenderer;
 
 	AABB bbox;
-	XMFLOAT3 extents = XMFLOAT3(res * voxelsize, res * voxelsize, res * voxelsize);
-	const float f = 0.5f / voxelsize;
+	XMFLOAT3 extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+	const float f = 0.5f / voxelSceneData.voxelsize;
 	XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
 	bbox.createFromHalfWidth(center, extents);
-	if (spTree != nullptr)
+	if (spTree != nullptr && (wiMath::Distance(center,voxelSceneData.center) > 0.1f || GetToDrawVoxelHelper() )) // debug voxel helper forces the render every time to help graphics debugging!
 	{
 		spTree->getVisible(bbox, culledObjects);
 
@@ -3957,51 +3966,45 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
 		}
 
+		GetDevice()->EventBegin("Voxelize Scene", threadID);
+		wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
+
 		ViewPort VP;
 		VP.TopLeftX = 0;
 		VP.TopLeftY = 0;
-		VP.Width = (float)res;
-		VP.Height = (float)res;
+		VP.Width = (float)voxelSceneData.res;
+		VP.Height = (float)voxelSceneData.res;
 		VP.MinDepth = 0.0f;
 		VP.MaxDepth = 1.0f;
 		GetDevice()->BindViewports(1, &VP, threadID);
 
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-		Camera savedCam = *cam;
-
-
-		for (int i = 0; i < res; ++i)
+		XMMATRIX voxelizerCams[SCENE_VOXELIZATION_RESOLUTION];
+		for (int i = 0; i < voxelSceneData.res; ++i)
 		{
-			GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_3D_VOXELSCENE], nullptr, threadID, i);
-			static const float color[] = { 0,0,0,0 };
-			GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE], color, threadID, i);
-
-			cam->Clear();
-			cam->Translate(bbox.getCenter());
-
 			XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&center), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
-			XMStoreFloat4x4(&cam->View, view);
-			XMMATRIX projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * voxelsize * 2, -extents.z + (i + 1) * voxelsize * 2);
-			XMStoreFloat4x4(&cam->Projection, projection);
-			XMStoreFloat4x4(&cam->VP, XMMatrixMultiply(view, projection));
+			XMMATRIX projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * voxelSceneData.voxelsize * 2, -extents.z + (i + 1) * voxelSceneData.voxelsize * 2);
 
-			UpdateCameraCB(cam, threadID);
-
-			RenderMeshes(cam->translation, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+			voxelizerCams[i] = XMMatrixTranspose(view*projection);
 		}
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOXELIZER], voxelizerCams, threadID, sizeof(voxelizerCams));
+		GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_VOXELIZER], 0, threadID);
+
+		GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_3D_VOXELSCENE], nullptr, threadID);
+		static const float color[] = { 0,0,0,0 };
+		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE], color, threadID);
+
+		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+
+		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 
-		*cam = savedCam;
-		UpdateCameraCB(cam, threadID);
+		wiProfiler::GetInstance().EndRange(threadID);
+		GetDevice()->EventEnd();
 
-
-		voxelSceneData.voxelsize = voxelsize;
 		voxelSceneData.center = center;
 	}
-
-	wiProfiler::GetInstance().EndRange(threadID);
-	GetDevice()->EventEnd();
 }
 
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)

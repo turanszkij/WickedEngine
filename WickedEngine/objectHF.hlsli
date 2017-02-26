@@ -119,7 +119,7 @@ inline void VoxelRadiance(in float3 P, inout float ao)
 		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		float4 radiance = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, 0);
 		diff = abs(diff);
-		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
+		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 8);
 
 		ao *= lerp(1 - radiance.a, 1, blend);
 	}

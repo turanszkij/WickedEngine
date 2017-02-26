@@ -29,28 +29,28 @@ void main( uint3 DTid : SV_DispatchThreadID, uint GroupIndex : SV_GroupIndex )
 {
 	// TODO!
 
-	float3 dim;
-	input.GetDimensions(dim.x, dim.y, dim.z);
-	float3 uvw = DTid / dim;
+	//float3 dim;
+	//input.GetDimensions(dim.x, dim.y, dim.z);
+	//float3 uvw = DTid / dim;
 
-	float occ = 0;
-	uint count = 0;
-	for (uint i = 0; i < 16; ++i)
-	{
-		for (uint j = 1; j < 6; ++j)
-		{
-			float3 tex = uvw + j * SAMPLES[i] / dim;
-			occ += input.SampleLevel(sampler_linear_clamp, tex, 0).a;
+	//float occ = 0;
+	//uint count = 0;
+	//for (uint i = 0; i < 16; ++i)
+	//{
+	//	for (uint j = 1; j < 6; ++j)
+	//	{
+	//		float3 tex = uvw + j * SAMPLES[i] / dim;
+	//		occ += input.SampleLevel(sampler_linear_clamp, tex, 0).a;
 
-			count++;
-		}
-	}
+	//		count++;
+	//	}
+	//}
 
-	output[DTid] = float4(input[DTid].rgb, occ / count);
+	//output[DTid] = occ / count;
 
-	//float4 current = input[DTid];
+	float4 current = input[DTid];
 
-	//output[DTid] = current;
+	output[DTid] = current;
 
 	//accumulation[GroupIndex] = current;
 

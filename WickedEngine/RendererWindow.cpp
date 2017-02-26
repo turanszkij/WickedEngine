@@ -58,6 +58,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	voxelRadianceDebugCheckBox->SetCheck(wiRenderer::GetToDrawVoxelHelper());
 	rendererWindow->AddWidget(voxelRadianceDebugCheckBox);
 
+	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 10, 1, 39, "Voxel Radiance Voxel Size: ");
+	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for voxel radiance calculations.");
+	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, 30));
+	voxelRadianceVoxelSizeSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceVoxelSizeSlider->SetValue(wiRenderer::GetVoxelRadianceVoxelSize());
+	voxelRadianceVoxelSizeSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceVoxelSize(args.fValue);
+	});
+	rendererWindow->AddWidget(voxelRadianceVoxelSizeSlider);
+
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
 	partitionBoxesCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -151,6 +161,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
 	speedMultiplierSlider->SetSize(XMFLOAT2(100, 30));
 	speedMultiplierSlider->SetPos(XMFLOAT2(x, y += 30));
+	speedMultiplierSlider->SetValue(wiRenderer::GetGameSpeed());
 	speedMultiplierSlider->OnSlide([&](wiEventArgs args) {
 		wiRenderer::SetGameSpeed(args.fValue);
 	});
@@ -280,6 +291,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(occlusionCullingCheckBox);
 	SAFE_DELETE(voxelRadianceCheckBox);
 	SAFE_DELETE(voxelRadianceDebugCheckBox);
+	SAFE_DELETE(voxelRadianceVoxelSizeSlider);
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);

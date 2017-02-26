@@ -296,6 +296,7 @@ protected:
 	static bool debugLightCulling;
 	static bool occlusionCulling;
 	static bool voxelRadiance;
+	static float voxelRadianceVoxelSize;
 
 	struct VoxelizedSceneData
 	{
@@ -347,6 +348,8 @@ public:
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static void SetVoxelRadianceEnabled(bool enabled) { voxelRadiance = enabled; }
 	static bool GetVoxelRadianceEnabled() { return voxelRadiance; }
+	static void SetVoxelRadianceVoxelSize(float enabled) { voxelRadianceVoxelSize = enabled; }
+	static float GetVoxelRadianceVoxelSize() { return voxelRadianceVoxelSize; }
 	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};

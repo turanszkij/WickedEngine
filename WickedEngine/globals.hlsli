@@ -1,5 +1,6 @@
 #ifndef _SHADER_GLOBALS_
 #define _SHADER_GLOBALS_
+#include "ShaderInterop.h"
 #include "ConstantBufferMapping.h"
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
