@@ -1013,6 +1013,18 @@ void wiRenderer::SetUpStates()
 	rs.AntialiasedLineEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
 
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_FRONT;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = false;
+	rs.ScissorEnable = false;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_SKY]);
+
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
 	{
 		depthStencils[i] = new DepthStencilState;
@@ -3707,7 +3719,7 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	GetDevice()->EventBegin("DrawSky", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
+	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY],threadID);
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,threadID);
 	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 	
@@ -3727,7 +3739,7 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 	GetDevice()->EventBegin("DrawSun", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
 	GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 
@@ -3865,7 +3877,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		// sky
 		{
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
 			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
