@@ -50,6 +50,7 @@ int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRendere
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false;
+wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -2339,7 +2340,7 @@ void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 
 
 		MiscCB sb;
-		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMVectorFloor(XMLoadFloat3(&camera->translation))) * camera->GetViewProjection());
+		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera->GetViewProjection());
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -3892,21 +3893,21 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd();
 }
 
-static float voxelRadianceScale = 0; // 0 is disabled
 void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 {
+	voxelSceneData.voxelsize = 0;
+
 	if (!GetVoxelRadianceEnabled())
 	{
-		voxelRadianceScale = 0;
 		return;
 	}
 
 	GetDevice()->EventBegin("Voxelize Scene", threadID);
 	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	static const int res = 32;
-	static const float scale = 2.0f; 
-	voxelRadianceScale = 1.0f / (res * scale);
+	static const int res = 64;
+	static const float voxelsize = 1.0f; 
+	voxelSceneData.res = res;
 	if (textures[TEXTYPE_3D_VOXELSCENE] == nullptr)
 	{
 		Texture3DDesc desc;
@@ -3931,8 +3932,9 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	CulledCollection culledRenderer;
 
 	AABB bbox;
-	XMFLOAT3 extents = XMFLOAT3(res * scale, res * scale, res * scale);
-	XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x), floorf(cam->translation.y), floorf(cam->translation.z));
+	XMFLOAT3 extents = XMFLOAT3(res * voxelsize, res * voxelsize, res * voxelsize);
+	const float f = 0.5f / voxelsize;
+	XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
 	bbox.createFromHalfWidth(center, extents);
 	if (spTree != nullptr)
 	{
@@ -3968,7 +3970,7 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 			XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&center), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
 			XMStoreFloat4x4(&cam->View, view);
-			XMMATRIX projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * scale * 2, -extents.z + (i + 1) * scale * 2);
+			XMMATRIX projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * voxelsize * 2, -extents.z + (i + 1) * voxelsize * 2);
 			XMStoreFloat4x4(&cam->Projection, projection);
 			XMStoreFloat4x4(&cam->VP, XMMatrixMultiply(view, projection));
 
@@ -3980,6 +3982,10 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 		*cam = savedCam;
 		UpdateCameraCB(cam, threadID);
+
+
+		voxelSceneData.voxelsize = voxelsize;
+		voxelSceneData.center = center;
 	}
 
 	wiProfiler::GetInstance().EndRange(threadID);
@@ -4325,7 +4331,8 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mHorizon = world.horizon;
 	value.mZenith = world.zenith;
 	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
-	value.mVoxelRadianceScale = voxelRadianceScale;
+	value.mVoxelRadianceRemap = voxelSceneData.voxelsize / voxelSceneData.res;
+	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)
 	{
@@ -4342,6 +4349,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;
 	cb.mWindDirection = wind.direction;
+	cb.mFrameCount = (UINT)GetDevice()->GetFrameCount();
 	cb.mSunLightArrayIndex = GetSunArrayIndex();
 
 	auto camera = getCamera();

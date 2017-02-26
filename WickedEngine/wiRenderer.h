@@ -91,7 +91,8 @@ public:
 		XMFLOAT3 mAmbient;				float pad2;
 		XMFLOAT3 mFog;					float pad3;
 		XMFLOAT2 mScreenWidthHeight;
-		float mVoxelRadianceScale;
+		float mVoxelRadianceRemap;		float pad4;
+		XMFLOAT3 mVoxelRadianceDataCenter;
 		float pad5;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
@@ -100,10 +101,11 @@ public:
 	};
 	GFX_STRUCT FrameCB
 	{
-		XMFLOAT3 mWindDirection;		float pad0;
+		XMFLOAT3 mWindDirection;
 		float mWindTime;
 		float mWindWaveSize;
 		float mWindRandomness;
+		UINT mFrameCount;
 		int mSunLightArrayIndex;
 		XMMATRIX mPrevV;
 		XMMATRIX mPrevP;
@@ -294,6 +296,13 @@ protected:
 	static bool debugLightCulling;
 	static bool occlusionCulling;
 	static bool voxelRadiance;
+
+	struct VoxelizedSceneData
+	{
+		int res;
+		float voxelsize;
+		XMFLOAT3 center;
+	} static voxelSceneData;
 
 public:
 	static string SHADERPATH;

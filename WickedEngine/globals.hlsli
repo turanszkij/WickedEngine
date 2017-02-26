@@ -50,15 +50,17 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
 	float3		g_xWorld_Fog;					float xPadding3_WorldCB;
 	float2		g_xWorld_ScreenWidthHeight;
-	float		g_xWorld_VoxelRadianceScale;
+	float		g_xWorld_VoxelRadianceRemap;	float xPadding4_WorldCB;
+	float3		g_xWorld_VoxelRadianceDataCenter;
 	float		xPadding5_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
-	float3		g_xFrame_WindDirection;			float xPadding0_FrameCB;
+	float3		g_xFrame_WindDirection;
 	float		g_xFrame_WindTime;
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
+	uint		g_xFrame_FrameCount;
 	int			g_xFrame_SunLightArrayIndex;
 	// The following are per frame properties for the main camera:
 	float4x4	g_xFrame_MainCamera_PrevV;

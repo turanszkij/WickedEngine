@@ -2096,7 +2096,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
 			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
 			renderTargetViewDesc.Texture3D.MipSlice = 0;
 			renderTargetViewDesc.Texture3D.FirstWSlice = 0;
-			renderTargetViewDesc.Texture3D.WSize = pTexture->GetDesc().Depth;
+			renderTargetViewDesc.Texture3D.WSize = -1;
 
 			pTexture->renderTargetViews_DX11.push_back(nullptr);
 			hr = device->CreateRenderTargetView(pTexture->texture3D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[0]);

@@ -77,7 +77,7 @@ inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 TBN)
 {
-	V = mul(V, transpose(TBN));
+	V = mul(TBN, V);
 	float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
 	float curLayerHeight = 0;
 	float2 dtex = g_xMat_parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
@@ -113,9 +113,9 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 inline void VoxelRadiance(in float3 P, inout float ao)
 {
 	[branch]
-	if (g_xWorld_VoxelRadianceScale > 0)
+	if (g_xWorld_VoxelRadianceRemap > 0)
 	{
-		float3 diff = (P - floor(g_xCamera_CamPos)) * g_xWorld_VoxelRadianceScale;
+		float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceRemap;
 		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		float4 radiance = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, 0);
 		diff = abs(diff);
