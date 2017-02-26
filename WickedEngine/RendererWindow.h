@@ -20,6 +20,7 @@ public:
 	wiCheckBox* vsyncCheckBox;
 	wiCheckBox* occlusionCullingCheckBox;
 	wiCheckBox* voxelRadianceCheckBox;
+	wiCheckBox* voxelRadianceDebugCheckBox;
 	wiCheckBox* partitionBoxesCheckBox;
 	wiCheckBox* boneLinesCheckBox;
 	wiCheckBox* wireFrameCheckBox;

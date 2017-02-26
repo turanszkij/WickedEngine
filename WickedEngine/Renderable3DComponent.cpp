@@ -405,6 +405,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 		wiRenderer::GetDevice()->EventBegin("Debug Geometry", threadID);
 		wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugVoxels(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);

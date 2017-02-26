@@ -12,18 +12,18 @@ void main( uint3 DTid : SV_DispatchThreadID, uint GroupIndex : SV_GroupIndex )
 
 	float4 current = input[DTid];
 
-	//output[DTid] = 1 - current.aaaa;
+	output[DTid] = current;
 
-	accumulation[GroupIndex] = current;
+	//accumulation[GroupIndex] = current;
 
-	GroupMemoryBarrierWithGroupSync();
+	//GroupMemoryBarrierWithGroupSync();
 
-	float4 avg = 0;
-	for (uint i = 0; i < 4 * 4 * 4; ++i)
-	{
-		avg += accumulation[i];
-	}
-	avg /= 4 * 4 * 4;
+	//float4 avg = 0;
+	//for (uint i = 0; i < 4 * 4 * 4; ++i)
+	//{
+	//	avg += accumulation[i];
+	//}
+	//avg /= 4 * 4 * 4;
 
-	output[DTid] = 1 - avg.aaaa;
+	//output[DTid] = avg.rgba;
 }

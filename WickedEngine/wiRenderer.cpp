@@ -49,7 +49,7 @@ Texture				*wiRenderer::textures[TEXTYPE_LAST];
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
-, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::requestReflectionRendering = false;
+, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -700,6 +700,8 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+
 
 	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap.cso", wiResourceManager::PIXELSHADER));	
@@ -759,6 +761,8 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_SHADOW] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
+
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -952,7 +956,7 @@ void wiRenderer::SetUpStates()
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=false;
+	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
@@ -964,7 +968,7 @@ void wiRenderer::SetUpStates()
 	rs.DepthBias = 0;
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=false;
+	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable = false;
@@ -978,7 +982,7 @@ void wiRenderer::SetUpStates()
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=false;
+	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
@@ -987,14 +991,26 @@ void wiRenderer::SetUpStates()
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_BACK;
 	rs.FrontCounterClockwise = true;
-	rs.DepthBias = -100;
-	rs.DepthBiasClamp = 100;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = 0;
 	rs.DepthClipEnable = true;
 	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_OCCLUDEE]);
+
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_NONE;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.ScissorEnable = false;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
 
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
 	{
@@ -2245,9 +2261,6 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
-		
-		GetDevice()->BindVertexBuffer(&Cube::vertexBuffer,0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4),threadID);
-		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
 
 		static float col = 0.7f;
 		static int gridVertexCount = 0;
@@ -2299,6 +2312,40 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindVertexBuffer(grid, 0, sizeof(XMFLOAT4) + sizeof(XMFLOAT4), threadID);
 		GetDevice()->Draw(gridVertexCount, threadID);
+
+
+		GetDevice()->EventEnd(threadID);
+	}
+}
+void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr) {
+		GetDevice()->EventBegin("Debug Voxels", threadID);
+
+		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_EMPTY, threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+
+
+		GetDevice()->BindPS(pixelShaders[PSTYPE_VOXEL], threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_VOXEL], threadID);
+
+		GetDevice()->BindVertexLayout(nullptr, threadID);
+		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
+		GetDevice()->BindIndexBuffer(nullptr, threadID);
+
+
+
+		MiscCB sb;
+		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMVectorFloor(XMLoadFloat3(&camera->translation))) * camera->GetViewProjection());
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
+		GetDevice()->DrawInstanced(36, desc.Width * desc.Height * desc.Depth, threadID); // cube
 
 
 		GetDevice()->EventEnd(threadID);
@@ -3324,7 +3371,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			targetStencilRef = mesh->stencilRef;
 
-			if (mesh->hasImpostor())
+			if (mesh->hasImpostor() && shaderType != SHADERTYPE_VOXELIZE)
 			{
 				int k = 0;
 				for (const Object* instance : visibleInstances) 
@@ -3414,29 +3461,35 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 			}
 
-			if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+			if (shaderType == SHADERTYPE_VOXELIZE)
 			{
-				if (!mesh->doubleSided)
-				{
-					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
-				}
-				else
-				{
-					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
-				}
+				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_VOXELIZE], threadID);
 			}
 			else
 			{
-				if (!mesh->doubleSided)
+				if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 				{
-					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+					if (!mesh->doubleSided)
+					{
+						GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+					}
+					else
+					{
+						GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
+					}
 				}
 				else
 				{
-					GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
+					if (!mesh->doubleSided)
+					{
+						GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+					}
+					else
+					{
+						GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
+					}
 				}
 			}
-
 
 			int k = 0;
 			for (const Object* instance : visibleInstances) 
@@ -3921,7 +3974,7 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 			UpdateCameraCB(cam, threadID);
 
-			RenderMeshes(cam->translation, culledRenderer, SHADERTYPE_TEXTURE, RENDERTYPE_OPAQUE, threadID);
+			RenderMeshes(cam->translation, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 		}
 
 
@@ -4177,6 +4230,7 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 	GetDevice()->UnBindResources(0, 1, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
+	GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
 	GetDevice()->BindResourcePS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID);

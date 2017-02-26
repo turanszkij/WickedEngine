@@ -513,6 +513,12 @@
     <FxCompile Include="voxelRadianceCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="voxelVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="voxelPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

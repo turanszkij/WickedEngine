@@ -4032,22 +4032,20 @@ void Light::UpdateLight()
 				c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 				d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 
-				if (!shadowCam_dirLight.empty()) {
-
+				if (!shadowCam_dirLight.empty()) 
+				{
+					// Avoid shadowmap texel swimming by aligning them to a discrete grid:
 					float f = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
-					e = XMVectorFloor(XMVectorLerp(d, c, lerp) / f)*f;
+					e = XMVectorFloor(XMVectorLerp(d, c, lerp) * f)/f;
 					f = shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
-					e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) / f)*f;
+					e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) * f)/f;
 					f = shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
-					e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) / f)*f;
+					e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) * f)/f;
 
 					XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
 					shadowCam_dirLight[0].Update(rrr*XMMatrixTranslationFromVector(e));
-					if (shadowCam_dirLight.size() > 1) {
-						shadowCam_dirLight[1].Update(rrr*XMMatrixTranslationFromVector(e1));
-						if (shadowCam_dirLight.size() > 2)
-							shadowCam_dirLight[2].Update(rrr*XMMatrixTranslationFromVector(e2));
-					}
+					shadowCam_dirLight[1].Update(rrr*XMMatrixTranslationFromVector(e1));
+					shadowCam_dirLight[2].Update(rrr*XMMatrixTranslationFromVector(e2));
 				}
 			}
 

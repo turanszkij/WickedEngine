@@ -115,16 +115,13 @@ inline void VoxelRadiance(in float3 P, inout float ao)
 	[branch]
 	if (g_xWorld_VoxelRadianceScale > 0)
 	{
-		float3 dim;
-		float mips;
-		texture_voxelradiance.GetDimensions(0, dim.x, dim.y, dim.z, mips);
 		float3 diff = (P - floor(g_xCamera_CamPos)) * g_xWorld_VoxelRadianceScale;
 		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		float4 radiance = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, 0);
 		diff = abs(diff);
 		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
 
-		ao *= lerp(radiance.a, 1, blend);
+		ao *= lerp(1 - radiance.a, 1, blend);
 	}
 }
 
