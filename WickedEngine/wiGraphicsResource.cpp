@@ -1,7 +1,5 @@
 #include "wiGraphicsResource.h"
-
-#include <d3d11_2.h>
-#include <DXGI1_2.h>
+#include "Include_DX11.h"
 
 namespace wiGraphicsTypes
 {

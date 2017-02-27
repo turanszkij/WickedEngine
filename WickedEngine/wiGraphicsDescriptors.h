@@ -416,6 +416,7 @@ namespace wiGraphicsTypes
 		BOOL ScissorEnable;
 		BOOL MultisampleEnable;
 		BOOL AntialiasedLineEnable;
+		BOOL ConservativeRasterizationEnable;
 	};
 	struct DepthStencilOpDesc
 	{

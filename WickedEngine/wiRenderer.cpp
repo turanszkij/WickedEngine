@@ -916,6 +916,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_FRONT]);
 
 	
@@ -929,6 +930,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_SHADOW]);
 
 	rs.FillMode=FILL_SOLID;
@@ -941,6 +943,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
 	rs.FillMode=FILL_WIREFRAME;
@@ -953,6 +956,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable = false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE]);
 	rs.AntialiasedLineEnable = true;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_SMOOTH]);
@@ -967,6 +971,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_DOUBLESIDED]);
 	
 	rs.FillMode=FILL_WIREFRAME;
@@ -979,6 +984,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable = false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
 	rs.AntialiasedLineEnable = true;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
@@ -993,6 +999,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_BACK]);
 
 	rs.FillMode = FILL_SOLID;
@@ -1005,19 +1012,8 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_OCCLUDEE]);
-
-	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_NONE;
-	rs.FrontCounterClockwise = true;
-	rs.DepthBias = 0;
-	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias = 0;
-	rs.DepthClipEnable = true;
-	rs.ScissorEnable = false;
-	rs.MultisampleEnable = false;
-	rs.AntialiasedLineEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -1029,7 +1025,21 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
+	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_SKY]);
+
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_NONE;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.ScissorEnable = false;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	rs.ConservativeRasterizationEnable = true;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
 
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
 	{
@@ -3320,7 +3330,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 		}
 
-		bool easyTextureBind = shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_ALPHATESTONLY;
+		bool easyTextureBind = shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_VOXELIZE;
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
 		{
@@ -3926,11 +3936,20 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	{
 		return;
 	}
+	if (!GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION))
+	{
+		SetVoxelRadianceEnabled(false);
+		wiBackLog::post("Conservative Rasterization not supported by the hardware, turning off voxel radiance!");
+		return;
+	}
+
+	GetDevice()->EventBegin("Voxelize Scene", threadID);
+	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 
 	voxelSceneData.res = SCENE_VOXELIZATION_RESOLUTION;
 	voxelSceneData.voxelsize = voxelRadianceVoxelSize;
-	if (textures[TEXTYPE_3D_VOXELSCENE] == nullptr)
+	if (textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE] == nullptr || textures[TEXTYPE_3D_VOXELSCENE_NORMAL] == nullptr)
 	{
 		Texture3DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -3944,8 +3963,15 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		textures[TEXTYPE_3D_VOXELSCENE] = new Texture3D;
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE]);
+		textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE] = new Texture3D;
+		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE]);
+		assert(SUCCEEDED(hr));
+
+
+		desc.Format = FORMAT_R11G11B10_FLOAT;
+
+		textures[TEXTYPE_3D_VOXELSCENE_NORMAL] = new Texture3D;
+		hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_NORMAL]);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -3957,7 +3983,7 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	const float f = 0.5f / voxelSceneData.voxelsize;
 	XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
 	bbox.createFromHalfWidth(center, extents);
-	if (spTree != nullptr && (wiMath::Distance(center,voxelSceneData.center) > 0.1f || GetToDrawVoxelHelper() )) // debug voxel helper forces the render every time to help graphics debugging!
+	if (spTree != nullptr)
 	{
 		spTree->getVisible(bbox, culledObjects);
 
@@ -3965,9 +3991,6 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		{
 			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
 		}
-
-		GetDevice()->EventBegin("Voxelize Scene", threadID);
-		wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 		ViewPort VP;
 		VP.TopLeftX = 0;
@@ -3980,10 +4003,11 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
+		XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&center), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
+
 		XMMATRIX voxelizerCams[SCENE_VOXELIZATION_RESOLUTION];
 		for (int i = 0; i < voxelSceneData.res; ++i)
 		{
-			XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&center), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
 			XMMATRIX projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * voxelSceneData.voxelsize * 2, -extents.z + (i + 1) * voxelSceneData.voxelsize * 2);
 
 			voxelizerCams[i] = XMMatrixTranspose(view*projection);
@@ -3991,20 +4015,22 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOXELIZER], voxelizerCams, threadID, sizeof(voxelizerCams));
 		GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_VOXELIZER], 0, threadID);
 
-		GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_3D_VOXELSCENE], nullptr, threadID);
+		Texture* RTs[] = { textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
+		GetDevice()->BindRenderTargets(2, RTs, nullptr, threadID);
 		static const float color[] = { 0,0,0,0 };
-		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE], color, threadID);
+		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE], color, threadID);
+		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], color, threadID);
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-
-		wiProfiler::GetInstance().EndRange(threadID);
-		GetDevice()->EventEnd();
-
 		voxelSceneData.center = center;
 	}
+
+
+	wiProfiler::GetInstance().EndRange(threadID);
+	GetDevice()->EventEnd();
 }
 
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
@@ -4208,7 +4234,7 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	if (textures[TEXTYPE_3D_VOXELSCENE] == nullptr)
+	if (textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE] == nullptr)
 	{
 		assert(0);
 		return;
@@ -4222,9 +4248,9 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 	{
 		Texture3DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE])->GetDesc().Width;
-		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE])->GetDesc().Height;
-		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE])->GetDesc().Depth;
+		desc.Width = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE])->GetDesc().Width;
+		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE])->GetDesc().Height;
+		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE])->GetDesc().Depth;
 		desc.MipLevels = 1;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
@@ -4238,7 +4264,8 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 	}
 
 	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE], 0, threadID);
+	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE], 0, threadID);
+	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], 1, threadID);
 	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
 
 	Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
@@ -4248,7 +4275,7 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 	GetDevice()->BindCS(nullptr, threadID);
 
 
-	GetDevice()->UnBindResources(0, 1, threadID);
+	GetDevice()->UnBindResources(0, 2, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
 	GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);

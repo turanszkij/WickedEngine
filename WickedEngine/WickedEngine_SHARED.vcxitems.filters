@@ -58,6 +58,9 @@
     <Filter Include="ENGINE\Graphics\GPUMapping">
       <UniqueIdentifier>{042fbecf-7b1e-4c61-9b93-f3e5ca541b99}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ENGINE\Graphics\API">
+      <UniqueIdentifier>{4cb4ddc4-c5a9-483b-b6cf-2c4382340e7a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -903,9 +906,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -934,18 +934,6 @@
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsResource.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
@@ -1091,6 +1079,24 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsResource.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h">
+      <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1754,12 +1760,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
@@ -1865,9 +1865,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
@@ -1876,6 +1873,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiProfiler.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp">
+      <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

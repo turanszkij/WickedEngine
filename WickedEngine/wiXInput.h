@@ -3,11 +3,7 @@
 #include <Xinput.h>
 
 
-#if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
 #pragma comment(lib,"xinput.lib")
-#else
-#pragma comment(lib,"xinput9_1_0.lib")
-#endif
 
 
 #define MAX_CONTROLLERS 4  // XInput handles up to 4 controllers 

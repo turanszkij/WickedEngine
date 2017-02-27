@@ -69,13 +69,8 @@ wiSound::~wiSound()
 HRESULT wiSound::FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWORD & dwChunkDataPosition)
 {
 	HRESULT hr = S_OK;
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
     if( INVALID_SET_FILE_POINTER == SetFilePointerEx( hFile, LARGE_INTEGER(), NULL, FILE_BEGIN ) )
         return HRESULT_FROM_WIN32( GetLastError() );
-#else
-    if( INVALID_SET_FILE_POINTER == SetFilePointer( hFile, 0, NULL, FILE_BEGIN ) )
-        return HRESULT_FROM_WIN32( GetLastError() );
-#endif
 
     DWORD dwChunkType;
     DWORD dwChunkDataSize;
@@ -103,15 +98,10 @@ HRESULT wiSound::FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWOR
             break;
 
 		default:
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 			LARGE_INTEGER li = LARGE_INTEGER();
 			li.QuadPart = dwChunkDataSize;
             if( INVALID_SET_FILE_POINTER == SetFilePointerEx( hFile, li, NULL, FILE_CURRENT ) )
             return HRESULT_FROM_WIN32( GetLastError() ); 
-#else
-            if( INVALID_SET_FILE_POINTER == SetFilePointer( hFile, dwChunkDataSize, NULL, FILE_CURRENT ) )
-            return HRESULT_FROM_WIN32( GetLastError() ); 
-#endif
         }
 
         dwOffset += sizeof(DWORD) * 2;
@@ -136,15 +126,10 @@ HRESULT wiSound::ReadChunkData(HANDLE hFile, void * buffer, DWORD buffersize, DW
 {
     HRESULT hr = S_OK;
 
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 	LARGE_INTEGER li = LARGE_INTEGER();
 	li.QuadPart=bufferoffset;
 	if( INVALID_SET_FILE_POINTER == SetFilePointerEx( hFile, li, NULL, FILE_BEGIN ) )
         return HRESULT_FROM_WIN32( GetLastError() );
-#else
-    if( INVALID_SET_FILE_POINTER == SetFilePointer( hFile, bufferoffset, NULL, FILE_BEGIN ) )
-        return HRESULT_FROM_WIN32( GetLastError() );
-#endif
     DWORD dwRead;
     if( 0 == ReadFile( hFile, buffer, buffersize, &dwRead, NULL ) )
         hr = HRESULT_FROM_WIN32( GetLastError() );
@@ -160,7 +145,6 @@ HRESULT wiSound::OpenFile(TCHAR* strFileName)
 	// Open the file
 	HANDLE hFile;
 
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 	hFile = CreateFile2(
 		strFileName,
 		GENERIC_READ,
@@ -174,22 +158,6 @@ HRESULT wiSound::OpenFile(TCHAR* strFileName)
 
 	if (INVALID_SET_FILE_POINTER == SetFilePointerEx(hFile, LARGE_INTEGER(), NULL, FILE_BEGIN))
 		return HRESULT_FROM_WIN32(GetLastError());
-#else
-	hFile = CreateFile(
-		strFileName,
-		GENERIC_READ,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		0,
-		NULL );
-
-	if( INVALID_HANDLE_VALUE == hFile )
-		return HRESULT_FROM_WIN32( GetLastError() );
-
-	if( INVALID_SET_FILE_POINTER == SetFilePointer( hFile, 0, NULL, FILE_BEGIN ) )
-		return HRESULT_FROM_WIN32( GetLastError() );
-#endif
 
 	DWORD dwChunkSize;
 	DWORD dwChunkPosition;

@@ -1,9 +1,7 @@
 #include "wiGraphicsDevice_DX11.h"
+#include "Include_DX11.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
-
-#include <d3d11_2.h>
-#include <DXGI1_2.h>
 
 #include "Utility/WicTextureLoader.h"
 #include "Utility/DDSTextureLoader.h"
@@ -1408,28 +1406,46 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
+		D3D_FEATURE_LEVEL_12_1,
+		D3D_FEATURE_LEVEL_12_0,
 		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_10_1,
-		//D3D_FEATURE_LEVEL_10_0,
 	};
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
+
+	ID3D11Device* _device = nullptr;
 
 	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
 	{
 		driverType = driverTypes[driverTypeIndex];
-		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
+		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &_device
 			, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
 
 		if (SUCCEEDED(hr))
 			break;
 	}
-	if (FAILED(hr)) 
+	if (FAILED(hr))
 	{
-		wiHelper::messageBox("Failed to create the graphics device!", "Error!");
+		stringstream ss("");
+		ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
+		wiHelper::messageBox(ss.str(), "Error!");
 		exit(1);
 	}
-	DX11 = ((device->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0) ? true : false);
+
+	hr = _device->QueryInterface(__uuidof(ID3D11Device3), (void**)&device);
+	if (FAILED(hr))
+	{
+		stringstream ss("");
+		ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
+		wiHelper::messageBox(ss.str(), "Error!");
+		exit(1);
+	}
+	SAFE_RELEASE(_device);
+
+	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
+	DX11 = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
+	CONSERVATIVE_RASTERIZATION = aquiredFeatureLevel >= D3D_FEATURE_LEVEL_12_0;
 
 	IDXGIDevice2 * pDXGIDevice;
 	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
@@ -1567,7 +1583,8 @@ bool GraphicsDevice_DX11::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
 	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
 		return DEFERREDCONTEXT_SUPPORT;
 		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_COUNT:
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
+		return CONSERVATIVE_RASTERIZATION;
 		break;
 	default:
 		break;
@@ -2369,7 +2386,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc
 }
 HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
-	D3D11_RASTERIZER_DESC desc;
+	D3D11_RASTERIZER_DESC2 desc;
 	desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
 	desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
 	desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
@@ -2380,9 +2397,11 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 	desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
 	desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
 	desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
+	desc.ConservativeRaster = (pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE ? D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D11_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+	desc.ForcedSampleCount = 0;
 
 	pRasterizerState->desc = *pRasterizerStateDesc;
-	return device->CreateRasterizerState(&desc, &pRasterizerState->resource_DX11);
+	return device->CreateRasterizerState2(&desc, &pRasterizerState->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {

@@ -45,11 +45,6 @@ namespace wiInitializer
 			{
 				stringstream ss("");
 				ss << "Failed to Initialize Audio Device!";
-#if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
-				//
-#else
-				ss << " Install June 2010 DirectX Redistributable!";
-#endif
 				wiHelper::messageBox(ss.str());
 			}
 		}

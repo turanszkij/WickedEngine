@@ -5,8 +5,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
 
-interface ID3D11Device;
-interface IDXGISwapChain;
+interface ID3D11Device3;
 interface IDXGISwapChain1;
 interface ID3D11DeviceContext;
 interface ID3D11CommandList;
@@ -20,7 +19,7 @@ namespace wiGraphicsTypes
 	class GraphicsDevice_DX11 : public GraphicsDevice
 	{
 	private:
-		ID3D11Device*				device;
+		ID3D11Device3*				device;
 		D3D_DRIVER_TYPE				driverType;
 		D3D_FEATURE_LEVEL			featureLevel;
 		IDXGISwapChain1*			swapChain;
@@ -29,7 +28,7 @@ namespace wiGraphicsTypes
 		ViewPort					viewPort;
 		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT];
 		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
-		bool						DX11, DEFERREDCONTEXT_SUPPORT;
+		bool						DX11, DEFERREDCONTEXT_SUPPORT, CONSERVATIVE_RASTERIZATION;
 		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT];
 
 	public:

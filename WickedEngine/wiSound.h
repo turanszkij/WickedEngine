@@ -3,14 +3,8 @@
 
 #include "CommonInclude.h"
 
-#if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
 #include <xaudio2.h>
 #pragma comment(lib,"xaudio2.lib")
-#else
-// WINDOWS 7 compatibility (needs DirectX June 2010 redist installed!)
-#include "Xaudio2_7/comdecl.h"
-#include "Xaudio2_7/xaudio2.h"
-#endif
 
 #include <string>
 #include <thread>

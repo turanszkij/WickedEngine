@@ -233,6 +233,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />

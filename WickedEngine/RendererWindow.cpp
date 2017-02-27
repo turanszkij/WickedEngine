@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 580));
+	rendererWindow->SetSize(XMFLOAT2(400, 600));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -41,13 +41,14 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	rendererWindow->AddWidget(occlusionCullingCheckBox);
 
 	voxelRadianceCheckBox = new wiCheckBox("Voxel Radiance: ");
-	voxelRadianceCheckBox->SetTooltip("Toggle voxel radiance computation (EXPERIMENTAL).");
+	voxelRadianceCheckBox->SetTooltip("Toggle voxel radiance computation (EXPERIMENTAL). Needs hardware support for Conservative Rasterization!");
 	voxelRadianceCheckBox->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceEnabled(args.bValue);
 	});
 	voxelRadianceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceEnabled());
 	rendererWindow->AddWidget(voxelRadianceCheckBox);
+	voxelRadianceCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION));
 
 	voxelRadianceDebugCheckBox = new wiCheckBox("DEBUG: ");
 	voxelRadianceDebugCheckBox->SetTooltip("Toggle voxel radiance visualization.");
@@ -57,6 +58,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	voxelRadianceDebugCheckBox->SetCheck(wiRenderer::GetToDrawVoxelHelper());
 	rendererWindow->AddWidget(voxelRadianceDebugCheckBox);
+	voxelRadianceDebugCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION));
 
 	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 10, 1, 39, "Voxel Radiance Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for voxel radiance calculations.");
@@ -67,6 +69,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 		wiRenderer::SetVoxelRadianceVoxelSize(args.fValue);
 	});
 	rendererWindow->AddWidget(voxelRadianceVoxelSizeSlider);
+	voxelRadianceVoxelSizeSlider->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION));
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
@@ -111,8 +114,8 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 		component->setTessellationEnabled(args.bValue);
 	});
 	tessellationCheckBox->SetCheck(wiRenderer::GetToDrawDebugBoneLines());
-	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
 	rendererWindow->AddWidget(tessellationCheckBox);
+	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
 
 	envProbesCheckBox = new wiCheckBox("Env probe visualizer: ");
 	envProbesCheckBox->SetTooltip("Toggle visualization of environment probes as reflective spheres");

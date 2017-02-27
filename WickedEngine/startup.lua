@@ -37,7 +37,9 @@ runProcess(function()
 		end
 		
 		if(input.Press(VK_F10)) then
-			PutEnvProbe(GetCamera().GetPosition(),256);
+			s = SoundEffect("C:\\PROJECTS\\DXProject\\DXProject\\sound\\1.wav")
+			s.Play()
+			--PutEnvProbe(GetCamera().GetPosition(),256);
 		end
 		
 		if(input.Press(VK_F4)) then

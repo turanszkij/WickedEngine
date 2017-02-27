@@ -15,15 +15,17 @@ Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
 Devblog: https://turanszkij.wordpress.com/
 
 ### Platforms:
-- Windows PC Desktop (tested for version 0.9.52)
+- Windows PC Desktop (tested for version 0.11.0)
 - Universal Windows (tested for version 0.9.11)
 
 ### Requirements:
 
+- Windows 10
 - Visual Studio 2015+
 - Windows SDK
-- DirectX11 SDK (included in Windows SDK)(legacy SDK not supported)
-- DirectX11 June 2010 Redist (Only if you want to support Windows 7 because it uses Xaudio 2.7!)
+- DirectX11 SDK
+
+(Windows 7 support dropped from version 0.11.0!)
 
 
 ### Hardware: 
@@ -47,8 +49,6 @@ This will not load all the features for you however. For that, use the helper wi
 will load all features of the engine. If you want to use just a subset of features, specify in the parameters of the function
 with a WICKEDENGINE_INITIALIZER enum value, or multiple values joined by the | operator.
 For further details, please check the demo project at: https://github.com/turanszkij/WickedEngineDemos.
-
-Windows 7 support: define _WIN32_WINNT=0x0601 preprocessor on the whole project
 
 Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole project
 

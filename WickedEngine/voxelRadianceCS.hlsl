@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 
-TEXTURE3D(input, float4, 0);
+TEXTURE3D(input_emittance, float4, 0);
+TEXTURE3D(input_normal, float3, 1);
 RWTEXTURE3D(output, float4, 0);
 
 groupshared float4 accumulation[4 * 4 * 4];
@@ -27,7 +28,11 @@ static const float3 SAMPLES[16] = {
 [numthreads(4, 4, 4)]
 void main( uint3 DTid : SV_DispatchThreadID, uint GroupIndex : SV_GroupIndex )
 {
-	// TODO!
+	float4 emittance = input_emittance[DTid];
+	float3 normal = input_normal[DTid];
+
+	output[DTid] = emittance;
+	//output[DTid] = float4(normal.rgb * 0.5f + 0.5f, emittance.a);
 
 	//float3 dim;
 	//input.GetDimensions(dim.x, dim.y, dim.z);
@@ -47,21 +52,4 @@ void main( uint3 DTid : SV_DispatchThreadID, uint GroupIndex : SV_GroupIndex )
 	//}
 
 	//output[DTid] = occ / count;
-
-	float4 current = input[DTid];
-
-	output[DTid] = current;
-
-	//accumulation[GroupIndex] = current;
-
-	//GroupMemoryBarrierWithGroupSync();
-
-	//float4 avg = 0;
-	//for (uint i = 0; i < 4 * 4 * 4; ++i)
-	//{
-	//	avg += accumulation[i];
-	//}
-	//avg /= 4 * 4 * 4;
-
-	//output[DTid] = avg.rgba;
 }

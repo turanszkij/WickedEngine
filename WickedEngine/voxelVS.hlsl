@@ -38,7 +38,7 @@ VSOut main( uint vertexID : SV_VERTEXID, uint instanceID : SV_INSTANCEID )
 		float3 pos = (float3)coord / (float3)dim * 2 - 1;
 		pos.y = -pos.y;
 		pos.xyz *= dim;
-		pos += CUBE[vertexID].xyz + 0.5f;
+		pos += CUBE[vertexID].xyz;
 		pos *= dim * g_xWorld_VoxelRadianceRemap;
 
 		o.pos = mul(float4(pos, 1), g_xTransform);
