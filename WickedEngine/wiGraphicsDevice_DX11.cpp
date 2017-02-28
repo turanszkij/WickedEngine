@@ -1445,7 +1445,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
 	DX11 = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
-	CONSERVATIVE_RASTERIZATION = aquiredFeatureLevel >= D3D_FEATURE_LEVEL_12_0;
+	CONSERVATIVE_RASTERIZATION = aquiredFeatureLevel >= D3D_FEATURE_LEVEL_12_1;
 
 	IDXGIDevice2 * pDXGIDevice;
 	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
