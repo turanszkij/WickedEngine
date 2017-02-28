@@ -620,6 +620,29 @@ void wiRenderer::LoadShaders()
 	}
 
 	{
+		// Sync with the upper declaration, NOTE: InstanceDataSteprate is SCENE_VOXELIZATION_RESOLUTION!
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+
+			{ "MATI", 0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
+			{ "MATI", 1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
+			{ "MATI", 2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
+			{ "COLOR_DITHER", 0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
+		};
+		UINT numElements = ARRAYSIZE( layout );
+		VertexShaderInfo* vsinfo = static_cast< VertexShaderInfo* >( wiResourceManager::GetShaderManager()->add( SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER, layout, numElements ) );
+		if( vsinfo != nullptr )
+		{
+			vertexShaders[ VSTYPE_VOXELIZER ] = vsinfo->vertexShader;
+			vertexLayouts[ VLTYPE_VOXELIZER ] = vsinfo->vertexLayout;
+		}
+	}
+
+	{
 
 		VertexLayoutDesc oslayout[] =
 		{
@@ -704,7 +727,6 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
 
@@ -3348,37 +3370,44 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				GetDevice()->BindPrimitiveTopology(PATCHLIST, threadID);
 			else
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+
+			int instanceDataStepRate = 1; // The number of instances to draw using the same per-instance data before advancing in the instance buffer by one element
 
 			if (shaderType == SHADERTYPE_VOXELIZE)
 			{
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
-				GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
-			}
-			else if (shaderType == SHADERTYPE_SHADOW)
-			{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
-			}
-			else if (shaderType == SHADERTYPE_SHADOWCUBE)
-			{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER], threadID);
-				GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
-			}
-			else if (shaderType == SHADERTYPE_ENVMAPCAPTURE)
-			{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
-				GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
+				GetDevice()->BindGS( geometryShaders[ GSTYPE_VOXELIZER ], threadID );
+				GetDevice()->BindVertexLayout( vertexLayouts[ VLTYPE_VOXELIZER ], threadID );
+				instanceDataStepRate = SCENE_VOXELIZATION_RESOLUTION;
 			}
 			else
 			{
-				if (tessellation && tessF)
+				if( shaderType == SHADERTYPE_SHADOW )
 				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT], threadID);
+					GetDevice()->BindVS( vertexShaders[ VSTYPE_SHADOW ], threadID );
+				}
+				else if( shaderType == SHADERTYPE_SHADOWCUBE )
+				{
+					GetDevice()->BindVS( vertexShaders[ VSTYPE_SHADOWCUBEMAPRENDER ], threadID );
+					GetDevice()->BindGS( geometryShaders[ GSTYPE_SHADOWCUBEMAPRENDER ], threadID );
+				}
+				else if( shaderType == SHADERTYPE_ENVMAPCAPTURE )
+				{
+					GetDevice()->BindVS( vertexShaders[ VSTYPE_ENVMAP ], threadID );
+					GetDevice()->BindGS( geometryShaders[ GSTYPE_ENVMAP ], threadID );
 				}
 				else
 				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
+					if( tessellation && tessF )
+					{
+						GetDevice()->BindVS( vertexShaders[ VSTYPE_OBJECT ], threadID );
+					}
+					else
+					{
+						GetDevice()->BindVS( vertexShaders[ VSTYPE_OBJECT10 ], threadID );
+					}
 				}
+				GetDevice()->BindVertexLayout( vertexLayouts[ VLTYPE_EFFECT ], threadID );
 			}
 
 			if (tessellation && tessF)
@@ -3631,7 +3660,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					SetAlphaRef(material->alphaRef, threadID);
 
-					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
+					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k * instanceDataStepRate, threadID);
 				}
 			}
 
@@ -4013,7 +4042,7 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 			voxelizerCams[i] = XMMatrixTranspose(view*projection);
 		}
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOXELIZER], voxelizerCams, threadID, sizeof(voxelizerCams));
-		GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_VOXELIZER], 0, threadID);
+		GetDevice()->BindConstantBufferGS( constantBuffers[ CBTYPE_VOXELIZER ], 0, threadID );
 
 		Texture* RTs[] = { textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
 		GetDevice()->BindRenderTargets(2, RTs, nullptr, threadID);
