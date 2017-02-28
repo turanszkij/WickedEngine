@@ -18,7 +18,7 @@ struct GSOutput
 	float4 pos : SV_POSITION;
 	float3 nor : NORMAL;
 	float2 tex : TEXCOORD;
-	//float3 pos3D : POSITION3D;
+	float3 pos3D : POSITION3D;
 	uint RTIndex : SV_RenderTargetArrayIndex;
 };
 
@@ -37,8 +37,7 @@ void main(
 		element.pos = mul(float4(input[i].pos.xyz, 1), xVoxelCam[ element.RTIndex ]);
 		element.nor = input[i].nor;
 		element.tex = input[i].tex;
-		//element.pos3D = input[ i ].pos.xyz;
+		element.pos3D = input[ i ].pos.xyz;
 		output.Append(element);
 	}
-	output.RestartStrip();
 }
