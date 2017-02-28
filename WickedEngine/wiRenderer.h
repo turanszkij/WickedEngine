@@ -303,6 +303,7 @@ protected:
 		int res;
 		float voxelsize;
 		XMFLOAT3 center;
+		XMFLOAT3 extents;
 	} static voxelSceneData;
 
 public:

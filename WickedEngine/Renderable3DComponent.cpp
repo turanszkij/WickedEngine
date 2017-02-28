@@ -275,16 +275,13 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	if (!getShadowsEnabled())
+	if (getShadowsEnabled())
 	{
-		return;
+		wiRenderer::DrawForShadowMap(threadID);
 	}
 
-	wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
-
-	wiRenderer::DrawForShadowMap(threadID);
-
-	wiProfiler::GetInstance().EndRange(); // Shadow Rendering
+	wiRenderer::VoxelizeScene(threadID);
+	wiRenderer::ComputeVoxelRadiance(threadID);
 }
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {

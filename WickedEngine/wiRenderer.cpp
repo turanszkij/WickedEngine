@@ -1471,6 +1471,15 @@ void wiRenderer::UpdatePerFrameData()
 	}
 	wiProfiler::GetInstance().EndRange(); // SPTree Update
 
+	// Update Voxelization parameters:
+	if (spTree != nullptr)
+	{
+		// We don't update it if the scene is empty, this even makes it easier to debug
+		const float f = 0.5f / voxelSceneData.voxelsize;
+		voxelSceneData.center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
+		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+	}
+
 	// Perform culling and obtain closest reflector:
 	requestReflectionRendering = false;
 	wiProfiler::GetInstance().BeginRange("SPTree Culling", wiProfiler::DOMAIN_CPU);
@@ -1529,7 +1538,8 @@ void wiRenderer::UpdatePerFrameData()
 			{
 				Frustum frustum;
 				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
-				spTree_lights->getVisible(frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
+				spTree_lights->getVisible(frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
+
 				int i = 0;
 				int shadowCounter_2D = 0;
 				int shadowCounter_Cube = 0;
@@ -1614,16 +1624,9 @@ void wiRenderer::UpdatePerFrameData()
 	UpdateCubes();
 
 	GetScene().wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&GetScene().wind.direction)))*0.1f;
-
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
-	//if(GetDevice()->GetFrameCount() % 30 == 0)
-	{
-		VoxelizeScene(threadID);
-		ComputeVoxelRadiance(threadID);
-	}
-
 	UpdateWorldCB(threadID); // only commits when parameters are changed
 	UpdateFrameCB(threadID);
 	
@@ -2551,6 +2554,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 	const CulledList& culledLights = culling.culledLights;
 
 	GetDevice()->EventBegin("Light Render", threadID);
+	wiProfiler::GetInstance().BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
@@ -2673,6 +2677,8 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 
 	}
+
+	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
@@ -2922,6 +2928,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	//if (GetGameSpeed() > 0) 
 	{
 		GetDevice()->EventBegin("ShadowMap Render", threadID);
+		wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 		const FrameCulling& culling = frameCullings[getCamera()];
 		const CulledList& culledLights = culling.culledLights;
@@ -3115,6 +3122,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		}
 
+
+		wiProfiler::GetInstance().EndRange(); // Shadow Rendering
 		GetDevice()->EventEnd(threadID);
 	}
 
@@ -3967,8 +3976,6 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	}
 	if (!GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION))
 	{
-		SetVoxelRadianceEnabled(false);
-		wiBackLog::post("Conservative Rasterization not supported by the hardware, turning off voxel radiance!");
 		return;
 	}
 
@@ -3978,7 +3985,7 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 	voxelSceneData.res = SCENE_VOXELIZATION_RESOLUTION;
 	voxelSceneData.voxelsize = voxelRadianceVoxelSize;
-	if (textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE] == nullptr || textures[TEXTYPE_3D_VOXELSCENE_NORMAL] == nullptr)
+	if (textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] == nullptr || textures[TEXTYPE_3D_VOXELSCENE_NORMAL] == nullptr)
 	{
 		Texture3DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -3992,8 +3999,8 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE] = new Texture3D;
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE]);
+		textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] = new Texture3D;
+		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_ALBEDO]);
 		assert(SUCCEEDED(hr));
 
 
@@ -4005,16 +4012,17 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	}
 
 	CulledList culledObjects;
+	CulledList culledLights;
 	CulledCollection culledRenderer;
 
 	AABB bbox;
-	XMFLOAT3 extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
-	const float f = 0.5f / voxelSceneData.voxelsize;
-	XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
+	const XMFLOAT3& extents = voxelSceneData.extents;
+	const XMFLOAT3& center = voxelSceneData.center;
 	bbox.createFromHalfWidth(center, extents);
 	if (spTree != nullptr)
 	{
 		spTree->getVisible(bbox, culledObjects);
+		spTree_lights->getVisible(bbox, culledLights);
 
 		for (Cullable* object : culledObjects)
 		{
@@ -4033,21 +4041,22 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 		XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&center), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
+		XMMATRIX projection;
 
 		XMMATRIX voxelizerCams[SCENE_VOXELIZATION_RESOLUTION];
 		for (int i = 0; i < voxelSceneData.res; ++i)
 		{
-			XMMATRIX projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * voxelSceneData.voxelsize * 2, -extents.z + (i + 1) * voxelSceneData.voxelsize * 2);
+			projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * voxelSceneData.voxelsize * 2, -extents.z + (i + 1) * voxelSceneData.voxelsize * 2);
 
 			voxelizerCams[i] = XMMatrixTranspose(view*projection);
 		}
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOXELIZER], voxelizerCams, threadID, sizeof(voxelizerCams));
-		GetDevice()->BindConstantBufferGS( constantBuffers[ CBTYPE_VOXELIZER ], 0, threadID );
+		GetDevice()->BindConstantBufferGS( constantBuffers[ CBTYPE_VOXELIZER ], CBSLOT_RENDERER_VOXELIZER, threadID );
 
-		Texture* RTs[] = { textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
+		Texture* RTs[] = { textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
 		GetDevice()->BindRenderTargets(2, RTs, nullptr, threadID);
 		static const float color[] = { 0,0,0,0 };
-		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE], color, threadID);
+		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], color, threadID);
 		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], color, threadID);
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
@@ -4263,7 +4272,7 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	if (textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE] == nullptr)
+	if (textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] == nullptr)
 	{
 		assert(0);
 		return;
@@ -4277,9 +4286,9 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 	{
 		Texture3DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE])->GetDesc().Width;
-		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE])->GetDesc().Height;
-		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE])->GetDesc().Depth;
+		desc.Width = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Width;
+		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Height;
+		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Depth;
 		desc.MipLevels = 1;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
@@ -4293,7 +4302,7 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 	}
 
 	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE_EMITTANCE], 0, threadID);
+	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], 0, threadID);
 	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], 1, threadID);
 	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
 
