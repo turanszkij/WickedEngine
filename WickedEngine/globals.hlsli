@@ -51,9 +51,10 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
 	float3		g_xWorld_Fog;					float xPadding3_WorldCB;
 	float2		g_xWorld_ScreenWidthHeight;
-	float		g_xWorld_VoxelRadianceRemap;	float xPadding4_WorldCB;
+	float		g_xWorld_VoxelRadianceDataSize;
+	float		g_xWorld_VoxelRadianceDataRes;
+	float		g_xWorld_VoxelRadianceRemap;
 	float3		g_xWorld_VoxelRadianceDataCenter;
-	float		xPadding5_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {

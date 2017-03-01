@@ -17,6 +17,7 @@ interface ID3D11Buffer;
 interface ID3D11InputLayout;
 interface ID3D11BlendState;
 interface ID3D11DepthStencilState;
+interface ID3D11RasterizerState;
 interface ID3D11RasterizerState2;
 interface ID3D11ClassLinkage;
 interface ID3D11RenderTargetView;
@@ -197,7 +198,8 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		ID3D11RasterizerState2*	resource_DX11;
+		ID3D11RasterizerState*	resource_DX11;
+		ID3D11RasterizerState2*	resource_DX11_2;
 		RasterizerStateDesc desc;
 	public:
 		RasterizerState();

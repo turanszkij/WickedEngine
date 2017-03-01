@@ -5,7 +5,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
 
-interface ID3D11Device3;
+interface ID3D11Device;
 interface IDXGISwapChain1;
 interface ID3D11DeviceContext;
 interface ID3D11CommandList;
@@ -19,7 +19,7 @@ namespace wiGraphicsTypes
 	class GraphicsDevice_DX11 : public GraphicsDevice
 	{
 	private:
-		ID3D11Device3*				device;
+		ID3D11Device*				device;
 		D3D_DRIVER_TYPE				driverType;
 		D3D_FEATURE_LEVEL			featureLevel;
 		IDXGISwapChain1*			swapChain;
@@ -71,6 +71,8 @@ namespace wiGraphicsTypes
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
+		virtual void BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, Texture* const *ppUAVs, int slotUAV, int countUAV, 
+			GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
 		virtual void BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
 		virtual void ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
 		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;

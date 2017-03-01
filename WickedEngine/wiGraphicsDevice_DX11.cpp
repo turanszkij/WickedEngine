@@ -1406,20 +1406,16 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
-		D3D_FEATURE_LEVEL_12_1,
-		D3D_FEATURE_LEVEL_12_0,
 		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_10_1,
 	};
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 
-	ID3D11Device* _device = nullptr;
-
 	for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
 	{
 		driverType = driverTypes[driverTypeIndex];
-		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &_device
+		hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
 			, &featureLevel, &deviceContexts[GRAPHICSTHREAD_IMMEDIATE]);
 
 		if (SUCCEEDED(hr))
@@ -1433,19 +1429,10 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		exit(1);
 	}
 
-	hr = _device->QueryInterface(__uuidof(ID3D11Device3), (void**)&device);
-	if (FAILED(hr))
-	{
-		stringstream ss("");
-		ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
-		wiHelper::messageBox(ss.str(), "Error!");
-		exit(1);
-	}
-	SAFE_RELEASE(_device);
-
 	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
 	DX11 = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
 	CONSERVATIVE_RASTERIZATION = aquiredFeatureLevel >= D3D_FEATURE_LEVEL_12_1;
+	CONSERVATIVE_RASTERIZATION = false; // TODO: correct query!
 
 	IDXGIDevice2 * pDXGIDevice;
 	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
@@ -1503,12 +1490,16 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	DEFERREDCONTEXT_SUPPORT = false;
 	D3D11_FEATURE_DATA_THREADING threadingFeature;
 	device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
-	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists) {
+	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists) 
+	{
 		DEFERREDCONTEXT_SUPPORT = true;
-		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) {
+		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
+		{
 			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
 				continue;
+
 			hr = device->CreateDeferredContext(0, &deviceContexts[i]);
+
 			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
 				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
 		}
@@ -2386,7 +2377,38 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc
 }
 HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
-	D3D11_RASTERIZER_DESC2 desc;
+	//if (pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE)
+	//{
+	//	ID3D11Device3* device3 = nullptr;
+	//	if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D11Device3), (void**)&device3)))
+	//	{
+	//		D3D11_RASTERIZER_DESC2 desc;
+	//		desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
+	//		desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
+	//		desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
+	//		desc.DepthBias = pRasterizerStateDesc->DepthBias;
+	//		desc.DepthBiasClamp = pRasterizerStateDesc->DepthBiasClamp;
+	//		desc.SlopeScaledDepthBias = pRasterizerStateDesc->SlopeScaledDepthBias;
+	//		desc.DepthClipEnable = pRasterizerStateDesc->DepthClipEnable;
+	//		desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
+	//		desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
+	//		desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
+	//		desc.ConservativeRaster = D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON;
+	//		desc.ForcedSampleCount = 0;
+
+	//		pRasterizerState->desc = *pRasterizerStateDesc;
+
+	//		HRESULT hr = device3->CreateRasterizerState2(&desc, &pRasterizerState->resource_DX11_2);
+	//		SAFE_RELEASE(device3);
+	//		return hr;
+	//	}
+	//}
+
+	//LOCK();
+	//CONSERVATIVE_RASTERIZATION = false;
+	//UNLOCK();
+
+	D3D11_RASTERIZER_DESC desc;
 	desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
 	desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
 	desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
@@ -2397,11 +2419,9 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 	desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
 	desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
 	desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
-	desc.ConservativeRaster = (pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE ? D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D11_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-	desc.ForcedSampleCount = 0;
 
 	pRasterizerState->desc = *pRasterizerStateDesc;
-	return device->CreateRasterizerState2(&desc, &pRasterizerState->resource_DX11);
+	return device->CreateRasterizerState(&desc, &pRasterizerState->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {
@@ -2528,6 +2548,26 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	}
 	deviceContexts[threadID]->RSSetViewports(NumViewports, pd3dViewPorts);
 	SAFE_DELETE_ARRAY(pd3dViewPorts);
+}
+void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, Texture* const *ppUAVs, int slotUAV, int countUAV,
+	GRAPHICSTHREAD threadID, UINT arrayIndex)
+{
+	ID3D11RenderTargetView* renderTargetViews[8];
+	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
+	for (UINT i = 0; i < min(NumViews, 8); ++i)
+	{
+		assert(ppRenderTargets[i]->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+		renderTargetViews[i] = ppRenderTargets[i]->renderTargetViews_DX11[arrayIndex];
+	}
+	assert(depthStencilTexture == nullptr || depthStencilTexture->depthStencilViews_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+	ID3D11DepthStencilView* depthStencilView = (depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilViews_DX11[arrayIndex]);
+	ID3D11UnorderedAccessView* UAVs[8];
+	ZeroMemory(UAVs, sizeof(UAVs));
+	for (int i = 0; i < min(countUAV, 8); ++i)
+	{
+		UAVs[i] = ppUAVs[i]->unorderedAccessView_DX11;
+	}
+	deviceContexts[threadID]->OMSetRenderTargetsAndUnorderedAccessViews(NumViews, renderTargetViews, depthStencilView, slotUAV, countUAV, UAVs, nullptr);
 }
 void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
@@ -2719,7 +2759,7 @@ void GraphicsDevice_DX11::BindDepthStencilState(const DepthStencilState* state, 
 }
 void GraphicsDevice_DX11::BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) 
 {
-	deviceContexts[threadID]->RSSetState(state->resource_DX11);
+	deviceContexts[threadID]->RSSetState(state->resource_DX11_2 != nullptr ? state->resource_DX11_2 : state->resource_DX11);
 }
 void GraphicsDevice_DX11::BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICSTHREAD threadID) 
 {

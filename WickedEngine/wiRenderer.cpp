@@ -51,14 +51,12 @@ int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRendere
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false;
-wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = true;
-bool wiRenderer::voxelRadiance = false;
-float wiRenderer::voxelRadianceVoxelSize = 1.0f;
+wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
@@ -566,9 +564,6 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(DispatchParamsCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
 
-	bd.ByteWidth = sizeof(XMMATRIX) * SCENE_VOXELIZATION_RESOLUTION;
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOXELIZER]);
-
 
 
 
@@ -616,29 +611,6 @@ void wiRenderer::LoadShaders()
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_OBJECT10] = vsinfo->vertexShader;
 			vertexLayouts[VLTYPE_EFFECT] = vsinfo->vertexLayout;
-		}
-	}
-
-	{
-		// Sync with the upper declaration, NOTE: InstanceDataSteprate is SCENE_VOXELIZATION_RESOLUTION!
-		VertexLayoutDesc layout[] =
-		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-
-			{ "MATI", 0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
-			{ "MATI", 1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
-			{ "MATI", 2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
-			{ "COLOR_DITHER", 0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, SCENE_VOXELIZATION_RESOLUTION },
-		};
-		UINT numElements = ARRAYSIZE( layout );
-		VertexShaderInfo* vsinfo = static_cast< VertexShaderInfo* >( wiResourceManager::GetShaderManager()->add( SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER, layout, numElements ) );
-		if( vsinfo != nullptr )
-		{
-			vertexShaders[ VSTYPE_VOXELIZER ] = vsinfo->vertexShader;
-			vertexLayouts[ VLTYPE_VOXELIZER ] = vsinfo->vertexLayout;
 		}
 	}
 
@@ -727,6 +699,7 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
 
@@ -3380,14 +3353,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			else
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
-			int instanceDataStepRate = 1; // The number of instances to draw using the same per-instance data before advancing in the instance buffer by one element
-
 			if (shaderType == SHADERTYPE_VOXELIZE)
 			{
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
 				GetDevice()->BindGS( geometryShaders[ GSTYPE_VOXELIZER ], threadID );
-				GetDevice()->BindVertexLayout( vertexLayouts[ VLTYPE_VOXELIZER ], threadID );
-				instanceDataStepRate = SCENE_VOXELIZATION_RESOLUTION;
 			}
 			else
 			{
@@ -3669,7 +3638,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					SetAlphaRef(material->alphaRef, threadID);
 
-					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k * instanceDataStepRate, threadID);
+					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 				}
 			}
 
@@ -3968,23 +3937,19 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 {
-	voxelSceneData.voxelsize = 0;
-
 	if (!GetVoxelRadianceEnabled())
 	{
 		return;
 	}
-	if (!GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION))
-	{
-		return;
-	}
+	//if (!GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION))
+	//{
+	//	return;
+	//}
 
 	GetDevice()->EventBegin("Voxelize Scene", threadID);
 	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 
-	voxelSceneData.res = SCENE_VOXELIZATION_RESOLUTION;
-	voxelSceneData.voxelsize = voxelRadianceVoxelSize;
 	if (textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] == nullptr || textures[TEXTYPE_3D_VOXELSCENE_NORMAL] == nullptr)
 	{
 		Texture3DDesc desc;
@@ -3994,7 +3959,7 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		desc.Depth = voxelSceneData.res;
 		desc.MipLevels = 1;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
@@ -4016,10 +3981,10 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	CulledCollection culledRenderer;
 
 	AABB bbox;
-	const XMFLOAT3& extents = voxelSceneData.extents;
-	const XMFLOAT3& center = voxelSceneData.center;
+	XMFLOAT3 extents = voxelSceneData.extents;
+	XMFLOAT3 center = voxelSceneData.center;
 	bbox.createFromHalfWidth(center, extents);
-	if (spTree != nullptr)
+	if (spTree != nullptr && extents.x > 0 && extents.y > 0 && extents.z > 0)
 	{
 		spTree->getVisible(bbox, culledObjects);
 		spTree_lights->getVisible(bbox, culledLights);
@@ -4040,28 +4005,13 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-		XMMATRIX view = XMMatrixLookToLH(XMLoadFloat3(&center), XMVectorSet(0, 0, 1, 0), XMVectorSet(0, 1, 0, 0));
-		XMMATRIX projection;
-
-		XMMATRIX voxelizerCams[SCENE_VOXELIZATION_RESOLUTION];
-		for (int i = 0; i < voxelSceneData.res; ++i)
-		{
-			projection = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z + i * voxelSceneData.voxelsize * 2, -extents.z + (i + 1) * voxelSceneData.voxelsize * 2);
-
-			voxelizerCams[i] = XMMatrixTranspose(view*projection);
-		}
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOXELIZER], voxelizerCams, threadID, sizeof(voxelizerCams));
-		GetDevice()->BindConstantBufferGS( constantBuffers[ CBTYPE_VOXELIZER ], CBSLOT_RENDERER_VOXELIZER, threadID );
-
-		Texture* RTs[] = { textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
-		GetDevice()->BindRenderTargets(2, RTs, nullptr, threadID);
+		Texture* UAVs[] = { textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
+		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 2, threadID);
 		static const float color[] = { 0,0,0,0 };
 		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], color, threadID);
 		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], color, threadID);
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
-
-		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 		voxelSceneData.center = center;
 	}
@@ -4411,7 +4361,9 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mHorizon = world.horizon;
 	value.mZenith = world.zenith;
 	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
-	value.mVoxelRadianceRemap = voxelSceneData.voxelsize / voxelSceneData.res;
+	value.mVoxelRadianceDataSize = voxelSceneData.voxelsize;
+	value.mVoxelRadianceDataRes = (float)voxelSceneData.res;
+	value.mVoxelRadianceRemap = (GetVoxelRadianceEnabled() ? voxelSceneData.voxelsize / voxelSceneData.res : 0.0f);
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)

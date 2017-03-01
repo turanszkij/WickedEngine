@@ -48,7 +48,6 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	voxelRadianceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceEnabled());
 	rendererWindow->AddWidget(voxelRadianceCheckBox);
-	voxelRadianceCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION));
 
 	voxelRadianceDebugCheckBox = new wiCheckBox("DEBUG: ");
 	voxelRadianceDebugCheckBox->SetTooltip("Toggle voxel radiance visualization.");
@@ -58,7 +57,6 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	voxelRadianceDebugCheckBox->SetCheck(wiRenderer::GetToDrawVoxelHelper());
 	rendererWindow->AddWidget(voxelRadianceDebugCheckBox);
-	voxelRadianceDebugCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION));
 
 	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 10, 1, 39, "Voxel Radiance Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for voxel radiance calculations.");
@@ -69,7 +67,6 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 		wiRenderer::SetVoxelRadianceVoxelSize(args.fValue);
 	});
 	rendererWindow->AddWidget(voxelRadianceVoxelSizeSlider);
-	voxelRadianceVoxelSizeSlider->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION));
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");

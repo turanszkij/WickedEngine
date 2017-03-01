@@ -91,9 +91,10 @@ public:
 		XMFLOAT3 mAmbient;				float pad2;
 		XMFLOAT3 mFog;					float pad3;
 		XMFLOAT2 mScreenWidthHeight;
-		float mVoxelRadianceRemap;		float pad4;
+		float mVoxelRadianceDataSize;
+		float mVoxelRadianceDataRes;
+		float mVoxelRadianceRemap;
 		XMFLOAT3 mVoxelRadianceDataCenter;
-		float pad5;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 
@@ -295,15 +296,16 @@ protected:
 
 	static bool debugLightCulling;
 	static bool occlusionCulling;
-	static bool voxelRadiance;
-	static float voxelRadianceVoxelSize;
 
 	struct VoxelizedSceneData
 	{
+		bool enabled;
 		int res;
 		float voxelsize;
 		XMFLOAT3 center;
 		XMFLOAT3 extents;
+
+		VoxelizedSceneData() :enabled(false), res(128), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)) {}
 	} static voxelSceneData;
 
 public:
@@ -347,10 +349,12 @@ public:
 	static bool GetDebugLightCulling() { return debugLightCulling; }
 	static void SetOcclusionCullingEnabled(bool enabled) { occlusionCulling = enabled; }
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
-	static void SetVoxelRadianceEnabled(bool enabled) { voxelRadiance = enabled; }
-	static bool GetVoxelRadianceEnabled() { return voxelRadiance; }
-	static void SetVoxelRadianceVoxelSize(float enabled) { voxelRadianceVoxelSize = enabled; }
-	static float GetVoxelRadianceVoxelSize() { return voxelRadianceVoxelSize; }
+	static void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }
+	static bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
+	static void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.voxelsize = value; }
+	static float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
+	//static void SetVoxelRadianceResolution(int value) { voxelSceneData.res = value; }
+	static int GetVoxelRadianceResolution() { return voxelSceneData.res; }
 	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};

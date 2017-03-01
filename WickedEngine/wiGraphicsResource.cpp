@@ -123,10 +123,12 @@ namespace wiGraphicsTypes
 	RasterizerState::RasterizerState()
 	{
 		SAFE_INIT(resource_DX11);
+		SAFE_INIT(resource_DX11_2);
 	}
 	RasterizerState::~RasterizerState()
 	{
 		SAFE_RELEASE(resource_DX11);
+		SAFE_RELEASE(resource_DX11_2);
 	}
 
 	ClassLinkage::ClassLinkage()

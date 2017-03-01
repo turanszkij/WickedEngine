@@ -4004,43 +4004,42 @@ void Light::UpdateLight()
 		{
 			if (shadow)
 			{
+				// Set up three shadow cascades
+				static const float lerp0 = 0.5f;			//third slice distance from cam (percentage)
+				static const float lerp1 = 0.12f;			//second slice distance from cam (percentage)
+				static const float lerp2 = 0.016f;			//first slice distance from cam (percentage)
+				
+
 				if (shadowCam_dirLight.empty())
 				{
-					// Set up three shadow cascades
-					float lerp = 0.5f;
-					float lerp1 = 0.12f;
-					float lerp2 = 0.016f;
 					XMVECTOR a0, a, b0, b;
-					a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					float size = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp), XMVectorLerp(a0, a, lerp))));
+					a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					float size = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp0), XMVectorLerp(a0, a, lerp0))));
 					float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp1), XMVectorLerp(a0, a, lerp1))));
 					float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp2), XMVectorLerp(a0, a, lerp2))));
 					XMVECTOR rot = XMQuaternionIdentity();
 
-					shadowCam_dirLight.push_back(SHCAM(size, rot, 0, wiRenderer::getCamera()->zFarP));
-					shadowCam_dirLight.push_back(SHCAM(size1, rot, 0, wiRenderer::getCamera()->zFarP));
-					shadowCam_dirLight.push_back(SHCAM(size2, rot, 0, wiRenderer::getCamera()->zFarP));
+					shadowCam_dirLight.push_back(SHCAM(size, rot, -wiRenderer::getCamera()->zFarP * 0.5f, wiRenderer::getCamera()->zFarP * 0.5f));
+					shadowCam_dirLight.push_back(SHCAM(size1, rot, -wiRenderer::getCamera()->zFarP * 0.5f, wiRenderer::getCamera()->zFarP * 0.5f));
+					shadowCam_dirLight.push_back(SHCAM(size2, rot, -wiRenderer::getCamera()->zFarP * 0.5f, wiRenderer::getCamera()->zFarP * 0.5f));
 				}
 
-				float lerp = 0.5f;			//third slice distance from cam (percentage)
-				float lerp1 = 0.12f;		//second slice distance from cam (percentage)
-				float lerp2 = 0.016f;		//first slice distance from cam (percentage)
 				XMVECTOR c, d, e, e1, e2;
-				c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-				d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+				c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+				d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 
 				if (!shadowCam_dirLight.empty()) 
 				{
 					// Avoid shadowmap texel swimming by aligning them to a discrete grid:
-					float f = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
-					e = XMVectorFloor(XMVectorLerp(d, c, lerp) * f)/f;
-					f = shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
-					e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) * f)/f;
-					f = shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
-					e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) * f)/f;
+					float f = shadowCam_dirLight[0].size * 2 / (float)wiRenderer::SHADOWRES_2D;
+					e = XMVectorFloor(XMVectorLerp(d, c, lerp0) / f) * f;
+					f = shadowCam_dirLight[1].size * 2 / (float)wiRenderer::SHADOWRES_2D;
+					e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) / f) * f;
+					f = shadowCam_dirLight[2].size * 2 / (float)wiRenderer::SHADOWRES_2D;
+					e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) / f) * f;
 
 					XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
 					shadowCam_dirLight[0].Update(rrr*XMMatrixTranslationFromVector(e));

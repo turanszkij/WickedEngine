@@ -653,9 +653,9 @@ struct SHCAM{
 		nearplane=0.1f;farplane=200,size=0;
 	}
 	//orthographic
-	SHCAM(float size, const XMVECTOR& dir, float newNear, float newFar){
-		nearplane=newNear;
-		farplane=newFar;
+	SHCAM(float size, const XMVECTOR& dir, float nearP, float farP){
+		nearplane=nearP;
+		farplane=farP;
 		Init(dir);
 		Create_Ortho(size);
 	};
@@ -680,7 +680,7 @@ struct SHCAM{
 		XMStoreFloat4x4( &View, rView);
 	}
 	void Create_Ortho(float size){
-		XMMATRIX rProjection = XMMatrixOrthographicLH(size,size,-farplane,farplane);
+		XMMATRIX rProjection = XMMatrixOrthographicOffCenterLH(-size*0.5f,size*0.5f,-size*0.5f,size*0.5f,nearplane, farplane);
 		XMStoreFloat4x4( &Projection, rProjection);
 		this->size=size;
 	}
