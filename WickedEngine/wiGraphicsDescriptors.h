@@ -338,8 +338,7 @@ namespace wiGraphicsTypes
 			Height(0.0f),
 			MinDepth(0.0f),
 			MaxDepth(1.0f)
-		{
-		}
+		{}
 	};
 	struct VertexLayoutDesc
 	{
@@ -364,6 +363,8 @@ namespace wiGraphicsTypes
 	{
 		UINT Count;
 		UINT Quality;
+
+		SampleDesc() :Count( 1 ), Quality( 0 ) {}
 	};
 	struct Texture1DDesc
 	{
@@ -375,6 +376,17 @@ namespace wiGraphicsTypes
 		UINT BindFlags;
 		UINT CPUAccessFlags;
 		UINT MiscFlags;
+
+		Texture1DDesc():
+			Width(0),
+			MipLevels(1),
+			ArraySize(1),
+			Format(FORMAT_UNKNOWN),
+			Usage(USAGE_DEFAULT),
+			BindFlags(0),
+			CPUAccessFlags(0),
+			MiscFlags(0)
+		{}
 	};
 	struct Texture2DDesc
 	{
@@ -388,6 +400,18 @@ namespace wiGraphicsTypes
 		UINT BindFlags;
 		UINT CPUAccessFlags;
 		UINT MiscFlags;
+
+		Texture2DDesc():
+			Width(0),
+			Height(0),
+			MipLevels(1),
+			ArraySize(1),
+			Format(FORMAT_UNKNOWN),
+			Usage(USAGE_DEFAULT),
+			BindFlags(0),
+			CPUAccessFlags(0),
+			MiscFlags(0)
+		{}
 	};
 	struct Texture3DDesc
 	{
@@ -400,6 +424,18 @@ namespace wiGraphicsTypes
 		UINT BindFlags;
 		UINT CPUAccessFlags;
 		UINT MiscFlags;
+
+		Texture3DDesc():
+			Width(0),
+			Height(0),
+			Depth(0),
+			MipLevels(1),
+			Format(FORMAT_UNKNOWN),
+			Usage(USAGE_DEFAULT),
+			BindFlags(0),
+			CPUAccessFlags(0),
+			MiscFlags(0)
+		{}
 	};
 	struct SamplerDesc
 	{
@@ -413,6 +449,19 @@ namespace wiGraphicsTypes
 		float BorderColor[4];
 		float MinLOD;
 		float MaxLOD;
+
+		SamplerDesc():
+			Filter(FILTER_MIN_MAG_MIP_POINT),
+			AddressU(TEXTURE_ADDRESS_CLAMP),
+			AddressV(TEXTURE_ADDRESS_CLAMP),
+			AddressW(TEXTURE_ADDRESS_CLAMP),
+			MipLODBias(0.0f),
+			MaxAnisotropy(0),
+			ComparisonFunc(COMPARISON_NEVER),
+			BorderColor{0.0f,0.0f,0.0f,0.0f},
+			MinLOD(0.0f),
+			MaxLOD(FLT_MAX)
+		{}
 	};
 	struct RasterizerStateDesc
 	{
@@ -430,20 +479,19 @@ namespace wiGraphicsTypes
 		UINT ForcedSampleCount;
 
 		RasterizerStateDesc() :
-			FillMode( FILL_SOLID ),
-			CullMode( CULL_NONE ),
-			FrontCounterClockwise( false ),
-			DepthBias( 0 ),
-			DepthBiasClamp( 0.0f ),
-			SlopeScaledDepthBias( 0.0f ),
-			DepthClipEnable( false ),
-			ScissorEnable( false ),
-			MultisampleEnable( false ),
-			AntialiasedLineEnable( false ),
-			ConservativeRasterizationEnable( false ),
-			ForcedSampleCount( 0 )
-		{
-		}
+			FillMode(FILL_SOLID),
+			CullMode(CULL_NONE),
+			FrontCounterClockwise(false),
+			DepthBias(0),
+			DepthBiasClamp(0.0f),
+			SlopeScaledDepthBias(0.0f),
+			DepthClipEnable(false),
+			ScissorEnable(false),
+			MultisampleEnable(false),
+			AntialiasedLineEnable(false),
+			ConservativeRasterizationEnable(false),
+			ForcedSampleCount(0)
+		{}
 	};
 	struct DepthStencilOpDesc
 	{
@@ -451,6 +499,13 @@ namespace wiGraphicsTypes
 		STENCIL_OP StencilDepthFailOp;
 		STENCIL_OP StencilPassOp;
 		COMPARISON_FUNC StencilFunc;
+
+		DepthStencilOpDesc():
+			StencilFailOp(STENCIL_OP_KEEP),
+			StencilDepthFailOp(STENCIL_OP_KEEP),
+			StencilPassOp(STENCIL_OP_KEEP),
+			StencilFunc(COMPARISON_NEVER)
+		{}
 	};
 	struct DepthStencilStateDesc
 	{
@@ -462,6 +517,15 @@ namespace wiGraphicsTypes
 		UINT8 StencilWriteMask;
 		DepthStencilOpDesc FrontFace;
 		DepthStencilOpDesc BackFace;
+
+		DepthStencilStateDesc():
+			DepthEnable(false),
+			DepthWriteMask(DEPTH_WRITE_MASK_ZERO),
+			DepthFunc(COMPARISON_NEVER),
+			StencilEnable(false),
+			StencilReadMask(0xff),
+			StencilWriteMask(0xff)
+		{}
 	};
 	struct RenderTargetBlendStateDesc
 	{
@@ -473,12 +537,28 @@ namespace wiGraphicsTypes
 		BLEND DestBlendAlpha;
 		BLEND_OP BlendOpAlpha;
 		UINT8 RenderTargetWriteMask;
+
+		RenderTargetBlendStateDesc():
+			BlendEnable(false),
+			SrcBlend(BLEND_SRC_ALPHA),
+			DestBlend(BLEND_INV_SRC_ALPHA),
+			BlendOp(BLEND_OP_ADD),
+			SrcBlendAlpha(BLEND_ONE),
+			DestBlendAlpha(BLEND_INV_SRC_ALPHA),
+			BlendOpAlpha(BLEND_OP_ADD),
+			RenderTargetWriteMask(COLOR_WRITE_ENABLE_ALL)
+		{}
 	};
 	struct BlendStateDesc
 	{
 		bool AlphaToCoverageEnable;
 		bool IndependentBlendEnable;
 		RenderTargetBlendStateDesc RenderTarget[8];
+
+		BlendStateDesc():
+			AlphaToCoverageEnable(false),
+			IndependentBlendEnable(false)
+		{}
 	};
 	struct GPUBufferDesc
 	{
@@ -488,6 +568,15 @@ namespace wiGraphicsTypes
 		UINT CPUAccessFlags;
 		UINT MiscFlags;
 		UINT StructureByteStride;
+
+		GPUBufferDesc():
+			ByteWidth(0),
+			Usage(USAGE_DEFAULT),
+			BindFlags(0),
+			CPUAccessFlags(0),
+			MiscFlags(0),
+			StructureByteStride(0)
+		{}
 	};
 	struct GPUQueryDesc
 	{
@@ -495,18 +584,36 @@ namespace wiGraphicsTypes
 		UINT MiscFlags;
 		// 0 for immediate access!
 		UINT async_latency;
+
+		GPUQueryDesc():
+			Type(GPU_QUERY_TYPE_OCCLUSION_PREDICATE),
+			MiscFlags(0),
+			async_latency(0)
+		{}
 	};
 	struct SubresourceData
 	{
 		const void *pSysMem;
 		UINT SysMemPitch;
 		UINT SysMemSlicePitch;
+
+		SubresourceData():
+			pSysMem(nullptr),
+			SysMemPitch(0),
+			SysMemSlicePitch(0)
+		{}
 	};
 	struct MappedSubresource
 	{
 		void *pData;
 		UINT RowPitch;
 		UINT DepthPitch;
+
+		MappedSubresource():
+			pData(nullptr),
+			RowPitch(0),
+			DepthPitch(0)
+		{}
 	};
 	struct Rect
 	{
@@ -514,6 +621,13 @@ namespace wiGraphicsTypes
 		LONG top;
 		LONG right;
 		LONG bottom;
+
+		Rect():
+			left(0),
+			top(0),
+			right(0),
+			bottom(0)
+		{}
 	};
 
 }

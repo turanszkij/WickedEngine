@@ -1364,14 +1364,14 @@ void wiColorPicker::Render(wiGUI* gui)
 				vertices.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
 				wiMath::ConstructTriangleEquilateral(__colorpicker_radius_triangle, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
-				GPUBufferDesc desc = { 0 };
+				GPUBufferDesc desc;
 				desc.BindFlags = BIND_VERTEX_BUFFER;
 				desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 				desc.CPUAccessFlags = CPU_ACCESS_WRITE;
 				desc.MiscFlags = 0;
 				desc.StructureByteStride = 0;
 				desc.Usage = USAGE_DYNAMIC;
-				SubresourceData data = { 0 };
+				SubresourceData data;
 				data.pSysMem = vertices.data();
 				hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_saturation);
 			}
@@ -1390,14 +1390,14 @@ void wiColorPicker::Render(wiGUI* gui)
 				vertices.push_back({ XMFLOAT4((__colorpicker_radius + __colorpicker_width) * x, (__colorpicker_radius + __colorpicker_width) * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
 			}
 
-			GPUBufferDesc desc = { 0 };
+			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = CPU_ACCESS_WRITE;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
 			desc.Usage = USAGE_DYNAMIC;
-			SubresourceData data = { 0 };
+			SubresourceData data;
 			data.pSysMem = vertices.data();
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_hue);
 		}
@@ -1416,14 +1416,14 @@ void wiColorPicker::Render(wiGUI* gui)
 				vertices.push_back({ XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1), XMFLOAT4(1,1,1,1) });
 			}
 
-			GPUBufferDesc desc = { 0 };
+			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
 			desc.Usage = USAGE_IMMUTABLE;
-			SubresourceData data = { 0 };
+			SubresourceData data;
 			data.pSysMem = vertices.data();
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_picker);
 		}
@@ -1439,14 +1439,14 @@ void wiColorPicker::Render(wiGUI* gui)
 			vertices.push_back({ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
 			vertices.push_back({ XMFLOAT4(_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
 
-			GPUBufferDesc desc = { 0 };
+			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
 			desc.Usage = USAGE_IMMUTABLE;
-			SubresourceData data = { 0 };
+			SubresourceData data;
 			data.pSysMem = vertices.data();
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
 		}
