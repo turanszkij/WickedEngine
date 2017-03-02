@@ -1033,7 +1033,7 @@ void wiRenderer::SetUpStates()
 	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
-	rs.ConservativeRasterizationEnable = true;
+	rs.ConservativeRasterizationEnable = false; // do it in the shader for now...
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
 
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
@@ -3941,10 +3941,11 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	{
 		return;
 	}
-	//if (!GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION))
-	//{
-	//	return;
-	//}
+	if( !GetDevice()->CheckCapability( GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS ) )
+	{
+		// TODO: support
+		return;
+	}
 
 	GetDevice()->EventBegin("Voxelize Scene", threadID);
 	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);

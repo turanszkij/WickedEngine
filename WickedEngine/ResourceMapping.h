@@ -80,37 +80,26 @@
 
 // Automatically binds resources on the shader side:
 
-#define STRUCTUREDBUFFER_X(name, type, slot) StructuredBuffer< type > name : register(t ## slot)
-#define STRUCTUREDBUFFER(name, type, slot) STRUCTUREDBUFFER_X(name, type, slot)
-#define RWSTRUCTUREDBUFFER_X(name, type, slot) RWStructuredBuffer< type > name : register(u ## slot)
-#define RWSTRUCTUREDBUFFER(name, type, slot) RWSTRUCTUREDBUFFER_X(name, type, slot)
+#define STRUCTUREDBUFFER(name, type, slot) StructuredBuffer< type > name : register(t ## slot)
+#define RWSTRUCTUREDBUFFER(name, type, slot) RWStructuredBuffer< type > name : register(u ## slot)
+#define ROVSTRUCTUREDBUFFER(name, type, slot) RasterizerOrderedStructuredBuffer< type > name : register(u ## slot)
 
 
-#define TEXTURE1D_X(name, type, slot) Texture1D< type > name : register(t ## slot);
-#define TEXTURE1D(name, type, slot) TEXTURE1D_X(name, type, slot)
-#define TEXTURE1DARRAY_X(name, type, slot) Texture1DArray< type > name : register(t ## slot);
-#define TEXTURE1DARRAY(name, type, slot) TEXTURE1DARRAY_X(name, type, slot)
-#define RWTEXTURE1D_X(name, type, slot) RWTexture1D< type > name : register(u ## slot);
-#define RWTEXTURE1D(name, type, slot) RWTEXTURE1D_X(name, type, slot)
+#define TEXTURE1D(name, type, slot) Texture1D< type > name : register(t ## slot);
+#define TEXTURE1DARRAY(name, type, slot) Texture1DArray< type > name : register(t ## slot);
+#define RWTEXTURE1D(name, type, slot) RWTexture1D< type > name : register(u ## slot);
 
-#define TEXTURE2D_X(name, type, slot) Texture2D< type > name : register(t ## slot);
-#define TEXTURE2D(name, type, slot) TEXTURE2D_X(name, type, slot)
-#define TEXTURE2DMS_X(name, type, slot) Texture2DMS< type > name : register(t ## slot);
-#define TEXTURE2DMS(name, type, slot) TEXTURE2DMS_X(name, type, slot)
-#define TEXTURE2DARRAY_X(name, type, slot) Texture2DArray< type > name : register(t ## slot);
-#define TEXTURE2DARRAY(name, type, slot) TEXTURE2DARRAY_X(name, type, slot)
-#define RWTEXTURE2D_X(name, type, slot) RWTexture2D< type > name : register(u ## slot);
-#define RWTEXTURE2D(name, type, slot) RWTEXTURE2D_X(name, type, slot)
+#define TEXTURE2D(name, type, slot) Texture2D< type > name : register(t ## slot);
+#define TEXTURE2DMS(name, type, slot) Texture2DMS< type > name : register(t ## slot);
+#define TEXTURE2DARRAY(name, type, slot) Texture2DArray< type > name : register(t ## slot);
+#define RWTEXTURE2D(name, type, slot) RWTexture2D< type > name : register(u ## slot);
+#define ROVTEXTURE2D(name, type, slot) RasterizerOrderedTexture2D< type > name : register(u ## slot);
 
-#define TEXTURECUBE_X(name, type, slot) TextureCube< type > name : register(t ## slot);
-#define TEXTURECUBE(name, type, slot) TEXTURECUBE_X(name, type, slot)
-#define TEXTURECUBEARRAY_X(name, type, slot) TextureCubeArray< type > name : register(t ## slot);
-#define TEXTURECUBEARRAY(name, type, slot) TEXTURECUBEARRAY_X(name, type, slot)
+#define TEXTURECUBE(name, type, slot) TextureCube< type > name : register(t ## slot);
+#define TEXTURECUBEARRAY(name, type, slot) TextureCubeArray< type > name : register(t ## slot);
 
-#define TEXTURE3D_X(name, type, slot) Texture3D< type > name : register(t ## slot);
-#define TEXTURE3D(name, type, slot) TEXTURE3D_X(name, type, slot)
-#define RWTEXTURE3D_X(name, type, slot) RWTexture3D< type > name : register(u ## slot);
-#define RWTEXTURE3D(name, type, slot) RWTEXTURE3D_X(name, type, slot)
-
+#define TEXTURE3D(name, type, slot) Texture3D< type > name : register(t ## slot);
+#define RWTEXTURE3D(name, type, slot) RWTexture3D< type > name : register(u ## slot);
+#define ROVTEXTURE3D(name, type, slot) RasterizerOrderedTexture3D< type > name : register(u ## slot);
 
 #endif // _RESOURCEBUFFER_MAPPING_H_

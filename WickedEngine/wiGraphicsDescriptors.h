@@ -277,10 +277,10 @@ namespace wiGraphicsTypes
 	};
 	enum GPU_QUERY_TYPE
 	{
-		GPU_QUERY_TYPE_OCCLUSION, // how many samples passed depthstencil test?
+		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depthstencil test?
 		GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
-		GPU_QUERY_TYPE_TIMESTAMP,
-		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,
+		GPU_QUERY_TYPE_TIMESTAMP,			// retrieve time point of gpu execution
+		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,	// timestamp frequency information
 	};
 
 	// Flags ////////////////////////////////////////////
@@ -324,12 +324,22 @@ namespace wiGraphicsTypes
 
 	struct ViewPort
 	{
-		FLOAT TopLeftX;
-		FLOAT TopLeftY;
-		FLOAT Width;
-		FLOAT Height;
-		FLOAT MinDepth;
-		FLOAT MaxDepth;
+		float TopLeftX;
+		float TopLeftY;
+		float Width;
+		float Height;
+		float MinDepth;
+		float MaxDepth;
+
+		ViewPort():
+			TopLeftX(0.0f),
+			TopLeftY(0.0f),
+			Width(0.0f),
+			Height(0.0f),
+			MinDepth(0.0f),
+			MaxDepth(1.0f)
+		{
+		}
 	};
 	struct VertexLayoutDesc
 	{
@@ -397,26 +407,43 @@ namespace wiGraphicsTypes
 		TEXTURE_ADDRESS_MODE AddressU;
 		TEXTURE_ADDRESS_MODE AddressV;
 		TEXTURE_ADDRESS_MODE AddressW;
-		FLOAT MipLODBias;
+		float MipLODBias;
 		UINT MaxAnisotropy;
 		COMPARISON_FUNC ComparisonFunc;
-		FLOAT BorderColor[4];
-		FLOAT MinLOD;
-		FLOAT MaxLOD;
+		float BorderColor[4];
+		float MinLOD;
+		float MaxLOD;
 	};
 	struct RasterizerStateDesc
 	{
 		FILL_MODE FillMode;
 		CULL_MODE CullMode;
-		BOOL FrontCounterClockwise;
+		bool FrontCounterClockwise;
 		INT DepthBias;
-		FLOAT DepthBiasClamp;
-		FLOAT SlopeScaledDepthBias;
-		BOOL DepthClipEnable;
-		BOOL ScissorEnable;
-		BOOL MultisampleEnable;
-		BOOL AntialiasedLineEnable;
-		BOOL ConservativeRasterizationEnable;
+		float DepthBiasClamp;
+		float SlopeScaledDepthBias;
+		bool DepthClipEnable;
+		bool ScissorEnable;
+		bool MultisampleEnable;
+		bool AntialiasedLineEnable;
+		bool ConservativeRasterizationEnable;
+		UINT ForcedSampleCount;
+
+		RasterizerStateDesc() :
+			FillMode( FILL_SOLID ),
+			CullMode( CULL_NONE ),
+			FrontCounterClockwise( false ),
+			DepthBias( 0 ),
+			DepthBiasClamp( 0.0f ),
+			SlopeScaledDepthBias( 0.0f ),
+			DepthClipEnable( false ),
+			ScissorEnable( false ),
+			MultisampleEnable( false ),
+			AntialiasedLineEnable( false ),
+			ConservativeRasterizationEnable( false ),
+			ForcedSampleCount( 0 )
+		{
+		}
 	};
 	struct DepthStencilOpDesc
 	{
@@ -427,10 +454,10 @@ namespace wiGraphicsTypes
 	};
 	struct DepthStencilStateDesc
 	{
-		BOOL DepthEnable;
+		bool DepthEnable;
 		DEPTH_WRITE_MASK DepthWriteMask;
 		COMPARISON_FUNC DepthFunc;
-		BOOL StencilEnable;
+		bool StencilEnable;
 		UINT8 StencilReadMask;
 		UINT8 StencilWriteMask;
 		DepthStencilOpDesc FrontFace;
@@ -438,7 +465,7 @@ namespace wiGraphicsTypes
 	};
 	struct RenderTargetBlendStateDesc
 	{
-		BOOL BlendEnable;
+		bool BlendEnable;
 		BLEND SrcBlend;
 		BLEND DestBlend;
 		BLEND_OP BlendOp;
@@ -449,8 +476,8 @@ namespace wiGraphicsTypes
 	};
 	struct BlendStateDesc
 	{
-		BOOL AlphaToCoverageEnable;
-		BOOL IndependentBlendEnable;
+		bool AlphaToCoverageEnable;
+		bool IndependentBlendEnable;
 		RenderTargetBlendStateDesc RenderTarget[8];
 	};
 	struct GPUBufferDesc

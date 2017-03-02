@@ -1431,8 +1431,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
 	DX11 = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
-	CONSERVATIVE_RASTERIZATION = aquiredFeatureLevel >= D3D_FEATURE_LEVEL_12_1;
-	CONSERVATIVE_RASTERIZATION = false; // TODO: correct query!
 
 	IDXGIDevice2 * pDXGIDevice;
 	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
@@ -1508,6 +1506,10 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		DEFERREDCONTEXT_SUPPORT = false;
 	}
 
+	D3D11_FEATURE_DATA_D3D11_OPTIONS2 features_2;
+	hr = device->CheckFeatureSupport( D3D11_FEATURE_D3D11_OPTIONS2, &features_2, sizeof( features_2 ) );
+	CONSERVATIVE_RASTERIZATION = features_2.ConservativeRasterizationTier >= D3D11_CONSERVATIVE_RASTERIZATION_TIER_1;
+	RASTERIZER_ORDERED_VIEWS = features_2.ROVsSupported == TRUE;
 
 	// Create a render target view
 	backBuffer = NULL;
@@ -1576,6 +1578,9 @@ bool GraphicsDevice_DX11::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
 		break;
 	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
 		return CONSERVATIVE_RASTERIZATION;
+		break;
+	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS:
+		return RASTERIZER_ORDERED_VIEWS;
 		break;
 	default:
 		break;
@@ -2377,36 +2382,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc
 }
 HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
-	//if (pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE)
-	//{
-	//	ID3D11Device3* device3 = nullptr;
-	//	if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D11Device3), (void**)&device3)))
-	//	{
-	//		D3D11_RASTERIZER_DESC2 desc;
-	//		desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
-	//		desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
-	//		desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
-	//		desc.DepthBias = pRasterizerStateDesc->DepthBias;
-	//		desc.DepthBiasClamp = pRasterizerStateDesc->DepthBiasClamp;
-	//		desc.SlopeScaledDepthBias = pRasterizerStateDesc->SlopeScaledDepthBias;
-	//		desc.DepthClipEnable = pRasterizerStateDesc->DepthClipEnable;
-	//		desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
-	//		desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
-	//		desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
-	//		desc.ConservativeRaster = D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON;
-	//		desc.ForcedSampleCount = 0;
-
-	//		pRasterizerState->desc = *pRasterizerStateDesc;
-
-	//		HRESULT hr = device3->CreateRasterizerState2(&desc, &pRasterizerState->resource_DX11_2);
-	//		SAFE_RELEASE(device3);
-	//		return hr;
-	//	}
-	//}
-
-	//LOCK();
-	//CONSERVATIVE_RASTERIZATION = false;
-	//UNLOCK();
+	pRasterizerState->desc = *pRasterizerStateDesc;
 
 	D3D11_RASTERIZER_DESC desc;
 	desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
@@ -2420,7 +2396,63 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 	desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
 	desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
 
-	pRasterizerState->desc = *pRasterizerStateDesc;
+
+	if( CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE )
+	{
+		ID3D11Device3* device3 = nullptr;
+		if( SUCCEEDED( device->QueryInterface( __uuidof( ID3D11Device3 ), ( void** )&device3 ) ) )
+		{
+			D3D11_RASTERIZER_DESC2 desc2;
+			desc2.FillMode = desc.FillMode;
+			desc2.CullMode = desc.CullMode;
+			desc2.FrontCounterClockwise = desc.FrontCounterClockwise;
+			desc2.DepthBias = desc.DepthBias;
+			desc2.DepthBiasClamp = desc.DepthBiasClamp;
+			desc2.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
+			desc2.DepthClipEnable = desc.DepthClipEnable;
+			desc2.ScissorEnable = desc.ScissorEnable;
+			desc2.MultisampleEnable = desc.MultisampleEnable;
+			desc2.AntialiasedLineEnable = desc.AntialiasedLineEnable;
+			desc2.ConservativeRaster = D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON;
+			desc2.ForcedSampleCount = ( RASTERIZER_ORDERED_VIEWS ? pRasterizerStateDesc->ForcedSampleCount : 0 );
+
+			pRasterizerState->desc = *pRasterizerStateDesc;
+
+			ID3D11RasterizerState2* rasterizer2 = nullptr;
+			HRESULT hr = device3->CreateRasterizerState2( &desc2, &rasterizer2 );
+			pRasterizerState->resource_DX11 = ( ID3D11RasterizerState* )rasterizer2;
+			SAFE_RELEASE( device3 );
+			return hr;
+		}
+	}
+	else if( RASTERIZER_ORDERED_VIEWS && pRasterizerStateDesc->ForcedSampleCount > 0 )
+	{
+		ID3D11Device1* device1 = nullptr;
+		if( SUCCEEDED( device->QueryInterface( __uuidof( ID3D11Device1 ), ( void** )&device1 ) ) )
+		{
+			D3D11_RASTERIZER_DESC1 desc1;
+			desc1.FillMode = desc.FillMode;
+			desc1.CullMode = desc.CullMode;
+			desc1.FrontCounterClockwise = desc.FrontCounterClockwise;
+			desc1.DepthBias = desc.DepthBias;
+			desc1.DepthBiasClamp = desc.DepthBiasClamp;
+			desc1.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
+			desc1.DepthClipEnable = desc.DepthClipEnable;
+			desc1.ScissorEnable = desc.ScissorEnable;
+			desc1.MultisampleEnable = desc.MultisampleEnable;
+			desc1.AntialiasedLineEnable = desc.AntialiasedLineEnable;
+			desc1.ForcedSampleCount = pRasterizerStateDesc->ForcedSampleCount;
+
+			pRasterizerState->desc = *pRasterizerStateDesc;
+
+			ID3D11RasterizerState1* rasterizer1 = nullptr;
+			HRESULT hr = device1->CreateRasterizerState1( &desc1, &rasterizer1 );
+			pRasterizerState->resource_DX11 = ( ID3D11RasterizerState* )rasterizer1;
+			SAFE_RELEASE( device1 );
+			return hr;
+		}
+	}
+
 	return device->CreateRasterizerState(&desc, &pRasterizerState->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
@@ -2759,7 +2791,7 @@ void GraphicsDevice_DX11::BindDepthStencilState(const DepthStencilState* state, 
 }
 void GraphicsDevice_DX11::BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) 
 {
-	deviceContexts[threadID]->RSSetState(state->resource_DX11_2 != nullptr ? state->resource_DX11_2 : state->resource_DX11);
+	deviceContexts[threadID]->RSSetState(state->resource_DX11);
 }
 void GraphicsDevice_DX11::BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICSTHREAD threadID) 
 {

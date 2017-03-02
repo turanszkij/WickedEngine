@@ -1,7 +1,7 @@
 #include "objectHF.hlsli"
 
-RWTEXTURE3D(output_emission, float4, 0);
-RWTEXTURE3D(output_normal, float4, 1);
+ROVTEXTURE3D(output_emission, float4, 0);
+ROVTEXTURE3D(output_normal, float4, 1);
 
 void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D)
 {

@@ -199,7 +199,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11RasterizerState*	resource_DX11;
-		ID3D11RasterizerState2*	resource_DX11_2;
 		RasterizerStateDesc desc;
 	public:
 		RasterizerState();
