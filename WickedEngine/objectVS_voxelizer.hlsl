@@ -14,7 +14,7 @@ VSOut main(Input input, uint instanceID : SV_INSTANCEID)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input);
 
 	Out.pos = mul(input.pos, WORLD);
-	Out.nor = input.nor.xyz;
+	Out.nor = normalize(mul(input.nor.xyz, (float3x3)WORLD));
 	Out.tex = input.tex.xy;
 
 	return Out;

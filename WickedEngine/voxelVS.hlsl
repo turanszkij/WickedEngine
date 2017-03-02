@@ -1,20 +1,6 @@
 #include "globals.hlsli"
 #include "cube.hlsli"
 
-inline uint to1D(uint3 coord, uint3 dim) 
-{
-	return (coord.z * dim.x * dim.y) + (coord.y * dim.x) + coord.x;
-}
-
-inline uint3 to3D(uint idx, uint3 dim) 
-{
-	const uint z = idx / (dim.x * dim.y);
-	idx -= (z * dim.x * dim.y);
-	const uint y = idx / dim.x;
-	const uint x = idx % dim.x;
-	return  uint3(x, y, z);
-}
-
 struct VSOut
 {
 	float4 pos : SV_POSITION;

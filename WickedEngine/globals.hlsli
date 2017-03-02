@@ -144,4 +144,22 @@ struct ComputeShaderInput
 	uint  groupIndex        : SV_GroupIndex;        // Flattened local index of the thread within a thread group.
 };
 
+
+// Helpers:
+
+// 3D array index to flattened 1D array index
+inline uint to1D(uint3 coord, uint3 dim)
+{
+	return (coord.z * dim.x * dim.y) + (coord.y * dim.x) + coord.x;
+}
+// flattened array index to 3D array index
+inline uint3 to3D(uint idx, uint3 dim)
+{
+	const uint z = idx / (dim.x * dim.y);
+	idx -= (z * dim.x * dim.y);
+	const uint y = idx / dim.x;
+	const uint x = idx % dim.x;
+	return  uint3(x, y, z);
+}
+
 #endif // _SHADER_GLOBALS_

@@ -305,7 +305,7 @@ protected:
 		XMFLOAT3 center;
 		XMFLOAT3 extents;
 
-		VoxelizedSceneData() :enabled(false), res(128), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)) {}
+		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)) {}
 	} static voxelSceneData;
 
 public:

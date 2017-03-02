@@ -121,7 +121,9 @@ inline void VoxelRadiance(in float3 P, inout float ao)
 		diff = abs(diff);
 		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 8);
 
-		ao *= lerp(1 - radiance.a, 1, blend);
+		// TODO
+
+		//ao *= lerp(1 - radiance.a, 1, blend);
 	}
 }
 
