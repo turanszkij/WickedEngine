@@ -103,6 +103,9 @@
     <None Include="cylinder.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="voxelHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">

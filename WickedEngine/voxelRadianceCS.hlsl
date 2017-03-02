@@ -1,7 +1,8 @@
 #include "globals.hlsli"
+#include "voxelHF.hlsli"
 
-TEXTURE3D(input_emittance, float4, 0);
-TEXTURE3D(input_normal, float3, 1);
+TEXTURE3D(input_albedo, uint, 0);
+TEXTURE3D(input_normal, uint, 1);
 RWTEXTURE3D(output, float4, 0);
 
 groupshared float4 accumulation[4 * 4 * 4];
@@ -28,28 +29,42 @@ static const float3 SAMPLES[16] = {
 [numthreads(4, 4, 4)]
 void main( uint3 DTid : SV_DispatchThreadID, uint GroupIndex : SV_GroupIndex )
 {
-	float4 emittance = input_emittance[DTid];
-	float3 normal = input_normal[DTid];
+	float4 color = DecodeColor(input_albedo[DTid]);
 
-	output[DTid] = emittance;
-	//output[DTid] = float4(normal.rgb * 0.5f + 0.5f, emittance.a);
+	if (color.a > 0)
+	{
+		float3 normal = DecodeNormal(input_normal[DTid]);
 
-	//float3 dim;
-	//input.GetDimensions(dim.x, dim.y, dim.z);
-	//float3 uvw = DTid / dim;
+		output[DTid] = float4(color.rgb, 1);
+	}
+	else
+	{
+		output[DTid] = 0;
+	}
 
-	//float occ = 0;
-	//uint count = 0;
-	//for (uint i = 0; i < 16; ++i)
-	//{
-	//	for (uint j = 1; j < 6; ++j)
-	//	{
-	//		float3 tex = uvw + j * SAMPLES[i] / dim;
-	//		occ += input.SampleLevel(sampler_linear_clamp, tex, 0).a;
 
-	//		count++;
-	//	}
-	//}
+	//float4 emittance = input_emittance[DTid];
+	//float3 normal = input_normal[DTid];
 
-	//output[DTid] = occ / count;
+	//output[DTid] = emittance;
+	////output[DTid] = float4(normal.rgb * 0.5f + 0.5f, emittance.a);
+
+	////float3 dim;
+	////input.GetDimensions(dim.x, dim.y, dim.z);
+	////float3 uvw = DTid / dim;
+
+	////float occ = 0;
+	////uint count = 0;
+	////for (uint i = 0; i < 16; ++i)
+	////{
+	////	for (uint j = 1; j < 6; ++j)
+	////	{
+	////		float3 tex = uvw + j * SAMPLES[i] / dim;
+	////		occ += input.SampleLevel(sampler_linear_clamp, tex, 0).a;
+
+	////		count++;
+	////	}
+	////}
+
+	////output[DTid] = occ / count;
 }

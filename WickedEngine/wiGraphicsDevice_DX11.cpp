@@ -2581,7 +2581,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	deviceContexts[threadID]->RSSetViewports(NumViewports, pd3dViewPorts);
 	SAFE_DELETE_ARRAY(pd3dViewPorts);
 }
-void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, Texture* const *ppUAVs, int slotUAV, int countUAV,
+void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUUnorderedResource* const *ppUAVs, int slotUAV, int countUAV,
 	GRAPHICSTHREAD threadID, UINT arrayIndex)
 {
 	ID3D11RenderTargetView* renderTargetViews[8];

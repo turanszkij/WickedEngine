@@ -52,6 +52,7 @@
     <None Include="tangentComputeHF.hlsli" />
     <None Include="uvsphere.hlsli" />
     <None Include="volumeLightHF.hlsli" />
+    <None Include="voxelHF.hlsli" />
     <None Include="windHF.hlsli" />
   </ItemGroup>
   <ItemGroup>

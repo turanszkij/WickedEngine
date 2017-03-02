@@ -3941,11 +3941,6 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 	{
 		return;
 	}
-	if( !GetDevice()->CheckCapability( GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS ) )
-	{
-		// TODO: support
-		return;
-	}
 
 	GetDevice()->EventBegin("Voxelize Scene", threadID);
 	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
@@ -3959,7 +3954,7 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		desc.Height = voxelSceneData.res;
 		desc.Depth = voxelSceneData.res;
 		desc.MipLevels = 1;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.Format = FORMAT_R32_UINT;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
@@ -3968,9 +3963,6 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] = new Texture3D;
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_ALBEDO]);
 		assert(SUCCEEDED(hr));
-
-
-		desc.Format = FORMAT_R11G11B10_FLOAT;
 
 		textures[TEXTYPE_3D_VOXELSCENE_NORMAL] = new Texture3D;
 		hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_NORMAL]);
@@ -4006,11 +3998,12 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-		Texture* UAVs[] = { textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
-		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 2, threadID);
-		static const float color[] = { 0,0,0,0 };
+		float color[] = { 0,0,0,0 };
 		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], color, threadID);
 		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], color, threadID);
+
+		GPUUnorderedResource* UAVs[] = { textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
+		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 2, threadID);
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
