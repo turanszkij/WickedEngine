@@ -9,7 +9,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 	float4 albedo = DEGAMMA(xBaseColorMap.Sample(sampler_linear_wrap, tex));
 
 
-	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceRemap;
+	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 	uint res = floor(g_xWorld_VoxelRadianceDataRes);
 	uint3 writecoord = floor(uvw * res);
