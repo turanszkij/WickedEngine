@@ -1,24 +1,46 @@
 #ifndef _VOXEL_HF_
 #define _VOXEL_HF_
 
-// Encode specified color (range 0.0f-1.0f), so that each channel is
-// stored in 8 bits of an unsigned integer.
+static const float __hdrRange = 10.0f;
+
+// Encode HDR color to a 32 bit uint
+// Alpha is 1 bit + 7 bit HDR remapping
 uint EncodeColor(in float4 color)
 {
-	uint4 iColor = uint4(color*255.0f);
-	uint colorMask = (iColor.a << 24u) | (iColor.r << 16u) | (iColor.g << 8u) | iColor.b;
+	// normalize color to LDR
+	float hdr = length(color.rgb);
+	color.rgb /= hdr;
+
+	// encode LDR color and HDR range
+	uint3 iColor = uint3(color.rgb * 255.0f);
+	uint iHDR = (uint)(saturate(hdr / __hdrRange) * 127);
+	uint colorMask = (iHDR << 24u) | (iColor.r << 16u) | (iColor.g << 8u) | iColor.b;
+
+	// encode alpha into highest bit
+	uint iAlpha = (color.a > 0 ? 1u : 0u);
+	colorMask |= iAlpha << 31u;
+
 	return colorMask;
 }
 
-// Decode specified mask into a float3 color (range 0.0f-1.0f).
+// Decode 32 bit uint into HDR color with 1 bit alpha
 float4 DecodeColor(in uint colorMask)
 {
+	float hdr;
 	float4 color;
-	color.a = (colorMask >> 24u) & 0x000000ff;
+
+	hdr = (colorMask >> 24u) & 0x0000007f;
 	color.r = (colorMask >> 16u) & 0x000000ff;
 	color.g = (colorMask >> 8u) & 0x000000ff;
 	color.b = colorMask & 0x000000ff;
-	color /= 255.0f;
+
+	hdr /= 127.0f;
+	color.rgb /= 255.0f;
+
+	color.rgb *= hdr * __hdrRange;
+
+	color.a = (colorMask >> 31u) & 0x00000001;
+
 	return color;
 }
 

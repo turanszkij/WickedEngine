@@ -45,7 +45,6 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 			albedo.rgb *= diffuse;
 		}
 
-
 		uint color_encoded = EncodeColor(albedo);
 		uint normal_encoded = EncodeNormal(N);
 

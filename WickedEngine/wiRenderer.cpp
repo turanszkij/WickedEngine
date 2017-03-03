@@ -4234,7 +4234,7 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Height;
 		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Depth;
 		desc.MipLevels = 0;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
