@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 
-TEXTURE3D(input_albedo, uint, 0);
-TEXTURE3D(input_normal, uint, 1);
+TEXTURE3D(input_emission, float4, 0);
+//TEXTURE3D(input_normal, float4, 1);
 RWTEXTURE3D(output, float4, 0);
 
 groupshared float4 accumulation[4 * 4 * 4];
@@ -29,11 +29,11 @@ static const float3 SAMPLES[16] = {
 [numthreads(4, 4, 4)]
 void main( uint3 DTid : SV_DispatchThreadID, uint GroupIndex : SV_GroupIndex )
 {
-	float4 color = DecodeColor(input_albedo[DTid]);
+	float4 color = input_emission[DTid];
 
 	if (color.a > 0)
 	{
-		float3 normal = DecodeNormal(input_normal[DTid]);
+		//float3 normal = input_normal[DTid];
 
 		output[DTid] = float4(color.rgb, 1);
 	}

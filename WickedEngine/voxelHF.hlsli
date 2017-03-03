@@ -1,6 +1,12 @@
 #ifndef _VOXEL_HF_
 #define _VOXEL_HF_
 
+struct VoxelType
+{
+	uint colorMask;
+	//uint normalMask;
+};
+
 static const float __hdrRange = 10.0f;
 
 // Encode HDR color to a 32 bit uint

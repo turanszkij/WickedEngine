@@ -280,8 +280,7 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawForShadowMap(threadID);
 	}
 
-	wiRenderer::VoxelizeScene(threadID);
-	wiRenderer::ComputeVoxelRadiance(threadID);
+	wiRenderer::VoxelRadiance(threadID);
 }
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {

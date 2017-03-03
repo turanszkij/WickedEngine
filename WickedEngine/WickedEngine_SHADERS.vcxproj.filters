@@ -531,6 +531,9 @@
     <FxCompile Include="objectPS_voxelizer.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="voxelSceneCopyClearCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

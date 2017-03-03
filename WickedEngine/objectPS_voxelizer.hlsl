@@ -1,8 +1,7 @@
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 
-RWTEXTURE3D(output_albedo, uint, 0);
-RWTEXTURE3D(output_normal, uint, 1);
+RWSTRUCTUREDBUFFER(output, VoxelType, 0);
 
 void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D)
 {
@@ -49,7 +48,8 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		uint normal_encoded = EncodeNormal(N);
 
 		// output:
-		InterlockedMax(output_albedo[writecoord], color_encoded);
-		InterlockedMax(output_normal[writecoord], normal_encoded);
+		uint id = to1D(writecoord, g_xWorld_VoxelRadianceDataRes);
+		InterlockedMax(output[id].colorMask, color_encoded);
+		//InterlockedMax(output[id].normalMask, normal_encoded);
 	}
 }

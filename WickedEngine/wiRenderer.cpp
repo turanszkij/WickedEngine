@@ -589,6 +589,8 @@ void wiRenderer::LoadBuffers()
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(LightArrayType);
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTARRAY]);
+
+	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
 
 void wiRenderer::LoadShaders()
@@ -777,6 +779,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELRADIANCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelRadianceCS.cso", wiResourceManager::COMPUTESHADER));
 	
 
@@ -3935,38 +3938,48 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd();
 }
 
-void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
+void wiRenderer::VoxelRadiance( GRAPHICSTHREAD threadID )
 {
-	if (!GetVoxelRadianceEnabled())
+	if( !GetVoxelRadianceEnabled() )
 	{
 		return;
 	}
 
-	GetDevice()->EventBegin("Voxelize Scene", threadID);
-	wiProfiler::GetInstance().BeginRange("Voxelize Scene", wiProfiler::DOMAIN_GPU, threadID);
+	GetDevice()->EventBegin( "Voxel Radiance", threadID );
+	wiProfiler::GetInstance().BeginRange( "Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID );
 
 
-	if (textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] == nullptr || textures[TEXTYPE_3D_VOXELSCENE_NORMAL] == nullptr)
+	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
 		Texture3DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = voxelSceneData.res;
 		desc.Height = voxelSceneData.res;
 		desc.Depth = voxelSceneData.res;
-		desc.MipLevels = 1;
-		desc.Format = FORMAT_R32_UINT;
+		desc.MipLevels = 0;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
+		desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
 
-		textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] = new Texture3D;
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_ALBEDO]);
+		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
+		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
+	}
+	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
+	{
+		GPUBufferDesc desc;
+		desc.StructureByteStride = sizeof(UINT) /** 2*/;
+		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
 
-		textures[TEXTYPE_3D_VOXELSCENE_NORMAL] = new Texture3D;
-		hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELSCENE_NORMAL]);
-		assert(SUCCEEDED(hr));
+		resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
+		HRESULT hr = GetDevice()->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
+		assert(hr);
 	}
 
 	CulledList culledObjects;
@@ -3998,18 +4011,28 @@ void wiRenderer::VoxelizeScene(GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-		float color[] = { 0,0,0,0 };
-		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], color, threadID);
-		GetDevice()->ClearRenderTarget(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], color, threadID);
-
-		GPUUnorderedResource* UAVs[] = { textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], textures[TEXTYPE_3D_VOXELSCENE_NORMAL] };
-		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 2, threadID);
+		GPUUnorderedResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
+		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 		voxelSceneData.center = center;
 	}
 
+	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+	GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+	GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+	//GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCE], threadID);
+	//GetDevice()->Dispatch((UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), threadID);
+	GetDevice()->BindCS(nullptr, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+
+	GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
+
+	GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+	GetDevice()->BindResourcePS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd();
@@ -4207,65 +4230,6 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
-	GetDevice()->EventEnd();
-}
-void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
-{
-	if (!GetVoxelRadianceEnabled())
-	{
-		return;
-	}
-
-	if (textures[TEXTYPE_3D_VOXELSCENE_ALBEDO] == nullptr)
-	{
-		assert(0);
-		return;
-	}
-
-	GetDevice()->EventBegin("Compute Voxel Radiance", threadID);
-	wiProfiler::GetInstance().BeginRange("Compute Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
-
-
-	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
-	{
-		Texture3DDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Width;
-		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Height;
-		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Depth;
-		desc.MipLevels = 0;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.Usage = USAGE_DEFAULT;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
-
-		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
-		assert(SUCCEEDED(hr));
-	}
-
-	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE_ALBEDO], 0, threadID);
-	GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELSCENE_NORMAL], 1, threadID);
-	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-
-	Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
-
-	GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCE], threadID);
-	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 4.f), (UINT)ceilf(desc.Height / 4.f), (UINT)ceilf(desc.Depth / 4.f), threadID);
-	GetDevice()->BindCS(nullptr, threadID);
-
-
-	GetDevice()->UnBindResources(0, 2, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
-
-	GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
-
-	GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
-	GetDevice()->BindResourcePS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
-
-	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd();
 }
 
