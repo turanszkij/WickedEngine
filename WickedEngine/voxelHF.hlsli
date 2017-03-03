@@ -1,7 +1,6 @@
 #ifndef _VOXEL_HF_
 #define _VOXEL_HF_
 
-
 // Encode specified color (range 0.0f-1.0f), so that each channel is
 // stored in 8 bits of an unsigned integer.
 uint EncodeColor(in float4 color)

@@ -1,8 +1,8 @@
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 
-ROVTEXTURE3D(output_albedo, uint, 0);
-ROVTEXTURE3D(output_normal, uint, 1);
+RWTEXTURE3D(output_albedo, uint, 0);
+RWTEXTURE3D(output_normal, uint, 1);
 
 void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D)
 {

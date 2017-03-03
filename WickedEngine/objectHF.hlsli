@@ -115,9 +115,9 @@ inline void VoxelRadiance(in float3 P, inout float ao)
 	[branch]
 	if (g_xWorld_VoxelRadianceRemap > 0)
 	{
-		float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceRemap;
+		float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
 		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-		float4 radiance = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, 0);
+		float4 radiance = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, 2);
 		diff = abs(diff);
 		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 8);
 

@@ -4233,12 +4233,12 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 		desc.Width = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Width;
 		desc.Height = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Height;
 		desc.Depth = ((Texture3D*)textures[TEXTYPE_3D_VOXELSCENE_ALBEDO])->GetDesc().Depth;
-		desc.MipLevels = 1;
+		desc.MipLevels = 0;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
+		desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
 
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
@@ -4259,6 +4259,8 @@ void wiRenderer::ComputeVoxelRadiance(GRAPHICSTHREAD threadID)
 
 	GetDevice()->UnBindResources(0, 2, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+
+	GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
 
 	GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
 	GetDevice()->BindResourcePS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
