@@ -129,43 +129,72 @@ static const float3 SAMPLES[16] = {
 	float3(0.0975089, -0.329594, 0.609803)
 };
 
-inline void VoxelRadiance(in float3 N, in float3 P, inout float ao)
+inline void VoxelRadiance(in float3 N, in float3 P, inout float3 diffuse, inout float3 specular, inout float ao)
 {
-	//[branch]
-	//if (g_xWorld_VoxelRadianceRemap > 0)
-	//{
-	//	uint3 dim;
-	//	uint mips;
-	//	texture_voxelradiance.GetDimensions(0, dim.x, dim.y, dim.z, mips);
+	[branch]
+	if (g_xWorld_VoxelRadianceRemap > 0)
+	{
+		uint3 dim;
+		uint mips;
+		texture_voxelradiance.GetDimensions(0, dim.x, dim.y, dim.z, mips);
 
-	//	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
-	//	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-	//	diff = abs(diff);
-	//	float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 8);
+		float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
+		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		diff = abs(diff);
+		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 8);
 
-	//	float occ = 0;
-	//	for (uint s = 0; s < 16; ++s)
-	//	{
-	//		uint step = 0;
-	//		float mip = 0;
-	//		for (step; step < (uint)g_xWorld_VoxelRadianceDataRes; ++step)
-	//		{
-	//			uvw += (1 + mip) * normalize(N * 2 + SAMPLES[s]) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
-	//			float opa = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, mip).a;
-	//			mip += 0.7f;
+		//float occ = 0;
+		//for (uint s = 0; s < 16; ++s)
+		//{
+		//	uint step = 0;
+		//	float mip = 0;
+		//	for (step; step < (uint)g_xWorld_VoxelRadianceDataRes; ++step)
+		//	{
+		//		uvw += (1 + mip) * normalize(N * 2 + SAMPLES[s]) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
+		//		float opa = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, mip).a;
+		//		mip += 0.7f;
 
-	//			if (opa > 0.99f || mip >= (float)mips || any(uvw - saturate(uvw)))
-	//			{
-	//				break;
-	//			}
-	//		}
-	//		occ += step;
-	//	}
-	//	occ /= 16.0f;
-	//	occ = 1 - occ;
+		//		if (opa > 0.99f || mip >= (float)mips || any(uvw - saturate(uvw)))
+		//		{
+		//			break;
+		//		}
+		//	}
+		//	occ += step;
+		//}
+		//occ /= 16.0f;
+		//occ = 1 - occ;
 
-	//	ao *= lerp(occ, 1, blend);
-	//}
+		float4 radiance = 0;
+		for (uint cone = 0; cone < 1; ++cone)
+		{
+			float4 _radiance = 0;
+			float step = 0;
+			float dist = 0;
+			for (int i = 0; i < g_xWorld_VoxelRadianceDataRes; ++i)
+			{
+				step++;
+
+				uvw += (1 + dist) * normalize(N * 20 + SAMPLES[cone]) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
+
+				if (any(uvw - saturate(uvw)))
+					break;
+
+				float4 vox = texture_voxelradiance.SampleLevel(sampler_linear_clamp, uvw, dist).a;
+				_radiance += vox;
+
+				if (_radiance.a > 0.9 || dist >= (float)mips)
+					break;
+
+				dist += 0.7f * step;
+			}
+			_radiance /= step;
+			radiance += _radiance;
+		}
+		radiance /= 1.0f;
+
+		//diffuse += lerp(radiance.rgb, 0, blend);
+		ao *= lerp(1 - radiance.a, 1, blend);
+	}
 }
 
 inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
@@ -325,7 +354,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_VOXELRADIANCE																						\
-	VoxelRadiance(N, P, ao);
+	VoxelRadiance(N, P, diffuse, specular, ao);
 
 #define OBJECT_PS_LIGHT_END																							\
 	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * albedo + specular;
