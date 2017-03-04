@@ -110,61 +110,6 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	color.a = 1;
 }
 
-static const float3 CONES[] = {
-	float3(0,0,0),
-	float3(0.355512, -0.709318, -0.102371),
-	float3(0.140679, -0.475516, -0.0639818),
-	float3(-0.0796121, 0.158842, -0.677075),
-	float3(-0.207641, 0.414286, 0.187755),
-	float3(0.63864, -0.114214, 0.262857),
-	float3(0.0975089, -0.329594, 0.609803)
-};
-inline void VoxelRadiance(in float3 N, in float3 P, inout float3 diffuse, inout float3 specular, inout float ao)
-{
-	[branch]
-	if (g_xWorld_VoxelRadianceRemap > 0)
-	{
-		uint3 dim;
-		uint mips;
-		texture_voxelradiance.GetDimensions(0, dim.x, dim.y, dim.z, mips);
-
-		float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
-		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-		diff = abs(diff);
-		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
-
-		float4 radiance = 0;
-		for (uint cone = 0; cone < 7; ++cone)
-		{
-			float4 _radiance = 0;
-			float step = 0;
-			float3 tc = uvw;
-			for (int i = 0; i < g_xWorld_VoxelRadianceDataRes; ++i)
-			{
-				step++;
-				float dist = 0.1f * i;
-
-				tc += (1 + dist) * normalize(N * 2 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * g_xWorld_VoxelRadianceDataSize * float3(1,-1,1);
-
-				if (any(tc - saturate(tc)))
-					break;
-
-				_radiance += texture_voxelradiance.SampleLevel(sampler_linear_clamp, tc, dist);
-
-				if (_radiance.a >= 1.0f || dist >= (float)mips)
-					break;
-
-			}
-			_radiance /= step;
-			radiance += _radiance;
-		}
-		radiance /= 7.0f;
-
-		diffuse += lerp(radiance.rgb, 0, blend);
-		ao *= lerp(1 - radiance.a, 1, blend);
-	}
-}
-
 inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
@@ -322,7 +267,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_VOXELRADIANCE																						\
-	VoxelRadiance(N, P, diffuse, specular, ao);
+	[branch]if(g_xWorld_VoxelRadianceDataRes != 0){ VoxelRadiance(N, P, diffuse, specular, ao); }
 
 #define OBJECT_PS_LIGHT_END																							\
 	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * albedo + specular;

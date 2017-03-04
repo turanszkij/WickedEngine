@@ -92,9 +92,9 @@ public:
 		XMFLOAT3 mFog;					float pad3;
 		XMFLOAT2 mScreenWidthHeight;
 		float mVoxelRadianceDataSize;
-		float mVoxelRadianceDataRes;
-		float mVoxelRadianceRemap;
+		UINT mVoxelRadianceDataRes;
 		XMFLOAT3 mVoxelRadianceDataCenter;
+		float pad4;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 

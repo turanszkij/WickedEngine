@@ -689,4 +689,60 @@ inline LightingResult TubeLight(in LightArrayType light, in float3 N, in float3 
 	return result;
 }
 
+
+
+// VOXEL RADIANCE
+
+static const float3 CONES[] = {
+	float3(0,0,0),
+	float3(-0.010735935, 0.01647018, 0.0062425877),
+	float3(-0.06533369, 0.3647007, -0.13746321),
+	float3(-0.6539235, -0.016726388, -0.53000957),
+	float3(0.40958285, 0.0052428036, -0.5591124),
+	float3(-0.1465366, 0.09899267, 0.15571679),
+	float3(-0.44122112, -0.5458797, 0.04912532),
+	float3(0.03755566, -0.10961345, -0.33040273),
+	float3(0.019100213, 0.29652783, 0.066237666),
+	float3(0.8765323, 0.011236004, 0.28265962),
+	float3(0.29264435, -0.40794238, 0.15964167)
+};
+inline void VoxelRadiance(in float3 N, in float3 P, inout float3 diffuse, inout float3 specular, inout float ao)
+{
+	uint3 dim;
+	uint mips;
+	texture_voxelradiance.GetDimensions(0, dim.x, dim.y, dim.z, mips);
+
+	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
+	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+	diff = abs(diff);
+	float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
+
+	// Cone tracing:
+	float4 radiance = 0;
+	for (uint cone = 0; cone < 11; ++cone)
+	{
+		float4 _radiance = 0;
+		float step = 0;
+		float3 tc = uvw;
+		for (uint i = 0; i < g_xWorld_VoxelRadianceDataRes; ++i)
+		{
+			step++;
+			float mip = 0.333 * i;
+
+			tc += normalize(N * 2 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
+
+			_radiance += texture_voxelradiance.SampleLevel(sampler_linear_clamp, tc, mip);
+
+			if (_radiance.a >= 1.0f || mip >= (float)mips || any(tc - saturate(tc)))
+				break;
+		}
+		_radiance /= step;
+		radiance += _radiance;
+	}
+	radiance /= 11.0f;
+
+	diffuse += lerp(radiance.rgb, 0, blend);
+	ao *= lerp(1 - radiance.a, 1, blend);
+}
+
 #endif // _LIGHTING_HF_

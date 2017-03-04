@@ -4325,8 +4325,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mZenith = world.zenith;
 	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
 	value.mVoxelRadianceDataSize = voxelSceneData.voxelsize;
-	value.mVoxelRadianceDataRes = (float)voxelSceneData.res;
-	value.mVoxelRadianceRemap = (GetVoxelRadianceEnabled() ? voxelSceneData.voxelsize / voxelSceneData.res : 0.0f);
+	value.mVoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (UINT)voxelSceneData.res : 0;
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)

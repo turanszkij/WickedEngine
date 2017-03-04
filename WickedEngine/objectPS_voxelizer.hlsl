@@ -7,13 +7,12 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 {
 	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-	uint res = floor(g_xWorld_VoxelRadianceDataRes);
-	uint3 writecoord = floor(uvw * res);
+	uint3 writecoord = floor(uvw * g_xWorld_VoxelRadianceDataRes);
 
 	[branch]
-	if (writecoord.x > 0 && writecoord.x < res
-		&& writecoord.y > 0 && writecoord.y < res
-		&& writecoord.z > 0 && writecoord.z < res)
+	if (writecoord.x > 0 && writecoord.x < g_xWorld_VoxelRadianceDataRes
+		&& writecoord.y > 0 && writecoord.y < g_xWorld_VoxelRadianceDataRes
+		&& writecoord.z > 0 && writecoord.z < g_xWorld_VoxelRadianceDataRes)
 	{
 		float4 baseColor = DEGAMMA(g_xMat_baseColor * float4(instanceColor, 1) * xBaseColorMap.Sample(sampler_linear_wrap, tex));
 		float4 color = baseColor;
