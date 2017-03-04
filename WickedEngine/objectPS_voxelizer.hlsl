@@ -3,21 +3,21 @@
 
 RWSTRUCTUREDBUFFER(output, VoxelType, 0);
 
-void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D)
+void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D, float3 instanceColor : COLOR)
 {
-	float4 albedo = DEGAMMA(xBaseColorMap.Sample(sampler_linear_wrap, tex));
-
-
 	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 	uint res = floor(g_xWorld_VoxelRadianceDataRes);
 	uint3 writecoord = floor(uvw * res);
 
-
-	if (writecoord.x >= 0 && writecoord.x < res
-		&& writecoord.y >= 0 && writecoord.y < res
-		&& writecoord.z >= 0 && writecoord.z < res)
+	[branch]
+	if (writecoord.x > 0 && writecoord.x < res
+		&& writecoord.y > 0 && writecoord.y < res
+		&& writecoord.z > 0 && writecoord.z < res)
 	{
+		float4 baseColor = DEGAMMA(g_xMat_baseColor * float4(instanceColor, 1) * xBaseColorMap.Sample(sampler_linear_wrap, tex));
+		float4 color = baseColor;
+		float emissive = g_xMat_emissive;
 
 		[branch]
 		if (g_xFrame_SunLightArrayIndex >= 0)
@@ -41,10 +41,12 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 				}
 			}
 
-			albedo.rgb *= diffuse;
+			color.rgb *= diffuse;
 		}
+		
+		OBJECT_PS_EMISSIVE
 
-		uint color_encoded = EncodeColor(albedo);
+		uint color_encoded = EncodeColor(color);
 		uint normal_encoded = EncodeNormal(N);
 
 		// output:

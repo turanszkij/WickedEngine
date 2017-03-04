@@ -4017,19 +4017,22 @@ void wiRenderer::VoxelRadiance( GRAPHICSTHREAD threadID )
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 		voxelSceneData.center = center;
+
+
+
+
+		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+		//GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCE], threadID);
+		//GetDevice()->Dispatch((UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), threadID);
+		GetDevice()->BindCS(nullptr, threadID);
+		GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+
+		GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
 	}
-
-	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
-	GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
-	GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-	//GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCE], threadID);
-	//GetDevice()->Dispatch((UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), threadID);
-	GetDevice()->BindCS(nullptr, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
-
-	GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
 
 	GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
 	GetDevice()->BindResourcePS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);

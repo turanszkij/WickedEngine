@@ -5,6 +5,7 @@ struct GSInput
 	float4 pos : SV_POSITION;
 	float3 nor : NORMAL;
 	float2 tex : TEXCOORD;
+	float3 instanceColor : COLOR;
 };
 
 struct GSOutput
@@ -13,6 +14,7 @@ struct GSOutput
 	float3 N : NORMAL;
 	float2 tex : TEXCOORD;
 	float3 P : POSITION3D;
+	float3 instanceColor : COLOR;
 };
 
 [maxvertexcount(3)]
@@ -31,7 +33,7 @@ void main(
 	for (uint i = 0; i < 3; ++i)
 	{
 		// voxel space pos:
-		output[i].pos = float4(input[i].pos.xyz / g_xWorld_VoxelRadianceDataSize - g_xWorld_VoxelRadianceDataCenter, 1);
+		output[i].pos = float4((input[i].pos.xyz - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataSize, 1);
 
 		// Project onto dominant axis:
 		if (maxi == 0)
@@ -51,6 +53,7 @@ void main(
 		output[i].N = input[i].nor;
 		output[i].tex = input[i].tex;
 		output[i].P = input[i].pos.xyz;
+		output[i].instanceColor = input[i].instanceColor;
 	}
 
 
