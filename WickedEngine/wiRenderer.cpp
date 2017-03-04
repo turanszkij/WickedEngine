@@ -3979,7 +3979,7 @@ void wiRenderer::VoxelRadiance( GRAPHICSTHREAD threadID )
 
 		resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
 		HRESULT hr = GetDevice()->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
-		assert(hr);
+		assert(SUCCEEDED(hr));
 	}
 
 	CulledList culledObjects;
@@ -4327,6 +4327,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mVoxelRadianceDataSize = voxelSceneData.voxelsize;
 	value.mVoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (UINT)voxelSceneData.res : 0;
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;
+	value.mVoxelRadianceDataConeTracingQuality = voxelSceneData.coneTracingQuality;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)
 	{

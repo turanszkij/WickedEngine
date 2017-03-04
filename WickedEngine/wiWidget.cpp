@@ -482,6 +482,7 @@ void wiSlider::Update(wiGUI* gui)
 		value /= step;
 		value = wiMath::Lerp(start, end, value);
 		args.fValue = value;
+		args.iValue = (int)value;
 		onSlide(args);
 		gui->ActivateWidget(this);
 	}

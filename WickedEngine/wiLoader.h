@@ -680,7 +680,7 @@ struct SHCAM{
 		XMStoreFloat4x4( &View, rView);
 	}
 	void Create_Ortho(float size){
-		XMMATRIX rProjection = XMMatrixOrthographicOffCenterLH(-size*0.5f,size*0.5f,-size*0.5f,size*0.5f,nearplane, farplane);
+		XMMATRIX rProjection = XMMatrixOrthographicOffCenterLH(-size*0.5f,size*0.5f,-size*0.5f,size*0.5f,nearplane,farplane);
 		XMStoreFloat4x4( &Projection, rProjection);
 		this->size=size;
 	}
@@ -706,6 +706,16 @@ struct SHCAM{
 		XMStoreFloat4x4( &View , 
 			XMMatrixLookAtLH(rEye,rAt,rUp)
 			);
+	}
+	void Update(const XMMATRIX& rot, const XMVECTOR& tra)
+	{
+		XMVECTOR rEye = XMVectorAdd(XMLoadFloat3(&Eye), tra);
+		XMVECTOR rAt = XMVectorAdd(XMVector3Transform(XMLoadFloat3(&At), rot), tra);
+		XMVECTOR rUp = XMVector3Transform(XMLoadFloat3(&Up), rot);
+
+		XMStoreFloat4x4(&View,
+			XMMatrixLookAtLH(rEye, rAt, rUp)
+		);
 	}
 	XMMATRIX getVP(){
 		return XMMatrixTranspose(XMLoadFloat4x4(&View)*XMLoadFloat4x4(&Projection));

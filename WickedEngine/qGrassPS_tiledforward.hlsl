@@ -24,6 +24,8 @@ float4 main(QGS_OUT PSIn) : SV_Target
 	float sss = 0;
 	float2 pixel = PSIn.pos.xy; 
 	float depth = PSIn.pos.z;
+	float3 diffuse = 0;
+	float3 specular = 0;
 
 	OBJECT_PS_LIGHT_BEGIN
 

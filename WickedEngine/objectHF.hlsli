@@ -206,6 +206,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 ////////////
 
 #define OBJECT_PS_MAKE_COMMON												\
+	float3 diffuse = 0;														\
+	float3 specular = 0;													\
 	float3 N = normalize(input.nor);										\
 	float3 P = input.pos3D;													\
 	float3 V = g_xCamera_CamPos - P;										\
@@ -254,7 +256,6 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	ParallaxOcclusionMapping(UV, V, TBN);
 
 #define OBJECT_PS_LIGHT_BEGIN																						\
-	float3 diffuse, specular;																						\
 	BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
 
 #define OBJECT_PS_REFRACTION																						\
@@ -267,7 +268,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_VOXELRADIANCE																						\
-	[branch]if(g_xWorld_VoxelRadianceDataRes != 0){ VoxelRadiance(N, P, diffuse, specular, ao); }
+	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
 
 #define OBJECT_PS_LIGHT_END																							\
 	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * albedo + specular;

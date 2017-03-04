@@ -22,6 +22,7 @@ public:
 	wiCheckBox* voxelRadianceCheckBox;
 	wiCheckBox* voxelRadianceDebugCheckBox;
 	wiSlider*	voxelRadianceVoxelSizeSlider;
+	wiSlider*	voxelRadianceConeTracingSlider;
 	wiCheckBox* partitionBoxesCheckBox;
 	wiCheckBox* boneLinesCheckBox;
 	wiCheckBox* wireFrameCheckBox;

@@ -94,7 +94,7 @@ public:
 		float mVoxelRadianceDataSize;
 		UINT mVoxelRadianceDataRes;
 		XMFLOAT3 mVoxelRadianceDataCenter;
-		float pad4;
+		UINT mVoxelRadianceDataConeTracingQuality;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 
@@ -304,8 +304,9 @@ protected:
 		float voxelsize;
 		XMFLOAT3 center;
 		XMFLOAT3 extents;
+		int coneTracingQuality;
 
-		VoxelizedSceneData() :enabled(false), res(64), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)) {}
+		VoxelizedSceneData() :enabled(false), res(64), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8) {}
 	} static voxelSceneData;
 
 public:
@@ -355,6 +356,8 @@ public:
 	static float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
 	//static void SetVoxelRadianceResolution(int value) { voxelSceneData.res = value; }
 	static int GetVoxelRadianceResolution() { return voxelSceneData.res; }
+	static void SetVoxelRadianceConeTracingQuality(int value) { voxelSceneData.coneTracingQuality = value; }
+	static int GetVoxelRadianceConeTracingQuality() { return voxelSceneData.coneTracingQuality; }
 	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};

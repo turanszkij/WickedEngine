@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 600));
+	rendererWindow->SetSize(XMFLOAT2(400, 640));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -67,6 +67,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 		wiRenderer::SetVoxelRadianceVoxelSize(args.fValue);
 	});
 	rendererWindow->AddWidget(voxelRadianceVoxelSizeSlider);
+
+	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel Radiance Cone Tracing Quality: ");
+	voxelRadianceConeTracingSlider->SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
+	voxelRadianceConeTracingSlider->SetSize(XMFLOAT2(100, 30));
+	voxelRadianceConeTracingSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceConeTracingSlider->SetValue((float)wiRenderer::GetVoxelRadianceConeTracingQuality());
+	voxelRadianceConeTracingSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceConeTracingQuality(args.iValue);
+	});
+	rendererWindow->AddWidget(voxelRadianceConeTracingSlider);
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
@@ -292,6 +302,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(voxelRadianceCheckBox);
 	SAFE_DELETE(voxelRadianceDebugCheckBox);
 	SAFE_DELETE(voxelRadianceVoxelSizeSlider);
+	SAFE_DELETE(voxelRadianceConeTracingSlider);
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);

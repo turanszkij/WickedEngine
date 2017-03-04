@@ -21,6 +21,8 @@ float4 main(GS_OUT PSIn) : SV_Target
 	float ao = 1;
 	float sss = 0;
 	float2 pixel = PSIn.pos.xy;
+	float3 diffuse = 0;
+	float3 specular = 0;
 
 	OBJECT_PS_LIGHT_BEGIN
 

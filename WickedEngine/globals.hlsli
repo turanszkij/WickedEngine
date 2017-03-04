@@ -54,7 +54,7 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float		g_xWorld_VoxelRadianceDataSize;
 	uint		g_xWorld_VoxelRadianceDataRes;
 	float3		g_xWorld_VoxelRadianceDataCenter;
-	float		xPadding4_WorldCB;
+	uint		g_xWorld_VoxelRadianceConeTracingQuality;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {

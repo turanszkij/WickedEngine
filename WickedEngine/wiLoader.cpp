@@ -4027,24 +4027,24 @@ void Light::UpdateLight()
 					shadowCam_dirLight.push_back(SHCAM(size2, rot, -wiRenderer::getCamera()->zFarP * 0.5f, wiRenderer::getCamera()->zFarP * 0.5f));
 				}
 
-				XMVECTOR c, d, e, e1, e2;
-				c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-				d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-
 				if (!shadowCam_dirLight.empty()) 
 				{
+					XMVECTOR c, d, e, e1, e2;
+					c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, (float)wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+
 					// Avoid shadowmap texel swimming by aligning them to a discrete grid:
-					float f = shadowCam_dirLight[0].size * 2 / (float)wiRenderer::SHADOWRES_2D;
+					float f = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
 					e = XMVectorFloor(XMVectorLerp(d, c, lerp0) / f) * f;
-					f = shadowCam_dirLight[1].size * 2 / (float)wiRenderer::SHADOWRES_2D;
+					f = shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
 					e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) / f) * f;
-					f = shadowCam_dirLight[2].size * 2 / (float)wiRenderer::SHADOWRES_2D;
+					f = shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
 					e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) / f) * f;
 
 					XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
-					shadowCam_dirLight[0].Update(rrr*XMMatrixTranslationFromVector(e));
-					shadowCam_dirLight[1].Update(rrr*XMMatrixTranslationFromVector(e1));
-					shadowCam_dirLight[2].Update(rrr*XMMatrixTranslationFromVector(e2));
+					shadowCam_dirLight[0].Update(rrr, e);
+					shadowCam_dirLight[1].Update(rrr, e1);
+					shadowCam_dirLight[2].Update(rrr, e2);
 				}
 			}
 
