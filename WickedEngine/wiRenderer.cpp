@@ -4016,9 +4016,6 @@ void wiRenderer::VoxelRadiance( GRAPHICSTHREAD threadID )
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
-		voxelSceneData.center = center;
-
-
 
 
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);

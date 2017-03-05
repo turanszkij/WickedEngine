@@ -21,7 +21,7 @@ VSOut main( uint vertexID : SV_VERTEXID, uint instanceID : SV_INSTANCEID )
 		float3 pos = (float3)coord / g_xWorld_VoxelRadianceDataRes * 2 - 1;
 		pos.y = -pos.y;
 		pos *= g_xWorld_VoxelRadianceDataRes;
-		pos += CUBE[vertexID].xyz;
+		pos += CUBE[vertexID].xyz + float3(1,-1,1);
 		pos *= g_xWorld_VoxelRadianceDataRes * g_xWorld_VoxelRadianceDataSize / g_xWorld_VoxelRadianceDataRes;
 
 		o.pos = mul(float4(pos, 1), g_xTransform);
