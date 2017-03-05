@@ -513,9 +513,6 @@
     <FxCompile Include="downsampleDepthBuffer4xPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="voxelRadianceCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="voxelVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>

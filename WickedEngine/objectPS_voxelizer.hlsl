@@ -20,8 +20,9 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 
 		float3 diffuse = 0;
 
-		uint lightCount = (uint)g_xColor.x;
-		for (uint i = 0; i < lightCount; ++i)
+		uint lightIndexStart = (uint)g_xColor.x;
+		uint lightCount = (uint)g_xColor.y;
+		for (uint i = lightIndexStart; i < lightCount; ++i)
 		{
 			LightArrayType light = LightArray[i];
 

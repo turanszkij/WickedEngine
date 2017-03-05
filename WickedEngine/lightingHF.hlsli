@@ -731,7 +731,7 @@ inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, i
 		float4 radiance = 0;
 		for (uint cone = 0; cone < numCones; ++cone)
 		{
-			float3 coneVec = normalize(N * 2 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
+			float3 coneVec = normalize(N + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 
 			float4 _radiance = 0;
 			float step = 0;
@@ -739,7 +739,7 @@ inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, i
 			for (uint i = 0; i < 8; ++i)
 			{
 				step++;
-				float mip = 0.8f * i;
+				float mip = 0.897f * i;
 
 				tc += coneVec;
 

@@ -781,7 +781,6 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_VOXELRADIANCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelRadianceCS.cso", wiResourceManager::COMPUTESHADER));
 	
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -1515,6 +1514,21 @@ void wiRenderer::UpdatePerFrameData()
 			{
 				Frustum frustum;
 				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
+
+				for (Model* model : GetScene().models)
+				{
+					if (model->decals.empty())
+						continue;
+
+					for (Decal* decal : model->decals)
+					{
+						if ((decal->texture || decal->normal) && frustum.CheckBox(decal->bounds))
+						{
+							x.second.culledDecals.push_back(decal);
+						}
+					}
+				}
+
 				spTree_lights->getVisible(frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
 
 				if (GetVoxelRadianceEnabled())
@@ -1528,7 +1542,7 @@ void wiRenderer::UpdatePerFrameData()
 				// We wouldn't have to sort, but we need unique lights and that only works with sorted forward_list!
 				spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
 
-				int i = 0;
+				int i = (int)x.second.culledDecals.size(); // Index the light array after the decals
 				int shadowCounter_2D = 0;
 				int shadowCounter_Cube = 0;
 				for (auto& c : culling.culledLights)
@@ -1588,20 +1602,6 @@ void wiRenderer::UpdatePerFrameData()
 			std::sort(culling.culledEmittedParticleSystems.begin(), culling.culledEmittedParticleSystems.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {
 				return wiMath::DistanceSquared(camera->translation, a->bounding_box->getCenter()) > wiMath::DistanceSquared(camera->translation,b->bounding_box->getCenter());
 			});
-
-			for (Model* model : GetScene().models)
-			{
-				if (model->decals.empty())
-					continue;
-
-				for (Decal* decal : model->decals)
-				{
-					if ((decal->texture || decal->normal) && getCamera()->frustum.CheckBox(decal->bounds))
-					{
-						x.second.culledDecals.push_back(decal);
-					}
-				}
-			}
 		}
 	}
 	wiProfiler::GetInstance().EndRange(); // SPTree Culling
@@ -4012,8 +4012,12 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
 		}
 
+		const FrameCulling& culling = frameCullings[getCamera()];
+
+		// Tell the voxelizer about the lights in the light array (exclude decals)
 		MiscCB cb;
-		cb.mColor.x = (float)frameCullings[getCamera()].culledLight_count;
+		cb.mColor.x = (float)culling.culledDecals.size();
+		cb.mColor.y = cb.mColor.x + (float)culling.culledLight_count;
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 		ViewPort VP;
@@ -4033,21 +4037,23 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 
-
+		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene data. The cone tracing will operate on the 3D texture
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
 		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
 		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
 		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-		//GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCE], threadID);
-		//GetDevice()->Dispatch((UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), (UINT)(voxelSceneData.res / 4), threadID);
 		GetDevice()->BindCS(nullptr, threadID);
 		GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
 
+		// Pre-integrate the voxel texture by creating blurred mip levels:
 		GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
 	}
 
-	GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+	if (voxelHelper)
+	{
+		GetDevice()->BindResourceVS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+	}
 	GetDevice()->BindResourcePS(textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID);
