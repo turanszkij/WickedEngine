@@ -162,4 +162,11 @@ inline uint3 to3D(uint idx, uint3 dim)
 	return  uint3(x, y, z);
 }
 
+// Creates a unit cube triangle strip from just vertex ID (14 vertices)
+inline float3 CreateCube(in uint vertexID)
+{
+	uint b = 1 << vertexID;
+	return float3((0x287a & b) != 0, (0x02af & b) != 0, (0x31e3 & b) != 0);
+}
+
 #endif // _SHADER_GLOBALS_

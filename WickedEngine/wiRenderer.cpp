@@ -771,6 +771,7 @@ void wiRenderer::LoadShaders()
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_VOXELIZER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectGS_voxelizer.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_VOXEL] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
@@ -1001,7 +1002,7 @@ void wiRenderer::SetUpStates()
 	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_BACK]);
 
 	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_BACK;
+	rs.CullMode = CULL_FRONT;
 	rs.FrontCounterClockwise = true;
 	rs.DepthBias = 0;
 	rs.DepthBiasClamp = 0;
@@ -1859,7 +1860,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_CUBE], threadID);
 		GetDevice()->BindPS(nullptr, threadID);
-		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST);
+		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP);
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
@@ -1894,7 +1895,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 					// render bounding box to later read the occlusion status
 					GetDevice()->QueryBegin(&query, threadID);
-					GetDevice()->Draw(36, threadID);
+					GetDevice()->Draw(14, threadID);
 					GetDevice()->QueryEnd(&query, threadID);
 				}
 			}
@@ -2352,15 +2353,16 @@ void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr) {
 		GetDevice()->EventBegin("Debug Voxels", threadID);
 
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+		GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_EMPTY, threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 
 		GetDevice()->BindPS(pixelShaders[PSTYPE_VOXEL], threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_VOXEL], threadID);
+		GetDevice()->BindGS(geometryShaders[GSTYPE_VOXEL], threadID);
 
 		GetDevice()->BindVertexLayout(nullptr, threadID);
 		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
@@ -2374,8 +2376,9 @@ void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		GetDevice()->DrawInstanced(36, voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, threadID); // cube
+		GetDevice()->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, threadID);
 
+		GetDevice()->BindGS(nullptr, threadID);
 
 		GetDevice()->EventEnd(threadID);
 	}

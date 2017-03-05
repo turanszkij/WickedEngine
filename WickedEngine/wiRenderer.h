@@ -306,7 +306,7 @@ protected:
 		XMFLOAT3 extents;
 		int coneTracingQuality;
 
-		VoxelizedSceneData() :enabled(false), res(64), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8) {}
+		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8) {}
 	} static voxelSceneData;
 
 public:
