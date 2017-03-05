@@ -1517,6 +1517,17 @@ void wiRenderer::UpdatePerFrameData()
 				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
 				spTree_lights->getVisible(frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
 
+				if (GetVoxelRadianceEnabled())
+				{
+					// Inject lights which are inside the voxel grid too
+					AABB box;
+					box.createFromHalfWidth(voxelSceneData.center, voxelSceneData.extents);
+					spTree_lights->getVisible(box, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
+				}
+
+				// We wouldn't have to sort, but we need unique lights and that only works with sorted forward_list!
+				spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
+
 				int i = 0;
 				int shadowCounter_2D = 0;
 				int shadowCounter_Cube = 0;
@@ -3941,15 +3952,15 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd();
 }
 
-void wiRenderer::VoxelRadiance( GRAPHICSTHREAD threadID )
+void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 {
-	if( !GetVoxelRadianceEnabled() )
+	if (!GetVoxelRadianceEnabled())
 	{
 		return;
 	}
 
-	GetDevice()->EventBegin( "Voxel Radiance", threadID );
-	wiProfiler::GetInstance().BeginRange( "Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID );
+	GetDevice()->EventBegin("Voxel Radiance", threadID);
+	wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
 
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
@@ -3986,7 +3997,6 @@ void wiRenderer::VoxelRadiance( GRAPHICSTHREAD threadID )
 	}
 
 	CulledList culledObjects;
-	CulledList culledLights;
 	CulledCollection culledRenderer;
 
 	AABB bbox;
@@ -3996,12 +4006,15 @@ void wiRenderer::VoxelRadiance( GRAPHICSTHREAD threadID )
 	if (spTree != nullptr && extents.x > 0 && extents.y > 0 && extents.z > 0)
 	{
 		spTree->getVisible(bbox, culledObjects);
-		spTree_lights->getVisible(bbox, culledLights);
 
 		for (Cullable* object : culledObjects)
 		{
 			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
 		}
+
+		MiscCB cb;
+		cb.mColor.x = (float)frameCullings[getCamera()].culledLight_count;
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 		ViewPort VP;
 		VP.TopLeftX = 0;

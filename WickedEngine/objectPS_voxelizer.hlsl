@@ -18,30 +18,134 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		float4 color = baseColor;
 		float emissive = g_xMat_emissive;
 
-		[branch]
-		if (g_xFrame_SunLightArrayIndex >= 0)
+		float3 diffuse = 0;
+
+		uint lightCount = (uint)g_xColor.x;
+		for (uint i = 0; i < lightCount; ++i)
 		{
-			LightArrayType light = LightArray[g_xFrame_SunLightArrayIndex];
+			LightArrayType light = LightArray[i];
 
-			float3 L = light.directionWS;
+			LightingResult result = (LightingResult)0;
 
-			float3 diffuse = light.color.rgb * light.energy * max(dot(N, L), 0);
-
-			[branch]
-			if (light.shadowMap_index >= 0)
+			switch (light.type)
 			{
-				float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
-				ShPos.xyz /= ShPos.w;
-				float3 ShTex = ShPos.xyz*float3(1, -1, 1) / 2.0f + 0.5f;
+			case 0/*DIRECTIONAL*/:
+			{
+				float3 L = light.directionWS;
 
-				[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+				float3 lightColor = light.color.rgb * light.energy * max(dot(N, L), 0);
+
+				[branch]
+				if (light.shadowMap_index >= 0)
 				{
-					diffuse *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
+					float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+					ShPos.xyz /= ShPos.w;
+					float3 ShTex = ShPos.xyz*float3(1, -1, 1) / 2.0f + 0.5f;
+
+					[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+					{
+						lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
+					}
+				}
+
+				result.diffuse = lightColor;
+			}
+			break;
+			case 1/*POINT*/:
+			{
+				float3 L = light.positionWS - P;
+				float dist = length(L);
+
+				[branch]
+				if (dist < light.range)
+				{
+					L /= dist;
+
+					float att = (light.energy * (light.range / (light.range + 1 + dist)));
+					float attenuation = (att * (light.range - dist) / light.range);
+
+					float3 lightColor = light.color.rgb * light.energy * max(dot(N, L), 0) * attenuation;
+
+					[branch]
+					if (light.shadowMap_index >= 0) {
+						lightColor *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / light.range * (1 - light.shadowBias)).r;
+					}
+
+					result.diffuse = lightColor;
 				}
 			}
+			break;
+			case 2/*SPOT*/:
+			{
+				float3 L = light.positionWS - P;
+				float dist = length(L);
 
-			color.rgb *= diffuse;
+				[branch]
+				if (dist < light.range)
+				{
+					L /= dist;
+
+					float SpotFactor = dot(L, light.directionWS);
+					float spotCutOff = light.coneAngleCos;
+
+					[branch]
+					if (SpotFactor > spotCutOff)
+					{
+						float att = (light.energy * (light.range / (light.range + 1 + dist)));
+						float attenuation = (att * (light.range - dist) / light.range);
+						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+
+						float3 lightColor = light.color.rgb * light.energy * max(dot(N, L), 0) * attenuation;
+
+						[branch]
+						if (light.shadowMap_index >= 0)
+						{
+							float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+							ShPos.xyz /= ShPos.w;
+							float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+							[branch]
+							if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+							{
+								lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index);
+							}
+						}
+
+						result.diffuse = lightColor;
+					}
+				}
+			}
+			break;
+			}
+
+			diffuse += result.diffuse;
 		}
+
+		color.rgb *= diffuse;
+
+		//[branch]
+		//if (g_xFrame_SunLightArrayIndex >= 0)
+		//{
+		//	LightArrayType light = LightArray[g_xFrame_SunLightArrayIndex];
+
+		//	float3 L = light.directionWS;
+
+		//	float3 diffuse = light.color.rgb * light.energy * max(dot(N, L), 0);
+
+		//	[branch]
+		//	if (light.shadowMap_index >= 0)
+		//	{
+		//		float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+		//		ShPos.xyz /= ShPos.w;
+		//		float3 ShTex = ShPos.xyz*float3(1, -1, 1) / 2.0f + 0.5f;
+
+		//		[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+		//		{
+		//			diffuse *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
+		//		}
+		//	}
+
+		//	color.rgb *= diffuse;
+		//}
 		
 		OBJECT_PS_EMISSIVE
 
