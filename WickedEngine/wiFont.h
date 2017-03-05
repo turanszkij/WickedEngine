@@ -30,7 +30,7 @@ public:
 
 	wiFontProps(int posX = 0, int posY = 0, int size = -1, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
 		, int spacingX = 2, int spacingY = 1)
-		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(XMFLOAT4(1,1,1,1)), shadowColor(XMFLOAT4(0,0,0,0))
+		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(XMFLOAT4(1,1,1,1)), shadowColor(XMFLOAT4(0,0,0,1))
 	{}
 };
 

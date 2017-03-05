@@ -366,34 +366,48 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(translatorCheckBox);
 
 	wiCheckBox* isScalatorCheckBox = new wiCheckBox("S:");
-	isScalatorCheckBox->SetTooltip("Scale");
-	isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 2, 22));
-	isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
-	isScalatorCheckBox->OnClick([=](wiEventArgs args) {
-		translator->isScalator = args.bValue;
-	});
-	isScalatorCheckBox->SetCheck(translator->isScalator);
-	GetGUI().AddWidget(isScalatorCheckBox);
-
 	wiCheckBox* isRotatorCheckBox = new wiCheckBox("R:");
-	isRotatorCheckBox->SetTooltip("Rotate");
-	isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 1, 22));
-	isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
-	isRotatorCheckBox->OnClick([=](wiEventArgs args) {
-		translator->isRotator = args.bValue;
-	});
-	isRotatorCheckBox->SetCheck(translator->isRotator);
-	GetGUI().AddWidget(isRotatorCheckBox);
-
 	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T:");
-	isTranslatorCheckBox->SetTooltip("Translate");
-	isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25, 22));
-	isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
-	isTranslatorCheckBox->OnClick([=](wiEventArgs args) {
-		translator->isTranslator = args.bValue;
-	});
-	isTranslatorCheckBox->SetCheck(translator->isTranslator);
-	GetGUI().AddWidget(isTranslatorCheckBox);
+	{
+		isScalatorCheckBox->SetTooltip("Scale");
+		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 2, 22));
+		isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
+		isScalatorCheckBox->OnClick([=](wiEventArgs args) {
+			translator->isScalator = args.bValue;
+			translator->isTranslator = false;
+			translator->isRotator = false;
+			isTranslatorCheckBox->SetCheck(false);
+			isRotatorCheckBox->SetCheck(false);
+		});
+		isScalatorCheckBox->SetCheck(translator->isScalator);
+		GetGUI().AddWidget(isScalatorCheckBox);
+
+		isRotatorCheckBox->SetTooltip("Rotate");
+		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 1, 22));
+		isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
+		isRotatorCheckBox->OnClick([=](wiEventArgs args) {
+			translator->isRotator = args.bValue;
+			translator->isScalator = false;
+			translator->isTranslator = false;
+			isScalatorCheckBox->SetCheck(false);
+			isTranslatorCheckBox->SetCheck(false);
+		});
+		isRotatorCheckBox->SetCheck(translator->isRotator);
+		GetGUI().AddWidget(isRotatorCheckBox);
+
+		isTranslatorCheckBox->SetTooltip("Translate");
+		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25, 22));
+		isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
+		isTranslatorCheckBox->OnClick([=](wiEventArgs args) {
+			translator->isTranslator = args.bValue;
+			translator->isScalator = false;
+			translator->isRotator = false;
+			isScalatorCheckBox->SetCheck(false);
+			isRotatorCheckBox->SetCheck(false);
+		});
+		isTranslatorCheckBox->SetCheck(translator->isTranslator);
+		GetGUI().AddWidget(isTranslatorCheckBox);
+	}
 
 
 	wiButton* saveButton = new wiButton("Save");
