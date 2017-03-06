@@ -64,7 +64,7 @@ void Renderable2DComponent::Start()
 }
 void Renderable2DComponent::Update(float dt)
 {
-	GetGUI().Update();
+	GetGUI().Update(dt);
 }
 void Renderable2DComponent::FixedUpdate()
 {

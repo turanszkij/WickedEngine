@@ -20,7 +20,7 @@ public:
 	wiGUI(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	~wiGUI();
 
-	void Update();
+	void Update(float dt);
 	void Render();
 
 	void AddWidget(wiWidget* widget);

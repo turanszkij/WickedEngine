@@ -78,7 +78,7 @@ public:
 	void SetTextColor(const wiColor& value) { textColor = value; }
 	void SetTextShadowColor(const wiColor& value) { textShadowColor = value; }
 
-	virtual void Update(wiGUI* gui);
+	virtual void Update(wiGUI* gui, float dt);
 	virtual void Render(wiGUI* gui) = 0;
 	void RenderTooltip(wiGUI* gui);
 
@@ -100,7 +100,7 @@ public:
 	wiButton(const string& name = "");
 	virtual ~wiButton();
 
-	virtual void Update(wiGUI* gui) override;
+	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
 	void OnClick(function<void(wiEventArgs args)> func);
@@ -117,7 +117,7 @@ public:
 	wiLabel(const string& name = "");
 	virtual ~wiLabel();
 
-	virtual void Update(wiGUI* gui) override;
+	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 };
 
@@ -141,7 +141,7 @@ public:
 	void SetValue(float value);
 	float GetValue();
 
-	virtual void Update(wiGUI* gui) override;
+	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
 	void OnSlide(function<void(wiEventArgs args)> func);
@@ -161,7 +161,7 @@ public:
 	void SetCheck(bool value);
 	bool GetCheck();
 
-	virtual void Update(wiGUI* gui) override;
+	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
 	void OnClick(function<void(wiEventArgs args)> func);
@@ -206,7 +206,7 @@ public:
 	int GetSelected();
 	string GetItemText(int index);
 
-	virtual void Update(wiGUI* gui) override;
+	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
 	void OnSelect(function<void(wiEventArgs args)> func);
@@ -232,7 +232,7 @@ public:
 	void RemoveWidget(wiWidget* widget);
 	void RemoveWidgets(bool alsoDelete = false);
 
-	virtual void Update(wiGUI* gui) override;
+	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
 	virtual void SetVisible(bool value) override;
@@ -257,7 +257,7 @@ public:
 	wiColorPicker(wiGUI* gui, const string& name = "");
 	virtual ~wiColorPicker();
 
-	virtual void Update(wiGUI* gui) override;
+	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
 	XMFLOAT4 GetPickColor();

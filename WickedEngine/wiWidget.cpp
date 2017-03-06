@@ -31,7 +31,7 @@ wiWidget::wiWidget():Transform()
 wiWidget::~wiWidget()
 {
 }
-void wiWidget::Update(wiGUI* gui)
+void wiWidget::Update(wiGUI* gui, float dt )
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -195,9 +195,9 @@ wiButton::~wiButton()
 {
 
 }
-void wiButton::Update(wiGUI* gui)
+void wiButton::Update(wiGUI* gui, float dt )
 {
-	wiWidget::Update(gui);
+	wiWidget::Update(gui, dt);
 
 	if (!IsEnabled())
 	{
@@ -345,9 +345,9 @@ wiLabel::~wiLabel()
 {
 
 }
-void wiLabel::Update(wiGUI* gui)
+void wiLabel::Update(wiGUI* gui, float dt )
 {
-	wiWidget::Update(gui);
+	wiWidget::Update(gui, dt);
 
 	if (!IsEnabled())
 	{
@@ -406,9 +406,9 @@ float wiSlider::GetValue()
 {
 	return value;
 }
-void wiSlider::Update(wiGUI* gui)
+void wiSlider::Update(wiGUI* gui, float dt )
 {
-	wiWidget::Update(gui);
+	wiWidget::Update(gui, dt);
 
 	if (!IsEnabled())
 	{
@@ -549,9 +549,9 @@ wiCheckBox::~wiCheckBox()
 {
 
 }
-void wiCheckBox::Update(wiGUI* gui)
+void wiCheckBox::Update(wiGUI* gui, float dt )
 {
-	wiWidget::Update(gui);
+	wiWidget::Update(gui, dt);
 
 	if (!IsEnabled())
 	{
@@ -689,9 +689,9 @@ const float wiComboBox::_GetItemOffset(int index) const
 	index = max(firstItemVisible, index) - firstItemVisible;
 	return scale.y * (index + 1) + 1;
 }
-void wiComboBox::Update(wiGUI* gui)
+void wiComboBox::Update(wiGUI* gui, float dt )
 {
-	wiWidget::Update(gui);
+	wiWidget::Update(gui, dt);
 
 	if (!IsEnabled())
 	{
@@ -1072,9 +1072,9 @@ void wiWindow::RemoveWidgets(bool alsoDelete)
 
 	childrenWidgets.clear();
 }
-void wiWindow::Update(wiGUI* gui)
+void wiWindow::Update(wiGUI* gui, float dt )
 {
-	wiWidget::Update(gui);
+	wiWidget::Update(gui, dt);
 
 	//// TODO: Override window controls for nicer alignment:
 	//if (moveDragger != nullptr)
@@ -1110,7 +1110,7 @@ void wiWindow::Update(wiGUI* gui)
 
 	for (auto& x : childrenWidgets)
 	{
-		x->Update(gui);
+		x->Update(gui, dt);
 		x->SetScissorRect(scissorRect);
 	}
 
@@ -1230,9 +1230,9 @@ static const float __colorpicker_center = 120;
 static const float __colorpicker_radius_triangle = 75;
 static const float __colorpicker_radius = 80;
 static const float __colorpicker_width = 16;
-void wiColorPicker::Update(wiGUI* gui)
+void wiColorPicker::Update(wiGUI* gui, float dt )
 {
-	wiWindow::Update(gui);
+	wiWindow::Update(gui, dt);
 
 	if (!IsEnabled())
 	{

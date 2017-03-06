@@ -15,7 +15,7 @@ wiGUI::~wiGUI()
 }
 
 
-void wiGUI::Update()
+void wiGUI::Update(float dt)
 {
 	XMFLOAT4 _p = wiInputManager::GetInstance()->getpointer();
 	pointerpos.x = _p.x;
@@ -36,7 +36,7 @@ void wiGUI::Update()
 		if ((*it)->container == nullptr)
 		{
 			// the contained child widgets will be updated by the containers
-			(*it)->Update(this);
+			(*it)->Update(this, dt);
 		}
 
 		if ((*it)->IsEnabled() && (*it)->IsVisible() && (*it)->GetState() > wiWidget::WIDGETSTATE::IDLE)
