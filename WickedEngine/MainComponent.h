@@ -41,7 +41,8 @@ public:
 	void	setApplicationControlLostThreshold(int value){ applicationControlLostThreshold = value; }
 
 	virtual void Initialize();
-	virtual void Update();
+	virtual void Update(float dt);
+	virtual void FixedUpdate();
 	virtual void Render();
 	virtual void Compose();
 

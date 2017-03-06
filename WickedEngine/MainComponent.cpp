@@ -92,7 +92,7 @@ void MainComponent::run()
 
 	// Variable-timed update:
 	wiProfiler::GetInstance().BeginRange("Update", wiProfiler::DOMAIN_CPU);
-	getActiveComponent()->Update((float)elapsedTime);
+	Update((float)elapsedTime);
 	wiProfiler::GetInstance().EndRange(); // Update
 
 
@@ -107,7 +107,7 @@ void MainComponent::run()
 		while (accumulator >= targetFrameRateInv)
 		{
 
-			Update();
+			FixedUpdate();
 
 			accumulator -= targetFrameRateInv;
 
@@ -116,7 +116,7 @@ void MainComponent::run()
 	}
 	else
 	{
-		Update();
+		FixedUpdate();
 	}
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
@@ -135,15 +135,18 @@ void MainComponent::run()
 	wiProfiler::GetInstance().EndFrame();
 }
 
-void MainComponent::Update()
+void MainComponent::Update(float dt)
 {
 	wiCpuInfo::Frame();
-	wiBackLog::Update();
+	getActiveComponent()->Update(dt);
+}
 
+void MainComponent::FixedUpdate()
+{
+	wiBackLog::Update();
 	wiLua::GetGlobal()->Update();
 
 	getActiveComponent()->FixedUpdate();
-
 
 	fadeManager.Update();
 }
@@ -209,7 +212,7 @@ void MainComponent::Compose()
 			ss << endl;
 		}
 		ss.precision(2);
-		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP)).Draw();
+		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw();
 	}
 
 	wiProfiler::GetInstance().DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);

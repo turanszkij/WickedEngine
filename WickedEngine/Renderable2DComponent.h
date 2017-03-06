@@ -57,6 +57,7 @@ public:
 	virtual void Load();
 	virtual void Unload();
 	virtual void Start();
+	virtual void Update(float dt);
 	virtual void FixedUpdate();
 	virtual void Render();
 	virtual void Compose();

@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 #include "ConstantBufferMapping.h"
+#include "wiColor.h"
 #define MAX_TEXT 20000
 
 // Do not alter order because it is bound to lua manually
@@ -25,12 +26,12 @@ public:
 	int spacingX, spacingY;
 	int posX, posY;
 	wiFontAlign h_align, v_align;
-	XMFLOAT4 color;
-	XMFLOAT4 shadowColor;
+	wiColor color;
+	wiColor shadowColor;
 
 	wiFontProps(int posX = 0, int posY = 0, int size = -1, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
-		, int spacingX = 2, int spacingY = 1)
-		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(XMFLOAT4(1,1,1,1)), shadowColor(XMFLOAT4(0,0,0,1))
+		, int spacingX = 2, int spacingY = 1, const wiColor& color = wiColor(255, 255, 255, 255), const wiColor& shadowColor = wiColor(0,0,0,255))
+		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(color), shadowColor(shadowColor)
 	{}
 };
 

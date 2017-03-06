@@ -52,6 +52,9 @@ protected:
 	void Deactivate();
 	wiColor colors[WIDGETSTATE_COUNT];
 	wiGraphicsTypes::Rect scissorRect;
+
+	wiColor textColor;
+	wiColor textShadowColor;
 public:
 	wiWidget();
 	virtual ~wiWidget();
@@ -72,6 +75,8 @@ public:
 	void SetColor(const wiColor& color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor();
 	void SetScissorRect(const wiGraphicsTypes::Rect& rect);
+	void SetTextColor(const wiColor& value) { textColor = value; }
+	void SetTextShadowColor(const wiColor& value) { textShadowColor = value; }
 
 	virtual void Update(wiGUI* gui);
 	virtual void Render(wiGUI* gui) = 0;
@@ -255,7 +260,8 @@ public:
 	virtual void Update(wiGUI* gui) override;
 	virtual void Render(wiGUI* gui) override;
 
-	XMFLOAT4 GetColor();
+	XMFLOAT4 GetPickColor();
+	void SetPickColor(const XMFLOAT4& value);
 
 	void OnColorChanged(function<void(wiEventArgs args)> func);
 };

@@ -295,14 +295,14 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 
 		wiRenderer::MiscCB cb;
 
-		if (newProps.shadowColor.w > 0)
+		if (newProps.shadowColor.a > 0)
 		{
 			// font shadow render:
 			cb.mTransform = XMMatrixTranspose(
 				XMMatrixTranslation((float)newProps.posX+1, (float)newProps.posY+1, 0)
 				* device->GetScreenProjection()
 			);
-			cb.mColor = newProps.shadowColor;
+			cb.mColor = XMFLOAT4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
 			device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 			device->DrawIndexed((int)text.length() * 6, threadID);
@@ -313,7 +313,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 			* device->GetScreenProjection()
 		);
-		cb.mColor = newProps.color;
+		cb.mColor = XMFLOAT4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
 		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC],&cb,threadID);
 
 		device->DrawIndexed((int)text.length() * 6, threadID);
