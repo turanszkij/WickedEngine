@@ -736,7 +736,7 @@ inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, i
 			float4 _radiance = 0;
 			float step = 0;
 			float3 tc = uvw;
-			for (uint i = 0; i < 8; ++i)
+			for (uint i = 0; i < g_xWorld_VoxelRadianceDataRes; ++i)
 			{
 				step++;
 				float mip = 0.897f * i;

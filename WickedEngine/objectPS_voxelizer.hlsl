@@ -122,31 +122,6 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		}
 
 		color.rgb *= diffuse;
-
-		//[branch]
-		//if (g_xFrame_SunLightArrayIndex >= 0)
-		//{
-		//	LightArrayType light = LightArray[g_xFrame_SunLightArrayIndex];
-
-		//	float3 L = light.directionWS;
-
-		//	float3 diffuse = light.color.rgb * light.energy * max(dot(N, L), 0);
-
-		//	[branch]
-		//	if (light.shadowMap_index >= 0)
-		//	{
-		//		float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
-		//		ShPos.xyz /= ShPos.w;
-		//		float3 ShTex = ShPos.xyz*float3(1, -1, 1) / 2.0f + 0.5f;
-
-		//		[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
-		//		{
-		//			diffuse *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
-		//		}
-		//	}
-
-		//	color.rgb *= diffuse;
-		//}
 		
 		OBJECT_PS_EMISSIVE
 
