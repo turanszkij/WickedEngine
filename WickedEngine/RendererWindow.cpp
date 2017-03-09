@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 640));
+	rendererWindow->SetSize(XMFLOAT2(400, 680));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -77,6 +77,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 		wiRenderer::SetVoxelRadianceConeTracingQuality(args.iValue);
 	});
 	rendererWindow->AddWidget(voxelRadianceConeTracingSlider);
+
+	voxelRadianceFalloffSlider = new wiSlider(0.01f, 2, 1, 10000, "Voxel Radiance Falloff: ");
+	voxelRadianceFalloffSlider->SetTooltip("Adjust the falloff of the light bounce.");
+	voxelRadianceFalloffSlider->SetSize(XMFLOAT2(100, 30));
+	voxelRadianceFalloffSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceFalloffSlider->SetValue(wiRenderer::GetVoxelRadianceFalloff());
+	voxelRadianceFalloffSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceFalloff(args.fValue);
+	});
+	rendererWindow->AddWidget(voxelRadianceFalloffSlider);
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
@@ -303,6 +313,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(voxelRadianceDebugCheckBox);
 	SAFE_DELETE(voxelRadianceVoxelSizeSlider);
 	SAFE_DELETE(voxelRadianceConeTracingSlider);
+	SAFE_DELETE(voxelRadianceFalloffSlider);
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);

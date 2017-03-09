@@ -28,7 +28,7 @@ void main(
 	float4 pos = float4(input[0].pos.xyz, 1);
 	float3 color = saturate(xColor.xyz + sin(pos.x - pos.y - pos.z)*0.013f)*0.5;
 	float3 normal = /*normalize(*/input[0].nor.xyz/*-wind)*/;
-	float3 wind = sin(g_xFrame_WindTime + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz*0.03*grassLength;
+	float3 wind = sin(g_xFrame_Time + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz*0.03*grassLength;
 	//if(rand%(uint)windRandomness) wind=-wind;
 
 	frame.xy *= grassLength;

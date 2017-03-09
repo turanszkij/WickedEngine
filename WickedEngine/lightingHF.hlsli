@@ -731,30 +731,32 @@ inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, i
 		float4 radiance = 0;
 		for (uint cone = 0; cone < numCones; ++cone)
 		{
-			float3 coneVec = normalize(N + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
+			float3 coneVec = normalize(N * 2 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 
-			float4 _radiance = 0;
+			float4 accumulation = 0;
 			float step = 0;
 			float3 tc = uvw;
 			for (uint i = 0; i < g_xWorld_VoxelRadianceDataRes; ++i)
 			{
 				step++;
-				float mip = 0.897f * i;
+				float mip = 0.7 * i;
 
-				tc += coneVec;
+				tc += coneVec * (1 + mip);
 
-				_radiance += texture_voxelradiance.SampleLevel(sampler_linear_clamp, tc, mip);
+				float4 sam = texture_voxelradiance.SampleLevel(sampler_linear_clamp, tc, mip);
+				accumulation.a += sam.a;
+				accumulation.rgb += sam.rgb * accumulation.a / g_xWorld_VoxelRadianceFalloff;
 
-				if (_radiance.a >= 1.0f || mip >= (float)mips || any(tc - saturate(tc)))
+				if (accumulation.a >= 1.0f || mip >= (float)mips || any(tc - saturate(tc)))
 					break;
 			}
-			_radiance /= step;
-			radiance += _radiance;
+			radiance += accumulation / step;
 		}
 		radiance /= numCones;
+		radiance.a = saturate(radiance.a);
 
 		diffuse += lerp(radiance.rgb, 0, blend);
-		ao *= lerp(1 - radiance.a, 1, blend);
+		ao *= 1 - lerp(radiance.a, 0, blend);
 	}
 }
 

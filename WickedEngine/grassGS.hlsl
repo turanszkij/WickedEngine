@@ -19,7 +19,7 @@ void main(
 	uint rand = input[0].pos.w;
 	float4 pos = float4(input[0].pos.xyz, 1);
 	float3 color = saturate(xColor.xyz + sin(pos.x - pos.y - pos.z)*0.013f)*0.5;
-	float3 wind = sin(g_xFrame_WindTime + (pos.x + pos.y + pos.z)*0.1f)*g_xFrame_WindDirection.xyz*0.1;
+	float3 wind = sin(g_xFrame_Time + (pos.x + pos.y + pos.z)*0.1f)*g_xFrame_WindDirection.xyz*0.1;
 	if (rand % (uint)g_xFrame_WindRandomness) wind = -wind;
 	float3 normal = input[0].nor.xyz;
 

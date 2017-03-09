@@ -55,11 +55,15 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	uint		g_xWorld_VoxelRadianceDataRes;
 	float3		g_xWorld_VoxelRadianceDataCenter;
 	uint		g_xWorld_VoxelRadianceConeTracingQuality;
+	float		g_xWorld_VoxelRadianceFalloff;
+	float		xPadding4_WorldCB;
+	float		xPadding5_WorldCB;
+	float		xPadding6_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
+	float		g_xFrame_Time;
 	float3		g_xFrame_WindDirection;
-	float		g_xFrame_WindTime;
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
 	uint		g_xFrame_FrameCount;
@@ -133,7 +137,7 @@ inline float3 GetAmbientColor() { return GAMMA(g_xWorld_Ambient.rgb); }
 inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
 inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
-inline float GetTime() { return g_xFrame_WindTime; }
+inline float GetTime() { return g_xFrame_Time; }
 inline float GetEmissive(float emissive) { return emissive * 10.0f; }
 
 struct ComputeShaderInput

@@ -51,6 +51,7 @@ int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRendere
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false;
+float wiRenderer::renderTime = 0;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -1611,7 +1612,7 @@ void wiRenderer::UpdatePerFrameData()
 	UpdateBoneLines();
 	UpdateCubes();
 
-	GetScene().wind.time = (float)((wiTimer::TotalTime()) / 1000.0*GameSpeed / 2.0*3.1415)*XMVectorGetX(XMVector3Length(XMLoadFloat3(&GetScene().wind.direction)))*0.1f;
+	renderTime = (float)((wiTimer::TotalTime()) / 1000.0 * GameSpeed);
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
@@ -4347,6 +4348,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mVoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (UINT)voxelSceneData.res : 0;
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 	value.mVoxelRadianceDataConeTracingQuality = voxelSceneData.coneTracingQuality;
+	value.mVoxelRadianceDataFalloff = voxelSceneData.falloff;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)
 	{
@@ -4358,8 +4360,8 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
 	FrameCB cb;
 
+	cb.mTime = renderTime;
 	auto& wind = GetScene().wind;
-	cb.mWindTime = wind.time;
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;
 	cb.mWindDirection = wind.direction;

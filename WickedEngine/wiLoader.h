@@ -806,10 +806,9 @@ struct WorldInfo{
 };
 struct Wind{
 	XMFLOAT3 direction;
-	float time;
 	float randomness;
 	float waveSize;
-	Wind():direction(XMFLOAT3(0,0,0)),time(0),randomness(5),waveSize(1){}
+	Wind():direction(XMFLOAT3(0,0,0)),randomness(5),waveSize(1){}
 };
 struct Camera:public Transform{
 	XMFLOAT4X4 View, Projection, VP;

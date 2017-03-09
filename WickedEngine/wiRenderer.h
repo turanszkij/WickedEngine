@@ -78,6 +78,7 @@ public:
 	
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
+	static float renderTime;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
@@ -95,6 +96,8 @@ public:
 		UINT mVoxelRadianceDataRes;
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		UINT mVoxelRadianceDataConeTracingQuality;
+		float mVoxelRadianceDataFalloff;
+		float pad[3];
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 
@@ -102,8 +105,8 @@ public:
 	};
 	GFX_STRUCT FrameCB
 	{
+		float mTime;
 		XMFLOAT3 mWindDirection;
-		float mWindTime;
 		float mWindWaveSize;
 		float mWindRandomness;
 		UINT mFrameCount;
@@ -305,8 +308,9 @@ protected:
 		XMFLOAT3 center;
 		XMFLOAT3 extents;
 		int coneTracingQuality;
+		float falloff;
 
-		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8) {}
+		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8), falloff(1) {}
 	} static voxelSceneData;
 
 public:
@@ -358,6 +362,8 @@ public:
 	static int GetVoxelRadianceResolution() { return voxelSceneData.res; }
 	static void SetVoxelRadianceConeTracingQuality(int value) { voxelSceneData.coneTracingQuality = value; }
 	static int GetVoxelRadianceConeTracingQuality() { return voxelSceneData.coneTracingQuality; }
+	static float GetVoxelRadianceFalloff() { return voxelSceneData.falloff; }
+	static void SetVoxelRadianceFalloff(float value) { voxelSceneData.falloff = value; }
 	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
