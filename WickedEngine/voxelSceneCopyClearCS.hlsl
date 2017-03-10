@@ -16,9 +16,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	[branch]
 	if (color.a > 0)
 	{
-		//float3 normal = DecodeNormal(voxel.normalMask);
-
-		//// try to make it temporally more stable:
+		// try to make it temporally more stable:
 		//output_emission[writecoord] = lerp(output_emission[writecoord], float4(color.rgb, 1), 0.1);
 		output_emission[writecoord] = float4(color.rgb, 1);
 	}
@@ -27,5 +25,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		output_emission[writecoord] = 0;
 	}
 
-	input_output[DTid.x] = (VoxelType)0;
+	// delete emission data, but keep normals (no need to delete, we will only read normal values of filled voxels)
+	input_output[DTid.x].colorMask = 0;
 }

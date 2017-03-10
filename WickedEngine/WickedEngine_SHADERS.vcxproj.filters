@@ -106,6 +106,9 @@
     <None Include="voxelHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="voxelConeTracingHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -533,6 +536,12 @@
     </FxCompile>
     <FxCompile Include="voxelGS.hlsl">
       <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="voxelRadianceSecondaryBounceCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="voxelClearOnlyNormalCS.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

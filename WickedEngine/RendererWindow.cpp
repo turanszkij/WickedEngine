@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 680));
+	rendererWindow->SetSize(XMFLOAT2(400, 700));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -41,7 +41,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	rendererWindow->AddWidget(occlusionCullingCheckBox);
 
 	voxelRadianceCheckBox = new wiCheckBox("Voxel Radiance: ");
-	voxelRadianceCheckBox->SetTooltip("Toggle voxel radiance computation (EXPERIMENTAL). Needs hardware support for Conservative Rasterization!");
+	voxelRadianceCheckBox->SetTooltip("Toggle voxel radiance computation (EXPERIMENTAL).");
 	voxelRadianceCheckBox->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceEnabled(args.bValue);
@@ -57,6 +57,15 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	voxelRadianceDebugCheckBox->SetCheck(wiRenderer::GetToDrawVoxelHelper());
 	rendererWindow->AddWidget(voxelRadianceDebugCheckBox);
+
+	voxelRadianceSecondaryBounceCheckBox = new wiCheckBox("Voxel Radiance Secondary Bounce: ");
+	voxelRadianceSecondaryBounceCheckBox->SetTooltip("Toggle secondary light bounce computation for voxel radiance.");
+	voxelRadianceSecondaryBounceCheckBox->SetPos(XMFLOAT2(x, y += step));
+	voxelRadianceSecondaryBounceCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
+	});
+	voxelRadianceSecondaryBounceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceSecondaryBounceEnabled());
+	rendererWindow->AddWidget(voxelRadianceSecondaryBounceCheckBox);
 
 	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 10, 1, 39, "Voxel Radiance Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for voxel radiance calculations.");
@@ -311,6 +320,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(occlusionCullingCheckBox);
 	SAFE_DELETE(voxelRadianceCheckBox);
 	SAFE_DELETE(voxelRadianceDebugCheckBox);
+	SAFE_DELETE(voxelRadianceSecondaryBounceCheckBox);
 	SAFE_DELETE(voxelRadianceVoxelSizeSlider);
 	SAFE_DELETE(voxelRadianceConeTracingSlider);
 	SAFE_DELETE(voxelRadianceFalloffSlider);

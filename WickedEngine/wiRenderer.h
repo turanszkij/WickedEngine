@@ -309,8 +309,11 @@ protected:
 		XMFLOAT3 extents;
 		int coneTracingQuality;
 		float falloff;
+		bool secondaryBounceEnabled;
 
-		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8), falloff(1) {}
+		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8), 
+			falloff(1), secondaryBounceEnabled(true)
+		{}
 	} static voxelSceneData;
 
 public:
@@ -356,6 +359,8 @@ public:
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }
 	static bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
+	static void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
+	static bool GetVoxelRadianceSecondaryBounceEnabled() { return voxelSceneData.secondaryBounceEnabled; }
 	static void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.voxelsize = value; }
 	static float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
 	//static void SetVoxelRadianceResolution(int value) { voxelSceneData.res = value; }

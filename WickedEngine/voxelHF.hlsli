@@ -4,7 +4,7 @@
 struct VoxelType
 {
 	uint colorMask;
-	//uint normalMask;
+	uint normalMask;
 };
 
 static const float __hdrRange = 10.0f;

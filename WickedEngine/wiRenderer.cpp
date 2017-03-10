@@ -782,6 +782,8 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelRadianceSecondaryBounceCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELCLEARONLYNORMAL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelClearOnlyNormalCS.cso", wiResourceManager::COMPUTESHADER));
 	
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -3964,7 +3966,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
 
-	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
+	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr || textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
 	{
 		Texture3DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -3981,11 +3983,14 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
+		hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+		assert(SUCCEEDED(hr));
 	}
 	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
 	{
 		GPUBufferDesc desc;
-		desc.StructureByteStride = sizeof(UINT) /** 2*/;
+		desc.StructureByteStride = sizeof(UINT) * 2;
 		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
@@ -4038,14 +4043,38 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 
-		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene data. The cone tracing will operate on the 3D texture
+		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
 		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+
 		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
 		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+
+		if (voxelSceneData.secondaryBounceEnabled)
+		{
+			GetDevice()->UnBindUnorderedAccessResources(1, 1, threadID);
+			// Pre-integrate the voxel texture by creating blurred mip levels:
+			GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
+			GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
+			GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
+			GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
+			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
+			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+
+			GetDevice()->UnBindResources(1, 1, threadID);
+			GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
+			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+
+			auto swap = textures[TEXTYPE_3D_VOXELRADIANCE];
+			textures[TEXTYPE_3D_VOXELRADIANCE] = textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
+			textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = swap;
+		}
+
 		GetDevice()->BindCS(nullptr, threadID);
 		GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
 		GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
