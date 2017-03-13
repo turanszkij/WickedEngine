@@ -16,8 +16,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	[branch]
 	if (color.a > 0)
 	{
-		// try to make it temporally more stable:
-		//output_emission[writecoord] = lerp(output_emission[writecoord], float4(color.rgb, 1), 0.1);
 		output_emission[writecoord] = float4(color.rgb, 1);
 	}
 	else

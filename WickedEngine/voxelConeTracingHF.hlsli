@@ -34,26 +34,26 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 uvw, in f
 	float4 radiance = 0;
 	for (uint cone = 0; cone < numCones; ++cone)
 	{
+		// try to approximate a hemisphere from normal and random point inside a sphere:
 		float3 coneVec = normalize(N * 2 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 
 		float4 accumulation = 0;
-		float step = 0;
 		float3 tc = uvw;
 		for (uint i = 0; i < g_xWorld_VoxelRadianceDataRes; ++i)
 		{
-			step++;
 			float mip = 0.7 * i;
 
 			tc += coneVec * (1 + mip);
 
 			float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
 			accumulation.a += sam.a;
-			accumulation.rgb += sam.rgb * accumulation.a / g_xWorld_VoxelRadianceFalloff;
+			accumulation.rgb += sam.rgb * accumulation.a;
 
 			if (accumulation.a >= 1.0f || mip >= (float)mips || any(tc - saturate(tc)))
 				break;
 		}
-		radiance += accumulation / step;
+		float searchDist = length(uvw - tc) * g_xWorld_VoxelRadianceDataRes * g_xWorld_VoxelRadianceFalloff;
+		radiance += accumulation / searchDist;
 	}
 	radiance /= numCones;
 	radiance.a = saturate(radiance.a);
