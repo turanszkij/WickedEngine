@@ -123,7 +123,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 			diffuse += result.diffuse;
 		}
 
-		color.rgb *= diffuse;
+		color.rgb *= diffuse + GetAmbientColor(); // should ambient light bounce?
 		
 		OBJECT_PS_EMISSIVE
 

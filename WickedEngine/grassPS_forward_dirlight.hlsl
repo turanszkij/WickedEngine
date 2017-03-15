@@ -8,9 +8,10 @@ float4 main(GS_OUT PSIn) : SV_Target
 	clip(dither(PSIn.pos.xy) - PSIn.fade);
 #endif
 
-	float4 color = float4(PSIn.col,1);
-	float opacity = color.a;
-	color = DEGAMMA(color);
+	float4 baseColor = float4(PSIn.col,1);
+	float opacity = baseColor.a;
+	baseColor = DEGAMMA(baseColor);
+	float4 color = baseColor;
 	float3 P = PSIn.pos3D;
 	float3 V = normalize(g_xCamera_CamPos - P);
 	float emissive = 0;

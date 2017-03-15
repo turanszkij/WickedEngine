@@ -28,7 +28,6 @@ namespace wiGraphicsTypes
 		ViewPort					viewPort;
 		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT];
 		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
-		bool						DX11, DEFERREDCONTEXT_SUPPORT, CONSERVATIVE_RASTERIZATION, RASTERIZER_ORDERED_VIEWS;
 		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT];
 
 	public:
@@ -65,8 +64,6 @@ namespace wiGraphicsTypes
 		virtual void SetResolution(int width, int height) override;
 
 		virtual Texture2D GetBackBuffer() override;
-
-		virtual bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) override;
 
 		///////////////Thread-sensitive////////////////////////
 

@@ -34,12 +34,13 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 uvw, in f
 	float4 radiance = 0;
 	for (uint cone = 0; cone < numCones; ++cone)
 	{
-		// try to approximate a hemisphere from normal and random point inside a sphere:
+		// try to approximate a hemisphere from normal and random points inside a sphere:
 		float3 coneVec = normalize(N * 2 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 
 		float4 accumulation = 0;
 		float3 tc = uvw;
-		for (uint i = 0; i < g_xWorld_VoxelRadianceDataRes; ++i)
+		uint i = 0;
+		while (accumulation.a < 1 && !any(tc - saturate(tc)))
 		{
 			float mip = 0.7 * i;
 
@@ -49,16 +50,51 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 uvw, in f
 			accumulation.a += sam.a;
 			accumulation.rgb += sam.rgb * accumulation.a;
 
-			if (accumulation.a >= 1.0f || mip >= (float)mips || any(tc - saturate(tc)))
+			if (mip >= (float)mips)
 				break;
+
+			++i;
 		}
 		float searchDist = length(uvw - tc) * g_xWorld_VoxelRadianceDataRes * g_xWorld_VoxelRadianceFalloff;
-		radiance += accumulation / searchDist;
+		accumulation /= searchDist;
+		radiance += accumulation;
 	}
 	radiance /= numCones;
 	radiance.a = saturate(radiance.a);
 
-	return radiance;
+	return max(0, radiance);
+}
+
+inline float4 ConeTraceReflection(in Texture3D<float4> voxels, in float3 uvw, in float3 N, in float3 V, in float roughness)
+{
+	uint3 dim;
+	uint mips;
+	voxels.GetDimensions(0, dim.x, dim.y, dim.z, mips);
+
+	float aperture = pow4(roughness);
+	float3 coneVec = reflect(-V, N) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
+	float4 accumulation = 0;
+	float3 tc = uvw;
+	uint i = 0;
+	while(accumulation.a < 1 && !any(tc - saturate(tc)))
+	{
+		float mip = aperture * i;
+
+		tc += coneVec * (1 + mip);
+
+		float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
+		accumulation.a += sam.a;
+		accumulation.rgb += sam.rgb * accumulation.a;
+
+		if (mip >= (float)mips)
+		{
+			break;
+		}
+
+		++i;
+	}
+
+	return float4(max(0, accumulation.rgb), saturate(accumulation.a));
 }
 
 #endif

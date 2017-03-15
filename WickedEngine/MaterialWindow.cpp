@@ -194,7 +194,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	GUI->AddWidget(colorPicker);
 
 
-	materialWindow->Translate(XMFLOAT3(30, 30, 0));
+	materialWindow->Translate(XMFLOAT3(screenW - 640, 50, 0));
 	materialWindow->SetVisible(false);
 
 	SetMaterial(nullptr);

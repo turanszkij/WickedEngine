@@ -19,7 +19,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	{
 		float3 N = DecodeNormal(input_voxelscene[DTid.x].normalMask);
 
-		float3 uvw = (float3)writecoord / (float3)g_xWorld_VoxelRadianceDataRes;
+		float3 uvw = ((float3)writecoord + 0.5f) / (float3)g_xWorld_VoxelRadianceDataRes;
 
 		float4 radiance = ConeTraceRadiance(input_emission, uvw, N);
 

@@ -97,7 +97,7 @@ public:
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		UINT mVoxelRadianceDataConeTracingQuality;
 		float mVoxelRadianceDataFalloff;
-		float pad[3];
+		XMFLOAT3 pad4;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 
@@ -311,7 +311,7 @@ protected:
 		float falloff;
 		bool secondaryBounceEnabled;
 
-		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8), 
+		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8),
 			falloff(1), secondaryBounceEnabled(true)
 		{}
 	} static voxelSceneData;

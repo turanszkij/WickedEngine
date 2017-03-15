@@ -56,9 +56,7 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_VoxelRadianceDataCenter;
 	uint		g_xWorld_VoxelRadianceConeTracingQuality;
 	float		g_xWorld_VoxelRadianceFalloff;
-	float		xPadding4_WorldCB;
-	float		xPadding5_WorldCB;
-	float		xPadding6_WorldCB;
+	float3		xPadding4_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
@@ -118,8 +116,9 @@ CBUFFER(APICB, CBSLOT_API)
 
 static const float		PI = 3.14159265358979323846;
 
-#define sqr( a )		(a)*(a)
-#define pow8( a )		(a)*(a)*(a)*(a)*(a)*(a)*(a)*(a)
+#define sqr(a)		((a)*(a))
+#define pow4(a)		((a)*(a)*(a)*(a))
+#define pow8(a)		((a)*(a)*(a)*(a)*(a)*(a)*(a)*(a))
 
 #ifdef DISABLE_ALPHATEST
 #define ALPHATEST(x)

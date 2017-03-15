@@ -12,6 +12,7 @@ Multiple material support
 Animated texturing
 Normal mapping
 Displacement mapping
+Parallax occlusion mapping
 Real time planar reflections
 Static reflections (cube-mapping)
 Refractions
@@ -63,3 +64,5 @@ Tiled decals
 Area lights: Sphere, Disc, Rectangle, Tube
 Frame Profiler
 Real time Voxelization on the GPU
+Real time Voxel Global Illumination (two light bounces)
+Real time Voxel Cone traced reflections

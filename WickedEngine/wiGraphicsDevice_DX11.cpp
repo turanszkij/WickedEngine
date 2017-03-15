@@ -1430,7 +1430,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
-	DX11 = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
+	TESSELLATION = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
 
 	IDXGIDevice2 * pDXGIDevice;
 	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
@@ -1485,12 +1485,11 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]),
 		reinterpret_cast<void**>(&userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]));
 
-	DEFERREDCONTEXT_SUPPORT = false;
 	D3D11_FEATURE_DATA_THREADING threadingFeature;
 	device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
 	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists) 
 	{
-		DEFERREDCONTEXT_SUPPORT = true;
+		MULTITHREADED_RENDERING = true;
 		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
 		{
 			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
@@ -1503,13 +1502,14 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		}
 	}
 	else {
-		DEFERREDCONTEXT_SUPPORT = false;
+		MULTITHREADED_RENDERING = false;
 	}
 
 	D3D11_FEATURE_DATA_D3D11_OPTIONS2 features_2;
 	hr = device->CheckFeatureSupport( D3D11_FEATURE_D3D11_OPTIONS2, &features_2, sizeof( features_2 ) );
 	CONSERVATIVE_RASTERIZATION = features_2.ConservativeRasterizationTier >= D3D11_CONSERVATIVE_RASTERIZATION_TIER_1;
 	RASTERIZER_ORDERED_VIEWS = features_2.ROVsSupported == TRUE;
+	UNORDEREDACCESSTEXTURE_LOAD_EXT = features_2.TypedUAVLoadAdditionalFormats == TRUE;
 
 	// Create a render target view
 	backBuffer = NULL;
@@ -1564,28 +1564,6 @@ Texture2D GraphicsDevice_DX11::GetBackBuffer()
 	result.texture2D_DX11 = backBuffer;
 	backBuffer->AddRef();
 	return result;
-}
-
-bool GraphicsDevice_DX11::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
-{
-	switch (capability)
-	{
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
-		return DX11;
-		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
-		return DEFERREDCONTEXT_SUPPORT;
-		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
-		return CONSERVATIVE_RASTERIZATION;
-		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS:
-		return RASTERIZER_ORDERED_VIEWS;
-		break;
-	default:
-		break;
-	}
-	return false;
 }
 
 HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)

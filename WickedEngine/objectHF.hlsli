@@ -277,10 +277,10 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	clip(dither(input.pos.xy) - input.dither);
 
 #define OBJECT_PS_PLANARREFLECTIONS																					\
-	specular += PlanarReflection(UV, refUV, N, V, roughness, f0);
+	specular = max(specular, PlanarReflection(UV, refUV, N, V, roughness, f0));
 
 #define OBJECT_PS_ENVIRONMENTREFLECTIONS																			\
-	specular += EnvironmentReflection(N, V, P, roughness, f0);
+	specular = max(specular, EnvironmentReflection(N, V, P, roughness, f0));
 
 #define OBJECT_PS_DEGAMMA																							\
 	color = DEGAMMA(color);

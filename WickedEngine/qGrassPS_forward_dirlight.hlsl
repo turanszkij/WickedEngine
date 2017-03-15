@@ -8,11 +8,12 @@ float4 main(QGS_OUT PSIn) : SV_Target
 	clip(dither(PSIn.pos.xy) - PSIn.fade);
 #endif
 
-	float4 color = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
-	ALPHATEST(color.a)
+	float4 baseColor = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
+	ALPHATEST(baseColor.a)
 	float opacity = 1; // keep edge diffuse shading
-	color = DEGAMMA(color);
-	color.a = 1; // do not blend
+	baseColor = DEGAMMA(baseColor);
+	baseColor.a = 1; // do not blend
+	float4 color = baseColor;
 	float3 P = PSIn.pos3D;
 	float3 V = g_xCamera_CamPos - P;
 	float dist = length(V);
