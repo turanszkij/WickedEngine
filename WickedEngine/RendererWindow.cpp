@@ -67,7 +67,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	voxelRadianceSecondaryBounceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceSecondaryBounceEnabled());
 	rendererWindow->AddWidget(voxelRadianceSecondaryBounceCheckBox);
 
-	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 10, 1, 39, "Voxel GI Voxel Size: ");
+	voxelRadianceVoxelSizeSlider = new wiSlider(0.125, 10, 1, 79, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for Voxel GI calculations.");
 	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, 30));
 	voxelRadianceVoxelSizeSlider->SetPos(XMFLOAT2(x, y += 30));

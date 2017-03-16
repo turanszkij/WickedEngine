@@ -4,33 +4,27 @@
 #define TEMPORAL_SMOOTHING
 
 RWSTRUCTUREDBUFFER(input_output, VoxelType, 0);
-globallycoherent RWTEXTURE3D(output_emission, float4, 1);
+RWTEXTURE3D(output_emission, float4, 1);
 
 [numthreads(1024, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	VoxelType voxel = input_output[DTid.x];
 
-	float4 color = DecodeColor(voxel.colorMask);
+	const float4 color = DecodeColor(voxel.colorMask);
 
-	uint3 writecoord = to3D(DTid.x, g_xWorld_VoxelRadianceDataRes);
-
-//#ifdef TEMPORAL_SMOOTHING
-//	uint3 loadPrev = writecoord + floor((g_xWorld_VoxelRadianceDataCenter - g_xWorld_VoxelRadianceDataInterpolatedCenter) * float3(1,-1,1));
-//	loadPrev = clamp(loadPrev, 0, g_xWorld_VoxelRadianceDataRes);
-//	float4 colorPrev = output_emission[loadPrev];
-//	DeviceMemoryBarrier();
-//#endif
+	const uint3 writecoord = to3D(DTid.x, g_xWorld_VoxelRadianceDataRes);
 
 	[branch]
 	if (color.a > 0)
 	{
 #ifdef TEMPORAL_SMOOTHING
-		//output_emission[writecoord] = lerp(output_emission[writecoord], float4(color.rgb, 1), 0.1);
-
+		// Blend voxels with the previous frame's data to avoid popping artifacts for dynamic objects:
 		[branch]
 		if (g_xColor.z > 0)
 		{
+			// Do not perform the blend if an offset happened to the voxel grid's center. 
+			// The offset is not accounted for in the blend operation which can introduce severe light leaking.
 			output_emission[writecoord] = float4(color.rgb, 1);
 		}
 		else
