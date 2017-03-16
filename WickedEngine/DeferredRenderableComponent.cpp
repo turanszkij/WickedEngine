@@ -35,20 +35,23 @@ void DeferredRenderableComponent::ResizeBuffers()
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
 
+	// NOTE: Light buffer precision seems OK when using FORMAT_R11G11B10_FLOAT format
+	// But the environmental light now also writes the AO to ALPHA so it has been changed to FORMAT_R16G16B16A16_FLOAT
+
 	rtDeferred.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtLight.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R11G11B10_FLOAT); // diffuse
-	rtLight.Add(FORMAT_R11G11B10_FLOAT); // specular
+		, false, FORMAT_R16G16B16A16_FLOAT); // diffuse
+	rtLight.Add(FORMAT_R16G16B16A16_FLOAT); // specular
 
 	rtSSS[0].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R11G11B10_FLOAT);
+		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtSSS[1].Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R11G11B10_FLOAT);
+		, false, FORMAT_R16G16B16A16_FLOAT);
 }
 
 void DeferredRenderableComponent::Initialize()
@@ -108,7 +111,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true);
-
 	}
 
 

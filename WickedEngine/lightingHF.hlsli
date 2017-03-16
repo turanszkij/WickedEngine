@@ -704,7 +704,10 @@ inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, i
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, uvw, N);
 		float4 reflection = ConeTraceReflection(texture_voxelradiance, uvw, N, V, roughness);
-		reflection.rgb *= f0;
+
+		float f90 = saturate(50.0 * dot(f0, 0.33));
+		float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
+		reflection.rgb *= F;
 
 		diffuse += lerp(radiance.rgb, 0, blend);
 		specular = lerp(lerp(reflection.rgb, specular, blend), specular, (1 - reflection.a));

@@ -37,6 +37,7 @@ struct LightOutputType
 	float roughness = g3.x;																\
 	float reflectance = g3.y;															\
 	float metalness = g3.z;																\
+	float ao = g3.w;																	\
 	BRDF_HELPER_MAKEINPUTS( baseColor, reflectance, metalness )							\
 	float3 P = getPosition(screenPos, depth);											\
 	float3 V = normalize(g_xCamera_CamPos - P);
@@ -44,7 +45,8 @@ struct LightOutputType
 
 #define DEFERREDLIGHT_ENVIRONMENTALLIGHT												\
 	diffuse = 0;																		\
-	specular = EnvironmentReflection(N, V, P, roughness, f0);
+	specular = EnvironmentReflection(N, V, P, roughness, f0);							\
+	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
 
 #define DEFERREDLIGHT_DIRECTIONAL														\
 	LightingResult result = DirectionalLight(light, N, V, P, roughness, f0);			\
@@ -84,7 +86,7 @@ struct LightOutputType
 
 #define DEFERREDLIGHT_RETURN															\
 	LightOutputType Out = (LightOutputType)0;											\
-	Out.diffuse = float4(diffuse, 1);													\
+	Out.diffuse = float4(diffuse, ao);													\
 	Out.specular = float4(specular, 1);													\
 	return Out;
 

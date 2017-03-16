@@ -310,9 +310,10 @@ protected:
 		int coneTracingQuality;
 		float falloff;
 		bool secondaryBounceEnabled;
+		bool centerChangedThisFrame;
 
 		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8),
-			falloff(1), secondaryBounceEnabled(true)
+			falloff(1), secondaryBounceEnabled(true), centerChangedThisFrame(true)
 		{}
 	} static voxelSceneData;
 

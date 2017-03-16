@@ -68,16 +68,21 @@ inline UINT _ParseColorWriteMask(UINT value)
 {
 	UINT _flag = 0;
 
-	if (value & COLOR_WRITE_ENABLE_RED)
-		_flag |= D3D11_COLOR_WRITE_ENABLE_RED;
-	if (value & COLOR_WRITE_ENABLE_GREEN)
-		_flag |= D3D11_COLOR_WRITE_ENABLE_GREEN;
-	if (value & COLOR_WRITE_ENABLE_BLUE)
-		_flag |= D3D11_COLOR_WRITE_ENABLE_BLUE;
-	if (value & COLOR_WRITE_ENABLE_ALPHA)
-		_flag |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
-	if (value & COLOR_WRITE_ENABLE_ALL)
-		_flag |= D3D11_COLOR_WRITE_ENABLE_ALL;
+	if (value == D3D11_COLOR_WRITE_ENABLE_ALL)
+	{
+		return D3D11_COLOR_WRITE_ENABLE_ALL;
+	}
+	else
+	{
+		if (value & COLOR_WRITE_ENABLE_RED)
+			_flag |= D3D11_COLOR_WRITE_ENABLE_RED;
+		if (value & COLOR_WRITE_ENABLE_GREEN)
+			_flag |= D3D11_COLOR_WRITE_ENABLE_GREEN;
+		if (value & COLOR_WRITE_ENABLE_BLUE)
+			_flag |= D3D11_COLOR_WRITE_ENABLE_BLUE;
+		if (value & COLOR_WRITE_ENABLE_ALPHA)
+			_flag |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
+	}
 
 	return _flag;
 }

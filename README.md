@@ -75,7 +75,8 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 The editor is now available but also work in progress. Just build the editor project and run it, then you will be presented with a blank scene.
 You can import files exported from Blender (.wio) with the scipt described below. You can also save models into the .wimf format from the Editor
-and open them.
+and open them. 
+Test model and scene files are now available in the WickedEngine/models directory.
 
 
 ### Model import/export:

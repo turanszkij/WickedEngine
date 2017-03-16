@@ -34,8 +34,8 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 uvw, in f
 	float4 radiance = 0;
 	for (uint cone = 0; cone < numCones; ++cone)
 	{
-		// try to approximate a hemisphere from normal and random points inside a sphere:
-		float3 coneVec = normalize(N * 2 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
+		// try to approximate a hemisphere from normal and random points inside a sphere (todo: better? exact cones in TBN space?):
+		float3 coneVec = normalize(N * 4 + CONES[cone]) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 
 		float4 accumulation = 0;
 		float3 tc = uvw;
@@ -48,7 +48,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 uvw, in f
 
 			float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
 			accumulation.a += sam.a;
-			accumulation.rgb += sam.rgb * accumulation.a;
+			accumulation.rgb += sam.rgb * sam.a;
 
 			if (mip >= (float)mips)
 				break;
@@ -56,7 +56,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 uvw, in f
 			++i;
 		}
 		float searchDist = length(uvw - tc) * g_xWorld_VoxelRadianceDataRes * g_xWorld_VoxelRadianceFalloff;
-		accumulation /= searchDist;
+		accumulation.a /= searchDist;
 		radiance += accumulation;
 	}
 	radiance /= numCones;
@@ -74,7 +74,10 @@ inline float4 ConeTraceReflection(in Texture3D<float4> voxels, in float3 uvw, in
 	float aperture = pow4(roughness);
 	float3 coneVec = reflect(-V, N) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 	float4 accumulation = 0;
-	float3 tc = uvw;
+	float3 tc = uvw + coneVec;
+	float rayLengthCorrection = 1 - saturate(dot(N, V));
+	coneVec *= lerp(g_xWorld_VoxelRadianceDataSize * 0.5f, g_xWorld_VoxelRadianceDataSize * 40, pow8(rayLengthCorrection));
+
 	uint i = 0;
 	while(accumulation.a < 1 && !any(tc - saturate(tc)))
 	{
@@ -84,7 +87,7 @@ inline float4 ConeTraceReflection(in Texture3D<float4> voxels, in float3 uvw, in
 
 		float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
 		accumulation.a += sam.a;
-		accumulation.rgb += sam.rgb * accumulation.a;
+		accumulation.rgb += sam.rgb * sam.a;
 
 		if (mip >= (float)mips)
 		{

@@ -1186,6 +1186,19 @@ void wiRenderer::SetUpStates()
 	bd.IndependentBlendEnable = false,
 	bd.AlphaToCoverageEnable = false;
 	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_COLORWRITEDISABLE]);
+
+
+	bd.RenderTarget[0].BlendEnable=true;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
+	bd.IndependentBlendEnable=false,
+	bd.AlphaToCoverageEnable=false;
+	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_DEFERREDLIGHT]);
 }
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -1454,8 +1467,17 @@ void wiRenderer::UpdatePerFrameData()
 	if (spTree != nullptr)
 	{
 		// We don't update it if the scene is empty, this even makes it easier to debug
-		const float f = 0.5f / voxelSceneData.voxelsize;
-		voxelSceneData.center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
+		const float f = 0.05f / voxelSceneData.voxelsize;
+		XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
+		if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
+		{
+			voxelSceneData.centerChangedThisFrame = true;
+		}
+		else
+		{
+			voxelSceneData.centerChangedThisFrame = false;
+		}
+		voxelSceneData.center = center;
 		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
 	}
 
@@ -2553,19 +2575,21 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 	
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
-	GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 
 	GetDevice()->BindVertexLayout(nullptr, threadID);
 	GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 	GetDevice()->BindIndexBuffer(nullptr, threadID);
 
-	// Environmental reflection is always drawn
+	// Environmental light (envmap + voxelGI) is always drawn
 	{
+		GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID); // just full screen triangle so we can use it
 		GetDevice()->BindPS(pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], threadID);
 		GetDevice()->Draw(3, threadID); // full screen triangle
 	}
+
+	GetDevice()->BindBlendState(blendStates[BSTYPE_DEFERREDLIGHT], threadID);
 
 	for (int type = 0; type < Light::LIGHTTYPE_COUNT; ++type)
 	{
@@ -4033,6 +4057,9 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		MiscCB cb;
 		cb.mColor.x = (float)culling.culledDecals.size();
 		cb.mColor.y = cb.mColor.x + (float)culling.culledLight_count;
+		// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
+		// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
+		cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 		ViewPort VP;

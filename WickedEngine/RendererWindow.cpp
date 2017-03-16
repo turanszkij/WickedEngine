@@ -40,8 +40,8 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	occlusionCullingCheckBox->SetCheck(wiRenderer::GetOcclusionCullingEnabled());
 	rendererWindow->AddWidget(occlusionCullingCheckBox);
 
-	voxelRadianceCheckBox = new wiCheckBox("Voxel Radiance: ");
-	voxelRadianceCheckBox->SetTooltip("Toggle voxel radiance computation (EXPERIMENTAL).");
+	voxelRadianceCheckBox = new wiCheckBox("Voxel GI: ");
+	voxelRadianceCheckBox->SetTooltip("Toggle voxel Global Illumination computation.");
 	voxelRadianceCheckBox->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceEnabled(args.bValue);
@@ -50,7 +50,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	rendererWindow->AddWidget(voxelRadianceCheckBox);
 
 	voxelRadianceDebugCheckBox = new wiCheckBox("DEBUG: ");
-	voxelRadianceDebugCheckBox->SetTooltip("Toggle voxel radiance visualization.");
+	voxelRadianceDebugCheckBox->SetTooltip("Toggle Voxel GI visualization.");
 	voxelRadianceDebugCheckBox->SetPos(XMFLOAT2(x + 100, y));
 	voxelRadianceDebugCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawVoxelHelper(args.bValue);
@@ -58,8 +58,8 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	voxelRadianceDebugCheckBox->SetCheck(wiRenderer::GetToDrawVoxelHelper());
 	rendererWindow->AddWidget(voxelRadianceDebugCheckBox);
 
-	voxelRadianceSecondaryBounceCheckBox = new wiCheckBox("Voxel Radiance Secondary Bounce: ");
-	voxelRadianceSecondaryBounceCheckBox->SetTooltip("Toggle secondary light bounce computation for voxel radiance.");
+	voxelRadianceSecondaryBounceCheckBox = new wiCheckBox("Voxel GI Secondary Light Bounce: ");
+	voxelRadianceSecondaryBounceCheckBox->SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
 	voxelRadianceSecondaryBounceCheckBox->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceSecondaryBounceCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
@@ -67,8 +67,8 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	voxelRadianceSecondaryBounceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceSecondaryBounceEnabled());
 	rendererWindow->AddWidget(voxelRadianceSecondaryBounceCheckBox);
 
-	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 10, 1, 39, "Voxel Radiance Voxel Size: ");
-	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for voxel radiance calculations.");
+	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 10, 1, 39, "Voxel GI Voxel Size: ");
+	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for Voxel GI calculations.");
 	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, 30));
 	voxelRadianceVoxelSizeSlider->SetPos(XMFLOAT2(x, y += 30));
 	voxelRadianceVoxelSizeSlider->SetValue(wiRenderer::GetVoxelRadianceVoxelSize());
@@ -77,7 +77,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	rendererWindow->AddWidget(voxelRadianceVoxelSizeSlider);
 
-	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel Radiance Cone Tracing Quality: ");
+	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel GI Diffuse Cone Tracing Quality: ");
 	voxelRadianceConeTracingSlider->SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
 	voxelRadianceConeTracingSlider->SetSize(XMFLOAT2(100, 30));
 	voxelRadianceConeTracingSlider->SetPos(XMFLOAT2(x, y += 30));
@@ -87,8 +87,8 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	rendererWindow->AddWidget(voxelRadianceConeTracingSlider);
 
-	voxelRadianceFalloffSlider = new wiSlider(0.01f, 2, 1, 10000, "Voxel Radiance Falloff: ");
-	voxelRadianceFalloffSlider->SetTooltip("Adjust the falloff of the light bounce.");
+	voxelRadianceFalloffSlider = new wiSlider(0.01f, 2, 1, 10000, "Voxel AO Falloff: ");
+	voxelRadianceFalloffSlider->SetTooltip("Adjust the falloff of the Voxel Ambient Occlusion.");
 	voxelRadianceFalloffSlider->SetSize(XMFLOAT2(100, 30));
 	voxelRadianceFalloffSlider->SetPos(XMFLOAT2(x, y += 30));
 	voxelRadianceFalloffSlider->SetValue(wiRenderer::GetVoxelRadianceFalloff());
