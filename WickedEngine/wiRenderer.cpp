@@ -782,8 +782,10 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelRadianceSecondaryBounceCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELCLEARONLYNORMAL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelClearOnlyNormalCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -3999,22 +4001,23 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		desc.Depth = voxelSceneData.res;
 		desc.MipLevels = 0;
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
+		desc.MiscFlags = 0;
 
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
-		assert(SUCCEEDED(hr));
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
-		hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
 	{
 		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 	}
@@ -4085,7 +4088,14 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
 		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
 
-		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+		if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		{
+			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
+		}
+		else
+		{
+			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+		}
 		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
 		GetDevice()->EventEnd();
 
@@ -4094,7 +4104,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 			GetDevice()->EventBegin("Voxel Radiance Secondary Bounce", threadID);
 			GetDevice()->UnBindUnorderedAccessResources(1, 1, threadID);
 			// Pre-integrate the voxel texture by creating blurred mip levels:
-			GetDevice()->GenerateMips(textures[TEXTYPE_3D_VOXELRADIANCE], threadID);
+			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
 			GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
 			GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
 			GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
@@ -4117,7 +4127,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
-		GetDevice()->GenerateMips(result, threadID);
+		GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
 	}
 
 	if (voxelHelper)
@@ -4321,6 +4331,57 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 
 	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+
+	GetDevice()->EventEnd();
+}
+void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
+{
+	assert(0 && "Not implemented!");
+}
+void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
+{
+	assert(0 && "Not implemented!");
+}
+void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
+{
+	Texture3DDesc desc = texture->GetDesc();
+
+	if (desc.MipLevels < 2)
+	{
+		assert(0);
+		return;
+	}
+
+	GetDevice()->EventBegin("GenerateMipChain 3D", threadID);
+
+	switch (filter)
+	{
+	case wiRenderer::MIPGENFILTER_POINT:
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_LINEAR:
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_GAUSSIAN:
+		assert(0 && "Not implemented!");
+		break;
+	}
+
+	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+	{
+		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+		GetDevice()->BindResourceCS(texture, 0, threadID, i);
+		desc.Width = max(1, desc.Width / 2);
+		desc.Height = max(1, desc.Height / 2);
+		desc.Depth = max(1, desc.Depth / 2);
+		GetDevice()->Dispatch(max(1, desc.Width / 8), max(1, desc.Height / 8), max(1, desc.Depth / 8), threadID);
+	}
+
+	GetDevice()->UnBindResources(0, 1, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	GetDevice()->BindCS(nullptr, threadID);
 
 	GetDevice()->EventEnd();
 }

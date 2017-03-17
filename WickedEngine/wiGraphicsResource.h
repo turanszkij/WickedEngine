@@ -122,7 +122,8 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		ID3D11ShaderResourceView*	shaderResourceView_DX11;
+		ID3D11ShaderResourceView*			SRV_DX11;					// main resource SRV
+		vector<ID3D11ShaderResourceView*>	additionalSRVs_DX11;		// can be used for sub-resources if requested
 
 	protected:
 		GPUResource();
@@ -133,7 +134,8 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		ID3D11UnorderedAccessView*	unorderedAccessView_DX11;
+		ID3D11UnorderedAccessView*			UAV_DX11;					// main resource UAV
+		vector<ID3D11UnorderedAccessView*>	additionalUAVs_DX11;		// can be used for sub-resources if requested
 
 	protected:
 		GPUUnorderedResource();
@@ -232,19 +234,25 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		vector<ID3D11RenderTargetView*>		renderTargetViews_DX11;
+		ID3D11RenderTargetView*				RTV_DX11;
+		vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
 		bool								independentRTVArraySlices;
 		bool								independentRTVCubemapFaces;
+		bool								independentSRVMIPs;
+		bool								independentUAVMIPs;
 	public:
 
 		Texture();
 		virtual ~Texture();
+
 		// if true, then each array slice will get a unique rendertarget
 		void RequestIndepententRenderTargetArraySlices(bool value);
-		bool IsIndepententRenderTargetArraySlices();
 		// if true, then each face of the cubemap will get a unique rendertarget
 		void RequestIndepententRenderTargetCubemapFaces(bool value);
-		bool IsIndepententRenderTargetCubemapFaces();
+		// if true, then each miplevel will get unique shader resource
+		void RequestIndepententShaderResourcesForMIPs(bool value);
+		// if true, then each miplevel will get unique unordered access resource
+		void RequestIndepententUnorderedAccessResourcesForMIPs(bool value);
 	};
 
 	class Texture1D : public Texture
@@ -264,9 +272,10 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		vector<ID3D11DepthStencilView*>		depthStencilViews_DX11;
-		ID3D11Texture2D*			texture2D_DX11;
-		Texture2DDesc				desc;
+		ID3D11DepthStencilView*				DSV_DX11;
+		vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
+		ID3D11Texture2D*					texture2D_DX11;
+		Texture2DDesc						desc;
 	public:
 		Texture2D();
 		virtual ~Texture2D();

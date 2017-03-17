@@ -69,17 +69,17 @@ namespace wiGraphicsTypes
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 		virtual void BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUUnorderedResource* const *ppUAVs, int slotUAV, int countUAV,
-			GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
-		virtual void BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
-		virtual void ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
-		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, UINT arrayIndex = 0) override;
-		virtual void BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void BindResourceVS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void BindResourceGS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void BindResourceDS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void BindResourceHS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void BindResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void BindUnorderedAccessResourceCS(const GPUUnorderedResource* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
+			GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindResourceVS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindResourceGS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindResourceDS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindResourceHS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
+		virtual void BindUnorderedAccessResourceCS(const GPUUnorderedResource* buffer, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, int arrayIndex = -1) override;
 		virtual void UnBindResources(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 		virtual void UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 		virtual void BindSamplerPS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;

@@ -1614,7 +1614,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 				srv_desc.BufferEx.NumElements = desc.ByteWidth / desc.StructureByteStride;
 			}
 
-			hr = device->CreateShaderResourceView(ppBuffer->resource_DX11, &srv_desc, &ppBuffer->shaderResourceView_DX11);
+			hr = device->CreateShaderResourceView(ppBuffer->resource_DX11, &srv_desc, &ppBuffer->SRV_DX11);
 
 			assert(SUCCEEDED(hr) && "ShaderResourceView of the GPUBuffer could not be created!");
 		}
@@ -1641,7 +1641,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 				uav_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
 			}
 
-			hr = device->CreateUnorderedAccessView(ppBuffer->resource_DX11, &uav_desc, &ppBuffer->unorderedAccessView_DX11);
+			hr = device->CreateUnorderedAccessView(ppBuffer->resource_DX11, &uav_desc, &ppBuffer->UAV_DX11);
 
 			assert(SUCCEEDED(hr) && "UnorderedAccessView of the GPUBuffer could not be created!");
 		}
@@ -1667,6 +1667,11 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const S
 	if (FAILED(hr))
 		return hr;
 
+	if ((*ppTexture1D)->desc.MipLevels == 0)
+	{
+		(*ppTexture1D)->desc.MipLevels = (UINT)log2((*ppTexture1D)->desc.Width);
+	}
+
 	CreateShaderResourceView(*ppTexture1D);
 
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
@@ -1678,7 +1683,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const S
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE1D;
 		uav_desc.Texture2D.MipSlice = 0;
 
-		hr = device->CreateUnorderedAccessView((*ppTexture1D)->texture1D_DX11, &uav_desc, &(*ppTexture1D)->unorderedAccessView_DX11);
+		hr = device->CreateUnorderedAccessView((*ppTexture1D)->texture1D_DX11, &uav_desc, &(*ppTexture1D)->UAV_DX11);
 
 		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture1D could not be created!");
 	}
@@ -1715,6 +1720,11 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 	if (FAILED(hr))
 		return hr;
 
+	if ((*ppTexture2D)->desc.MipLevels == 0)
+	{
+		(*ppTexture2D)->desc.MipLevels = (UINT)log2(max((*ppTexture2D)->desc.Width, (*ppTexture2D)->desc.Height));
+	}
+
 	CreateRenderTargetView(*ppTexture2D);
 	CreateShaderResourceView(*ppTexture2D);
 	CreateDepthStencilView(*ppTexture2D);
@@ -1729,7 +1739,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
 		uav_desc.Texture2D.MipSlice = 0;
 
-		hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->unorderedAccessView_DX11);
+		hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->UAV_DX11);
 
 		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
 	}
@@ -1754,6 +1764,11 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const S
 	if (FAILED(hr))
 		return hr;
 
+	if ((*ppTexture3D)->desc.MipLevels == 0)
+	{
+		(*ppTexture3D)->desc.MipLevels = (UINT)log2(max((*ppTexture3D)->desc.Width, max((*ppTexture3D)->desc.Height, (*ppTexture3D)->desc.Depth)));
+	}
+
 	CreateShaderResourceView(*ppTexture3D);
 	CreateRenderTargetView(*ppTexture3D);
 
@@ -1763,20 +1778,39 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const S
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
 		ZeroMemory(&uav_desc, sizeof(uav_desc));
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
-		uav_desc.Texture3D.MipSlice = 0;
 		uav_desc.Texture3D.FirstWSlice = 0;
-		uav_desc.Texture3D.WSize = desc.Depth;
 
-		hr = device->CreateUnorderedAccessView((*ppTexture3D)->texture3D_DX11, &uav_desc, &(*ppTexture3D)->unorderedAccessView_DX11);
+		if ((*ppTexture3D)->independentUAVMIPs)
+		{
+			// Create subresource UAVs:
+			UINT miplevels = (*ppTexture3D)->desc.MipLevels;
+			uav_desc.Texture3D.WSize = desc.Depth;
+			for (UINT i = 0; i < miplevels; ++i)
+			{
+				uav_desc.Texture3D.MipSlice = i;
 
-		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+				(*ppTexture3D)->additionalUAVs_DX11.push_back(nullptr);
+				hr = device->CreateUnorderedAccessView((*ppTexture3D)->texture3D_DX11, &uav_desc, &(*ppTexture3D)->additionalUAVs_DX11[i]);
+				assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture3D could not be created!");
+
+				uav_desc.Texture3D.WSize /= 2;
+			}
+		}
+
+		{
+			// Create full-resource UAV
+			uav_desc.Texture3D.MipSlice = 0;
+			uav_desc.Texture3D.WSize = desc.Depth;
+			hr = device->CreateUnorderedAccessView((*ppTexture3D)->texture3D_DX11, &uav_desc, &(*ppTexture3D)->UAV_DX11);
+			assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture3D could not be created!");
+		}
 	}
 
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture1D* pTexture)
 {
-	if (pTexture->shaderResourceView_DX11 != nullptr)
+	if (pTexture->SRV_DX11 != nullptr)
 	{
 		return E_FAIL;
 	}
@@ -1805,7 +1839,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture1D* pTexture)
 			shaderResourceViewDesc.Texture1D.MipLevels = -1; //...to least detailed
 		}
 
-		hr = device->CreateShaderResourceView(pTexture->texture1D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
+		hr = device->CreateShaderResourceView(pTexture->texture1D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
 
 		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 	}
@@ -1814,7 +1848,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture1D* pTexture)
 }
 HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 {
-	if (pTexture->shaderResourceView_DX11 != nullptr)
+	if (pTexture->SRV_DX11 != nullptr)
 	{
 		return E_FAIL;
 	}
@@ -1896,7 +1930,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 			}
 		}
 
-		hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
+		hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
 
 		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 	}
@@ -1905,7 +1939,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 }
 HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture3D* pTexture)
 {
-	if (pTexture->shaderResourceView_DX11 != nullptr)
+	if (pTexture->SRV_DX11 != nullptr)
 	{
 		return E_FAIL;
 	}
@@ -1918,19 +1952,38 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture3D* pTexture)
 		ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
 		shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
 		shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
-		shaderResourceViewDesc.Texture3D.MostDetailedMip = 0; //from most detailed...
-		shaderResourceViewDesc.Texture3D.MipLevels = -1; //...to least detailed
 
-		hr = device->CreateShaderResourceView(pTexture->texture3D_DX11, &shaderResourceViewDesc, &pTexture->shaderResourceView_DX11);
+		if (pTexture->independentSRVMIPs)
+		{
+			// Create subresource SRVs:
+			UINT miplevels = pTexture->desc.MipLevels;
+			for (UINT i = 0; i < miplevels; ++i)
+			{
+				shaderResourceViewDesc.Texture3D.MostDetailedMip = i;
+				shaderResourceViewDesc.Texture3D.MipLevels = 1;
 
-		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+				pTexture->additionalSRVs_DX11.push_back(nullptr);
+				hr = device->CreateShaderResourceView(pTexture->texture3D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11[i]);
+				assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+			}
+		}
+
+		{
+			// Create full-resource SRV:
+			shaderResourceViewDesc.Texture3D.MostDetailedMip = 0; //from most detailed...
+			shaderResourceViewDesc.Texture3D.MipLevels = -1; //...to least detailed
+
+			hr = device->CreateShaderResourceView(pTexture->texture3D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
+			assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+		}
+
 	}
 
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 {
-	if (!pTexture->renderTargetViews_DX11.empty())
+	if (!pTexture->additionalRTVs_DX11.empty())
 	{
 		return E_FAIL;
 	}
@@ -1963,34 +2016,32 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
 					renderTargetViewDesc.Texture2DArray.ArraySize = 1;
 
-					pTexture->renderTargetViews_DX11.push_back(nullptr);
-					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
+					pTexture->additionalRTVs_DX11.push_back(nullptr);
+					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->additionalRTVs_DX11[i]);
+					assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 				}
 			}
-			else
+			else if (pTexture->independentRTVArraySlices)
 			{
-
-				if (pTexture->independentRTVArraySlices)
+				// independent slices
+				for (UINT i = 0; i < slices; ++i)
 				{
-					// independent slices
-					for (UINT i = 0; i < slices; ++i)
-					{
-						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i * 6;
-						renderTargetViewDesc.Texture2DArray.ArraySize = 6;
+					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i * 6;
+					renderTargetViewDesc.Texture2DArray.ArraySize = 6;
 
-						pTexture->renderTargetViews_DX11.push_back(nullptr);
-						hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
-					}
+					pTexture->additionalRTVs_DX11.push_back(nullptr);
+					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->additionalRTVs_DX11[i]);
+					assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 				}
-				else
-				{
-					// everything in one
-					renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
-					renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
+			}
 
-					pTexture->renderTargetViews_DX11.push_back(nullptr);
-					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[0]);
-				}
+			{
+				// Create full-resource RTVs:
+				renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
+				renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
+
+				hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->RTV_DX11);
+				assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 			}
 		}
 		else
@@ -1998,6 +2049,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 			// Texture2D, Texture2DArray...
 			if (arraySize > 1 && pTexture->independentRTVArraySlices)
 			{
+				// Create subresource RTVs:
 				for (UINT i = 0; i < arraySize; ++i)
 				{
 					if (multisampled)
@@ -2014,12 +2066,14 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 						renderTargetViewDesc.Texture2DArray.MipSlice = 0;
 					}
 
-					pTexture->renderTargetViews_DX11.push_back(nullptr);
-					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
+					pTexture->additionalRTVs_DX11.push_back(nullptr);
+					hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->additionalRTVs_DX11[i]);
+					assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 				}
 			}
-			else
+
 			{
+				// Create the full-resource RTV:
 				if (arraySize > 1)
 				{
 					if (multisampled)
@@ -2049,19 +2103,17 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 					}
 				}
 
-				pTexture->renderTargetViews_DX11.push_back(nullptr);
-				hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[0]);
+				hr = device->CreateRenderTargetView(pTexture->texture2D_DX11, &renderTargetViewDesc, &pTexture->RTV_DX11);
+				assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 			}
 		}
-		
-		assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 	}
 
 	return hr;
 }
 HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
 {
-	if (!pTexture->renderTargetViews_DX11.empty())
+	if (!pTexture->additionalRTVs_DX11.empty())
 	{
 		return E_FAIL;
 	}
@@ -2076,6 +2128,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
 
 		if (pTexture->independentRTVArraySlices)
 		{
+			// Create Subresource RTVs:
 			for (UINT i = 0; i < pTexture->GetDesc().Depth; ++i)
 			{
 				renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
@@ -2083,19 +2136,20 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
 				renderTargetViewDesc.Texture3D.FirstWSlice = i;
 				renderTargetViewDesc.Texture3D.WSize = 1;
 
-				pTexture->renderTargetViews_DX11.push_back(nullptr);
-				hr = device->CreateRenderTargetView(pTexture->texture3D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[i]);
+				pTexture->additionalRTVs_DX11.push_back(nullptr);
+				hr = device->CreateRenderTargetView(pTexture->texture3D_DX11, &renderTargetViewDesc, &pTexture->additionalRTVs_DX11[i]);
 			}
 		}
-		else
+
 		{
+			// Create full-resource RTV:
 			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
 			renderTargetViewDesc.Texture3D.MipSlice = 0;
 			renderTargetViewDesc.Texture3D.FirstWSlice = 0;
 			renderTargetViewDesc.Texture3D.WSize = -1;
 
-			pTexture->renderTargetViews_DX11.push_back(nullptr);
-			hr = device->CreateRenderTargetView(pTexture->texture3D_DX11, &renderTargetViewDesc, &pTexture->renderTargetViews_DX11[0]);
+			pTexture->additionalRTVs_DX11.push_back(nullptr);
+			hr = device->CreateRenderTargetView(pTexture->texture3D_DX11, &renderTargetViewDesc, &pTexture->additionalRTVs_DX11[0]);
 		}
 
 		assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
@@ -2105,7 +2159,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
 }
 HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 {
-	if (!pTexture->depthStencilViews_DX11.empty())
+	if (!pTexture->additionalDSVs_DX11.empty())
 	{
 		return E_FAIL;
 	}
@@ -2155,34 +2209,29 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
 					depthStencilViewDesc.Texture2DArray.ArraySize = 1;
 
-					pTexture->depthStencilViews_DX11.push_back(nullptr);
-					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
+					pTexture->additionalDSVs_DX11.push_back(nullptr);
+					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->additionalDSVs_DX11[i]);
 				}
 			}
-			else
+			else if (pTexture->independentRTVArraySlices)
 			{
-
-				if (pTexture->independentRTVArraySlices)
+				// independent slices
+				for (UINT i = 0; i < slices; ++i)
 				{
-					// independent slices
-					for (UINT i = 0; i < slices; ++i)
-					{
-						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i * 6;
-						depthStencilViewDesc.Texture2DArray.ArraySize = 6;
+					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i * 6;
+					depthStencilViewDesc.Texture2DArray.ArraySize = 6;
 
-						pTexture->depthStencilViews_DX11.push_back(nullptr);
-						hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
-					}
+					pTexture->additionalDSVs_DX11.push_back(nullptr);
+					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->additionalDSVs_DX11[i]);
 				}
-				else
-				{
-					// everything in one
-					depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
-					depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
+			}
 
-					pTexture->depthStencilViews_DX11.push_back(nullptr);
-					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[0]);
-				}
+			{
+				// Create full-resource DSV:
+				depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
+				depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
+
+				hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->DSV_DX11);
 			}
 		}
 		else
@@ -2190,6 +2239,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 			// Texture2D, Texture2DArray...
 			if (arraySize > 1 && pTexture->independentRTVArraySlices)
 			{
+				// Create subresource DSVs:
 				for (UINT i = 0; i < arraySize; ++i)
 				{
 					if (multisampled)
@@ -2206,12 +2256,13 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 						depthStencilViewDesc.Texture2DArray.ArraySize = 1;
 					}
 
-					pTexture->depthStencilViews_DX11.push_back(nullptr);
-					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[i]);
+					pTexture->additionalDSVs_DX11.push_back(nullptr);
+					hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->additionalDSVs_DX11[i]);
 				}
 			}
 			else
 			{
+				// Create full-resource DSV:
 				if (arraySize > 1)
 				{
 					if (multisampled)
@@ -2241,8 +2292,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 					}
 				}
 
-				pTexture->depthStencilViews_DX11.push_back(nullptr);
-				hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->depthStencilViews_DX11[0]);
+				hr = device->CreateDepthStencilView(pTexture->texture2D_DX11, &depthStencilViewDesc, &pTexture->DSV_DX11);
 			}
 		}
 
@@ -2565,87 +2615,219 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	SAFE_DELETE_ARRAY(pd3dViewPorts);
 }
 void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUUnorderedResource* const *ppUAVs, int slotUAV, int countUAV,
-	GRAPHICSTHREAD threadID, UINT arrayIndex)
+	GRAPHICSTHREAD threadID, int arrayIndex)
 {
+	// RTVs:
 	ID3D11RenderTargetView* renderTargetViews[8];
 	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
-		assert(ppRenderTargets[i]->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
-		renderTargetViews[i] = ppRenderTargets[i]->renderTargetViews_DX11[arrayIndex];
+		if (arrayIndex < 0)
+		{
+			renderTargetViews[i] = ppRenderTargets[i]->RTV_DX11;
+		}
+		else
+		{
+			assert(ppRenderTargets[i]->additionalRTVs_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+			renderTargetViews[i] = ppRenderTargets[i]->additionalRTVs_DX11[arrayIndex];
+		}
 	}
-	assert(depthStencilTexture == nullptr || depthStencilTexture->depthStencilViews_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
-	ID3D11DepthStencilView* depthStencilView = (depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilViews_DX11[arrayIndex]);
+
+	// DSVs:
+	ID3D11DepthStencilView* depthStencilView = nullptr;
+	if (depthStencilTexture != nullptr)
+	{
+		if (arrayIndex < 0)
+		{
+			depthStencilView = depthStencilTexture->DSV_DX11;
+		}
+		else
+		{
+			assert(depthStencilTexture->additionalDSVs_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+			depthStencilView = depthStencilTexture->additionalDSVs_DX11[arrayIndex];
+		}
+	}
+
+	// UAVs:
 	ID3D11UnorderedAccessView* UAVs[8];
 	ZeroMemory(UAVs, sizeof(UAVs));
 	for (int i = 0; i < min(countUAV, 8); ++i)
 	{
-		UAVs[i] = ppUAVs[i]->unorderedAccessView_DX11;
+		UAVs[i] = ppUAVs[i]->UAV_DX11;
 	}
+
+
 	deviceContexts[threadID]->OMSetRenderTargetsAndUnorderedAccessViews(NumViews, renderTargetViews, depthStencilView, slotUAV, countUAV, UAVs, nullptr);
 }
-void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, UINT arrayIndex)
+void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
+	// RTVs:
 	ID3D11RenderTargetView* renderTargetViews[8];
 	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
-		assert(ppRenderTargets[i]->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
-		renderTargetViews[i] = ppRenderTargets[i]->renderTargetViews_DX11[arrayIndex];
+		if (arrayIndex < 0)
+		{
+			renderTargetViews[i] = ppRenderTargets[i]->RTV_DX11;
+		}
+		else
+		{
+			assert(ppRenderTargets[i]->additionalRTVs_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+			renderTargetViews[i] = ppRenderTargets[i]->additionalRTVs_DX11[arrayIndex];
+		}
 	}
-	assert(depthStencilTexture == nullptr || depthStencilTexture->depthStencilViews_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
-	ID3D11DepthStencilView* depthStencilView = (depthStencilTexture == nullptr ? nullptr : depthStencilTexture->depthStencilViews_DX11[arrayIndex]);
+
+	// DSVs:
+	ID3D11DepthStencilView* depthStencilView = nullptr;
+	if (depthStencilTexture != nullptr)
+	{
+		if (arrayIndex < 0)
+		{
+			depthStencilView = depthStencilTexture->DSV_DX11;
+		}
+		else
+		{
+			assert(depthStencilTexture->additionalDSVs_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+			depthStencilView = depthStencilTexture->additionalDSVs_DX11[arrayIndex];
+		}
+	}
+
 	deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews, depthStencilView);
 }
-void GraphicsDevice_DX11::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, UINT arrayIndex)
+void GraphicsDevice_DX11::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 {
-	assert(pTexture->renderTargetViews_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
-	deviceContexts[threadID]->ClearRenderTargetView(pTexture->renderTargetViews_DX11[arrayIndex], ColorRGBA);
+	if (arrayIndex < 0)
+	{
+		deviceContexts[threadID]->ClearRenderTargetView(pTexture->RTV_DX11, ColorRGBA);
+	}
+	else
+	{
+		assert(pTexture->additionalRTVs_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+		deviceContexts[threadID]->ClearRenderTargetView(pTexture->additionalRTVs_DX11[arrayIndex], ColorRGBA);
+	}
 }
-void GraphicsDevice_DX11::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, UINT arrayIndex)
+void GraphicsDevice_DX11::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
 {
-	assert(pTexture->depthStencilViews_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
 	UINT _flags = 0;
 	if (ClearFlags & CLEAR_DEPTH)
 		_flags |= D3D11_CLEAR_DEPTH;
 	if (ClearFlags & CLEAR_STENCIL)
 		_flags |= D3D11_CLEAR_STENCIL;
-	deviceContexts[threadID]->ClearDepthStencilView(pTexture->depthStencilViews_DX11[arrayIndex], _flags, Depth, Stencil);
+
+	if (arrayIndex < 0)
+	{
+		deviceContexts[threadID]->ClearDepthStencilView(pTexture->DSV_DX11, _flags, Depth, Stencil);
+	}
+	else
+	{
+		assert(pTexture->additionalDSVs_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+		deviceContexts[threadID]->ClearDepthStencilView(pTexture->additionalDSVs_DX11[arrayIndex], _flags, Depth, Stencil);
+	}
 }
-void GraphicsDevice_DX11::BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex) 
 {
 	if (resource != nullptr)
-		deviceContexts[threadID]->PSSetShaderResources(slot, 1, &resource->shaderResourceView_DX11);
+	{
+		if (arrayIndex < 0)
+		{
+			deviceContexts[threadID]->PSSetShaderResources(slot, 1, &resource->SRV_DX11);
+		}
+		else
+		{
+			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			deviceContexts[threadID]->PSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
+		}
+	}
 }
-void GraphicsDevice_DX11::BindResourceVS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindResourceVS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
-		deviceContexts[threadID]->VSSetShaderResources(slot, 1, &resource->shaderResourceView_DX11);
+	{
+		if (arrayIndex < 0)
+		{
+			deviceContexts[threadID]->VSSetShaderResources(slot, 1, &resource->SRV_DX11);
+		}
+		else
+		{
+			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			deviceContexts[threadID]->VSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
+		}
+	}
 }
-void GraphicsDevice_DX11::BindResourceGS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindResourceGS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
-		deviceContexts[threadID]->GSSetShaderResources(slot, 1, &resource->shaderResourceView_DX11);
+	{
+		if (arrayIndex < 0)
+		{
+			deviceContexts[threadID]->GSSetShaderResources(slot, 1, &resource->SRV_DX11);
+		}
+		else
+		{
+			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			deviceContexts[threadID]->GSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
+		}
+	}
 }
-void GraphicsDevice_DX11::BindResourceDS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::BindResourceDS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex) 
 {
 	if (resource != nullptr)
-		deviceContexts[threadID]->DSSetShaderResources(slot, 1, &resource->shaderResourceView_DX11);
+	{
+		if (arrayIndex < 0)
+		{
+			deviceContexts[threadID]->DSSetShaderResources(slot, 1, &resource->SRV_DX11);
+		}
+		else
+		{
+			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			deviceContexts[threadID]->DSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
+		}
+	}
 }
-void GraphicsDevice_DX11::BindResourceHS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindResourceHS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
-		deviceContexts[threadID]->HSSetShaderResources(slot, 1, &resource->shaderResourceView_DX11);
+	{
+		if (arrayIndex < 0)
+		{
+			deviceContexts[threadID]->HSSetShaderResources(slot, 1, &resource->SRV_DX11);
+		}
+		else
+		{
+			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			deviceContexts[threadID]->HSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
+		}
+	}
 }
-void GraphicsDevice_DX11::BindResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::BindResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex) 
 {
 	if (resource != nullptr)
-		deviceContexts[threadID]->CSSetShaderResources(slot, 1, &resource->shaderResourceView_DX11);
+	{
+		if (arrayIndex < 0)
+		{
+			deviceContexts[threadID]->CSSetShaderResources(slot, 1, &resource->SRV_DX11);
+		}
+		else
+		{
+			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			deviceContexts[threadID]->CSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
+		}
+	}
 }
-void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUUnorderedResource* resource, int slot, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUUnorderedResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
-		deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->unorderedAccessView_DX11, nullptr);
+	{
+		if (arrayIndex < 0)
+		{
+			deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->UAV_DX11, nullptr);
+		}
+		else
+		{
+			assert(resource->additionalUAVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->additionalUAVs_DX11[arrayIndex], nullptr);
+		}
+	}
 }
 void GraphicsDevice_DX11::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
 {
@@ -2834,7 +3016,7 @@ void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCount
 }
 void GraphicsDevice_DX11::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID)
 {
-	deviceContexts[threadID]->GenerateMips(texture->shaderResourceView_DX11);
+	deviceContexts[threadID]->GenerateMips(texture->SRV_DX11);
 }
 void GraphicsDevice_DX11::CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
 {
@@ -3006,14 +3188,14 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const string& fileName, Textu
 	if (!fileName.substr(fileName.length() - 4).compare(string(".dds")))
 	{
 		// Load dds
-		hr = CreateDDSTextureFromFile(device, wstring(fileName.begin(),fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
+		hr = CreateDDSTextureFromFile(device, wstring(fileName.begin(),fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->SRV_DX11);
 	}
 	else
 	{
 		// Load WIC
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			LOCK();
-		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], wstring(fileName.begin(), fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->shaderResourceView_DX11);
+		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], wstring(fileName.begin(), fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->SRV_DX11);
 		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
 			UNLOCK();
 	}

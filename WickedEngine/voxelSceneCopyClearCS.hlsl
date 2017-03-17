@@ -1,8 +1,6 @@
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 
-#define TEMPORAL_SMOOTHING
-
 RWSTRUCTUREDBUFFER(input_output, VoxelType, 0);
 RWTEXTURE3D(output_emission, float4, 1);
 
@@ -29,6 +27,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		}
 		else
 		{
+			// This operation requires Feature: Typed UAV additional format loads!
 			output_emission[writecoord] = lerp(output_emission[writecoord], float4(color.rgb, 1), 0.2f);
 		}
 #else

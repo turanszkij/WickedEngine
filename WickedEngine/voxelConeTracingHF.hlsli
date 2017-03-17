@@ -85,7 +85,7 @@ inline float4 ConeTraceReflection(in Texture3D<float4> voxels, in float3 uvw, in
 
 		tc += coneVec * (1 + mip);
 
-		float4 sam = voxels.SampleLevel(sampler_point_clamp, tc, mip);
+		float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
 		accumulation.a += sam.a;
 		accumulation.rgb += sam.rgb * sam.a;
 

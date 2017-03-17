@@ -543,6 +543,12 @@
     <FxCompile Include="voxelClearOnlyNormalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="generateMIPChain3D_SimpleFilterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="voxelSceneCopyClear_TemporalSmoothing.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

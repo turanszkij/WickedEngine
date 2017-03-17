@@ -68,20 +68,28 @@ namespace wiGraphicsTypes
 
 	GPUResource::GPUResource()
 	{
-		SAFE_INIT(shaderResourceView_DX11);
+		SAFE_INIT(SRV_DX11);
 	}
 	GPUResource::~GPUResource()
 	{
-		SAFE_RELEASE(shaderResourceView_DX11);
+		SAFE_RELEASE(SRV_DX11);
+		for (auto& x : additionalSRVs_DX11)
+		{
+			SAFE_RELEASE(x);
+		}
 	}
 
 	GPUUnorderedResource::GPUUnorderedResource()
 	{
-		SAFE_INIT(unorderedAccessView_DX11);
+		SAFE_INIT(UAV_DX11);
 	}
 	GPUUnorderedResource::~GPUUnorderedResource()
 	{
-		SAFE_RELEASE(unorderedAccessView_DX11);
+		SAFE_RELEASE(UAV_DX11);
+		for (auto& x : additionalUAVs_DX11)
+		{
+			SAFE_RELEASE(x);
+		}
 	}
 
 	GPUBuffer::GPUBuffer() : GPUResource(), GPUUnorderedResource()
@@ -149,12 +157,16 @@ namespace wiGraphicsTypes
 		SAFE_DELETE(vertexLayout);
 	}
 
-	Texture::Texture() : GPUResource(), GPUUnorderedResource(), independentRTVArraySlices(false), independentRTVCubemapFaces(false)
+	Texture::Texture() : GPUResource(), GPUUnorderedResource()
+		, independentRTVArraySlices(false), independentRTVCubemapFaces(false)
+		, independentSRVMIPs(false), independentUAVMIPs(false)
 	{
+		SAFE_INIT(RTV_DX11);
 	}
 	Texture::~Texture()
 	{
-		for (auto& x : renderTargetViews_DX11)
+		SAFE_RELEASE(RTV_DX11);
+		for (auto& x : additionalRTVs_DX11)
 		{
 			SAFE_RELEASE(x);
 		}
@@ -163,17 +175,17 @@ namespace wiGraphicsTypes
 	{
 		independentRTVArraySlices = value;
 	}
-	bool Texture::IsIndepententRenderTargetArraySlices()
-	{
-		return independentRTVArraySlices;
-	}
 	void Texture::RequestIndepententRenderTargetCubemapFaces(bool value)
 	{
 		independentRTVCubemapFaces = value;
 	}
-	bool Texture::IsIndepententRenderTargetCubemapFaces()
+	void Texture::RequestIndepententShaderResourcesForMIPs(bool value)
 	{
-		return independentRTVCubemapFaces;
+		independentSRVMIPs = value;
+	}
+	void Texture::RequestIndepententUnorderedAccessResourcesForMIPs(bool value)
+	{
+		independentUAVMIPs = value;
 	}
 
 	Texture1D::Texture1D() :Texture()
@@ -188,11 +200,13 @@ namespace wiGraphicsTypes
 	Texture2D::Texture2D() :Texture()
 	{
 		SAFE_INIT(texture2D_DX11);
+		SAFE_INIT(DSV_DX11);
 	}
 	Texture2D::~Texture2D()
 	{
 		SAFE_RELEASE(texture2D_DX11);
-		for (auto& x : depthStencilViews_DX11)
+		SAFE_RELEASE(DSV_DX11);
+		for (auto& x : additionalDSVs_DX11)
 		{
 			SAFE_RELEASE(x);
 		}

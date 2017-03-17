@@ -454,6 +454,16 @@ public:
 	static void ComputeTiledLightCulling(GRAPHICSTHREAD threadID);
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 
+	enum MIPGENFILTER
+	{
+		MIPGENFILTER_POINT,
+		MIPGENFILTER_LINEAR,
+		MIPGENFILTER_GAUSSIAN,
+	};
+	static void GenerateMipChain(wiGraphicsTypes::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
+	static void GenerateMipChain(wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
+	static void GenerateMipChain(wiGraphicsTypes::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
+
 	static void ManageDecalAtlas(GRAPHICSTHREAD threadID);
 	
 	static XMVECTOR GetSunPosition();
