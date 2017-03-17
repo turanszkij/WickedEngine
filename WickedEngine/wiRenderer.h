@@ -276,7 +276,7 @@ protected:
 	
 
 
-	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, gridHelper, voxelHelper;
+	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, gridHelper, voxelHelper, advancedLightCulling;
 	static bool requestReflectionRendering;
 
 
@@ -356,6 +356,8 @@ public:
 	static void SetToDrawVoxelHelper(bool value) { voxelHelper = value; }
 	static void SetDebugLightCulling(bool enabled) { debugLightCulling = enabled; }
 	static bool GetDebugLightCulling() { return debugLightCulling; }
+	static void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
+	static bool GetAdvancedLightCulling() { return advancedLightCulling; }
 	static void SetOcclusionCullingEnabled(bool enabled) { occlusionCulling = enabled; }
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }

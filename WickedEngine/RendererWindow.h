@@ -28,6 +28,7 @@ public:
 	wiCheckBox* partitionBoxesCheckBox;
 	wiCheckBox* boneLinesCheckBox;
 	wiCheckBox* wireFrameCheckBox;
+	wiCheckBox* advancedLightCullingCheckBox;
 	wiCheckBox* debugLightCullingCheckBox;
 	wiCheckBox* tessellationCheckBox;
 	wiCheckBox* envProbesCheckBox;

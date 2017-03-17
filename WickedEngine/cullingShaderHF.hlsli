@@ -1,6 +1,6 @@
 #ifndef _CULLING_SHADER_HF_
 #define _CULLING_SHADER_HF_
-#include "lightCullingCSInterop.h"
+#include "ShaderInterop.h"
 
 CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
 {

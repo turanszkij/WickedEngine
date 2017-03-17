@@ -124,13 +124,22 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wireFrameCheckBox->SetCheck(wiRenderer::IsWireRender());
 	rendererWindow->AddWidget(wireFrameCheckBox);
 
-	debugLightCullingCheckBox = new wiCheckBox("Debug Light Culling: ");
-	debugLightCullingCheckBox->SetTooltip("Toggle visualization of the screen space light culling heatmap grid (Tiled Forward renderer only)");
-	debugLightCullingCheckBox->SetPos(XMFLOAT2(x, y += step));
+	advancedLightCullingCheckBox = new wiCheckBox("2.5D Light Culling: ");
+	advancedLightCullingCheckBox->SetTooltip("Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)");
+	advancedLightCullingCheckBox->SetPos(XMFLOAT2(x, y += step));
+	advancedLightCullingCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetAdvancedLightCulling(args.bValue);
+	});
+	advancedLightCullingCheckBox->SetCheck(wiRenderer::GetAdvancedLightCulling());
+	rendererWindow->AddWidget(advancedLightCullingCheckBox);
+
+	debugLightCullingCheckBox = new wiCheckBox("DEBUG: ");
+	debugLightCullingCheckBox->SetTooltip("Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)");
+	debugLightCullingCheckBox->SetPos(XMFLOAT2(x + 100, y));
 	debugLightCullingCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetDebugLightCulling(args.bValue);
 	});
-	debugLightCullingCheckBox->SetCheck(wiRenderer::IsWireRender());
+	debugLightCullingCheckBox->SetCheck(wiRenderer::GetDebugLightCulling());
 	rendererWindow->AddWidget(debugLightCullingCheckBox);
 
 	tessellationCheckBox = new wiCheckBox("Tessellation Enabled: ");
@@ -327,6 +336,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);
+	SAFE_DELETE(advancedLightCullingCheckBox);
 	SAFE_DELETE(debugLightCullingCheckBox);
 	SAFE_DELETE(tessellationCheckBox);
 	SAFE_DELETE(envProbesCheckBox);

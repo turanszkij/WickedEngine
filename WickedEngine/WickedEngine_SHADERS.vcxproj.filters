@@ -561,6 +561,12 @@
     <FxCompile Include="generateMIPChain2D_GaussianCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="lightCullingCS_ADVANCED.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightCullingCS_ADVANCED_DEBUG.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
@@ -584,10 +590,5 @@
     <Filter Include="HF">
       <UniqueIdentifier>{12396e21-0254-42fa-a88b-805f0703eca5}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="lightCullingCSInterop.h">
-      <Filter>CS</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

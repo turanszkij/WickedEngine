@@ -10,7 +10,6 @@
 #include "brdf.hlsli"
 #include "envReflectionHF.hlsli"
 #include "packHF.hlsli"
-#include "lightCullingCSInterop.h"
 #include "lightingHF.hlsli"
 
 // DEFINITIONS

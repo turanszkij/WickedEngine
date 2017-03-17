@@ -247,7 +247,7 @@ void main(ComputeShaderInput IN)
 	// (used for testing lights within the bounds of opaque geometry).
 	Plane minPlane = { float3(0, 0, 1), minDepthVS };
 
-
+#ifdef ADVANCED_CULLING
 	// We divide the minmax depth bounds to 32 equal slices
 	// then we mark the occupied depth slices with atomic or from each thread
 	// we do all this in linear (view) space
@@ -256,6 +256,7 @@ void main(ComputeShaderInput IN)
 	const uint __depthmaskcellindex = max(0, min(32, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 	InterlockedOr(uDepthMask, 1 << __depthmaskcellindex);
 	GroupMemoryBarrierWithGroupSync();
+#endif
 
 	// Cull lights
 	// Each thread in a group will cull 1 light until all lights have been culled.
@@ -276,7 +277,9 @@ void main(ComputeShaderInput IN)
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than just frustum culling
 				{
 					// Add light to light list for opaque geometry.
+#ifdef ADVANCED_CULLING
 					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
 					{
 						o_AppendLight(i);
 					}
@@ -310,7 +313,9 @@ void main(ComputeShaderInput IN)
 
 				if (SphereIntersectsAABB(sphere, GroupAABB))
 				{
+#ifdef ADVANCED_CULLING
 					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
 					{
 						o_AppendLight(i);
 					}
@@ -347,7 +352,9 @@ void main(ComputeShaderInput IN)
 
 				if (IntersectAABB(a, b))
 				{
+#ifdef ADVANCED_CULLING
 					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
 					{
 						o_AppendLight(i);
 					}

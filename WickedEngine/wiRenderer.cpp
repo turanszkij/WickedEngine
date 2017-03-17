@@ -23,7 +23,6 @@
 #include "ResourceMapping.h"
 #include "wiGraphicsDevice_DX11.h"
 #include "wiTranslator.h"
-#include "lightCullingCSInterop.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
@@ -50,7 +49,7 @@ Texture				*wiRenderer::textures[TEXTYPE_LAST];
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
-, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false;
+, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true;
 float wiRenderer::renderTime = 0;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
@@ -779,7 +778,9 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEFRUSTUMS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
@@ -4305,11 +4306,25 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		if (GetDebugLightCulling())
 		{
 			device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
-			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
+			if (GetAdvancedLightCulling())
+			{
+				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG], threadID);
+			}
+			else
+			{
+				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
+			}
 		}
 		else
 		{
-			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
+			if (GetAdvancedLightCulling())
+			{
+				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED], threadID);
+			}
+			else
+			{
+				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
+			}
 		}
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Opaque, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE, threadID);
 		device->BindUnorderedAccessResourceCS(lightCounterHelper_Transparent, UAVSLOT_LIGHTINDEXCOUNTERHELPER_TRANSPARENT, threadID);
