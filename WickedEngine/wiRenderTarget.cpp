@@ -60,13 +60,17 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
 		textureDesc.MiscFlags = 0;
-		if (mipMapLevelCount != 1)
-		{
-			textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
-		}
 
 		numViews = 1;
-		renderTargets.push_back(nullptr);
+		Texture2D* texture = new Texture2D;
+		if (mipMapLevelCount != 1)
+		{
+			texture->RequestIndepententShaderResourcesForMIPs(true);
+			texture->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+			textureDesc.BindFlags |= BIND_UNORDERED_ACCESS;
+			textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
+		}
+		renderTargets.push_back(texture);
 		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
 		if (MSAAC > 1)
 		{

@@ -52,7 +52,11 @@
 
 #define TEXSLOT_LIGHTGRID			25
 
-#define TEXSLOT_COUNT		TEXSLOT_LIGHTGRID
+// Ondemand textures are 2d textures and declared in shader globals, these can be used independently in any shader
+#define TEXSLOT_UNIQUE0				26
+#define TEXSLOT_UNIQUE1				27
+
+#define TEXSLOT_COUNT		TEXSLOT_UNIQUE1
 
 #define SBSLOT_BONE					0
 #define SBSLOT_TILEFRUSTUMS			25

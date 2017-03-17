@@ -109,6 +109,9 @@
     <None Include="voxelConeTracingHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="generateMIPChainHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -547,6 +550,15 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="voxelSceneCopyClear_TemporalSmoothing.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain3D_GaussianCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2D_SimpleFilterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2D_GaussianCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

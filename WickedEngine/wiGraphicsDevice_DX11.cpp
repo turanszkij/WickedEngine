@@ -1737,9 +1737,26 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
 		ZeroMemory(&uav_desc, sizeof(uav_desc));
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-		uav_desc.Texture2D.MipSlice = 0;
 
-		hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->UAV_DX11);
+		if ((*ppTexture2D)->independentUAVMIPs)
+		{
+			// Create subresource UAVs:
+			UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+			for (UINT i = 0; i < miplevels; ++i)
+			{
+				uav_desc.Texture2D.MipSlice = i;
+
+				(*ppTexture2D)->additionalUAVs_DX11.push_back(nullptr);
+				hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->additionalUAVs_DX11[i]);
+				assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+			}
+		}
+
+		{
+			// Create main resource UAV:
+			uav_desc.Texture2D.MipSlice = 0;
+			hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->UAV_DX11);
+		}
 
 		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
 	}
@@ -1798,7 +1815,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const S
 		}
 
 		{
-			// Create full-resource UAV
+			// Create main resource UAV:
 			uav_desc.Texture3D.MipSlice = 0;
 			uav_desc.Texture3D.WSize = desc.Depth;
 			hr = device->CreateUnorderedAccessView((*ppTexture3D)->texture3D_DX11, &uav_desc, &(*ppTexture3D)->UAV_DX11);
@@ -1915,24 +1932,45 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 					shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
 				}
 			}
+			hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
+			assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 		}
 		else
 		{
 			if (multisampled)
 			{
 				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+				hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
+				assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 			}
 			else
 			{
 				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-				shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
-				shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
+
+				if (pTexture->independentSRVMIPs)
+				{
+					// Create subresource SRVs:
+					UINT miplevels = pTexture->desc.MipLevels;
+					for (UINT i = 0; i < miplevels; ++i)
+					{
+						shaderResourceViewDesc.Texture2D.MostDetailedMip = i;
+						shaderResourceViewDesc.Texture2D.MipLevels = 1;
+
+						pTexture->additionalSRVs_DX11.push_back(nullptr);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11[i]);
+						assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+					}
+				}
+
+				{
+					// Create full-resource SRV:
+					shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
+					shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
+					hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
+					assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+				}
 			}
 		}
-
-		hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
-
-		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 	}
 
 	return hr;

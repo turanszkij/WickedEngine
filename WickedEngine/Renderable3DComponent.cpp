@@ -53,7 +53,7 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, FORMAT_R8G8B8A8_SNORM);
 	rtSceneCopy.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
-		, false, FORMAT_R16G16B16A16_FLOAT, 5);
+		, false, FORMAT_R16G16B16A16_FLOAT, 8);
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
 		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
@@ -363,8 +363,8 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::GenerateMipChain(rtSceneCopy.GetTexture(), wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
 	shadedSceneRT.Set(threadID, mainRT.depth); {
-		wiRenderer::GetDevice()->GenerateMips(rtSceneCopy.GetTexture(), threadID); // todo: create smoother mipchain for refraction
 		RenderTransparentScene(rtSceneCopy, threadID);
 
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
@@ -428,7 +428,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		// We don't need the following for stereograms...
 		return;
 	}
-	wiProfiler::GetInstance().BeginRange("Post Processing 1", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::GetInstance().BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 
@@ -556,9 +556,6 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 }
 void Renderable3DComponent::RenderColorGradedComposition()
 {
-	wiProfiler::GetInstance().BeginRange("Post Processing 2", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
-
-
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_NEAREST;
@@ -595,9 +592,6 @@ void Renderable3DComponent::RenderColorGradedComposition()
 
 	wiImage::Draw(rtFinal[1].GetTexture(), fx);
 	wiRenderer::GetDevice()->EventEnd();
-
-
-	wiProfiler::GetInstance().EndRange(); // Post Processing 2
 }
 
 

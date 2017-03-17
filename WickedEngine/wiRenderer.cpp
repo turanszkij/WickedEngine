@@ -785,8 +785,11 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelRadianceSecondaryBounceCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELCLEARONLYNORMAL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelClearOnlyNormalCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	
+	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
 
@@ -4127,7 +4130,14 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
-		GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
+		if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		{
+			GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
+		}
+		else
+		{
+			GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
+		}
 	}
 
 	if (voxelHelper)
@@ -4340,11 +4350,7 @@ void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	assert(0 && "Not implemented!");
-}
-void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
-{
-	Texture3DDesc desc = texture->GetDesc();
+	const Texture2DDesc& desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -4352,34 +4358,119 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 		return;
 	}
 
-	GetDevice()->EventBegin("GenerateMipChain 3D", threadID);
+	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 	switch (filter)
 	{
 	case wiRenderer::MIPGENFILTER_POINT:
+		GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_LINEAR:
+		GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_GAUSSIAN:
+		GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
+		// Gaussian will first generate linear sampled mip levels, and a second pass will perform gaussian blur on the mip levels!
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	}
+
+	Texture2DDesc tmpdesc = desc;
+	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+	{
+		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+		tmpdesc.Width = max(1, desc.Width / 2);
+		tmpdesc.Height = max(1, desc.Height / 2);
+		GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE), 1, threadID);
+	}
+
+	if (filter == MIPGENFILTER_GAUSSIAN)
+	{
+		tmpdesc = desc;
+		GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
+
+		for (UINT i = 1; i < desc.MipLevels; ++i)
+		{
+			GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i);
+			tmpdesc.Width = max(1, desc.Width / 2);
+			tmpdesc.Height = max(1, desc.Height / 2);
+			GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE), 1, threadID);
+		}
+	}
+
+	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	GetDevice()->BindCS(nullptr, threadID);
+
+	GetDevice()->EventEnd();
+}
+void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
+{
+	const Texture3DDesc& desc = texture->GetDesc();
+
+	if (desc.MipLevels < 2)
+	{
+		assert(0);
+		return;
+	}
+
+	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+
+	switch (filter)
+	{
+	case wiRenderer::MIPGENFILTER_POINT:
+		GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
 		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
 		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_LINEAR:
+		GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
 		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
 		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_GAUSSIAN:
-		assert(0 && "Not implemented!");
+		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
+		// Gaussian will first generate linear sampled mip levels, and a second pass will perform gaussian blur on the mip levels!
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	}
 
+	Texture3DDesc tmpdesc = desc;
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
 		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
-		GetDevice()->BindResourceCS(texture, 0, threadID, i);
-		desc.Width = max(1, desc.Width / 2);
-		desc.Height = max(1, desc.Height / 2);
-		desc.Depth = max(1, desc.Depth / 2);
-		GetDevice()->Dispatch(max(1, desc.Width / 8), max(1, desc.Height / 8), max(1, desc.Depth / 8), threadID);
+		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+		tmpdesc.Width = max(1, desc.Width / 2);
+		tmpdesc.Height = max(1, desc.Height / 2);
+		tmpdesc.Depth = max(1, desc.Depth / 2);
+		GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE), threadID);
 	}
 
-	GetDevice()->UnBindResources(0, 1, threadID);
+	if (filter == MIPGENFILTER_GAUSSIAN)
+	{
+		tmpdesc = desc;
+		GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN], threadID);
+
+		for (UINT i = 1; i < desc.MipLevels; ++i)
+		{
+			GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i);
+			tmpdesc.Width = max(1, desc.Width / 2);
+			tmpdesc.Height = max(1, desc.Height / 2);
+			tmpdesc.Depth = max(1, desc.Depth / 2);
+			GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE), threadID);
+		}
+	}
+
+	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 	GetDevice()->BindCS(nullptr, threadID);
 
