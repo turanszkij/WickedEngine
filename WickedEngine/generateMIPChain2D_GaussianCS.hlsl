@@ -13,48 +13,35 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	input_output.GetDimensions(dim.x, dim.y);
 
 	// Determine if the thread is alive (it is alive when the dispatchthreadID can directly index a pixel)
-	bool alive = DTid.x < dim.x && DTid.y < dim.y;
-
-	if (alive)
+	if (DTid.x < dim.x && DTid.y < dim.y)
 	{
+		// Do a bilinear sample first and write it out:
 		input_output[DTid.xy] = input.SampleLevel(sampler_linear_clamp, ((float2)DTid + 0.5f) / (float2)dim, 0);
-	}
-	DeviceMemoryBarrier();
+		DeviceMemoryBarrier();
 
-	uint i = 0;
-	float4 sum = 0;
+		uint i = 0;
+		float4 sum = 0;
 
-	// Gather samples in the X (horizontal) direction:
-	if (alive)
-	{
+		// Gather samples in the X (horizontal) direction:
 		[unroll]
 		for (i = 0; i < 9; ++i)
 		{
 			sum += input_output[DTid.xy + uint2(gaussianOffsets[i], 0)] * gaussianWeightsNormalized[i];
 		}
-	}
-	// Write out the result of the horizontal blur:
-	DeviceMemoryBarrier();
-	if (alive)
-	{
+		// Write out the result of the horizontal blur:
+		DeviceMemoryBarrier();
 		input_output[DTid.xy] = sum;
-	}
-	DeviceMemoryBarrier();
-	sum = 0;
+		DeviceMemoryBarrier();
+		sum = 0;
 
-	// Gather samples in the Y (vertical) direction:
-	if (alive)
-	{
+		// Gather samples in the Y (vertical) direction:
 		[unroll]
 		for (i = 0; i < 9; ++i)
 		{
 			sum += input_output[DTid.xy + uint2(0, gaussianOffsets[i])] * gaussianWeightsNormalized[i];
 		}
-	}
-	// Write out the result of the vertical blur:
-	DeviceMemoryBarrier();
-	if (alive)
-	{
+		// Write out the result of the vertical blur:
+		DeviceMemoryBarrier();
 		input_output[DTid.xy] = sum;
 	}
 }
