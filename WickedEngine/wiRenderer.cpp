@@ -4350,7 +4350,7 @@ void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	const Texture2DDesc& desc = texture->GetDesc();
+	Texture2DDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -4374,35 +4374,21 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 		break;
 	case wiRenderer::MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
-		// Gaussian will first generate linear sampled mip levels, and a second pass will perform gaussian blur on the mip levels!
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
 		break;
 	}
 
-	Texture2DDesc tmpdesc = desc;
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
 		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
 		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
-		tmpdesc.Width = max(1, desc.Width / 2);
-		tmpdesc.Height = max(1, desc.Height / 2);
-		GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE), 1, threadID);
-	}
-
-	if (filter == MIPGENFILTER_GAUSSIAN)
-	{
-		tmpdesc = desc;
-		GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
-
-		for (UINT i = 1; i < desc.MipLevels; ++i)
-		{
-			GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i);
-			tmpdesc.Width = max(1, desc.Width / 2);
-			tmpdesc.Height = max(1, desc.Height / 2);
-			GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE), 1, threadID);
-		}
+		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+		GetDevice()->Dispatch(
+			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
+			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
+			1, 
+			threadID);
 	}
 
 	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
@@ -4413,7 +4399,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	const Texture3DDesc& desc = texture->GetDesc();
+	Texture3DDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -4437,37 +4423,22 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 		break;
 	case wiRenderer::MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
-		// Gaussian will first generate linear sampled mip levels, and a second pass will perform gaussian blur on the mip levels!
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN], threadID);
 		break;
 	}
 
-	Texture3DDesc tmpdesc = desc;
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
 		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
 		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
-		tmpdesc.Width = max(1, desc.Width / 2);
-		tmpdesc.Height = max(1, desc.Height / 2);
-		tmpdesc.Depth = max(1, desc.Depth / 2);
-		GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE), threadID);
-	}
-
-	if (filter == MIPGENFILTER_GAUSSIAN)
-	{
-		tmpdesc = desc;
-		GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN], threadID);
-
-		for (UINT i = 1; i < desc.MipLevels; ++i)
-		{
-			GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i);
-			tmpdesc.Width = max(1, desc.Width / 2);
-			tmpdesc.Height = max(1, desc.Height / 2);
-			tmpdesc.Depth = max(1, desc.Depth / 2);
-			GetDevice()->Dispatch(max(1, desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE), max(1, desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE), threadID);
-		}
+		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+		desc.Depth = max(1, (UINT)ceilf(desc.Depth * 0.5f));
+		GetDevice()->Dispatch(
+			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			max(1, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			threadID);
 	}
 
 	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
