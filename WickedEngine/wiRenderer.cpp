@@ -4130,11 +4130,11 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
-		if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
-		{
-			GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
-		}
-		else
+		//if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		//{
+		//	GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
+		//}
+		//else
 		{
 			GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
 		}
