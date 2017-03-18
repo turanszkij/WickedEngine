@@ -755,12 +755,14 @@ void EditorComponent::Update(float dt)
 		{
 			// FPS Camera
 			cam->detach();
+
+			float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 100.0f : 10.0f) * dt;
+			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
+			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
+
 			if (!wiInputManager::GetInstance()->down(VK_CONTROL))
 			{
 				// Only move camera if control not pressed
-				float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 100.0f : 10.0f) * dt;
-				static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
-				XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 				if (wiInputManager::GetInstance()->down('A')) moveNew += XMVectorSet(-1, 0, 0, 0);
 				if (wiInputManager::GetInstance()->down('D')) moveNew += XMVectorSet(1, 0, 0, 0);
 				if (wiInputManager::GetInstance()->down('W')) moveNew += XMVectorSet(0, 0, 1, 0);
@@ -768,9 +770,10 @@ void EditorComponent::Update(float dt)
 				if (wiInputManager::GetInstance()->down('E')) moveNew += XMVectorSet(0, 1, 0, 0);
 				if (wiInputManager::GetInstance()->down('Q')) moveNew += XMVectorSet(0, -1, 0, 0);
 				moveNew = XMVector3Normalize(moveNew) * speed;
-				move = XMVectorLerp(move, moveNew, 0.18f); // smooth the movement a bit
-				cam->Move(move);
 			}
+
+			move = XMVectorLerp(move, moveNew, 0.18f); // smooth the movement a bit
+			cam->Move(move);
 			cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
 		}
 		else
