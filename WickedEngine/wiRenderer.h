@@ -78,6 +78,7 @@ public:
 	
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
+	static float SPECULARAA;
 	static float renderTime;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
@@ -90,7 +91,8 @@ public:
 		XMFLOAT3 mHorizon;				float pad0;
 		XMFLOAT3 mZenith;				float pad1;
 		XMFLOAT3 mAmbient;				float pad2;
-		XMFLOAT3 mFog;					float pad3;
+		XMFLOAT3 mFog;
+		float mSpecularAA;
 		XMFLOAT2 mScreenWidthHeight;
 		float mVoxelRadianceDataSize;
 		UINT mVoxelRadianceDataRes;
@@ -372,6 +374,8 @@ public:
 	static int GetVoxelRadianceConeTracingQuality() { return voxelSceneData.coneTracingQuality; }
 	static float GetVoxelRadianceFalloff() { return voxelSceneData.falloff; }
 	static void SetVoxelRadianceFalloff(float value) { voxelSceneData.falloff = value; }
+	static void SetSpecularAAParam(float value) { SPECULARAA = value; }
+	static float GetSpecularAAParam() { return SPECULARAA; }
 	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};

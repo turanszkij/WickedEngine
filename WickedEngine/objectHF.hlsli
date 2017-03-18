@@ -65,6 +65,18 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3
 	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMat_normalMapStrength));
 }
 
+inline void SpecularAA(in float3 N, inout float roughness)
+{
+	[branch]
+	if (g_xWorld_SpecularAA > 0)
+	{
+		float3 ddxN = ddx(N);
+		float3 ddyN = ddy(N);
+		float curve = pow(max(dot(ddxN, ddxN), dot(ddyN, ddyN)), 1 - g_xWorld_SpecularAA);
+		roughness = max(roughness, curve);
+	}
+}
+
 inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, in float3 V, in float roughness, in float3 f0)
 {
 	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz*0.1f, 0);
@@ -253,6 +265,9 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 #define OBJECT_PS_PARALLAXOCCLUSIONMAPPING									\
 	ParallaxOcclusionMapping(UV, V, TBN);
+
+#define OBJECT_PS_SPECULARANTIALIASING										\
+	SpecularAA(N, roughness);
 
 #define OBJECT_PS_LIGHT_BEGIN																						\
 	BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )

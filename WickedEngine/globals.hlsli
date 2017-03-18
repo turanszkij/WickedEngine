@@ -49,7 +49,8 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_Horizon;				float xPadding0_WorldCB;
 	float3		g_xWorld_Zenith;				float xPadding1_WorldCB;
 	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
-	float3		g_xWorld_Fog;					float xPadding3_WorldCB;
+	float3		g_xWorld_Fog;
+	float		g_xWorld_SpecularAA;
 	float2		g_xWorld_ScreenWidthHeight;
 	float		g_xWorld_VoxelRadianceDataSize;
 	uint		g_xWorld_VoxelRadianceDataRes;

@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 700));
+	rendererWindow->SetSize(XMFLOAT2(400, 740));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -96,6 +96,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 		wiRenderer::SetVoxelRadianceFalloff(args.fValue);
 	});
 	rendererWindow->AddWidget(voxelRadianceFalloffSlider);
+
+	specularAASlider = new wiSlider(0, 1, 1, 10000, "Specular Antialiasing: ");
+	specularAASlider->SetTooltip("Adjust specular antialiasing strength. This can reduce flickering of specular highlights.");
+	specularAASlider->SetSize(XMFLOAT2(100, 30));
+	specularAASlider->SetPos(XMFLOAT2(x, y += 30));
+	specularAASlider->SetValue(wiRenderer::GetSpecularAAParam());
+	specularAASlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetSpecularAAParam(args.fValue);
+	});
+	rendererWindow->AddWidget(specularAASlider);
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
@@ -333,6 +343,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(voxelRadianceVoxelSizeSlider);
 	SAFE_DELETE(voxelRadianceConeTracingSlider);
 	SAFE_DELETE(voxelRadianceFalloffSlider);
+	SAFE_DELETE(specularAASlider);
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);

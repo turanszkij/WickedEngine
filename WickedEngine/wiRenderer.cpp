@@ -50,6 +50,7 @@ int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRendere
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true;
+float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
@@ -4555,6 +4556,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mFog = world.fogSEH;
 	value.mHorizon = world.horizon;
 	value.mZenith = world.zenith;
+	value.mSpecularAA = SPECULARAA;
 	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
 	value.mVoxelRadianceDataSize = voxelSceneData.voxelsize;
 	value.mVoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (UINT)voxelSceneData.res : 0;
