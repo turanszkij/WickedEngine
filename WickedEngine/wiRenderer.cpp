@@ -4476,6 +4476,11 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 		for (Decal* decal : model->decals)
 		{
+			if (decal->texture == nullptr)
+			{
+				continue;
+			}
+
 			using namespace wiRectPacker;
 			static map<Texture2D*, rect_xywhf> storedTextures;
 

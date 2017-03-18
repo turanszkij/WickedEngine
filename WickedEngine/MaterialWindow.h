@@ -42,5 +42,13 @@ public:
 	wiButton*	colorPickerToggleButton;
 	wiColorPicker* colorPicker;
 	wiSlider*	alphaRefSlider;
+
+	wiLabel*	texture_baseColor_Label;
+	wiLabel*	texture_normal_Label;
+	wiLabel*	texture_displacement_Label;
+
+	wiButton*	texture_baseColor_Button;
+	wiButton*	texture_normal_Button;
+	wiButton*	texture_displacement_Button;
 };
 
