@@ -120,7 +120,9 @@ void MainComponent::run()
 	}
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
+	wiProfiler::GetInstance().BeginRange("Render", wiProfiler::DOMAIN_CPU);
 	Render();
+	wiProfiler::GetInstance().EndRange(); // Render
 
 	wiProfiler::GetInstance().EndRange(); // CPU Frame
 
