@@ -99,12 +99,22 @@ void wiSPTree::Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortTy
 	{
 	case wiSPTree::SP_TREE_SORT_NONE:
 		break;
+	case wiSPTree::SP_TREE_SORT_UNIQUE:
+		// Unique must only be called on a sorted forward_list!
+		// And we cannot rely on the by distance sort for this because culled objects could have been gathered by different cullers, so sort by pointers!
+		objects.sort([&](const void* a, const void* b) {
+			return a < b;
+		});
+		objects.unique();
+		break;
 	case wiSPTree::SP_TREE_SORT_BACK_TO_FRONT:
+		Sort(origin, objects, wiSPTree::SP_TREE_SORT_UNIQUE);
 		objects.sort([&](const Cullable* a, const Cullable* b) {
 			return wiMath::DistanceSquared(origin, a->bounds.getCenter()) > wiMath::DistanceSquared(origin, b->bounds.getCenter());
 		});
 		break;
 	case wiSPTree::SP_TREE_SORT_FRONT_TO_BACK:
+		Sort(origin, objects, wiSPTree::SP_TREE_SORT_UNIQUE);
 		objects.sort([&](const Cullable* a, const Cullable* b) {
 			return wiMath::DistanceSquared(origin, a->bounds.getCenter()) < wiMath::DistanceSquared(origin, b->bounds.getCenter());
 		});
@@ -112,9 +122,6 @@ void wiSPTree::Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortTy
 	default:
 		break;
 	}
-
-	// unique should be AFTER the sort!!
-	objects.unique();
 }
 
 void wiSPTree::getVisible(Frustum& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
@@ -320,7 +327,7 @@ wiSPTree* wiSPTree::updateTree(Node* node)
 			}
 			else{
 				CulledList culledItems;
-				getVisible(node->box, culledItems, SP_TREE_SORT_NONE, SP_TREE_STRICT_CULL, node);
+				getVisible(node->box, culledItems, SP_TREE_SORT_UNIQUE, SP_TREE_STRICT_CULL, node);
 				for(Cullable* item : culledItems){
 					bad.push_back(item);
 				}

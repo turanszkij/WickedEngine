@@ -1601,7 +1601,7 @@ void wiRenderer::UpdatePerFrameData()
 				}
 
 				// We wouldn't have to sort, but we need unique lights and that only works with sorted forward_list!
-				spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
+				spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_UNIQUE);
 
 				int i = (int)x.second.culledDecals.size(); // Index the light array after the decals
 				int shadowCounter_2D = 0;
@@ -3016,6 +3016,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					vp.MinDepth = 0.0f;
 					vp.MaxDepth = 1.0f;
 					GetDevice()->BindViewports(1, &vp, threadID);
+					break;
 				}
 				break;
 				case Light::POINT:
@@ -3033,6 +3034,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					GetDevice()->BindViewports(1, &vp, threadID);
 
 					GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+					break;
 				}
 				break;
 				default:
@@ -3169,6 +3171,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					break;
 					} // terminate switch
 				}
+
 			}
 
 			GetDevice()->BindGS(nullptr, threadID);

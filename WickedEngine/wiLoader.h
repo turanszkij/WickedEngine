@@ -392,10 +392,6 @@ struct Cullable
 public:
 	Cullable();
 	AABB bounds;
-	long lastSquaredDistMulThousand; //for early depth sort
-	bool operator() (const Cullable* a, const Cullable* b) const{
-		return a->lastSquaredDistMulThousand<b->lastSquaredDistMulThousand;
-	}
 	void Serialize(wiArchive& archive);
 };
 struct Streamable : public Cullable

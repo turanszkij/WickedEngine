@@ -772,7 +772,7 @@ void EditorComponent::Update(float dt)
 				moveNew = XMVector3Normalize(moveNew) * speed;
 			}
 
-			move = XMVectorLerp(move, moveNew, 0.18f); // smooth the movement a bit
+			move = XMVectorLerp(move, moveNew, 0.18f * dt / 0.0166f); // smooth the movement a bit
 			cam->Move(move);
 			cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
 		}

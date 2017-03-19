@@ -1377,7 +1377,7 @@ void Scene::Update()
 #pragma endregion
 
 #pragma region CULLABLE
-Cullable::Cullable():bounds(AABB())/*,lastSquaredDistMulThousand(0)*/{}
+Cullable::Cullable():bounds(AABB()){}
 void Cullable::Serialize(wiArchive& archive)
 {
 	bounds.Serialize(archive);
