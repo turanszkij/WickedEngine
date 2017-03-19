@@ -288,3 +288,9 @@ enum BSTYPES
 	BSTYPE_DEFERREDLIGHT,
 	BSTYPE_LAST
 };
+// custom sample states
+enum CSSTYPES
+{
+	SSTYPE_MAXIMUM_CLAMP,
+	SSTYPE_LAST
+};

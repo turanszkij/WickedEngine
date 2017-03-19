@@ -74,6 +74,7 @@ public:
 	static wiGraphicsTypes::GPUBuffer			*constantBuffers[CBTYPE_LAST];
 	static wiGraphicsTypes::GPUBuffer			*resourceBuffers[RBTYPE_LAST];
 	static wiGraphicsTypes::Texture				*textures[TEXTYPE_LAST];
+	static wiGraphicsTypes::Sampler				*customsamplers[SSTYPE_LAST];
 
 	
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;
@@ -464,6 +465,7 @@ public:
 	{
 		MIPGENFILTER_POINT,
 		MIPGENFILTER_LINEAR,
+		MIPGENFILTER_LINEAR_MAXIMUM,
 		MIPGENFILTER_GAUSSIAN,
 	};
 	static void GenerateMipChain(wiGraphicsTypes::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);

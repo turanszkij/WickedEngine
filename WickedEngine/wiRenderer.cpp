@@ -45,6 +45,7 @@ BlendState			*wiRenderer::blendStates[BSTYPE_LAST];
 GPUBuffer			*wiRenderer::constantBuffers[CBTYPE_LAST];
 GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 Texture				*wiRenderer::textures[TEXTYPE_LAST];
+Sampler				*wiRenderer::customsamplers[SSTYPE_LAST];
 
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
@@ -187,6 +188,10 @@ void wiRenderer::SetUpStaticComponents()
 	{
 		SAFE_INIT(samplers[i]);
 	}
+	for (int i = 0; i < SSTYPE_LAST; ++i)
+	{
+		SAFE_INIT(customsamplers[i]);
+	}
 
 	LoadShaders();
 
@@ -311,6 +316,10 @@ void wiRenderer::CleanUpStatic()
 	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
 	{
 		SAFE_DELETE(samplers[i]);
+	}
+	for (int i = 0; i < SSTYPE_LAST; ++i)
+	{
+		SAFE_DELETE(customsamplers[i]);
 	}
 
 	if (physicsEngine) physicsEngine->CleanUp();
@@ -906,6 +915,26 @@ void wiRenderer::SetUpStates()
 	samplerDesc.MaxAnisotropy = 16;
 	samplerDesc.ComparisonFunc = COMPARISON_LESS_EQUAL;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_CMP_DEPTH]);
+
+	for (int i = 0; i < SSTYPE_LAST; ++i)
+	{
+		customsamplers[i] = new Sampler;
+	}
+
+	samplerDesc.Filter = FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
+	samplerDesc.BorderColor[0] = 0;
+	samplerDesc.BorderColor[1] = 0;
+	samplerDesc.BorderColor[2] = 0;
+	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = FLOAT32_MAX;
+	GetDevice()->CreateSamplerState(&samplerDesc, customsamplers[SSTYPE_MAXIMUM_CLAMP]);
 
 
 	for (int i = 0; i < RSTYPE_LAST; ++i)
@@ -4388,6 +4417,11 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
 		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
+	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+		GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
 	case wiRenderer::MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
 		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
@@ -4436,6 +4470,11 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 		GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
 		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
 		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+		GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
+		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);

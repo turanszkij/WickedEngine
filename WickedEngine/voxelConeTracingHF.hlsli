@@ -75,8 +75,8 @@ inline float4 ConeTraceReflection(in Texture3D<float4> voxels, in float3 uvw, in
 	float3 coneVec = reflect(-V, N) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 	float4 accumulation = 0;
 	float3 tc = uvw + coneVec;
-	float rayLengthCorrection = 1 - saturate(dot(N, V));
-	coneVec *= lerp(g_xWorld_VoxelRadianceDataSize, g_xWorld_VoxelRadianceDataSize * 40, pow8(rayLengthCorrection));
+	float NdotV = saturate(dot(N, V));
+	coneVec *= lerp(0.25, 4, pow8(1 - NdotV));
 
 	uint i = 0;
 	while(accumulation.a < 1 && !any(tc - saturate(tc)))
