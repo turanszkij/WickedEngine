@@ -91,13 +91,13 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 
 	float depth = texture_lineardepth.Load(int3(input.pos.xy, 0));
 
-	float3 vWorldPos = getPosition(input.tex, depth);
+	float3 P = getPosition(input.tex, texture_depth.Load( int3( input.pos.xy, 0 ) ));
 
 
 	//Reflection vector
-	float3 vViewPos = mul(float4(vWorldPos.xyz, 1), g_xCamera_View).xyz;
+	float3 vViewPos = mul(float4(P.xyz, 1), g_xCamera_View).xyz;
 	float3 vViewNor = mul(float4(N, 0), g_xCamera_View).xyz;
-	float3 vReflectDir = normalize(reflect(normalize(vViewPos.xyz), normalize(vViewNor.xyz)));
+	float3 vReflectDir = normalize(reflect( normalize(vViewPos.xyz), normalize( vViewNor.xyz ) ));
 
 
 	//Raycast
@@ -125,6 +125,7 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 	float3 reflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
 	float3 sceneColor = xTexture.Load(int3(input.pos.xy,0)).rgb;
 
+	//return saturate(float4( vReflectDir.zzz, 1 ));
 	return float4(sceneColor.rgb + reflectionColor.rgb * f0 * reflectionIntensity, 1);
 
 }
