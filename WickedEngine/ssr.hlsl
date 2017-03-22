@@ -2,18 +2,15 @@
 #include "reconstructPositionHF.hlsli"
 #include "brdf.hlsli"
 
-// Ne lepegessunk 0-kat, akkor mar inkabb kicsit tobbet inkabb
+// Avoid stepping zero distance
 static const float	g_fMinRayStep = 0.01f;
-// Hany lepesben keressunk durvan
+// Crude raystep count
 static const int	g_iMaxSteps = 16;
-// Durva kereses fazisban mennyire durvuljon minden lepesben
+// Crude raystep scaling
 static const float	g_fRayStep = 1.18f;
-// Ha durva talalat van akkor finomitsuk azt ennyi lepesben
+// Fine raystep count
 static const int	g_iNumBinarySearchSteps = 16;
-// Tavoli tukorkepek fadelesehez (view space)
-static const float	g_fSearchDist = 80.f;
-static const float	g_fSearchDistInv = 1.0f / g_fSearchDist;
-// Minel kisebb, annal pontosabb tukrozodes talalatok lesznek csak megtartva
+// Approximate the precision of the search (smaller is more precise)
 static const float  g_fRayhitThreshold = 0.9f;
 
 bool bInsideScreen(in float2 vCoord)
@@ -91,13 +88,13 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 
 	float depth = texture_lineardepth.Load(int3(input.pos.xy, 0));
 
-	float3 P = getPosition(input.tex, texture_depth.Load( int3( input.pos.xy, 0 ) ));
+	float3 P = getPosition(input.tex, texture_depth.Load(int3(input.pos.xy, 0)));
 
 
 	//Reflection vector
 	float3 vViewPos = mul(float4(P.xyz, 1), g_xCamera_View).xyz;
 	float3 vViewNor = mul(float4(N, 0), g_xCamera_View).xyz;
-	float3 vReflectDir = normalize(reflect( normalize(vViewPos.xyz), normalize( vViewNor.xyz ) ));
+	float3 vReflectDir = normalize(reflect(vViewPos.xyz, vViewNor.xyz));
 
 
 	//Raycast
@@ -117,7 +114,6 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 		saturate(
 			fScreenEdgeFactor *																	// screen fade
 			saturate(vReflectDir.z)																// camera facing fade
-			//* saturate((g_fSearchDist - distance(vViewPos, vHitPos)) * g_fSearchDistInv)	// reflected object distance fade
 			* vCoords.w																			// rayhit binary fade
 			);
 
@@ -125,7 +121,6 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 	float3 reflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
 	float3 sceneColor = xTexture.Load(int3(input.pos.xy,0)).rgb;
 
-	//return saturate(float4( vReflectDir.zzz, 1 ));
 	return float4(sceneColor.rgb + reflectionColor.rgb * f0 * reflectionIntensity, 1);
 
 }
