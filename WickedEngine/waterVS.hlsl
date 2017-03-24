@@ -4,7 +4,7 @@ PixelInputType main(Input input)
 {
 	PixelInputType Out = (PixelInputType)0;
 	
-	float4x4 WORLD = MakeWorldMatrixFromInstance(input);
+	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 		
 	float4 pos = input.pos;
 	pos = mul( pos,WORLD );

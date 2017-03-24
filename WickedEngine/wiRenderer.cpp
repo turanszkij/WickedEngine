@@ -608,15 +608,15 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, VPROP_POS, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL",			0, FORMAT_R32G32B32A32_FLOAT, VPROP_NOR, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, VPROP_TEX, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		1, FORMAT_R32G32B32A32_FLOAT, VPROP_PRE, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -627,18 +627,33 @@ void wiRenderer::LoadShaders()
 	}
 
 	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		};
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr){
+			vertexShaders[VSTYPE_SHADOW] = vsinfo->vertexShader;
+			vertexLayouts[VLTYPE_SHADOW] = vsinfo->vertexLayout;
+		}
+	}
+
+	{
 		VertexLayoutDesc oslayout[] =
 		{
-			{ "POSITION",	0, FORMAT_R32G32B32A32_FLOAT, VPROP_POS, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL",		0, FORMAT_R32G32B32A32_FLOAT, VPROP_NOR, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",	0, FORMAT_R32G32B32A32_FLOAT, VPROP_TEX, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",	1, FORMAT_R32G32B32A32_FLOAT, VPROP_BON, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",	2, FORMAT_R32G32B32A32_FLOAT, VPROP_WEI, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",	0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",	1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		UINT numElements = ARRAYSIZE(oslayout);
-
-
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOVS.cso", wiResourceManager::VERTEXSHADER, oslayout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_STREAMOUT] = vsinfo->vertexShader;
@@ -649,14 +664,13 @@ void wiRenderer::LoadShaders()
 	{
 		StreamOutDeclaration pDecl[] =
 		{
-			// semantic name, semantic index, start component, component count, output slot
-			{ 0, "SV_POSITION", 0, 0, 4,	VPROP_POS },	// output all components of position
-			{ 0, "NORMAL",		0, 0, 4,	VPROP_NOR },	// output all components of the normal
-			{ 0, "TEXCOORD",	0, 0, 4,	VPROP_TEX },	// output all components texture coordinates
-			{ 0, "TEXCOORD",	1, 0, 4,	VPROP_PRE },	// output all components texture coordinates
+			// stream, semantic name, semantic index, start component, component count, output slot
+			{ 0, "SV_POSITION", 0, 0, 4,	0 },	// output all components of position
+			{ 0, "NORMAL",		0, 0, 4,	1 },	// output all components of the normal
+			{ 0, "TEXCOORD",	0, 0, 4,	2 },	// output all components of the previous frame position
 		};
-
-		geometryShaders[GSTYPE_STREAMOUT] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
+		UINT numElements = ARRAYSIZE(pDecl);
+		geometryShaders[GSTYPE_STREAMOUT] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, numElements, pDecl));
 	}
 
 	{
@@ -707,9 +721,8 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SPHERE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_CUBE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_SHADOWCUBE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
@@ -1733,7 +1746,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GPUBuffer* vbs[] = {
 						&mesh->vertexBuffers[VPROP_POS],
 						&mesh->vertexBuffers[VPROP_NOR],
-						&mesh->vertexBuffers[VPROP_TEX],
 						&mesh->vertexBuffers[VPROP_BON],
 						&mesh->vertexBuffers[VPROP_WEI],
 					};
@@ -1742,12 +1754,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						sizeof(XMFLOAT4),
 						sizeof(XMFLOAT4),
 						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
 					};
 					GPUBuffer* sos[] = {
 						&mesh->streamoutBuffers[VPROP_POS],
 						&mesh->streamoutBuffers[VPROP_NOR],
-						&mesh->streamoutBuffers[VPROP_TEX],
 						&mesh->streamoutBuffers[VPROP_PRE],
 					};
 					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), vbstrides, threadID);
@@ -1781,7 +1791,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			// Unload skinning shader
 			GetDevice()->BindGS(nullptr, threadID);
 			GetDevice()->BindVS(nullptr, threadID);
-			GetDevice()->BindStreamOutTarget(nullptr, threadID);
+			GetDevice()->BindStreamOutTargets(nullptr, threadID);
 		}
 #endif
 
@@ -3457,36 +3467,40 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			if (shaderType == SHADERTYPE_VOXELIZE)
 			{
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
-				GetDevice()->BindGS( geometryShaders[ GSTYPE_VOXELIZER ], threadID );
+				GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
+				GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 			}
 			else
 			{
-				if( shaderType == SHADERTYPE_SHADOW )
+				if (shaderType == SHADERTYPE_SHADOW)
 				{
-					GetDevice()->BindVS( vertexShaders[ VSTYPE_SHADOW ], threadID );
+					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW], threadID);
 				}
-				else if( shaderType == SHADERTYPE_SHADOWCUBE )
+				else if (shaderType == SHADERTYPE_SHADOWCUBE)
 				{
-					GetDevice()->BindVS( vertexShaders[ VSTYPE_SHADOWCUBEMAPRENDER ], threadID );
-					GetDevice()->BindGS( geometryShaders[ GSTYPE_SHADOWCUBEMAPRENDER ], threadID );
+					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBE], threadID);
+					GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW], threadID);
 				}
-				else if( shaderType == SHADERTYPE_ENVMAPCAPTURE )
+				else if (shaderType == SHADERTYPE_ENVMAPCAPTURE)
 				{
-					GetDevice()->BindVS( vertexShaders[ VSTYPE_ENVMAP ], threadID );
-					GetDevice()->BindGS( geometryShaders[ GSTYPE_ENVMAP ], threadID );
+					GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
+					GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 				}
 				else
 				{
-					if( tessellation && tessF )
+					if (tessellation && tessF)
 					{
-						GetDevice()->BindVS( vertexShaders[ VSTYPE_OBJECT ], threadID );
+						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT], threadID);
 					}
 					else
 					{
-						GetDevice()->BindVS( vertexShaders[ VSTYPE_OBJECT10 ], threadID );
+						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
 					}
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 				}
-				GetDevice()->BindVertexLayout( vertexLayouts[ VLTYPE_EFFECT ], threadID );
 			}
 
 			if (tessellation && tessF)
@@ -3681,21 +3695,38 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			mesh->UpdateRenderableInstances(k, threadID);
 
-			GPUBuffer* vbs[] = {
-				(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-				(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
-				(mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]),
-				(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_POS]),
-				&mesh->instanceBuffer
-			};
-			UINT strides[] = {
-				sizeof(XMFLOAT4),
-				sizeof(XMFLOAT4),
-				sizeof(XMFLOAT4),
-				sizeof(XMFLOAT4),
-				sizeof(Instance)
-			};
-			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+			if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+			{
+				GPUBuffer* vbs[] = {
+					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+					&mesh->vertexBuffers[VPROP_TEX],
+					&mesh->instanceBuffer
+				};
+				UINT strides[] = {
+					sizeof(XMFLOAT4),
+					sizeof(XMFLOAT4),
+					sizeof(Instance)
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+			}
+			else
+			{
+				GPUBuffer* vbs[] = {
+					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+					(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
+					&mesh->vertexBuffers[VPROP_TEX],
+					(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_POS]),
+					&mesh->instanceBuffer
+				};
+				UINT strides[] = {
+					sizeof(XMFLOAT4),
+					sizeof(XMFLOAT4),
+					sizeof(XMFLOAT4),
+					sizeof(XMFLOAT4),
+					sizeof(Instance)
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+			}
 
 			for (MeshSubset& subset : mesh->subsets)
 			{
@@ -5330,7 +5361,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	GPUBuffer* vbs[] = {
 		(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
 		(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
-		(mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]),
+		&mesh->vertexBuffers[VPROP_TEX],
 		(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_POS]),
 		&mesh->instanceBuffer
 	};

@@ -7,10 +7,10 @@ PixelInputType main(Input input)
 	PixelInputType Out = (PixelInputType)0;
 
 
-	float4x4 WORLD = MakeWorldMatrixFromInstance(input);
+	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 
-	Out.instanceColor = input.color_dither.rgb;
-	Out.dither = input.color_dither.a;
+	Out.instanceColor = input.instance.color_dither.rgb;
+	Out.dither = input.instance.color_dither.a;
 	
 	float4 pos = input.pos;
 	float4 posPrev = input.pre;

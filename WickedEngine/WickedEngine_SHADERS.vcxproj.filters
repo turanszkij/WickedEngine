@@ -273,9 +273,6 @@
     <FxCompile Include="circleVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="cubeShadowVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="decalVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -566,6 +563,9 @@
     </FxCompile>
     <FxCompile Include="lightCullingCS_ADVANCED_DEBUG.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowVS.hlsl">
+      <Filter>VS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

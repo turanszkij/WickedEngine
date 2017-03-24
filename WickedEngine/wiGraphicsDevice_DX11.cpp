@@ -2938,20 +2938,28 @@ void GraphicsDevice_DX11::BindConstantBufferCS(const GPUBuffer* buffer, int slot
 }
 void GraphicsDevice_DX11::BindVertexBuffer(const GPUBuffer* vertexBuffer, int slot, UINT stride, GRAPHICSTHREAD threadID) 
 {
-	UINT offset = 0;
-	ID3D11Buffer* res = vertexBuffer ? vertexBuffer->resource_DX11 : nullptr;
-	deviceContexts[threadID]->IASetVertexBuffers(slot, 1, &res, &stride, &offset);
+	UINT data[8] = { 0 };
+	if (vertexBuffer == nullptr)
+	{
+		deviceContexts[threadID]->IASetVertexBuffers(0, 8, (ID3D11Buffer**)__nullBlob, data, (UINT*)__nullBlob);
+	}
+	else
+	{
+		deviceContexts[threadID]->IASetVertexBuffers(slot, 1, &vertexBuffer->resource_DX11, &stride, (UINT*)__nullBlob);
+	}
 }
 void GraphicsDevice_DX11::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, UINT count, const UINT* strides, GRAPHICSTHREAD threadID)
 {
 	assert(count <= 8);
-	UINT offsets[8] = { 0 };
 	ID3D11Buffer* res[8] = { 0 };
 	for (UINT i = 0; i < count; ++i)
 	{
-		res[i] = vertexBuffers[i]->resource_DX11;
+		if (vertexBuffers[i] != nullptr)
+		{
+			res[i] = vertexBuffers[i]->resource_DX11;
+		}
 	}
-	deviceContexts[threadID]->IASetVertexBuffers(slot, count, res, strides, offsets);
+	deviceContexts[threadID]->IASetVertexBuffers(slot, count, res, strides, (UINT*)__nullBlob);
 }
 void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID)
 {
@@ -3009,9 +3017,14 @@ void GraphicsDevice_DX11::BindRasterizerState(const RasterizerState* state, GRAP
 }
 void GraphicsDevice_DX11::BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICSTHREAD threadID) 
 {
-	UINT offsetSO[1] = { 0 };
-	ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
-	deviceContexts[threadID]->SOSetTargets(1, &res, offsetSO);
+	if (buffer == nullptr)
+	{
+		deviceContexts[threadID]->SOSetTargets(8, (ID3D11Buffer**)__nullBlob, (UINT*)__nullBlob);
+	}
+	else
+	{
+		deviceContexts[threadID]->SOSetTargets(1, &buffer->resource_DX11, (UINT*)__nullBlob);
+	}
 }
 void GraphicsDevice_DX11::BindStreamOutTargets(GPUBuffer* const * buffers, UINT count, GRAPHICSTHREAD threadID)
 {
@@ -3020,7 +3033,10 @@ void GraphicsDevice_DX11::BindStreamOutTargets(GPUBuffer* const * buffers, UINT 
 	ID3D11Buffer* res[8] = { 0 };
 	for (UINT i = 0; i < count; ++i)
 	{
-		res[i] = buffers[i]->resource_DX11;
+		if (buffers[i] != nullptr)
+		{
+			res[i] = buffers[i]->resource_DX11;
+		}
 	}
 	deviceContexts[threadID]->SOSetTargets(count, res, offsetSO);
 }

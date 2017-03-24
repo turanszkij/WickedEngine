@@ -309,7 +309,7 @@ public:
 	vector<string>			materialNames;
 
 	wiGraphicsTypes::GPUBuffer			vertexBuffers[VPROP_COUNT];
-	wiGraphicsTypes::GPUBuffer			streamoutBuffers[VPROP_COUNT - 1]; // omit weights, change boneindices to posprev
+	wiGraphicsTypes::GPUBuffer			streamoutBuffers[VPROP_COUNT - 2]; // omit texcoord, omit weights, change boneindices to posprev
 	wiGraphicsTypes::GPUBuffer			instanceBuffer;
 
 	bool renderable,doubleSided;

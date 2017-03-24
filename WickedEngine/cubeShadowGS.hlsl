@@ -22,18 +22,19 @@ CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 [maxvertexcount(18)] 
 void main( triangle GS_CUBEMAP_IN input[3], inout TriangleStream<PS_CUBEMAP_IN> CubeMapStream ) 
 { 
-    for( int f = 0; f < 6; ++f ) 
-    { 
-        // Compute screen coordinates 
-        PS_CUBEMAP_IN output; 
-        output.RTIndex = f; 
-        for( int v = 0; v < 3; v++ ) 
-        { 
-            output.Pos = mul( input[v].Pos, xCubeShadowVP[f] );
+	[unroll]
+	for (int f = 0; f < 6; ++f)
+	{
+		PS_CUBEMAP_IN output;
+		output.RTIndex = f;
+		[unroll]
+		for (int v = 0; v < 3; v++)
+		{
+			output.Pos = mul(input[v].Pos, xCubeShadowVP[f]);
 			output.pos3D = input[v].Pos.xyz;
-            output.Tex = input[v].Tex;
-            CubeMapStream.Append( output ); 
-        } 
-        CubeMapStream.RestartStrip(); 
-    } 
+			output.Tex = input[v].Tex;
+			CubeMapStream.Append(output);
+		}
+		CubeMapStream.RestartStrip();
+	}
 }

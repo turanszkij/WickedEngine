@@ -17,7 +17,7 @@ HullInputType main(Input input)
 	HullInputType Out = (HullInputType)0;
 
 	
-	float4x4 WORLD = MakeWorldMatrixFromInstance(input);
+	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 
 	float4 pos = input.pos;
 	float4 posPrev = input.pre;
@@ -40,8 +40,8 @@ HullInputType main(Input input)
 	Out.nor.xyz = normalize(normal);
 	Out.nor.w = input.nor.w;
 
-	Out.instanceColor = input.color_dither.rgb;
-	Out.dither = input.color_dither.a;
+	Out.instanceColor = input.instance.color_dither.rgb;
+	Out.dither = input.instance.color_dither.a;
 
 	return Out;
 }

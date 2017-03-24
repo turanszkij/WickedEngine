@@ -1884,7 +1884,7 @@ void Mesh::CreateBuffers(Object* object)
 			InitData.pSysMem = vertices[vprop].data();
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffers[vprop]);
 
-			if (object->isArmatureDeformed() && !softBody && vprop < VPROP_COUNT - 1) {
+			if (object->isArmatureDeformed() && !softBody && vprop != VPROP_TEX && vprop != VPROP_WEI) {
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = USAGE_DEFAULT;
 				bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
