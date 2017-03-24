@@ -286,11 +286,14 @@ void wiHairParticle::Generate()
 			if (lenMod[m] < 0) lenMod[m] = 0;
 		}
 
-		SkinnedVertex* v[] = {
-			&mesh->vertices[vi[0]],
-			&mesh->vertices[vi[1]],
-			&mesh->vertices[vi[2]],
-		};
+		Vertex verts[3];
+		verts[0].pos = mesh->vertices[VPROP_POS][vi[0]];
+		verts[0].nor = mesh->vertices[VPROP_NOR][vi[0]];
+		verts[1].pos = mesh->vertices[VPROP_POS][vi[1]];
+		verts[1].nor = mesh->vertices[VPROP_NOR][vi[1]];
+		verts[2].pos = mesh->vertices[VPROP_POS][vi[2]];
+		verts[2].nor = mesh->vertices[VPROP_NOR][vi[2]];
+
 		if(
 			(denMod[0]>FLT_EPSILON || denMod[1]>FLT_EPSILON || denMod[2]>FLT_EPSILON) &&
 			(lenMod[0]>FLT_EPSILON || lenMod[1]>FLT_EPSILON || lenMod[2]>FLT_EPSILON)
@@ -314,9 +317,9 @@ void wiHairParticle::Generate()
 						g = 1 - g;
 					}
 					XMVECTOR pos[] = {
-						XMVector3Transform(XMLoadFloat4(&v[0]->pos),matr)
-						,	XMVector3Transform(XMLoadFloat4(&v[1]->pos),matr)
-						,	XMVector3Transform(XMLoadFloat4(&v[2]->pos),matr)
+						XMVector3Transform(XMLoadFloat4(&verts[0].pos),matr)
+						,	XMVector3Transform(XMLoadFloat4(&verts[1].pos),matr)
+						,	XMVector3Transform(XMLoadFloat4(&verts[2].pos),matr)
 					};
 					XMVECTOR vbar=XMVectorBaryCentric(
 							pos[0],pos[1],pos[2]
@@ -324,9 +327,9 @@ void wiHairParticle::Generate()
 						,	g
 						);
 					XMVECTOR nbar=XMVectorBaryCentric(
-							XMLoadFloat4(&v[0]->nor)
-						,	XMLoadFloat4(&v[1]->nor)
-						,	XMLoadFloat4(&v[2]->nor)
+							XMLoadFloat4(&verts[0].nor)
+						,	XMLoadFloat4(&verts[1].nor)
+						,	XMLoadFloat4(&verts[2].nor)
 						,	f
 						,	g
 						);

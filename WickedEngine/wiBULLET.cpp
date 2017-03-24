@@ -316,11 +316,11 @@ void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLO
 	
 }
 
-void wiBULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addConvexHull(const vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	btCollisionShape* shape = new btConvexHullShape();
 	for (unsigned int i = 0; i<vertices.size(); ++i)
-		((btConvexHullShape*)shape)->addPoint(btVector3(vertices[i].pos.x,vertices[i].pos.y,vertices[i].pos.z));
+		((btConvexHullShape*)shape)->addPoint(btVector3(vertices[i].x,vertices[i].y,vertices[i].z));
 	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
 	shape->setMargin(btScalar(0.05));
 
@@ -374,7 +374,7 @@ void wiBULLET::addConvexHull(const vector<SkinnedVertex>& vertices, const XMFLOA
 	
 }
 
-void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addTriangleMesh(const vector<XMFLOAT4>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	
 	int totalVerts = (int)vertices.size();
@@ -382,7 +382,7 @@ void wiBULLET::addTriangleMesh(const vector<SkinnedVertex>& vertices, const vect
 
 	btVector3* btVerts = new btVector3[totalVerts];
 	for (unsigned int i = 0; i<vertices.size(); ++i)
-		btVerts[i] = (btVector3(vertices[i].pos.x,vertices[i].pos.y,vertices[i].pos.z));
+		btVerts[i] = (btVector3(vertices[i].x,vertices[i].y,vertices[i].z));
 
 	int* btInd = new int[indices.size()];
 	for (unsigned int i = 0; i<indices.size(); ++i)
@@ -586,16 +586,16 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
 		int gvg = mesh->goalVG;
-		for (unsigned int i = 0; i<mesh->vertices_Complete.size(); ++i)
+		for (unsigned int i = 0; i<mesh->vertices[VPROP_POS].size(); ++i)
 		{
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
-			mesh->vertices_Complete[i].pre=mesh->vertices_Complete[i].pos;
-			mesh->vertices_Complete[i].pos = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), 1);
-			mesh->vertices_Complete[i].nor.x = -nodes[indexP].m_n.getX();
-			mesh->vertices_Complete[i].nor.y = -nodes[indexP].m_n.getY();
-			mesh->vertices_Complete[i].nor.z = -nodes[indexP].m_n.getZ();
-			mesh->vertices_Complete[i].tex=mesh->vertices[i].tex;
+			mesh->vertices[VPROP_PRE][i] = mesh->vertices[VPROP_POS][i];
+			mesh->vertices[VPROP_POS][i] = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), 1);
+			mesh->vertices[VPROP_NOR][i].x = -nodes[indexP].m_n.getX();
+			mesh->vertices[VPROP_NOR][i].y = -nodes[indexP].m_n.getY();
+			mesh->vertices[VPROP_NOR][i].z = -nodes[indexP].m_n.getZ();
+			mesh->vertices[VPROP_TEX][i] = mesh->vertices[VPROP_TEX][i];
 		}
 	}
 }
@@ -702,7 +702,7 @@ void wiBULLET::registerObject(Object* object){
 		}
 		if(!object->collisionShape.compare("CONVEX_HULL")){
 			addConvexHull(
-				object->mesh->vertices,
+				object->mesh->vertices[VPROP_POS],
 				S,R,T
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic
@@ -711,7 +711,7 @@ void wiBULLET::registerObject(Object* object){
 		}
 		if(!object->collisionShape.compare("MESH")){
 			addTriangleMesh(
-				object->mesh->vertices,object->mesh->indices,
+				object->mesh->vertices[VPROP_POS],object->mesh->indices,
 				S,R,T
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic

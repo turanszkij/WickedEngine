@@ -613,10 +613,10 @@ void wiRenderer::LoadShaders()
 			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, VPROP_TEX, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",		1, FORMAT_R32G32B32A32_FLOAT, VPROP_PRE, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, (VPROP_PRE + 1), APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -3665,10 +3665,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			mesh->UpdateRenderableInstances(k, threadID);
 
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]), 0, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]), 0, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]), 0, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]), VPROP_POS, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]), VPROP_NOR, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]), VPROP_TEX, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]), VPROP_PRE, sizeof(Vertex), threadID);
 			GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
 
 			for (MeshSubset& subset : mesh->subsets)
@@ -5012,7 +5012,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			Vertex v;
 			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
 			{
-				v = TransformVertex(mesh, i, objectMat_Inverse);
+				v = TransformVertex(mesh, (int)i, objectMat_Inverse);
 				_vertices[i] = XMLoadFloat4(&v.pos);
 				_materialIndices[i] = (int)v.tex.z;
 			}
@@ -5199,11 +5199,19 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 					int gvg = m->goalVG;
 					if (gvg >= 0) {
 						int j = 0;
-						for (map<int, float>::iterator it = m->vertexGroups[gvg].vertices.begin(); it != m->vertexGroups[gvg].vertices.end(); ++it) {
+						for (map<int, float>::iterator it = m->vertexGroups[gvg].vertices.begin(); it != m->vertexGroups[gvg].vertices.end(); ++it) 
+						{
 							int vi = (*it).first;
-							Vertex tvert = m->vertices_Complete[vi];
+							Vertex tvert;
 							if (m->hasArmature())
+							{
 								tvert = TransformVertex(m, vi);
+							}
+							else
+							{
+								tvert.pos = m->vertices[VPROP_POS][vi];
+								tvert.nor = m->vertices[VPROP_NOR][vi];
+							}
 							m->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
 							m->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
 							++j;
