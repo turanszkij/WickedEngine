@@ -1399,7 +1399,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -3022,7 +3022,7 @@ void GraphicsDevice_DX11::BindStreamOutTargets(GPUBuffer* const * buffers, UINT 
 	{
 		res[i] = buffers[i]->resource_DX11;
 	}
-	deviceContexts[threadID]->SOSetTargets(1, res, offsetSO);
+	deviceContexts[threadID]->SOSetTargets(count, res, offsetSO);
 }
 void GraphicsDevice_DX11::BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) 
 {

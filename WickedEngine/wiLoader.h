@@ -300,10 +300,6 @@ private:
 public:
 	string name;
 	string parent;
-	//// Full vertex info with bones
-	//vector<SkinnedVertex>	vertices;
-	//// Already animated vertices
-	//vector<Vertex>			vertices_Complete;
 	vector<XMFLOAT4>		vertices[VPROP_COUNT];
 	vector<unsigned int>    indices;
 	vector<XMFLOAT3>		physicsverts;
@@ -340,7 +336,7 @@ public:
 
 	wiRenderTarget	impostorTarget;
 	float impostorDistance;
-	static wiGraphicsTypes::GPUBuffer	impostorVB;
+	static wiGraphicsTypes::GPUBuffer	impostorVBs[VPROP_COUNT - 2]; // omit weights, omit posprev
 
 	float tessellationFactor;
 

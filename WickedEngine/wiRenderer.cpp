@@ -1750,8 +1750,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						&mesh->streamoutBuffers[VPROP_TEX],
 						&mesh->streamoutBuffers[VPROP_PRE],
 					};
-					GetDevice()->BindVertexBuffers(vbs, VPROP_POS, VPROP_COUNT, vbstrides, threadID);
-					GetDevice()->BindStreamOutTargets(sos, 4, threadID);
+					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), vbstrides, threadID);
+					GetDevice()->BindStreamOutTargets(sos, ARRAYSIZE(sos), threadID);
 					GetDevice()->Draw((int)mesh->vertices[VPROP_POS].size(), threadID);
 
 #else
@@ -3562,8 +3562,21 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GetDevice()->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
 
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
-					GetDevice()->BindVertexBuffer(&Mesh::impostorVB, 0, sizeof(Vertex), threadID);
-					GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
+					GPUBuffer* vbs[] = {
+						&Mesh::impostorVBs[VPROP_POS],
+						&Mesh::impostorVBs[VPROP_NOR],
+						&Mesh::impostorVBs[VPROP_TEX],
+						&Mesh::impostorVBs[VPROP_POS],
+						&mesh->instanceBuffer,
+					};
+					UINT strides[] = {
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(Instance)
+					};
+					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
 					if (!easyTextureBind)
 					{
@@ -3595,6 +3608,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							break;
 						case SHADERTYPE_SHADOWCUBE:
 							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
+							break;
+						case SHADERTYPE_ALPHATESTONLY:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_ALPHATESTONLY], threadID);
 							break;
 						default:
 							GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
@@ -3665,11 +3681,21 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			mesh->UpdateRenderableInstances(k, threadID);
 
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]), VPROP_POS, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]), VPROP_NOR, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]), VPROP_TEX, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]), VPROP_PRE, sizeof(Vertex), threadID);
-			GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
+			GPUBuffer* vbs[] = {
+				(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+				(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
+				(mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]),
+				(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_POS]),
+				&mesh->instanceBuffer
+			};
+			UINT strides[] = {
+				sizeof(XMFLOAT4),
+				sizeof(XMFLOAT4),
+				sizeof(XMFLOAT4),
+				sizeof(XMFLOAT4),
+				sizeof(Instance)
+			};
+			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 
 			for (MeshSubset& subset : mesh->subsets)
 			{
@@ -5300,11 +5326,22 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), 0, threadID);
 	mesh->UpdateRenderableInstances(1, threadID);
-	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]), 0, sizeof(Vertex), threadID);
-	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]), 0, sizeof(Vertex), threadID);
-	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]), 0, sizeof(Vertex), threadID);
-	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]), 0, sizeof(Vertex), threadID);
-	GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
+
+	GPUBuffer* vbs[] = {
+		(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+		(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
+		(mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]),
+		(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_POS]),
+		&mesh->instanceBuffer
+	};
+	UINT strides[] = {
+		sizeof(XMFLOAT4),
+		sizeof(XMFLOAT4),
+		sizeof(XMFLOAT4),
+		sizeof(XMFLOAT4),
+		sizeof(Instance)
+	};
+	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 
 
 	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
