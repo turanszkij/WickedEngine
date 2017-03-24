@@ -608,15 +608,15 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, VPROP_POS, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL",			0, FORMAT_R32G32B32A32_FLOAT, VPROP_NOR, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, VPROP_TEX, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		1, FORMAT_R32G32B32A32_FLOAT, VPROP_PRE, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI", 0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI", 1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI", 2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER", 0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -630,11 +630,11 @@ void wiRenderer::LoadShaders()
 
 		VertexLayoutDesc oslayout[] =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 2, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",	0, FORMAT_R32G32B32A32_FLOAT, VPROP_POS, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL",		0, FORMAT_R32G32B32A32_FLOAT, VPROP_NOR, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",	0, FORMAT_R32G32B32A32_FLOAT, VPROP_TEX, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",	1, FORMAT_R32G32B32A32_FLOAT, VPROP_BON, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",	2, FORMAT_R32G32B32A32_FLOAT, VPROP_WEI, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		UINT numElements = ARRAYSIZE(oslayout);
 
@@ -650,10 +650,10 @@ void wiRenderer::LoadShaders()
 		StreamOutDeclaration pDecl[] =
 		{
 			// semantic name, semantic index, start component, component count, output slot
-			{ 0, "SV_POSITION", 0, 0, 4, 0 },   // output all components of position
-			{ 0, "NORMAL", 0, 0, 4, 0 },     // output the first 3 of the normal
-			{ 0, "TEXCOORD", 0, 0, 4, 0 },     // output the first 2 texture coordinates
-			{ 0, "TEXCOORD", 1, 0, 4, 0 },     // output the first 2 texture coordinates
+			{ 0, "SV_POSITION", 0, 0, 4,	VPROP_POS },	// output all components of position
+			{ 0, "NORMAL",		0, 0, 4,	VPROP_NOR },	// output all components of the normal
+			{ 0, "TEXCOORD",	0, 0, 4,	VPROP_TEX },	// output all components texture coordinates
+			{ 0, "TEXCOORD",	1, 0, 4,	VPROP_PRE },	// output all components texture coordinates
 		};
 
 		geometryShaders[GSTYPE_STREAMOUT] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, 4, pDecl));
@@ -1383,27 +1383,23 @@ Light* wiRenderer::getLightByName(const string& name)
 
 Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
 {
-	return TransformVertex(mesh, mesh->vertices[vertexI], mat);
-}
-Vertex wiRenderer::TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex, const XMMATRIX& mat)
-{
 	assert(mesh->hasArmature() && string(mesh->name + "has no Armature!").c_str());
 	assert(!mesh->armature->boneCollection.empty() && string(mesh->armature->name + "has no bones!").c_str());
 
-	XMVECTOR pos = XMLoadFloat4( &vertex.pos );
-	XMVECTOR nor = XMLoadFloat4(&vertex.nor);
-	float inWei[4] = { 
-		vertex.wei.x
-		,vertex.wei.y
-		,vertex.wei.z
-		,vertex.wei.w};
-	float inBon[4] = { 
-		vertex.bon.x
-		,vertex.bon.y
-		,vertex.bon.z
-		,vertex.bon.w};
+	XMVECTOR pos = XMLoadFloat4(&mesh->vertices[VPROP_POS][vertexI]);
+	XMVECTOR nor = XMLoadFloat4(&mesh->vertices[VPROP_NOR][vertexI]);
+	float inWei[4] = {
+		mesh->vertices[VPROP_WEI][vertexI].x
+		, mesh->vertices[VPROP_WEI][vertexI].y
+		, mesh->vertices[VPROP_WEI][vertexI].z
+		, mesh->vertices[VPROP_WEI][vertexI].w };
+	float inBon[4] = {
+		mesh->vertices[VPROP_BON][vertexI].x
+		, mesh->vertices[VPROP_BON][vertexI].y
+		, mesh->vertices[VPROP_BON][vertexI].z
+		, mesh->vertices[VPROP_BON][vertexI].w };
 	XMMATRIX sump;
-	if (inWei[0] || inWei[1] || inWei[2] || inWei[3]) 
+	if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
 	{
 		sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		for (unsigned int i = 0; i < 4; i++)
@@ -1418,29 +1414,31 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, const SkinnedVertex& vertex
 
 	sump = XMMatrixMultiply(sump, mat);
 
-	XMFLOAT3 transformedP,transformedN;
+	XMFLOAT3 transformedP, transformedN;
 	XMStoreFloat3(&transformedP, XMVector3Transform(pos, sump));
-	
+
 	XMStoreFloat3(&transformedN, XMVector3Normalize(XMVector3TransformNormal(nor, sump)));
 
 	Vertex retV(transformedP);
 	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
-	retV.tex = vertex.tex;
+	retV.tex = mesh->vertices[VPROP_TEX][vertexI];
 	retV.pre = XMFLOAT4(0, 0, 0, 1);
 
 	return retV;
 }
-XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, const int& vertexI)
+XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, int vertexI)
 {
-	XMVECTOR pos = XMLoadFloat4(&mesh->vertices[vertexI].pos);
-	float inWei[4] = { mesh->vertices[vertexI].wei.x
-		,mesh->vertices[vertexI].wei.y
-		,mesh->vertices[vertexI].wei.z
-		,mesh->vertices[vertexI].wei.w };
-	float inBon[4] = { mesh->vertices[vertexI].bon.x
-		,mesh->vertices[vertexI].bon.y
-		,mesh->vertices[vertexI].bon.z
-		,mesh->vertices[vertexI].bon.w };
+	XMVECTOR pos = XMLoadFloat4(&mesh->vertices[VPROP_POS][vertexI]);
+	float inWei[4] = {
+		mesh->vertices[VPROP_WEI][vertexI].x
+		, mesh->vertices[VPROP_WEI][vertexI].y
+		, mesh->vertices[VPROP_WEI][vertexI].z
+		, mesh->vertices[VPROP_WEI][vertexI].w };
+	float inBon[4] = {
+		mesh->vertices[VPROP_BON][vertexI].x
+		, mesh->vertices[VPROP_BON][vertexI].y
+		, mesh->vertices[VPROP_BON][vertexI].z
+		, mesh->vertices[VPROP_BON][vertexI].w };
 	XMMATRIX sump;
 	XMMATRIX sumpPrev;
 	if (inWei[0] || inWei[1] || inWei[2] || inWei[3]) 
@@ -1692,8 +1690,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			{
 				Mesh* mesh = iter->second;
 
-				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices.empty()
-					&& mesh->streamoutBuffer.IsValid() && mesh->vertexBuffer.IsValid())
+				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices[VPROP_POS].empty()
+					&& mesh->streamoutBuffers[VPROP_POS].IsValid() && mesh->vertexBuffers[VPROP_POS].IsValid())
 				{
 #ifdef USE_GPU_SKINNING
 
@@ -1732,9 +1730,29 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf, threadID, (int)(sizeof(ShaderBoneType) * mesh->armature->boneCollection.size()));
 
 					// Do the skinning
-					GetDevice()->BindVertexBuffer(&mesh->vertexBuffer, 0, sizeof(SkinnedVertex), threadID);
-					GetDevice()->BindStreamOutTarget(&mesh->streamoutBuffer, threadID);
-					GetDevice()->Draw((int)mesh->vertices.size(), threadID);
+					GPUBuffer* vbs[] = {
+						&mesh->vertexBuffers[VPROP_POS],
+						&mesh->vertexBuffers[VPROP_NOR],
+						&mesh->vertexBuffers[VPROP_TEX],
+						&mesh->vertexBuffers[VPROP_BON],
+						&mesh->vertexBuffers[VPROP_WEI],
+					};
+					UINT vbstrides[] = {
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+					};
+					GPUBuffer* sos[] = {
+						&mesh->streamoutBuffers[VPROP_POS],
+						&mesh->streamoutBuffers[VPROP_NOR],
+						&mesh->streamoutBuffers[VPROP_TEX],
+						&mesh->streamoutBuffers[VPROP_PRE],
+					};
+					GetDevice()->BindVertexBuffers(vbs, VPROP_POS, VPROP_COUNT, vbstrides, threadID);
+					GetDevice()->BindStreamOutTargets(sos, 4, threadID);
+					GetDevice()->Draw((int)mesh->vertices[VPROP_POS].size(), threadID);
 
 #else
 					// Doing skinning on the CPU
@@ -1752,7 +1770,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (mesh->softBody || mesh->hasArmature())
 #endif
 				{
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffer, mesh->vertices_Complete.data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Complete.size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_POS], mesh->vertices[VPROP_POS].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices[VPROP_POS].size()));
 				}
 			}
 		}
@@ -3647,7 +3665,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			mesh->UpdateRenderableInstances(k, threadID);
 
-			GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]), 0, sizeof(Vertex), threadID);
+			GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]), 0, sizeof(Vertex), threadID);
 			GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
 
 			for (MeshSubset& subset : mesh->subsets)
@@ -4971,7 +4992,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		}
 
 		Mesh* mesh = object->mesh;
-		if (mesh->vertices.size() >= _arraySize)
+		if (mesh->vertices[VPROP_POS].size() >= _arraySize)
 		{
 			_mm_free(_vertices);
 			SAFE_DELETE_ARRAY(_materialIndices);
@@ -4986,17 +5007,21 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		XMVECTOR& rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 		XMVECTOR& rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-		for (size_t i = 0; i < mesh->vertices.size(); ++i)
+		for (size_t i = 0; i < mesh->vertices[VPROP_POS].size(); ++i)
 		{
+			Vertex v;
 			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
 			{
-				Vertex& v = TransformVertex(mesh, mesh->vertices[i], objectMat_Inverse);
+				v = TransformVertex(mesh, i, objectMat_Inverse);
 				_vertices[i] = XMLoadFloat4(&v.pos);
 				_materialIndices[i] = (int)v.tex.z;
 			}
 			else
 			{
-				Vertex& v = mesh->vertices_Complete[i];
+				v.pos = mesh->vertices[VPROP_POS][i];
+				v.nor = mesh->vertices[VPROP_NOR][i];
+				v.tex = mesh->vertices[VPROP_TEX][i];
+				v.pre = mesh->vertices[VPROP_PRE][i];
 				_vertices[i] = XMLoadFloat4(&v.pos);
 				_materialIndices[i] = (int)v.tex.z;
 			}
@@ -5029,72 +5054,72 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 
 void wiRenderer::CalculateVertexAO(Object* object)
 {
-	//TODO
+	////TODO
 
-	static const float minAmbient = 0.05f;
-	static const float falloff = 0.1f;
+	//static const float minAmbient = 0.05f;
+	//static const float falloff = 0.1f;
 
-	Mesh* mesh = object->mesh;
+	//Mesh* mesh = object->mesh;
 
-	XMMATRIX& objectMat = object->getMatrix();
+	//XMMATRIX& objectMat = object->getMatrix();
 
-	CulledCollection culledRenderer;
-	CulledList culledObjects;
-	wiSPTree* searchTree = spTree;
+	//CulledCollection culledRenderer;
+	//CulledList culledObjects;
+	//wiSPTree* searchTree = spTree;
 
-	int ind = 0;
-	for (SkinnedVertex& vert : mesh->vertices)
-	{
-		float ambientShadow = 0.0f;
+	//int ind = 0;
+	//for (SkinnedVertex& vert : mesh->vertices)
+	//{
+	//	float ambientShadow = 0.0f;
 
-		XMFLOAT3 vPos, vNor;
+	//	XMFLOAT3 vPos, vNor;
 
-		//XMVECTOR p = XMVector4Transform(XMVectorSet(vert.pos.x, vert.pos.y, vert.pos.z, 1), XMLoadFloat4x4(&object->world));
-		//XMVECTOR n = XMVector3Transform(XMVectorSet(vert.nor.x, vert.nor.y, vert.nor.z, 0), XMLoadFloat4x4(&object->world));
+	//	//XMVECTOR p = XMVector4Transform(XMVectorSet(vert.pos.x, vert.pos.y, vert.pos.z, 1), XMLoadFloat4x4(&object->world));
+	//	//XMVECTOR n = XMVector3Transform(XMVectorSet(vert.nor.x, vert.nor.y, vert.nor.z, 0), XMLoadFloat4x4(&object->world));
 
-		//XMStoreFloat3(&vPos, p);
-		//XMStoreFloat3(&vNor, n);
+	//	//XMStoreFloat3(&vPos, p);
+	//	//XMStoreFloat3(&vNor, n);
 
-		Vertex v = TransformVertex(mesh, vert, objectMat);
-		vPos.x = v.pos.x;
-		vPos.y = v.pos.y;
-		vPos.z = v.pos.z;
-		vNor.x = v.nor.x;
-		vNor.y = v.nor.y;
-		vNor.z = v.nor.z;
+	//	Vertex v = TransformVertex(mesh, vert, objectMat);
+	//	vPos.x = v.pos.x;
+	//	vPos.y = v.pos.y;
+	//	vPos.z = v.pos.z;
+	//	vNor.x = v.nor.x;
+	//	vNor.y = v.nor.y;
+	//	vNor.z = v.nor.z;
 
-			RAY ray = RAY(vPos, vNor);
-			XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
-			XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
+	//		RAY ray = RAY(vPos, vNor);
+	//		XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
+	//		XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
 
-			searchTree->getVisible(ray, culledObjects);
+	//		searchTree->getVisible(ray, culledObjects);
 
-			vector<Picked> points;
+	//		vector<Picked> points;
 
-			RayIntersectMeshes(ray, culledObjects, points, PICK_OPAQUE, false);
+	//		RayIntersectMeshes(ray, culledObjects, points, PICK_OPAQUE, false);
 
 
-			if (!points.empty()){
-				Picked min = points.front();
-				float mini = wiMath::DistanceSquared(min.position, ray.origin);
-				for (unsigned int i = 1; i<points.size(); ++i){
-					if (float nm = wiMath::DistanceSquared(points[i].position, ray.origin)<mini){
-						min = points[i];
-						mini = nm;
-					}
-				}
+	//		if (!points.empty()){
+	//			Picked min = points.front();
+	//			float mini = wiMath::DistanceSquared(min.position, ray.origin);
+	//			for (unsigned int i = 1; i<points.size(); ++i){
+	//				if (float nm = wiMath::DistanceSquared(points[i].position, ray.origin)<mini){
+	//					min = points[i];
+	//					mini = nm;
+	//				}
+	//			}
 
-				float ambientLightIntensity = wiMath::Clamp(abs(wiMath::Distance(ray.origin, min.position)) / falloff, 0, 1);
-				ambientLightIntensity += minAmbient;
+	//			float ambientLightIntensity = wiMath::Clamp(abs(wiMath::Distance(ray.origin, min.position)) / falloff, 0, 1);
+	//			ambientLightIntensity += minAmbient;
 
-				vert.nor.w = ambientLightIntensity;
-				mesh->vertices[ind].nor.w = ambientLightIntensity;
-			}
+	//			vert.nor.w = ambientLightIntensity;
+	//			mesh->vertices[ind].nor.w = ambientLightIntensity;
+	//		}
 
-			++ind;
-	}
+	//		++ind;
+	//}
 
-	mesh->calculatedAO = true;
+	//mesh->calculatedAO = true;
 }
 
 Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX& transform, const string& ident)
@@ -5267,7 +5292,10 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), 0, threadID);
 	mesh->UpdateRenderableInstances(1, threadID);
-	GetDevice()->BindVertexBuffer((mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->vertexBuffer), 0, sizeof(Vertex), threadID);
+	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]), 0, sizeof(Vertex), threadID);
+	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]), 0, sizeof(Vertex), threadID);
+	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_TEX].IsValid() ? &mesh->streamoutBuffers[VPROP_TEX] : &mesh->vertexBuffers[VPROP_TEX]), 0, sizeof(Vertex), threadID);
+	GetDevice()->BindVertexBuffer((mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]), 0, sizeof(Vertex), threadID);
 	GetDevice()->BindVertexBuffer(&mesh->instanceBuffer, 1, sizeof(Instance), threadID);
 
 

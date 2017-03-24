@@ -525,26 +525,29 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 					}
 					break;
 				case 'v': 
-					currentMesh->vertices.push_back(SkinnedVertex());
-					file >> currentMesh->vertices.back().pos.x;
-					file >> currentMesh->vertices.back().pos.y;
-					file >> currentMesh->vertices.back().pos.z;
+					for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
+					{
+						currentMesh->vertices[vprop].push_back(XMFLOAT4());
+					}
+					file >> currentMesh->vertices[VPROP_POS].back().x;
+					file >> currentMesh->vertices[VPROP_POS].back().y;
+					file >> currentMesh->vertices[VPROP_POS].back().z;
 					break;
 				case 'n':
 					if (currentMesh->isBillboarded){
-						currentMesh->vertices.back().nor.x = currentMesh->billboardAxis.x;
-						currentMesh->vertices.back().nor.y = currentMesh->billboardAxis.y;
-						currentMesh->vertices.back().nor.z = currentMesh->billboardAxis.z;
+						currentMesh->vertices[VPROP_NOR].back().x = currentMesh->billboardAxis.x;
+						currentMesh->vertices[VPROP_NOR].back().y = currentMesh->billboardAxis.y;
+						currentMesh->vertices[VPROP_NOR].back().z = currentMesh->billboardAxis.z;
 					}
 					else{
-						file >> currentMesh->vertices.back().nor.x;
-						file >> currentMesh->vertices.back().nor.y;
-						file >> currentMesh->vertices.back().nor.z;
+						file >> currentMesh->vertices[VPROP_NOR].back().x;
+						file >> currentMesh->vertices[VPROP_NOR].back().y;
+						file >> currentMesh->vertices[VPROP_NOR].back().z;
 					}
 					break;
 				case 'u':
-					file >> currentMesh->vertices.back().tex.x;
-					file >> currentMesh->vertices.back().tex.y;
+					file >> currentMesh->vertices[VPROP_TEX].back().x;
+					file >> currentMesh->vertices[VPROP_TEX].back().y;
 					//texCoordFill++;
 					break;
 				case 'w':
@@ -580,31 +583,31 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 								j++;
 							}
 						}
-						if(gotBone){ //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
-							if(!currentMesh->vertices.back().wei.x) {
-								currentMesh->vertices.back().wei.x=weight;
-								currentMesh->vertices.back().bon.x=(float)BONEINDEX;
+						if (gotBone) { //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
+							if (!currentMesh->vertices[VPROP_WEI].back().x) {
+								currentMesh->vertices[VPROP_WEI].back().x = weight;
+								currentMesh->vertices[VPROP_BON].back().x = (float)BONEINDEX;
 							}
-							else if(!currentMesh->vertices.back().wei.y) {
-								currentMesh->vertices.back().wei.y=weight;
-								currentMesh->vertices.back().bon.y=(float)BONEINDEX;
+							else if(!currentMesh->vertices[VPROP_WEI].back().y) {
+								currentMesh->vertices[VPROP_WEI].back().y=weight;
+								currentMesh->vertices[VPROP_BON].back().y=(float)BONEINDEX;
 							}
-							else if(!currentMesh->vertices.back().wei.z) {
-								currentMesh->vertices.back().wei.z=weight;
-								currentMesh->vertices.back().bon.z=(float)BONEINDEX;
+							else if(!currentMesh->vertices[VPROP_WEI].back().z) {
+								currentMesh->vertices[VPROP_WEI].back().z=weight;
+								currentMesh->vertices[VPROP_BON].back().z=(float)BONEINDEX;
 							}
-							else if(!currentMesh->vertices.back().wei.w) {
-								currentMesh->vertices.back().wei.w=weight;
-								currentMesh->vertices.back().bon.w=(float)BONEINDEX;
+							else if(!currentMesh->vertices[VPROP_WEI].back().w) {
+								currentMesh->vertices[VPROP_WEI].back().w = weight;
+								currentMesh->vertices[VPROP_BON].back().w = (float)BONEINDEX;
 							}
 						}
 
 						 //(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
 
 						if(nameB.find("trailbase")!=string::npos)
-							currentMesh->trailInfo.base = (int)(currentMesh->vertices.size()-1);
+							currentMesh->trailInfo.base = (int)(currentMesh->vertices[VPROP_POS].size()-1);
 						else if(nameB.find("trailtip")!=string::npos)
-							currentMesh->trailInfo.tip = (int)(currentMesh->vertices.size()-1);
+							currentMesh->trailInfo.tip = (int)(currentMesh->vertices[VPROP_POS].size()-1);
 						
 						bool windAffection=false;
 						if(nameB.find("wind")!=string::npos)
@@ -613,15 +616,15 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v)
 							if(!nameB.compare(currentMesh->vertexGroups[v].name)){
 								gotvg=true;
-								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices.size() - 1), weight));
+								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices[VPROP_TEX].size() - 1), weight));
 								if(windAffection)
-									currentMesh->vertices.back().tex.w=weight;
+									currentMesh->vertices[VPROP_TEX].back().w=weight;
 							}
 						if(!gotvg){
 							currentMesh->vertexGroups.push_back(VertexGroup(nameB));
-							currentMesh->vertexGroups.back().addVertex(VertexRef((int)(currentMesh->vertices.size() - 1), weight));
+							currentMesh->vertexGroups.back().addVertex(VertexRef((int)(currentMesh->vertices[VPROP_POS].size() - 1), weight));
 							if(windAffection)
-								currentMesh->vertices.back().tex.w=weight;
+								currentMesh->vertices[VPROP_TEX].back().w=weight;
 						}
 					}
 					break;
@@ -671,7 +674,7 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 					}
 					break;
 				case 'a':
-					file>>currentMesh->vertices.back().tex.z;
+					file>>currentMesh->vertices[VPROP_TEX].back().z;
 					break;
 				case 'B':
 					for(int corner=0;corner<8;++corner){
@@ -1299,27 +1302,27 @@ void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
 	tree->initialize(objects);
 }
 
-#pragma region SKINNEDVERTEX
-void SkinnedVertex::Serialize(wiArchive& archive)
-{
-	if (archive.IsReadMode())
-	{
-		archive >> pos;
-		archive >> nor;
-		archive >> tex;
-		archive >> bon;
-		archive >> wei;
-	}
-	else
-	{
-		archive << pos;
-		archive << nor;
-		archive << tex;
-		archive << bon;
-		archive << wei;
-	}
-}
-#pragma endregion
+//#pragma region SKINNEDVERTEX
+//void SkinnedVertex::Serialize(wiArchive& archive)
+//{
+//	if (archive.IsReadMode())
+//	{
+//		archive >> pos;
+//		archive >> nor;
+//		archive >> tex;
+//		archive >> bon;
+//		archive >> wei;
+//	}
+//	else
+//	{
+//		archive << pos;
+//		archive << nor;
+//		archive << tex;
+//		archive << bon;
+//		archive << wei;
+//	}
+//}
+//#pragma endregion
 
 #pragma region SCENE
 Model* _CreateWorldNode()
@@ -1720,31 +1723,34 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 		memcpy(&vertexCount, buffer + offset, sizeof(int));
 		offset += sizeof(int);
 
-		vertices.reserve(vertexCount);
+		for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
+		{
+			vertices[vprop].resize(vertexCount);
+		}
+
 		for (int i = 0; i<vertexCount; ++i) {
-			SkinnedVertex vert = SkinnedVertex();
 			float v[8];
 			memcpy(v, buffer + offset, sizeof(float) * 8);
 			offset += sizeof(float) * 8;
-			vert.pos.x = v[0];
-			vert.pos.y = v[1];
-			vert.pos.z = v[2];
+			vertices[VPROP_POS][i].x = v[0];
+			vertices[VPROP_POS][i].y = v[1];
+			vertices[VPROP_POS][i].z = v[2];
 			if (!isBillboarded) {
-				vert.nor.x = v[3];
-				vert.nor.y = v[4];
-				vert.nor.z = v[5];
+				vertices[VPROP_NOR][i].x = v[3];
+				vertices[VPROP_NOR][i].y = v[4];
+				vertices[VPROP_NOR][i].z = v[5];
 			}
 			else {
-				vert.nor.x = billboardAxis.x;
-				vert.nor.y = billboardAxis.y;
-				vert.nor.z = billboardAxis.z;
+				vertices[VPROP_NOR][i].x = billboardAxis.x;
+				vertices[VPROP_NOR][i].y = billboardAxis.y;
+				vertices[VPROP_NOR][i].z = billboardAxis.z;
 			}
-			vert.tex.x = v[6];
-			vert.tex.y = v[7];
+			vertices[VPROP_TEX][i].x = v[6];
+			vertices[VPROP_TEX][i].y = v[7];
 			int matIndex;
 			memcpy(&matIndex, buffer + offset, sizeof(int));
 			offset += sizeof(int);
-			vert.tex.z = (float)matIndex;
+			vertices[VPROP_TEX][i].z = (float)matIndex;
 
 			int weightCount = 0;
 			memcpy(&weightCount, buffer + offset, sizeof(int));
@@ -1775,21 +1781,21 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 						b++;
 					}
 					if (gotBone) { //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
-						if (!vert.wei.x) {
-							vert.wei.x = weightValue;
-							vert.bon.x = (float)BONEINDEX;
+						if (!vertices[VPROP_WEI][i].x) {
+							vertices[VPROP_WEI][i].x = weightValue;
+							vertices[VPROP_BON][i].x = (float)BONEINDEX;
 						}
-						else if (!vert.wei.y) {
-							vert.wei.y = weightValue;
-							vert.bon.y = (float)BONEINDEX;
+						else if (!vertices[VPROP_WEI][i].y) {
+							vertices[VPROP_WEI][i].y = weightValue;
+							vertices[VPROP_BON][i].y = (float)BONEINDEX;
 						}
-						else if (!vert.wei.z) {
-							vert.wei.z = weightValue;
-							vert.bon.z = (float)BONEINDEX;
+						else if (!vertices[VPROP_WEI][i].z) {
+							vertices[VPROP_WEI][i].z = weightValue;
+							vertices[VPROP_BON][i].z = (float)BONEINDEX;
 						}
-						else if (!vert.wei.w) {
-							vert.wei.w = weightValue;
-							vert.bon.w = (float)BONEINDEX;
+						else if (!vertices[VPROP_WEI][i].w) {
+							vertices[VPROP_WEI][i].w = weightValue;
+							vertices[VPROP_BON][i].w = (float)BONEINDEX;
 						}
 					}
 				}
@@ -1797,9 +1803,9 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				//(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
 
 				if (nameB.find("trailbase") != string::npos)
-					trailInfo.base = (int)vertices.size();
+					trailInfo.base = (int)vertices[VPROP_POS].size();
 				else if (nameB.find("trailtip") != string::npos)
-					trailInfo.tip = (int)vertices.size();
+					trailInfo.tip = (int)vertices[VPROP_POS].size();
 
 				bool windAffection = false;
 				if (nameB.find("wind") != string::npos)
@@ -1808,15 +1814,15 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				for (unsigned int v = 0; v<vertexGroups.size(); ++v)
 					if (!nameB.compare(vertexGroups[v].name)) {
 						gotvg = true;
-						vertexGroups[v].addVertex(VertexRef((int)vertices.size(), weightValue));
+						vertexGroups[v].addVertex(VertexRef((int)vertices[VPROP_TEX].size(), weightValue));
 						if (windAffection)
-							vert.tex.w = weightValue;
+							vertices[VPROP_TEX][i].w = weightValue;
 					}
 				if (!gotvg) {
 					vertexGroups.push_back(VertexGroup(nameB));
-					vertexGroups.back().addVertex(VertexRef((int)vertices.size(), weightValue));
+					vertexGroups.back().addVertex(VertexRef((int)vertices[VPROP_TEX].size(), weightValue));
 					if (windAffection)
-						vert.tex.w = weightValue;
+						vertices[VPROP_TEX][i].w = weightValue;
 				}
 #pragma endregion
 
@@ -1825,8 +1831,6 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 
 			}
 
-
-			vertices.push_back(vert);
 		}
 
 		if (rendermesh) {
@@ -1931,7 +1935,7 @@ void Mesh::CreateBuffers(Object* object)
 {
 	if (!buffersComplete) 
 	{
-		if (vertices.empty())
+		if (vertices[VPROP_POS].empty())
 		{
 			renderable = false;
 		}
@@ -1941,6 +1945,7 @@ void Mesh::CreateBuffers(Object* object)
 		}
 
 		GPUBufferDesc bd;
+		SubresourceData InitData;
 		if (!instanceBuffer.IsValid())
 		{
 			ZeroMemory(&bd, sizeof(bd));
@@ -1957,46 +1962,45 @@ void Mesh::CreateBuffers(Object* object)
 			goalNormals.resize(vertexGroups[goalVG].vertices.size());
 		}
 
-		ZeroMemory(&bd, sizeof(bd));
-#ifdef USE_GPU_SKINNING
-		bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
-		bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
-		if (object->isArmatureDeformed() && !softBody)
-			bd.ByteWidth = (UINT)(sizeof(SkinnedVertex) * vertices.size());
-		else
-			bd.ByteWidth = (UINT)(sizeof(Vertex) * vertices_Complete.size());
-#else
-		bd.Usage = ((softBody || object->isArmatureDeformed()) ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
-		bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? CPU_ACCESS_WRITE : 0);
-		bd.ByteWidth = sizeof(Vertex) * vertices_Complete.size();
-#endif
-		bd.BindFlags = BIND_VERTEX_BUFFER;
-		SubresourceData InitData;
-		ZeroMemory(&InitData, sizeof(InitData));
-		if (object->isArmatureDeformed() && !softBody)
-			InitData.pSysMem = vertices.data();
-		else
-			InitData.pSysMem = vertices_Complete.data();
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer);
-
-		if (object->isArmatureDeformed() && !softBody) {
+		for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
+		{
 			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = (UINT)(sizeof(Vertex) * vertices_Complete.size());
-			bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			bd.StructureByteStride = 0;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer);
+#ifdef USE_GPU_SKINNING
+			bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
+			bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
+			if (object->isArmatureDeformed() && !softBody)
+				bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
+			else
+				bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
+#else
+			bd.Usage = ((softBody || object->isArmatureDeformed()) ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
+			bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? CPU_ACCESS_WRITE : 0);
+			bd.ByteWidth = sizeof(Vertex) * vertices_Complete.size();
+#endif
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = vertices[vprop].data();
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffers[vprop]);
+
+			if (object->isArmatureDeformed() && !softBody && vprop < VPROP_COUNT - 1) {
+				ZeroMemory(&bd, sizeof(bd));
+				bd.Usage = USAGE_DEFAULT;
+				bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
+				bd.BindFlags = BIND_STREAM_OUTPUT | BIND_VERTEX_BUFFER;
+				bd.CPUAccessFlags = 0;
+				bd.StructureByteStride = 0;
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffers[vprop]);
+			}
 		}
 
 		//PHYSICALMAPPING
 		if (!physicsverts.empty() && physicalmapGP.empty())
 		{
-			for (unsigned int i = 0; i < vertices.size(); ++i) {
+			for (unsigned int i = 0; i < vertices[VPROP_POS].size(); ++i) {
 				for (unsigned int j = 0; j < physicsverts.size(); ++j) {
-					if (fabs(vertices[i].pos.x - physicsverts[j].x) < FLT_EPSILON
-						&&	fabs(vertices[i].pos.y - physicsverts[j].y) < FLT_EPSILON
-						&&	fabs(vertices[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+					if (fabs(vertices[VPROP_POS][i].x - physicsverts[j].x) < FLT_EPSILON
+						&&	fabs(vertices[VPROP_POS][i].y - physicsverts[j].y) < FLT_EPSILON
+						&&	fabs(vertices[VPROP_POS][i].z - physicsverts[j].z) < FLT_EPSILON
 						)
 					{
 						physicalmapGP.push_back(j);
@@ -2029,209 +2033,211 @@ void Mesh::CreateBuffers(Object* object)
 }
 void Mesh::CreateImpostorVB()
 {
-	if (!impostorVB.IsValid())
-	{
-		Vertex impostorVertices[6 * 6];
+	assert(0 && "TODO");
 
-		float stepX = 1.f / 6.f;
+	//if (!impostorVB.IsValid())
+	//{
+	//	Vertex impostorVertices[6 * 6];
 
-		// front
-		impostorVertices[0].pos = XMFLOAT4(-1, 1, 0, 1);
-		impostorVertices[0].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[0].tex = XMFLOAT4(0, 0, 0, 0);
-		impostorVertices[0].pre = XMFLOAT4(-1, 1, 0, 1);
+	//	float stepX = 1.f / 6.f;
 
-		impostorVertices[1].pos = XMFLOAT4(-1, -1, 0, 1);
-		impostorVertices[1].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[1].tex = XMFLOAT4(0, 1, 0, 0);
-		impostorVertices[1].pre = XMFLOAT4(-1, -1, 0, 1);
+	//	// front
+	//	impostorVertices[0].pos = XMFLOAT4(-1, 1, 0, 1);
+	//	impostorVertices[0].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[0].tex = XMFLOAT4(0, 0, 0, 0);
+	//	impostorVertices[0].pre = XMFLOAT4(-1, 1, 0, 1);
 
-		impostorVertices[2].pos = XMFLOAT4(1, 1, 0, 1);
-		impostorVertices[2].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[2].tex = XMFLOAT4(stepX, 0, 0, 0);
-		impostorVertices[2].pre = XMFLOAT4(1, 1, 0, 1);
+	//	impostorVertices[1].pos = XMFLOAT4(-1, -1, 0, 1);
+	//	impostorVertices[1].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[1].tex = XMFLOAT4(0, 1, 0, 0);
+	//	impostorVertices[1].pre = XMFLOAT4(-1, -1, 0, 1);
 
-		impostorVertices[3].pos = XMFLOAT4(-1, -1, 0, 1);
-		impostorVertices[3].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[3].tex = XMFLOAT4(0, 1, 0, 0);
-		impostorVertices[3].pre = XMFLOAT4(-1, -1, 0, 1);
+	//	impostorVertices[2].pos = XMFLOAT4(1, 1, 0, 1);
+	//	impostorVertices[2].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[2].tex = XMFLOAT4(stepX, 0, 0, 0);
+	//	impostorVertices[2].pre = XMFLOAT4(1, 1, 0, 1);
 
-		impostorVertices[4].pos = XMFLOAT4(1, -1, 0, 1);
-		impostorVertices[4].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[4].tex = XMFLOAT4(stepX, 1, 0, 0);
-		impostorVertices[4].pre = XMFLOAT4(1, -1, 0, 1);
+	//	impostorVertices[3].pos = XMFLOAT4(-1, -1, 0, 1);
+	//	impostorVertices[3].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[3].tex = XMFLOAT4(0, 1, 0, 0);
+	//	impostorVertices[3].pre = XMFLOAT4(-1, -1, 0, 1);
 
-		impostorVertices[5].pos = XMFLOAT4(1, 1, 0, 1);
-		impostorVertices[5].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[5].tex = XMFLOAT4(stepX, 0, 0, 0);
-		impostorVertices[5].pre = XMFLOAT4(1, 1, 0, 1);
+	//	impostorVertices[4].pos = XMFLOAT4(1, -1, 0, 1);
+	//	impostorVertices[4].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[4].tex = XMFLOAT4(stepX, 1, 0, 0);
+	//	impostorVertices[4].pre = XMFLOAT4(1, -1, 0, 1);
 
-		// right
-		impostorVertices[6].pos = XMFLOAT4(0, 1, -1, 1);
-		impostorVertices[6].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[6].tex = XMFLOAT4(stepX, 0, 0, 0);
-		impostorVertices[6].pre = XMFLOAT4(0, 1, -1, 1);
+	//	impostorVertices[5].pos = XMFLOAT4(1, 1, 0, 1);
+	//	impostorVertices[5].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[5].tex = XMFLOAT4(stepX, 0, 0, 0);
+	//	impostorVertices[5].pre = XMFLOAT4(1, 1, 0, 1);
 
-		impostorVertices[7].pos = XMFLOAT4(0, -1, -1, 1);
-		impostorVertices[7].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[7].tex = XMFLOAT4(stepX, 1, 0, 0);
-		impostorVertices[7].pre = XMFLOAT4(0, -1, -1, 1);
+	//	// right
+	//	impostorVertices[6].pos = XMFLOAT4(0, 1, -1, 1);
+	//	impostorVertices[6].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[6].tex = XMFLOAT4(stepX, 0, 0, 0);
+	//	impostorVertices[6].pre = XMFLOAT4(0, 1, -1, 1);
 
-		impostorVertices[8].pos = XMFLOAT4(0, 1, 1, 1);
-		impostorVertices[8].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[8].tex = XMFLOAT4(stepX*2, 0, 0, 0);
-		impostorVertices[8].pre = XMFLOAT4(0, 1, 1, 1);
+	//	impostorVertices[7].pos = XMFLOAT4(0, -1, -1, 1);
+	//	impostorVertices[7].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[7].tex = XMFLOAT4(stepX, 1, 0, 0);
+	//	impostorVertices[7].pre = XMFLOAT4(0, -1, -1, 1);
 
-		impostorVertices[9].pos = XMFLOAT4(0, -1, -1, 1);
-		impostorVertices[9].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[9].tex = XMFLOAT4(stepX, 1, 0, 0);
-		impostorVertices[9].pre = XMFLOAT4(0, -1, -1, 1);
+	//	impostorVertices[8].pos = XMFLOAT4(0, 1, 1, 1);
+	//	impostorVertices[8].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[8].tex = XMFLOAT4(stepX*2, 0, 0, 0);
+	//	impostorVertices[8].pre = XMFLOAT4(0, 1, 1, 1);
 
-		impostorVertices[10].pos = XMFLOAT4(0, -1, 1, 1);
-		impostorVertices[10].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[10].tex = XMFLOAT4(stepX*2, 1, 0, 0);
-		impostorVertices[10].pre = XMFLOAT4(0, -1, 1, 1);
+	//	impostorVertices[9].pos = XMFLOAT4(0, -1, -1, 1);
+	//	impostorVertices[9].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[9].tex = XMFLOAT4(stepX, 1, 0, 0);
+	//	impostorVertices[9].pre = XMFLOAT4(0, -1, -1, 1);
 
-		impostorVertices[11].pos = XMFLOAT4(0, 1, 1, 1);
-		impostorVertices[11].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[11].tex = XMFLOAT4(stepX*2, 0, 0, 0);
-		impostorVertices[11].pre = XMFLOAT4(0, 1, 1, 1);
+	//	impostorVertices[10].pos = XMFLOAT4(0, -1, 1, 1);
+	//	impostorVertices[10].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[10].tex = XMFLOAT4(stepX*2, 1, 0, 0);
+	//	impostorVertices[10].pre = XMFLOAT4(0, -1, 1, 1);
 
-		// back
-		impostorVertices[12].pos = XMFLOAT4(-1, 1, 0, 1);
-		impostorVertices[12].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[12].tex = XMFLOAT4(stepX*3, 0, 0, 0);
-		impostorVertices[12].pre = XMFLOAT4(-1, 1, 0, 1);
+	//	impostorVertices[11].pos = XMFLOAT4(0, 1, 1, 1);
+	//	impostorVertices[11].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[11].tex = XMFLOAT4(stepX*2, 0, 0, 0);
+	//	impostorVertices[11].pre = XMFLOAT4(0, 1, 1, 1);
 
-		impostorVertices[13].pos = XMFLOAT4(1, 1, 0, 1);
-		impostorVertices[13].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[13].tex = XMFLOAT4(stepX * 2, 0, 0, 0);
-		impostorVertices[13].pre = XMFLOAT4(1, 1, 0, 1);
+	//	// back
+	//	impostorVertices[12].pos = XMFLOAT4(-1, 1, 0, 1);
+	//	impostorVertices[12].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[12].tex = XMFLOAT4(stepX*3, 0, 0, 0);
+	//	impostorVertices[12].pre = XMFLOAT4(-1, 1, 0, 1);
 
-		impostorVertices[14].pos = XMFLOAT4(-1, -1, 0, 1);
-		impostorVertices[14].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[14].tex = XMFLOAT4(stepX*3, 1, 0, 0);
-		impostorVertices[14].pre = XMFLOAT4(-1, -1, 0, 1);
+	//	impostorVertices[13].pos = XMFLOAT4(1, 1, 0, 1);
+	//	impostorVertices[13].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[13].tex = XMFLOAT4(stepX * 2, 0, 0, 0);
+	//	impostorVertices[13].pre = XMFLOAT4(1, 1, 0, 1);
 
-		impostorVertices[15].pos = XMFLOAT4(-1, -1, 0, 1);
-		impostorVertices[15].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[15].tex = XMFLOAT4(stepX*3, 1, 0, 0);
-		impostorVertices[15].pre = XMFLOAT4(-1, -1, 0, 1);
+	//	impostorVertices[14].pos = XMFLOAT4(-1, -1, 0, 1);
+	//	impostorVertices[14].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[14].tex = XMFLOAT4(stepX*3, 1, 0, 0);
+	//	impostorVertices[14].pre = XMFLOAT4(-1, -1, 0, 1);
 
-		impostorVertices[16].pos = XMFLOAT4(1, 1, 0, 1);
-		impostorVertices[16].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[16].tex = XMFLOAT4(stepX*2, 0, 0, 0);
-		impostorVertices[16].pre = XMFLOAT4(1, 1, 0, 1);
+	//	impostorVertices[15].pos = XMFLOAT4(-1, -1, 0, 1);
+	//	impostorVertices[15].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[15].tex = XMFLOAT4(stepX*3, 1, 0, 0);
+	//	impostorVertices[15].pre = XMFLOAT4(-1, -1, 0, 1);
 
-		impostorVertices[17].pos = XMFLOAT4(1, -1, 0, 1);
-		impostorVertices[17].nor = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[17].tex = XMFLOAT4(stepX*2, 1, 0, 0);
-		impostorVertices[17].pre = XMFLOAT4(1, -1, 0, 1);
+	//	impostorVertices[16].pos = XMFLOAT4(1, 1, 0, 1);
+	//	impostorVertices[16].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[16].tex = XMFLOAT4(stepX*2, 0, 0, 0);
+	//	impostorVertices[16].pre = XMFLOAT4(1, 1, 0, 1);
 
-		// left
-		impostorVertices[18].pos = XMFLOAT4(0, 1, -1, 1);
-		impostorVertices[18].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[18].tex = XMFLOAT4(stepX*4, 0, 0, 0);
-		impostorVertices[18].pre = XMFLOAT4(0, 1, -1, 1);
+	//	impostorVertices[17].pos = XMFLOAT4(1, -1, 0, 1);
+	//	impostorVertices[17].nor = XMFLOAT4(0, 0, -1, 1);
+	//	impostorVertices[17].tex = XMFLOAT4(stepX*2, 1, 0, 0);
+	//	impostorVertices[17].pre = XMFLOAT4(1, -1, 0, 1);
 
-		impostorVertices[19].pos = XMFLOAT4(0, 1, 1, 1);
-		impostorVertices[19].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[19].tex = XMFLOAT4(stepX * 3, 0, 0, 0);
-		impostorVertices[19].pre = XMFLOAT4(0, 1, 1, 1);
+	//	// left
+	//	impostorVertices[18].pos = XMFLOAT4(0, 1, -1, 1);
+	//	impostorVertices[18].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[18].tex = XMFLOAT4(stepX*4, 0, 0, 0);
+	//	impostorVertices[18].pre = XMFLOAT4(0, 1, -1, 1);
 
-		impostorVertices[20].pos = XMFLOAT4(0, -1, -1, 1);
-		impostorVertices[20].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[20].tex = XMFLOAT4(stepX*4, 1, 0, 0);
-		impostorVertices[20].pre = XMFLOAT4(0, -1, -1, 1);
+	//	impostorVertices[19].pos = XMFLOAT4(0, 1, 1, 1);
+	//	impostorVertices[19].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[19].tex = XMFLOAT4(stepX * 3, 0, 0, 0);
+	//	impostorVertices[19].pre = XMFLOAT4(0, 1, 1, 1);
 
-		impostorVertices[21].pos = XMFLOAT4(0, -1, -1, 1);
-		impostorVertices[21].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[21].tex = XMFLOAT4(stepX*4, 1, 0, 0);
-		impostorVertices[21].pre = XMFLOAT4(0, -1, -1, 1);
+	//	impostorVertices[20].pos = XMFLOAT4(0, -1, -1, 1);
+	//	impostorVertices[20].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[20].tex = XMFLOAT4(stepX*4, 1, 0, 0);
+	//	impostorVertices[20].pre = XMFLOAT4(0, -1, -1, 1);
 
-		impostorVertices[22].pos = XMFLOAT4(0, 1, 1, 1);
-		impostorVertices[22].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[22].tex = XMFLOAT4(stepX*3, 0, 0, 0);
-		impostorVertices[22].pre = XMFLOAT4(0, 1, 1, 1);
+	//	impostorVertices[21].pos = XMFLOAT4(0, -1, -1, 1);
+	//	impostorVertices[21].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[21].tex = XMFLOAT4(stepX*4, 1, 0, 0);
+	//	impostorVertices[21].pre = XMFLOAT4(0, -1, -1, 1);
 
-		impostorVertices[23].pos = XMFLOAT4(0, -1, 1, 1);
-		impostorVertices[23].nor = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[23].tex = XMFLOAT4(stepX*3, 1, 0, 0);
-		impostorVertices[23].pre = XMFLOAT4(0, -1, 1, 1);
+	//	impostorVertices[22].pos = XMFLOAT4(0, 1, 1, 1);
+	//	impostorVertices[22].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[22].tex = XMFLOAT4(stepX*3, 0, 0, 0);
+	//	impostorVertices[22].pre = XMFLOAT4(0, 1, 1, 1);
 
-		// bottom
-		impostorVertices[24].pos = XMFLOAT4(-1, 0, 1, 1);
-		impostorVertices[24].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[24].tex = XMFLOAT4(stepX*4, 0, 0, 0);
-		impostorVertices[24].pre = XMFLOAT4(-1, 0, 1, 1);
+	//	impostorVertices[23].pos = XMFLOAT4(0, -1, 1, 1);
+	//	impostorVertices[23].nor = XMFLOAT4(1, 0, 0, 1);
+	//	impostorVertices[23].tex = XMFLOAT4(stepX*3, 1, 0, 0);
+	//	impostorVertices[23].pre = XMFLOAT4(0, -1, 1, 1);
 
-		impostorVertices[25].pos = XMFLOAT4(1, 0, 1, 1);
-		impostorVertices[25].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[25].tex = XMFLOAT4(stepX * 5, 0, 0, 0);
-		impostorVertices[25].pre = XMFLOAT4(1, 0, 1, 1);
+	//	// bottom
+	//	impostorVertices[24].pos = XMFLOAT4(-1, 0, 1, 1);
+	//	impostorVertices[24].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[24].tex = XMFLOAT4(stepX*4, 0, 0, 0);
+	//	impostorVertices[24].pre = XMFLOAT4(-1, 0, 1, 1);
 
-		impostorVertices[26].pos = XMFLOAT4(-1, 0, -1, 1);
-		impostorVertices[26].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[26].tex = XMFLOAT4(stepX*4, 1, 0, 0);
-		impostorVertices[26].pre = XMFLOAT4(-1, 0, -1, 1);
+	//	impostorVertices[25].pos = XMFLOAT4(1, 0, 1, 1);
+	//	impostorVertices[25].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[25].tex = XMFLOAT4(stepX * 5, 0, 0, 0);
+	//	impostorVertices[25].pre = XMFLOAT4(1, 0, 1, 1);
 
-		impostorVertices[27].pos = XMFLOAT4(-1, 0, -1, 1);
-		impostorVertices[27].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[27].tex = XMFLOAT4(stepX*4, 1, 0, 0);
-		impostorVertices[27].pre = XMFLOAT4(-1, 0, -1, 1);
+	//	impostorVertices[26].pos = XMFLOAT4(-1, 0, -1, 1);
+	//	impostorVertices[26].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[26].tex = XMFLOAT4(stepX*4, 1, 0, 0);
+	//	impostorVertices[26].pre = XMFLOAT4(-1, 0, -1, 1);
 
-		impostorVertices[28].pos = XMFLOAT4(1, 0, 1, 1);
-		impostorVertices[28].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[28].tex = XMFLOAT4(stepX*5, 0, 0, 0);
-		impostorVertices[28].pre = XMFLOAT4(1, 0, 1, 1);
+	//	impostorVertices[27].pos = XMFLOAT4(-1, 0, -1, 1);
+	//	impostorVertices[27].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[27].tex = XMFLOAT4(stepX*4, 1, 0, 0);
+	//	impostorVertices[27].pre = XMFLOAT4(-1, 0, -1, 1);
 
-		impostorVertices[29].pos = XMFLOAT4(1, 0, -1, 1);
-		impostorVertices[29].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[29].tex = XMFLOAT4(stepX*5, 1, 0, 0);
-		impostorVertices[29].pre = XMFLOAT4(1, 0, -1, 1);
+	//	impostorVertices[28].pos = XMFLOAT4(1, 0, 1, 1);
+	//	impostorVertices[28].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[28].tex = XMFLOAT4(stepX*5, 0, 0, 0);
+	//	impostorVertices[28].pre = XMFLOAT4(1, 0, 1, 1);
 
-		// top
-		impostorVertices[30].pos = XMFLOAT4(-1, 0, 1, 1);
-		impostorVertices[30].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[30].tex = XMFLOAT4(stepX*5, 0, 0, 0);
-		impostorVertices[30].pre = XMFLOAT4(-1, 0, 1, 1);
+	//	impostorVertices[29].pos = XMFLOAT4(1, 0, -1, 1);
+	//	impostorVertices[29].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[29].tex = XMFLOAT4(stepX*5, 1, 0, 0);
+	//	impostorVertices[29].pre = XMFLOAT4(1, 0, -1, 1);
 
-		impostorVertices[31].pos = XMFLOAT4(-1, 0, -1, 1);
-		impostorVertices[31].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[31].tex = XMFLOAT4(stepX * 5, 1, 0, 0);
-		impostorVertices[31].pre = XMFLOAT4(-1, 0, -1, 1);
+	//	// top
+	//	impostorVertices[30].pos = XMFLOAT4(-1, 0, 1, 1);
+	//	impostorVertices[30].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[30].tex = XMFLOAT4(stepX*5, 0, 0, 0);
+	//	impostorVertices[30].pre = XMFLOAT4(-1, 0, 1, 1);
 
-		impostorVertices[32].pos = XMFLOAT4(1, 0, 1, 1);
-		impostorVertices[32].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[32].tex = XMFLOAT4(stepX*6, 0, 0, 0);
-		impostorVertices[32].pre = XMFLOAT4(1, 0, 1, 1);
+	//	impostorVertices[31].pos = XMFLOAT4(-1, 0, -1, 1);
+	//	impostorVertices[31].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[31].tex = XMFLOAT4(stepX * 5, 1, 0, 0);
+	//	impostorVertices[31].pre = XMFLOAT4(-1, 0, -1, 1);
 
-		impostorVertices[33].pos = XMFLOAT4(-1, 0, -1, 1);
-		impostorVertices[33].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[33].tex = XMFLOAT4(stepX*5, 1, 0, 0);
-		impostorVertices[33].pre = XMFLOAT4(-1, 0, -1, 1);
+	//	impostorVertices[32].pos = XMFLOAT4(1, 0, 1, 1);
+	//	impostorVertices[32].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[32].tex = XMFLOAT4(stepX*6, 0, 0, 0);
+	//	impostorVertices[32].pre = XMFLOAT4(1, 0, 1, 1);
 
-		impostorVertices[34].pos = XMFLOAT4(1, 0, -1, 1);
-		impostorVertices[34].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[34].tex = XMFLOAT4(stepX*6, 1, 0, 0);
-		impostorVertices[34].pre = XMFLOAT4(1, 0, -1, 1);
+	//	impostorVertices[33].pos = XMFLOAT4(-1, 0, -1, 1);
+	//	impostorVertices[33].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[33].tex = XMFLOAT4(stepX*5, 1, 0, 0);
+	//	impostorVertices[33].pre = XMFLOAT4(-1, 0, -1, 1);
 
-		impostorVertices[35].pos = XMFLOAT4(1, 0, 1, 1);
-		impostorVertices[35].nor = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[35].tex = XMFLOAT4(stepX*6, 0, 0, 0);
-		impostorVertices[35].pre = XMFLOAT4(1, 0, 1, 1);
+	//	impostorVertices[34].pos = XMFLOAT4(1, 0, -1, 1);
+	//	impostorVertices[34].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[34].tex = XMFLOAT4(stepX*6, 1, 0, 0);
+	//	impostorVertices[34].pre = XMFLOAT4(1, 0, -1, 1);
 
-		GPUBufferDesc bd;
-		ZeroMemory(&bd, sizeof(bd));
-		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(impostorVertices);
-		bd.BindFlags = BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		SubresourceData InitData;
-		ZeroMemory(&InitData, sizeof(InitData));
-		InitData.pSysMem = impostorVertices;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB);
-	}
+	//	impostorVertices[35].pos = XMFLOAT4(1, 0, 1, 1);
+	//	impostorVertices[35].nor = XMFLOAT4(0, 1, 0, 1);
+	//	impostorVertices[35].tex = XMFLOAT4(stepX*6, 0, 0, 0);
+	//	impostorVertices[35].pre = XMFLOAT4(1, 0, 1, 1);
+
+	//	GPUBufferDesc bd;
+	//	ZeroMemory(&bd, sizeof(bd));
+	//	bd.Usage = USAGE_IMMUTABLE;
+	//	bd.ByteWidth = sizeof(impostorVertices);
+	//	bd.BindFlags = BIND_VERTEX_BUFFER;
+	//	bd.CPUAccessFlags = 0;
+	//	SubresourceData InitData;
+	//	ZeroMemory(&InitData, sizeof(InitData));
+	//	InitData.pSysMem = impostorVertices;
+	//	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB);
+	//}
 }
 void Mesh::CreateVertexArrays()
 {
@@ -2240,32 +2246,45 @@ void Mesh::CreateVertexArrays()
 		return;
 	}
 
-	if (vertices_Complete.empty())
+	//if (vertices_Complete.empty())
+	//{
+	//	vertices_Complete.resize(vertices.size());
+	//	for (size_t i = 0; i < vertices.size(); ++i) 
+	//	{
+	//		// normalize bone weights:
+	//		float len = vertices[i].wei.x + vertices[i].wei.y + vertices[i].wei.z + vertices[i].wei.w;
+	//		if (len > 0)
+	//		{
+	//			vertices[i].wei.x /= len;
+	//			vertices[i].wei.y /= len;
+	//			vertices[i].wei.z /= len;
+	//			vertices[i].wei.w /= len;
+	//		}
+	//		// copy the vertex to the unskinned vertex array:
+	//		vertices_Complete[i].pos = vertices[i].pos;
+	//		vertices_Complete[i].nor = vertices[i].nor;
+	//		vertices_Complete[i].tex = vertices[i].tex;
+	//	}
+	//}
+
+	for (auto& wei : vertices[VPROP_WEI])
 	{
-		vertices_Complete.resize(vertices.size());
-		for (size_t i = 0; i < vertices.size(); ++i) 
+		// normalize bone weights:
+		float len = wei.x + wei.y + wei.z + wei.w;
+		if (len > 0)
 		{
-			// normalize bone weights:
-			float len = vertices[i].wei.x + vertices[i].wei.y + vertices[i].wei.z + vertices[i].wei.w;
-			if (len > 0)
-			{
-				vertices[i].wei.x /= len;
-				vertices[i].wei.y /= len;
-				vertices[i].wei.z /= len;
-				vertices[i].wei.w /= len;
-			}
-			// copy the vertex to the unskinned vertex array:
-			vertices_Complete[i].pos = vertices[i].pos;
-			vertices_Complete[i].nor = vertices[i].nor;
-			vertices_Complete[i].tex = vertices[i].tex;
+			wei.x /= len;
+			wei.y /= len;
+			wei.z /= len;
+			wei.w /= len;
 		}
 	}
 
 	for (size_t i = 0; i < indices.size(); ++i)
 	{
 		unsigned int index = indices[i];
-		SkinnedVertex skinnedVertex = vertices[index];
-		unsigned int materialIndex = (unsigned int)floor(skinnedVertex.tex.z);
+		const XMFLOAT4& tex = vertices[VPROP_TEX][index];
+		unsigned int materialIndex = (unsigned int)floor(tex.z);
 
 		assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
 
@@ -2308,11 +2327,17 @@ void Mesh::Serialize(wiArchive& archive)
 		{
 			size_t vertexCount;
 			archive >> vertexCount;
-			SkinnedVertex tempVert;
+			for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
+			{
+				vertices[vprop].resize(vertexCount);
+			}
 			for (size_t i = 0; i < vertexCount; ++i)
 			{
-				tempVert.Serialize(archive);
-				vertices.push_back(tempVert);
+				archive >> vertices[VPROP_POS][i];
+				archive >> vertices[VPROP_NOR][i];
+				archive >> vertices[VPROP_TEX][i];
+				archive >> vertices[VPROP_BON][i];
+				archive >> vertices[VPROP_WEI][i];
 			}
 		}
 		// indices
@@ -2416,10 +2441,14 @@ void Mesh::Serialize(wiArchive& archive)
 
 		// vertices
 		{
-			archive << vertices.size();
-			for (auto& x : vertices)
+			archive << vertices[VPROP_POS].size();
+			for (size_t i = 0; i < vertices[VPROP_POS].size(); ++i)
 			{
-				x.Serialize(archive);
+				archive << vertices[VPROP_POS][i];
+				archive << vertices[VPROP_NOR][i];
+				archive << vertices[VPROP_TEX][i];
+				archive << vertices[VPROP_BON][i];
+				archive << vertices[VPROP_WEI][i];
 			}
 		}
 		// indices

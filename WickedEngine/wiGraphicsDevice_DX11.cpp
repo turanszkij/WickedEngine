@@ -2942,6 +2942,17 @@ void GraphicsDevice_DX11::BindVertexBuffer(const GPUBuffer* vertexBuffer, int sl
 	ID3D11Buffer* res = vertexBuffer ? vertexBuffer->resource_DX11 : nullptr;
 	deviceContexts[threadID]->IASetVertexBuffers(slot, 1, &res, &stride, &offset);
 }
+void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer** vertexBuffers, int slot, UINT count, const UINT* strides, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE)
+{
+	assert(count <= 8);
+	UINT offsets[8] = { 0 };
+	ID3D11Buffer* res[8] = { 0 };
+	for (int i = 0; i < count; ++i)
+	{
+		res[i] = vertexBuffers[i]->resource_DX11;
+	}
+	deviceContexts[threadID]->IASetVertexBuffers(slot, count, res, strides, offsets);
+}
 void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID)
 {
 	ID3D11Buffer* res = indexBuffer ? indexBuffer->resource_DX11 : nullptr;
@@ -3001,6 +3012,17 @@ void GraphicsDevice_DX11::BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICST
 	UINT offsetSO[1] = { 0 };
 	ID3D11Buffer* res = buffer ? buffer->resource_DX11 : nullptr;
 	deviceContexts[threadID]->SOSetTargets(1, &res, offsetSO);
+}
+void GraphicsDevice_DX11::BindStreamOutTargets(const GPUBuffer** buffers, UINT count, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE)
+{
+	assert(count <= 8);
+	UINT offsetSO[8] = { 0 };
+	ID3D11Buffer* res[8] = { 0 };
+	for (int i = 0; i < count; ++i)
+	{
+		res[i] = buffers[i]->resource_DX11;
+	}
+	deviceContexts[threadID]->SOSetTargets(1, res, offsetSO);
 }
 void GraphicsDevice_DX11::BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) 
 {

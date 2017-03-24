@@ -26,6 +26,16 @@ typedef map<string,Material*> MaterialCollection;
 
 class wiArchive;
 
+enum VERTEXPROPERTY
+{
+	VPROP_POS,		// pos
+	VPROP_NOR,		// normal, vertexao
+	VPROP_TEX,		// texcoord, materialindex, wind
+	VPROP_BON,		// boneindices
+	VPROP_WEI,		// boneweights
+	VPROP_COUNT,
+};
+#define VPROP_PRE VPROP_BON // posprev
 struct SkinnedVertex
 {
 	XMFLOAT4 pos; //pos
@@ -49,7 +59,7 @@ struct SkinnedVertex
 		bon=XMFLOAT4(0,0,0,0);
 		wei=XMFLOAT4(0,0,0,0);
 	}
-	void Serialize(wiArchive& archive);
+	//void Serialize(wiArchive& archive);
 };
 struct Vertex
 {
@@ -290,10 +300,11 @@ private:
 public:
 	string name;
 	string parent;
-	// Full vertex info with bones
-	vector<SkinnedVertex>	vertices;
-	// Already animated vertices
-	vector<Vertex>			vertices_Complete;
+	//// Full vertex info with bones
+	//vector<SkinnedVertex>	vertices;
+	//// Already animated vertices
+	//vector<Vertex>			vertices_Complete;
+	vector<XMFLOAT4>		vertices[VPROP_COUNT];
 	vector<unsigned int>    indices;
 	vector<XMFLOAT3>		physicsverts;
 	vector<unsigned int>	physicsindices;
@@ -301,8 +312,8 @@ public:
 	vector<MeshSubset>		subsets;
 	vector<string>			materialNames;
 
-	wiGraphicsTypes::GPUBuffer			vertexBuffer;
-	wiGraphicsTypes::GPUBuffer			streamoutBuffer;
+	wiGraphicsTypes::GPUBuffer			vertexBuffers[VPROP_COUNT];
+	wiGraphicsTypes::GPUBuffer			streamoutBuffers[VPROP_COUNT - 1]; // omit weights, change boneindices to posprev
 	wiGraphicsTypes::GPUBuffer			instanceBuffer;
 
 	bool renderable,doubleSided;
@@ -360,20 +371,19 @@ public:
 		renderable=false;
 		doubleSided=false;
 		stencilRef = STENCILREF::STENCILREF_DEFAULT;
-		//usedBy.resize(0);
 		aabb=AABB();
 		trailInfo=RibbonTrail();
 		armature=nullptr;
 		isBillboarded=false;
 		billboardAxis=XMFLOAT3(0,0,0);
-		vertexGroups.resize(0);
+		vertexGroups.clear();
 		softBody=false;
 		mass=friction=1;
 		massVG=-1;
 		goalVG=-1;
-		softVG=-1;
-		goalPositions.resize(0);
-		goalNormals.resize(0);
+		softVG = -1;
+		goalPositions.clear();
+		goalNormals.clear();
 		buffersComplete = false;
 		arraysComplete = false;
 		calculatedAO = false;
