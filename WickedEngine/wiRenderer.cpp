@@ -3440,7 +3440,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 	return realPS;
 }
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-	bool tessellation, bool disableOcclusionCulling)
+	bool tessellation, bool occlusionCulling)
 {
 	if (!culledRenderer.empty())
 	{
@@ -3513,7 +3513,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
 					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 				}
-				else if (shaderType == SHADERTYPE_ALPHATESTONLY)
+				else if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE)
 				{
 					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
 					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT_SIMPLE], threadID);
@@ -3572,7 +3572,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						if (dither > 1.0f - FLT_EPSILON)
 							continue;
 
-						if (disableOcclusionCulling || !instance->IsOccluded())
+						if (!occlusionCulling || !instance->IsOccluded())
 						{
 							mesh->AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
 							++k;
@@ -3607,7 +3607,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
 
 
-					if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+					if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 					{
 						GPUBuffer* vbs[] = {
 							&Mesh::impostorVBs[VPROP_POS],
@@ -3727,7 +3727,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
 
-					if (disableOcclusionCulling || !instance->IsOccluded())
+					if (!occlusionCulling || !instance->IsOccluded())
 					{
 						if (mesh->softBody || instance->isArmatureDeformed())
 							mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), dither, instance->color), k, threadID);
@@ -3744,7 +3744,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			mesh->UpdateRenderableInstances(k, threadID);
 
-			if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+			if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 			{
 				GPUBuffer* vbs[] = {
 					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
@@ -3868,7 +3868,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 	}
 }
 
-void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, Texture2D* refRes, bool grass)
+void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, Texture2D* refRes, bool grass, bool occlusionCulling)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -3902,7 +3902,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 			}
 		}
 
-		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, !GetOcclusionCullingEnabled());
+		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
 	GetDevice()->EventEnd();
@@ -3910,7 +3910,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 }
 
 void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Texture2D* refracRes, Texture2D* refRes
-	, Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass)
+	, Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -3944,7 +3944,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
 		}
 
-		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, !GetOcclusionCullingEnabled());
+		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
 	GetDevice()->EventEnd();

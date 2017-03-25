@@ -110,7 +110,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), true, true);
 	}
 
 

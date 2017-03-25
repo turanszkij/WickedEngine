@@ -258,7 +258,7 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 			wiRenderer::SetClipPlane(water, threadID);
 
-			wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, nullptr, getHairParticlesReflectionEnabled());
+			wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, nullptr, getHairParticlesReflectionEnabled(), false);
 			wiRenderer::DrawSky(threadID);
 
 			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
@@ -417,7 +417,7 @@ void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT,
 	wiProfiler::GetInstance().BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
-		, rtWaterRipple.GetTexture(), threadID, false);
+		, rtWaterRipple.GetTexture(), threadID, false, true);
 
 	wiProfiler::GetInstance().EndRange(); // Transparent Scene
 }

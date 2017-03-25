@@ -229,6 +229,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
 	float4 color = baseColor;												\
 	float opacity = color.a;												\
+	float emissive = g_xMat_emissive;										\
 	float2 pixel = input.pos.xy;
 
 
@@ -247,7 +248,6 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	metalness = saturate(metalness);										\
 	float reflectance = g_xMat_reflectance;									\
 	reflectance = saturate(reflectance);									\
-	float emissive = g_xMat_emissive;										\
 	float sss = g_xMat_subsurfaceScattering;								\
 	float3 bumpColor = 0;													\
 	float depth = input.pos.z;												\
