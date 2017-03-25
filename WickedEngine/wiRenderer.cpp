@@ -1802,9 +1802,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (mesh->softBody || mesh->hasArmature())
 #endif
 				{
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_POS], mesh->vertices_Transformed[VPROP_POS].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Transformed[VPROP_POS].size()));
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_NOR], mesh->vertices_Transformed[VPROP_NOR].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Transformed[VPROP_NOR].size()));
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_PRE], mesh->vertices_Transformed[VPROP_PRE].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Transformed[VPROP_PRE].size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_POS], mesh->vertices_Transformed[VPROP_POS].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_POS].size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_NOR], mesh->vertices_Transformed[VPROP_NOR].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_NOR].size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_PRE], mesh->vertices_Transformed[VPROP_PRE].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_PRE].size()));
 				}
 			}
 		}
