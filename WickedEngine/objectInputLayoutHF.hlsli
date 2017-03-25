@@ -22,6 +22,13 @@ struct Input_Skinning
 	float4 bon : TEXCOORD0;
 	float4 wei : TEXCOORD1;
 };
+struct Input_Simple
+{
+	uint id: SV_VertexID;
+	float4 pos : POSITION;
+	float4 tex : TEXCOORD0;
+	Input_Instance instance;
+};
 struct Input
 {
 	uint id: SV_VertexID;

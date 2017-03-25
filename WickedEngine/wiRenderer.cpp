@@ -625,6 +625,24 @@ void wiRenderer::LoadShaders()
 			vertexLayouts[VLTYPE_EFFECT] = vsinfo->vertexLayout;
 		}
 	}
+	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		};
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_Simple.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr){
+			vertexShaders[VSTYPE_OBJECT_SIMPLE] = vsinfo->vertexShader;
+			vertexLayouts[VLTYPE_EFFECT_SIMPLE] = vsinfo->vertexLayout;
+		}
+	}
 
 	{
 		VertexLayoutDesc layout[] =
@@ -3489,6 +3507,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
 					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 				}
+				else if (shaderType == SHADERTYPE_ALPHATESTONLY)
+				{
+					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT_SIMPLE], threadID);
+				}
 				else
 				{
 					if (tessellation && tessF)
@@ -3576,6 +3599,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GetDevice()->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
 
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
+
 					GPUBuffer* vbs[] = {
 						&Mesh::impostorVBs[VPROP_POS],
 						&Mesh::impostorVBs[VPROP_NOR],
@@ -3591,6 +3615,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						sizeof(Instance)
 					};
 					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
 					if (!easyTextureBind)
 					{
@@ -3696,6 +3721,20 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			mesh->UpdateRenderableInstances(k, threadID);
 
 			if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+			{
+				GPUBuffer* vbs[] = {
+					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+					&mesh->vertexBuffers[VPROP_TEX],
+					&mesh->instanceBuffer
+				};
+				UINT strides[] = {
+					sizeof(XMFLOAT4),
+					sizeof(XMFLOAT4),
+					sizeof(Instance)
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+			}
+			else if (shaderType == SHADERTYPE_ALPHATESTONLY)
 			{
 				GPUBuffer* vbs[] = {
 					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),

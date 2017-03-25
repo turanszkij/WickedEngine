@@ -28,6 +28,14 @@
 
 #define sampler_objectshader	sampler_aniso_wrap
 
+struct PixelInputType_Simple
+{
+	float4 pos								: SV_POSITION;
+	float  clip								: SV_ClipDistance0;
+	float2 tex								: TEXCOORD0;
+	nointerpolation float  dither			: DITHER;
+	nointerpolation float3 instanceColor	: INSTANCECOLOR;
+};
 struct PixelInputType
 {
 	float4 pos								: SV_POSITION;
@@ -216,7 +224,16 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 // MACROS
 ////////////
 
+#define OBJECT_PS_MAKE_SIMPLE												\
+	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
+	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
+	float4 color = baseColor;												\
+	float opacity = color.a;												\
+	float2 pixel = input.pos.xy;
+
+
 #define OBJECT_PS_MAKE_COMMON												\
+	OBJECT_PS_MAKE_SIMPLE													\
 	float3 diffuse = 0;														\
 	float3 specular = 0;													\
 	float3 N = normalize(input.nor);										\
@@ -224,10 +241,6 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float3 V = g_xCamera_CamPos - P;										\
 	float dist = length(V);													\
 	V /= dist;																\
-	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
-	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
-	float4 color = baseColor;												\
-	float opacity = color.a;												\
 	float roughness = g_xMat_roughness;										\
 	roughness = saturate(roughness);										\
 	float metalness = g_xMat_metalness;										\
@@ -238,8 +251,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float sss = g_xMat_subsurfaceScattering;								\
 	float3 bumpColor = 0;													\
 	float depth = input.pos.z;												\
-	float ao = input.ao;													\
-	float2 pixel = input.pos.xy;
+	float ao = input.ao;
 
 #define OBJECT_PS_MAKE																								\
 	OBJECT_PS_MAKE_COMMON																							\
@@ -251,11 +263,14 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float3 T, B;															\
 	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
 
-#define OBJECT_PS_SAMPLETEXTURES											\
+#define OBJECT_PS_SAMPLETEXTURES_SIMPLE										\
 	baseColor *= xBaseColorMap.Sample(sampler_objectshader, UV);			\
 	ALPHATEST(baseColor.a);													\
 	color = baseColor;														\
 	opacity = color.a;														\
+
+#define OBJECT_PS_SAMPLETEXTURES											\
+	OBJECT_PS_SAMPLETEXTURES_SIMPLE											\
 	roughness *= xRoughnessMap.Sample(sampler_objectshader, UV).r;			\
 	metalness *= xMetalnessMap.Sample(sampler_objectshader, UV).r;			\
 	reflectance *= xReflectanceMap.Sample(sampler_objectshader, UV).r;

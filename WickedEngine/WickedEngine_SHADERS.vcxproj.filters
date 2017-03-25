@@ -567,6 +567,9 @@
     <FxCompile Include="cubeShadowVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="objectVS_simple.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
