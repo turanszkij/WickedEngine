@@ -1815,7 +1815,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			// Unload skinning shader
 			GetDevice()->BindGS(nullptr, threadID);
 			GetDevice()->BindVS(nullptr, threadID);
-			GetDevice()->BindStreamOutTargets(nullptr, threadID);
+			GetDevice()->BindStreamOutTarget(nullptr, threadID);
 		}
 #endif
 

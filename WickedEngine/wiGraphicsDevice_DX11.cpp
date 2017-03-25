@@ -2941,7 +2941,7 @@ void GraphicsDevice_DX11::BindVertexBuffer(const GPUBuffer* vertexBuffer, int sl
 	UINT data[8] = { 0 };
 	if (vertexBuffer == nullptr)
 	{
-		deviceContexts[threadID]->IASetVertexBuffers(0, 8, (ID3D11Buffer**)__nullBlob, data, (UINT*)__nullBlob);
+		deviceContexts[threadID]->IASetVertexBuffers(0, 0, (ID3D11Buffer**)__nullBlob, data, (UINT*)__nullBlob);
 	}
 	else
 	{
@@ -3019,7 +3019,7 @@ void GraphicsDevice_DX11::BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICST
 {
 	if (buffer == nullptr)
 	{
-		deviceContexts[threadID]->SOSetTargets(8, (ID3D11Buffer**)__nullBlob, (UINT*)__nullBlob);
+		deviceContexts[threadID]->SOSetTargets(0, (ID3D11Buffer**)__nullBlob, (UINT*)__nullBlob);
 	}
 	else
 	{
