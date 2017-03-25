@@ -39,7 +39,7 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	ppWindow->AddWidget(lightShaftsCheckBox);
 
 	ssaoCheckBox = new wiCheckBox("SSAO: ");
-	ssaoCheckBox->SetTooltip("Enable Screen Space Ambient Occlusion.");
+	ssaoCheckBox->SetTooltip("Enable Screen Space Ambient Occlusion. (Deferred only for now)");
 	ssaoCheckBox->SetPos(XMFLOAT2(x, y += 35));
 	ssaoCheckBox->SetCheck(component->getSSAOEnabled());
 	ssaoCheckBox->OnClick([&](wiEventArgs args) {
@@ -48,7 +48,7 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	ppWindow->AddWidget(ssaoCheckBox);
 
 	ssrCheckBox = new wiCheckBox("SSR: ");
-	ssrCheckBox->SetTooltip("Enable Screen Space Reflections");
+	ssrCheckBox->SetTooltip("Enable Screen Space Reflections. (Deferred only for now)");
 	ssrCheckBox->SetPos(XMFLOAT2(x, y += 35));
 	ssrCheckBox->SetCheck(component->getSSREnabled());
 	ssrCheckBox->OnClick([&](wiEventArgs args) {
@@ -57,7 +57,7 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	ppWindow->AddWidget(ssrCheckBox);
 
 	sssCheckBox = new wiCheckBox("SSS: ");
-	sssCheckBox->SetTooltip("Enable Subsurface Scattering");
+	sssCheckBox->SetTooltip("Enable Subsurface Scattering. (Deferred only for now)");
 	sssCheckBox->SetPos(XMFLOAT2(x, y += 35));
 	sssCheckBox->SetCheck(component->getSSSEnabled());
 	sssCheckBox->OnClick([&](wiEventArgs args) {
