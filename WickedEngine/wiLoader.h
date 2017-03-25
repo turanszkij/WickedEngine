@@ -309,7 +309,7 @@ public:
 	vector<string>			materialNames;
 
 	wiGraphicsTypes::GPUBuffer			vertexBuffers[VPROP_COUNT];
-	wiGraphicsTypes::GPUBuffer			streamoutBuffers[VPROP_COUNT - 2]; // omit texcoord, omit weights, change boneindices to posprev
+	wiGraphicsTypes::GPUBuffer			streamoutBuffers[VPROP_COUNT]; // omit texcoord, omit weights, change boneindices to posprev
 	wiGraphicsTypes::GPUBuffer			instanceBuffer;
 
 	bool renderable,doubleSided;
@@ -336,7 +336,7 @@ public:
 
 	wiRenderTarget	impostorTarget;
 	float impostorDistance;
-	static wiGraphicsTypes::GPUBuffer	impostorVBs[VPROP_COUNT - 2]; // omit weights, omit posprev
+	static wiGraphicsTypes::GPUBuffer	impostorVBs[VPROP_COUNT]; // omit weights, omit posprev
 
 	float tessellationFactor;
 

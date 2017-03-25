@@ -1536,7 +1536,7 @@ void VertexGroup::Serialize(wiArchive& archive)
 
 #pragma region MESH
 
-GPUBuffer Mesh::impostorVBs[VPROP_COUNT - 2];
+GPUBuffer Mesh::impostorVBs[VPROP_COUNT];
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
 	, const MaterialCollection& materialColl, list<Armature*> armatures, const string& identifier) {
