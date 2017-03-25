@@ -300,6 +300,7 @@ private:
 public:
 	string name;
 	string parent;
+	vector<XMFLOAT4>		vertices_Transformed[VPROP_COUNT]; // for CPU skinning / soft body simulation
 	vector<XMFLOAT4>		vertices[VPROP_COUNT];
 	vector<unsigned int>    indices;
 	vector<XMFLOAT3>		physicsverts;

@@ -1414,36 +1414,40 @@ Light* wiRenderer::getLightByName(const string& name)
 
 Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
 {
-	assert(mesh->hasArmature() && string(mesh->name + "has no Armature!").c_str());
-	assert(!mesh->armature->boneCollection.empty() && string(mesh->armature->name + "has no bones!").c_str());
-
+	XMMATRIX sump;
 	XMVECTOR pos = XMLoadFloat4(&mesh->vertices[VPROP_POS][vertexI]);
 	XMVECTOR nor = XMLoadFloat4(&mesh->vertices[VPROP_NOR][vertexI]);
-	float inWei[4] = {
-		mesh->vertices[VPROP_WEI][vertexI].x
-		, mesh->vertices[VPROP_WEI][vertexI].y
-		, mesh->vertices[VPROP_WEI][vertexI].z
-		, mesh->vertices[VPROP_WEI][vertexI].w };
-	float inBon[4] = {
-		mesh->vertices[VPROP_BON][vertexI].x
-		, mesh->vertices[VPROP_BON][vertexI].y
-		, mesh->vertices[VPROP_BON][vertexI].z
-		, mesh->vertices[VPROP_BON][vertexI].w };
-	XMMATRIX sump;
-	if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
+
+	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
 	{
-		sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-		for (unsigned int i = 0; i < 4; i++)
+		float inWei[4] = {
+			mesh->vertices[VPROP_WEI][vertexI].x
+			, mesh->vertices[VPROP_WEI][vertexI].y
+			, mesh->vertices[VPROP_WEI][vertexI].z
+			, mesh->vertices[VPROP_WEI][vertexI].w };
+		float inBon[4] = {
+			mesh->vertices[VPROP_BON][vertexI].x
+			, mesh->vertices[VPROP_BON][vertexI].y
+			, mesh->vertices[VPROP_BON][vertexI].z
+			, mesh->vertices[VPROP_BON][vertexI].w };
+		if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
 		{
-			sump += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
+			sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+			for (unsigned int i = 0; i < 4; i++)
+			{
+				sump += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
+			}
 		}
+		else
+		{
+			sump = XMMatrixIdentity();
+		}
+		sump = XMMatrixMultiply(sump, mat);
 	}
 	else
 	{
-		sump = XMMatrixIdentity();
+		sump = mat;
 	}
-
-	sump = XMMatrixMultiply(sump, mat);
 
 	XMFLOAT3 transformedP, transformedN;
 	XMStoreFloat3(&transformedP, XMVector3Transform(pos, sump));
@@ -1798,7 +1802,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (mesh->softBody || mesh->hasArmature())
 #endif
 				{
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_POS], mesh->vertices[VPROP_POS].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices[VPROP_POS].size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_POS], mesh->vertices_Transformed[VPROP_POS].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Transformed[VPROP_POS].size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_NOR], mesh->vertices_Transformed[VPROP_NOR].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Transformed[VPROP_NOR].size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_PRE], mesh->vertices_Transformed[VPROP_PRE].data(), threadID, (int)(sizeof(Vertex)*mesh->vertices_Transformed[VPROP_PRE].size()));
 				}
 			}
 		}
@@ -3600,21 +3606,39 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
 
-					GPUBuffer* vbs[] = {
-						&Mesh::impostorVBs[VPROP_POS],
-						&Mesh::impostorVBs[VPROP_NOR],
-						&Mesh::impostorVBs[VPROP_TEX],
-						&Mesh::impostorVBs[VPROP_POS],
-						&mesh->instanceBuffer,
-					};
-					UINT strides[] = {
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(Instance)
-					};
-					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+
+					if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+					{
+						GPUBuffer* vbs[] = {
+							&Mesh::impostorVBs[VPROP_POS],
+							&Mesh::impostorVBs[VPROP_TEX],
+							&mesh->instanceBuffer
+						};
+						UINT strides[] = {
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(Instance)
+						};
+						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					}
+					else
+					{
+						GPUBuffer* vbs[] = {
+							&Mesh::impostorVBs[VPROP_POS],
+							&Mesh::impostorVBs[VPROP_NOR],
+							&Mesh::impostorVBs[VPROP_TEX],
+							&Mesh::impostorVBs[VPROP_POS],
+							&mesh->instanceBuffer
+						};
+						UINT strides[] = {
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(Instance)
+						};
+						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					}
 
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
 					if (!easyTextureBind)
@@ -3720,21 +3744,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			mesh->UpdateRenderableInstances(k, threadID);
 
-			if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-			{
-				GPUBuffer* vbs[] = {
-					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-					&mesh->vertexBuffers[VPROP_TEX],
-					&mesh->instanceBuffer
-				};
-				UINT strides[] = {
-					sizeof(XMFLOAT4),
-					sizeof(XMFLOAT4),
-					sizeof(Instance)
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-			}
-			else if (shaderType == SHADERTYPE_ALPHATESTONLY)
+			if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 			{
 				GPUBuffer* vbs[] = {
 					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
@@ -5281,59 +5291,51 @@ Scene& wiRenderer::GetScene()
 
 void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 {
-	if (physicsEngine && GetGameSpeed()){
-
+	if (physicsEngine && GetGameSpeed())
+	{
 		physicsEngine->addWind(GetScene().wind.direction);
 
-		//UpdateSoftBodyPinning();
+		// Update physics world data
 		for (Model* model : GetScene().models)
 		{
-			// Soft body pinning update
-			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter) {
-				Mesh* m = iter->second;
-				if (m->softBody) {
-					int gvg = m->goalVG;
-					if (gvg >= 0) {
-						int j = 0;
-						for (map<int, float>::iterator it = m->vertexGroups[gvg].vertices.begin(); it != m->vertexGroups[gvg].vertices.end(); ++it) 
-						{
-							int vi = (*it).first;
-							Vertex tvert;
-							if (m->hasArmature())
-							{
-								tvert = TransformVertex(m, vi);
-							}
-							else
-							{
-								tvert.pos = m->vertices[VPROP_POS][vi];
-								tvert.nor = m->vertices[VPROP_NOR][vi];
-							}
-							m->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
-							m->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
-							++j;
-						}
-					}
-				}
-			}
-
-
-			for (Object* object : model->objects) {
+			for (Object* object : model->objects) 
+			{
+				Mesh* mesh = object->mesh;
 				int pI = object->physicsObjectI;
-				if (pI >= 0) {
-					if (object->mesh->softBody) {
+				if (pI >= 0) 
+				{
+					if (mesh->softBody) 
+					{
+						int gvg = mesh->goalVG;
+						if (gvg >= 0)
+						{
+							XMMATRIX worldMat = mesh->hasArmature() ? XMMatrixIdentity() : XMLoadFloat4x4(&object->world);
+							int j = 0;
+							for (map<int, float>::iterator it = mesh->vertexGroups[gvg].vertices.begin(); it != mesh->vertexGroups[gvg].vertices.end(); ++it)
+							{
+								int vi = (*it).first;
+								Vertex tvert = TransformVertex(mesh, vi, worldMat);
+								mesh->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
+								mesh->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
+								++j;
+							}
+						}
 						physicsEngine->connectSoftBodyToVertices(
 							object->mesh, pI
 							);
 					}
-					if (object->kinematic && object->rigidBody) {
+					if (object->kinematic && object->rigidBody)
+					{
 						physicsEngine->transformBody(object->rotation, object->translation, pI);
 					}
 				}
 			}
 		}
 
+		// Run physics simulation
 		physicsEngine->Update(dt);
 
+		// Retrieve physics simulation data
 		for (Model* model : GetScene().models)
 		{
 			for (Object* object : model->objects) {

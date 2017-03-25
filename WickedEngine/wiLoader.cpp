@@ -2114,30 +2114,14 @@ void Mesh::CreateVertexArrays()
 		return;
 	}
 
-	//if (vertices_Complete.empty())
-	//{
-	//	vertices_Complete.resize(vertices.size());
-	//	for (size_t i = 0; i < vertices.size(); ++i) 
-	//	{
-	//		// normalize bone weights:
-	//		float len = vertices[i].wei.x + vertices[i].wei.y + vertices[i].wei.z + vertices[i].wei.w;
-	//		if (len > 0)
-	//		{
-	//			vertices[i].wei.x /= len;
-	//			vertices[i].wei.y /= len;
-	//			vertices[i].wei.z /= len;
-	//			vertices[i].wei.w /= len;
-	//		}
-	//		// copy the vertex to the unskinned vertex array:
-	//		vertices_Complete[i].pos = vertices[i].pos;
-	//		vertices_Complete[i].nor = vertices[i].nor;
-	//		vertices_Complete[i].tex = vertices[i].tex;
-	//	}
-	//}
+	// Save original vertices. This will be input for CPU skinning / soft bodies
+	vertices_Transformed[VPROP_POS] = vertices[VPROP_POS];
+	vertices_Transformed[VPROP_NOR] = vertices[VPROP_NOR];
+	vertices_Transformed[VPROP_PRE] = vertices[VPROP_POS]; // pre <- pos!!
 
+	// Normalize bone weights:
 	for (auto& wei : vertices[VPROP_WEI])
 	{
-		// normalize bone weights:
 		float len = wei.x + wei.y + wei.z + wei.w;
 		if (len > 0)
 		{
@@ -2148,6 +2132,7 @@ void Mesh::CreateVertexArrays()
 		}
 	}
 
+	// Map subset indices:
 	for (size_t i = 0; i < indices.size(); ++i)
 	{
 		unsigned int index = indices[i];
