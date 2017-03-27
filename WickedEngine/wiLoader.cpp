@@ -11,6 +11,9 @@
 #include "wiPHYSICS.h"
 #include "wiArchive.h"
 
+#define FORSYTH_IMPLEMENTATION
+#include "wiMeshOptimizer.h"
+
 using namespace wiGraphicsTypes;
 
 void LoadWiArmatures(const string& directory, const string& name, const string& identifier, list<Armature*>& armatures)
@@ -1835,7 +1838,23 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 }
 void Mesh::Optimize()
 {
-	//TODO
+	// TODO
+
+	//ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
+	//ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
+	//for (size_t i = 0; i < indices.size(); ++i)
+	//{
+	//	_indices_in[i] = this->indices[i];
+	//}
+
+	//ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices->size()));
+
+	//for (size_t i = 0; i < indices.size(); ++i)
+	//{
+	//	this->indices[i] = _indices_out[i];
+	//}
+	//SAFE_DELETE_ARRAY(_indices_in);
+	//SAFE_DELETE_ARRAY(_indices_out);
 }
 void Mesh::CreateBuffers(Object* object) 
 {

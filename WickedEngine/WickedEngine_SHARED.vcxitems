@@ -328,6 +328,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLuna.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiMath.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h" />
