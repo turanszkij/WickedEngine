@@ -341,6 +341,8 @@ public:
 
 	float tessellationFactor;
 
+	bool optimized;
+
 	Mesh(){
 		init();
 	}
@@ -387,6 +389,7 @@ public:
 		armatureName = "";
 		impostorDistance = 100.0f;
 		tessellationFactor = 0.0f;
+		optimized = false;
 	}
 	
 	bool hasArmature()const { return armature != nullptr; }

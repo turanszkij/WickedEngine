@@ -1838,23 +1838,31 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 }
 void Mesh::Optimize()
 {
-	// TODO
+	if (optimized)
+	{
+		return;
+	}
 
-	//ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
-	//ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
-	//for (size_t i = 0; i < indices.size(); ++i)
-	//{
-	//	_indices_in[i] = this->indices[i];
-	//}
+	// Vertex cache optimization:
+	{
+		ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
+		ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
+		for (size_t i = 0; i < indices.size(); ++i)
+		{
+			_indices_in[i] = this->indices[i];
+		}
 
-	//ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices->size()));
+		ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices->size()));
 
-	//for (size_t i = 0; i < indices.size(); ++i)
-	//{
-	//	this->indices[i] = _indices_out[i];
-	//}
-	//SAFE_DELETE_ARRAY(_indices_in);
-	//SAFE_DELETE_ARRAY(_indices_out);
+		for (size_t i = 0; i < indices.size(); ++i)
+		{
+			this->indices[i] = _indices_out[i];
+		}
+		SAFE_DELETE_ARRAY(_indices_in);
+		SAFE_DELETE_ARRAY(_indices_out);
+	}
+
+	optimized = true;
 }
 void Mesh::CreateBuffers(Object* object) 
 {
@@ -2305,6 +2313,13 @@ void Mesh::Serialize(wiArchive& archive)
 		archive >> softVG;
 		archive >> armatureName;
 		aabb.Serialize(archive);
+
+		if (archive.GetVersion() >= 7)
+		{
+			archive >> impostorDistance;
+			archive >> tessellationFactor;
+			archive >> optimized;
+		}
 	}
 	else
 	{
@@ -2391,6 +2406,13 @@ void Mesh::Serialize(wiArchive& archive)
 		archive << softVG;
 		archive << armatureName;
 		aabb.Serialize(archive);
+
+		if (archive.GetVersion() >= 7)
+		{
+			archive << impostorDistance;
+			archive << tessellationFactor;
+			archive << optimized;
+		}
 	}
 }
 #pragma endregion

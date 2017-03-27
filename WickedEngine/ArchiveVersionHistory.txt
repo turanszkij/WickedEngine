@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+7:	serialized extended mesh properties
 6:	serialized area light properties
 5:	serialized color and emissive decal properties
 4:	serialized Material property alphaRef
