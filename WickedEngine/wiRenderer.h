@@ -80,7 +80,7 @@ public:
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 	static float SPECULARAA;
-	static float renderTime;
+	static float renderTime, renderTime_Prev, deltaTime;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
@@ -109,11 +109,17 @@ public:
 	GFX_STRUCT FrameCB
 	{
 		float mTime;
-		XMFLOAT3 mWindDirection;
+		float mTimePrev;
+		float mDeltaTime;				float pad0;
+		XMFLOAT3 mWindDirection;		float pad1;
 		float mWindWaveSize;
 		float mWindRandomness;
 		UINT mFrameCount;
 		int mSunLightArrayIndex;
+		XMMATRIX mVP;
+		XMMATRIX mView;
+		XMMATRIX mProj;
+		XMFLOAT3 mCamPos;				float pad2;
 		XMMATRIX mPrevV;
 		XMMATRIX mPrevP;
 		XMMATRIX mPrevVP;
@@ -302,6 +308,7 @@ protected:
 
 	static bool debugLightCulling;
 	static bool occlusionCulling;
+	static bool temporalAA;
 
 	struct VoxelizedSceneData
 	{
@@ -328,9 +335,9 @@ public:
 	static void SetUpStaticComponents();
 	static void CleanUpStatic();
 	
-	static void Update();
+	static void FixedUpdate();
 	// Render data that needs to be updated on the main thread!
-	static void UpdatePerFrameData();
+	static void UpdatePerFrameData(float dt);
 	static void UpdateRenderData(GRAPHICSTHREAD threadID);
 	static void OcclusionCulling_Render(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	static void OcclusionCulling_Read();
@@ -363,6 +370,8 @@ public:
 	static bool GetAdvancedLightCulling() { return advancedLightCulling; }
 	static void SetOcclusionCullingEnabled(bool enabled) { occlusionCulling = enabled; }
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
+	static void SetTemporalAAEnabled(bool enabled) { temporalAA = enabled; }
+	static bool GetTemporalAAEnabled() { return temporalAA; }
 	static void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }
 	static bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
 	static void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }

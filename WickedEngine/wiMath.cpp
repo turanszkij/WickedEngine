@@ -326,7 +326,7 @@ namespace wiMath
 			XMFLOAT4(0.9843750000f, 0.0617283951f, 0.6960000000f, 0.0437317784f),
 			XMFLOAT4(0.0078125000f, 0.3950617284f, 0.8960000000f, 0.1865889213f),
 		};
-		assert(idx >= 0 && idx < 64);
+		assert(idx >= 0 && idx < ARRAYSIZE(HALTON));
 		return HALTON[idx];
 	}
 }

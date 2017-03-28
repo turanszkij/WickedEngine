@@ -185,7 +185,7 @@ void Renderable3DComponent::Start()
 
 void Renderable3DComponent::FixedUpdate()
 {
-	wiRenderer::Update();
+	wiRenderer::FixedUpdate();
 	wiRenderer::UpdateImages();
 
 	Renderable2DComponent::FixedUpdate();
@@ -194,6 +194,7 @@ void Renderable3DComponent::FixedUpdate()
 void Renderable3DComponent::Update(float dt)
 {
 	wiRenderer::SynchronizeWithPhysicsEngine(dt);
+	wiRenderer::UpdatePerFrameData(dt);
 
 	Renderable2DComponent::Update(dt);
 }

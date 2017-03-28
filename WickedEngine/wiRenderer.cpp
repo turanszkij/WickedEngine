@@ -52,12 +52,13 @@ bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true;
 float wiRenderer::SPECULARAA = 0.0f;
-float wiRenderer::renderTime = 0;
+float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = true;
+bool wiRenderer::temporalAA = true;
 wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
@@ -1494,7 +1495,7 @@ XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, int vertexI)
 	XMStoreFloat3(&velocity, GetGameSpeed()*XMVectorSubtract(XMVector3Transform(pos, sump), XMVector3Transform(pos, sumpPrev)));
 	return velocity;
 }
-void wiRenderer::Update()
+void wiRenderer::FixedUpdate()
 {
 	cam->UpdateTransform();
 
@@ -1505,7 +1506,7 @@ void wiRenderer::Update()
 	GetScene().Update();
 
 }
-void wiRenderer::UpdatePerFrameData()
+void wiRenderer::UpdatePerFrameData(float dt)
 {
 	// update the space partitioning trees:
 	wiProfiler::GetInstance().BeginRange("SPTree Update", wiProfiler::DOMAIN_CPU);
@@ -1700,12 +1701,23 @@ void wiRenderer::UpdatePerFrameData()
 	}
 	wiProfiler::GetInstance().EndRange(); // SPTree Culling
 
+	if (GetTemporalAAEnabled())
+	{
+		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 64);
+		static float jitter = 2.0f;
+		cam->Projection.m[2][0] = jitter * (halton.x * 2 - 1) / (float)GetDevice()->GetScreenWidth();
+		cam->Projection.m[2][1] = jitter * (halton.y * 2 - 1) / (float)GetDevice()->GetScreenHeight();
+		cam->BakeMatrices();
+	}
+
 	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
 
 	UpdateBoneLines();
 	UpdateCubes();
 
+	renderTime_Prev = renderTime;
 	renderTime = (float)((wiTimer::TotalTime()) / 1000.0 * GameSpeed);
+	deltaTime = dt;
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
@@ -4744,6 +4756,8 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	FrameCB cb;
 
 	cb.mTime = renderTime;
+	cb.mTime = renderTime_Prev;
+	cb.mDeltaTime = deltaTime;
 	auto& wind = GetScene().wind;
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;
@@ -4755,6 +4769,10 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	auto prevCam = prevFrameCam;
 	auto reflCam = getRefCamera();
 
+	cb.mVP = XMMatrixTranspose(camera->GetViewProjection());
+	cb.mView = XMMatrixTranspose(camera->GetView());
+	cb.mProj = XMMatrixTranspose(camera->GetProjection());
+	cb.mCamPos = camera->translation;
 	cb.mPrevV = XMMatrixTranspose(prevCam->GetView());
 	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
 	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
@@ -5561,7 +5579,7 @@ void wiRenderer::AddModel(Model* model)
 	}
 
 
-	Update();
+	FixedUpdate();
 
 	Add(model->objects);
 	Add(model->lights);

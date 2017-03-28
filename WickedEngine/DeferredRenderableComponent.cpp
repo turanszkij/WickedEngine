@@ -70,8 +70,6 @@ void DeferredRenderableComponent::Start()
 }
 void DeferredRenderableComponent::Render()
 {
-	wiRenderer::UpdatePerFrameData();
-
 	if (getThreadingCount() > 1)
 	{
 		for (auto workerThread : workerThreads)

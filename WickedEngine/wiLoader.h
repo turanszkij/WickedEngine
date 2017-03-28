@@ -924,6 +924,18 @@ struct Camera:public Transform{
 		XMStoreFloat4x4(&this->Projection, P);
 		XMStoreFloat4x4(&this->InvProjection, InvP);
 	}
+	void BakeMatrices()
+	{
+		XMMATRIX V = XMLoadFloat4x4(&this->View);
+		XMMATRIX P = XMLoadFloat4x4(&this->Projection);
+		XMMATRIX VP = XMMatrixMultiply(V, P);
+		XMStoreFloat4x4(&this->VP, VP);
+		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, V));
+		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, VP));
+		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
+		XMStoreFloat4x4(&this->Projection, P);
+		XMStoreFloat4x4(&this->InvProjection, InvP);
+	}
 
 	XMVECTOR GetEye()
 	{

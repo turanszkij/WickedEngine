@@ -45,8 +45,6 @@ void ForwardRenderableComponent::Start()
 }
 void ForwardRenderableComponent::Render()
 {
-	wiRenderer::UpdatePerFrameData();
-
 	if (getThreadingCount() > 1)
 	{
 

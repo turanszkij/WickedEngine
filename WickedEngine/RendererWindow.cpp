@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 740));
+	rendererWindow->SetSize(XMFLOAT2(400, 780));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -324,9 +324,18 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	MSAAComboBox->SetTooltip("Multisampling Anti Aliasing quality. It is only available for Forward render paths.");
 	rendererWindow->AddWidget(MSAAComboBox);
 
+	temporalAACheckBox = new wiCheckBox("Temporal AA: ");
+	temporalAACheckBox->SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
+	temporalAACheckBox->SetPos(XMFLOAT2(x, y += step));
+	temporalAACheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetTemporalAAEnabled(args.bValue);
+	});
+	temporalAACheckBox->SetCheck(wiRenderer::GetTemporalAAEnabled());
+	rendererWindow->AddWidget(temporalAACheckBox);
 
 
-	rendererWindow->Translate(XMFLOAT3(100, 30, 0));
+
+	rendererWindow->Translate(XMFLOAT3(130, 20, 0));
 	rendererWindow->SetVisible(false);
 }
 
@@ -360,6 +369,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(shadowProps2DComboBox);
 	SAFE_DELETE(shadowPropsCubeComboBox);
 	SAFE_DELETE(MSAAComboBox);
+	SAFE_DELETE(temporalAACheckBox);
 }
 
 int RendererWindow::GetPickType()
