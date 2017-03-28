@@ -40,5 +40,8 @@ namespace wiMath
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b);
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
+
+	// 64-iteration 4-dimensional Halton sequence (0 <= idx < 64)
+	const XMFLOAT4& GetHaltonSequence(int idx);
 };
 
