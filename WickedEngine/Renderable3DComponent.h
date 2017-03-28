@@ -59,6 +59,7 @@ protected:
 		, rtParticleAdditive
 		, rtFinal[2]
 		, rtDof[3]
+		, rtTemporalAA[2]
 		;
 	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
 	wiDepthTarget dtDepthCopy;

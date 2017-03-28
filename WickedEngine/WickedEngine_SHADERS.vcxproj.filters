@@ -570,6 +570,9 @@
     <FxCompile Include="objectVS_simple.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="temporalAAResolvePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

@@ -108,6 +108,13 @@ void Renderable3DComponent::ResizeBuffers()
 			, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() / getBloomDownSample())
 			, false, defaultTextureFormat);
 
+	rtTemporalAA[0].Initialize(
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		, false, FORMAT_R16G16B16A16_FLOAT);
+	rtTemporalAA[1].Initialize(
+		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		, false, FORMAT_R16G16B16A16_FLOAT);
+
 
 	SAFE_DELETE(smallDepth);
 	Texture2DDesc desc;
@@ -316,6 +323,27 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 	wiProfiler::GetInstance().BeginRange("Secondary Scene", wiProfiler::DOMAIN_GPU, threadID);
 
+	if (wiRenderer::GetTemporalAAEnabled())
+	{
+		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
+		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
+		int history = 1 - current;
+		rtTemporalAA[current].Activate(threadID); {
+			fx.process.setTemporalAAResolve(true);
+			fx.setMaskMap(rtTemporalAA[history].GetTexture());
+			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
+			fx.process.clear();
+		}
+		shadedSceneRT.Set(threadID, nullptr); {
+			fx.presentFullScreen = true;
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			fx.quality = QUALITY_NEAREST;
+			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
+			fx.presentFullScreen = false;
+		}
+		wiRenderer::GetDevice()->EventEnd();
+	}
+
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(wiRenderer::GetSunPosition(), wiRenderer::getCamera()->GetAt())) > 0)
 	{
 		wiRenderer::GetDevice()->EventBegin("Light Shafts", threadID);
@@ -365,7 +393,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	wiRenderer::GenerateMipChain(rtSceneCopy.GetTexture(), wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
-	shadedSceneRT.Set(threadID, mainRT.depth); {
+	shadedSceneRT.Set(threadID, mainRT.depth);{
 		RenderTransparentScene(rtSceneCopy, threadID);
 
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());

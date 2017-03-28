@@ -1704,7 +1704,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	if (GetTemporalAAEnabled())
 	{
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 64);
-		static float jitter = 2.0f;
+		static float jitter = 1.0f;
 		cam->Projection.m[2][0] = jitter * (halton.x * 2 - 1) / (float)GetDevice()->GetScreenWidth();
 		cam->Projection.m[2][1] = jitter * (halton.y * 2 - 1) / (float)GetDevice()->GetScreenHeight();
 		cam->BakeMatrices();
