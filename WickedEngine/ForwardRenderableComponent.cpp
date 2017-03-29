@@ -26,6 +26,7 @@ void ForwardRenderableComponent::ResizeBuffers()
 	Renderable3DComponent::ResizeBuffers();
 
 	rtMain.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), true, FORMAT_R16G16B16A16_FLOAT, 1, getMSAASampleCount(), false);
+	rtMain.Add(FORMAT_R16G16B16A16_FLOAT); // thin gbuffer
 }
 
 void ForwardRenderableComponent::Initialize()

@@ -20,7 +20,6 @@ TiledForwardRenderableComponent::~TiledForwardRenderableComponent()
 
 void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
@@ -53,12 +52,14 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
+	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Set(threadID);
 	{
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, rtReflection.GetTexture(), true, true);
 		wiRenderer::DrawSky(threadID);
 	}
-
+	rtMain.Deactivate(threadID);
+	wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), nullptr, nullptr, nullptr, threadID);
 	wiProfiler::GetInstance().EndRange(); // Opaque Scene
 }
 void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)

@@ -11,7 +11,7 @@ struct ImpostorOut
 
 ImpostorOut main(PixelInputType input)
 {
-	OBJECT_PS_MAKE
+	OBJECT_PS_MAKE_COMMON
 
 	OBJECT_PS_SAMPLETEXTURES
 

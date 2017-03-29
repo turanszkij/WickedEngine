@@ -69,11 +69,13 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindRandomness;
 	uint		g_xFrame_FrameCount;
 	int			g_xFrame_SunLightArrayIndex;
+	float2		g_xFrame_TemporalAAJitter;
+	float2		g_xFrame_TemporalAAJitterPrev;
 	// The following are per frame properties for the main camera:
 	float4x4	g_xFrame_MainCamera_VP;			// View*Projection
 	float4x4	g_xFrame_MainCamera_View;
 	float4x4	g_xFrame_MainCamera_Proj;
-	float3		g_xFrame_MainCamera_CamPos;		float xPadding2_FrameCB;
+	float3		g_xFrame_MainCamera_CamPos;		float xPadding3_FrameCB;
 	float4x4	g_xFrame_MainCamera_PrevV;
 	float4x4	g_xFrame_MainCamera_PrevP;
 	float4x4	g_xFrame_MainCamera_PrevVP;		// PrevView*PrevProjection

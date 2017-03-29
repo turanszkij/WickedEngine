@@ -53,6 +53,7 @@ bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRendere
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true;
 float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
+XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -1705,9 +1706,17 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	{
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 64);
 		static float jitter = 1.0f;
-		cam->Projection.m[2][0] = jitter * (halton.x * 2 - 1) / (float)GetDevice()->GetScreenWidth();
-		cam->Projection.m[2][1] = jitter * (halton.y * 2 - 1) / (float)GetDevice()->GetScreenHeight();
+		temporalAAJitterPrev = temporalAAJitter;
+		temporalAAJitter.x = jitter * (halton.x * 2 - 1) / (float)GetDevice()->GetScreenWidth();
+		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetDevice()->GetScreenHeight();
+		cam->Projection.m[2][0] = temporalAAJitter.x;
+		cam->Projection.m[2][1] = temporalAAJitter.y;
 		cam->BakeMatrices();
+	}
+	else
+	{
+		temporalAAJitter = XMFLOAT2(0, 0);
+		temporalAAJitterPrev = XMFLOAT2(0, 0);
 	}
 
 	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
@@ -3776,7 +3785,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
 					(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
 					&mesh->vertexBuffers[VPROP_TEX],
-					(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_POS]),
+					(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]),
 					&mesh->instanceBuffer
 				};
 				UINT strides[] = {
@@ -4764,6 +4773,8 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindDirection = wind.direction;
 	cb.mFrameCount = (UINT)GetDevice()->GetFrameCount();
 	cb.mSunLightArrayIndex = GetSunArrayIndex();
+	cb.mTemporalAAJitter = temporalAAJitter;
+	cb.mTemporalAAJitterPrev = temporalAAJitterPrev;
 
 	auto camera = getCamera();
 	auto prevCam = prevFrameCam;

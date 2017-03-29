@@ -3,7 +3,7 @@
 #include "objectHF.hlsli"
 
 [earlydepthstencil]
-float4 main(PixelInputType input) : SV_TARGET
+GBUFFEROutputType_Thin main(PixelInputType input)
 {
 	OBJECT_PS_MAKE
 

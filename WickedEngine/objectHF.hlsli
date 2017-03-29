@@ -60,6 +60,11 @@ struct GBUFFEROutputType
 	float4 g2	: SV_TARGET2;		// texture_gbuffer2
 	float4 g3	: SV_TARGET3;		// texture_gbuffer3
 };
+struct GBUFFEROutputType_Thin
+{
+	float4 g0	: SV_TARGET0;		// texture_gbuffer0
+	float4 g1	: SV_TARGET1;		// texture_gbuffer1
+};
 
 
 // METHODS
@@ -258,6 +263,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float lineardepth = input.pos2D.z;																				\
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;\
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
+	float2 velocity = ((input.pos2DPrev.xy/input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy/input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
 #define OBJECT_PS_COMPUTETANGENTSPACE										\
 	float3 T, B;															\
@@ -332,6 +338,12 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	return Out;
 
 #define OBJECT_PS_OUT_FORWARD																						\
+	GBUFFEROutputType_Thin Out = (GBUFFEROutputType_Thin)0;															\
+	Out.g0 = color;													/*FORMAT_R16G16B16_FLOAT*/						\
+	Out.g1 = float4(encode(N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
+	return Out;
+
+#define OBJECT_PS_OUT_FORWARD_SIMPLE																				\
 	return color;
 
 #endif // _OBJECTSHADER_HF_

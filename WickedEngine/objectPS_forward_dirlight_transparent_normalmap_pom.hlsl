@@ -32,5 +32,5 @@ float4 main( PixelInputType input) : SV_TARGET
 
 	OBJECT_PS_FOG
 
-	OBJECT_PS_OUT_FORWARD
+	OBJECT_PS_OUT_FORWARD_SIMPLE
 }

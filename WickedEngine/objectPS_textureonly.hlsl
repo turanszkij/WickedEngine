@@ -14,6 +14,6 @@ float4 main(PixelInputType_Simple input) : SV_TARGET
 
 	OBJECT_PS_EMISSIVE
 
-	OBJECT_PS_OUT_FORWARD
+	OBJECT_PS_OUT_FORWARD_SIMPLE
 }
 

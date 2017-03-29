@@ -4,7 +4,7 @@
 #include "ditherHF.hlsli"
 
 [earlydepthstencil]
-float4 main(QGS_OUT PSIn) : SV_Target
+GBUFFEROutputType_Thin main(QGS_OUT PSIn)
 {
 	float4 baseColor = texture_0.Sample(sampler_linear_clamp,PSIn.tex);
 	baseColor.a *= 1.0 - PSIn.fade;
@@ -27,6 +27,7 @@ float4 main(QGS_OUT PSIn) : SV_Target
 	float depth = PSIn.pos.z;
 	float3 diffuse = 0;
 	float3 specular = 0;
+	float2 velocity = 0;
 
 	OBJECT_PS_LIGHT_BEGIN
 

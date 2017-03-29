@@ -81,6 +81,7 @@ public:
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 	static float SPECULARAA;
 	static float renderTime, renderTime_Prev, deltaTime;
+	static XMFLOAT2 temporalAAJitter, temporalAAJitterPrev;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
@@ -116,10 +117,12 @@ public:
 		float mWindRandomness;
 		UINT mFrameCount;
 		int mSunLightArrayIndex;
+		XMFLOAT2 mTemporalAAJitter;
+		XMFLOAT2 mTemporalAAJitterPrev;
 		XMMATRIX mVP;
 		XMMATRIX mView;
 		XMMATRIX mProj;
-		XMFLOAT3 mCamPos;				float pad2;
+		XMFLOAT3 mCamPos;				float pad3;
 		XMMATRIX mPrevV;
 		XMMATRIX mPrevP;
 		XMMATRIX mPrevVP;

@@ -2,6 +2,8 @@
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
+	float2 velocity = texture_gbuffer1.Load(uint3(PSIn.pos.xy,0)).zw;
+
 	//float4 neighborhood[9];
 	//neighborhood[0] = xMaskTex.Load(uint3(PSIn.pos.xy + uint2(-1, -1), 0));
 	//neighborhood[1] = xMaskTex.Load(uint3(PSIn.pos.xy + uint2(0, -1), 0));
@@ -22,7 +24,8 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	//}
 
 	//float4 history = clamp(neighborhood[4], neighborhoodMin, neighborhoodMax);
-	float4 history = xMaskTex.Load(uint3(PSIn.pos.xy, 0));
+	//float4 history = xMaskTex.Load(uint3(PSIn.pos.xy, 0));
+	float4 history = xMaskTex.SampleLevel(sampler_linear_clamp, PSIn.tex + velocity, 0);
 
 	float4 current = xTexture.Load(uint3(PSIn.pos.xy,0));
 

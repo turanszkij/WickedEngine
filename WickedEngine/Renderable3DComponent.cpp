@@ -334,6 +334,8 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 			fx.process.clear();
 		}
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 2, threadID);
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		shadedSceneRT.Set(threadID, nullptr); {
 			fx.presentFullScreen = true;
 			fx.blendFlag = BLENDMODE_OPAQUE;

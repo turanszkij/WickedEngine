@@ -41,7 +41,7 @@ PixelInputType main(Input input)
 	//}
 
 	Out.pos = Out.pos2D = mul( pos, g_xCamera_VP );
-	Out.pos2DPrev = mul(posPrev, g_xCamera_VP);
+	Out.pos2DPrev = mul(posPrev, g_xFrame_MainCamera_PrevVP);
 	Out.pos3D = pos.xyz;
 	Out.tex = input.tex.xy;
 	Out.nor = normalize(normal);

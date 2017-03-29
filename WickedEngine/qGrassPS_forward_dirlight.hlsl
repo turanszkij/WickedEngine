@@ -2,7 +2,7 @@
 #include "grassHF_PS.hlsli"
 #include "ditherHF.hlsli"
 
-float4 main(QGS_OUT PSIn) : SV_Target
+GBUFFEROutputType_Thin main(QGS_OUT PSIn)
 {
 #ifdef GRASS_FADE_DITHER
 	clip(dither(PSIn.pos.xy) - PSIn.fade);
@@ -29,6 +29,7 @@ float4 main(QGS_OUT PSIn) : SV_Target
 	float depth = PSIn.pos.z;
 	float3 diffuse = 0;
 	float3 specular = 0;
+	float2 velocity = 0;
 
 	OBJECT_PS_LIGHT_BEGIN
 

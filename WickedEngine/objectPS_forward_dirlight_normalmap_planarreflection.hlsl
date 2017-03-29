@@ -1,7 +1,7 @@
 #include "objectHF.hlsli"
 
 
-float4 main(PixelInputType input) : SV_TARGET
+GBUFFEROutputType_Thin main(PixelInputType input)
 {
 	OBJECT_PS_DITHER
 
