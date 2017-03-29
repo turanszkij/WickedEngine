@@ -33,5 +33,5 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	float4 current = xTexture.Load(uint3(PSIn.pos.xy,0));
 
-	return lerp(history, current, 0.05f);
+	return float4(lerp(history.rgb, current.rgb, 0.05f), 1);
 }
