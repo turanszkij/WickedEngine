@@ -8,16 +8,16 @@ PixelInputType main(Input input)
 
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
+	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instancePrev);
 
 	Out.instanceColor = input.instance.color_dither.rgb;
 	Out.dither = input.instance.color_dither.a;
 	
 	float4 pos = input.pos;
 	float4 posPrev = input.pre;
-	//float4 vel = float4(0,0,0,1);
-		
 
 	pos = mul( pos,WORLD );
+	posPrev = mul(posPrev, WORLDPREV);
 
 
 	Out.clip = dot(pos, g_xClipPlane);
@@ -26,13 +26,6 @@ PixelInputType main(Input input)
 	affectWind(pos.xyz,input.tex.w,input.id);
 
 
-	[branch]
-	if (posPrev.w){
-		posPrev = mul(posPrev, WORLD);
-		//vel = pos - posPrev;
-	}
-	else
-		posPrev = pos;
 
 	//VERTEX OFFSET MOTION BLUR
 	//if(xMotionBlur.x){

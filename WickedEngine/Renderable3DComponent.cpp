@@ -335,7 +335,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 			fx.process.clear();
 		}
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 2, threadID);
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 4, threadID);
 		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		shadedSceneRT.Set(threadID, nullptr); {
 			fx.presentFullScreen = true;
@@ -394,6 +394,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd();
 	}
 
+	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 4, threadID);
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	wiRenderer::GenerateMipChain(rtSceneCopy.GetTexture(), wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
 	shadedSceneRT.Set(threadID, mainRT.depth);{

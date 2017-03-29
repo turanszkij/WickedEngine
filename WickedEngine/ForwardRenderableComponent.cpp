@@ -86,6 +86,8 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_FORWARD, rtReflection.GetTexture(), true, true);
 		wiRenderer::DrawSky(threadID);
 	}
+	rtMain.Deactivate(threadID);
+	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 
 	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
 

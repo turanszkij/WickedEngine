@@ -619,6 +619,9 @@ void wiRenderer::LoadShaders()
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 5, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 5, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 5, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -3735,6 +3738,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 			}
 
+			bool instancePrevUpdated = false;
+
 			int k = 0;
 			for (const Object* instance : visibleInstances) 
 			{
@@ -3750,10 +3755,23 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					if (!occlusionCulling || !instance->IsOccluded())
 					{
+						XMMATRIX temp;
 						if (mesh->softBody || instance->isArmatureDeformed())
-							mesh->AddRenderableInstance(Instance(XMMatrixIdentity(), dither, instance->color), k, threadID);
+							temp = XMMatrixIdentity();
 						else
-							mesh->AddRenderableInstance(Instance(XMMatrixTranspose(XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
+							temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->world));
+						mesh->AddRenderableInstance(Instance(temp, dither, instance->color), k, threadID);
+
+						if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
+						{
+							if (mesh->softBody || instance->isArmatureDeformed())
+								temp = XMMatrixIdentity();
+							else
+								temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->worldPrev));
+							mesh->AddRenderableInstancePrev(InstancePrev(temp), k, threadID);
+							instancePrevUpdated = true;
+						}
+						
 						++k;
 					}
 				}
@@ -3764,6 +3782,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			}
 
 			mesh->UpdateRenderableInstances(k, threadID);
+			if (instancePrevUpdated)
+			{
+				mesh->UpdateRenderableInstancesPrev(k, threadID);
+			}
 
 			if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 			{
@@ -3785,15 +3807,17 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
 					(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
 					&mesh->vertexBuffers[VPROP_TEX],
-					(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_PRE]),
-					&mesh->instanceBuffer
+					(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
+					&mesh->instanceBuffer,
+					&mesh->instanceBufferPrev,
 				};
 				UINT strides[] = {
 					sizeof(XMFLOAT4),
 					sizeof(XMFLOAT4),
 					sizeof(XMFLOAT4),
 					sizeof(XMFLOAT4),
-					sizeof(Instance)
+					sizeof(Instance),
+					sizeof(InstancePrev),
 				};
 				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 			}

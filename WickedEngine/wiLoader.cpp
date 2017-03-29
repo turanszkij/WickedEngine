@@ -1887,6 +1887,8 @@ void Mesh::CreateBuffers(Object* object)
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBuffer);
+			bd.ByteWidth = sizeof(InstancePrev);
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBufferPrev);
 		}
 
 
@@ -2176,16 +2178,33 @@ void Mesh::CreateVertexArrays()
 }
 
 vector<Instance> meshInstances[GRAPHICSTHREAD_COUNT];
+vector<InstancePrev> meshInstancesPrev[GRAPHICSTHREAD_COUNT];
 void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID)
 {
 	if (numerator >= (int)meshInstances[threadID].size())
 	{
+		// grow buffer
 		meshInstances[threadID].resize((meshInstances[threadID].size() + 1) * 2);
 	}
 	if (!instanceBufferIsUpToDate || memcmp(&meshInstances[threadID][numerator], &instance, sizeof(Instance)) != 0)
 	{
+		// fill buffer
 		instanceBufferIsUpToDate = false;
 		meshInstances[threadID][numerator] = instance;
+	}
+}
+void Mesh::AddRenderableInstancePrev(const InstancePrev& instance, int numerator, GRAPHICSTHREAD threadID)
+{
+	if (numerator >= (int)meshInstancesPrev[threadID].size())
+	{
+		// grow buffer
+		meshInstancesPrev[threadID].resize((meshInstancesPrev[threadID].size() + 1) * 2);
+	}
+	if (!instanceBufferIsUpToDatePrev || memcmp(&meshInstancesPrev[threadID][numerator], &instance, sizeof(InstancePrev)) != 0)
+	{
+		// fill buffer
+		instanceBufferIsUpToDatePrev = false;
+		meshInstancesPrev[threadID][numerator] = instance;
 	}
 }
 void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
@@ -2194,6 +2213,14 @@ void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 	{
 		instanceBufferIsUpToDate = true;
 		wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
+	}
+}
+void Mesh::UpdateRenderableInstancesPrev(int count, GRAPHICSTHREAD threadID)
+{
+	if (!instanceBufferIsUpToDatePrev)
+	{
+		instanceBufferIsUpToDatePrev = true;
+		wiRenderer::GetDevice()->UpdateBuffer(&instanceBufferPrev, meshInstancesPrev[threadID].data(), threadID, sizeof(Instance)*count);
 	}
 }
 void Mesh::Serialize(wiArchive& archive)

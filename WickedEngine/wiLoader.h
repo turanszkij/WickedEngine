@@ -114,6 +114,27 @@ struct Instance
 
 	ALIGN_16
 };
+struct InstancePrev
+{
+	XMFLOAT4A mat0;
+	XMFLOAT4A mat1;
+	XMFLOAT4A mat2;
+
+	InstancePrev()
+	{
+		mat0 = XMFLOAT4A(1, 0, 0, 0);
+		mat1 = XMFLOAT4A(0, 1, 0, 0);
+		mat2 = XMFLOAT4A(0, 0, 1, 0);
+	}
+	InstancePrev(const XMMATRIX& matIn)
+	{
+		XMStoreFloat4A(&mat0, matIn.r[0]);
+		XMStoreFloat4A(&mat1, matIn.r[1]);
+		XMStoreFloat4A(&mat2, matIn.r[2]);
+	}
+
+	ALIGN_16
+};
 struct Material
 {
 	string name;
@@ -297,6 +318,7 @@ struct Mesh
 {
 private:
 	bool instanceBufferIsUpToDate;
+	bool instanceBufferIsUpToDatePrev;
 public:
 	string name;
 	string parent;
@@ -312,6 +334,7 @@ public:
 	wiGraphicsTypes::GPUBuffer			vertexBuffers[VPROP_COUNT];
 	wiGraphicsTypes::GPUBuffer			streamoutBuffers[VPROP_COUNT]; // omit texcoord, omit weights, change boneindices to posprev
 	wiGraphicsTypes::GPUBuffer			instanceBuffer;
+	wiGraphicsTypes::GPUBuffer			instanceBufferPrev;
 
 	bool renderable,doubleSided;
 	STENCILREF stencilRef;
@@ -361,10 +384,13 @@ public:
 	bool arraysComplete;
 	void CreateVertexArrays();
 	void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
+	void AddRenderableInstancePrev(const InstancePrev& instance, int numerator, GRAPHICSTHREAD threadID);
 	void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
+	void UpdateRenderableInstancesPrev(int count, GRAPHICSTHREAD threadID);
 	void init()
 	{
 		instanceBufferIsUpToDate = false;
+		instanceBufferIsUpToDatePrev = false;
 		parent="";
 		indices.resize(0);
 		renderable=false;
