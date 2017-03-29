@@ -1987,7 +1987,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {
-	if (!GetOcclusionCullingEnabled())
+	if (!GetOcclusionCullingEnabled() || spTree == nullptr)
 	{
 		return;
 	}
@@ -2056,7 +2056,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::OcclusionCulling_Read()
 {
-	if (!GetOcclusionCullingEnabled())
+	if (!GetOcclusionCullingEnabled() || spTree == nullptr)
 	{
 		return;
 	}

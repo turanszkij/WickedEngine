@@ -335,9 +335,9 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 			fx.process.clear();
 		}
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 4, threadID);
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
 		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-		shadedSceneRT.Set(threadID, nullptr); {
+		shadedSceneRT.Set(threadID, nullptr, false, 0); {
 			fx.presentFullScreen = true;
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.quality = QUALITY_NEAREST;
@@ -394,10 +394,10 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd();
 	}
 
-	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 4, threadID);
+	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	wiRenderer::GenerateMipChain(rtSceneCopy.GetTexture(), wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
-	shadedSceneRT.Set(threadID, mainRT.depth);{
+	shadedSceneRT.Set(threadID, mainRT.depth, false, 0);{
 		RenderTransparentScene(rtSceneCopy, threadID);
 
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
@@ -500,7 +500,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		fx.blur = 0;
 		fx.blurDir = 0;
 
-		shadedSceneRT.Set(threadID); { // add to the scene
+		shadedSceneRT.Set(threadID, false, 0); { // add to the scene
 			fx.blendFlag = BLENDMODE_ADDITIVE;
 			fx.presentFullScreen = true;
 			fx.process.clear();
@@ -553,6 +553,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		fx.process.setSharpen(true);
 		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 		fx.process.clear();
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
 		SwapPtr(rt0, rt1);
 	}

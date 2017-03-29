@@ -4,14 +4,9 @@
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float3 color = float3(0,0,0);
-	float numSampling = 0.0f; 
+	float numSampling = 0.0f;
 
-	float depth = texture_depth.SampleLevel(sampler_point_clamp, PSIn.tex, 0);
-	float3 P = getPosition(PSIn.tex, depth);
-	float2 pos2D = PSIn.tex.xy*2-1;
-	float4 pos2DPrev = mul(float4(P, 1), g_xFrame_MainCamera_PrevVP);
-	pos2DPrev.xy = float2(1,-1)*pos2DPrev.xy/pos2DPrev.w;
-	float2 vel = pos2D - pos2DPrev.xy;
+	float2 vel = texture_gbuffer1.Load(uint3(PSIn.pos.xy, 0)).zw;
 	vel *= 0.025f;
 
 	numSampling++;

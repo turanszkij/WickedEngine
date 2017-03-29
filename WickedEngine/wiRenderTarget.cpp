@@ -157,43 +157,71 @@ void wiRenderTarget::Add(FORMAT format)
 
 }
 
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, bool disableColor)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, bool disableColor, int viewID)
 {
-	Activate(threadID,0,0,0,0,disableColor);
+	Activate(threadID,0,0,0,0,disableColor, viewID);
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, float r, float g, float b, float a, bool disableColor)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, float r, float g, float b, float a, bool disableColor, int viewID)
 {
-	Set(threadID, disableColor);
+	Set(threadID, disableColor, viewID);
 	float ClearColor[4] = { r, g, b, a };
-	for(int i=0;i<numViews;++i)
-		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+	if (viewID >= 0)
+	{
+		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(viewID), ClearColor, threadID);
+	}
+	else
+	{
+		for (int i = 0; i<numViews; ++i)
+			wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+	}
 	if(depth) depth->Clear(threadID);
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, float r, float g, float b, float a, bool disableColor)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, float r, float g, float b, float a, bool disableColor, int viewID)
 {
-	Set(threadID,getDepth, disableColor);
+	Set(threadID,getDepth, disableColor, viewID);
 	float ClearColor[4] = { r, g, b, a };
-	for(int i=0;i<numViews;++i)
-		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+	if (viewID >= 0)
+	{
+		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(viewID), ClearColor, threadID);
+	}
+	else
+	{
+		for (int i = 0; i<numViews; ++i)
+			wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+	}
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor)
+void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor, int viewID)
 {
-	Activate(threadID,getDepth,0,0,0,0, disableColor);
+	Activate(threadID,getDepth,0,0,0,0, disableColor, viewID);
 }
 void wiRenderTarget::Deactivate(GRAPHICSTHREAD threadID)
 {
 	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 }
-void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor)
+void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor, int viewID)
 {
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
+	if (viewID >= 0)
+	{
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (depth ? depth->GetTexture() : nullptr), threadID);
+	}
+	else
+	{
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
+	}
 	resolvedMSAAUptodate = false;
 }
-void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor)
+void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor, int viewID)
 {
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+	if (viewID >= 0)
+	{
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+	}
+	else
+	{
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+	}
 	resolvedMSAAUptodate = false;
 }
 
