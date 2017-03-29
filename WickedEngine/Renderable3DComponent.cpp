@@ -166,6 +166,7 @@ void Renderable3DComponent::setProperties()
 	setStereogramEnabled(false);
 	setEyeAdaptionEnabled(false);
 	setTessellationEnabled(false);
+	setSharpenFilterEnabled(false);
 
 	setMSAASampleCount(1);
 
@@ -543,6 +544,17 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	fx.process.clear();
 	wiRenderer::GetDevice()->EventEnd();
 
+	wiRenderTarget* rt0 = &rtFinal[0];
+	wiRenderTarget* rt1 = &rtFinal[1];
+	if (getSharpenFilterEnabled())
+	{
+		rt1->Activate(threadID);
+		fx.process.setSharpen(true);
+		wiImage::Draw(rt0->GetTexture(), fx, threadID);
+		fx.process.clear();
+
+		SwapPtr(rt0, rt1);
+	}
 
 	if (getDepthOfFieldEnabled())
 	{
@@ -551,7 +563,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		rtDof[0].Activate(threadID);
 		fx.blur = getDepthOfFieldStrength();
 		fx.blurDir = 0;
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 
 		rtDof[1].Activate(threadID);
 		fx.blurDir = 1;
@@ -564,7 +576,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		fx.process.setDOF(getDepthOfFieldFocus());
 		fx.setMaskMap(rtDof[1].GetTexture());
 		//fx.setDepthMap(rtLinearDepth.shaderResource.back());
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 		fx.setMaskMap(nullptr);
 		//fx.setDepthMap(nullptr);
 		fx.process.clear();
@@ -572,13 +584,13 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	}
 
 
-	rtFinal[1].Activate(threadID);
+	rt1->Activate(threadID);
 	wiRenderer::GetDevice()->EventBegin("FXAA", threadID);
 	fx.process.setFXAA(getFXAAEnabled());
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
 	else
-		wiImage::Draw(rtFinal[0].GetTexture(), fx, threadID);
+		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 	fx.process.clear();
 	wiRenderer::GetDevice()->EventEnd();
 
@@ -621,7 +633,14 @@ void Renderable3DComponent::RenderColorGradedComposition()
 		fx.presentFullScreen = true;
 	}
 
-	wiImage::Draw(rtFinal[1].GetTexture(), fx);
+	if (getSharpenFilterEnabled())
+	{
+		wiImage::Draw(rtFinal[0].GetTexture(), fx);
+	}
+	else
+	{
+		wiImage::Draw(rtFinal[1].GetTexture(), fx);
+	}
 	wiRenderer::GetDevice()->EventEnd();
 }
 

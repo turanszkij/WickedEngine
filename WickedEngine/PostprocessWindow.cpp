@@ -14,7 +14,7 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(360, 500));
+	ppWindow->SetSize(XMFLOAT2(360, 520));
 	GUI->AddWidget(ppWindow);
 
 	float x = 110;
@@ -148,6 +148,15 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	});
 	ppWindow->AddWidget(stereogramCheckBox);
 
+	sharpenFilterCheckBox = new wiCheckBox("Sharpen Filter: ");
+	sharpenFilterCheckBox->SetTooltip("Toggle sharpening post process of the final image.");
+	sharpenFilterCheckBox->SetPos(XMFLOAT2(x, y += 35));
+	sharpenFilterCheckBox->SetCheck(component->getSharpenFilterEnabled());
+	sharpenFilterCheckBox->OnClick([&](wiEventArgs args) {
+		component->setSharpenFilterEnabled(args.bValue);
+	});
+	ppWindow->AddWidget(sharpenFilterCheckBox);
+
 
 	ppWindow->Translate(XMFLOAT3(screenW - 380, 50, 0));
 	ppWindow->SetVisible(false);
@@ -172,4 +181,5 @@ PostprocessWindow::~PostprocessWindow()
 	SAFE_DELETE(fxaaCheckBox);
 	SAFE_DELETE(colorGradingCheckBox);
 	SAFE_DELETE(stereogramCheckBox);
+	SAFE_DELETE(sharpenFilterCheckBox);
 }

@@ -32,6 +32,7 @@ public:
 	wiCheckBox* fxaaCheckBox;
 	wiCheckBox* stereogramCheckBox;
 	wiCheckBox* colorGradingCheckBox;
+	wiCheckBox* sharpenFilterCheckBox;
 
 
 };

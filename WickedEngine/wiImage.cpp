@@ -17,7 +17,7 @@ VertexShader     *wiImage::vertexShader = nullptr,*wiImage::screenVS = nullptr;
 PixelShader      *wiImage::pixelShader = nullptr, *wiImage::blurHPS = nullptr, *wiImage::blurVPS = nullptr, *wiImage::shaftPS = nullptr, *wiImage::outlinePS = nullptr
 	, *wiImage::dofPS = nullptr, *wiImage::motionBlurPS = nullptr, *wiImage::bloomSeparatePS = nullptr, *wiImage::fxaaPS = nullptr, *wiImage::ssaoPS = nullptr, *wiImage::deferredPS = nullptr
 	, *wiImage::ssssPS = nullptr, *wiImage::linDepthPS = nullptr, *wiImage::colorGradePS = nullptr, *wiImage::ssrPS = nullptr, *wiImage::screenPS = nullptr, *wiImage::stereogramPS = nullptr
-	, *wiImage::tonemapPS = nullptr, *wiImage::reprojectDepthBufferPS = nullptr, *wiImage::downsampleDepthBufferPS = nullptr, *wiImage::temporalAAResolvePS = nullptr;
+	, *wiImage::tonemapPS = nullptr, *wiImage::reprojectDepthBufferPS = nullptr, *wiImage::downsampleDepthBufferPS = nullptr, *wiImage::temporalAAResolvePS = nullptr, *wiImage::sharpenPS = nullptr;
 	
 
 RasterizerState		*wiImage::rasterizerState = nullptr;
@@ -82,6 +82,7 @@ void wiImage::LoadShaders()
 	reprojectDepthBufferPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "reprojectDepthBufferPS.cso", wiResourceManager::PIXELSHADER));
 	downsampleDepthBufferPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
 	temporalAAResolvePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "temporalAAResolvePS.cso", wiResourceManager::PIXELSHADER));
+	sharpenPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "sharpenPS.cso", wiResourceManager::PIXELSHADER));
 
 }
 void wiImage::SetUpStates()
@@ -415,6 +416,8 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			}
 			else if (effects.process.temporalAAResolve)
 				device->BindPS(temporalAAResolvePS, threadID);
+			else if (effects.process.sharpen)
+				device->BindPS(sharpenPS, threadID);
 			else 
 				wiHelper::messageBox("Postprocess branch not implemented!");
 			
@@ -559,4 +562,5 @@ void wiImage::CleanUp()
 	SAFE_DELETE(reprojectDepthBufferPS);
 	SAFE_DELETE(downsampleDepthBufferPS);
 	SAFE_DELETE(temporalAAResolvePS);
+	SAFE_DELETE(sharpenPS);
 }

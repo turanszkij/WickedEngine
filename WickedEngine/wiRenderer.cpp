@@ -1704,7 +1704,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 	if (GetTemporalAAEnabled())
 	{
-		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 64);
+		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 256);
 		static float jitter = 1.0f;
 		temporalAAJitterPrev = temporalAAJitter;
 		temporalAAJitter.x = jitter * (halton.x * 2 - 1) / (float)GetDevice()->GetScreenWidth();

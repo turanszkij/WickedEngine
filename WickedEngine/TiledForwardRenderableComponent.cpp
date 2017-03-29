@@ -59,7 +59,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 	rtMain.Deactivate(threadID);
-	wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), nullptr, nullptr, nullptr, threadID);
+	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 	wiProfiler::GetInstance().EndRange(); // Opaque Scene
 }
 void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)

@@ -573,6 +573,9 @@
     <FxCompile Include="temporalAAResolvePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="sharpenPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

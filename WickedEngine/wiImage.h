@@ -49,7 +49,7 @@ protected:
 	static wiGraphicsTypes::VertexShader     *vertexShader,*screenVS;
 	static wiGraphicsTypes::PixelShader      *pixelShader,*blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS
 		,*fxaaPS,*ssaoPS,*ssssPS,*deferredPS,*linDepthPS,*colorGradePS,*ssrPS, *screenPS, *stereogramPS, *tonemapPS, *reprojectDepthBufferPS, *downsampleDepthBufferPS
-		,*temporalAAResolvePS;
+		,*temporalAAResolvePS, *sharpenPS;
 	
 
 	
