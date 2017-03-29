@@ -1098,7 +1098,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="S:\WickedEngine\WickedEngine\wiMeshOptimizer.h">
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiMeshOptimizer.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
   </ItemGroup>
