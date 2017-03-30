@@ -9,13 +9,11 @@ wiRenderTarget::wiRenderTarget()
 {
 	numViews = 0;
 	depth = nullptr;
-	resolvedMSAAUptodate = false;
 }
 wiRenderTarget::wiRenderTarget(UINT width, UINT height, bool hasDepth, FORMAT format, UINT mipMapLevelCount, UINT MSAAC, bool depthOnly)
 {
 	numViews = 0;
 	depth = nullptr;
-	resolvedMSAAUptodate = false;
 	Initialize(width, height, hasDepth, format, mipMapLevelCount, MSAAC);
 }
 
@@ -37,7 +35,7 @@ void wiRenderTarget::CleanUp() {
 	renderTargets.clear();
 	renderTargets_resolvedMSAA.clear();
 	SAFE_DELETE(depth);
-	resolvedMSAAUptodate = false;
+	resolvedMSAAUptodate.clear();
 }
 
 void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
@@ -77,6 +75,11 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 			textureDesc.SampleDesc.Count = 1;
 			renderTargets_resolvedMSAA.push_back(nullptr);
 			wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets_resolvedMSAA[0]);
+			resolvedMSAAUptodate.push_back(false);
+		}
+		else
+		{
+			resolvedMSAAUptodate.push_back(true);
 		}
 	}
 	
@@ -119,6 +122,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 		numViews = 1;
 		renderTargets.push_back(nullptr);
 		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
+		resolvedMSAAUptodate.push_back(true);
 	}
 	
 	viewPort.Width = (FLOAT)size;
@@ -147,7 +151,12 @@ void wiRenderTarget::Add(FORMAT format)
 		{
 			desc.SampleDesc.Count = 1;
 			renderTargets_resolvedMSAA.push_back(nullptr);
-			wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &renderTargets_resolvedMSAA[0]);
+			wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &renderTargets_resolvedMSAA.back());
+			resolvedMSAAUptodate.push_back(false);
+		}
+		else
+		{
+			resolvedMSAAUptodate.push_back(true);
 		}
 	}
 	else
@@ -204,12 +213,16 @@ void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor, int viewID)
 	if (viewID >= 0)
 	{
 		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (depth ? depth->GetTexture() : nullptr), threadID);
+		resolvedMSAAUptodate[viewID] = false;
 	}
 	else
 	{
 		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
+		for (auto& x : resolvedMSAAUptodate)
+		{
+			x = false;
+		}
 	}
-	resolvedMSAAUptodate = false;
 }
 void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor, int viewID)
 {
@@ -217,12 +230,16 @@ void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool 
 	if (viewID >= 0)
 	{
 		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+		resolvedMSAAUptodate[viewID] = false;
 	}
 	else
 	{
 		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+		for (auto& x : resolvedMSAAUptodate)
+		{
+			x = false;
+		}
 	}
-	resolvedMSAAUptodate = false;
 }
 
 
@@ -230,10 +247,10 @@ Texture2D* wiRenderTarget::GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int v
 { 
 	if (GetDesc(viewID).SampleDesc.Count > 1)
 	{
-		if (!resolvedMSAAUptodate)
+		if (resolvedMSAAUptodate[viewID] == false)
 		{
 			wiRenderer::GetDevice()->MSAAResolve(renderTargets_resolvedMSAA[viewID], renderTargets[viewID], threadID);
-			resolvedMSAAUptodate = true;
+			resolvedMSAAUptodate[viewID] = true;
 		}
 		return renderTargets_resolvedMSAA[viewID];
 	}

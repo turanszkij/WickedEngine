@@ -5,9 +5,6 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float2 velocity = texture_gbuffer1.Load(uint3(PSIn.pos.xy,0)).zw;
 	float2 prevTC = PSIn.tex + velocity;
 
-	float2 dim;
-	xMaskTex.GetDimensions(dim.x, dim.y);
-	float2 texelSize = 1.0f / dim;
 	float4 neighborhood[9];
 	neighborhood[0] = xTexture.Load(uint3(PSIn.pos.xy + float2(-1, -1),	0));
 	neighborhood[1] = xTexture.Load(uint3(PSIn.pos.xy + float2(0, -1),	0));
@@ -32,5 +29,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	float4 current = neighborhood[4];
 
-	return float4(lerp(history.rgb, current.rgb, 0.05f), 1);
+	float blendfactor = saturate(lerp(0.05f, 1.0f, length(velocity) * 10)); // todo
+
+	return float4(lerp(history.rgb, current.rgb, blendfactor), 1);
 }

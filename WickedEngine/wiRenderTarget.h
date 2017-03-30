@@ -11,7 +11,7 @@ private:
 	int numViews;
 	vector<wiGraphicsTypes::Texture2D*>		renderTargets;
 	vector<wiGraphicsTypes::Texture2D*>		renderTargets_resolvedMSAA;
-	bool resolvedMSAAUptodate;
+	vector<int>								resolvedMSAAUptodate;
 public:
 	wiGraphicsTypes::ViewPort	viewPort;
 	wiDepthTarget*				depth;
