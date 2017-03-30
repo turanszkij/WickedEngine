@@ -324,29 +324,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 	wiProfiler::GetInstance().BeginRange("Secondary Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	if (wiRenderer::GetTemporalAAEnabled())
-	{
-		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
-		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
-		int history = 1 - current;
-		rtTemporalAA[current].Activate(threadID); {
-			fx.process.setTemporalAAResolve(true);
-			fx.setMaskMap(rtTemporalAA[history].GetTexture());
-			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
-			fx.process.clear();
-		}
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-		shadedSceneRT.Set(threadID, nullptr, false, 0); {
-			fx.presentFullScreen = true;
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			fx.quality = QUALITY_NEAREST;
-			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
-			fx.presentFullScreen = false;
-		}
-		wiRenderer::GetDevice()->EventEnd();
-	}
-
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(wiRenderer::GetSunPosition(), wiRenderer::getCamera()->GetAt())) > 0)
 	{
 		wiRenderer::GetDevice()->EventBegin("Light Shafts", threadID);
@@ -440,6 +417,31 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
+		wiRenderer::GetDevice()->EventEnd();
+	}
+
+	if (wiRenderer::GetTemporalAAEnabled())
+	{
+		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
+		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
+		int history = 1 - current;
+		rtTemporalAA[current].Activate(threadID); {
+			wiRenderer::UpdateGBuffer(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
+			fx.presentFullScreen = false;
+			fx.process.setTemporalAAResolve(true);
+			fx.setMaskMap(rtTemporalAA[history].GetTexture());
+			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
+			fx.process.clear();
+		}
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		shadedSceneRT.Set(threadID, nullptr, false, 0); {
+			fx.presentFullScreen = true;
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			fx.quality = QUALITY_NEAREST;
+			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
+			fx.presentFullScreen = false;
+		}
 		wiRenderer::GetDevice()->EventEnd();
 	}
 

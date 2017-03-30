@@ -17,6 +17,7 @@ GBUFFEROutputType main(GS_OUT PSIn)
 	float metalness = 0;
 	float ao = 1;
 	float sss = 0;
+	float2 velocity = 0;
 
 	OBJECT_PS_OUT_GBUFFER
 }

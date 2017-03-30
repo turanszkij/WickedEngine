@@ -332,7 +332,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #define OBJECT_PS_OUT_GBUFFER																						\
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
 	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
-	Out.g1 = float4(encode(N), 0, 0);								/*FORMAT_R16G16_FLOAT*/							\
+	Out.g1 = float4(encode(N), velocity);								/*FORMAT_R16G16B16_FLOAT*/					\
 	Out.g2 = float4(0, 0, sss, emissive);							/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g3 = float4(roughness, reflectance, metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	return Out;

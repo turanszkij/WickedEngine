@@ -31,7 +31,7 @@ void DeferredRenderableComponent::ResizeBuffers()
 	rtGBuffer.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
 		, true, FORMAT_R8G8B8A8_UNORM);
-	rtGBuffer.Add(FORMAT_R16G16_FLOAT);
+	rtGBuffer.Add(FORMAT_R16G16B16A16_FLOAT);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
 
