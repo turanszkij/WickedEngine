@@ -869,15 +869,12 @@ inline D3D11_TEXTURE3D_DESC _ConvertTexture3DDesc(const Texture3DDesc* pDesc)
 
 	return desc;
 }
-inline D3D11_SUBRESOURCE_DATA* _ConvertSubresourceData(const SubresourceData* pInitialData)
+inline D3D11_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 {
-	if (pInitialData == nullptr)
-		return nullptr;
-
-	D3D11_SUBRESOURCE_DATA* data = new D3D11_SUBRESOURCE_DATA;
-	data->pSysMem = pInitialData->pSysMem;
-	data->SysMemPitch = pInitialData->SysMemPitch;
-	data->SysMemSlicePitch = pInitialData->SysMemSlicePitch;
+	D3D11_SUBRESOURCE_DATA data;
+	data.pSysMem = pInitialData.pSysMem;
+	data.SysMemPitch = pInitialData.SysMemPitch;
+	data.SysMemSlicePitch = pInitialData.SysMemSlicePitch;
 
 	return data;
 }
@@ -1581,10 +1578,19 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 	desc.MiscFlags = _ParseResourceMiscFlags(pDesc->MiscFlags);
 	desc.StructureByteStride = pDesc->StructureByteStride;
 
-	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
+	D3D11_SUBRESOURCE_DATA* data = nullptr;
+	if (pInitialData != nullptr)
+	{
+		data = new D3D11_SUBRESOURCE_DATA[1];
+		for (UINT slice = 0; slice < 1; ++slice)
+		{
+			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
+		}
+	}
 
 	ppBuffer->desc = *pDesc;
 	HRESULT hr = device->CreateBuffer(&desc, data, &ppBuffer->resource_DX11);
+	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "GPUBuffer creation failed!");
 
 	if (SUCCEEDED(hr))
@@ -1658,11 +1664,21 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const S
 	(*ppTexture1D)->desc = *pDesc;
 
 	D3D11_TEXTURE1D_DESC desc = _ConvertTexture1DDesc(&(*ppTexture1D)->desc);
-	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
+
+	D3D11_SUBRESOURCE_DATA* data = nullptr;
+	if (pInitialData != nullptr)
+	{
+		data = new D3D11_SUBRESOURCE_DATA[pDesc->ArraySize];
+		for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+		{
+			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
+		}
+	}
 
 	HRESULT hr = S_OK;
 
 	hr = device->CreateTexture1D(&desc, data, &((*ppTexture1D)->texture1D_DX11));
+	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "Texture1D creation failed!");
 	if (FAILED(hr))
 		return hr;
@@ -1711,11 +1727,21 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 	}
 
 	D3D11_TEXTURE2D_DESC desc = _ConvertTexture2DDesc(&(*ppTexture2D)->desc);
-	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
+
+	D3D11_SUBRESOURCE_DATA* data = nullptr;
+	if (pInitialData != nullptr)
+	{
+		data = new D3D11_SUBRESOURCE_DATA[pDesc->ArraySize];
+		for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+		{
+			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
+		}
+	}
 
 	HRESULT hr = S_OK;
 	
 	hr = device->CreateTexture2D(&desc, data, &((*ppTexture2D)->texture2D_DX11));
+	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "Texture2D creation failed!");
 	if (FAILED(hr))
 		return hr;
@@ -1772,11 +1798,21 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const S
 	(*ppTexture3D)->desc = *pDesc;
 
 	D3D11_TEXTURE3D_DESC desc = _ConvertTexture3DDesc(&(*ppTexture3D)->desc);
-	D3D11_SUBRESOURCE_DATA* data = _ConvertSubresourceData(pInitialData);
+
+	D3D11_SUBRESOURCE_DATA* data = nullptr;
+	if (pInitialData != nullptr)
+	{
+		data = new D3D11_SUBRESOURCE_DATA[1];
+		for (UINT slice = 0; slice < 1; ++slice)
+		{
+			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
+		}
+	}
 
 	HRESULT hr = S_OK;
 
 	hr = device->CreateTexture3D(&desc, data, &((*ppTexture3D)->texture3D_DX11));
+	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "Texture3D creation failed!");
 	if (FAILED(hr))
 		return hr;

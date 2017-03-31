@@ -15,6 +15,7 @@ private:
 			HELPERTEXTURE_RANDOM64X64,
 			HELPERTEXTURE_COLORGRADEDEFAULT,
 			HELPERTEXTURE_NORMALMAPDEFAULT,
+			HELPERTEXTURE_BLACKCUBEMAP,
 			HELPERTEXTURE_COUNT
 		};
 		wiGraphicsTypes::Texture2D* helperTextures[HELPERTEXTURE_COUNT];
@@ -27,6 +28,7 @@ private:
 		wiGraphicsTypes::Texture2D* getRandom64x64();
 		wiGraphicsTypes::Texture2D* getColorGradeDefault();
 		wiGraphicsTypes::Texture2D* getNormalMapDefault();
+		wiGraphicsTypes::Texture2D* getBlackCubeMap();
 
 		wiGraphicsTypes::Texture2D* getWhite();
 		wiGraphicsTypes::Texture2D* getBlack();

@@ -98,6 +98,68 @@ Texture2D* wiTextureHelper::wiTextureHelperInstance::getNormalMapDefault()
 	return getColor(wiColor(127, 127, 255, 255));
 }
 
+Texture2D* wiTextureHelper::wiTextureHelperInstance::getBlackCubeMap()
+{
+	if (helperTextures[HELPERTEXTURE_BLACKCUBEMAP] != nullptr)
+	{
+		return helperTextures[HELPERTEXTURE_BLACKCUBEMAP];
+	}
+
+	int width = 1;
+	int height = 1;
+
+	struct vector4b
+	{
+		unsigned char r;
+		unsigned char g;
+		unsigned char b;
+		unsigned char a;
+
+		vector4b(unsigned char r=0, unsigned char g=0, unsigned char b=0, unsigned char a=0) :r(r), g(g), b(b), a(a) {}
+	};
+
+	Texture2DDesc texDesc;
+	texDesc.Width = width;
+	texDesc.Height = height;
+	texDesc.MipLevels = 1;
+	texDesc.ArraySize = 6;
+	texDesc.Format = FORMAT_R8G8B8A8_UNORM;
+	texDesc.CPUAccessFlags = 0;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.Usage = USAGE_DEFAULT;
+	texDesc.BindFlags = BIND_SHADER_RESOURCE;
+	texDesc.CPUAccessFlags = 0;
+	texDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+
+	SubresourceData pData[6];
+	std::vector<vector4b> d[6]; // 6 images of type vector4b = 4 * unsigned char
+
+	for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < 6; cubeMapFaceIndex++)
+	{
+		d[cubeMapFaceIndex].resize(width * height);
+
+		// fill with black color  
+		std::fill(
+			d[cubeMapFaceIndex].begin(),
+			d[cubeMapFaceIndex].end(),
+			vector4b(0, 0, 0, 0));
+
+		pData[cubeMapFaceIndex].pSysMem = &d[cubeMapFaceIndex][0];// description.data;
+		pData[cubeMapFaceIndex].SysMemPitch = width * 4;
+		pData[cubeMapFaceIndex].SysMemSlicePitch = 0;
+	}
+
+	HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
+
+	if (FAILED(hr))
+	{
+		return nullptr;
+	}
+
+	return helperTextures[HELPERTEXTURE_BLACKCUBEMAP];
+}
+
 Texture2D* wiTextureHelper::wiTextureHelperInstance::getWhite()
 {
 	return getColor(wiColor(255, 255, 255, 255));

@@ -3998,8 +3998,11 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 {
-	if (enviroMap == nullptr)
-		return;
+	if (!GetTemporalAAEnabled()) // If temporal AA is enabled, we should render a velocity map anyway, so render a black sky as that is the default!
+	{
+		if (enviroMap == nullptr)
+			return;
+	}
 
 	GetDevice()->EventBegin("DrawSky", threadID);
 
@@ -4011,7 +4014,15 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	GetDevice()->BindVS(vertexShaders[VSTYPE_SKY], threadID);
 	GetDevice()->BindPS(pixelShaders[PSTYPE_SKY], threadID);
 	
-	GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+	if (enviroMap != nullptr)
+	{
+		GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+	}
+	else
+	{
+		// If control gets here, it means we fill out only a velocity buffer on the background for temporal AA
+		GetDevice()->BindResourcePS(wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ENV_GLOBAL, threadID);
+	}
 
 	GetDevice()->BindVertexBuffer(nullptr,0,0,threadID);
 	GetDevice()->BindVertexLayout(nullptr, threadID);

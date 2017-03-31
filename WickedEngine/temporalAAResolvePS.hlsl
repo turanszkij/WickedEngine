@@ -1,4 +1,5 @@
 #include "postProcessHF.hlsli"
+#include "reconstructPositionHF.hlsli"
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
