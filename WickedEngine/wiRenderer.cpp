@@ -2013,7 +2013,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
 			Mesh* mesh = iter->first;
-			if (!mesh->renderable)
+			if (!mesh->renderable || mesh->softBody) // todo: correct softbody
 			{
 				continue;
 			}
@@ -2073,7 +2073,7 @@ void wiRenderer::OcclusionCulling_Read()
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
 			Mesh* mesh = iter->first;
-			if (!mesh->renderable)
+			if (!mesh->renderable || mesh->softBody) // todo: correct softbody
 			{
 				continue;
 			}
@@ -3756,7 +3756,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (!occlusionCulling || !instance->IsOccluded())
 					{
 						XMMATRIX temp;
-						if (mesh->softBody || instance->isArmatureDeformed())
+						if (mesh->softBody)
 							temp = XMMatrixIdentity();
 						else
 							temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->world));
@@ -3764,7 +3764,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 						if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 						{
-							if (mesh->softBody || instance->isArmatureDeformed())
+							if (mesh->softBody)
 								temp = XMMatrixIdentity();
 							else
 								temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->worldPrev));
