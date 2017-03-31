@@ -423,6 +423,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	if (wiRenderer::GetTemporalAAEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
+		wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
 		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
 		int history = 1 - current;
 		rtTemporalAA[current].Activate(threadID); {
@@ -442,6 +443,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
 			fx.presentFullScreen = false;
 		}
+		wiProfiler::GetInstance().EndRange(threadID);
 		wiRenderer::GetDevice()->EventEnd();
 	}
 
