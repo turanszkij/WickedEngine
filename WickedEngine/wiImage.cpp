@@ -340,12 +340,18 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 					faceRot = XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
 				}
 
+				XMMATRIX view = wiRenderer::getCamera()->GetView();
+				XMMATRIX projection = wiRenderer::getCamera()->GetProjection();
+				// Remove possible jittering from temporal camera:
+				projection.r[2] = XMVectorSetX(projection.r[2], 0);
+				projection.r[2] = XMVectorSetY(projection.r[2], 0);
+
 				cb.mTransform = XMMatrixTranspose(
 						XMMatrixScaling(effects.scale.x*effects.siz.x,-1*effects.scale.y*effects.siz.y,1)
 						*XMMatrixRotationZ(effects.rotation)
 						*faceRot
 						*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
-						*wiRenderer::getCamera()->GetViewProjection()
+						*view * projection
 					);
 			}
 
