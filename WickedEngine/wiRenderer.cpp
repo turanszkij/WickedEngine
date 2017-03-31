@@ -3756,7 +3756,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (!occlusionCulling || !instance->IsOccluded())
 					{
 						XMMATRIX temp;
-						if (mesh->softBody)
+						if (mesh->softBody || instance->isArmatureDeformed())
 							temp = XMMatrixIdentity();
 						else
 							temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->world));
@@ -3764,7 +3764,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 						if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 						{
-							if (mesh->softBody)
+							if (mesh->softBody || instance->isArmatureDeformed())
 								temp = XMMatrixIdentity();
 							else
 								temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->worldPrev));

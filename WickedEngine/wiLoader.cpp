@@ -3150,7 +3150,7 @@ void Armature::UpdateTransform()
 	// calculate frame
 	for (Bone* root : rootbones) 
 	{
-		RecursiveBoneTransform(this, root, XMMatrixIdentity());
+		RecursiveBoneTransform(this, root, getMatrix());
 	}
 
 }
