@@ -17,7 +17,7 @@ PixelInputType_Simple main(Input_Simple input)
 
 	Out.clip = dot(pos, g_xClipPlane);
 
-	affectWind(pos.xyz, input.tex.w, input.id);
+	affectWind(pos.xyz, input.tex.w, input.id, g_xFrame_Time);
 
 
 	Out.pos = mul(pos, g_xCamera_VP);

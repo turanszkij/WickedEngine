@@ -23,8 +23,8 @@ PixelInputType main(Input input)
 	Out.clip = dot(pos, g_xClipPlane);
 		
 	float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
-	affectWind(pos.xyz,input.tex.w,input.id);
-
+	affectWind(pos.xyz, input.tex.w, input.id, g_xFrame_Time);
+	affectWind(posPrev.xyz, input.tex.w, input.id, g_xFrame_TimePrev);
 
 
 	//VERTEX OFFSET MOTION BLUR

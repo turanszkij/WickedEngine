@@ -16,7 +16,7 @@ VertexOut main(Input_Shadow input)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 		
 	Out.pos = mul(input.pos, WORLD);
-	affectWind(Out.pos.xyz, input.tex.w, input.id);
+	affectWind(Out.pos.xyz, input.tex.w, input.id, g_xFrame_Time);
 
 	Out.pos = mul(Out.pos, g_xCamera_VP);
 	Out.tex = input.tex.xy;

@@ -4800,7 +4800,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	FrameCB cb;
 
 	cb.mTime = renderTime;
-	cb.mTime = renderTime_Prev;
+	cb.mTimePrev = renderTime_Prev;
 	cb.mDeltaTime = deltaTime;
 	auto& wind = GetScene().wind;
 	cb.mWindRandomness = wind.randomness;
