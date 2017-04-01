@@ -420,7 +420,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd();
 	}
 
-	if (wiRenderer::GetTemporalAAEnabled())
+	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
 		wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);

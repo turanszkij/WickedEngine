@@ -43,6 +43,7 @@ public:
 	wiComboBox* shadowPropsCubeComboBox;
 	wiComboBox* MSAAComboBox;
 	wiCheckBox* temporalAACheckBox;
+	wiCheckBox* temporalAADebugCheckBox;
 
 	int GetPickType();
 };

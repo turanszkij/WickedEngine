@@ -333,6 +333,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	temporalAACheckBox->SetCheck(wiRenderer::GetTemporalAAEnabled());
 	rendererWindow->AddWidget(temporalAACheckBox);
 
+	temporalAADebugCheckBox = new wiCheckBox("DEBUGJitter: ");
+	temporalAADebugCheckBox->SetText("DEBUG: ");
+	temporalAADebugCheckBox->SetTooltip("Disable blending of frame history. Camera Subpixel jitter will be visible.");
+	temporalAADebugCheckBox->SetPos(XMFLOAT2(x + 100, y));
+	temporalAADebugCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetTemporalAADebugEnabled(args.bValue);
+	});
+	temporalAADebugCheckBox->SetCheck(wiRenderer::GetTemporalAADebugEnabled());
+	rendererWindow->AddWidget(temporalAADebugCheckBox);
+
 
 
 	rendererWindow->Translate(XMFLOAT3(130, 20, 0));

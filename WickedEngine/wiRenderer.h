@@ -311,7 +311,7 @@ protected:
 
 	static bool debugLightCulling;
 	static bool occlusionCulling;
-	static bool temporalAA;
+	static bool temporalAA, temporalAADEBUG;
 
 	struct VoxelizedSceneData
 	{
@@ -375,6 +375,8 @@ public:
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static void SetTemporalAAEnabled(bool enabled) { temporalAA = enabled; }
 	static bool GetTemporalAAEnabled() { return temporalAA; }
+	static void SetTemporalAADebugEnabled(bool enabled) { temporalAADEBUG = enabled; }
+	static bool GetTemporalAADebugEnabled() { return temporalAADEBUG; }
 	static void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }
 	static bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
 	static void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
