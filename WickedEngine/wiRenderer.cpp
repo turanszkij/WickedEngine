@@ -59,7 +59,7 @@ Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = true;
-bool wiRenderer::temporalAA = true, wiRenderer::temporalAADEBUG = false;
+bool wiRenderer::temporalAA = false, wiRenderer::temporalAADEBUG = false;
 wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
