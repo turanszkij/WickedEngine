@@ -33,6 +33,7 @@ public:
 	wiCheckBox* stereogramCheckBox;
 	wiCheckBox* colorGradingCheckBox;
 	wiCheckBox* sharpenFilterCheckBox;
+	wiSlider*	sharpenFilterAmountSlider;
 
 
 };

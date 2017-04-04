@@ -22,6 +22,7 @@ private:
 	float ssaoBlur;
 	float dofFocus;
 	float dofStrength;
+	float sharpenFilterAmount;
 
 	bool fxaaEnabled;
 	bool ssaoEnabled;
@@ -91,6 +92,7 @@ public:
 	inline float getSSAOBlur(){ return ssaoBlur; }
 	inline float getDepthOfFieldFocus(){ return dofFocus; }
 	inline float getDepthOfFieldStrength(){ return dofStrength; }
+	inline float getSharpenFilterAmount() { return sharpenFilterAmount; }
 
 	inline bool getSSAOEnabled(){ return ssaoEnabled; }
 	inline bool getSSREnabled(){ return ssrEnabled; }
@@ -130,6 +132,7 @@ public:
 	inline void setSSAOBlur(float value){ ssaoBlur = value; }
 	inline void setDepthOfFieldFocus(float value){ dofFocus = value; }
 	inline void setDepthOfFieldStrength(float value){ dofStrength = value; }
+	inline void setSharpenFilterAmount(float value) { sharpenFilterAmount = value; }
 
 	inline void setSSAOEnabled(bool value){ ssaoEnabled = value; }
 	inline void setSSREnabled(bool value){ ssrEnabled = value; }

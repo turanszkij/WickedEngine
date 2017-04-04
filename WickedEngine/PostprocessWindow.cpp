@@ -157,6 +157,16 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 	});
 	ppWindow->AddWidget(sharpenFilterCheckBox);
 
+	sharpenFilterAmountSlider = new wiSlider(0, 4, 1, 1000, "Amount: ");
+	sharpenFilterAmountSlider->SetTooltip("Set sharpness filter strength.");
+	sharpenFilterAmountSlider->SetSize(XMFLOAT2(100, 20));
+	sharpenFilterAmountSlider->SetPos(XMFLOAT2(x + 100, y));
+	sharpenFilterAmountSlider->SetValue(component->getSharpenFilterAmount());
+	sharpenFilterAmountSlider->OnSlide([&](wiEventArgs args) {
+		component->setSharpenFilterAmount(args.fValue);
+	});
+	ppWindow->AddWidget(sharpenFilterAmountSlider);
+
 
 	ppWindow->Translate(XMFLOAT3(screenW - 380, 50, 0));
 	ppWindow->SetVisible(false);
@@ -182,4 +192,5 @@ PostprocessWindow::~PostprocessWindow()
 	SAFE_DELETE(colorGradingCheckBox);
 	SAFE_DELETE(stereogramCheckBox);
 	SAFE_DELETE(sharpenFilterCheckBox);
+	SAFE_DELETE(sharpenFilterAmountSlider);
 }

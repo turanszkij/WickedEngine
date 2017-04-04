@@ -80,11 +80,11 @@ public:
 		bool reprojectDepthBuffer;
 		bool downsampleDepthBuffer4x;
 		bool temporalAAResolve;
-		bool sharpen;
+		float sharpen;
 
 		void clear() { 
-			active = motionBlur = outline = fxaa = ssao = linDepth = colorGrade = ssr = stereogram = tonemap = reprojectDepthBuffer = downsampleDepthBuffer4x = temporalAAResolve = sharpen = false; 
-			dofStrength = 0; ssss = XMFLOAT2(0, 0); 
+			active = motionBlur = outline = fxaa = ssao = linDepth = colorGrade = ssr = stereogram = tonemap = reprojectDepthBuffer = downsampleDepthBuffer4x = temporalAAResolve = false; 
+			dofStrength = sharpen = 0; ssss = XMFLOAT2(0, 0); 
 		}
 		void setDOF(float value) { dofStrength = value; active = value > FLT_EPSILON; }
 		void setMotionBlur(bool value) { motionBlur = value; active = value; }
@@ -101,7 +101,7 @@ public:
 		void setDepthBufferReprojection(bool value) { reprojectDepthBuffer = value; active = value; }
 		void setDepthBufferDownsampling(bool value) { downsampleDepthBuffer4x = value; active = value; }
 		void setTemporalAAResolve(bool value) { temporalAAResolve = value; active = value; }
-		void setSharpen(bool value) { sharpen = value; active = value; }
+		void setSharpen(float value) { sharpen = value; active = value; }
 		Processing() { clear(); }
 	};
 	Processing process;

@@ -386,30 +386,60 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			device->BindVS(screenVS, threadID);
 			fullScreenEffect = true;
 
-			if(effects.process.outline) 
-				device->BindPS(outlinePS,threadID);
-			else if(effects.process.motionBlur) 
-				device->BindPS(motionBlurPS,threadID);
-			else if(effects.process.dofStrength) 
-				device->BindPS(dofPS,threadID);
-			else if(effects.process.fxaa) 
-				device->BindPS(fxaaPS,threadID);
-			else if(effects.process.ssao)
-				device->BindPS(ssaoPS,threadID);
-			else if(effects.process.linDepth) 
+			if (effects.process.outline) {
+				device->BindPS(outlinePS, threadID);
+
+				prcb.params0[1] = effects.process.outline;
+				device->UpdateBuffer(processCb, &prcb, threadID);
+			}
+			else if (effects.process.motionBlur) {
+				device->BindPS(motionBlurPS, threadID);
+
+				prcb.params0[0] = effects.process.motionBlur;
+				device->UpdateBuffer(processCb, &prcb, threadID);
+			}
+			else if (effects.process.dofStrength) {
+				device->BindPS(dofPS, threadID);
+
+				prcb.params0[2] = effects.process.dofStrength;
+				device->UpdateBuffer(processCb, &prcb, threadID);
+			}
+			else if (effects.process.fxaa) {
+				device->BindPS(fxaaPS, threadID);
+			}
+			else if (effects.process.ssao) {
+				device->BindPS(ssaoPS, threadID);
+			}
+			else if (effects.process.linDepth) {
 				device->BindPS(linDepthPS, threadID);
-			else if (effects.process.colorGrade)
+			}
+			else if (effects.process.colorGrade) {
 				device->BindPS(colorGradePS, threadID);
-			else if (effects.process.ssr)
+			}
+			else if (effects.process.ssr) {
 				device->BindPS(ssrPS, threadID);
-			else if (effects.process.stereogram)
+			}
+			else if (effects.process.stereogram) {
 				device->BindPS(stereogramPS, threadID);
-			else if (effects.process.tonemap)
+			}
+			else if (effects.process.tonemap) {
 				device->BindPS(tonemapPS, threadID);
-			else if(effects.process.ssss.x + effects.process.ssss.y > 0)
-				device->BindPS(ssssPS,threadID);
-			else if (effects.bloom.separate)
+			}
+			else if (effects.process.ssss.x + effects.process.ssss.y > 0) {
+				device->BindPS(ssssPS, threadID);
+
+				prcb.params0[3] = effects.process.ssss.x;
+				prcb.params1[3] = effects.process.ssss.y;
+				device->UpdateBuffer(processCb, &prcb, threadID);
+			}
+			else if (effects.bloom.separate) {
 				device->BindPS(bloomSeparatePS, threadID);
+
+				prcb.params1[0] = effects.bloom.separate;
+				prcb.params1[1] = effects.bloom.threshold;
+				prcb.params1[2] = effects.bloom.saturation;
+				device->UpdateBuffer(processCb, &prcb, threadID);
+			}
 			else if (effects.process.reprojectDepthBuffer)
 			{
 				device->BindPS(reprojectDepthBufferPS, threadID);
@@ -420,23 +450,18 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				device->BindPS(downsampleDepthBufferPS, threadID);
 				device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
 			}
-			else if (effects.process.temporalAAResolve)
+			else if (effects.process.temporalAAResolve) {
 				device->BindPS(temporalAAResolvePS, threadID);
-			else if (effects.process.sharpen)
+			}
+			else if (effects.process.sharpen > 0) {
 				device->BindPS(sharpenPS, threadID);
-			else 
-				wiHelper::messageBox("Postprocess branch not implemented!");
-			
-			prcb.params0[0] = effects.process.motionBlur; 
-			prcb.params0[1] = effects.process.outline;
-			prcb.params0[2] = effects.process.dofStrength;
-			prcb.params0[3] = effects.process.ssss.x;
-			prcb.params1[0] = effects.bloom.separate;
-			prcb.params1[1] = effects.bloom.threshold;
-			prcb.params1[2] = effects.bloom.saturation;
-			prcb.params1[3] = effects.process.ssss.y;
 
-			device->UpdateBuffer(processCb, &prcb, threadID);
+				prcb.params0[0] = effects.process.sharpen;
+				device->UpdateBuffer(processCb, &prcb, threadID);
+			}
+			else {
+				wiHelper::messageBox("Postprocess branch not implemented!");
+			}
 		}
 		else{ 
 			device->BindVS(screenVS,threadID);

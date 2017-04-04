@@ -146,6 +146,7 @@ void Renderable3DComponent::setProperties()
 	setBloomSaturation(-3.86f);
 	setDepthOfFieldFocus(10.f);
 	setDepthOfFieldStrength(2.2f);
+	setSharpenFilterAmount(0.28f); 
 
 	setSSAOEnabled(true);
 	setSSREnabled(true);
@@ -554,7 +555,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	if (getSharpenFilterEnabled())
 	{
 		rt1->Activate(threadID);
-		fx.process.setSharpen(true);
+		fx.process.setSharpen(getSharpenFilterAmount());
 		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 		fx.process.clear();
 		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
