@@ -44,6 +44,7 @@ protected:
 	wiHashString fastName;
 	string text;
 	string tooltip;
+	string scriptTip;
 	bool enabled;
 	bool visible;
 
@@ -64,6 +65,7 @@ public:
 	string GetText();
 	void SetText(const string& value);
 	void SetTooltip(const string& value);
+	void SetScriptTip(const string& value);
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState();

@@ -66,13 +66,26 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 		{
 			tooltipPos.y += 40;
 		}
-		wiFontProps fontProps = wiFontProps((int)tooltipPos.x, (int)tooltipPos.y, -1, WIFALIGN_CENTER, WIFALIGN_CENTER);
-		fontProps.color = wiColor(25, 25, 25, 1);
+		wiFontProps fontProps = wiFontProps((int)tooltipPos.x, (int)tooltipPos.y, -1, WIFALIGN_LEFT, WIFALIGN_TOP);
+		fontProps.color = wiColor(25, 25, 25, 255);
 		wiFont tooltipFont = wiFont(tooltip, fontProps);
-		float fontWidth = (float)tooltipFont.textWidth() + 4;
-		float fontHeight = (float)tooltipFont.textHeight() + 4;
-		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(255,234,165)), wiImageEffects(tooltipPos.x - fontWidth*0.5f, tooltipPos.y - fontHeight*0.5f, fontWidth, fontHeight), gui->GetGraphicsThread());
+		if (!scriptTip.empty())
+		{
+			tooltipFont.SetText(tooltip + "\n" + scriptTip);
+		}
+		static const float _border = 2;
+		float fontWidth = (float)tooltipFont.textWidth() + _border* 2;
+		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
+		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(255, 234, 165)), wiImageEffects(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), gui->GetGraphicsThread());
+		tooltipFont.SetText(tooltip);
 		tooltipFont.Draw(gui->GetGraphicsThread());
+		if (!scriptTip.empty())
+		{
+			tooltipFont.SetText(scriptTip);
+			tooltipFont.props.posY += (int)(fontHeight / 2);
+			tooltipFont.props.color = wiColor(25, 25, 25, 110);
+			tooltipFont.Draw(gui->GetGraphicsThread());
+		}
 	}
 }
 wiHashString wiWidget::GetName()
@@ -104,6 +117,10 @@ void wiWidget::SetText(const string& value)
 void wiWidget::SetTooltip(const string& value)
 {
 	tooltip = value;
+}
+void wiWidget::SetScriptTip(const string& value)
+{
+	scriptTip = value;
 }
 void wiWidget::SetPos(const XMFLOAT2& value)
 {

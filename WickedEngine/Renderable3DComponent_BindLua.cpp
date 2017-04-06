@@ -53,6 +53,8 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, SetTessellationEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetMSAASampleCount),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticleAlphaCompositionEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSharpenFilterEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSharpenFilterAmount),
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
@@ -362,6 +364,36 @@ int Renderable3DComponent_BindLua::SetHairParticleAlphaCompositionEnabled(lua_St
 	}
 	else
 		wiLua::SError(L, "SetHairParticleAlphaCompositionEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetSharpenFilterEnabled(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetSharpenFilterEnabled(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((Renderable3DComponent*)component)->setSharpenFilterEnabled(wiLua::SGetBool(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetSharpenFilterEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetSharpenFilterAmount(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetSharpenFilterAmount(bool value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((Renderable3DComponent*)component)->setSharpenFilterAmount(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetSharpenFilterAmount(bool value) not enough arguments!");
 	return 0;
 }
 

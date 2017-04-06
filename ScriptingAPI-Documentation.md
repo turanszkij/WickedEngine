@@ -495,6 +495,9 @@ It inherits functions from Renderable2DComponent, so it can render a 2D overlay.
 - SetTessellationEnabled(bool value)
 - SetMSAASampleCount(int count)
 - SetHairParticleAlphaCompositionEnabled(bool value)
+- SetStereogramEnabled(bool value)
+- SetSharpenFilterEnabled(bool value)
+- SetSharpenFilterAmount(bool value)
 
 ##### ForwardRenderableComponent
 It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 

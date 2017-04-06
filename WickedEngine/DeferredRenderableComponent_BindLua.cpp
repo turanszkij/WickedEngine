@@ -51,6 +51,8 @@ Luna<DeferredRenderableComponent_BindLua>::FunctionType DeferredRenderableCompon
 	lunamethod(Renderable3DComponent_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetTessellationEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticleAlphaCompositionEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSharpenFilterEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetSharpenFilterAmount),
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
