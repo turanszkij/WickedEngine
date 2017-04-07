@@ -24,6 +24,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
+	vsyncCheckBox->SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox->SetPos(XMFLOAT2(x, y += step));
 	vsyncCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::GetDevice()->SetVSyncEnabled(args.bValue);
@@ -33,6 +34,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 
 	occlusionCullingCheckBox = new wiCheckBox("Occlusion Culling: ");
 	occlusionCullingCheckBox->SetTooltip("Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.");
+	occlusionCullingCheckBox->SetScriptTip("SetOcclusionCullingEnabled(bool enabled)");
 	occlusionCullingCheckBox->SetPos(XMFLOAT2(x, y += step));
 	occlusionCullingCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetOcclusionCullingEnabled(args.bValue);
@@ -109,6 +111,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 
 	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
 	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
+	partitionBoxesCheckBox->SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
 	partitionBoxesCheckBox->SetPos(XMFLOAT2(x, y += step));
 	partitionBoxesCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
@@ -118,6 +121,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 
 	boneLinesCheckBox = new wiCheckBox("Bone line visualizer: ");
 	boneLinesCheckBox->SetTooltip("Visualize bones of armatures");
+	boneLinesCheckBox->SetScriptTip("SetDebugBonesEnabled(bool enabled)");
 	boneLinesCheckBox->SetPos(XMFLOAT2(x, y += step));
 	boneLinesCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawDebugBoneLines(args.bValue);
@@ -252,6 +256,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	shadowProps2DComboBox->SetSelected(3);
 	shadowProps2DComboBox->SetEnabled(true);
 	shadowProps2DComboBox->SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights...");
+	shadowProps2DComboBox->SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	rendererWindow->AddWidget(shadowProps2DComboBox);
 
 	shadowPropsCubeComboBox = new wiComboBox("Cube Shadowmap resolution:");
@@ -291,6 +296,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	shadowPropsCubeComboBox->SetSelected(1);
 	shadowPropsCubeComboBox->SetEnabled(true);
 	shadowPropsCubeComboBox->SetTooltip("Choose a shadow quality preset for cube shadow maps (pointlights, area lights)...");
+	shadowPropsCubeComboBox->SetScriptTip("SetShadowPropsCube(int resolution, int count)");
 	rendererWindow->AddWidget(shadowPropsCubeComboBox);
 
 	MSAAComboBox = new wiComboBox("MSAA:");
