@@ -7,7 +7,7 @@ class ForwardRenderableComponent :
 {
 protected:
 
-	wiRenderTarget rtMain;
+	static wiRenderTarget rtMain;
 
 	virtual void ResizeBuffers();
 

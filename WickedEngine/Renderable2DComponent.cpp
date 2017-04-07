@@ -21,9 +21,28 @@ Renderable2DComponent::~Renderable2DComponent()
 	Unload();
 }
 
+wiRenderTarget Renderable2DComponent::rtFinal;
 void Renderable2DComponent::ResizeBuffers()
 {
-	rtFinal.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false);
+	FORMAT defaultTextureFormat = GraphicsDevice::GetBackBufferFormat();
+
+	// Protect against multiple buffer resizes when there is no change!
+	static UINT lastBufferResWidth = 0, lastBufferResHeight = 0, lastBufferMSAA = 0;
+	static FORMAT lastBufferFormat = FORMAT_UNKNOWN;
+	if (lastBufferResWidth == (UINT)wiRenderer::GetDevice()->GetScreenWidth() &&
+		lastBufferResHeight == (UINT)wiRenderer::GetDevice()->GetScreenHeight() &&
+		lastBufferFormat == defaultTextureFormat)
+	{
+		return;
+	}
+	else
+	{
+		lastBufferResWidth = (UINT)wiRenderer::GetDevice()->GetScreenWidth();
+		lastBufferResHeight = (UINT)wiRenderer::GetDevice()->GetScreenHeight();
+		lastBufferFormat = defaultTextureFormat;
+	}
+
+	rtFinal.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false, defaultTextureFormat);
 }
 
 void Renderable2DComponent::Initialize()
@@ -65,6 +84,8 @@ void Renderable2DComponent::Start()
 void Renderable2DComponent::Update(float dt)
 {
 	GetGUI().Update(dt);
+
+	RenderableComponent::Update(dt);
 }
 void Renderable2DComponent::FixedUpdate()
 {

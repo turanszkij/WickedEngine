@@ -6,7 +6,7 @@ class DeferredRenderableComponent :
 	public Renderable3DComponent
 {
 protected:
-	wiRenderTarget rtGBuffer, rtDeferred, rtLight, rtSSS[2];
+	static wiRenderTarget rtGBuffer, rtDeferred, rtLight, rtSSS[2];
 
 	virtual void ResizeBuffers();
 

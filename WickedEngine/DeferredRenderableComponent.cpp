@@ -24,9 +24,31 @@ DeferredRenderableComponent::~DeferredRenderableComponent()
 {
 }
 
+
+static wiRenderTarget rtGBuffer, rtDeferred, rtLight, rtSSS[2];
 void DeferredRenderableComponent::ResizeBuffers()
 {
 	Renderable3DComponent::ResizeBuffers();
+
+	FORMAT defaultTextureFormat = GraphicsDevice::GetBackBufferFormat();
+
+	// Protect against multiple buffer resizes when there is no change!
+	static UINT lastBufferResWidth = 0, lastBufferResHeight = 0, lastBufferMSAA = 0;
+	static FORMAT lastBufferFormat = FORMAT_UNKNOWN;
+	if (lastBufferResWidth == (UINT)wiRenderer::GetDevice()->GetScreenWidth() &&
+		lastBufferResHeight == (UINT)wiRenderer::GetDevice()->GetScreenHeight() &&
+		lastBufferMSAA == getMSAASampleCount() &&
+		lastBufferFormat == defaultTextureFormat)
+	{
+		return;
+	}
+	else
+	{
+		lastBufferResWidth = (UINT)wiRenderer::GetDevice()->GetScreenWidth();
+		lastBufferResHeight = (UINT)wiRenderer::GetDevice()->GetScreenHeight();
+		lastBufferMSAA = getMSAASampleCount();
+		lastBufferFormat = defaultTextureFormat;
+	}
 
 	rtGBuffer.Initialize(
 		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
@@ -98,6 +120,7 @@ void DeferredRenderableComponent::Render()
 }
 
 
+wiRenderTarget DeferredRenderableComponent::rtGBuffer, DeferredRenderableComponent::rtDeferred, DeferredRenderableComponent::rtLight, DeferredRenderableComponent::rtSSS[2];
 void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);

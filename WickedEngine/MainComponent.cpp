@@ -85,7 +85,7 @@ void MainComponent::run()
 
 	static wiTimer timer = wiTimer();
 	static double accumulator = 0.0;
-	const double elapsedTime = timer.elapsed() / 1000.0;
+	const double elapsedTime = max(0, timer.elapsed() / 1000.0);
 	timer.record();
 
 	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
@@ -103,6 +103,12 @@ void MainComponent::run()
 		accumulator += elapsedTime;
 		if (!wiWindowRegistration::GetInstance()->IsWindowActive() || accumulator > applicationControlLostThreshold) //application probably lost control
 			accumulator = 0;
+
+		if (GetAsyncKeyState('Q') < 0)
+		{
+			int asd = 213;
+			asd = asd;
+		}
 
 		while (accumulator >= targetFrameRateInv)
 		{

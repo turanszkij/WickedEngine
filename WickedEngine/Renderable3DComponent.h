@@ -50,7 +50,7 @@ private:
 
 
 protected:
-	wiRenderTarget
+	static wiRenderTarget
 		rtReflection
 		, rtSSR
 		, rtMotionBlur
@@ -63,9 +63,9 @@ protected:
 		, rtDof[3]
 		, rtTemporalAA[2]
 		;
-	vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
-	wiDepthTarget dtDepthCopy;
-	wiGraphicsTypes::Texture2D* smallDepth;
+	static vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
+	static wiDepthTarget dtDepthCopy;
+	static wiGraphicsTypes::Texture2D* smallDepth;
 
 	virtual void ResizeBuffers() override;
 

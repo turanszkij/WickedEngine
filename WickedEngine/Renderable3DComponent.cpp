@@ -26,11 +26,45 @@ Renderable3DComponent::~Renderable3DComponent()
 	}
 }
 
+wiRenderTarget
+	Renderable3DComponent::rtReflection
+	, Renderable3DComponent::rtSSR
+	, Renderable3DComponent::rtMotionBlur
+	, Renderable3DComponent::rtSceneCopy
+	, Renderable3DComponent::rtWaterRipple
+	, Renderable3DComponent::rtLinearDepth
+	, Renderable3DComponent::rtParticle
+	, Renderable3DComponent::rtParticleAdditive
+	, Renderable3DComponent::rtFinal[2]
+	, Renderable3DComponent::rtDof[3]
+	, Renderable3DComponent::rtTemporalAA[2]
+;
+vector<wiRenderTarget> Renderable3DComponent::rtSun, Renderable3DComponent::rtBloom, Renderable3DComponent::rtSSAO;
+wiDepthTarget Renderable3DComponent::dtDepthCopy;
+Texture2D* Renderable3DComponent::smallDepth;
 void Renderable3DComponent::ResizeBuffers()
 {
 	Renderable2DComponent::ResizeBuffers();
 
 	FORMAT defaultTextureFormat = GraphicsDevice::GetBackBufferFormat();
+
+	// Protect against multiple buffer resizes when there is no change!
+	static UINT lastBufferResWidth = 0, lastBufferResHeight = 0, lastBufferMSAA = 0;
+	static FORMAT lastBufferFormat = FORMAT_UNKNOWN;
+	if (lastBufferResWidth == (UINT)wiRenderer::GetDevice()->GetScreenWidth() && 
+		lastBufferResHeight == (UINT)wiRenderer::GetDevice()->GetScreenHeight() && 
+		lastBufferMSAA == getMSAASampleCount() && 
+		lastBufferFormat == defaultTextureFormat)
+	{
+		return;
+	}
+	else
+	{
+		lastBufferResWidth = (UINT)wiRenderer::GetDevice()->GetScreenWidth();
+		lastBufferResHeight = (UINT)wiRenderer::GetDevice()->GetScreenHeight();
+		lastBufferMSAA = getMSAASampleCount();
+		lastBufferFormat = defaultTextureFormat;
+	}
 
 	rtSSR.Initialize(
 		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())

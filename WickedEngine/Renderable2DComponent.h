@@ -44,7 +44,7 @@ class Renderable2DComponent :
 {
 private:
 	float m_spriteSpeed;
-	wiRenderTarget rtFinal;
+	static wiRenderTarget rtFinal;
 	wiGUI GUI;
 
 protected:
