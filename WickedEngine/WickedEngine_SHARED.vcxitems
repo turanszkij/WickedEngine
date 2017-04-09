@@ -712,9 +712,7 @@
     <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
     <None Include="$(MSBuildThisFileDirectory)..\ScriptingAPI-Documentation.md" />
-    <None Include="$(MSBuildThisFileDirectory)WickedEngine-Documentation.md">
-      <FileType>Document</FileType>
-    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\WickedEngine-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
       <DeploymentContent>true</DeploymentContent>
     </None>
