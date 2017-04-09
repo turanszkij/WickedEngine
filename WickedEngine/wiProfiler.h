@@ -27,7 +27,7 @@ public:
 		wiTimer cpuBegin, cpuEnd;
 		wiGraphicsTypes::GPUQuery gpuBegin, gpuEnd;
 
-		Range() :time(0) {}
+		Range() :time(0), domain(DOMAIN_CPU) {}
 		~Range() {}
 	};
 

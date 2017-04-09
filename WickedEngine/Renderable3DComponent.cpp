@@ -10,11 +10,9 @@
 
 using namespace wiGraphicsTypes;
 
-Renderable3DComponent::Renderable3DComponent()
+Renderable3DComponent::Renderable3DComponent() : Renderable2DComponent()
 {
 	SAFE_INIT(smallDepth);
-
-	Renderable2DComponent();
 }
 Renderable3DComponent::~Renderable3DComponent()
 {

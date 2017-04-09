@@ -6,13 +6,11 @@
 
 using namespace wiGraphicsTypes;
 
-Renderable2DComponent::Renderable2DComponent()
+Renderable2DComponent::Renderable2DComponent() : RenderableComponent()
 {
 	setSpriteSpeed(1.f);
 	addLayer(DEFAULT_RENDERLAYER);
 	GUI = wiGUI(GRAPHICSTHREAD_IMMEDIATE);
-
-	RenderableComponent();
 }
 
 

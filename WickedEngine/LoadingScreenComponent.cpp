@@ -1,9 +1,8 @@
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
 
-LoadingScreenComponent::LoadingScreenComponent()
+LoadingScreenComponent::LoadingScreenComponent() : Renderable2DComponent()
 {
-	Renderable2DComponent::Renderable2DComponent();
 	loaders.clear();
 	finish = nullptr;
 }

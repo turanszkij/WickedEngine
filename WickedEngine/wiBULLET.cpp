@@ -138,7 +138,7 @@ void wiBULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& 
 		dynamicsWorld->addRigidBody(body);
 
 		
-		if (body && body->getMotionState())
+		if (body->getMotionState())
 		{
 			btTransform trans;
 			body->getMotionState()->getWorldTransform(trans);
@@ -248,7 +248,7 @@ void wiBULLET::addSphere(float rad, const XMFLOAT3& pos
 		dynamicsWorld->addRigidBody(body);
 
 		
-		if (body && body->getMotionState())
+		if (body->getMotionState())
 		{
 			btTransform trans;
 			body->getMotionState()->getWorldTransform(trans);
@@ -301,7 +301,7 @@ void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLO
 		dynamicsWorld->addRigidBody(body);
 
 		
-		if (body && body->getMotionState())
+		if (body->getMotionState())
 		{
 			btTransform trans;
 			body->getMotionState()->getWorldTransform(trans);
@@ -359,7 +359,7 @@ void wiBULLET::addConvexHull(const vector<XMFLOAT4>& vertices, const XMFLOAT3& s
 		dynamicsWorld->addRigidBody(body);
 
 		
-		if (body && body->getMotionState())
+		if (body->getMotionState())
 		{
 			btTransform trans;
 			body->getMotionState()->getWorldTransform(trans);
@@ -439,7 +439,7 @@ void wiBULLET::addTriangleMesh(const vector<XMFLOAT4>& vertices, const vector<un
 		dynamicsWorld->addRigidBody(body);
 
 		
-		if (body && body->getMotionState())
+		if (body->getMotionState())
 		{
 			btTransform trans;
 			body->getMotionState()->getWorldTransform(trans);
@@ -660,7 +660,7 @@ PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 }
 
 void wiBULLET::registerObject(Object* object){
-	if(object->rigidBody && rigidBodyPhysicsEnabled){
+	if(object->rigidBody && object->mesh != nullptr && rigidBodyPhysicsEnabled){
 		//XMVECTOR s,r,t;
 		//XMMatrixDecompose(&s,&r,&t,XMLoadFloat4x4(&object->world));
 		XMFLOAT3 S,T;

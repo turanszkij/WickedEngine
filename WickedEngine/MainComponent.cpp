@@ -104,12 +104,6 @@ void MainComponent::run()
 		if (!wiWindowRegistration::GetInstance()->IsWindowActive() || accumulator > applicationControlLostThreshold) //application probably lost control
 			accumulator = 0;
 
-		if (GetAsyncKeyState('Q') < 0)
-		{
-			int asd = 213;
-			asd = asd;
-		}
-
 		while (accumulator >= targetFrameRateInv)
 		{
 

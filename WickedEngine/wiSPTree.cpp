@@ -10,7 +10,8 @@
 
 wiSPTree::wiSPTree()
 {
-	root=NULL;
+	childCount = 0;
+	root=nullptr;
 }
 
 wiSPTree::~wiSPTree()
@@ -303,7 +304,7 @@ wiSPTree* wiSPTree::updateTree(Node* node)
 		node = root;
 	}
 
-	if(this && node)
+	if(node)
 	{
 
 		vector<Cullable*> bad(0);

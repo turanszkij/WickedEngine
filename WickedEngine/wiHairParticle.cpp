@@ -302,7 +302,7 @@ void wiHairParticle::Generate()
 
 			float density = (float)(denMod[0]+denMod[1]+denMod[2])/3.0f*avgPatchSize;
 			int rdense = (int)(( density - (int)density ) * 100);
-			density += (wiRandom::getRandom(0, 99)) <= rdense;
+			density += ((wiRandom::getRandom(0, 99)) <= rdense ? 1.0f : 0.0f);
 			int PATCHSIZE = material->texture?(int)density:(int)density*10;
 			  
 			if(PATCHSIZE)

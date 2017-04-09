@@ -319,7 +319,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 		//device->BindResourcePS(depth,1,threadID);
 
 		ConstantBuffer cb;
-		cb.mAdd.x = additive;
+		cb.mAdd.x = additive ? 1.0f : 0.0f;
 		cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
 		cb.mMotionBlurAmount = motionBlurAmount;
 		

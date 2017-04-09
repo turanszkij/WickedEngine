@@ -504,6 +504,8 @@ struct Object : public Streamable, public Transform
 	void UpdateObject();
 	XMMATRIX GetOBB() const;
 	void Serialize(wiArchive& archive);
+
+	Object operator=(const Object& other) { return Object(other); }
 };
 // AutoSerialized!
 struct KeyFrame
@@ -556,7 +558,7 @@ struct Bone : public Transform
 	float length;
 	bool connected;
 
-	Bone(){};
+	Bone():length(0),connected(false){};
 	Bone(string newName):Transform(){
 		name=newName;
 		childrenN.clear();
@@ -693,14 +695,14 @@ struct SHCAM{
 	};
 	//perspective
 	SHCAM(const XMFLOAT4& dir, float newNear, float newFar, float newFov){
+		size = 0;
 		nearplane=newNear;
 		farplane=newFar;
 		Init(XMLoadFloat4(&dir));
 		Create_Perspective(newFov);
 	};
 	void Init(const XMVECTOR& dir){
-		XMMATRIX rot = XMMatrixIdentity();
-		rot = XMMatrixRotationQuaternion( dir );
+		XMMATRIX rot = XMMatrixRotationQuaternion( dir );
 		XMVECTOR rEye = XMVectorSet(0,0,0,0);
 		XMVECTOR rAt = XMVector3Transform( XMVectorSet( 0.0f, -1.0f, 0.0f, 0.0f ), rot);
 		XMVECTOR rUp = XMVector3Transform( XMVectorSet( 0.0f, 0.0f, 1.0f, 0.0f ), rot);
@@ -852,10 +854,12 @@ struct Camera:public Transform{
 	XMFLOAT4X4 InvView, InvProjection, InvVP;
 	
 	Camera():Transform(){
+		width = height = zNearP = zFarP = fov = 0;
 	}
 	Camera(const XMFLOAT3& newPos, const XMFLOAT4& newRot,
 		const string& newName):Transform()
 	{
+		width = height = zNearP = zFarP = fov = 0;
 		translation_rest=newPos;
 		rotation_rest=newRot;
 		name=newName;
@@ -1006,7 +1010,7 @@ struct Camera:public Transform{
 	virtual void UpdateTransform();
 };
 struct HitSphere:public SPHERE, public Transform{
-	float radius_saved, radius;
+	float radius_saved;
 	static wiGraphicsTypes::GPUBuffer vertexBuffer;
 	enum HitSphereType{
 		HITTYPE,
@@ -1015,9 +1019,9 @@ struct HitSphere:public SPHERE, public Transform{
 	};
 	HitSphereType TYPE_SAVED,TYPE;
 
-	HitSphere():Transform(){}
+	HitSphere():Transform(), SPHERE(), radius_saved(0){}
 	HitSphere(string newName, float newRadius, const XMFLOAT3& location, 
-		Transform* newParent, string newProperty):Transform(){
+		Transform* newParent, string newProperty):Transform(),SPHERE(location,newRadius){
 
 			name=newName;
 			radius_saved=newRadius;

@@ -389,13 +389,13 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			if (effects.process.outline) {
 				device->BindPS(outlinePS, threadID);
 
-				prcb.params0[1] = effects.process.outline;
+				prcb.params0[1] = effects.process.outline ? 1.0f : 0.0f;
 				device->UpdateBuffer(processCb, &prcb, threadID);
 			}
 			else if (effects.process.motionBlur) {
 				device->BindPS(motionBlurPS, threadID);
 
-				prcb.params0[0] = effects.process.motionBlur;
+				prcb.params0[0] = effects.process.motionBlur ? 1.0f : 0.0f;
 				device->UpdateBuffer(processCb, &prcb, threadID);
 			}
 			else if (effects.process.dofStrength) {
@@ -435,7 +435,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			else if (effects.bloom.separate) {
 				device->BindPS(bloomSeparatePS, threadID);
 
-				prcb.params1[0] = effects.bloom.separate;
+				prcb.params1[0] = effects.bloom.separate ? 1.0f : 0.0f;
 				prcb.params1[1] = effects.bloom.threshold;
 				prcb.params1[2] = effects.bloom.saturation;
 				device->UpdateBuffer(processCb, &prcb, threadID);

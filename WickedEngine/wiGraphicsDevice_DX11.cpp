@@ -430,16 +430,16 @@ inline D3D11_USAGE _ConvertUsage(USAGE value)
 {
 	switch (value)
 	{
-	case D3D11_USAGE_DEFAULT:
+	case USAGE_DEFAULT:
 		return D3D11_USAGE_DEFAULT;
 		break;
-	case D3D11_USAGE_IMMUTABLE:
+	case USAGE_IMMUTABLE:
 		return D3D11_USAGE_IMMUTABLE;
 		break;
-	case D3D11_USAGE_DYNAMIC:
+	case USAGE_DYNAMIC:
 		return D3D11_USAGE_DYNAMIC;
 		break;
-	case D3D11_USAGE_STAGING:
+	case USAGE_STAGING:
 		return D3D11_USAGE_STAGING;
 		break;
 	default:
@@ -3231,7 +3231,7 @@ void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAP
 			pRects[i].top = rects[i].top;
 		}
 		deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
-		SAFE_DELETE(pRects);
+		SAFE_DELETE_ARRAY(pRects);
 	}
 	else
 	{
