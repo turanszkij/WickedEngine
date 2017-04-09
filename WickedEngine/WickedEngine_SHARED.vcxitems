@@ -695,6 +695,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.png" />
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
       <DeploymentContent>true</DeploymentContent>
     </Image>
@@ -703,16 +704,17 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\ScriptingAPI-Documentation.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\WickedEngine-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
       <DeploymentContent>true</DeploymentContent>
     </None>

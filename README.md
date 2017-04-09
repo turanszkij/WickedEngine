@@ -10,6 +10,7 @@ Demos are available at: https://github.com/turanszkij/WickedEngineDemos
 From now on you can easily set up a game project by using the component templates. (see the demos for examples)
 Run in Release mode for best performance. Debug mode has full debugging support but poor performance.
 
+[Documentation](Documentation/WickedEngine-Documentation.md)
 Video: https://www.youtube.com/watch?v=nNlfkrURqZQ <br/>
 Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
 Devblog: https://turanszkij.wordpress.com/
@@ -68,7 +69,7 @@ Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole projec
 ### Scripting API:
 
 You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running.
-For further details, please check the scripting API documentation: [Wicked Engine Scripting API](ScriptingAPI-Documentation.md)
+For further details, please check the scripting API documentation: [Wicked Engine Scripting API](Documentation/ScriptingAPI-Documentation.md)
 
 
 ### Editor:
