@@ -10,7 +10,7 @@ Demos are available at: https://github.com/turanszkij/WickedEngineDemos
 From now on you can easily set up a game project by using the component templates. (see the demos for examples)
 Run in Release mode for best performance. Debug mode has full debugging support but poor performance.
 
-[Documentation](Documentation/WickedEngine-Documentation.md)
+[Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 Video: https://www.youtube.com/watch?v=nNlfkrURqZQ <br/>
 Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
 Devblog: https://turanszkij.wordpress.com/
