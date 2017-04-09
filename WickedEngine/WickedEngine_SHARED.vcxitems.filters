@@ -1908,5 +1908,6 @@
     <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
       <Filter>fonts</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)WickedEngine-Documentation.md" />
   </ItemGroup>
 </Project>
