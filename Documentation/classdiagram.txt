@@ -20,7 +20,8 @@
     virtual Update(float dt)
     virtual Render()
     virtual Compose()]
-[Renderable2DComponent]
+[Renderable2DComponent
+	|...]
 [Renderable3DComponent
 	|[Collection of functions to get/set/enable postprocess parameters]]
 [ForwardRenderableComponent]
@@ -32,6 +33,15 @@
     onFinished(function<void()>)
     getPercentageComplete()
     isActive()]
+    
+[wiGUI]
+[<abstract>wiWidget]
+[wiLabel]
+[wiButton]
+[wiCheckBox]
+[wiSlider]
+[wiWindow]
+[wiColorPicker]
 
 [<abstract>GraphicsDevice
 	|GetScreenWidth() : int
@@ -44,15 +54,43 @@
     |[Collection of graphics API-agnostic rendering commands]]
 [GraphicsDevice_DX11]
 
-[Transform]
-[Mesh]
-[Object]
-[Material]
-[Armature]
-[Light]
-[Camera]
-[Scene]
-[EnvironmentProbe]
+[Transform
+	| ...]
+[Mesh
+	| ...]
+[MeshSubset
+	| ...]
+[Object
+	| ...]
+[Material
+	| ...]
+[Armature
+	| ...]
+[Light
+	| ...]
+[Camera
+	| ...]
+[Scene
+	|models : vector<Model>
+    worldInfo : WorldInfo
+    environmentProbes : list<EnvironmentProbes]
+[EnvironmentProbe
+	| ...]
+[WorldInfo
+	|horizon : float4
+    zenith : float4
+    ambient : float4
+    fogSEH : float4
+    water : plane4]
+[Wind
+	|direction : vector3
+    randomness : float
+    waveSize : float]
+[Decal
+	| ...]
+[wiSPTree
+	|GetVisible(params)
+    Sort(params)]
 [<instance>wiRenderer
 	|static scene : Scene
     static cam : Camera
@@ -113,8 +151,10 @@
     CleanUp()]
 
 [<abstract>wiNetwork]
-[wiClient]
-[wiServer]
+[wiClient
+	| ...]
+[wiServer
+	| ...]
 
 [<abstract>wiPHYSICS
 	|virtual Update(float dt)
@@ -150,29 +190,51 @@
 [Renderable3DComponent]<:-[TiledForwardRenderableComponent]
 [Renderable3DComponent]<:-[DeferredRenderableComponent]
 
+[wiGUI]<--[wiWidget]
+[wiGUI]+->0..*[wiWidget]
+[Renderable2DComponent]+->1[wiGUI]
+[wiWidget]<:-[wiLabel]
+[wiWidget]<:-[wiButton]
+[wiWidget]<:-[wiCheckBox]
+[wiWidget]<:-[wiSlider]
+[wiWidget]<:-[wiWindow]
+[wiWindow]<:-[wiColorPicker]
+[wiWidget]<:-[wiComboBox]
+
 [GraphicsDevice]<--[wiRenderer]
 [GraphicsDevice]<--[wiImage]
 [GraphicsDevice]<--[wiFont]
 [GraphicsDevice]<--[wiResourceManager]
 [GraphicsDevice]<:--[GraphicsDevice_DX11]
-
-[Scene]+->0..*[Mesh]
-[Scene]+->0..*[Object]
-[Scene]+->0..*[Material]
-[Scene]+->0..*[Armature]
-[Scene]+->0..*[Light]
-[Scene]+->0..*[Camera]
+[Scene]+->0..*[Model]
+[Scene]+->1[WorldInfo]
+[Scene]+->1[Wind]
 [Scene]+->0..*[EnvironmentProbe]
-[Scene]-:>[Transform]
+[Model]+->0..*[Mesh]
+[Model]+->0..*[Object]
+[Model]+->0..*[Material]
+[Model]+->0..*[Armature]
+[Armature]+->0..*[Bone]
+[Model]+->0..*[Light]
+[Model]+->0..*[Camera]
+[Model]+->0..*[EnvironmentProbe]
+[Model]+->0..*[Decal]
+[Model]-:>[Transform]
 [Object]-:>[Transform]
 [Armature]-:>[Transform]
+[Bone]-:>[Transform]
+[Decal]-:>[Transform]
 [Camera]-:>[Transform]
 [EnvironmentProbe]-:>[Transform]
 [Light]-:>[Transform]
 [Object]+->0..1[Mesh]
+[Mesh]+->0..*[MeshSubset]
+[MeshSubset]+->1[Material]
 [Mesh]+->0..1[Armature]
 
 [wiRenderer]+->0..*[Scene]
+[wiRenderer]+->1[wiSPTree]
+[wiRenderer]+->1[GraphicsDevice]
 [wiRenderer]+->1[wiPHYSICS]
 [wiImage]<--[MainComponent]
 [wiImage]<--[Renderable2DComponent]
@@ -192,3 +254,4 @@
 [wiNetwork]<:--[wiClient]
 
 [wiPHYSICS]<:--[wiBULLET]
+[wiPHYSICS]<:--[wiHAVOK (PRIVATE)]
