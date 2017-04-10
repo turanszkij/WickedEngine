@@ -1,11 +1,11 @@
 # WickedEngine Documentation (work in progress)
 
-![Logo](classdiagram.png)
-Diagram generated with nomnoml.com
-
 ## Classes
+The most important classes are related as described in the following diagram: 
+![ClassDiagram](classdiagram.png)
+<i>(Diagram generated with nomnoml.com)</i>
 
 # MainComponent
-	The engine entry point.
+The engine entry point.
 
 # TODO
