@@ -190,6 +190,7 @@
 [Renderable3DComponent]<:-[TiledForwardRenderableComponent]
 [Renderable3DComponent]<:-[DeferredRenderableComponent]
 
+[wiGUI]-->[wiInputManager]
 [wiGUI]<--[wiWidget]
 [wiGUI]+->0..*[wiWidget]
 [Renderable2DComponent]+->1[wiGUI]
@@ -197,9 +198,9 @@
 [wiWidget]<:-[wiButton]
 [wiWidget]<:-[wiCheckBox]
 [wiWidget]<:-[wiSlider]
+[wiWidget]<:-[wiComboBox]
 [wiWidget]<:-[wiWindow]
 [wiWindow]<:-[wiColorPicker]
-[wiWidget]<:-[wiComboBox]
 
 [GraphicsDevice]<--[wiRenderer]
 [GraphicsDevice]<--[wiImage]
