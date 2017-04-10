@@ -1101,7 +1101,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiMeshOptimizer.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1897,7 +1897,7 @@
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
       <Filter>fonts</Filter>
     </Image>
-    <Image Include="C:\PROJECTS\WickedEngine\WickedEngine\..\Documentation\classdiagram.png">
+    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.png">
       <Filter>Documentation</Filter>
     </Image>
   </ItemGroup>
@@ -1906,7 +1906,7 @@
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
-    <Text Include="C:\PROJECTS\WickedEngine\WickedEngine\..\Documentation\classdiagram.txt">
+    <Text Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.txt">
       <Filter>Documentation</Filter>
     </Text>
   </ItemGroup>
@@ -1916,10 +1916,10 @@
     <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
       <Filter>fonts</Filter>
     </None>
-    <None Include="C:\PROJECTS\WickedEngine\WickedEngine\..\Documentation\ScriptingAPI-Documentation.md">
+    <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md">
       <Filter>Documentation</Filter>
     </None>
-    <None Include="C:\PROJECTS\WickedEngine\WickedEngine\..\Documentation\WickedEngine-Documentation.md">
+    <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md">
       <Filter>Documentation</Filter>
     </None>
   </ItemGroup>

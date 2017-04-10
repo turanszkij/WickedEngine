@@ -201,6 +201,7 @@
 [wiWidget]<:-[wiComboBox]
 [wiWidget]<:-[wiWindow]
 [wiWindow]<:-[wiColorPicker]
+[wiWidget]-:>[Transform]
 
 [GraphicsDevice]<--[wiRenderer]
 [GraphicsDevice]<--[wiImage]
