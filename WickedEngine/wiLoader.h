@@ -375,7 +375,7 @@ public:
 	}
 	~Mesh() {}
 	void LoadFromFile(const string& newName, const string& fname
-		, const MaterialCollection& materialColl, list<Armature*> armatures, const string& identifier="");
+		, const MaterialCollection& materialColl, const list<Armature*>& armatures, const string& identifier="");
 	bool buffersComplete;
 	void Optimize();
 	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?

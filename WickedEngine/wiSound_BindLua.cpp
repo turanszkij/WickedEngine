@@ -100,9 +100,8 @@ Luna<wiSoundEffect_BindLua>::PropertyType wiSoundEffect_BindLua::properties[] = 
 	{ NULL, NULL }
 };
 
-wiSoundEffect_BindLua::wiSoundEffect_BindLua(lua_State *L)
+wiSoundEffect_BindLua::wiSoundEffect_BindLua(lua_State *L) :wiSound_BindLua()
 {
-	wiSoundEffect_BindLua::wiSound_BindLua();
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
@@ -132,9 +131,8 @@ Luna<wiMusic_BindLua>::PropertyType wiMusic_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-wiMusic_BindLua::wiMusic_BindLua(lua_State *L)
+wiMusic_BindLua::wiMusic_BindLua(lua_State *L) :wiSound_BindLua()
 {
-	wiSoundEffect_BindLua::wiSound_BindLua();
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{

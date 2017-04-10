@@ -436,7 +436,7 @@ public:
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	static void UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID);
 	static void UpdateMaterialCB(const MaterialCB& value, GRAPHICSTHREAD threadID);
-	static void SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID);
+	static void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);
 	static void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
 	static void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
 	static void UpdateGBuffer(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);

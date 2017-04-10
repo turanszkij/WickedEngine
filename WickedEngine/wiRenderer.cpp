@@ -1889,7 +1889,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		const CulledList& culledLights = mainCameraCulling.culledLights;
 
 		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
-		ZeroMemory(lightArray, sizeof(lightArray));
+		ZeroMemory(lightArray, sizeof(LightArrayType)*MAX_LIGHTS);
 
 		XMMATRIX viewMatrix = cam->GetView();
 
@@ -4855,7 +4855,7 @@ void wiRenderer::UpdateMaterialCB(const MaterialCB& value, GRAPHICSTHREAD thread
 	}
 }
 wiRenderer::APICB apiCB[GRAPHICSTHREAD_COUNT];
-void wiRenderer::SetClipPlane(XMFLOAT4 clipPlane, GRAPHICSTHREAD threadID)
+void wiRenderer::SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID)
 {
 	apiCB[threadID].clipPlane = clipPlane;
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);

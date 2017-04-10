@@ -1542,7 +1542,7 @@ void VertexGroup::Serialize(wiArchive& archive)
 GPUBuffer Mesh::impostorVBs[VPROP_COUNT];
 
 void Mesh::LoadFromFile(const string& newName, const string& fname
-	, const MaterialCollection& materialColl, list<Armature*> armatures, const string& identifier) {
+	, const MaterialCollection& materialColl, const list<Armature*>& armatures, const string& identifier) {
 	name = newName;
 
 	BYTE* buffer;

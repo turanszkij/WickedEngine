@@ -158,7 +158,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 				wiRenderer::GetDevice()->CreateGeometryShader(buffer, bufferSize, nullptr, shader);
 				if (streamOutDecl != nullptr && elementCount > 0){
 					wiRenderer::GetDevice()->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
-						elementCount, NULL, 0, shader ? 0 : SO_NO_RASTERIZED_STREAM, NULL, shader);
+						elementCount, NULL, 0, SO_NO_RASTERIZED_STREAM, NULL, shader);
 				}
 				delete[] buffer;
 				success = shader;
