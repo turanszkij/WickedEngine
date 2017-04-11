@@ -53,6 +53,17 @@
     GetFrameCount() : int
     |[Collection of graphics API-agnostic rendering commands]]
 [GraphicsDevice_DX11]
+[GraphicsResources
+	|[Texture]
+    [GPUBuffer]
+    [Shader]
+    [GPUQuery]
+    [Etc...]]
+[GraphicsDescriptors
+	|[TextureDesc]
+    [GPUBufferDesc]
+    [ViewPort]
+    [Etc...]]
 
 [Transform
 	| ...]
@@ -66,6 +77,10 @@
 	| ...]
 [Armature
 	| ...]
+[Action
+	|...]
+[AnimationLayer
+	|...]
 [Light
 	| ...]
 [Camera
@@ -206,6 +221,8 @@
 [GraphicsDevice]<--[wiRenderer]
 [GraphicsDevice]<--[wiImage]
 [GraphicsDevice]<--[wiFont]
+[GraphicsResources] friend - [GraphicsDevice]
+[GraphicsResources]-->[GraphicsDescriptors]
 [GraphicsDevice]<--[wiResourceManager]
 [GraphicsDevice]<:--[GraphicsDevice_DX11]
 [Scene]+->0..*[Model]
@@ -217,6 +234,8 @@
 [Model]+->0..*[Material]
 [Model]+->0..*[Armature]
 [Armature]+->0..*[Bone]
+[Armature]+->0..*[Action]
+[Armature]+->0..*[AnimationLayer]
 [Model]+->0..*[Light]
 [Model]+->0..*[Camera]
 [Model]+->0..*[EnvironmentProbe]
