@@ -41,7 +41,7 @@ The simplest kind of 3D renderable component. It supports only directional light
 ##### TiledForwardRenderableComponent
 This implements the Forward+ rendering pipeline which is a forward rendering using per-screenspace-tile light list while rendering objects. It has a Z-buffer creation prepass to eficiently cull lights per tile and reduce overdraw.
 
-#### DeferredRenderableComponent
+##### DeferredRenderableComponent
 This implements a Deferred rendering pipeline. Several screen space geometry buffers are created while rendering the objects, then the lights are rendered in screen space while looking up the geometry information.
 It has a lower entry barrier performance wise than Tiled Forward rendering but has some disadvantages. It scales worse for increasing number of lights, has lower precision output and transparent objects are rendered using the 
 Forward rendering pipeline.
