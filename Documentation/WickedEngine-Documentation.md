@@ -16,6 +16,7 @@ This class is completely overridable to the user's desired control flow logic.
 This is an abstract class which is void of any logic, but its overriders can implement several methods of it like Load, Update, Render, etc. 
 Any class implementing this interface can be "activated" on the MainComponent and that will just run it.
 The available functions for overriding are the following:
+
 	- void Initialize() : Initialize common state
 	- void Load() : Use it for resource loading
 	- void Unload() : Destroy resources inside of this
@@ -47,6 +48,7 @@ Forward rendering pipeline.
 
 #### LoadingScreenComponent
 A helper engine component to load resources or an entire component. It can be activated by the MainComponent as a regular component but has some additional features which are not available in any other.
+
 	- void addLoadingFunction(function<void()> loadingFunction) : Assign a function to do on a separate loading thread. Multiple functions can be assigned
 	- void addLoadingComponent(RenderableComponent* component, MainComponent* main) : A helper for loading a whole component. When it's finished, the MainComponent which is provided in the arguments, will activate that component
 	- void onFinshed(function<void()> finishFunction) : Tell the component what to do when loading is completely finished
