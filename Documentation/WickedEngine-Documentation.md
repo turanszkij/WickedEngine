@@ -54,4 +54,39 @@ A helper engine component to load resources or an entire component. It can be ac
 	- bool isActive() : See if the component is currently working on the loading or not
 
 
-# TODO
+
+### Graphics
+This section contains engine graphics rendering functionality documentation.
+
+#### API
+The graphics API can be managed with these wrappers. These are provided to avoid API specific code in the engine.
+
+##### GraphicsDevice
+Functions to expose API functionality. There are two main kinds of functions. Resource creation functions are thread safe, rendering command functions are not, they have a GRAPHICSTHREAD parameter which is important to be provided when they are called from separate threads.
+The interface maps best to Direct3D 11's functionality.
+
+##### wiGraphicsDescriptors
+Graphics resource descriptors. These are used when creating graphics resources.
+
+##### wiGraphicsResource
+Graphics resource wrappers. These have a friend relationship with the graphics device to avoid exposing API specific graphics classes.
+
+
+#### wiRenderer
+The main renderer. The responsibility of this class is managing the scene graph, space partitioning trees, shaders and graphics states, performs rendering tasks, keeps track of engine level rendering state.
+This also holds an instance of the GraphicsDevice.
+This is a fully static class which means that there can be only a single renderer per application instance.
+
+### Physics
+
+### GUI
+
+### Input
+
+### Helpers
+
+### Network
+
+### Scripting
+
+### Tools
