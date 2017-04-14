@@ -1,7 +1,5 @@
 ![Logo](logo/logo_small.png)
-![Promo1](logo/promo1.png)
-![Promo2](logo/promo2.png)
-![Promo3](logo/promo3.png)
+![Promo](logo/promo.png)
 
 # Wicked Engine
 ## Created by Turánszki János
