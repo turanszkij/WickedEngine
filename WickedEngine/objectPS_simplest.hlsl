@@ -3,7 +3,7 @@
 
 
 
-float4 main(PixelInputType PSIn) : SV_TARGET
+float4 main(PixelInputType_Simple PSIn) : SV_TARGET
 {
 	return g_xMat_baseColor * float4(PSIn.instanceColor,1);
 }

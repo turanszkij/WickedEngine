@@ -300,12 +300,6 @@
     <FxCompile Include="linesVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="objectVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectVS10.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="pointLightVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -575,6 +569,15 @@
     </FxCompile>
     <FxCompile Include="sharpenPS.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS_common.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS_common_tessellation.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS_simple_tessellation.hlsl">
+      <Filter>VS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

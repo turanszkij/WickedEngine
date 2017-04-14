@@ -624,9 +624,9 @@ void wiRenderer::LoadShaders()
 			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 5, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS10.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
-			vertexShaders[VSTYPE_OBJECT10] = vsinfo->vertexShader;
+			vertexShaders[VSTYPE_OBJECT_COMMON] = vsinfo->vertexShader;
 			vertexLayouts[VLTYPE_EFFECT] = vsinfo->vertexLayout;
 		}
 	}
@@ -729,7 +729,8 @@ void wiRenderer::LoadShaders()
 
 
 
-	vertexShaders[VSTYPE_OBJECT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common_tessellation.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple_tessellation.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_DIRLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_POINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
@@ -3050,6 +3051,9 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 }
 void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 {
+	if (wireRender)
+		return;
+
 	// We need to render shadows even if the gamespeed is 0 for these reasons:
 	// 1.) Shadow cascades is updated every time according to camera
 	// 2.) We can move any other light, or object, too
@@ -3539,18 +3543,25 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				else if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE)
 				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
+					if (tessellation && tessF)
+					{
+						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], threadID);
+					}
+					else
+					{
+						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
+					}
 					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT_SIMPLE], threadID);
 				}
 				else
 				{
 					if (tessellation && tessF)
 					{
-						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT], threadID);
+						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], threadID);
 					}
 					else
 					{
-						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
+						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
 					}
 					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
 				}
@@ -5476,7 +5487,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
-	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT10], threadID);
+	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
 	GetDevice()->BindPS(pixelShaders[PSTYPE_CAPTUREIMPOSTOR], threadID);
 
 	ViewPort savedViewPort = mesh->impostorTarget.viewPort;
