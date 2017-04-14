@@ -699,9 +699,6 @@
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)logo\logo.png">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.txt" />

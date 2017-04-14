@@ -28,9 +28,6 @@
     <Filter Include="ENGINE\Graphics">
       <UniqueIdentifier>{3d5f1098-95e6-4baa-9e39-864be28a5b64}</UniqueIdentifier>
     </Filter>
-    <Filter Include="logo">
-      <UniqueIdentifier>{49cc37cb-b047-44fb-8389-032d76692a1b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ENGINE\Helpers">
       <UniqueIdentifier>{4342ecc7-471b-4218-9acb-2b5b8e2e10f2}</UniqueIdentifier>
     </Filter>
@@ -1891,9 +1888,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)logo\logo.png">
-      <Filter>logo</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
       <Filter>fonts</Filter>
     </Image>
