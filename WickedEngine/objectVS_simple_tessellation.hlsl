@@ -12,7 +12,7 @@ struct HullInputType
 };
 
 
-HullInputType main(Input_Simple input)
+HullInputType main(Input input)
 {
 	HullInputType Out = (HullInputType)0;
 
@@ -25,13 +25,16 @@ HullInputType main(Input_Simple input)
 	pos = mul(pos, WORLD);
 	affectWind(pos.xyz, input.tex.w, input.id, g_xFrame_Time);
 
+	float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
 
 	Out.pos = pos.xyz;
 	Out.tex = input.tex.xyz;
 
+	// note: simple vs doesn't have normal but this needs it because tessellation is using normal information
+	Out.nor = float4(normalize(normal), input.nor.w);
+
 	// todo: leave these but I'm lazy to create appropriate hull/domain shaders now...
 	Out.posPrev = 0;
-	Out.nor = 0;
 	Out.instanceColor = 0;
 	Out.dither = 0;
 

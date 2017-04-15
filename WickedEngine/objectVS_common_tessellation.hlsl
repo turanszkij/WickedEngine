@@ -36,8 +36,7 @@ HullInputType main(Input input)
 	Out.pos=pos.xyz;
 	Out.posPrev = posPrev.xyz;
 	Out.tex=input.tex.xyz;
-	Out.nor.xyz = normalize(normal);
-	Out.nor.w = input.nor.w;
+	Out.nor = float4(normalize(normal), input.nor.w);
 
 	Out.instanceColor = input.instance.color_dither.rgb;
 	Out.dither = input.instance.color_dither.a;

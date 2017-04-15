@@ -633,7 +633,7 @@ void wiRenderer::LoadShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_OBJECT_COMMON] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_EFFECT] = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_OBJECT] = vsinfo->vertexLayout;
 		}
 	}
 	{
@@ -651,7 +651,7 @@ void wiRenderer::LoadShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_Simple.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_OBJECT_SIMPLE] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_EFFECT_SIMPLE] = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_OBJECT_SIMPLE] = vsinfo->vertexLayout;
 		}
 	}
 
@@ -3071,7 +3071,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
 
 
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
@@ -3508,17 +3508,22 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			const CulledObjectList& visibleInstances = iter->second;
 
 			float tessF = mesh->getTessellationFactor();
+			bool tessellatorRequested = tessF > 0 && tessellation;
 
-			if (tessellation && tessF)
+			if (tessellatorRequested)
+			{
 				GetDevice()->BindPrimitiveTopology(PATCHLIST, threadID);
+			}
 			else
+			{
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+			}
 
 			if (shaderType == SHADERTYPE_VOXELIZE)
 			{
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
 				GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
-				GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+				GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
 			}
 			else
 			{
@@ -3537,23 +3542,24 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				{
 					GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
 					GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
 				}
 				else if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE)
 				{
-					if (tessellation && tessF)
+					if (tessellatorRequested)
 					{
 						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], threadID);
+						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID); // tessellator requires normals
 					}
 					else
 					{
 						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
+						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_SIMPLE], threadID);
 					}
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT_SIMPLE], threadID);
 				}
 				else
 				{
-					if (tessellation && tessF)
+					if (tessellatorRequested)
 					{
 						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], threadID);
 					}
@@ -3561,11 +3567,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					{
 						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
 					}
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
 				}
 			}
 
-			if (tessellation && tessF)
+			if (tessellatorRequested)
 			{
 				TessellationCB tessCB;
 				tessCB.tessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
@@ -3578,7 +3584,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				GetDevice()->BindHS(nullptr, threadID);
 			}
 
-			if (tessellation && tessF) {
+			if (tessellatorRequested) {
 				GetDevice()->BindDS(domainShaders[DSTYPE_OBJECT], threadID);
 			}
 			else 
@@ -3796,8 +3802,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				mesh->UpdateRenderableInstancesPrev(k, threadID);
 			}
 
-			if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+			if (!tessellatorRequested && (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
 			{
+				// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
 				GPUBuffer* vbs[] = {
 					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
 					&mesh->vertexBuffers[VPROP_TEX],
@@ -3812,6 +3819,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			}
 			else
 			{
+				// common vertex buffers:
 				GPUBuffer* vbs[] = {
 					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
 					(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
@@ -3914,7 +3922,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		GetDevice()->BindVS(nullptr, threadID);
 		GetDevice()->BindDS(nullptr, threadID);
 		GetDevice()->BindHS(nullptr, threadID);
-		GetDevice()->BindVertexBuffer(nullptr, 1, 0, threadID); // unbind the instance buffer
 
 		ResetAlphaRef(threadID);
 
@@ -5484,7 +5491,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_EFFECT], threadID);
+	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
 	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
 	GetDevice()->BindPS(pixelShaders[PSTYPE_CAPTUREIMPOSTOR], threadID);
 

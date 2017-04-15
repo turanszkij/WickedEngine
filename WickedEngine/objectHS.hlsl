@@ -42,7 +42,7 @@ struct HullOutputType
 	float3 pos								: POSITION;
 	float3 posPrev							: POSITIONPREV;
 	float3 tex								: TEXCOORD0;
-	float3 nor								: NORMAL;
+	float4 nor								: NORMAL;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	nointerpolation float dither			: DITHER;
 };
