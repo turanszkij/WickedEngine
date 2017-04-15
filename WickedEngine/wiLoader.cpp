@@ -530,7 +530,7 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 				case 'v': 
 					for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
 					{
-						currentMesh->vertices[vprop].push_back(XMFLOAT4());
+						currentMesh->vertices[vprop].push_back(XMFLOAT4(0,0,0,1));
 					}
 					file >> currentMesh->vertices[VPROP_POS].back().x;
 					file >> currentMesh->vertices[VPROP_POS].back().y;
@@ -1644,6 +1644,7 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 			vertices[VPROP_POS][i].x = v[0];
 			vertices[VPROP_POS][i].y = v[1];
 			vertices[VPROP_POS][i].z = v[2];
+			vertices[VPROP_POS][i].w = 1;
 			if (!isBillboarded) {
 				vertices[VPROP_NOR][i].x = v[3];
 				vertices[VPROP_NOR][i].y = v[4];
@@ -1712,9 +1713,9 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				//(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
 
 				if (nameB.find("trailbase") != string::npos)
-					trailInfo.base = (int)vertices[VPROP_POS].size();
+					trailInfo.base = i;
 				else if (nameB.find("trailtip") != string::npos)
-					trailInfo.tip = (int)vertices[VPROP_POS].size();
+					trailInfo.tip = i;
 
 				bool windAffection = false;
 				if (nameB.find("wind") != string::npos)
@@ -1723,13 +1724,13 @@ void Mesh::LoadFromFile(const string& newName, const string& fname
 				for (unsigned int v = 0; v<vertexGroups.size(); ++v)
 					if (!nameB.compare(vertexGroups[v].name)) {
 						gotvg = true;
-						vertexGroups[v].addVertex(VertexRef((int)vertices[VPROP_TEX].size(), weightValue));
+						vertexGroups[v].addVertex(VertexRef(i, weightValue));
 						if (windAffection)
 							vertices[VPROP_TEX][i].w = weightValue;
 					}
 				if (!gotvg) {
 					vertexGroups.push_back(VertexGroup(nameB));
-					vertexGroups.back().addVertex(VertexRef((int)vertices[VPROP_TEX].size(), weightValue));
+					vertexGroups.back().addVertex(VertexRef(i, weightValue));
 					if (windAffection)
 						vertices[VPROP_TEX][i].w = weightValue;
 				}

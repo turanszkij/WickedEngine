@@ -426,6 +426,18 @@ public:
 		UINT culledLight_count; // because forward_list doesn't have size()
 		vector<wiEmittedParticle*> culledEmittedParticleSystems;
 		list<Decal*> culledDecals;
+
+		void Clear()
+		{
+			culledRenderer.clear();
+			culledRenderer_opaque.clear();
+			culledRenderer_transparent.clear();
+			culledHairParticleSystems.clear();
+			culledLights.clear();
+			culledLight_count = 0;
+			culledEmittedParticleSystems.clear();
+			culledDecals.clear();
+		}
 	};
 	static unordered_map<Camera*, FrameCulling> frameCullings;
 	

@@ -350,6 +350,12 @@ void wiRenderer::CleanUpStaticTemp()
 	SAFE_DELETE(spTree);
 	SAFE_DELETE(spTree_lights);
 
+	for (auto& x : frameCullings)
+	{
+		FrameCulling& culling = x.second;
+		culling.Clear();
+	}
+
 	cam->detach();
 
 	GetScene().ClearWorld();
@@ -1564,15 +1570,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		{
 			Camera* camera = x.first;
 			FrameCulling& culling = x.second;
-
-			culling.culledRenderer.clear();
-			culling.culledRenderer_opaque.clear();
-			culling.culledRenderer_transparent.clear();
-			culling.culledHairParticleSystems.clear();
-			culling.culledLights.clear();
-			culling.culledLight_count = 0;
-			culling.culledEmittedParticleSystems.clear();
-			culling.culledDecals.clear();
+			culling.Clear();
 
 			if (spTree != nullptr)
 			{
