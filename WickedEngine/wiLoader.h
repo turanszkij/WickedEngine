@@ -316,9 +316,6 @@ struct MeshSubset
 };
 struct Mesh
 {
-private:
-	bool instanceBufferIsUpToDate[GRAPHICSTHREAD_COUNT];
-	bool instanceBufferIsUpToDatePrev[GRAPHICSTHREAD_COUNT];
 public:
 	string name;
 	string parent;
@@ -389,11 +386,6 @@ public:
 	void UpdateRenderableInstancesPrev(int count, GRAPHICSTHREAD threadID);
 	void init()
 	{
-		for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
-		{
-			instanceBufferIsUpToDate[i] = false;
-			instanceBufferIsUpToDatePrev[i] = false;
-		}
 		parent="";
 		indices.resize(0);
 		renderable=false;

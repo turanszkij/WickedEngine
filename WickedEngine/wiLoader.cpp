@@ -2187,12 +2187,9 @@ void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHI
 		// grow buffer
 		meshInstances[threadID].resize((meshInstances[threadID].size() + 1) * 2);
 	}
-	if (!instanceBufferIsUpToDate[threadID] || memcmp(&meshInstances[threadID][numerator], &instance, sizeof(Instance)) != 0)
-	{
-		// fill buffer
-		instanceBufferIsUpToDate[threadID] = false;
-		meshInstances[threadID][numerator] = instance;
-	}
+
+	// fill buffer
+	meshInstances[threadID][numerator] = instance;
 }
 void Mesh::AddRenderableInstancePrev(const InstancePrev& instance, int numerator, GRAPHICSTHREAD threadID)
 {
@@ -2201,28 +2198,17 @@ void Mesh::AddRenderableInstancePrev(const InstancePrev& instance, int numerator
 		// grow buffer
 		meshInstancesPrev[threadID].resize((meshInstancesPrev[threadID].size() + 1) * 2);
 	}
-	if (!instanceBufferIsUpToDatePrev[threadID] || memcmp(&meshInstancesPrev[threadID][numerator], &instance, sizeof(InstancePrev)) != 0)
-	{
-		// fill buffer
-		instanceBufferIsUpToDatePrev[threadID] = false;
-		meshInstancesPrev[threadID][numerator] = instance;
-	}
+
+	// fill buffer
+	meshInstancesPrev[threadID][numerator] = instance;
 }
 void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
 {
-	if (!instanceBufferIsUpToDate[threadID])
-	{
-		instanceBufferIsUpToDate[threadID] = true;
-		wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
-	}
+	wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
 }
 void Mesh::UpdateRenderableInstancesPrev(int count, GRAPHICSTHREAD threadID)
 {
-	if (!instanceBufferIsUpToDatePrev[threadID])
-	{
-		instanceBufferIsUpToDatePrev[threadID] = true;
-		wiRenderer::GetDevice()->UpdateBuffer(&instanceBufferPrev, meshInstancesPrev[threadID].data(), threadID, sizeof(Instance)*count);
-	}
+	wiRenderer::GetDevice()->UpdateBuffer(&instanceBufferPrev, meshInstancesPrev[threadID].data(), threadID, sizeof(InstancePrev)*count);
 }
 void Mesh::Serialize(wiArchive& archive)
 {
