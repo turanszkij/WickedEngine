@@ -88,7 +88,7 @@ struct Vertex
 		pre = XMFLOAT4(0, 0, 0, 0);
 	}
 };
-struct Instance
+GFX_STRUCT Instance
 {
 	XMFLOAT4A mat0;
 	XMFLOAT4A mat1;
@@ -101,20 +101,20 @@ struct Instance
 		mat0 = XMFLOAT4A(0, 0, 1, 0);
 		color_dither = XMFLOAT4A(color.x, color.y, color.z, dither);
 	}
-	Instance(const XMMATRIX& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)){
+	Instance(const XMFLOAT4X4& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)){
 		Create(matIn, dither, color);
 	}
-	void Create(const XMMATRIX& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1))
+	void Create(const XMFLOAT4X4& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1))
 	{
-		XMStoreFloat4A(&mat0, matIn.r[0]);
-		XMStoreFloat4A(&mat1, matIn.r[1]);
-		XMStoreFloat4A(&mat2, matIn.r[2]);
+		mat0 = XMFLOAT4A(matIn._11, matIn._21, matIn._31, matIn._41);
+		mat1 = XMFLOAT4A(matIn._12, matIn._22, matIn._32, matIn._42);
+		mat2 = XMFLOAT4A(matIn._13, matIn._23, matIn._33, matIn._43);
 		color_dither = XMFLOAT4A(color.x, color.y, color.z, dither);
 	}
 
 	ALIGN_16
 };
-struct InstancePrev
+GFX_STRUCT InstancePrev
 {
 	XMFLOAT4A mat0;
 	XMFLOAT4A mat1;
@@ -126,11 +126,11 @@ struct InstancePrev
 		mat1 = XMFLOAT4A(0, 1, 0, 0);
 		mat2 = XMFLOAT4A(0, 0, 1, 0);
 	}
-	InstancePrev(const XMMATRIX& matIn)
+	InstancePrev(const XMFLOAT4X4& matIn)
 	{
-		XMStoreFloat4A(&mat0, matIn.r[0]);
-		XMStoreFloat4A(&mat1, matIn.r[1]);
-		XMStoreFloat4A(&mat2, matIn.r[2]);
+		mat0 = XMFLOAT4A(matIn._11, matIn._21, matIn._31, matIn._41);
+		mat1 = XMFLOAT4A(matIn._12, matIn._22, matIn._32, matIn._42);
+		mat2 = XMFLOAT4A(matIn._13, matIn._23, matIn._33, matIn._43);
 	}
 
 	ALIGN_16

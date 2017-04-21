@@ -3475,7 +3475,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		tessellation = tessellation && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
 		DSSTYPES targetDepthStencilState = DSSTYPE_DEFAULT;
-		UINT targetStencilRef = STENCILREF_DEFAULT; 
+		UINT targetStencilRef = STENCILREF_DEFAULT;
+
+		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+		XMFLOAT4X4 tempMat;
 		
 		if (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE)
 		{
@@ -3613,7 +3616,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 						if (!occlusionCulling || !instance->IsOccluded())
 						{
-							mesh->AddRenderableInstance(Instance(XMMatrixTranspose(mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world)), dither, instance->color), k, threadID);
+							XMStoreFloat4x4(&tempMat, mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world));
+							mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
 							++k;
 						}
 					}
@@ -3770,20 +3774,19 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					if (!occlusionCulling || !instance->IsOccluded())
 					{
-						XMMATRIX temp;
 						if (mesh->softBody || instance->isArmatureDeformed())
-							temp = XMMatrixIdentity();
+							tempMat = __identityMat;
 						else
-							temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->world));
-						mesh->AddRenderableInstance(Instance(temp, dither, instance->color), k, threadID);
+							tempMat = instance->world;
+						mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
 
 						if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 						{
 							if (mesh->softBody || instance->isArmatureDeformed())
-								temp = XMMatrixIdentity();
+								tempMat = __identityMat;
 							else
-								temp = XMMatrixTranspose(XMLoadFloat4x4(&instance->worldPrev));
-							mesh->AddRenderableInstancePrev(InstancePrev(temp), k, threadID);
+								tempMat = instance->worldPrev;
+							mesh->AddRenderableInstancePrev(InstancePrev(tempMat), k, threadID);
 							instancePrevUpdated = true;
 						}
 						
@@ -5466,8 +5469,8 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	GetDevice()->LOCK();
 
-
-	mesh->AddRenderableInstance(Instance(XMMatrixIdentity()), 0, threadID);
+	static const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+	mesh->AddRenderableInstance(Instance(__identity), 0, threadID);
 	mesh->UpdateRenderableInstances(1, threadID);
 
 	GPUBuffer* vbs[] = {
