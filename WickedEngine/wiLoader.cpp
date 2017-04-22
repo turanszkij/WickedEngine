@@ -1074,12 +1074,24 @@ void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worl
 			switch(read[0]){
 			case 'h':
 				file>>worldInfo.horizon.x>>worldInfo.horizon.y>>worldInfo.horizon.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.horizon.x = powf(worldInfo.horizon.x, 1.0f / 2.2f);
+				worldInfo.horizon.y = powf(worldInfo.horizon.y, 1.0f / 2.2f);
+				worldInfo.horizon.z = powf(worldInfo.horizon.z, 1.0f / 2.2f);
 				break;
 			case 'z':
 				file>>worldInfo.zenith.x>>worldInfo.zenith.y>>worldInfo.zenith.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
+				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
+				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
 				break;
 			case 'a':
 				file>>worldInfo.ambient.x>>worldInfo.ambient.y>>worldInfo.ambient.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
+				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
+				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
 				break;
 			case 'W':
 				{

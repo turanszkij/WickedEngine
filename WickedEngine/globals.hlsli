@@ -46,7 +46,8 @@ SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		)
 
 CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 {
-	float3		g_xWorld_Horizon;				float xPadding0_WorldCB;
+	float		g_xWorld_Gamma;
+	float3		g_xWorld_Horizon;
 	float3		g_xWorld_Zenith;				float xPadding1_WorldCB;
 	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
 	float3		g_xWorld_Fog;
@@ -135,13 +136,12 @@ static const float		PI = 3.14159265358979323846;
 #define ALPHATEST(x)	clip((x) - (1.0f - g_xAlphaRef));
 #endif
 
-static const float		g_GammaValue = 2.2;
-#define DEGAMMA(x)		pow(abs(x),g_GammaValue)
-#define GAMMA(x)		pow(abs(x),1.0/g_GammaValue)
+#define DEGAMMA(x)		pow(abs(x),g_xWorld_Gamma)
+#define GAMMA(x)		pow(abs(x),1.0/g_xWorld_Gamma)
 
-inline float3 GetHorizonColor() { return GAMMA(g_xWorld_Horizon.rgb); }
-inline float3 GetZenithColor() { return GAMMA(g_xWorld_Zenith.rgb); }
-inline float3 GetAmbientColor() { return GAMMA(g_xWorld_Ambient.rgb); }
+inline float3 GetHorizonColor() { return g_xWorld_Horizon.rgb; }
+inline float3 GetZenithColor() { return g_xWorld_Zenith.rgb; }
+inline float3 GetAmbientColor() { return g_xWorld_Ambient.rgb; }
 inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
 inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }

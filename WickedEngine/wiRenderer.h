@@ -77,6 +77,7 @@ public:
 	static wiGraphicsTypes::Sampler				*customsamplers[SSTYPE_LAST];
 
 	
+	static float GAMMA;
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;
 	static bool HAIRPARTICLEENABLED, EMITTERSENABLED;
 	static float SPECULARAA;
@@ -90,7 +91,8 @@ public:
 	// Persistent buffers:
 	GFX_STRUCT WorldCB
 	{
-		XMFLOAT3 mHorizon;				float pad0;
+		float	 mGamma;
+		XMFLOAT3 mHorizon;
 		XMFLOAT3 mZenith;				float pad1;
 		XMFLOAT3 mAmbient;				float pad2;
 		XMFLOAT3 mFog;
@@ -352,6 +354,8 @@ public:
 	static void DrawWaterRipples(GRAPHICSTHREAD threadID);
 	static void SetGameSpeed(float value){GameSpeed=value; if(GameSpeed<0) GameSpeed=0;};
 	static float GetGameSpeed();
+	static void SetGamma(float value) { GAMMA = value; }
+	static float GetGamma() { return GAMMA; }
 	static void SetWireRender(bool value) { wireRender = value; }
 	static bool IsWireRender() { return wireRender; }
 	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}

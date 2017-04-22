@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 780));
+	rendererWindow->SetSize(XMFLOAT2(400, 800));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -41,6 +41,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	occlusionCullingCheckBox->SetCheck(wiRenderer::GetOcclusionCullingEnabled());
 	rendererWindow->AddWidget(occlusionCullingCheckBox);
+
+	gammaSlider = new wiSlider(1.0f, 3.0f, 2.2f, 1000.0f, "Gamma: ");
+	gammaSlider->SetTooltip("Adjust the gamma correction for the display device.");
+	gammaSlider->SetSize(XMFLOAT2(100, 30));
+	gammaSlider->SetPos(XMFLOAT2(x, y += 30));
+	gammaSlider->SetValue(wiRenderer::GetGamma());
+	gammaSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetGamma(args.fValue);
+	});
+	rendererWindow->AddWidget(gammaSlider);
 
 	voxelRadianceCheckBox = new wiCheckBox("Voxel GI: ");
 	voxelRadianceCheckBox->SetTooltip("Toggle voxel Global Illumination computation.");
@@ -362,6 +372,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(vsyncCheckBox);
 	SAFE_DELETE(vsyncCheckBox);
 	SAFE_DELETE(occlusionCullingCheckBox);
+	SAFE_DELETE(gammaSlider);
 	SAFE_DELETE(voxelRadianceCheckBox);
 	SAFE_DELETE(voxelRadianceDebugCheckBox);
 	SAFE_DELETE(voxelRadianceSecondaryBounceCheckBox);

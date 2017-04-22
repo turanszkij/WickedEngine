@@ -47,6 +47,7 @@ GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 Texture				*wiRenderer::textures[TEXTYPE_LAST];
 Sampler				*wiRenderer::customsamplers[SSTYPE_LAST];
 
+float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
@@ -4795,6 +4796,9 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	static WorldCB prevcb[GRAPHICSTHREAD_COUNT];
 
 	WorldCB value;
+	ZeroMemory(&value, sizeof(value));
+
+	value.mGamma = GAMMA;
 	auto& world = GetScene().worldInfo;
 	value.mAmbient = world.ambient;
 	value.mFog = world.fogSEH;

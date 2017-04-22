@@ -1,26 +1,16 @@
 #include "postProcessHF.hlsli"
-
-static const float strength = 0.85;
+#include "tonemapHF.hlsli"
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
-	//return texture_gbuffer1.Load(uint3(PSIn.pos.xy,0)).zzzz;
 	float4 hdr = xTexture.Load(uint3(PSIn.pos.xy,0));
 	float average_luminance = xMaskTex.Load(uint3(0,0,0)).r;
-	//return xMaskTex.SampleLevel(sampler_linear_clamp, PSIn.tex, 0);
-
-	//if (PSIn.pos.x < 100 && PSIn.pos.y < 100)
-	//	return average_luminance;
 
 	float luminance = dot(hdr.rgb, float3(0.2126, 0.7152, 0.0722));
-	luminance = (luminance * (1 + luminance)) / (1 + luminance); // Reinhard
-	luminance *= strength / average_luminance; // adaption
+	luminance /= average_luminance; // adaption
+	hdr *= luminance;
 
-	//luminance = 1;
-
-	//hdr = GAMMA(hdr);
-
-	float4 ldr = float4(saturate(hdr.rgb * luminance), hdr.a);
+	float4 ldr = saturate(float4(tonemap(hdr.rgb), hdr.a));
 
 	ldr = GAMMA(ldr);
 

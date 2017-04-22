@@ -30,5 +30,5 @@ void main(
 	}
 	if (groupIndex != 0) { return; }
 
-	tex[groupId.xy] = lerp(tex[groupId.xy], accumulator[0] / (GROUPSIZE), 0.08);
+	tex[groupId.xy] = lerp(tex[groupId.xy], accumulator[0] / (GROUPSIZE), g_xFrame_DeltaTime * 2);
 }

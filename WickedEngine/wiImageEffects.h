@@ -101,7 +101,7 @@ public:
 		void setDepthBufferReprojection(bool value) { reprojectDepthBuffer = value; active = value; }
 		void setDepthBufferDownsampling(bool value) { downsampleDepthBuffer4x = value; active = value; }
 		void setTemporalAAResolve(bool value) { temporalAAResolve = value; active = value; }
-		void setSharpen(float value) { sharpen = value; active = value; }
+		void setSharpen(float value) { sharpen = value; active = value > FLT_EPSILON; }
 		Processing() { clear(); }
 	};
 	Processing process;

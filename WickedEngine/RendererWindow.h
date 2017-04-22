@@ -19,6 +19,7 @@ public:
 	wiWindow*	rendererWindow;
 	wiCheckBox* vsyncCheckBox;
 	wiCheckBox* occlusionCullingCheckBox;
+	wiSlider*	gammaSlider;
 	wiCheckBox* voxelRadianceCheckBox;
 	wiCheckBox* voxelRadianceDebugCheckBox;
 	wiCheckBox* voxelRadianceSecondaryBounceCheckBox;

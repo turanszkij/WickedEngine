@@ -1,5 +1,8 @@
 #include "postProcessHF.hlsli"
 #include "reconstructPositionHF.hlsli"
+#include "tonemapHF.hlsli"
+
+#define HDR_CORRECTION
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
@@ -32,5 +35,16 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	float blendfactor = saturate(lerp(0.05f, 1.0f, length(velocity) * 10 * length(neighborhoodMax - neighborhoodMin))); // todo
 
-	return float4(lerp(history.rgb, current.rgb, blendfactor), 1);
+#ifdef HDR_CORRECTION
+	history.rgb = tonemap(history.rgb);
+	current.rgb = tonemap(current.rgb);
+#endif
+
+	float4 resolved = float4(lerp(history.rgb, current.rgb, blendfactor), 1);
+
+#ifdef HDR_CORRECTION
+	resolved.rgb = inverseTonemap(resolved.rgb);
+#endif
+
+	return resolved;
 }
