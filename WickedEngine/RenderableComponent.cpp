@@ -3,7 +3,7 @@
 
 void RenderableComponent::Update(float dt)
 {
-	if (wiRenderer::GetDevice()->ResolutionChanged())
+	if (wiRenderer::ResolutionChanged())
 	{
 		ResizeBuffers();
 	}

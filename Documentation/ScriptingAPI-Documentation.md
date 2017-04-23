@@ -104,6 +104,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetLights() : string result
 - GetMaterials() : string result
 - GetGameSpeed() : float result
+- SetResolutionScale(float scale)
+- SetGamma(float gamma)
 - SetGameSpeed(float speed)
 - GetScreenWidth() : float result
 - GetScreenHeight() : float result

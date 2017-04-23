@@ -249,6 +249,32 @@ namespace wiRenderer_BindLua
 		return 1;
 	}
 
+	int SetResolutionScale(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::SetResolutionScale(wiLua::SGetFloat(L, 1));
+		}
+		else
+		{
+			wiLua::SError(L, "SetResolutionScale(float) not enough arguments!");
+		}
+		return 0;
+	}
+	int SetGamma(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::SetGamma(wiLua::SGetFloat(L, 1));
+		}
+		else
+		{
+			wiLua::SError(L, "SetGamma(float) not enough arguments!");
+		}
+		return 0;
+	}
 	int SetGameSpeed(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -658,6 +684,8 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
 			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
 
+			wiLua::GetGlobal()->RegisterFunc("SetResolutionScale", SetResolutionScale);
+			wiLua::GetGlobal()->RegisterFunc("SetGamma", SetGamma);
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);

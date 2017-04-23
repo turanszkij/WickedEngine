@@ -55,6 +55,7 @@ bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRendere
 float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
 XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
+float wiRenderer::RESOLUTIONSCALE = 1.0f;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -199,9 +200,9 @@ void wiRenderer::SetUpStaticComponents()
 	LoadShaders();
 
 	cam = new Camera();
-	cam->SetUp((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight(), 0.1f, 800);
+	cam->SetUp((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
 	refCam = new Camera();
-	refCam->SetUp((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight(), 0.1f, 800);
+	refCam->SetUp((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
 	prevFrameCam = new Camera;
 	
 
@@ -231,18 +232,18 @@ void wiRenderer::SetUpStaticComponents()
 
 	
 	normalMapRT.Initialize(
-		GetDevice()->GetScreenWidth()
-		,GetDevice()->GetScreenHeight()
+		GetInternalResolution().x
+		, GetInternalResolution().y
 		,false,FORMAT_R8G8B8A8_SNORM
 		);
 	imagesRTAdd.Initialize(
-		GetDevice()->GetScreenWidth()
-		,GetDevice()->GetScreenHeight()
+		GetInternalResolution().x
+		, GetInternalResolution().y
 		,false
 		);
 	imagesRT.Initialize(
-		GetDevice()->GetScreenWidth()
-		,GetDevice()->GetScreenHeight()
+		GetInternalResolution().x
+		, GetInternalResolution().y
 		,false
 		);
 
@@ -525,6 +526,17 @@ void wiRenderer::UpdateCubes(){
 	//		cubes.push_back(Cube(decal->bounds.getCenter(),decal->bounds.getHalfWidth(),XMFLOAT4A(1,0,1,1)));
 	//	}
 	//}
+}
+
+bool wiRenderer::ResolutionChanged()
+{
+	static float _savedresscale = GetResolutionScale();
+	if (_savedresscale != GetResolutionScale())
+	{
+		_savedresscale = GetResolutionScale();
+		return true;
+	}
+	return GetDevice()->ResolutionChanged();
 }
 
 
@@ -1710,8 +1722,8 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 256);
 		static float jitter = 1.0f;
 		temporalAAJitterPrev = temporalAAJitter;
-		temporalAAJitter.x = jitter * (halton.x * 2 - 1) / (float)GetDevice()->GetScreenWidth();
-		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetDevice()->GetScreenHeight();
+		temporalAAJitter.x = jitter * (halton.x * 2 - 1) / (float)GetInternalResolution().x;
+		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetInternalResolution().y;
 		cam->Projection.m[2][0] = temporalAAJitter.x;
 		cam->Projection.m[2][1] = temporalAAJitter.y;
 		cam->BakeMatrices();
@@ -2988,7 +3000,7 @@ void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 				) * 100000;
 			}
 			
-			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetDevice()->GetScreenWidth(),(float)GetDevice()->GetScreenHeight(),0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
+			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
 
 			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
 				wiLensFlare::Draw(threadID,flarePos,l->lensFlareRimTextures);
@@ -4392,8 +4404,8 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().BeginRange("Tiled Light Culling", wiProfiler::DOMAIN_GPU, threadID);
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	int _width = device->GetScreenWidth();
-	int _height = device->GetScreenHeight();
+	int _width = GetInternalResolution().x;
+	int _height = GetInternalResolution().y;
 	UINT averageLightCountPerTile = 256;
 
 	static int _savedWidth = 0;

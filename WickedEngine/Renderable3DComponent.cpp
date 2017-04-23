@@ -49,8 +49,8 @@ void Renderable3DComponent::ResizeBuffers()
 	// Protect against multiple buffer resizes when there is no change!
 	static UINT lastBufferResWidth = 0, lastBufferResHeight = 0, lastBufferMSAA = 0;
 	static FORMAT lastBufferFormat = FORMAT_UNKNOWN;
-	if (lastBufferResWidth == (UINT)wiRenderer::GetDevice()->GetScreenWidth() && 
-		lastBufferResHeight == (UINT)wiRenderer::GetDevice()->GetScreenHeight() && 
+	if (lastBufferResWidth == wiRenderer::GetInternalResolution().x &&
+		lastBufferResHeight == wiRenderer::GetInternalResolution().y &&
 		lastBufferMSAA == getMSAASampleCount() && 
 		lastBufferFormat == defaultTextureFormat)
 	{
@@ -58,93 +58,90 @@ void Renderable3DComponent::ResizeBuffers()
 	}
 	else
 	{
-		lastBufferResWidth = (UINT)wiRenderer::GetDevice()->GetScreenWidth();
-		lastBufferResHeight = (UINT)wiRenderer::GetDevice()->GetScreenHeight();
+		lastBufferResWidth = wiRenderer::GetInternalResolution().x;
+		lastBufferResHeight = wiRenderer::GetInternalResolution().y;
 		lastBufferMSAA = getMSAASampleCount();
 		lastBufferFormat = defaultTextureFormat;
 	}
 
 	rtSSR.Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtMotionBlur.Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight())
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtLinearDepth.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R32_FLOAT);
 	rtParticle.Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getAlphaParticleDownSample())
+		(UINT)(wiRenderer::GetInternalResolution().x*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getAlphaParticleDownSample())
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtParticleAdditive.Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getAdditiveParticleDownSample()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getAdditiveParticleDownSample())
+		(UINT)(wiRenderer::GetInternalResolution().x*getAdditiveParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getAdditiveParticleDownSample())
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtWaterRipple.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth()
-		, wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R8G8B8A8_SNORM);
 	rtSceneCopy.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT, 8);
 	rtReflection.Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() * getReflectionQuality())
-		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() * getReflectionQuality())
+		(UINT)(wiRenderer::GetInternalResolution().x * getReflectionQuality())
+		, (UINT)(wiRenderer::GetInternalResolution().y * getReflectionQuality())
 		, true, FORMAT_R16G16B16A16_FLOAT);
 	rtFinal[0].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, defaultTextureFormat);
 	rtFinal[1].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, defaultTextureFormat, 1);
 
 	rtDof[0].Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
+		(UINT)(wiRenderer::GetInternalResolution().x*0.5f), (UINT)(wiRenderer::GetInternalResolution().y*0.5f)
 		, false, defaultTextureFormat);
 	rtDof[1].Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f)
+		(UINT)(wiRenderer::GetInternalResolution().x*0.5f), (UINT)(wiRenderer::GetInternalResolution().y*0.5f)
 		, false, defaultTextureFormat);
 	rtDof[2].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, defaultTextureFormat);
 
-	dtDepthCopy.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), getMSAASampleCount());
-	//dtSmallDepth.Initialize(wiRenderer::GetDevice()->GetScreenWidth() / 4, wiRenderer::GetDevice()->GetScreenHeight() / 4, 1);
+	dtDepthCopy.Initialize(wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y, getMSAASampleCount());
+	//dtSmallDepth.Initialize(wiRenderer::GetInternalResolution().x / 4, wiRenderer::GetInternalResolution().y / 4, 1);
 
 	rtSSAO.resize(3);
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
 		rtSSAO[i].Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getSSAOQuality()), (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getSSAOQuality())
+		(UINT)(wiRenderer::GetInternalResolution().x*getSSAOQuality()), (UINT)(wiRenderer::GetInternalResolution().y*getSSAOQuality())
 			, false, FORMAT_R8_UNORM);
 
 
 	rtSun.resize(2);
 	rtSun[0].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth()
-		, wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, true, defaultTextureFormat, 1, getMSAASampleCount()
 	);
 	rtSun[1].Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth()*getLightShaftQuality())
-		, (UINT)(wiRenderer::GetDevice()->GetScreenHeight()*getLightShaftQuality())
+		(UINT)(wiRenderer::GetInternalResolution().x*getLightShaftQuality())
+		, (UINT)(wiRenderer::GetInternalResolution().y*getLightShaftQuality())
 		, false, defaultTextureFormat
 	);
 
 	rtBloom.resize(3);
 	rtBloom[0].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth()
-		, wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, defaultTextureFormat, 0);
 	for (unsigned int i = 1; i<rtBloom.size(); ++i)
 		rtBloom[i].Initialize(
-		(UINT)(wiRenderer::GetDevice()->GetScreenWidth() / getBloomDownSample())
-			, (UINT)(wiRenderer::GetDevice()->GetScreenHeight() / getBloomDownSample())
+			(UINT)(wiRenderer::GetInternalResolution().x / getBloomDownSample())
+			, (UINT)(wiRenderer::GetInternalResolution().y / getBloomDownSample())
 			, false, defaultTextureFormat);
 
 	rtTemporalAA[0].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtTemporalAA[1].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT);
 
 
@@ -154,8 +151,8 @@ void Renderable3DComponent::ResizeBuffers()
 	desc.BindFlags = BIND_DEPTH_STENCIL;
 	desc.CPUAccessFlags = 0;
 	desc.Format = FORMAT_D16_UNORM;
-	desc.Width = wiRenderer::GetDevice()->GetScreenWidth() / 4;
-	desc.Height = wiRenderer::GetDevice()->GetScreenHeight() / 4;
+	desc.Width = wiRenderer::GetInternalResolution().x / 4;
+	desc.Height = wiRenderer::GetInternalResolution().y / 4;
 	desc.MipLevels = 1;
 	desc.MiscFlags = 0;
 	desc.SampleDesc.Count = 1;
@@ -326,7 +323,7 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 }
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	wiRenderer::GetDevice()->EventBegin("Downsample Depth Buffer");
 	{
@@ -368,7 +365,9 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		rtSun[1].Activate(threadID); {
 			wiImageEffects fxs = fx;
 			fxs.blendFlag = BLENDMODE_ADDITIVE;
-			XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, (float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 0.1f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+			XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, 
+				(float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 1.0f, 
+				wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 			{
 				XMStoreFloat2(&fxs.sunPos, sunPos);
 				wiImage::Draw(rtSun[0].GetTextureResolvedMSAA(threadID), fxs, threadID);
@@ -500,7 +499,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	}
 	wiProfiler::GetInstance().BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	if (getBloomEnabled())
 	{

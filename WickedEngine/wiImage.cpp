@@ -488,11 +488,11 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		
 		if(effects.blurDir==0){
 			device->BindPS(blurHPS,threadID);
-			prcb.params1[3] = 1.0f / device->GetScreenWidth();
+			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().x;
 		}
 		else{
 			device->BindPS(blurVPS,threadID);
-			prcb.params1[3] = 1.0f / device->GetScreenHeight();
+			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().y;
 		}
 
 		static float weight0 = 1.0f;

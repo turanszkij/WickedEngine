@@ -83,6 +83,7 @@ public:
 	static float SPECULARAA;
 	static float renderTime, renderTime_Prev, deltaTime;
 	static XMFLOAT2 temporalAAJitter, temporalAAJitterPrev;
+	static float RESOLUTIONSCALE;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
@@ -354,6 +355,10 @@ public:
 	static void DrawWaterRipples(GRAPHICSTHREAD threadID);
 	static void SetGameSpeed(float value){GameSpeed=value; if(GameSpeed<0) GameSpeed=0;};
 	static float GetGameSpeed();
+	static void SetResolutionScale(float value) { RESOLUTIONSCALE = value; }
+	static float GetResolutionScale() { return RESOLUTIONSCALE; }
+	static XMUINT2 GetInternalResolution() { return XMUINT2((UINT)ceilf(GetDevice()->GetScreenWidth()*GetResolutionScale()), (UINT)ceilf(GetDevice()->GetScreenHeight()*GetResolutionScale())); }
+	static bool ResolutionChanged();
 	static void SetGamma(float value) { GAMMA = value; }
 	static float GetGamma() { return GAMMA; }
 	static void SetWireRender(bool value) { wireRender = value; }

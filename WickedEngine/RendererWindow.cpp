@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 800));
+	rendererWindow->SetSize(XMFLOAT2(400, 810));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -41,6 +41,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	occlusionCullingCheckBox->SetCheck(wiRenderer::GetOcclusionCullingEnabled());
 	rendererWindow->AddWidget(occlusionCullingCheckBox);
+
+	resolutionScaleSlider = new wiSlider(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
+	resolutionScaleSlider->SetTooltip("Adjust the gamma correction for the display device.");
+	resolutionScaleSlider->SetSize(XMFLOAT2(100, 30));
+	resolutionScaleSlider->SetPos(XMFLOAT2(x, y += 30));
+	resolutionScaleSlider->SetValue(wiRenderer::GetResolutionScale());
+	resolutionScaleSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetResolutionScale(args.fValue);
+	});
+	rendererWindow->AddWidget(resolutionScaleSlider);
 
 	gammaSlider = new wiSlider(1.0f, 3.0f, 2.2f, 1000.0f, "Gamma: ");
 	gammaSlider->SetTooltip("Adjust the gamma correction for the display device.");
@@ -372,6 +382,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(vsyncCheckBox);
 	SAFE_DELETE(vsyncCheckBox);
 	SAFE_DELETE(occlusionCullingCheckBox);
+	SAFE_DELETE(resolutionScaleSlider);
 	SAFE_DELETE(gammaSlider);
 	SAFE_DELETE(voxelRadianceCheckBox);
 	SAFE_DELETE(voxelRadianceDebugCheckBox);

@@ -35,8 +35,8 @@ void DeferredRenderableComponent::ResizeBuffers()
 	// Protect against multiple buffer resizes when there is no change!
 	static UINT lastBufferResWidth = 0, lastBufferResHeight = 0, lastBufferMSAA = 0;
 	static FORMAT lastBufferFormat = FORMAT_UNKNOWN;
-	if (lastBufferResWidth == (UINT)wiRenderer::GetDevice()->GetScreenWidth() &&
-		lastBufferResHeight == (UINT)wiRenderer::GetDevice()->GetScreenHeight() &&
+	if (lastBufferResWidth == wiRenderer::GetInternalResolution().x &&
+		lastBufferResHeight == wiRenderer::GetInternalResolution().y &&
 		lastBufferMSAA == getMSAASampleCount() &&
 		lastBufferFormat == defaultTextureFormat)
 	{
@@ -44,14 +44,14 @@ void DeferredRenderableComponent::ResizeBuffers()
 	}
 	else
 	{
-		lastBufferResWidth = (UINT)wiRenderer::GetDevice()->GetScreenWidth();
-		lastBufferResHeight = (UINT)wiRenderer::GetDevice()->GetScreenHeight();
+		lastBufferResWidth = wiRenderer::GetInternalResolution().x;
+		lastBufferResHeight = wiRenderer::GetInternalResolution().y;
 		lastBufferMSAA = getMSAASampleCount();
 		lastBufferFormat = defaultTextureFormat;
 	}
 
 	rtGBuffer.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, true, FORMAT_R8G8B8A8_UNORM);
 	rtGBuffer.Add(FORMAT_R16G16B16A16_FLOAT);
 	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
@@ -61,18 +61,18 @@ void DeferredRenderableComponent::ResizeBuffers()
 	// But the environmental light now also writes the AO to ALPHA so it has been changed to FORMAT_R16G16B16A16_FLOAT
 
 	rtDeferred.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtLight.Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT); // diffuse
 	rtLight.Add(FORMAT_R16G16B16A16_FLOAT); // specular
 
 	rtSSS[0].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtSSS[1].Initialize(
-		wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight()
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R16G16B16A16_FLOAT);
 }
 
@@ -127,7 +127,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
@@ -214,7 +214,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			static float stren = 0.018f;
 			if (i % 2 == 0)
 			{
-				dir.x = stren*((float)wiRenderer::GetDevice()->GetScreenHeight() / (float)wiRenderer::GetDevice()->GetScreenWidth());
+				dir.x = stren*((float)wiRenderer::GetInternalResolution().y / (float)wiRenderer::GetInternalResolution().x);
 			}
 			else
 			{

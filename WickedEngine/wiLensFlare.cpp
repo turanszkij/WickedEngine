@@ -43,8 +43,8 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector
 		device->BindGS(geometryShader,threadID);
 
 		ConstantBuffer cb;
-		cb.mSunPos = lightPos / XMVectorSet((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 1, 1);
-		cb.mScreen = XMFLOAT4((float)device->GetScreenWidth(), (float)device->GetScreenHeight(), 0, 0);
+		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1);
+		cb.mScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
 
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
 		device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
