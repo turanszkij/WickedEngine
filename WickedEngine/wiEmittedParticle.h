@@ -101,7 +101,7 @@ public:
 	int getCount();
 	static long getNumParticles();
 
-	void Update(float gamespeed);
+	void Update(float dt);
 	void Burst(float num);
 
 	void UpdateRenderData(GRAPHICSTHREAD threadID);

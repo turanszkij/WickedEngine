@@ -82,8 +82,8 @@ wiSPTree* wiRenderer::spTree_lights = nullptr;
 
 Scene* wiRenderer::scene = nullptr;
 
-vector<Object*>		wiRenderer::objectsWithTrails;
-vector<wiEmittedParticle*> wiRenderer::emitterSystems;
+unordered_set<Object*>			  wiRenderer::objectsWithTrails;
+unordered_set<wiEmittedParticle*> wiRenderer::emitterSystems;
 
 vector<Lines*>	wiRenderer::boneLines;
 vector<Lines*>	wiRenderer::linesTemp;
@@ -1526,7 +1526,6 @@ void wiRenderer::FixedUpdate()
 	objectsWithTrails.clear();
 	emitterSystems.clear();
 
-
 	GetScene().Update();
 
 }
@@ -1708,6 +1707,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 				if (camera->frustum.CheckBox(*x->bounding_box))
 				{
 					culling.culledEmittedParticleSystems.push_back(x);
+					x->Update(dt*GetGameSpeed());
 				}
 			}
 			std::sort(culling.culledEmittedParticleSystems.begin(), culling.culledEmittedParticleSystems.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {

@@ -3775,14 +3775,13 @@ void Object::UpdateObject()
 
 	if (!trail.empty())
 	{
-		wiRenderer::objectsWithTrails.push_back(this);
+		wiRenderer::objectsWithTrails.insert(this);
 		FadeTrail();
 	}
 
 	for (wiEmittedParticle* x : eParticleSystems)
 	{
-		x->Update(wiRenderer::GetGameSpeed());
-		wiRenderer::emitterSystems.push_back(x);
+		wiRenderer::emitterSystems.insert(x);
 	}
 }
 bool Object::IsCastingShadow() const

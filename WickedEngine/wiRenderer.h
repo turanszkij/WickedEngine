@@ -530,8 +530,8 @@ public:
 	static vector<Lines*> linesTemp;
 	static vector<Cube> cubes;
 
-	static vector<Object*> objectsWithTrails;
-	static vector<wiEmittedParticle*> emitterSystems;
+	static unordered_set<Object*> objectsWithTrails;
+	static unordered_set<wiEmittedParticle*> emitterSystems;
 	
 	static deque<wiSprite*> images;
 	static deque<wiSprite*> waterRipples;
