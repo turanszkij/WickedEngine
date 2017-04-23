@@ -18,7 +18,7 @@ float4 sampleAs3DTexture(float3 uv, float width) {
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
-	float4 color = xTexture.Load(int3(PSIn.pos.xy,0));
+	float4 color = xTexture.SampleLevel(Sampler,PSIn.tex,0);
 	
 	float2 dim;
 	xMaskTex.GetDimensions(dim.x,dim.y);

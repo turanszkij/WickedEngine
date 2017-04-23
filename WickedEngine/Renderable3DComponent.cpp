@@ -624,7 +624,14 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 
 	rt1->Activate(threadID);
 	wiRenderer::GetDevice()->EventBegin("FXAA", threadID);
-	fx.process.setFXAA(getFXAAEnabled());
+	if (getFXAAEnabled())
+	{
+		fx.process.setFXAA(true);
+	}
+	else
+	{
+		fx.presentFullScreen = true;
+	}
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
 	else
@@ -639,7 +646,7 @@ void Renderable3DComponent::RenderColorGradedComposition()
 {
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	fx.quality = QUALITY_NEAREST;
+	fx.quality = QUALITY_BILINEAR;
 
 	if (getStereogramEnabled())
 	{
