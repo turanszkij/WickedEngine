@@ -92,19 +92,20 @@ public:
 	// Persistent buffers:
 	GFX_STRUCT WorldCB
 	{
+		XMFLOAT2 mScreenWidthHeight;
+		XMFLOAT2 mInternalResolution;
 		float	 mGamma;
 		XMFLOAT3 mHorizon;
-		XMFLOAT3 mZenith;				float pad1;
-		XMFLOAT3 mAmbient;				float pad2;
+		XMFLOAT3 mZenith;				float pad0;
+		XMFLOAT3 mAmbient;				float pad1;
 		XMFLOAT3 mFog;
 		float mSpecularAA;
-		XMFLOAT2 mScreenWidthHeight;
 		float mVoxelRadianceDataSize;
 		UINT mVoxelRadianceDataRes;
-		XMFLOAT3 mVoxelRadianceDataCenter;
 		UINT mVoxelRadianceDataConeTracingQuality;
 		float mVoxelRadianceDataFalloff;
-		XMFLOAT3 pad4;
+		XMFLOAT3 mVoxelRadianceDataCenter;
+		float pad2;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 

@@ -4810,21 +4810,22 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	WorldCB value;
 	ZeroMemory(&value, sizeof(value));
 
-	value.mGamma = GAMMA;
+	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
+	value.mInternalResolution = XMFLOAT2((float)GetInternalResolution().x, (float)GetInternalResolution().y);
+	value.mGamma = GetGamma();
 	auto& world = GetScene().worldInfo;
 	value.mAmbient = world.ambient;
 	value.mFog = world.fogSEH;
 	value.mHorizon = world.horizon;
 	value.mZenith = world.zenith;
 	value.mSpecularAA = SPECULARAA;
-	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
 	value.mVoxelRadianceDataSize = voxelSceneData.voxelsize;
 	value.mVoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (UINT)voxelSceneData.res : 0;
-	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 	value.mVoxelRadianceDataConeTracingQuality = voxelSceneData.coneTracingQuality;
 	value.mVoxelRadianceDataFalloff = voxelSceneData.falloff;
+	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 
-	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0)
+	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit
 	{
 		prevcb[threadID] = value;
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &prevcb[threadID], threadID);

@@ -172,6 +172,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 	if (getSSAOEnabled()){
+		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = COMPARISON_LESS;
 		rtSSAO[0].Activate(threadID); {
@@ -197,19 +198,23 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		}
 		fx.stencilRef = 0;
 		fx.stencilComp = 0;
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	if (getSSSEnabled())
 	{
+		wiRenderer::GetDevice()->EventBegin("SSS", threadID);
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = COMPARISON_LESS;
 		fx.quality = QUALITY_BILINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
+		rtSSS[1].Activate(threadID, 0, 0, 0, 0);
+		rtSSS[0].Activate(threadID, 0, 0, 0, 0);
 		static int sssPassCount = 6;
 		for (int i = 0; i < sssPassCount; ++i) 
 		{
 			wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-			rtSSS[i % 2].Activate(threadID, rtGBuffer.depth, 0, 0, 0, 0);
+			rtSSS[i % 2].Set(threadID, rtGBuffer.depth);
 			XMFLOAT2 dir = XMFLOAT2(0, 0);
 			static float stren = 0.018f;
 			if (i % 2 == 0)
@@ -239,6 +244,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.stencilRef = 0;
 			fx.stencilComp = 0;
+			fx.presentFullScreen = true;
 			wiImage::Draw(rtLight.GetTexture(0), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = COMPARISON_LESS;
@@ -247,6 +253,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 		fx.stencilRef = 0;
 		fx.stencilComp = 0;
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
@@ -258,6 +265,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 	if (getSSREnabled()){
+		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
 			fx.process.setSSR(true);
@@ -265,6 +273,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 			fx.process.clear();
 		}
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	wiProfiler::GetInstance().EndRange(); // Opaque Scene

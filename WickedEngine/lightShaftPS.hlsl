@@ -14,7 +14,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	[branch]if(xPPParams1[0] || xPPParams1[1]) //LIGHTSHAFTS
 	{
 
-		float2 lightPos = float2(xPPParams1[0] / g_xWorld_ScreenWidthHeight.x, xPPParams1[1] / g_xWorld_ScreenWidthHeight.y);
+		float2 lightPos = float2(xPPParams1[0] / GetInternalResolution().x, xPPParams1[1] / GetInternalResolution().y);
 		float2 deltaTexCoord =  PSIn.tex - lightPos;
 		deltaTexCoord *= 1.0f/NUM_SAMPLES * xPPParams0[0];
 		float illuminationDecay = 1.0f;

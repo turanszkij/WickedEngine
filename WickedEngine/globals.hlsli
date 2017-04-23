@@ -46,19 +46,20 @@ SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		)
 
 CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 {
+	float2		g_xWorld_ScreenWidthHeight;
+	float2		g_xWorld_InternalResolution;
 	float		g_xWorld_Gamma;
 	float3		g_xWorld_Horizon;
-	float3		g_xWorld_Zenith;				float xPadding1_WorldCB;
-	float3		g_xWorld_Ambient;				float xPadding2_WorldCB;
+	float3		g_xWorld_Zenith;				float xPadding0_WorldCB;
+	float3		g_xWorld_Ambient;				float xPadding1_WorldCB;
 	float3		g_xWorld_Fog;
 	float		g_xWorld_SpecularAA;
-	float2		g_xWorld_ScreenWidthHeight;
 	float		g_xWorld_VoxelRadianceDataSize;
 	uint		g_xWorld_VoxelRadianceDataRes;
-	float3		g_xWorld_VoxelRadianceDataCenter;
 	uint		g_xWorld_VoxelRadianceConeTracingQuality;
 	float		g_xWorld_VoxelRadianceFalloff;
-	float3		xPadding4_WorldCB;
+	float3		g_xWorld_VoxelRadianceDataCenter;
+	float		xPadding2_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
@@ -145,6 +146,7 @@ inline float3 GetAmbientColor() { return g_xWorld_Ambient.rgb; }
 inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
 inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
+inline float2 GetInternalResolution() { return g_xWorld_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline float GetEmissive(float emissive) { return emissive * 10.0f; }
 
