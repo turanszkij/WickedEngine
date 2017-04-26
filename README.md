@@ -62,7 +62,7 @@ Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole projec
 - ./WickedEngine/BULLET/					- Bullet 2.82 Source files; 
 - ./WickedEngine/LUA/					- Lua 5.3.1 Source files; 
 - ./WickedEngine/shaders/					- Binary shaders output; 
-- ./WickedEngine/Scene/Sample					- Sample scene files
+- ./WickedEngine/models					- Sample model files
 - ./WickedEngine/ 						- C++ and shader source files; 
 - ./WickedEngine/Utility 					- C++ source files for utility helpers;
 - ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene; 
