@@ -5,6 +5,10 @@ The most important classes are related as described in the following diagram:
 ![ClassDiagram](classdiagram.png)
 <i>(Diagram generated with nomnoml.com)</i>
 
+Order of execution:
+![OrderOfExecution](orderofexecution.png)
+<i>(Diagram generated with draw.io)</i>
+
 ### Components
 The "engine components" which provide the high level runtime flow control logic. The application usually overrides these to specify desired specialized logic and rendering.
 
