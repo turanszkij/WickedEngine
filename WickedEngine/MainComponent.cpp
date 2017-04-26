@@ -88,13 +88,6 @@ void MainComponent::run()
 	const double elapsedTime = max(0, timer.elapsed() / 1000.0);
 	timer.record();
 
-	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
-
-	// Variable-timed update:
-	wiProfiler::GetInstance().BeginRange("Update", wiProfiler::DOMAIN_CPU);
-	Update((float)elapsedTime);
-	wiProfiler::GetInstance().EndRange(); // Update
-
 
 	// Fixed time update:
 	wiProfiler::GetInstance().BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
@@ -120,6 +113,13 @@ void MainComponent::run()
 	}
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
+	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
+
+	// Variable-timed update:
+	wiProfiler::GetInstance().BeginRange("Update", wiProfiler::DOMAIN_CPU);
+	Update((float)elapsedTime);
+	wiProfiler::GetInstance().EndRange(); // Update
+
 	wiProfiler::GetInstance().BeginRange("Render", wiProfiler::DOMAIN_CPU);
 	Render();
 	wiProfiler::GetInstance().EndRange(); // Render
@@ -141,12 +141,14 @@ void MainComponent::Update(float dt)
 {
 	wiCpuInfo::Frame();
 	getActiveComponent()->Update(dt);
+
+	wiLua::GetGlobal()->Update();
 }
 
 void MainComponent::FixedUpdate()
 {
 	wiBackLog::Update();
-	wiLua::GetGlobal()->Update();
+	wiLua::GetGlobal()->FixedUpdate();
 
 	getActiveComponent()->FixedUpdate();
 

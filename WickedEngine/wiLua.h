@@ -60,6 +60,8 @@ public:
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
+	//update lua scripts which are waiting for a fixed game tick
+	void FixedUpdate();
 	//update lua scripts which are waiting for a game tick
 	void Update();
 	//issue lua drawing commands which are waiting for a render tick

@@ -244,6 +244,10 @@ void wiLua::SetDeltaTime(double dt)
 	lua_call(m_luaState, 1, 0);
 	UNLOCK();
 }
+void wiLua::FixedUpdate()
+{
+	TrySignal("wickedengine_fixed_update_tick");
+}
 void wiLua::Update()
 {
 	TrySignal("wickedengine_update_tick");

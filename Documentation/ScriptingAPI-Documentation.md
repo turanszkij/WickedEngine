@@ -68,6 +68,7 @@ This section describes the common tools for scripting which are not necessarily 
 - getprops(table object)
 - len(table object)
 - backlog_post_list(table list)
+- fixedupdate()
 - update()
 - render()
 - math.lerp(float a,b,t)

@@ -135,6 +135,11 @@ function signal(signalName)
     end
 end 
 
+-- Wait until the game engine fixed update function runs again
+function fixedupdate()
+	waitSignal("wickedengine_fixed_update_tick")
+end
+
 -- Wait until the game engine update function runs again
 function update()
 	waitSignal("wickedengine_update_tick")
