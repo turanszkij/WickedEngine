@@ -1894,6 +1894,9 @@
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.png">
       <Filter>Documentation</Filter>
     </Image>
+    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png">
+      <Filter>Documentation</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
