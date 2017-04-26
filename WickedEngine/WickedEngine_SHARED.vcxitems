@@ -717,4 +717,7 @@
       <DeploymentContent>true</DeploymentContent>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml" />
+  </ItemGroup>
 </Project>

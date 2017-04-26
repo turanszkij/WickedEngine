@@ -88,7 +88,6 @@ void MainComponent::run()
 	const double elapsedTime = max(0, timer.elapsed() / 1000.0);
 	timer.record();
 
-
 	// Fixed time update:
 	wiProfiler::GetInstance().BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
 	if (frameskip)
@@ -99,19 +98,19 @@ void MainComponent::run()
 
 		while (accumulator >= targetFrameRateInv)
 		{
-
 			FixedUpdate();
-
 			accumulator -= targetFrameRateInv;
-
 		}
-
 	}
 	else
 	{
 		FixedUpdate();
 	}
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
+
+	wiProfiler::GetInstance().BeginRange("Physics", wiProfiler::DOMAIN_CPU);
+	wiRenderer::SynchronizeWithPhysicsEngine((float)elapsedTime);
+	wiProfiler::GetInstance().EndRange(); // Physics
 
 	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
 

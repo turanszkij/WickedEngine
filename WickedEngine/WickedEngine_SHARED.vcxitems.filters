@@ -1920,4 +1920,9 @@
       <Filter>Documentation</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">
+      <Filter>Documentation</Filter>
+    </Xml>
+  </ItemGroup>
 </Project>
