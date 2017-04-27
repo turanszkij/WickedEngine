@@ -23,9 +23,16 @@ public:
 	wiSlider*	blendSlider;
 	wiCheckBox* loopedCheckBox;
 
+	// TODO: nicer way to control arbitrary amount of animation layers....
+
 	wiComboBox*	actionsComboBox1;
 	wiSlider*	blendSlider1;
 	wiSlider*	weightSlider1;
 	wiCheckBox* loopedCheckBox1;
+
+	wiComboBox*	actionsComboBox2;
+	wiSlider*	blendSlider2;
+	wiSlider*	weightSlider2;
+	wiCheckBox* loopedCheckBox2;
 };
 
