@@ -37,7 +37,14 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	blendSlider->SetSize(XMFLOAT2(100, 30));
 	blendSlider->SetPos(XMFLOAT2(x, y += step));
 	blendSlider->OnSlide([&](wiEventArgs args) {
-		// no operation, will only be queried
+		if (armature != nullptr)
+		{
+			AnimationLayer* layer = armature->GetPrimaryAnimation();
+			if (layer != nullptr)
+			{
+				layer->blendFrames = args.fValue;
+			}
+		}
 	});
 	blendSlider->SetEnabled(false);
 	blendSlider->SetTooltip("Adjust the blend length in frames when changing actions...");
@@ -78,7 +85,14 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	blendSlider1->SetSize(XMFLOAT2(100, 30));
 	blendSlider1->SetPos(XMFLOAT2(x, y += step));
 	blendSlider1->OnSlide([&](wiEventArgs args) {
-		// no operation, will only be queried
+		if (armature != nullptr)
+		{
+			AnimationLayer* layer1 = armature->GetAnimLayer("SECONDARY1");
+			if (layer1 != nullptr)
+			{
+				layer1->blendFrames = args.fValue;
+			}
+		}
 	});
 	blendSlider1->SetEnabled(false);
 	blendSlider1->SetTooltip("Adjust the blend length in frames when changing actions...");
@@ -103,7 +117,14 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	weightSlider1->SetSize(XMFLOAT2(100, 30));
 	weightSlider1->SetPos(XMFLOAT2(x, y += step));
 	weightSlider1->OnSlide([&](wiEventArgs args) {
-		// no operation, will only be queried
+		if (armature != nullptr)
+		{
+			AnimationLayer* layer1 = armature->GetAnimLayer("SECONDARY1");
+			if (layer1 != nullptr)
+			{
+				layer1->weight = args.fValue;
+			}
+		}
 	});
 	weightSlider1->SetEnabled(false);
 	weightSlider1->SetTooltip("Adjust the blend weight for the secondary action...");
@@ -129,7 +150,14 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	blendSlider2->SetSize(XMFLOAT2(100, 30));
 	blendSlider2->SetPos(XMFLOAT2(x, y += step));
 	blendSlider2->OnSlide([&](wiEventArgs args) {
-		// no operation, will only be queried
+		if (armature != nullptr)
+		{
+			AnimationLayer* layer2 = armature->GetAnimLayer("SECONDARY2");
+			if (layer2 != nullptr)
+			{
+				layer2->blendFrames = args.fValue;
+			}
+		}
 	});
 	blendSlider2->SetEnabled(false);
 	blendSlider2->SetTooltip("Adjust the blend length in frames when changing actions...");
@@ -154,7 +182,14 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	weightSlider2->SetSize(XMFLOAT2(100, 30));
 	weightSlider2->SetPos(XMFLOAT2(x, y += step));
 	weightSlider2->OnSlide([&](wiEventArgs args) {
-		// no operation, will only be queried
+		if (armature != nullptr)
+		{
+			AnimationLayer* layer2 = armature->GetAnimLayer("SECONDARY2");
+			if (layer2 != nullptr)
+			{
+				layer2->weight = args.fValue;
+			}
+		}
 	});
 	weightSlider2->SetEnabled(false);
 	weightSlider2->SetTooltip("Adjust the blend weight for the secondary action...");
