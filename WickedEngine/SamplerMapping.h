@@ -16,9 +16,9 @@
 #define SSLOT_ANISO_WRAP		11
 #define SSLOT_ANISO_MIRROR		12
 #define SSLOT_CMP_DEPTH			13
-#define SSLOT_RESERVED0			14
-#define SSLOT_RESERVED1			15
-#define SSLOT_COUNT_PERSISTENT	(SSLOT_RESERVED1 + 1 - SSLOT_COUNT_ONDEMAND)
+#define SSLOT_OBJECTSHADER		14
+#define SSLOT_RESERVED			15
+#define SSLOT_COUNT_PERSISTENT	(SSLOT_RESERVED + 1 - SSLOT_COUNT_ONDEMAND)
 
 // On demand samplers:
 // These are bound on demand and alive until another is bound at the same slot

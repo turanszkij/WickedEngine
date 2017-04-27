@@ -26,8 +26,6 @@
 #define xRefraction				texture_7
 #define	xWaterRipples			texture_8
 
-#define sampler_objectshader	sampler_aniso_wrap
-
 struct PixelInputType_Simple
 {
 	float4 pos								: SV_POSITION;

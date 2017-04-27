@@ -43,6 +43,7 @@ SAMPLERSTATE(			sampler_aniso_clamp,	SSLOT_ANISO_CLAMP	)
 SAMPLERSTATE(			sampler_aniso_wrap,		SSLOT_ANISO_WRAP	)
 SAMPLERSTATE(			sampler_aniso_mirror,	SSLOT_ANISO_MIRROR	)
 SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		)
+SAMPLERSTATE(			sampler_objectshader,	SSLOT_OBJECTSHADER	)
 
 CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 {

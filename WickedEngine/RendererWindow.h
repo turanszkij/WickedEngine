@@ -46,6 +46,8 @@ public:
 	wiComboBox* MSAAComboBox;
 	wiCheckBox* temporalAACheckBox;
 	wiCheckBox* temporalAADebugCheckBox;
+	wiComboBox* textureQualityComboBox;
+	wiSlider*	mipLodBiasSlider;
 
 	int GetPickType();
 };

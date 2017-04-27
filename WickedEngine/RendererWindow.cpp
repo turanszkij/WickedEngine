@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 810));
+	rendererWindow->SetSize(XMFLOAT2(400, 870));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -369,6 +369,58 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	temporalAADebugCheckBox->SetCheck(wiRenderer::GetTemporalAADebugEnabled());
 	rendererWindow->AddWidget(temporalAADebugCheckBox);
 
+	textureQualityComboBox = new wiComboBox("Texture Quality:");
+	textureQualityComboBox->SetSize(XMFLOAT2(100, 20));
+	textureQualityComboBox->SetPos(XMFLOAT2(x, y += step));
+	textureQualityComboBox->AddItem("Nearest");
+	textureQualityComboBox->AddItem("Bilinear");
+	textureQualityComboBox->AddItem("Trilinear");
+	textureQualityComboBox->AddItem("Anisotropic");
+	textureQualityComboBox->OnSelect([&](wiEventArgs args) {
+		wiGraphicsTypes::SamplerDesc desc = wiRenderer::samplers[SSLOT_OBJECTSHADER]->GetDesc();
+		SAFE_DELETE(wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+
+		switch (args.iValue)
+		{
+		case 0:
+			desc.Filter = wiGraphicsTypes::FILTER_MIN_MAG_MIP_POINT;
+			break;
+		case 1:
+			desc.Filter = wiGraphicsTypes::FILTER_MIN_MAG_LINEAR_MIP_POINT;
+			break;
+		case 2:
+			desc.Filter = wiGraphicsTypes::FILTER_MIN_MAG_MIP_LINEAR;
+			break;
+		case 3:
+			desc.Filter = wiGraphicsTypes::FILTER_ANISOTROPIC;
+			break;
+		default:
+			break;
+		}
+
+		wiRenderer::samplers[SSLOT_OBJECTSHADER] = new wiGraphicsTypes::Sampler;
+		wiRenderer::GetDevice()->CreateSamplerState(&desc, wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	});
+	textureQualityComboBox->SetSelected(3);
+	textureQualityComboBox->SetEnabled(true);
+	textureQualityComboBox->SetTooltip("Choose a texture sampling method.");
+	rendererWindow->AddWidget(textureQualityComboBox);
+
+	mipLodBiasSlider = new wiSlider(-2, 2, 0, 100000, "MipLOD Bias: ");
+	mipLodBiasSlider->SetTooltip("Bias the rendered mip map level of the material textures.");
+	mipLodBiasSlider->SetSize(XMFLOAT2(100, 30));
+	mipLodBiasSlider->SetPos(XMFLOAT2(x, y += 30));
+	mipLodBiasSlider->OnSlide([&](wiEventArgs args) {
+		wiGraphicsTypes::SamplerDesc desc = wiRenderer::samplers[SSLOT_OBJECTSHADER]->GetDesc();
+		SAFE_DELETE(wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+		desc.MipLODBias = args.fValue;
+		wiRenderer::samplers[SSLOT_OBJECTSHADER] = new wiGraphicsTypes::Sampler;
+		wiRenderer::GetDevice()->CreateSamplerState(&desc, wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	});
+	rendererWindow->AddWidget(mipLodBiasSlider);
+
 
 
 	rendererWindow->Translate(XMFLOAT3(130, 20, 0));
@@ -408,6 +460,8 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(shadowPropsCubeComboBox);
 	SAFE_DELETE(MSAAComboBox);
 	SAFE_DELETE(temporalAACheckBox);
+	SAFE_DELETE(textureQualityComboBox);
+	SAFE_DELETE(mipLodBiasSlider);
 }
 
 int RendererWindow::GetPickType()

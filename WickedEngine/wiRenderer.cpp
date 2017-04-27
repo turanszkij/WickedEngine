@@ -962,6 +962,12 @@ void wiRenderer::SetUpStates()
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_MIRROR]);
 
+	samplerDesc.Filter = FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
+	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_OBJECTSHADER]);
+
 	ZeroMemory( &samplerDesc, sizeof(SamplerDesc) );
 	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
