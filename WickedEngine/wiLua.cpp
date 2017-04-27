@@ -239,7 +239,7 @@ void wiLua::AddInt(const string& name, int data)
 void wiLua::SetDeltaTime(double dt)
 {
 	LOCK();
-	lua_getglobal(m_luaState, "wakeUpWaitingThreads");
+	lua_getglobal(m_luaState, "setDeltaTime");
 	SSetDouble(m_luaState, dt);
 	lua_call(m_luaState, 1, 0);
 	UNLOCK();

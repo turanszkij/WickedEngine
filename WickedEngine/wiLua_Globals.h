@@ -133,7 +133,17 @@ function signal(signalName)
 			error("[Lua Error] "..errorMsg)
 		end
     end
-end 
+end
+
+-- Store the delta time for the current frame
+local lastDeltaTime = 0
+function setDeltaTime(dt)
+	lastDeltaTime = dt
+	wakeUpWaitingThreads(dt)
+end
+function getDeltaTime()
+	return lastDeltaTime
+end
 
 -- Wait until the game engine fixed update function runs again
 function fixedupdate()
