@@ -582,6 +582,12 @@
     <FxCompile Include="objectVS_simple_tessellation.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="objectVS_debug.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_debug.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

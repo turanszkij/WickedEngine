@@ -447,6 +447,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugEmitters(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
 		wiRenderer::GetDevice()->EventEnd();
 	}

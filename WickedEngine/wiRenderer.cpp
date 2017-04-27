@@ -50,7 +50,7 @@ Sampler				*wiRenderer::customsamplers[SSTYPE_LAST];
 float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
-bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false
+bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true;
 float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
@@ -630,6 +630,18 @@ void wiRenderer::LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		};
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr) {
+			vertexShaders[VSTYPE_OBJECT_DEBUG] = vsinfo->vertexShader;
+			vertexLayouts[VLTYPE_OBJECT_DEBUG] = vsinfo->vertexLayout;
+		}
+	}
+	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
@@ -804,10 +816,11 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_water.cso", wiResourceManager::PIXELSHADER));
 
-	pixelShaders[PSTYPE_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEBUG] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_debug.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
@@ -1297,6 +1310,17 @@ void wiRenderer::SetUpStates()
 	bd.IndependentBlendEnable=false,
 	bd.AlphaToCoverageEnable=false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_DEFERREDLIGHT]);
+
+	bd.RenderTarget[0].SrcBlend = BLEND_INV_DEST_COLOR;
+	bd.RenderTarget[0].DestBlend = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.AlphaToCoverageEnable = false;
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_INVERSE]);
 }
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -2549,6 +2573,43 @@ void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->EventEnd(threadID);
 	}
 }
+void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	if (debugEmitters || !renderableBoxes.empty()) {
+		GetDevice()->EventBegin("DebugEmitters", threadID);
+
+		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_DEBUG], threadID);
+
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_INVERSE], threadID);
+
+
+		GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEBUG], threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_DEBUG], threadID);
+
+		MiscCB sb;
+		for (auto& x : emitterSystems)
+		{
+			if (x->object != nullptr && x->object->mesh != nullptr)
+			{
+				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->object->world)*camera->GetViewProjection());
+				sb.mColor = XMFLOAT4(1, 1, 1, 1);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+				for (auto& y : x->object->mesh->subsets)
+				{
+					GetDevice()->BindVertexBuffer(&x->object->mesh->vertexBuffers[VPROP_POS], 0, sizeof(XMFLOAT4), threadID);
+					GetDevice()->BindIndexBuffer(&y.indexBuffer, threadID);
+					GetDevice()->DrawIndexed((int)y.subsetIndices.size(), threadID);
+				}
+			}
+		}
+
+		GetDevice()->EventEnd(threadID);
+	}
+}
 
 void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark)
 {
@@ -3287,7 +3348,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 {
-	PSTYPES realPS = PSTYPE_SIMPLEST;
+	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
 
 	bool transparent = material->IsTransparent();
 	bool water = material->IsWater();
@@ -3472,13 +3533,13 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 		realPS = PSTYPE_ENVMAP;
 		break;
 	case SHADERTYPE_ALPHATESTONLY:
-		realPS = PSTYPE_ALPHATESTONLY;
+		realPS = PSTYPE_OBJECT_ALPHATESTONLY;
 		break;
 	case SHADERTYPE_VOXELIZE:
 		realPS = PSTYPE_VOXELIZER;
 		break;
 	default:
-		realPS = PSTYPE_TEXTUREONLY;
+		realPS = PSTYPE_OBJECT_TEXTUREONLY;
 		break;
 	}
 
@@ -3713,7 +3774,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					if (wireRender)
 					{
-						GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
+						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
 					}
 					else
 					{
@@ -3735,10 +3796,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
 							break;
 						case SHADERTYPE_ALPHATESTONLY:
-							GetDevice()->BindPS(pixelShaders[PSTYPE_ALPHATESTONLY], threadID);
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY], threadID);
 							break;
 						default:
-							GetDevice()->BindPS(pixelShaders[PSTYPE_TEXTUREONLY], threadID);
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TEXTUREONLY], threadID);
 							break;
 						}
 					}
@@ -3923,7 +3984,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 					else
 					{
-						GetDevice()->BindPS(pixelShaders[PSTYPE_SIMPLEST], threadID);
+						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
 					}
 					if (tessellation)
 					{

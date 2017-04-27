@@ -30,6 +30,7 @@ public:
 	wiSlider*	specularAASlider;
 	wiCheckBox* partitionBoxesCheckBox;
 	wiCheckBox* boneLinesCheckBox;
+	wiCheckBox* debugEmittersCheckBox;
 	wiCheckBox* wireFrameCheckBox;
 	wiCheckBox* advancedLightCullingCheckBox;
 	wiCheckBox* debugLightCullingCheckBox;

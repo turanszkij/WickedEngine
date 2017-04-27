@@ -292,7 +292,7 @@ protected:
 	
 
 
-	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, gridHelper, voxelHelper, advancedLightCulling;
+	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, gridHelper, voxelHelper, advancedLightCulling;
 	static bool requestReflectionRendering;
 
 
@@ -373,6 +373,8 @@ public:
 	static bool GetToDrawDebugPartitionTree(){return debugPartitionTree;}
 	static bool GetToDrawDebugEnvProbes() { return debugEnvProbes; }
 	static void SetToDrawDebugEnvProbes(bool value) { debugEnvProbes = value; }
+	static void SetToDrawDebugEmitters(bool param) { debugEmitters = param; }
+	static bool GetToDrawDebugEmitters() { return debugEmitters; }
 	static bool GetToDrawGridHelper() { return gridHelper; }
 	static void SetToDrawGridHelper(bool value) { gridHelper = value; }
 	static bool GetToDrawVoxelHelper() { return voxelHelper; }
@@ -479,6 +481,7 @@ public:
 	static void DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);

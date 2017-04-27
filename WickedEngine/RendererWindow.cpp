@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 870));
+	rendererWindow->SetSize(XMFLOAT2(400, 900));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -148,6 +148,16 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	});
 	boneLinesCheckBox->SetCheck(wiRenderer::GetToDrawDebugBoneLines());
 	rendererWindow->AddWidget(boneLinesCheckBox);
+
+	debugEmittersCheckBox = new wiCheckBox("Emitter visualizer: ");
+	debugEmittersCheckBox->SetTooltip("Visualize emitters");
+	debugEmittersCheckBox->SetScriptTip("SetDebugEmitters(bool enabled)");
+	debugEmittersCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugEmittersCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawDebugEmitters(args.bValue);
+	});
+	debugEmittersCheckBox->SetCheck(wiRenderer::GetToDrawDebugEmitters());
+	rendererWindow->AddWidget(debugEmittersCheckBox);
 
 	wireFrameCheckBox = new wiCheckBox("Render Wireframe: ");
 	wireFrameCheckBox->SetTooltip("Visualize the scene as a wireframe");
@@ -445,6 +455,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(specularAASlider);
 	SAFE_DELETE(partitionBoxesCheckBox);
 	SAFE_DELETE(boneLinesCheckBox);
+	SAFE_DELETE(debugEmittersCheckBox);
 	SAFE_DELETE(wireFrameCheckBox);
 	SAFE_DELETE(advancedLightCullingCheckBox);
 	SAFE_DELETE(debugLightCullingCheckBox);
