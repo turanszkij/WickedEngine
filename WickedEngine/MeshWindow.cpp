@@ -92,8 +92,10 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	meshWindow->Translate(XMFLOAT3(30, 30, 0));
+	meshWindow->Translate(XMFLOAT3(1300, 520, 0));
 	meshWindow->SetVisible(false);
+
+	SetMesh(nullptr);
 }
 
 

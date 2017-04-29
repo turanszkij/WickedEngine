@@ -7,6 +7,7 @@ class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
+class wiComboBox;
 
 class ObjectWindow
 {
@@ -23,5 +24,11 @@ public:
 	wiWindow*	objectWindow;
 
 	wiSlider*	ditherSlider;
+
+	wiLabel*	physicsLabel;
+	wiComboBox*	simulationTypeComboBox;
+	wiCheckBox* kinematicCheckBox;
+	wiComboBox*	physicsTypeComboBox;
+	wiComboBox*	collisionShapeComboBox;
 };
 

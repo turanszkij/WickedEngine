@@ -695,10 +695,16 @@ void EditorComponent::Load()
 	clearButton->SetSize(XMFLOAT2(100, 40));
 	clearButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
 	clearButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
-	clearButton->OnClick([](wiEventArgs args) {
+	clearButton->OnClick([&](wiEventArgs args) {
 		selected.clear();
 		EndTranslate();
 		wiRenderer::CleanUpStaticTemp();
+		objectWnd->SetObject(nullptr);
+		meshWnd->SetMesh(nullptr);
+		lightWnd->SetLight(nullptr);
+		decalWnd->SetDecal(nullptr);
+		envProbeWnd->SetProbe(nullptr);
+		materialWnd->SetMaterial(nullptr);
 	});
 	GetGUI().AddWidget(clearButton);
 
