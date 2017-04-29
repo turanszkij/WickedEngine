@@ -242,7 +242,7 @@ struct Material
 
 		planar_reflections = false;
 
-		alphaRef = 0.75f;
+		alphaRef = 1.0f; // no alpha test by default
 	}
 
 	bool IsTransparent() const { return alpha < 1.0f; }
