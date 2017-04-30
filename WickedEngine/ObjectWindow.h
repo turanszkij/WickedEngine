@@ -8,6 +8,7 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiComboBox;
+class wiColorPicker;
 
 class ObjectWindow
 {
@@ -24,6 +25,8 @@ public:
 	wiWindow*	objectWindow;
 
 	wiSlider*	ditherSlider;
+	wiButton*	colorPickerToggleButton;
+	wiColorPicker* colorPicker;
 
 	wiLabel*	physicsLabel;
 	wiComboBox*	simulationTypeComboBox;

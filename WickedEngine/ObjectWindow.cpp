@@ -32,6 +32,27 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	});
 	objectWindow->AddWidget(ditherSlider);
 
+
+	colorPickerToggleButton = new wiButton("Color");
+	colorPickerToggleButton->SetTooltip("Adjust the object color.");
+	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += 30));
+	colorPickerToggleButton->OnClick([&](wiEventArgs args) {
+		colorPicker->SetVisible(!colorPicker->IsVisible());
+	});
+	objectWindow->AddWidget(colorPickerToggleButton);
+
+
+	colorPicker = new wiColorPicker(GUI, "Object Color");
+	colorPicker->SetVisible(false);
+	colorPicker->SetEnabled(false);
+	colorPicker->OnColorChanged([&](wiEventArgs args) {
+		if (object != nullptr)
+		{
+			object->color = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		}
+	});
+	GUI->AddWidget(colorPicker);
+
 	y += 60;
 
 	physicsLabel = new wiLabel("PHYSICSLABEL");
@@ -172,6 +193,8 @@ ObjectWindow::~ObjectWindow()
 {
 	SAFE_DELETE(objectWindow);
 	SAFE_DELETE(ditherSlider);
+	SAFE_DELETE(colorPickerToggleButton);
+	SAFE_DELETE(colorPicker);
 	SAFE_DELETE(physicsLabel);
 	SAFE_DELETE(simulationTypeComboBox);
 	SAFE_DELETE(kinematicCheckBox);

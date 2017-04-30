@@ -193,7 +193,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	colorPicker->SetVisible(false);
 	colorPicker->SetEnabled(false);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
-		material->baseColor = XMFLOAT3(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f));
+		material->baseColor = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
 	GUI->AddWidget(colorPicker);
 
@@ -210,7 +210,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	texture_baseColor_Button = new wiButton("BaseColor");
 	texture_baseColor_Button->SetText("");
-	texture_baseColor_Button->SetTooltip("Adjust the material color.");
+	texture_baseColor_Button->SetTooltip("Load the basecolor texture.");
 	texture_baseColor_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_baseColor_Button->SetSize(XMFLOAT2(260, 20));
 	texture_baseColor_Button->OnClick([&](wiEventArgs args) {
@@ -259,7 +259,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	texture_normal_Button = new wiButton("NormalMap");
 	texture_normal_Button->SetText("");
-	texture_normal_Button->SetTooltip("Adjust the material color.");
+	texture_normal_Button->SetTooltip("Load the normalmap texture.");
 	texture_normal_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_normal_Button->SetSize(XMFLOAT2(260, 20));
 	texture_normal_Button->OnClick([&](wiEventArgs args) {
@@ -308,7 +308,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	texture_displacement_Button = new wiButton("DisplacementMap");
 	texture_displacement_Button->SetText("");
-	texture_displacement_Button->SetTooltip("Adjust the material color.");
+	texture_displacement_Button->SetTooltip("Load the displacement map texture.");
 	texture_displacement_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_displacement_Button->SetSize(XMFLOAT2(260, 20));
 	texture_displacement_Button->OnClick([&](wiEventArgs args) {

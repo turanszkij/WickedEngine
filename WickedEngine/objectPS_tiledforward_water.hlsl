@@ -40,7 +40,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float NdotV = abs(dot(N, V)) + 1e-5f;
 	float mod = saturate(0.05*(refDepth - lineardepth));
-	float3 dullColor = lerp(refractiveColor, g_xMat_baseColor.rgb, saturate(NdotV));
+	float3 dullColor = lerp(refractiveColor, g_xMat_baseColor.rgb * input.instanceColor, saturate(NdotV));
 	refractiveColor = lerp(refractiveColor, dullColor, mod).rgb;
 
 	//FRESNEL TERM
@@ -48,7 +48,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 
 	//DULL COLOR
-	albedo.rgb = lerp(albedo.rgb, g_xMat_baseColor.rgb, 0.16);
+	albedo.rgb = lerp(albedo.rgb, g_xMat_baseColor.rgb * input.instanceColor, 0.16);
 
 	OBJECT_PS_LIGHT_TILED
 
