@@ -5275,7 +5275,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		if (mesh->vertices[VPROP_POS].size() >= _arraySize)
 		{
 			_mm_free(_vertices);
-			_arraySize *= 2;
+			_arraySize = mesh->vertices[VPROP_POS].size();
 			_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 		}
 
