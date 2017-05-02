@@ -5236,6 +5236,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
 	XMVECTOR& rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
+	// pre allocate helper vector array:
 	static size_t _arraySize = 10000;
 	static XMVECTOR* _vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 
@@ -5274,8 +5275,9 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		Mesh* mesh = object->mesh;
 		if (mesh->vertices[VPROP_POS].size() >= _arraySize)
 		{
+			// grow preallocated vector helper array
 			_mm_free(_vertices);
-			_arraySize = mesh->vertices[VPROP_POS].size();
+			_arraySize = (mesh->vertices[VPROP_POS].size() + 1) * 2;
 			_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 		}
 
