@@ -66,11 +66,6 @@
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
 
-
-#include "Utility/WicTextureLoader.h"
-#include "Utility/DDSTextureLoader.h"
-#include "Utility/ScreenGrab.h"
-
 #ifdef _WIN32
 
 #ifdef WINSTORE_SUPPORT
