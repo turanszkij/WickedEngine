@@ -8,6 +8,7 @@
 #include "ResourceMapping.h"
 #include "wiArchive.h"
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 VertexLayout	*wiEmittedParticle::vertexLayout = nullptr;
@@ -33,7 +34,7 @@ wiEmittedParticle::wiEmittedParticle()
 	bounding_box = new AABB();
 	lightName = "";
 }
-wiEmittedParticle::wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
+wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot){
 	name=newName;
 	object=newObject;
@@ -297,7 +298,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	if (!points.empty())
 	{
-		vector<Point> renderPoints = vector<Point>(points.begin(), points.end());
+		std::vector<Point> renderPoints = std::vector<Point>(points.begin(), points.end());
 		wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
 	}
 }

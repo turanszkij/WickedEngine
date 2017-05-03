@@ -36,27 +36,27 @@ public:
 	//check if the last call failed
 	bool Failed();
 	//get error message for the last call
-	string GetErrorMsg();
+	std::string GetErrorMsg();
 	//remove and get error message from stack
-	string PopErrorMsg();
+	std::string PopErrorMsg();
 	//post error to backlog and/or debug output
 	void PostErrorMsg(bool todebug = true, bool tobacklog = true);
 	//run a script from file
-	bool RunFile(const string& filename);
+	bool RunFile(const std::string& filename);
 	//run a script from param
-	bool RunText(const string& script);
+	bool RunText(const std::string& script);
 	//register function to use in scripts
-	bool RegisterFunc(const string& name, lua_CFunction function);
+	bool RegisterFunc(const std::string& name, lua_CFunction function);
 	//register class
-	void RegisterLibrary(const string& tableName, const luaL_Reg* functions);
+	void RegisterLibrary(const std::string& tableName, const luaL_Reg* functions);
 	//register object
-	bool RegisterObject(const string& tableName, const string& name, void* object);
+	bool RegisterObject(const std::string& tableName, const std::string& name, void* object);
 	//add function to the previously registered object
-	void AddFunc(const string& name, lua_CFunction function);
+	void AddFunc(const std::string& name, lua_CFunction function);
 	//add function array to the previously registered object
 	void AddFuncArray(const luaL_Reg* functions);
 	//add int member to registered object
-	void AddInt(const string& name, int data);
+	void AddInt(const std::string& name, int data);
 
 	//set delta time to use with lua
 	void SetDeltaTime(double dt);
@@ -68,14 +68,14 @@ public:
 	void Render();
 
 	//send a signal to lua
-	void Signal(const string& name);
+	void Signal(const std::string& name);
 	//try sending a signal to lua, which can fail because of thread conflicts
-	bool TrySignal(const string& name);
+	bool TrySignal(const std::string& name);
 
 	//Static function wrappers from here on
 
 	//get string from lua on stack position
-	static string SGetString(lua_State* L, int stackpos);
+	static std::string SGetString(lua_State* L, int stackpos);
 	//check if a value is string on the stack position
 	static bool SIsString(lua_State* L, int stackpos);
 	//check if a value is number on the stack position
@@ -116,7 +116,7 @@ public:
 	//push double to lua stack
 	static void SSetDouble(lua_State* L, double data);
 	//push string to lua stack
-	static void SSetString(lua_State* L, const string& data);
+	static void SSetString(lua_State* L, const std::string& data);
 	//push bool to lua stack
 	static void SSetBool(lua_State* L, bool data);
 	//push pointer (light userdata) to lua stack
@@ -125,9 +125,9 @@ public:
 	static void SSetNull(lua_State* L);
 
 	//throw error
-	static void SError(lua_State* L, const string& error = "", bool todebug = true, bool tobacklog = true);
+	static void SError(lua_State* L, const std::string& error = "", bool todebug = true, bool tobacklog = true);
 	
 	//add new metatable
-	static void SAddMetatable(lua_State* L, const string& name);
+	static void SAddMetatable(lua_State* L, const std::string& name);
 };
 

@@ -12,7 +12,7 @@ int x, y, w, h;
 bool flipped;
 
 2. bin - structure representing resultant bin object
-3. bool pack(rect_xywhf* const * v, int n, int max_side, std::vector<bin>& bins) - actual packing function
+3. bool pack(rect_xywhf* const * v, int n, int max_side, std::std::vector<bin>& bins) - actual packing function
 Arguments:
 input/output: v - pointer to array of pointers to your rectangles (const here means that the pointers will point to the same rectangles after the call)
 input: n - rectangles count

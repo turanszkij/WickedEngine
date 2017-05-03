@@ -13,6 +13,8 @@
 #include "wiFrameRate.h"
 #include "wiProfiler.h"
 
+using namespace std;
+
 MainComponent::MainComponent()
 {
 	// This call also saves the current working dir as the original one on this first call

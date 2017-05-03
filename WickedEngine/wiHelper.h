@@ -8,31 +8,31 @@
 
 namespace wiHelper
 {
-	string toUpper(const string& s);
+	std::string toUpper(const std::string& s);
 
-	bool readByteData(const string& fileName, BYTE** data, size_t& dataSize);
+	bool readByteData(const std::string& fileName, BYTE** data, size_t& dataSize);
 
-	void messageBox(const string& msg, const string& caption = "Warning!");
+	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
-	void screenshot(const string& name = "");
+	void screenshot(const std::string& name = "");
 
-	string getCurrentDateTimeAsString();
+	std::string getCurrentDateTimeAsString();
 
-	string GetApplicationDirectory();
+	std::string GetApplicationDirectory();
 
-	string GetOriginalWorkingDirectory();
+	std::string GetOriginalWorkingDirectory();
 
-	string GetWorkingDirectory();
+	std::string GetWorkingDirectory();
 
-	bool SetWorkingDirectory(const string& path);
+	bool SetWorkingDirectory(const std::string& path);
 
-	void GetFilesInDirectory(vector<string> &out, const string &directory);
+	void GetFilesInDirectory(std::vector<std::string> &out, const std::string &directory);
 
-	void SplitPath(const string& fullPath, string& dir, string& fileName);
+	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName);
 
-	string GetFileNameFromPath(const string& fullPath);
+	std::string GetFileNameFromPath(const std::string& fullPath);
 
-	string GetDirectoryFromPath(const string& fullPath);
+	std::string GetDirectoryFromPath(const std::string& fullPath);
 
 	void Sleep(float milliseconds);
 };

@@ -1,9 +1,10 @@
 #include "wiClient.h"
 
+using namespace std;
 
 #ifndef WINSTORE_SUPPORT
 
-wiClient::wiClient(const string& newName, const string& ipaddress, int port)
+wiClient::wiClient(const std::string& newName, const std::string& ipaddress, int port)
 {
 	if(ConnectToHost(port,ipaddress.length()<=1?"127.0.0.1":ipaddress.c_str())){
 		success=true;
@@ -31,18 +32,18 @@ wiClient::~wiClient(void)
 }
 
 
-bool wiClient::sendText(const string& text){
+bool wiClient::sendText(const std::string& text){
 	return wiNetwork::sendText(text,s);
 }
 bool wiClient::receiveText(string& text){
 	return wiNetwork::receiveText(text,s);
 }
-bool wiClient::changeName(const string& newName){
+bool wiClient::changeName(const std::string& newName){
 	wiNetwork::changeName(newName);
 	wiNetwork::sendData(wiNetwork::PACKET_TYPE_CHANGENAME,s);
 	return wiNetwork::sendText(newName,s);
 }
-bool wiClient::sendMessage(const string& text){
+bool wiClient::sendMessage(const std::string& text){
 	wiNetwork::sendData(wiNetwork::PACKET_TYPE_TEXTMESSAGE,s);
 	return wiNetwork::sendText(text,s);
 }

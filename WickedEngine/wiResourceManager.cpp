@@ -3,6 +3,7 @@
 #include "wiSound.h"
 #include "wiHelper.h"
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 wiResourceManager::filetypes wiResourceManager::types;
@@ -297,7 +298,7 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 
 bool wiResourceManager::CleanUp()
 {
-	vector<wiHashString>resNames(0);
+	std::vector<wiHashString>resNames(0);
 	for (auto& x : resources)
 	{
 		resNames.push_back(x.first);

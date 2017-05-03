@@ -17,9 +17,10 @@
 #include <algorithm>
 #include <fstream>
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
-void LoadWiArmatures(const string& directory, const string& name, const string& identifier, list<Armature*>& armatures)
+void LoadWiArmatures(const std::string& directory, const std::string& name, const std::string& identifier, list<Armature*>& armatures)
 {
 	stringstream filename("");
 	filename<<directory<<name;
@@ -135,7 +136,7 @@ void RecursiveRest(Armature* armature, Bone* bone){
 		RecursiveRest(armature,bone->childrenI[i]);
 	}
 }
-void LoadWiMaterialLibrary(const string& directory, const string& name, const string& identifier, const string& texturesDir,MaterialCollection& materials)
+void LoadWiMaterialLibrary(const std::string& directory, const std::string& name, const std::string& identifier, const std::string& texturesDir,MaterialCollection& materials)
 {
 	int materialI=(int)(materials.size()-1);
 
@@ -285,7 +286,7 @@ void LoadWiMaterialLibrary(const string& directory, const string& name, const st
 	}
 
 }
-void LoadWiObjects(const string& directory, const string& name, const string& identifier, list<Object*>& objects
+void LoadWiObjects(const std::string& directory, const std::string& name, const std::string& identifier, list<Object*>& objects
 					, list<Armature*>& armatures
 				   , MeshCollection& meshes, const MaterialCollection& materials)
 {
@@ -484,7 +485,7 @@ void LoadWiObjects(const string& directory, const string& name, const string& id
 	//}
 
 }
-void LoadWiMeshes(const string& directory, const string& name, const string& identifier, MeshCollection& meshes, 
+void LoadWiMeshes(const std::string& directory, const std::string& name, const std::string& identifier, MeshCollection& meshes, 
 	const list<Armature*>& armatures, const MaterialCollection& materials)
 {
 	int meshI=(int)(meshes.size()-1);
@@ -727,7 +728,7 @@ void LoadWiMeshes(const string& directory, const string& name, const string& ide
 		meshes.insert( pair<string,Mesh*>(currentMesh->name,currentMesh) );
 
 }
-void LoadWiActions(const string& directory, const string& name, const string& identifier, list<Armature*>& armatures)
+void LoadWiActions(const std::string& directory, const std::string& name, const std::string& identifier, list<Armature*>& armatures)
 {
 	Armature* armatureI=nullptr;
 	Bone* boneI=nullptr;
@@ -818,7 +819,7 @@ void LoadWiActions(const string& directory, const string& name, const string& id
 	}
 	file.close();
 }
-void LoadWiLights(const string& directory, const string& name, const string& identifier, list<Light*>& lights)
+void LoadWiLights(const std::string& directory, const std::string& name, const std::string& identifier, list<Light*>& lights)
 {
 
 	stringstream filename("");
@@ -866,7 +867,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 					stringstream identified_parentName("");
 					identified_parentName<<parentName<<identifier;
 					lights.back()->parentName=identified_parentName.str();
-					//for(map<string,Transform*>::iterator it=transforms.begin();it!=transforms.end();++it){
+					//for(std::map<string,Transform*>::iterator it=transforms.begin();it!=transforms.end();++it){
 					//	if(!it->second->name.compare(lights.back()->parentName)){
 					//		lights.back()->parent=it->second;
 					//		lights.back()->attachTo(it->second,1,1,1);
@@ -964,7 +965,7 @@ void LoadWiLights(const string& directory, const string& name, const string& ide
 	}
 	file.close();
 }
-void LoadWiHitSpheres(const string& directory, const string& name, const string& identifier, vector<HitSphere*>& spheres
+void LoadWiHitSpheres(const std::string& directory, const std::string& name, const std::string& identifier, std::vector<HitSphere*>& spheres
 					  ,const list<Armature*>& armatures)
 {
 	stringstream filename("");
@@ -1065,7 +1066,7 @@ void LoadWiHitSpheres(const string& directory, const string& name, const string&
 	//	}
 	//}
 }
-void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worldInfo, Wind& wind){
+void LoadWiWorldInfo(const std::string&directory, const std::string& name, WorldInfo& worldInfo, Wind& wind){
 	stringstream filename("");
 	filename<<directory<<name;
 
@@ -1117,7 +1118,7 @@ void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worl
 	}
 	file.close();
 }
-void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
+void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::vector<Camera>& cameras
 				   ,const list<Armature*>& armatures){
 	stringstream filename("");
 	filename<<directory<<name;
@@ -1185,7 +1186,7 @@ void LoadWiCameras(const string&directory, const string& name, const string& ide
 	}
 	file.close();
 }
-void LoadWiDecals(const string&directory, const string& name, const string& texturesDir, list<Decal*>& decals){
+void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, list<Decal*>& decals){
 	stringstream filename("");
 	filename<<directory<<name;
 
@@ -1239,7 +1240,7 @@ void LoadWiDecals(const string&directory, const string& name, const string& text
 
 
 
-void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type){
+void GenerateSPTree(wiSPTree*& tree, std::vector<Cullable*>& objects, int type){
 	if(type==SPTREE_GENERATE_QUADTREE)
 		tree = new QuadTree();
 	else if(type==SPTREE_GENERATE_OCTREE)
@@ -1556,8 +1557,8 @@ void VertexGroup::Serialize(wiArchive& archive)
 
 GPUBuffer Mesh::impostorVBs[VPROP_COUNT];
 
-void Mesh::LoadFromFile(const string& newName, const string& fname
-	, const MaterialCollection& materialColl, const list<Armature*>& armatures, const string& identifier) {
+void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
+	, const MaterialCollection& materialColl, const list<Armature*>& armatures, const std::string& identifier) {
 	name = newName;
 
 	BYTE* buffer;
@@ -2193,8 +2194,8 @@ void Mesh::CreateVertexArrays()
 	arraysComplete = true;
 }
 
-vector<Instance> meshInstances[GRAPHICSTHREAD_COUNT];
-vector<InstancePrev> meshInstancesPrev[GRAPHICSTHREAD_COUNT];
+std::vector<Instance> meshInstances[GRAPHICSTHREAD_COUNT];
+std::vector<InstancePrev> meshInstancesPrev[GRAPHICSTHREAD_COUNT];
 void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID)
 {
 	if (numerator >= (int)meshInstances[threadID].size())
@@ -2482,7 +2483,7 @@ void Model::CleanUp()
 		SAFE_DELETE(x);
 	}
 }
-void Model::LoadFromDisk(const string& dir, const string& name, const string& identifier)
+void Model::LoadFromDisk(const std::string& dir, const std::string& name, const std::string& identifier)
 {
 	wiArchive archive(dir + name + ".wimf", true);
 	if (archive.IsOpen())
@@ -2518,7 +2519,7 @@ void Model::LoadFromDisk(const string& dir, const string& name, const string& id
 }
 void Model::FinishLoading()
 {
-	vector<Transform*> transforms(0);
+	std::vector<Transform*> transforms(0);
 	transforms.reserve(armatures.size() + objects.size() + lights.size() + decals.size());
 
 	for (Armature* x : armatures)
@@ -2901,7 +2902,7 @@ GPUBuffer HitSphere::vertexBuffer;
 void HitSphere::SetUpStatic()
 {
 	const int numVert = (RESOLUTION+1)*2;
-	vector<XMFLOAT3A> verts(0);
+	std::vector<XMFLOAT3A> verts(0);
 
 	for(int i=0;i<=RESOLUTION;++i){
 		float alpha = (float)i/(float)RESOLUTION*2*3.14159265359f;
@@ -3295,7 +3296,7 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 	// Because bones are not updated in the regular Transform fashion, a separate update needs to be called
 	bone->UpdateTransform();
 }
-XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const vector<KeyFrame>& keyframeList, KeyFrameType type)
+XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const std::vector<KeyFrame>& keyframeList, KeyFrameType type)
 {
 	XMVECTOR result = XMVectorSet(0, 0, 0, 0);
 
@@ -3375,7 +3376,7 @@ XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const vector<
 	return result;
 }
 
-void Armature::ChangeAction(const string& actionName, float blendFrames, const string& animLayer, float weight)
+void Armature::ChangeAction(const std::string& actionName, float blendFrames, const std::string& animLayer, float weight)
 {
 	AnimationLayer* anim = GetPrimaryAnimation();
 	if (animLayer.length() > 0)
@@ -3398,7 +3399,7 @@ void Armature::ChangeAction(const string& actionName, float blendFrames, const s
 	// Fall back to identity action
 	anim->ChangeAction(0, blendFrames, weight);
 }
-AnimationLayer* Armature::GetAnimLayer(const string& name)
+AnimationLayer* Armature::GetAnimLayer(const std::string& name)
 {
 	for (auto& x : animationLayers)
 	{
@@ -3411,7 +3412,7 @@ AnimationLayer* Armature::GetAnimLayer(const string& name)
 	animationLayers.back()->name = name;
 	return animationLayers.back();
 }
-void Armature::AddAnimLayer(const string& name)
+void Armature::AddAnimLayer(const std::string& name)
 {
 	for (auto& x : animationLayers)
 	{
@@ -3423,7 +3424,7 @@ void Armature::AddAnimLayer(const string& name)
 	animationLayers.push_back(new AnimationLayer);
 	animationLayers.back()->name = name;
 }
-void Armature::DeleteAnimLayer(const string& name)
+void Armature::DeleteAnimLayer(const std::string& name)
 {
 	auto i = animationLayers.begin();
 	while (i != animationLayers.end())
@@ -3462,7 +3463,7 @@ void Armature::CreateFamily()
 		RecursiveRest(this, rootbones[i]);
 	}
 }
-Bone* Armature::GetBone(const string& name)
+Bone* Armature::GetBone(const std::string& name)
 {
 	for (auto& x : boneCollection)
 	{
@@ -3534,7 +3535,7 @@ void Armature::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region Decals
-Decal::Decal(const XMFLOAT3& tra, const XMFLOAT3& sca, const XMFLOAT4& rot, const string& tex, const string& nor):Cullable(),Transform(){
+Decal::Decal(const XMFLOAT3& tra, const XMFLOAT3& sca, const XMFLOAT4& rot, const std::string& tex, const std::string& nor):Cullable(),Transform(){
 	scale_rest=scale=sca;
 	rotation_rest=rotation=rot;
 	translation_rest=translation=tra;
@@ -3557,13 +3558,13 @@ Decal::~Decal() {
 	wiResourceManager::GetGlobal()->del(texName);
 	wiResourceManager::GetGlobal()->del(norName);
 }
-void Decal::addTexture(const string& tex){
+void Decal::addTexture(const std::string& tex){
 	texName=tex;
 	if(!tex.empty()){
 		texture = (Texture2D*)wiResourceManager::GetGlobal()->add(tex);
 	}
 }
-void Decal::addNormal(const string& nor){
+void Decal::addNormal(const std::string& nor){
 	norName=nor;
 	if(!nor.empty()){
 		normal = (Texture2D*)wiResourceManager::GetGlobal()->add(nor);
@@ -3647,7 +3648,7 @@ void Camera::UpdateTransform()
 #pragma endregion
 
 #pragma region OBJECT
-Object::Object(const string& name) :Transform()
+Object::Object(const std::string& name) :Transform()
 {
 	this->name = name;
 	init();

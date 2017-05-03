@@ -5,6 +5,8 @@
 #include "wiWindowRegistration.h"
 #include "wiHelper.h"
 
+using namespace std;
+
 #ifndef WINSTORE_SUPPORT
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
 #define KEY_TOGGLE(vk_code) ((GetAsyncKeyState(vk_code) & 1) != 0)
@@ -259,7 +261,7 @@ void _OnPointerMoved(CoreWindow^ window, PointerEventArgs^ pointer)
 }
 #endif // WINSTORE_SUPPORT
 
-vector<wiInputManager::Touch> wiInputManager::getTouches()
+std::vector<wiInputManager::Touch> wiInputManager::getTouches()
 {
 	static bool isRegisteredTouch = false;
 	if (!isRegisteredTouch)

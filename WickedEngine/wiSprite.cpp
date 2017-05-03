@@ -11,17 +11,17 @@ wiSprite::wiSprite(wiResourceManager* contentHolder) :ContentHolder(contentHolde
 {
 	Init();
 }
-wiSprite::wiSprite(const string& newTexture, const string& newMask, const string& newNormal, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
+wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask, const std::string& newNormal, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
 {
 	Init();
 	CreateReference(newTexture,newMask,newNormal);
 }
-wiSprite::wiSprite(const string& newTexture, const string& newMask, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
+wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
 {
 	Init();
 	CreateReference(newTexture,newMask,"");
 }
-wiSprite::wiSprite(const string& newTexture, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
+wiSprite::wiSprite(const std::string& newTexture, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
 {
 	Init();
 	CreateReference(newTexture,"","");
@@ -39,7 +39,7 @@ void wiSprite::Init(){
 	effects=wiImageEffects();
 	anim=Anim();
 }
-void wiSprite::CreateReference(const string& newTexture, const string& newMask, const string& newNormal){
+void wiSprite::CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal){
 	if(newTexture.length()) {
 		texture = newTexture;
 		texturePointer = (Texture2D*)ContentHolder->add(newTexture);

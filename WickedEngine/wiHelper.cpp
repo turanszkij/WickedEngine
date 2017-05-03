@@ -9,10 +9,12 @@
 #include <iomanip>
 #include <fstream>
 
+using namespace std;
+
 namespace wiHelper
 {
 
-	string toUpper(const string& s)
+	string toUpper(const std::string& s)
 	{
 		std::string result;
 		std::locale loc;
@@ -23,7 +25,7 @@ namespace wiHelper
 		return result;
 	}
 
-	bool readByteData(const string& fileName, BYTE** data, size_t& dataSize){
+	bool readByteData(const std::string& fileName, BYTE** data, size_t& dataSize){
 		ifstream file(fileName, ios::binary | ios::ate);
 		if (file.is_open()){
 
@@ -41,7 +43,7 @@ namespace wiHelper
 		return false;
 	}
 
-	void messageBox(const string& msg, const string& caption){
+	void messageBox(const std::string& msg, const std::string& caption){
 #ifndef WINSTORE_SUPPORT
 		MessageBoxA(wiWindowRegistration::GetInstance()->GetRegisteredWindow(), msg.c_str(), caption.c_str(), 0);
 #else
@@ -51,7 +53,7 @@ namespace wiHelper
 #endif
 	}
 
-	void screenshot(const string& name)
+	void screenshot(const std::string& name)
 	{
 		CreateDirectoryA("screenshots", 0);
 		stringstream ss("");
@@ -106,12 +108,12 @@ namespace wiHelper
 		return string(_getcwd(NULL, 0)) + "/";
 	}
 
-	bool SetWorkingDirectory(const string& path)
+	bool SetWorkingDirectory(const std::string& path)
 	{
 		return _chdir(path.c_str()) == 0;
 	}
 
-	void GetFilesInDirectory(vector<string>& out, const string& directory)
+	void GetFilesInDirectory(std::vector<string>& out, const std::string& directory)
 	{
 #ifndef WINSTORE_SUPPORT
 		// WINDOWS
@@ -165,7 +167,7 @@ namespace wiHelper
 		//closedir(dir);
 	}
 
-	void SplitPath(const string& fullPath, string& dir, string& fileName)
+	void SplitPath(const std::string& fullPath, string& dir, string& fileName)
 	{
 		size_t found;
 		found = fullPath.find_last_of("/\\");
@@ -173,7 +175,7 @@ namespace wiHelper
 		fileName = fullPath.substr(found + 1);
 	}
 
-	string GetFileNameFromPath(const string& fullPath)
+	string GetFileNameFromPath(const std::string& fullPath)
 	{
 		if (fullPath.empty())
 		{
@@ -185,7 +187,7 @@ namespace wiHelper
 		return ret;
 	}
 
-	string GetDirectoryFromPath(const string& fullPath)
+	string GetDirectoryFromPath(const std::string& fullPath)
 	{
 		if (fullPath.empty())
 		{

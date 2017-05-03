@@ -5,7 +5,7 @@
 using namespace std;
 
 
-wiServer::wiServer(const string& newName, const string& ipaddress, int port)
+wiServer::wiServer(const std::string& newName, const std::string& ipaddress, int port)
 {
 	name=newName;
 	if(ListenOnPort(port,ipaddress.length()<=1?"0.0.0.0":ipaddress.c_str())){
@@ -25,7 +25,7 @@ wiServer::wiServer(const string& newName, const string& ipaddress, int port)
 
 wiServer::~wiServer(void)
 {
-	for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
+	for (std::map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
 		closesocket(it->first);
 	}
 	wiNetwork::~wiNetwork();
@@ -93,10 +93,10 @@ SOCKET wiServer::CreateAccepter(){
 
 
 
-vector<string> wiServer::listClients()
+std::vector<string> wiServer::listClients()
 {
-	vector<string> ret(0);
-	for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
+	std::vector<string> ret(0);
+	for (std::map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
 		stringstream ss("");
 		ss<<it->second<<":"<<it->first;
 		ret.push_back(ss.str());
@@ -104,16 +104,16 @@ vector<string> wiServer::listClients()
 	return ret;
 }
 
-bool wiServer::sendText(const string& text, int packettype, const string& clientName, int clientID){
+bool wiServer::sendText(const std::string& text, int packettype, const std::string& clientName, int clientID){
 	int sentTo=0;
 
 	if(clientName.length()<=0){ //send to everyone
-		for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
+		for (std::map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
 			sentTo += wiNetwork::sendData(packettype,it->first) && wiNetwork::sendText(text,it->first);
 		}
 	}
 	else if(clientID<0){ //send to all of same name
-		for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
+		for (std::map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
 			if(!clientName.compare(it->second)){
 				sentTo += wiNetwork::sendData(packettype,it->first) && wiNetwork::sendText(text,it->first);
 			}
@@ -131,11 +131,11 @@ bool wiServer::sendText(const string& text, int packettype, const string& client
 	return sentTo>0;
 }
 
-bool wiServer::changeName(const string& newName){
+bool wiServer::changeName(const std::string& newName){
 	wiNetwork::changeName(newName);
 	return sendText(newName, wiNetwork::PACKET_TYPE_CHANGENAME);
 }
-bool wiServer::sendMessage(const string& text, const string& clientName, int clientID){
+bool wiServer::sendMessage(const std::string& text, const std::string& clientName, int clientID){
 	return sendText(text, wiNetwork::PACKET_TYPE_TEXTMESSAGE, clientName, clientID);
 }
 

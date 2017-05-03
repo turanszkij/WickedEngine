@@ -4,6 +4,7 @@
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)

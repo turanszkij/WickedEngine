@@ -1,5 +1,7 @@
 #include "wiCVars.h"
 
+using namespace std;
+
 wiCVars* wiCVars::globalVars = nullptr;
 
 wiCVars::wiCVars()
@@ -23,14 +25,14 @@ wiCVars* wiCVars::GetGlobal()
 }
 
 
-const wiCVars::Variable wiCVars::get(const string& name)
+const wiCVars::Variable wiCVars::get(const std::string& name)
 {
 	container::iterator it = variables.find(name);
 	if(it!=variables.end())
 		return it->second;
 	else return Variable::Invalid();
 }
-bool wiCVars::set(const string& name, const string& value)
+bool wiCVars::set(const std::string& name, const std::string& value)
 {
 	if (!get(name).isValid())
 		return false;
@@ -43,7 +45,7 @@ bool wiCVars::set(const string& name, const string& value)
 
 	return true;
 }
-bool wiCVars::add(const string& name, const string& value, Data_Type newType)
+bool wiCVars::add(const std::string& name, const std::string& value, Data_Type newType)
 {
 	if(get(name).isValid())
 		return false;
@@ -52,7 +54,7 @@ bool wiCVars::add(const string& name, const string& value, Data_Type newType)
 	UNLOCK();
 	return true;
 } 
-bool wiCVars::del(const string& name)
+bool wiCVars::del(const std::string& name)
 {
 	if (!get(name).isValid())
 		return false;

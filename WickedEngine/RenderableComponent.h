@@ -14,8 +14,8 @@ public:
 	wiCVars Params;
 	wiResourceManager Content;
 
-	function<void()> onStart;
-	function<void()> onStop;
+	std::function<void()> onStart;
+	std::function<void()> onStop;
 
 	RenderableComponent(){}
 	virtual ~RenderableComponent() { Unload(); }

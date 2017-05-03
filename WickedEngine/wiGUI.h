@@ -12,7 +12,7 @@ class wiGUI
 {
 	friend class wiWidget;
 private:
-	list<wiWidget*> widgets;
+	std::list<wiWidget*> widgets;
 	wiWidget* activeWidget;
 	GRAPHICSTHREAD threadID;
 	bool focus;

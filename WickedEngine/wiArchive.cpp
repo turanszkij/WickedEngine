@@ -4,6 +4,8 @@
 #include <fstream>
 #include <sstream>
 
+using namespace std;
+
 // this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
 uint64_t __archiveVersion = 7;
 // this is the version number of which below the archive is not compatible with the current version
@@ -11,7 +13,7 @@ uint64_t __archiveVersionBarrier = 1;
 
 // version history is logged in ArchiveVersionHistory.txt file!
 
-wiArchive::wiArchive(const string& fileName, bool readMode):readMode(readMode),pos(0),DATA(nullptr),dataSize(0),fileName(fileName)
+wiArchive::wiArchive(const std::string& fileName, bool readMode):readMode(readMode),pos(0),DATA(nullptr),dataSize(0),fileName(fileName)
 {
 	if (!fileName.empty())
 	{
@@ -74,7 +76,7 @@ void wiArchive::Close()
 	SAFE_DELETE_ARRAY(DATA);
 }
 
-bool wiArchive::SaveFile(const string& fileName)
+bool wiArchive::SaveFile(const std::string& fileName)
 {
 	if (pos <= 0)
 	{

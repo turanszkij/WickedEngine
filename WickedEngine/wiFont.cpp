@@ -7,6 +7,7 @@
 
 #include <fstream>
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 #define WHITESPACE_SIZE 3
@@ -20,14 +21,14 @@ BlendState			*wiFont::blendState = nullptr;
 RasterizerState		*wiFont::rasterizerState = nullptr;
 RasterizerState		*wiFont::rasterizerState_Scissor = nullptr;
 DepthStencilState	*wiFont::depthStencilState = nullptr;
-vector<wiFont::Vertex> wiFont::vertexList;
-vector<wiFont::wiFontStyle> wiFont::fontStyles;
+std::vector<wiFont::Vertex> wiFont::vertexList;
+std::vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
-wiFont::wiFont(const string& text, wiFontProps props, int style) : props(props), style(style)
+wiFont::wiFont(const std::string& text, wiFontProps props, int style) : props(props), style(style)
 {
 	this->text = wstring(text.begin(), text.end());
 }
-wiFont::wiFont(const wstring& text, wiFontProps props, int style) : text(text), props(props), style(style)
+wiFont::wiFont(const std::wstring& text, wiFontProps props, int style) : text(text), props(props), style(style)
 {
 
 }
@@ -156,7 +157,7 @@ void wiFont::CleanUpStatic()
 }
 
 
-void wiFont::ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID)
+void wiFont::ModifyGeo(const std::wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID)
 {
 	const int lineHeight = (props.size < 0 ? fontStyles[style].lineHeight : props.size);
 	const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyles[style].lineHeight);
@@ -374,11 +375,11 @@ int wiFont::textHeight()
 }
 
 
-void wiFont::SetText(const string& text)
+void wiFont::SetText(const std::string& text)
 {
 	this->text = wstring(text.begin(), text.end());
 }
-void wiFont::SetText(const wstring& text)
+void wiFont::SetText(const std::wstring& text)
 {
 	this->text = text;
 }
@@ -391,7 +392,7 @@ string wiFont::GetTextA()
 	return string(text.begin(),text.end());
 }
 
-wiFont::wiFontStyle::wiFontStyle(const string& newName)
+wiFont::wiFontStyle::wiFontStyle(const std::string& newName)
 {
 	name=newName;
 
@@ -437,7 +438,7 @@ wiFont::wiFontStyle::wiFontStyle(const string& newName)
 void wiFont::wiFontStyle::CleanUp(){
 	SAFE_DELETE(texture);
 }
-void wiFont::addFontStyle( const string& toAdd ){
+void wiFont::addFontStyle( const std::string& toAdd ){
 	for (auto& x : fontStyles)
 	{
 		if (!x.name.compare(toAdd))
@@ -445,7 +446,7 @@ void wiFont::addFontStyle( const string& toAdd ){
 	}
 	fontStyles.push_back(wiFontStyle(toAdd));
 }
-int wiFont::getFontStyleByName( const string& get ){
+int wiFont::getFontStyleByName( const std::string& get ){
 	for (unsigned int i = 0; i<fontStyles.size(); i++)
 	if(!fontStyles[i].name.compare(get))
 		return i;

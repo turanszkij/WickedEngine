@@ -8,7 +8,7 @@ class wiThreadSafeManager
 {
 protected:
 	//mutex MUTEX;
-	static mutex STATICMUTEX;
+	static std::mutex STATICMUTEX;
 	wiSpinLock spinlock;
 public:
 	wiThreadSafeManager();

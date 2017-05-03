@@ -19,11 +19,11 @@ wiSPTree::~wiSPTree()
 	SAFE_DELETE(root);
 }
 
-void wiSPTree::initialize(const vector<Cullable*>& objects){
+void wiSPTree::initialize(const std::vector<Cullable*>& objects){
 	initialize(objects,XMFLOAT3(FLOAT32_MAX,FLOAT32_MAX,FLOAT32_MAX)
 		,XMFLOAT3(-FLOAT32_MAX,-FLOAT32_MAX,-FLOAT32_MAX));
 }
-void wiSPTree::initialize(const vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax){
+void wiSPTree::initialize(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax){
 	XMFLOAT3 min = newMin;
 	XMFLOAT3 max = newMax;
 
@@ -38,7 +38,7 @@ void wiSPTree::initialize(const vector<Cullable*>& objects, const XMFLOAT3& newM
 	AddObjects(this->root,objects);
 }
 
-void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects)
+void wiSPTree::AddObjects(Node* node, const std::vector<Cullable*>& newObjects)
 {
 	for(Cullable* object : newObjects)
 	{
@@ -72,7 +72,7 @@ void wiSPTree::AddObjects(Node* node, const vector<Cullable*>& newObjects)
 		for(int i=0;i<node->count;++i){
 			//children[i] = new Node(this,boxes[i],depth+1);
 
-			vector<Cullable*> o(0);
+			std::vector<Cullable*> o(0);
 			o.reserve(newObjects.size());
 			for(Cullable* object : newObjects)
 #ifdef SP_TREE_BOX_CONTAIN
@@ -307,7 +307,7 @@ wiSPTree* wiSPTree::updateTree(Node* node)
 	if(node)
 	{
 
-		vector<Cullable*> bad(0);
+		std::vector<Cullable*> bad(0);
 		for(Cullable* object : node->objects){
 #ifdef SP_TREE_BOX_CONTAIN
 			if( node->box.intersects(object->bounds)!=AABB::INSIDE )

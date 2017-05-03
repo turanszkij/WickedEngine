@@ -4,6 +4,8 @@
 // NOTE:
 // Do not include engine features in this file!
 
+
+// Platform specific:
 #include <SDKDDKVer.h>
 #include <windows.h>
 #ifdef WINSTORE_SUPPORT
@@ -11,13 +13,10 @@
 #endif
 
 
+// Platform agnostic:
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
-
-
-
 using namespace DirectX;
-using namespace std;
 
 #define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
 #define SAFE_INIT(a) (a) = nullptr;

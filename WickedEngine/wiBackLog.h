@@ -5,18 +5,22 @@
 #include "wiImage.h"
 #include "wiLua.h"
 
+#include <mutex>
+#include <string>
+#include <sstream>
 #include <deque>
+#include <fstream>
 
 class wiBackLog
 {
 private:
-	static deque<string> stream;
+	static std::deque<std::string> stream;
 	static unsigned int deletefromline;
-	static mutex logMutex;
+	static std::mutex logMutex;
 	static const float speed;
 	static float pos;
 	static int scroll;
-	static stringstream inputArea;
+	static std::stringstream inputArea;
 	enum State{
 		DISABLED,
 		IDLE,
@@ -32,15 +36,15 @@ public:
 	static void Update();
 	static void Draw();
 
-	static string getText();
+	static std::string getText();
 	static void clear();
 	static void post(const char* input);
 	static void input(const char& input);
 	static void acceptInput();
 	static void deletefromInput();
-	static void save(ofstream& file);
+	static void save(std::ofstream& file);
 
-	static deque<string> history;
+	static std::deque<std::string> history;
 	static int historyPos;
 	static void historyPrev();
 	static void historyNext();

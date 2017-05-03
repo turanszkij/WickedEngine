@@ -35,11 +35,11 @@ public:
 			refCount = 1;
 		};
 	};
-	typedef unordered_map<wiHashString, Resource*> container;
+	typedef std::unordered_map<wiHashString, Resource*> container;
 	container resources;
 
 protected:
-typedef map<string,Data_Type> filetypes;
+typedef std::map<std::string,Data_Type> filetypes;
 static filetypes types;
 static wiResourceManager* globalResources;
 static void SetUp();

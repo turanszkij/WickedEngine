@@ -10,9 +10,9 @@ class wiRenderTarget
 {
 private:
 	int numViews;
-	vector<wiGraphicsTypes::Texture2D*>		renderTargets;
-	vector<wiGraphicsTypes::Texture2D*>		renderTargets_resolvedMSAA;
-	vector<int>								resolvedMSAAUptodate;
+	std::vector<wiGraphicsTypes::Texture2D*>		renderTargets;
+	std::vector<wiGraphicsTypes::Texture2D*>		renderTargets_resolvedMSAA;
+	std::vector<int>								resolvedMSAAUptodate;
 public:
 	wiGraphicsTypes::ViewPort	viewPort;
 	wiDepthTarget*				depth;

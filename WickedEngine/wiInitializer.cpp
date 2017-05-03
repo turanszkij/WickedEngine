@@ -9,6 +9,7 @@
 #include "wiSound.h"
 #include "wiHelper.h"
 
+using namespace std;
 
 namespace wiInitializer
 {

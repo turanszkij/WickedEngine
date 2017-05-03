@@ -6,14 +6,14 @@
 class wiHashString
 {
 private:
-	string str;
+	std::string str;
 	size_t hash;
 public:
 	wiHashString(const char* value = "");
-	wiHashString(const string& value);
+	wiHashString(const std::string& value);
 	~wiHashString();
 
-	const string& GetString() const { return str; }
+	const std::string& GetString() const { return str; }
 	size_t GetHash() const { return hash; }
 };
 

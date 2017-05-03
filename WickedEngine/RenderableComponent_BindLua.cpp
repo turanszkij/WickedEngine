@@ -1,6 +1,8 @@
 #include "RenderableComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
 
+using namespace std;
+
 const char RenderableComponent_BindLua::className[] = "RenderableComponent";
 
 Luna<RenderableComponent_BindLua>::FunctionType RenderableComponent_BindLua::methods[] = {

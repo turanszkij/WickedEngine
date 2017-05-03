@@ -29,7 +29,7 @@ void wiLensFlare::CleanUp(){
 	SAFE_DELETE(depthStencilState);
 	SAFE_DELETE(blendState);
 }
-void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, vector<Texture2D*>& rims){
+void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<Texture2D*>& rims){
 
 	if(!rims.empty())
 	{

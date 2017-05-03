@@ -10,6 +10,8 @@
 #include <sstream>
 #include <wincodec.h>
 
+using namespace std;
+
 namespace wiGraphicsTypes
 {
 // Engine -> Native converters
@@ -3295,7 +3297,7 @@ bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 }
 
 
-HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
+HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
 {
 	HRESULT hr = E_FAIL;
 	(*ppTexture) = new Texture2D();
@@ -3326,7 +3328,7 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const string& fileName, Textu
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::SaveTexturePNG(const string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
+HRESULT GraphicsDevice_DX11::SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
 {
 	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
 	if (tex2D != nullptr)
@@ -3335,7 +3337,7 @@ HRESULT GraphicsDevice_DX11::SaveTexturePNG(const string& fileName, Texture2D *p
 	}
 	return E_FAIL;
 }
-HRESULT GraphicsDevice_DX11::SaveTextureDDS(const string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
+HRESULT GraphicsDevice_DX11::SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
 {
 	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
 	if (tex2D != nullptr)
@@ -3345,7 +3347,7 @@ HRESULT GraphicsDevice_DX11::SaveTextureDDS(const string& fileName, Texture *pTe
 	return E_FAIL;
 }
 
-void GraphicsDevice_DX11::EventBegin(const string& name, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
 {
 	userDefinedAnnotations[threadID]->BeginEvent(wstring(name.begin(), name.end()).c_str());
 }
@@ -3353,7 +3355,7 @@ void GraphicsDevice_DX11::EventEnd(GRAPHICSTHREAD threadID)
 {
 	userDefinedAnnotations[threadID]->EndEvent();
 }
-void GraphicsDevice_DX11::SetMarker(const string& name, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::SetMarker(const std::string& name, GRAPHICSTHREAD threadID)
 {
 	userDefinedAnnotations[threadID]->SetMarker(wstring(name.begin(),name.end()).c_str());
 }

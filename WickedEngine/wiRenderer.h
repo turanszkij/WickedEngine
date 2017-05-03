@@ -45,8 +45,8 @@ class  PHYSICS;
 class  wiRenderTarget;
 class  wiWaterPlane;
 
-typedef map<string,Mesh*> MeshCollection;
-typedef map<string, Material*> MaterialCollection;
+typedef std::map<std::string, Mesh*> MeshCollection;
+typedef std::map<std::string, Material*> MaterialCollection;
 
 #define USE_GPU_SKINNING
 
@@ -59,7 +59,7 @@ public:
 
 
 	static void InitDevice(wiWindowRegistration::window_type window, bool fullscreen = false);
-	static void Present(function<void()> drawToScreen1=nullptr,function<void()> drawToScreen2=nullptr,function<void()> drawToScreen3=nullptr);
+	static void Present(std::function<void()> drawToScreen1=nullptr, std::function<void()> drawToScreen2=nullptr, std::function<void()> drawToScreen3=nullptr);
 
 	
 	static wiGraphicsTypes::Sampler				*samplers[SSLOT_COUNT];
@@ -337,7 +337,7 @@ protected:
 	} static voxelSceneData;
 
 public:
-	static string SHADERPATH;
+	static std::string SHADERPATH;
 
 	wiRenderer();
 	void CleanUp();
@@ -353,7 +353,7 @@ public:
 	static void UpdateImages();
 	static void ManageImages();
 	static void PutDecal(Decal* decal);
-	static void PutWaterRipple(const string& image, const XMFLOAT3& pos);
+	static void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	static void ManageWaterRipples();
 	static void DrawWaterRipples(GRAPHICSTHREAD threadID);
 	static void SetGameSpeed(float value){GameSpeed=value; if(GameSpeed<0) GameSpeed=0;};
@@ -413,17 +413,17 @@ public:
 	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	static wiWaterPlane GetWaterPlane();
 
-	static Transform* getTransformByName(const string& name);
+	static Transform* getTransformByName(const std::string& name);
 	static Transform* getTransformByID(unsigned long long id);
-	static Armature* getArmatureByName(const string& get);
-	static int getActionByName(Armature* armature, const string& get);
-	static int getBoneByName(Armature* armature, const string& get);
-	static Material* getMaterialByName(const string& get);
-	HitSphere* getSphereByName(const string& get);
-	static Object* getObjectByName(const string& name);
-	static Light* getLightByName(const string& name);
+	static Armature* getArmatureByName(const std::string& get);
+	static int getActionByName(Armature* armature, const std::string& get);
+	static int getBoneByName(Armature* armature, const std::string& get);
+	static Material* getMaterialByName(const std::string& get);
+	HitSphere* getSphereByName(const std::string& get);
+	static Object* getObjectByName(const std::string& name);
+	static Light* getLightByName(const std::string& name);
 
-	static void ReloadShaders(const string& path = "");
+	static void ReloadShaders(const std::string& path = "");
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
 	static void RebindPersistentState(GRAPHICSTHREAD threadID);
 
@@ -435,11 +435,11 @@ public:
 		CulledCollection culledRenderer;
 		CulledCollection culledRenderer_opaque;
 		CulledCollection culledRenderer_transparent;
-		vector<wiHairParticle*> culledHairParticleSystems;
+		std::vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
 		UINT culledLight_count; // because forward_list doesn't have size()
-		vector<wiEmittedParticle*> culledEmittedParticleSystems;
-		list<Decal*> culledDecals;
+		std::vector<wiEmittedParticle*> culledEmittedParticleSystems;
+		std::list<Decal*> culledDecals;
 
 		void Clear()
 		{
@@ -453,7 +453,7 @@ public:
 			culledDecals.clear();
 		}
 	};
-	static unordered_map<Camera*, FrameCulling> frameCullings;
+	static std::unordered_map<Camera*, FrameCulling> frameCullings;
 	
 public:
 	
@@ -529,17 +529,17 @@ public:
 	// The scene holds all models, world information and wind information
 	static Scene& GetScene();
 
-	vector<Camera> cameras;
-	vector<HitSphere*> spheres;
-	static vector<Lines*> boneLines;
-	static vector<Lines*> linesTemp;
-	static vector<Cube> cubes;
+	std::vector<Camera> cameras;
+	std::vector<HitSphere*> spheres;
+	static std::vector<Lines*> boneLines;
+	static std::vector<Lines*> linesTemp;
+	static std::vector<Cube> cubes;
 
-	static unordered_set<Object*> objectsWithTrails;
-	static unordered_set<wiEmittedParticle*> emitterSystems;
+	static std::unordered_set<Object*> objectsWithTrails;
+	static std::unordered_set<wiEmittedParticle*> emitterSystems;
 	
-	static deque<wiSprite*> images;
-	static deque<wiSprite*> waterRipples;
+	static std::deque<wiSprite*> images;
+	static std::deque<wiSprite*> waterRipples;
 	static void CleanUpStaticTemp();
 
 
@@ -551,7 +551,7 @@ public:
 
 	float getSphereRadius(const int& index);
 
-	string DIRECTORY;
+	std::string DIRECTORY;
 
 	struct Picked
 	{
@@ -596,29 +596,29 @@ public:
 	// pickType: PICKTYPE enum values ocncatenated with | operator
 	// layer : concatenated string of layers to check against, empty string : all layers will be checked
 	// layerDisable : concatenated string of layers to NOT check against
-	static Picked Pick(long cursorX, long cursorY, int pickType = PICK_OPAQUE, const string& layer = "", const string& layerDisable = "");
-	static Picked Pick(RAY& ray, int pickType = PICK_OPAQUE, const string& layer = "", const string& layerDisable = "");
+	static Picked Pick(long cursorX, long cursorY, int pickType = PICK_OPAQUE, const std::string& layer = "", const std::string& layerDisable = "");
+	static Picked Pick(RAY& ray, int pickType = PICK_OPAQUE, const std::string& layer = "", const std::string& layerDisable = "");
 	static RAY getPickRay(long cursorX, long cursorY);
-	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
-		int pickType = PICK_OPAQUE, bool dynamicObjects = true, const string& layer = "", const string& layerDisable = "", bool onlyVisible = false);
+	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, std::vector<Picked>& points,
+		int pickType = PICK_OPAQUE, bool dynamicObjects = true, const std::string& layer = "", const std::string& layerDisable = "", bool onlyVisible = false);
 	static void CalculateVertexAO(Object* object);
 
 	static PHYSICS* physicsEngine;
 	static void SynchronizeWithPhysicsEngine(float dt = 1.0f / 60.0f);
 
-	static Model* LoadModel(const string& dir, const string& name, const XMMATRIX& transform = XMMatrixIdentity(), const string& ident = "common");
-	static void LoadWorldInfo(const string& dir, const string& name);
+	static Model* LoadModel(const std::string& dir, const std::string& name, const XMMATRIX& transform = XMMatrixIdentity(), const std::string& ident = "common");
+	static void LoadWorldInfo(const std::string& dir, const std::string& name);
 	static void LoadDefaultLighting();
 
 	static void PutEnvProbe(const XMFLOAT3& position, int resolution = 256);
 
 	static void CreateImpostor(Mesh* mesh);
 
-	static vector<wiTranslator*> renderableTranslators;
+	static std::vector<wiTranslator*> renderableTranslators;
 	// Add translator to render in next frame
 	static void AddRenderableTranslator(wiTranslator* translator);
 
-	static vector<pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;
+	static std::vector<std::pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;
 	// Add box to render in next frame
 	static void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 
@@ -627,10 +627,10 @@ public:
 
 	// Add Object Instance
 	static void Add(Object* value);
-	static void Add(const list<Object*>& objects);
+	static void Add(const std::list<Object*>& objects);
 	// Add Light Instance
 	static void Add(Light* value);
-	static void Add(const list<Light*>& lights);
+	static void Add(const std::list<Light*>& lights);
 
 	// Remove from the scene
 	static void Remove(Object* value);

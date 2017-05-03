@@ -36,7 +36,7 @@ public:
 	wiNetwork(void);
 	~wiNetwork(void);
 
-	virtual bool changeName(const string& newName){
+	virtual bool changeName(const std::string& newName){
 		name=newName;
 		return true;
 	}

@@ -8,14 +8,14 @@ class wiClient : public wiNetwork
 {
 #ifndef WINSTORE_SUPPORT
 public:
-	wiClient(const string& newName = "CLIENT", const string& ipaddress = "127.0.0.1", int port = PORT);
+	wiClient(const std::string& newName = "CLIENT", const std::string& ipaddress = "127.0.0.1", int port = PORT);
 	~wiClient(void);
 
-	string serverName;
+	std::string serverName;
 
 	
-	bool sendText(const string& text);
-	bool receiveText(string& newName);
+	bool sendText(const std::string& text);
+	bool receiveText(std::string& newName);
 
 	template <typename T>
 	bool sendData(const T& value){
@@ -27,8 +27,8 @@ public:
 		return wiNetwork::receiveData(value,s);
 	}
 
-	bool changeName(const string& newName);
-	bool sendMessage(const string& text);
+	bool changeName(const std::string& newName);
+	bool sendMessage(const std::string& text);
 	
 	bool ConnectToHost(int PortNo, const char* IPAddress)
 	{
@@ -141,7 +141,7 @@ public:
 
 #else
 public:
-	wiClient(const string& newName = "CLIENT", const string& ipaddress = "127.0.0.1", int port = PORT) {}
+	wiClient(const std::string& newName = "CLIENT", const std::string& ipaddress = "127.0.0.1", int port = PORT) {}
 	template<typename T>
 	void Poll(T& data) {}
 

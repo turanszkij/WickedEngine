@@ -4,6 +4,8 @@
 #include "wiEmittedParticle.h"
 #include "Texture_BindLua.h"
 
+using namespace std;
+
 namespace wiLoader_BindLua
 {
 	void Bind()

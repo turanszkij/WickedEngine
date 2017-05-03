@@ -3,6 +3,7 @@
 #include "wiHelper.h"
 #include "wiThreadSafeManager.h"
 
+#include <string>
 #include <map>
 
 class wiCVars : public wiThreadSafeManager
@@ -18,15 +19,15 @@ public:
 	};
 private:
 	struct Variable{
-		string data;
+		std::string data;
 		Data_Type type;
-		Variable(const string& d = "", Data_Type t = TEXT):data(d),type(t){}
+		Variable(const std::string& d = "", Data_Type t = TEXT):data(d),type(t){}
 
 		bool isValid() const
 		{
 			return type != EMPTY && !data.empty();
 		}
-		string get() const
+		std::string get() const
 		{
 			return data;
 		}
@@ -77,7 +78,7 @@ private:
 			return Variable("", EMPTY);
 		}
 	};
-	typedef map<string,Variable> container;
+	typedef std::map<std::string,Variable> container;
 	container variables;
 
 	static wiCVars* globalVars;
@@ -86,10 +87,10 @@ public:
 	~wiCVars();
 	static wiCVars* GetGlobal();
 
-	const Variable get(const string& name);
-	bool set(const string& name, const string& value);
-	bool add(const string& name, const string& value, Data_Type newType = Data_Type::TEXT); 
-	bool del(const string& name);
+	const Variable get(const std::string& name);
+	bool set(const std::string& name, const std::string& value);
+	bool add(const std::string& name, const std::string& value, Data_Type newType = Data_Type::TEXT); 
+	bool del(const std::string& name);
 	bool CleanUp();
 };
 

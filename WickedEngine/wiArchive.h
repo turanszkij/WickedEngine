@@ -13,18 +13,18 @@ private:
 	char* DATA;
 	size_t dataSize;
 
-	string fileName; // save to this file on closing if not empty
+	std::string fileName; // save to this file on closing if not empty
 public:
-	wiArchive(const string& fileName, bool readMode = true);
+	wiArchive(const std::string& fileName, bool readMode = true);
 	~wiArchive();
 
 	uint64_t GetVersion() { return version; }
 	bool IsReadMode() { return readMode; }
 	bool IsOpen();
 	void Close();
-	bool SaveFile(const string& fileName);
-	string GetSourceDirectory();
-	string GetSourceFileName();
+	bool SaveFile(const std::string& fileName);
+	std::string GetSourceDirectory();
+	std::string GetSourceFileName();
 
 	// It could be templated but we have to be extremely careful of different datasizes on different platforms
 	// because serialized data should be interchangeable!
@@ -106,7 +106,7 @@ public:
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const string& data)
+	wiArchive& operator<<(const std::string& data)
 	{
 		uint64_t len = (uint64_t)(data.length() + 1); // +1 for the null-terminator
 		_write(len);
@@ -204,14 +204,14 @@ public:
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (string& data)
+	wiArchive& operator >> (std::string& data)
 	{
 		uint64_t len;
 		_read(len);
 		char* str = new char[(size_t)len];
 		memset(str, '\0', (size_t)(sizeof(char)*len));
 		_read(*str, len);
-		data = string(str);
+		data = std::string(str);
 		delete[] str;
 		return *this;
 	}

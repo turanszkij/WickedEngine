@@ -43,9 +43,9 @@ public:
 		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
 	void addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
 		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
-	void addConvexHull(const vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+	void addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
-	void addTriangleMesh(const vector<XMFLOAT4>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+	void addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
 	
 	void addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos

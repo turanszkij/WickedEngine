@@ -132,7 +132,7 @@ namespace wiRectPacker
 		}
 	};
 
-	rect_wh _rect2D(rect_xywhf* const * v, int n, int max_s, vector<rect_xywhf*>& succ, vector<rect_xywhf*>& unsucc) {
+	rect_wh _rect2D(rect_xywhf* const * v, int n, int max_s, std::vector<rect_xywhf*>& succ, std::vector<rect_xywhf*>& unsucc) {
 		node root;
 
 		const int funcs = (sizeof(cmpf) / sizeof(bool(*)(rect_xywhf*, rect_xywhf*)));
@@ -235,13 +235,13 @@ namespace wiRectPacker
 	}
 
 
-	bool pack(rect_xywhf* const * v, int n, int max_s, vector<bin>& bins) {
+	bool pack(rect_xywhf* const * v, int n, int max_s, std::vector<bin>& bins) {
 		rect_wh _rect(max_s, max_s);
 
 		for (int i = 0; i < n; ++i)
 			if (!v[i]->fits(_rect)) return false;
 
-		vector<rect_xywhf*> vec[2], *p[2] = { vec, vec + 1 };
+		std::vector<rect_xywhf*> vec[2], *p[2] = { vec, vec + 1 };
 		vec[0].resize(n);
 		vec[1].clear();
 		memcpy(&vec[0][0], v, sizeof(rect_xywhf*)*n);

@@ -13,7 +13,7 @@ struct Node
 private:
 	unsigned long long ID;
 public:
-	string name;
+	std::string name;
 
 	Node() {
 		name = "";
@@ -22,10 +22,10 @@ public:
 	}
 
 
-	string GetLayerID()
+	std::string GetLayerID()
 	{
 		auto x = name.find_last_of('_');
-		if (x != string::npos)
+		if (x != std::string::npos)
 		{
 			return name.substr(x + 1);
 		}
@@ -38,16 +38,16 @@ public:
 
 struct Transform : public Node
 {
-	string parentName;
+	std::string parentName;
 	Transform* parent;
-	set<Transform*> children;
+	std::set<Transform*> children;
 
 	XMFLOAT3 translation_rest, translation, translationPrev;
 	XMFLOAT4 rotation_rest, rotation, rotationPrev;
 	XMFLOAT3 scale_rest, scale, scalePrev;
 	XMFLOAT4X4 world_rest, world, worldPrev;
 
-	string boneParent;	//for transforms that are parented to bones (for blender-import compatibility)
+	std::string boneParent;	//for transforms that are parented to bones (for blender-import compatibility)
 
 	XMFLOAT4X4 parent_inv_rest;
 	int copyParentT, copyParentR, copyParentS;
@@ -67,7 +67,7 @@ struct Transform : public Node
 	//attach to parent
 	void attachTo(Transform* newParent, int copyTranslation = 1, int copyRotation = 1, int copyScale = 1);
 	//find transform in tree
-	Transform* find(const string& name);
+	Transform* find(const std::string& name);
 	Transform* find(unsigned long long ID);
 	//detach child - detach all if no parameters
 	void detachChild(Transform* child = nullptr);

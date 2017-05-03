@@ -27,8 +27,8 @@ struct Mesh;
 struct Material;
 struct Object;
 
-typedef map<string,Mesh*> MeshCollection;
-typedef map<string,Material*> MaterialCollection;
+typedef std::map<std::string,Mesh*> MeshCollection;
+typedef std::map<std::string,Material*> MaterialCollection;
 
 class wiArchive;
 
@@ -143,24 +143,24 @@ GFX_STRUCT InstancePrev
 };
 struct Material
 {
-	string name;
+	std::string name;
 	XMFLOAT3 diffuseColor;
 
-	string refMapName;
+	std::string refMapName;
 	wiGraphicsTypes::Texture2D* refMap;
 
-	string textureName;
+	std::string textureName;
 	wiGraphicsTypes::Texture2D* texture;
 	bool premultipliedTexture;
 	BLENDMODE blendFlag;
 		
-	string normalMapName;
+	std::string normalMapName;
 	wiGraphicsTypes::Texture2D* normalMap;
 
-	string displacementMapName;
+	std::string displacementMapName;
 	wiGraphicsTypes::Texture2D* displacementMap;
 
-	string specularMapName;
+	std::string specularMapName;
 	wiGraphicsTypes::Texture2D* specularMap;
 
 	bool toonshading;
@@ -197,7 +197,7 @@ struct Material
 	{
 		init();
 	}
-	Material(string newName){
+	Material(const std::string& newName){
 		name=newName;
 		init();
 	}
@@ -301,13 +301,13 @@ struct VertexRef{
 	VertexRef(int i, float w){index=i;weight=w;}
 };
 struct VertexGroup{
-	string name;
-	//vector<VertexRef> vertices;
+	std::string name;
+	//std::vector<VertexRef> vertices;
 	//index,weight
-	map<int,float> vertices;
+	std::map<int,float> vertices;
 	VertexGroup(){name="";}
-	VertexGroup(string n){name=n;}
-	void addVertex(const VertexRef& vRef){vertices.insert(pair<int,float>(vRef.index,vRef.weight));}
+	VertexGroup(const std::string& n){name=n;}
+	void addVertex(const VertexRef& vRef){vertices.insert(std::pair<int,float>(vRef.index,vRef.weight));}
 	void Serialize(wiArchive& archive);
 };
 struct MeshSubset
@@ -315,7 +315,7 @@ struct MeshSubset
 	Material* material;
 	wiGraphicsTypes::GPUBuffer	indexBuffer;
 
-	vector<unsigned int>		subsetIndices;
+	std::vector<unsigned int>		subsetIndices;
 
 	MeshSubset();
 	~MeshSubset();
@@ -323,28 +323,28 @@ struct MeshSubset
 struct Mesh
 {
 public:
-	string name;
-	string parent;
-	vector<XMFLOAT4>		vertices_Transformed[VPROP_COUNT]; // for CPU skinning / soft body simulation
-	vector<XMFLOAT4>		vertices[VPROP_COUNT];
-	vector<unsigned int>    indices;
-	vector<XMFLOAT3>		physicsverts;
-	vector<unsigned int>	physicsindices;
-	vector<int>				physicalmapGP;
-	vector<MeshSubset>		subsets;
-	vector<string>			materialNames;
+	std::string name;
+	std::string parent;
+	std::vector<XMFLOAT4>		vertices_Transformed[VPROP_COUNT]; // for CPU skinning / soft body simulation
+	std::vector<XMFLOAT4>		vertices[VPROP_COUNT];
+	std::vector<unsigned int>   indices;
+	std::vector<XMFLOAT3>		physicsverts;
+	std::vector<unsigned int>	physicsindices;
+	std::vector<int>			physicalmapGP;
+	std::vector<MeshSubset>		subsets;
+	std::vector<std::string>	materialNames;
 
-	wiGraphicsTypes::GPUBuffer			vertexBuffers[VPROP_COUNT];
-	wiGraphicsTypes::GPUBuffer			streamoutBuffers[VPROP_COUNT]; // omit texcoord, omit weights, change boneindices to posprev
-	wiGraphicsTypes::GPUBuffer			instanceBuffer;
-	wiGraphicsTypes::GPUBuffer			instanceBufferPrev;
+	wiGraphicsTypes::GPUBuffer	vertexBuffers[VPROP_COUNT];
+	wiGraphicsTypes::GPUBuffer	streamoutBuffers[VPROP_COUNT]; // omit texcoord, omit weights, change boneindices to posprev
+	wiGraphicsTypes::GPUBuffer	instanceBuffer;
+	wiGraphicsTypes::GPUBuffer	instanceBufferPrev;
 
 	bool renderable,doubleSided;
 	STENCILREF stencilRef;
 
 	bool calculatedAO;
 
-	string armatureName;
+	std::string armatureName;
 	Armature* armature;
 
 	AABB aabb;
@@ -355,11 +355,11 @@ public:
 	bool isBillboarded;
 	XMFLOAT3 billboardAxis;
 
-	vector<VertexGroup> vertexGroups;
+	std::vector<VertexGroup> vertexGroups;
 	bool softBody;
 	float mass, friction;
 	int massVG,goalVG,softVG; //vertexGroupID
-	vector<XMFLOAT3> goalPositions,goalNormals;
+	std::vector<XMFLOAT3> goalPositions,goalNormals;
 
 	wiRenderTarget	impostorTarget;
 	float impostorDistance;
@@ -372,13 +372,13 @@ public:
 	Mesh(){
 		init();
 	}
-	Mesh(string newName){
+	Mesh(const std::string& newName){
 		name=newName;
 		init();
 	}
 	~Mesh() {}
-	void LoadFromFile(const string& newName, const string& fname
-		, const MaterialCollection& materialColl, const list<Armature*>& armatures, const string& identifier="");
+	void LoadFromFile(const std::string& newName, const std::string& fname
+		, const MaterialCollection& materialColl, const std::list<Armature*>& armatures, const std::string& identifier="");
 	bool buffersComplete;
 	void Optimize();
 	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
@@ -435,9 +435,9 @@ struct Streamable : public Cullable
 {
 public:
 	Streamable();
-	string directory;
-	string meshfile;
-	string materialfile;
+	std::string directory;
+	std::string meshfile;
+	std::string materialfile;
 	bool loaded;
 	Mesh* mesh;
 
@@ -454,8 +454,8 @@ struct Object : public Streamable, public Transform
 		EMITTER_INVISIBLE,
 	};
 	EmitterType emitterType;
-	vector< wiEmittedParticle* > eParticleSystems;
-	vector< wiHairParticle* > hParticleSystems;
+	std::vector< wiEmittedParticle* > eParticleSystems;
+	std::vector< wiHairParticle* > hParticleSystems;
 
 	float transparency;
 
@@ -464,12 +464,12 @@ struct Object : public Streamable, public Transform
 	
 	//PHYSICS
 	bool rigidBody, kinematic;
-	string collisionShape, physicsType;
+	std::string collisionShape, physicsType;
 	float mass, friction, restitution, damping;
 	
 	
 	//RIBBON TRAIL
-	deque<RibbonVertex> trail;
+	std::deque<RibbonVertex> trail;
 	wiGraphicsTypes::GPUBuffer trailBuff;
 	wiGraphicsTypes::Texture2D* trailDistortTex;
 	wiGraphicsTypes::Texture2D* trailTex;
@@ -491,7 +491,7 @@ struct Object : public Streamable, public Transform
 		return ((physicsObjectI >= 0 && !kinematic) || mesh->softBody || isArmatureDeformed());
 	}
 
-	Object(const string& newName = "");
+	Object(const std::string& newName = "");
 	Object(const Object& other);
 	virtual ~Object();
 	void init();
@@ -526,7 +526,7 @@ struct KeyFrame
 };
 struct Action
 {
-	string name;
+	std::string name;
 	int frameCount;
 
 	Action(){
@@ -536,20 +536,20 @@ struct Action
 };
 struct ActionFrames
 {
-	vector< KeyFrame > keyframesRot;
-	vector< KeyFrame > keyframesPos;
-	vector< KeyFrame > keyframesSca;
+	std::vector< KeyFrame > keyframesRot;
+	std::vector< KeyFrame > keyframesPos;
+	std::vector< KeyFrame > keyframesSca;
 
 	ActionFrames(){
 	}
 };
 struct Bone : public Transform
 {
-	vector< string > childrenN;
-	vector< Bone* > childrenI;
+	std::vector<std::string> childrenN;
+	std::vector<Bone*> childrenI;
 
 	XMFLOAT4X4 restInv;
-	vector<ActionFrames> actionFrames;
+	std::vector<ActionFrames> actionFrames;
 
 	XMFLOAT4X4 recursivePose, recursiveRest, recursiveRestInv;
 
@@ -560,7 +560,7 @@ struct Bone : public Transform
 	bool connected;
 
 	Bone():length(0),connected(false){};
-	Bone(string newName):Transform(){
+	Bone(const std::string& newName):Transform(){
 		name=newName;
 		childrenN.clear();
 		childrenI.clear();
@@ -580,7 +580,7 @@ struct Bone : public Transform
 };
 struct AnimationLayer
 {
-	string name;
+	std::string name;
 
 	int activeAction, prevAction;
 	float currentFrame;
@@ -620,20 +620,20 @@ struct AnimationLayer
 struct Armature : public Transform
 {
 public:
-	string unidentified_name;
-	vector<Bone*> boneCollection;
-	vector<Bone*> rootbones;
+	std::string unidentified_name;
+	std::vector<Bone*> boneCollection;
+	std::vector<Bone*> rootbones;
 
-	list<AnimationLayer*> animationLayers;
-	vector<Action> actions;
+	std::list<AnimationLayer*> animationLayers;
+	std::vector<Action> actions;
 	
 
 	Armature() :Transform(){
 		init();
 	};
-	Armature(string newName,string identifier):Transform(){
+	Armature(const std::string& newName, const std::string& identifier):Transform(){
 		unidentified_name=newName;
-		stringstream ss("");
+		std::stringstream ss("");
 		ss<<newName<<identifier;
 		name=ss.str();
 		init();
@@ -658,14 +658,14 @@ public:
 	}
 
 	// Empty actionName will be the Identity Action (T-pose)
-	void ChangeAction(const string& actionName = "", float blendFrames = 0.0f, const string& animLayer = "", float weight = 1.0f);
-	AnimationLayer* GetAnimLayer(const string& name);
-	void AddAnimLayer(const string& name);
-	void DeleteAnimLayer(const string& name);
+	void ChangeAction(const std::string& actionName = "", float blendFrames = 0.0f, const std::string& animLayer = "", float weight = 1.0f);
+	AnimationLayer* GetAnimLayer(const std::string& name);
+	void AddAnimLayer(const std::string& name);
+	void DeleteAnimLayer(const std::string& name);
 	virtual void UpdateTransform();
 	void UpdateArmature();
 	void CreateFamily();
-	Bone* GetBone(const string& name);
+	Bone* GetBone(const std::string& name);
 	void Serialize(wiArchive& archive);
 
 private:
@@ -675,7 +675,7 @@ private:
 		SCALARKEYFRAMETYPE,
 	};
 	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
-	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int frameCount, const vector<KeyFrame>& keyframes, KeyFrameType type);
+	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int frameCount, const std::vector<KeyFrame>& keyframes, KeyFrameType type);
 };
 struct SHCAM{	
 	XMFLOAT4X4 View,Projection;
@@ -773,17 +773,17 @@ struct Light : public Cullable , public Transform
 	XMFLOAT4 enerDis;
 	bool noHalo;
 	bool shadow;
-	vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
-	vector<string> lensFlareNames;
+	std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
+	std::vector<std::string> lensFlareNames;
 
 	static wiGraphicsTypes::Texture2D* shadowMapArray_2D;
 	static wiGraphicsTypes::Texture2D* shadowMapArray_Cube;
 	int shadowMap_index;
 	int lightArray_index;
 
-	vector<SHCAM> shadowCam_pointLight;
-	vector<SHCAM> shadowCam_dirLight;
-	vector<SHCAM> shadowCam_spotLight;
+	std::vector<SHCAM> shadowCam_pointLight;
+	std::vector<SHCAM> shadowCam_dirLight;
+	std::vector<SHCAM> shadowCam_spotLight;
 
 	float shadowBias;
 
@@ -806,7 +806,7 @@ private:
 };
 struct Decal : public Cullable, public Transform
 {
-	string texName,norName;
+	std::string texName,norName;
 	wiGraphicsTypes::Texture2D* texture,*normal;
 	XMFLOAT3 front;
 	float life,fadeStart;
@@ -814,11 +814,11 @@ struct Decal : public Cullable, public Transform
 	XMFLOAT4 color;
 	float emissive;
 
-	Decal(const XMFLOAT3& tra=XMFLOAT3(0,0,0), const XMFLOAT3& sca=XMFLOAT3(1,1,1), const XMFLOAT4& rot=XMFLOAT4(0,0,0,1), const string& tex="", const string& nor="");
+	Decal(const XMFLOAT3& tra=XMFLOAT3(0,0,0), const XMFLOAT3& sca=XMFLOAT3(1,1,1), const XMFLOAT4& rot=XMFLOAT4(0,0,0,1), const std::string& tex="", const std::string& nor="");
 	virtual ~Decal();
 	
-	void addTexture(const string& tex);
-	void addNormal(const string& nor);
+	void addTexture(const std::string& tex);
+	void addNormal(const std::string& nor);
 	virtual void UpdateTransform();
 	void UpdateDecal();
 	float GetOpacity() const;
@@ -858,7 +858,7 @@ struct Camera:public Transform{
 		width = height = zNearP = zFarP = fov = 0;
 	}
 	Camera(const XMFLOAT3& newPos, const XMFLOAT4& newRot,
-		const string& newName):Transform()
+		const std::string& newName):Transform()
 	{
 		width = height = zNearP = zFarP = fov = 0;
 		translation_rest=newPos;
@@ -1021,8 +1021,8 @@ struct HitSphere:public SPHERE, public Transform{
 	HitSphereType TYPE_SAVED,TYPE;
 
 	HitSphere():Transform(), SPHERE(), radius_saved(0){}
-	HitSphere(string newName, float newRadius, const XMFLOAT3& location, 
-		Transform* newParent, string newProperty):Transform(),SPHERE(location,newRadius){
+	HitSphere(const std::string& newName, float newRadius, const XMFLOAT3& location,
+		Transform* newParent, const std::string& newProperty):Transform(),SPHERE(location,newRadius){
 
 			name=newName;
 			radius_saved=newRadius;
@@ -1032,8 +1032,8 @@ struct HitSphere:public SPHERE, public Transform{
 				parent=newParent;
 			}
 			TYPE=HitSphereType::HITTYPE;
-			if(newProperty.find("inv")!=string::npos) TYPE=HitSphereType::INVTYPE;
-			else if(newProperty.find("atk")!=string::npos) TYPE=HitSphereType::ATKTYPE;
+			if(newProperty.find("inv") != std::string::npos) TYPE=HitSphereType::INVTYPE;
+			else if(newProperty.find("atk") != std::string::npos) TYPE=HitSphereType::ATKTYPE;
 			TYPE_SAVED=TYPE;
 	}
 	void Reset(){
@@ -1058,17 +1058,17 @@ struct EnvironmentProbe : public Transform
 
 struct Model : public Transform
 {
-	list<Object*> objects;
+	std::list<Object*> objects;
 	MeshCollection meshes;
 	MaterialCollection materials;
-	list<Armature*> armatures;
-	list<Light*> lights;
-	list<Decal*> decals;
+	std::list<Armature*> armatures;
+	std::list<Light*> lights;
+	std::list<Decal*> decals;
 
 	Model();
 	virtual ~Model();
 	void CleanUp();
-	void LoadFromDisk(const string& dir, const string& name, const string& identifier);
+	void LoadFromDisk(const std::string& dir, const std::string& name, const std::string& identifier);
 	void FinishLoading();
 	void UpdateModel();
 	void Add(Object* value);
@@ -1083,10 +1083,10 @@ struct Model : public Transform
 struct Scene
 {
 	// First is always the world node
-	vector<Model*> models;
+	std::vector<Model*> models;
 	WorldInfo worldInfo;
 	Wind wind;
-	list<EnvironmentProbe*> environmentProbes;
+	std::list<EnvironmentProbe*> environmentProbes;
 
 	Scene();
 	~Scene();
@@ -1102,23 +1102,23 @@ struct Scene
 // Create rest positions for bone tree
 void RecursiveRest(Armature* armature, Bone* bone);
 
-void LoadWiArmatures(const string& directory, const string& filename, const string& identifier, list<Armature*>& armatures);
-void LoadWiMaterialLibrary(const string& directory, const string& filename, const string& identifier, const string& texturesDir, MaterialCollection& materials);
-void LoadWiObjects(const string& directory, const string& filename, const string& identifier, list<Object*>& objects
-				   , list<Armature*>& armatures, MeshCollection& meshes, const MaterialCollection& materials);
-void LoadWiMeshes(const string& directory, const string& filename, const string& identifier, MeshCollection& meshes, const list<Armature*>& armatures, const MaterialCollection& materials);
-void LoadWiActions(const string& directory, const string& filename, const string& identifier, list<Armature*>& armatures);
-void LoadWiLights(const string& directory, const string& filename, const string& identifier, list<Light*>& lights);
-void LoadWiHitSpheres(const string& directory, const string& name, const string& identifier, vector<HitSphere*>& spheres
-					  ,const list<Armature*>& armatures);
-void LoadWiWorldInfo(const string&directory, const string& name, WorldInfo& worldInfo, Wind& wind);
-void LoadWiCameras(const string&directory, const string& name, const string& identifier, vector<Camera>& cameras
-				   ,const list<Armature*>& armatures);
-void LoadWiDecals(const string&directory, const string& name, const string& texturesDir, list<Decal*>& decals);
+void LoadWiArmatures(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Armature*>& armatures);
+void LoadWiMaterialLibrary(const std::string& directory, const std::string& filename, const std::string& identifier, const std::string& texturesDir, MaterialCollection& materials);
+void LoadWiObjects(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Object*>& objects
+				   , std::list<Armature*>& armatures, MeshCollection& meshes, const MaterialCollection& materials);
+void LoadWiMeshes(const std::string& directory, const std::string& filename, const std::string& identifier, MeshCollection& meshes, const std::list<Armature*>& armatures, const MaterialCollection& materials);
+void LoadWiActions(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Armature*>& armatures);
+void LoadWiLights(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Light*>& lights);
+void LoadWiHitSpheres(const std::string& directory, const std::string& name, const std::string& identifier, std::vector<HitSphere*>& spheres
+					  ,const std::list<Armature*>& armatures);
+void LoadWiWorldInfo(const std::string&directory, const std::string& name, WorldInfo& worldInfo, Wind& wind);
+void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::vector<Camera>& cameras
+				   ,const std::list<Armature*>& armatures);
+void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, std::list<Decal*>& decals);
 
 
 #include "wiSPTree.h"
 class wiSPTree;
 #define SPTREE_GENERATE_QUADTREE 0
 #define SPTREE_GENERATE_OCTREE 1
-void GenerateSPTree(wiSPTree*& tree, vector<Cullable*>& objects, int type = SPTREE_GENERATE_QUADTREE);
+void GenerateSPTree(wiSPTree*& tree, std::vector<Cullable*>& objects, int type = SPTREE_GENERATE_QUADTREE);

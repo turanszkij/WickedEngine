@@ -8,16 +8,16 @@ class wiResourceManager;
 class wiSprite : public wiImage
 {
 private:
-	string texture, mask, normal;
+	std::string texture, mask, normal;
 	wiGraphicsTypes::Texture2D* texturePointer,*normalPointer,*maskPointer;
 	wiResourceManager* ContentHolder;
 public:
 	wiSprite(wiResourceManager* contentHolder = nullptr);
-	wiSprite(const string& newTexture, const string& newMask, const string& newNormal, wiResourceManager* contentHolder = nullptr);
-	wiSprite(const string& newTexture, const string& newMask, wiResourceManager* contentHolder = nullptr);
-	wiSprite(const string& newTexture, wiResourceManager* contentHolder = nullptr);
+	wiSprite(const std::string& newTexture, const std::string& newMask, const std::string& newNormal, wiResourceManager* contentHolder = nullptr);
+	wiSprite(const std::string& newTexture, const std::string& newMask, wiResourceManager* contentHolder = nullptr);
+	wiSprite(const std::string& newTexture, wiResourceManager* contentHolder = nullptr);
 	void Init();
-	void CreateReference(const string& newTexture, const string& newMask, const string& newNormal);
+	void CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal);
 	void CleanUp();
 
 	void Update(float);
@@ -26,7 +26,7 @@ public:
 	void Draw();
 	void DrawNormal(GRAPHICSTHREAD threadID);
 
-	string name;
+	std::string name;
 
 	wiImageEffects effects;
 

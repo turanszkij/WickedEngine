@@ -20,14 +20,14 @@ public:
 		FADE_FINISHED,
 	} state;
 	wiColor color;
-	function<void()> onFade;
+	std::function<void()> onFade;
 
 	wiFadeManager()
 	{
 		Clear();
 	}
 	void Clear();
-	void Start(int targetFrames, const wiColor& color, function<void()> onFadeFunction)
+	void Start(int targetFrames, const wiColor& color, std::function<void()> onFadeFunction)
 	{
 		this->targetFrames = targetFrames;
 		this->color = color;

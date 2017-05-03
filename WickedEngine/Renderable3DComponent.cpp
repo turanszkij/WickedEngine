@@ -37,7 +37,7 @@ wiRenderTarget
 	, Renderable3DComponent::rtDof[3]
 	, Renderable3DComponent::rtTemporalAA[2]
 ;
-vector<wiRenderTarget> Renderable3DComponent::rtSun, Renderable3DComponent::rtBloom, Renderable3DComponent::rtSSAO;
+std::vector<wiRenderTarget> Renderable3DComponent::rtSun, Renderable3DComponent::rtBloom, Renderable3DComponent::rtSSAO;
 wiDepthTarget Renderable3DComponent::dtDepthCopy;
 Texture2D* Renderable3DComponent::smallDepth;
 void Renderable3DComponent::ResizeBuffers()

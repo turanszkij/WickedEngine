@@ -1,12 +1,13 @@
 #include "wiHashString.h"
 
+using namespace std;
 
-std::hash<std::string> hasher;
+hash<std::string> hasher;
 
 wiHashString::wiHashString(const char* value):wiHashString(string(value))
 {
 }
-wiHashString::wiHashString(const string& value)
+wiHashString::wiHashString(const std::string& value)
 {
 	str = value;
 	hash = hasher(str);

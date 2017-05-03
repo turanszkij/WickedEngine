@@ -29,6 +29,7 @@
 
 #include <algorithm>
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 #pragma region STATICS
@@ -87,14 +88,14 @@ Scene* wiRenderer::scene = nullptr;
 unordered_set<Object*>			  wiRenderer::objectsWithTrails;
 unordered_set<wiEmittedParticle*> wiRenderer::emitterSystems;
 
-vector<Lines*>	wiRenderer::boneLines;
-vector<Lines*>	wiRenderer::linesTemp;
-vector<Cube>	wiRenderer::cubes;
+std::vector<Lines*>	wiRenderer::boneLines;
+std::vector<Lines*>	wiRenderer::linesTemp;
+std::vector<Cube>	wiRenderer::cubes;
 
-vector<wiTranslator*> wiRenderer::renderableTranslators;
-vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
+std::vector<wiTranslator*> wiRenderer::renderableTranslators;
+std::vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
 
-unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
+std::unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
 
 wiWaterPlane wiRenderer::waterPlane;
 
@@ -472,8 +473,8 @@ void wiRenderer::UpdateBoneLines()
 		}
 	}
 }
-void iterateSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col);
-void iterateSPTree(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col){
+void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col);
+void iterateSPTree(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
 	if(!n) return;
 	if(n->count){
 		for (unsigned int i = 0; i<n->children.size(); ++i)
@@ -489,7 +490,7 @@ void iterateSPTree(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col)
 		}
 	}
 }
-void iterateSPTree2(wiSPTree::Node* n, vector<Cube>& cubes, const XMFLOAT4A& col){
+void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
 	if(!n) return;
 	if(n->count){
 		for (unsigned int i = 0; i<n->children.size(); ++i)
@@ -882,7 +883,7 @@ void wiRenderer::LoadShaders()
 
 }
 
-void wiRenderer::ReloadShaders(const string& path)
+void wiRenderer::ReloadShaders(const std::string& path)
 {
 
 	if (path.length() > 0)
@@ -1381,7 +1382,7 @@ void wiRenderer::RebindPersistentState(GRAPHICSTHREAD threadID)
 	wiImage::BindPersistentState(threadID);
 }
 
-Transform* wiRenderer::getTransformByName(const string& get)
+Transform* wiRenderer::getTransformByName(const std::string& get)
 {
 	//auto transf = transforms.find(get);
 	//if (transf != transforms.end())
@@ -1394,7 +1395,7 @@ Transform* wiRenderer::getTransformByID(unsigned long long id)
 {
 	return GetScene().GetWorldNode()->find(id);
 }
-Armature* wiRenderer::getArmatureByName(const string& get)
+Armature* wiRenderer::getArmatureByName(const std::string& get)
 {
 	for (Model* model : GetScene().models)
 	{
@@ -1404,7 +1405,7 @@ Armature* wiRenderer::getArmatureByName(const string& get)
 	}
 	return nullptr;
 }
-int wiRenderer::getActionByName(Armature* armature, const string& get)
+int wiRenderer::getActionByName(Armature* armature, const std::string& get)
 {
 	if(armature==nullptr)
 		return (-1);
@@ -1416,14 +1417,14 @@ int wiRenderer::getActionByName(Armature* armature, const string& get)
 			return j;
 	return (-1);
 }
-int wiRenderer::getBoneByName(Armature* armature, const string& get)
+int wiRenderer::getBoneByName(Armature* armature, const std::string& get)
 {
 	for (unsigned int j = 0; j<armature->boneCollection.size(); j++)
 		if(!armature->boneCollection[j]->name.compare(get))
 			return j;
 	return (-1);
 }
-Material* wiRenderer::getMaterialByName(const string& get)
+Material* wiRenderer::getMaterialByName(const std::string& get)
 {
 	for (Model* model : GetScene().models)
 	{
@@ -1433,13 +1434,13 @@ Material* wiRenderer::getMaterialByName(const string& get)
 	}
 	return NULL;
 }
-HitSphere* wiRenderer::getSphereByName(const string& get){
+HitSphere* wiRenderer::getSphereByName(const std::string& get){
 	for(HitSphere* hs : spheres)
 		if(!hs->name.compare(get))
 			return hs;
 	return nullptr;
 }
-Object* wiRenderer::getObjectByName(const string& name)
+Object* wiRenderer::getObjectByName(const std::string& name)
 {
 	for (Model* model : GetScene().models)
 	{
@@ -1454,7 +1455,7 @@ Object* wiRenderer::getObjectByName(const string& name)
 
 	return nullptr;
 }
-Light* wiRenderer::getLightByName(const string& name)
+Light* wiRenderer::getLightByName(const std::string& name)
 {
 	for (Model* model : GetScene().models)
 	{
@@ -2158,7 +2159,7 @@ void wiRenderer::PutDecal(Decal* decal)
 {
 	GetScene().GetWorldNode()->decals.push_back(decal);
 }
-void wiRenderer::PutWaterRipple(const string& image, const XMFLOAT3& pos)
+void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
 	wiSprite* img=new wiSprite("","",image);
 	img->anim.fad=0.01f;
@@ -2659,7 +2660,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 			GetDevice()->BindResourcePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
 			GetDevice()->BindResourcePS(o->trailTex, TEXSLOT_ONDEMAND2, threadID);
 
-			vector<RibbonVertex> trails;
+			std::vector<RibbonVertex> trails;
 
 			int bounds = (int)o->trail.size();
 			trails.reserve(bounds * 10);
@@ -4237,7 +4238,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 		probe->cubeMap.Activate(threadID, 0, 0, 0, 1);
 
-		vector<SHCAM> cameras;
+		std::vector<SHCAM> cameras;
 		{
 			cameras.clear();
 
@@ -4817,7 +4818,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 			}
 
 			using namespace wiRectPacker;
-			static map<Texture2D*, rect_xywhf> storedTextures;
+			static std::map<Texture2D*, rect_xywhf> storedTextures;
 
 			if (storedTextures.find(decal->texture) == storedTextures.end())
 			{
@@ -4833,7 +4834,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 					i++;
 				}
 
-				vector<bin> bins;
+				std::vector<bin> bins;
 				if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
 				{
 					assert(bins.size() == 1 && "Decal atlas packing into single texture failed!");
@@ -5018,7 +5019,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	static Texture2D* luminance_map = nullptr;
-	static vector<Texture2D*> luminance_avg(0);
+	static std::vector<Texture2D*> luminance_avg(0);
 	if (luminance_map == nullptr)
 	{
 		SAFE_DELETE(luminance_map);
@@ -5100,8 +5101,8 @@ wiWaterPlane wiRenderer::GetWaterPlane()
 	return waterPlane;
 }
 
-wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
-	const string& layerDisable)
+wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& layer,
+	const std::string& layerDisable)
 {
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
@@ -5110,7 +5111,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 	{
 		searchTree->getVisible(ray, culledObjects);
 
-		vector<Picked> pickPoints;
+		std::vector<Picked> pickPoints;
 
 		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable, true);
 
@@ -5197,8 +5198,8 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const string& layer,
 
 	return Picked();
 }
-wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, const string& layer,
-	const string& layerDisable)
+wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, const std::string& layer,
+	const std::string& layerDisable)
 {
 	RAY ray = getPickRay(cursorX, cursorY);
 
@@ -5216,8 +5217,8 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 	return RAY(lineStart, rayDirection);
 }
 
-void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, vector<Picked>& points,
-	int pickType, bool dynamicObjects, const string& layer, const string& layerDisable, bool onlyVisible)
+void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, std::vector<Picked>& points,
+	int pickType, bool dynamicObjects, const std::string& layer, const std::string& layerDisable, bool onlyVisible)
 {
 	if (culledObjects.empty())
 	{
@@ -5370,7 +5371,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 
 	//		searchTree->getVisible(ray, culledObjects);
 
-	//		vector<Picked> points;
+	//		std::vector<Picked> points;
 
 	//		RayIntersectMeshes(ray, culledObjects, points, PICK_OPAQUE, false);
 
@@ -5398,7 +5399,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 	//mesh->calculatedAO = true;
 }
 
-Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATRIX& transform, const string& ident)
+Model* wiRenderer::LoadModel(const std::string& dir, const std::string& name, const XMMATRIX& transform, const std::string& ident)
 {
 	static int unique_identifier = 0;
 
@@ -5418,7 +5419,7 @@ Model* wiRenderer::LoadModel(const string& dir, const string& name, const XMMATR
 
 	return model;
 }
-void wiRenderer::LoadWorldInfo(const string& dir, const string& name)
+void wiRenderer::LoadWorldInfo(const std::string& dir, const std::string& name)
 {
 	LoadWiWorldInfo(/*dir*/"", name+".wiw", GetScene().worldInfo, GetScene().wind);
 
@@ -5443,11 +5444,11 @@ void wiRenderer::LoadDefaultLighting()
 	GetScene().models.push_back(model);
 
 	if (spTree_lights) {
-		spTree_lights->AddObjects(spTree_lights->root, vector<Cullable*>(model->lights.begin(), model->lights.end()));
+		spTree_lights->AddObjects(spTree_lights->root, std::vector<Cullable*>(model->lights.begin(), model->lights.end()));
 	}
 	else
 	{
-		GenerateSPTree(spTree_lights, vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
+		GenerateSPTree(spTree_lights, std::vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
 	}
 }
 Scene& wiRenderer::GetScene()
@@ -5481,7 +5482,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 						{
 							XMMATRIX worldMat = mesh->hasArmature() ? XMMatrixIdentity() : XMLoadFloat4x4(&object->world);
 							int j = 0;
-							for (map<int, float>::iterator it = mesh->vertexGroups[gvg].vertices.begin(); it != mesh->vertexGroups[gvg].vertices.end(); ++it)
+							for (std::map<int, float>::iterator it = mesh->vertexGroups[gvg].vertices.begin(); it != mesh->vertexGroups[gvg].vertices.end(); ++it)
 							{
 								int vi = (*it).first;
 								Vertex tvert = TransformVertex(mesh, vi, worldMat);
@@ -5775,11 +5776,11 @@ void wiRenderer::Add(const list<Object*>& objects)
 		}
 	}
 	if (spTree) {
-		spTree->AddObjects(spTree->root, vector<Cullable*>(objects.begin(), objects.end()));
+		spTree->AddObjects(spTree->root, std::vector<Cullable*>(objects.begin(), objects.end()));
 	}
 	else
 	{
-		GenerateSPTree(spTree, vector<Cullable*>(objects.begin(), objects.end()), SPTREE_GENERATE_OCTREE);
+		GenerateSPTree(spTree, std::vector<Cullable*>(objects.begin(), objects.end()), SPTREE_GENERATE_OCTREE);
 	}
 }
 void wiRenderer::Add(const list<Light*>& lights)
@@ -5792,11 +5793,11 @@ void wiRenderer::Add(const list<Light*>& lights)
 		}
 	}
 	if (spTree_lights) {
-		spTree_lights->AddObjects(spTree_lights->root, vector<Cullable*>(lights.begin(), lights.end()));
+		spTree_lights->AddObjects(spTree_lights->root, std::vector<Cullable*>(lights.begin(), lights.end()));
 	}
 	else
 	{
-		GenerateSPTree(spTree_lights, vector<Cullable*>(lights.begin(), lights.end()), SPTREE_GENERATE_OCTREE);
+		GenerateSPTree(spTree_lights, std::vector<Cullable*>(lights.begin(), lights.end()), SPTREE_GENERATE_OCTREE);
 	}
 }
 

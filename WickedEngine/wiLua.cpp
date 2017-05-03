@@ -24,6 +24,8 @@
 #include "wiBackLog_BindLua.h"
 #include "wiNetwork_BindLua.h"
 
+using namespace std;
+
 wiLua *wiLua::globalLua = nullptr;
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
@@ -131,7 +133,7 @@ void wiLua::PostErrorMsg(bool todebug, bool tobacklog)
 		UNLOCK();
 	}
 }
-bool wiLua::RunFile(const string& filename)
+bool wiLua::RunFile(const std::string& filename)
 {
 	LOCK();
 	m_status = luaL_loadfile(m_luaState, filename.c_str());
@@ -144,7 +146,7 @@ bool wiLua::RunFile(const string& filename)
 	PostErrorMsg();
 	return false;
 }
-bool wiLua::RunText(const string& script)
+bool wiLua::RunText(const std::string& script)
 {
 	LOCK();
 	m_status = luaL_loadstring(m_luaState, script.c_str());
@@ -169,7 +171,7 @@ bool wiLua::RunScript()
 	}
 	return true;
 }
-bool wiLua::RegisterFunc(const string& name, lua_CFunction function)
+bool wiLua::RegisterFunc(const std::string& name, lua_CFunction function)
 {
 	LOCK();
 	lua_register(m_luaState, name.c_str(), function);
@@ -179,7 +181,7 @@ bool wiLua::RegisterFunc(const string& name, lua_CFunction function)
 
 	return Success();
 }
-void wiLua::RegisterLibrary(const string& tableName, const luaL_Reg* functions)
+void wiLua::RegisterLibrary(const std::string& tableName, const luaL_Reg* functions)
 {
 	LOCK();
 	if (luaL_newmetatable(m_luaState, tableName.c_str()) != 0)
@@ -195,7 +197,7 @@ void wiLua::RegisterLibrary(const string& tableName, const luaL_Reg* functions)
 		UNLOCK();
 	}
 }
-bool wiLua::RegisterObject(const string& tableName, const string& name, void* object)
+bool wiLua::RegisterObject(const std::string& tableName, const std::string& name, void* object)
 {
 	RegisterLibrary(tableName, nullptr);
 
@@ -210,7 +212,7 @@ bool wiLua::RegisterObject(const string& tableName, const string& name, void* ob
 	UNLOCK();
 	return true;
 }
-void wiLua::AddFunc(const string& name, lua_CFunction function)
+void wiLua::AddFunc(const std::string& name, lua_CFunction function)
 {
 	LOCK();
 
@@ -228,7 +230,7 @@ void wiLua::AddFuncArray(const luaL_Reg* functions)
 		UNLOCK();
 	}
 }
-void wiLua::AddInt(const string& name, int data)
+void wiLua::AddInt(const std::string& name, int data)
 {
 	LOCK();
 	lua_pushinteger(m_luaState, data);
@@ -257,19 +259,19 @@ void wiLua::Render()
 	TrySignal("wickedengine_render_tick");
 }
 
-inline void SignalHelper(lua_State* L, const string& name)
+inline void SignalHelper(lua_State* L, const std::string& name)
 {
 	lua_getglobal(L, "signal");
 	wiLua::SSetString(L, name.c_str());
 	lua_call(L, 1, 0);
 }
-void wiLua::Signal(const string& name)
+void wiLua::Signal(const std::string& name)
 {
 	LOCK();
 	SignalHelper(m_luaState, name);
 	UNLOCK();
 }
-bool wiLua::TrySignal(const string& name)
+bool wiLua::TrySignal(const std::string& name)
 {
 	if (!TRY_LOCK())
 		return false;
@@ -393,7 +395,7 @@ void wiLua::SSetDouble(lua_State* L, double data)
 {
 	lua_pushnumber(L, (lua_Number)data);
 }
-void wiLua::SSetString(lua_State* L, const string& data)
+void wiLua::SSetString(lua_State* L, const std::string& data)
 {
 	lua_pushstring(L, data.c_str());
 }
@@ -410,7 +412,7 @@ void wiLua::SSetNull(lua_State* L)
 	lua_pushnil(L);
 }
 
-void wiLua::SError(lua_State* L, const string& error, bool todebug, bool tobacklog)
+void wiLua::SError(lua_State* L, const std::string& error, bool todebug, bool tobacklog)
 {
 	//retrieve line number for error info
 	lua_Debug ar;
@@ -435,7 +437,7 @@ void wiLua::SError(lua_State* L, const string& error, bool todebug, bool tobackl
 	}
 }
 
-void wiLua::SAddMetatable(lua_State* L, const string& name)
+void wiLua::SAddMetatable(lua_State* L, const std::string& name)
 {
 	luaL_newmetatable(L, name.c_str());
 }

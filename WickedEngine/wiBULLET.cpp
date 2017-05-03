@@ -316,7 +316,7 @@ void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLO
 	
 }
 
-void wiBULLET::addConvexHull(const vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	btCollisionShape* shape = new btConvexHullShape();
 	for (unsigned int i = 0; i<vertices.size(); ++i)
@@ -374,7 +374,7 @@ void wiBULLET::addConvexHull(const vector<XMFLOAT4>& vertices, const XMFLOAT3& s
 	
 }
 
-void wiBULLET::addTriangleMesh(const vector<XMFLOAT4>& vertices, const vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+void wiBULLET::addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
 	
 	int totalVerts = (int)vertices.size();
@@ -532,7 +532,7 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 		
 		int mvg = mesh->massVG;
 		if(mvg>=0){
-			for(map<int,float>::const_iterator it=mesh->vertexGroups[mvg].vertices.begin();it!=mesh->vertexGroups[mvg].vertices.end();++it){
+			for(std::map<int,float>::const_iterator it=mesh->vertexGroups[mvg].vertices.begin();it!=mesh->vertexGroups[mvg].vertices.end();++it){
 				int vi = (*it).first;
 				float wei = (*it).second;
 				int index=mesh->physicalmapGP[vi];
@@ -543,7 +543,7 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 		
 		int gvg = mesh->goalVG;
 		if(gvg>=0){
-			for(map<int,float>::const_iterator it=mesh->vertexGroups[gvg].vertices.begin();it!=mesh->vertexGroups[gvg].vertices.end();++it){
+			for(std::map<int,float>::const_iterator it=mesh->vertexGroups[gvg].vertices.begin();it!=mesh->vertexGroups[gvg].vertices.end();++it){
 				int vi = (*it).first;
 				int index=mesh->physicalmapGP[vi];
 				float weight = (*it).second;
@@ -612,7 +612,7 @@ void wiBULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
 			int gvg = mesh->goalVG;
 			if(gvg>=0){
 				int j=0;
-				for(map<int,float>::const_iterator it=mesh->vertexGroups[gvg].vertices.begin();it!=mesh->vertexGroups[gvg].vertices.end();++it){
+				for(std::map<int,float>::const_iterator it=mesh->vertexGroups[gvg].vertices.begin();it!=mesh->vertexGroups[gvg].vertices.end();++it){
 					int vi = (*it).first;
 					int index=mesh->physicalmapGP[vi];
 					float weight = (*it).second;

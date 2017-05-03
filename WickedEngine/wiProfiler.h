@@ -37,7 +37,7 @@ public:
 	void EndRange(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 
 	float GetRangeTime(const std::string& name) { return ranges[name]->time; }
-	const std::unordered_map<string, Range*>& GetRanges() { return ranges; }
+	const std::unordered_map<std::string, Range*>& GetRanges() { return ranges; }
 
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
 	void DrawData(int x, int y, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);

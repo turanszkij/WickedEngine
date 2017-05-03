@@ -1,5 +1,8 @@
 #pragma once
 #include "Renderable2DComponent.h"
+
+#include <thread>
+#include <functional>
 #include <atomic>
 
 class MainComponent;
@@ -10,10 +13,10 @@ class LoadingScreenComponent :
 private:
 	struct LoaderTask
 	{
-		function< void() > functionBody;
-		atomic_bool active;
+		std::function< void() > functionBody;
+		std::atomic_bool active;
 
-		LoaderTask(function< void() > functionBody) :functionBody(functionBody)
+		LoaderTask(std::function< void() > functionBody) :functionBody(functionBody)
 		{
 			active.store(false);
 		}
@@ -23,24 +26,24 @@ private:
 			active.store(l.active.load());
 		}
 	};
-	vector< LoaderTask > loaders;
+	std::vector< LoaderTask > loaders;
 	void doLoadingTasks();
 
 	void waitForFinish();
-	function<void()> finish;
-	thread worker;
+	std::function<void()> finish;
+	std::thread worker;
 public:
 	LoadingScreenComponent();
 	virtual ~LoadingScreenComponent();
 
 	//Add a loading task which should be executed
 	//use std::bind( YourFunctionPointer )
-	void addLoadingFunction(function<void()> loadingFunction);
+	void addLoadingFunction(std::function<void()> loadingFunction);
 	//Helper for loading a whole renderable component
 	void addLoadingComponent(RenderableComponent* component, MainComponent* main);
 	//Set a function that should be called when the loading finishes
 	//use std::bind( YourFunctionPointer )
-	void onFinished(function<void()> finishFunction);
+	void onFinished(std::function<void()> finishFunction);
 	//Get percentage of finished loading tasks (values 0-100)
 	int getPercentageComplete();
 	//See if the loading is currently running

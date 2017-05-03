@@ -6,7 +6,9 @@
 #include "wiGraphicsAPI.h"
 #include "wiIntersectables.h"
 
+#include <string>
 #include <list>
+#include <functional>
 
 class wiGUI;
 
@@ -20,7 +22,7 @@ struct wiEventArgs
 	bool bValue;
 	int iValue;
 	XMFLOAT4 color;
-	string sValue;
+	std::string sValue;
 };
 
 class wiWidget : public Transform
@@ -44,9 +46,9 @@ private:
 	int tooltipTimer;
 protected:
 	wiHashString fastName;
-	string text;
-	string tooltip;
-	string scriptTip;
+	std::string text;
+	std::string tooltip;
+	std::string scriptTip;
 	bool enabled;
 	bool visible;
 
@@ -63,11 +65,11 @@ public:
 	virtual ~wiWidget();
 
 	wiHashString GetName();
-	void SetName(const string& value);
-	string GetText();
-	void SetText(const string& value);
-	void SetTooltip(const string& value);
-	void SetScriptTip(const string& value);
+	void SetName(const std::string& value);
+	std::string GetText();
+	void SetText(const std::string& value);
+	void SetTooltip(const std::string& value);
+	void SetScriptTip(const std::string& value);
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState();
@@ -93,24 +95,24 @@ public:
 class wiButton : public wiWidget
 {
 protected:
-	function<void(wiEventArgs args)> onClick;
-	function<void(wiEventArgs args)> onDragStart;
-	function<void(wiEventArgs args)> onDrag;
-	function<void(wiEventArgs args)> onDragEnd;
+	std::function<void(wiEventArgs args)> onClick;
+	std::function<void(wiEventArgs args)> onDragStart;
+	std::function<void(wiEventArgs args)> onDrag;
+	std::function<void(wiEventArgs args)> onDragEnd;
 	XMFLOAT2 dragStart;
 	XMFLOAT2 prevPos;
 	Hitbox2D hitBox;
 public:
-	wiButton(const string& name = "");
+	wiButton(const std::string& name = "");
 	virtual ~wiButton();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
-	void OnClick(function<void(wiEventArgs args)> func);
-	void OnDragStart(function<void(wiEventArgs args)> func);
-	void OnDrag(function<void(wiEventArgs args)> func);
-	void OnDragEnd(function<void(wiEventArgs args)> func);
+	void OnClick(std::function<void(wiEventArgs args)> func);
+	void OnDragStart(std::function<void(wiEventArgs args)> func);
+	void OnDrag(std::function<void(wiEventArgs args)> func);
+	void OnDragEnd(std::function<void(wiEventArgs args)> func);
 };
 
 // Static box that holds text
@@ -118,7 +120,7 @@ class wiLabel : public wiWidget
 {
 protected:
 public:
-	wiLabel(const string& name = "");
+	wiLabel(const std::string& name = "");
 	virtual ~wiLabel();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
@@ -129,7 +131,7 @@ public:
 class wiSlider : public wiWidget
 {
 protected:
-	function<void(wiEventArgs args)> onSlide;
+	std::function<void(wiEventArgs args)> onSlide;
 	Hitbox2D hitBox;
 	float start, end;
 	float step;
@@ -139,7 +141,7 @@ public:
 	// end : slider maximum value
 	// defaultValue : slider default Value
 	// step : slider step size
-	wiSlider(float start = 0.0f, float end = 1.0f, float defaultValue = 0.5f, float step = 1000.0f, const string& name = "");
+	wiSlider(float start = 0.0f, float end = 1.0f, float defaultValue = 0.5f, float step = 1000.0f, const std::string& name = "");
 	virtual ~wiSlider();
 
 	void SetValue(float value);
@@ -148,18 +150,18 @@ public:
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
-	void OnSlide(function<void(wiEventArgs args)> func);
+	void OnSlide(std::function<void(wiEventArgs args)> func);
 };
 
 // Two-state clickable box
 class wiCheckBox :public wiWidget
 {
 protected:
-	function<void(wiEventArgs args)> onClick;
+	std::function<void(wiEventArgs args)> onClick;
 	Hitbox2D hitBox;
 	bool checked;
 public:
-	wiCheckBox(const string& name = "");
+	wiCheckBox(const std::string& name = "");
 	virtual ~wiCheckBox();
 
 	void SetCheck(bool value);
@@ -168,14 +170,14 @@ public:
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
-	void OnClick(function<void(wiEventArgs args)> func);
+	void OnClick(std::function<void(wiEventArgs args)> func);
 };
 
 // Drop-down list
 class wiComboBox :public wiWidget
 {
 protected:
-	function<void(wiEventArgs args)> onSelect;
+	std::function<void(wiEventArgs args)> onSelect;
 	Hitbox2D hitBox;
 	int selected;
 	int maxVisibleItemCount;
@@ -194,26 +196,26 @@ protected:
 	} combostate;
 	int hovered;
 
-	vector<string> items;
+	std::vector<std::string> items;
 
 	const float _GetItemOffset(int index) const;
 public:
-	wiComboBox(const string& name = "");
+	wiComboBox(const std::string& name = "");
 	virtual ~wiComboBox();
 
-	void AddItem(const string& item);
+	void AddItem(const std::string& item);
 	void RemoveItem(int index);
 	void ClearItems();
 	void SetMaxVisibleItemCount(int value);
 
 	void SetSelected(int index);
 	int GetSelected();
-	string GetItemText(int index);
+	std::string GetItemText(int index);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
 
-	void OnSelect(function<void(wiEventArgs args)> func);
+	void OnSelect(std::function<void(wiEventArgs args)> func);
 };
 
 // Widget container
@@ -226,10 +228,10 @@ protected:
 	wiButton* resizeDragger_UpperLeft;
 	wiButton* resizeDragger_BottomRight;
 	wiButton* moveDragger;
-	list<wiWidget*> childrenWidgets;
+	std::list<wiWidget*> childrenWidgets;
 	bool minimized;
 public:
-	wiWindow(wiGUI* gui, const string& name = "");
+	wiWindow(wiGUI* gui, const std::string& name = "");
 	virtual ~wiWindow();
 
 	void AddWidget(wiWidget* widget);
@@ -249,7 +251,7 @@ public:
 class wiColorPicker : public wiWindow
 {
 protected:
-	function<void(wiEventArgs args)> onColorChanged;
+	std::function<void(wiEventArgs args)> onColorChanged;
 	XMFLOAT2 hue_picker;
 	XMFLOAT2 saturation_picker;
 	XMFLOAT3 saturation_picker_barycentric;
@@ -258,7 +260,7 @@ protected:
 	float angle;
 	bool huefocus; // whether the hue is in focus or the saturation
 public:
-	wiColorPicker(wiGUI* gui, const string& name = "");
+	wiColorPicker(wiGUI* gui, const std::string& name = "");
 	virtual ~wiColorPicker();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
@@ -267,6 +269,6 @@ public:
 	XMFLOAT4 GetPickColor();
 	void SetPickColor(const XMFLOAT4& value);
 
-	void OnColorChanged(function<void(wiEventArgs args)> func);
+	void OnColorChanged(std::function<void(wiEventArgs args)> func);
 };
 

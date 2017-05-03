@@ -4,6 +4,7 @@
 #include "wiRenderer.h"
 #include "wiInputManager.h"
 
+using namespace std;
 
 wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), pointerpos(XMFLOAT2(0,0))
 {

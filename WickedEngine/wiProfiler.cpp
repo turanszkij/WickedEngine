@@ -3,6 +3,7 @@
 #include "wiRenderer.h"
 #include "wiFont.h"
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 void wiProfiler::BeginFrame()
@@ -107,7 +108,7 @@ void wiProfiler::EndRange(GRAPHICSTHREAD threadID)
 		return;
 
 	assert(!rangeStack.empty() && "There is no range to end!");
-	const string& top = rangeStack.top();
+	const std::string& top = rangeStack.top();
 
 	auto& it = ranges.find(top);
 	if (it != ranges.end())

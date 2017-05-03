@@ -8,6 +8,7 @@
 #include "ResourceMapping.h"
 #include "wiArchive.h"
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 VertexLayout *wiHairParticle::il;
@@ -32,8 +33,8 @@ wiHairParticle::wiHairParticle()
 	object = nullptr;
 	materialName = "";
 }
-wiHairParticle::wiHairParticle(const string& newName, float newLen, int newCount
-						   , const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup)
+wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int newCount
+						   , const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup)
 {
 	vb = nullptr;
 	name=newName;

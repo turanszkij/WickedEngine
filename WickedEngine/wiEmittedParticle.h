@@ -43,7 +43,7 @@ private:
 			sizBeginEnd[1] = sizOpaMir.x*scaleX;
 		}
 	};
-	deque<Point> points;
+	std::deque<Point> points;
 
 	GFX_STRUCT ConstantBuffer
 	{
@@ -72,10 +72,10 @@ private:
 	static void SetUpStates();
 	void LoadVertexBuffer();
 
-	static set<wiEmittedParticle*> systems;
+	static std::set<wiEmittedParticle*> systems;
 	
 
-	//std::vector<SkinnedVertex> emitterVertexList;
+	//std::std::vector<SkinnedVertex> emitterVertexList;
 	
 	float getNewVelocityModifier(){ return 1+((rand()%10001+1)*0.0001f)*random_factor;}
 	float getNewPositionModifier(){ return (rand()%((int)(random_factor*1000)+1))*0.001f - random_factor*0.5f; }
@@ -96,7 +96,7 @@ private:
 	void SetupLightInterpolators();
 public:
 	wiEmittedParticle();
-	wiEmittedParticle(std::string newName, std::string newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
+	wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot);
 	static void SetUpStatic();
 	static void CleanUpStatic();
@@ -116,12 +116,12 @@ public:
 	void DrawNonPremul(GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
 	void CleanUp();
 
-	string name;
+	std::string name;
 	Object* object;
-	string materialName;
+	std::string materialName;
 	Material* material;
 	Light* light;
-	string lightName;
+	std::string lightName;
 	
 	AABB* bounding_box;
 

@@ -28,11 +28,11 @@ struct LayeredRenderEntity
 };
 struct RenderLayer
 {
-	vector<LayeredRenderEntity> entities;
-	string name;
+	std::vector<LayeredRenderEntity> entities;
+	std::string name;
 	int order;
 
-	RenderLayer(const string& newName)
+	RenderLayer(const std::string& newName)
 	{
 		name = newName;
 		order = 0;
@@ -62,21 +62,21 @@ public:
 	virtual void Render();
 	virtual void Compose();
 
-	void addSprite(wiSprite* sprite, const string& layer = DEFAULT_RENDERLAYER);
+	void addSprite(wiSprite* sprite, const std::string& layer = DEFAULT_RENDERLAYER);
 	void removeSprite(wiSprite* sprite);
 	void clearSprites();
 	void setSpriteSpeed(float value){ m_spriteSpeed = value; }
 	float getSpriteSpeed(){ return m_spriteSpeed; }
 	int getSpriteOrder(wiSprite* sprite);
 
-	void addFont(wiFont* font, const string& layer = DEFAULT_RENDERLAYER);
+	void addFont(wiFont* font, const std::string& layer = DEFAULT_RENDERLAYER);
 	void removeFont(wiFont* font);
 	void clearFonts();
 	int getFontOrder(wiFont* font);
 
-	vector<RenderLayer> layers;
-	void addLayer(const string& name);
-	void setLayerOrder(const string& name, int order);
+	std::vector<RenderLayer> layers;
+	void addLayer(const std::string& name);
+	void setLayerOrder(const std::string& name, int order);
 	void SetSpriteOrder(wiSprite* sprite, int order);
 	void SetFontOrder(wiFont* font, int order);
 	void SortLayers();

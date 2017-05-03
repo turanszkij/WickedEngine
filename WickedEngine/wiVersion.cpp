@@ -28,9 +28,9 @@ namespace wiVersion
 	{
 		return revision;
 	}
-	string GetVersionString()
+	std::string GetVersionString()
 	{
-		stringstream ss("");
+		std::stringstream ss("");
 		ss << GetMajor() << "." << GetMinor() << "." << GetRevision();
 		return ss.str();
 	}

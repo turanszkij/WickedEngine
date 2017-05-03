@@ -45,7 +45,7 @@ protected:
 
 		ALIGN_16
 	};
-	static vector<Vertex> vertexList;
+	static std::vector<Vertex> vertexList;
 	static wiGraphicsTypes::GPUBuffer           *vertexBuffer, *indexBuffer;
 
 	static wiGraphicsTypes::VertexLayout		*vertexLayout;
@@ -66,7 +66,7 @@ private:
 
 
 	struct wiFontStyle{
-		string name;
+		std::string name;
 		wiGraphicsTypes::Texture2D* texture;
 		
 		struct LookUp{
@@ -81,25 +81,25 @@ private:
 		int lineHeight;
 
 		wiFontStyle(){}
-		wiFontStyle(const string& newName);
+		wiFontStyle(const std::string& newName);
 		void CleanUp();
 	};
-	static vector<wiFontStyle> fontStyles;
+	static std::vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(const wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID);
+	static void ModifyGeo(const std::wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID);
 
 public:
 	static void Initialize();
 	static void SetUpStaticComponents();
 	static void CleanUpStatic();
 
-	wstring text;
+	std::wstring text;
 	wiFontProps props;
 	int style;
 
-	wiFont(const string& text = "", wiFontProps props = wiFontProps(), int style = 0);
-	wiFont(const wstring& text, wiFontProps props = wiFontProps(), int style = 0);
+	wiFont(const std::string& text = "", wiFontProps props = wiFontProps(), int style = 0);
+	wiFont(const std::wstring& text, wiFontProps props = wiFontProps(), int style = 0);
 	~wiFont();
 
 	
@@ -109,13 +109,13 @@ public:
 	int textWidth();
 	int textHeight();
 
-	static void addFontStyle( const string& toAdd );
-	static int getFontStyleByName( const string& get );
+	static void addFontStyle( const std::string& toAdd );
+	static int getFontStyleByName( const std::string& get );
 
-	void SetText(const string& text);
-	void SetText(const wstring& text);
-	wstring GetText();
-	string GetTextA();
+	void SetText(const std::string& text);
+	void SetText(const std::wstring& text);
+	std::wstring GetText();
+	std::string GetTextA();
 
 	void CleanUp();
 };

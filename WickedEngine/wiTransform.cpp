@@ -83,7 +83,7 @@ void Transform::attachTo(Transform* newParent, int copyTranslation, int copyRota
 		parent->children.insert(this);
 	}
 }
-Transform* Transform::find(const string& findname)
+Transform* Transform::find(const std::string& findname)
 {
 	if (!name.compare(findname))
 	{
@@ -128,7 +128,7 @@ void Transform::detachChild(Transform* child) {
 		{
 			return;
 		}
-		vector<Transform*> delChildren(children.begin(), children.end());
+		std::vector<Transform*> delChildren(children.begin(), children.end());
 		for (Transform* c : delChildren) {
 			if (c != nullptr) {
 				c->detach();

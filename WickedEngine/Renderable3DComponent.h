@@ -63,13 +63,13 @@ protected:
 		, rtDof[3]
 		, rtTemporalAA[2]
 		;
-	static vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
+	static std::vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
 	static wiDepthTarget dtDepthCopy;
 	static wiGraphicsTypes::Texture2D* smallDepth;
 
 	virtual void ResizeBuffers() override;
 
-	vector<wiTaskThread*> workerThreads;
+	std::vector<wiTaskThread*> workerThreads;
 
 	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
 	virtual void RenderReflections(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);

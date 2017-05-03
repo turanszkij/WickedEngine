@@ -3,6 +3,8 @@
 #include "wiServer.h"
 #include "wiHelper.h"
 
+using namespace std;
+
 const char wiClient_BindLua::className[] = "Client";
 
 Luna<wiClient_BindLua>::FunctionType wiClient_BindLua::methods[] = {

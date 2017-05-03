@@ -1,6 +1,8 @@
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
 
+using namespace std;
+
 LoadingScreenComponent::LoadingScreenComponent() : Renderable2DComponent()
 {
 	loaders.clear();
@@ -59,7 +61,7 @@ void LoadingScreenComponent::waitForFinish()
 
 void LoadingScreenComponent::doLoadingTasks()
 {
-	vector<thread> loaderThreads(0);
+	std::vector<thread> loaderThreads(0);
 
 	for (LoaderTask& x : loaders)
 	{

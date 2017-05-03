@@ -1,5 +1,7 @@
 #include "wiThreadSafeManager.h"
 
+using namespace std;
+
 mutex wiThreadSafeManager::STATICMUTEX;
 
 wiThreadSafeManager::wiThreadSafeManager()

@@ -5,6 +5,8 @@
 
 #include <sstream>
 
+using namespace std;
+
 const char Renderable2DComponent_BindLua::className[] = "Renderable2DComponent";
 
 Luna<Renderable2DComponent_BindLua>::FunctionType Renderable2DComponent_BindLua::methods[] = {

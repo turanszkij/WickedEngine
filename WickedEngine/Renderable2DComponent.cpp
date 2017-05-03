@@ -141,7 +141,7 @@ void Renderable2DComponent::Compose()
 }
 
 
-void Renderable2DComponent::addSprite(wiSprite* sprite, const string& layer)
+void Renderable2DComponent::addSprite(wiSprite* sprite, const std::string& layer)
 {
 	for (auto& x : layers)
 	{
@@ -195,7 +195,7 @@ int Renderable2DComponent::getSpriteOrder(wiSprite* sprite)
 	return 0;
 }
 
-void Renderable2DComponent::addFont(wiFont* font, const string& layer)
+void Renderable2DComponent::addFont(wiFont* font, const std::string& layer)
 {
 	for (auto& x : layers)
 	{
@@ -250,7 +250,7 @@ int Renderable2DComponent::getFontOrder(wiFont* font)
 }
 
 
-void Renderable2DComponent::addLayer(const string& name)
+void Renderable2DComponent::addLayer(const std::string& name)
 {
 	for (auto& x : layers)
 	{
@@ -262,7 +262,7 @@ void Renderable2DComponent::addLayer(const string& name)
 	layers.push_back(layer);
 	layers.back().entities.clear();
 }
-void Renderable2DComponent::setLayerOrder(const string& name, int order)
+void Renderable2DComponent::setLayerOrder(const std::string& name, int order)
 {
 	for (auto& x : layers)
 	{
@@ -350,7 +350,7 @@ void Renderable2DComponent::CleanLayers()
 		{
 			continue;
 		}
-		vector<LayeredRenderEntity> cleanEntities(0);
+		std::vector<LayeredRenderEntity> cleanEntities(0);
 		for (auto& y : x.entities)
 		{
 			if (y.sprite != nullptr || y.font!=nullptr)

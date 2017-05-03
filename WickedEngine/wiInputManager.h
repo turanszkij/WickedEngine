@@ -54,7 +54,7 @@ public:
 			}
 		};
 	};
-	typedef map<Input,DWORD,Input::LessComparer> InputCollection;
+	typedef std::map<Input,DWORD,Input::LessComparer> InputCollection;
 	InputCollection inputs;
 	
 	//check if a button is down
@@ -82,10 +82,10 @@ public:
 		// current position of touch
 		XMFLOAT2 pos;
 	};
-	vector<Touch> getTouches();
+	std::vector<Touch> getTouches();
 
 private:
-	vector<Touch> touches;
+	std::vector<Touch> touches;
 
 	friend void AddTouch(const wiInputManager::Touch& touch);
 

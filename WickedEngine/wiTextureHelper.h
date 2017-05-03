@@ -20,7 +20,7 @@ private:
 		};
 		wiGraphicsTypes::Texture2D* helperTextures[HELPERTEXTURE_COUNT];
 
-		unordered_map<unsigned long, wiGraphicsTypes::Texture2D*> colorTextures;
+		std::unordered_map<unsigned long, wiGraphicsTypes::Texture2D*> colorTextures;
 	public:
 		wiTextureHelperInstance();
 		~wiTextureHelperInstance();

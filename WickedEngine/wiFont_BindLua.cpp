@@ -3,6 +3,8 @@
 #include "CommonInclude.h"
 #include "Vector_BindLua.h"
 
+using namespace std;
+
 const char wiFont_BindLua::className[] = "Font";
 
 Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {

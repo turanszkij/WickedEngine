@@ -12,15 +12,15 @@ class wiServer : public wiNetwork
 {
 #ifndef WINSTORE_SUPPORT
 private:
-	map<SOCKET,string> clients;
+	std::map<SOCKET, std::string> clients;
 public:
-	wiServer(const string& newName = "SERVER", const string& ipaddress = "0.0.0.0", int port = PORT);
+	wiServer(const std::string& newName = "SERVER", const std::string& ipaddress = "0.0.0.0", int port = PORT);
 	~wiServer(void);
 
 	bool active(){return !clients.empty();}
 
 	
-	bool sendText(const string& text, int packettype, const string& clientName = "", int clientID = -1);
+	bool sendText(const std::string& text, int packettype, const std::string& clientName = "", int clientID = -1);
 	template <typename T>
 	bool sendData(const T& value){
 		if(clients.begin()==clients.end())
@@ -36,8 +36,8 @@ public:
 	}
 
 	
-	bool changeName(const string& newName);
-	bool sendMessage(const string& text, const string& clientName = "", int clientID = -1);
+	bool changeName(const std::string& newName);
+	bool sendMessage(const std::string& text, const std::string& clientName = "", int clientID = -1);
 
 	bool ListenOnPort(int portno, const char* ipaddress);
 	SOCKET CreateAccepter();
@@ -55,7 +55,7 @@ public:
 		SOCKET max_sd = s;
 
 
-		for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
+		for (std::map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ++it) {
 			if(it->first>0)
 				FD_SET( it->first, &readfds );
 			if(it->first>max_sd)
@@ -95,7 +95,7 @@ public:
 		}
 
 		//else its some IO operation on some other socket :)
-		for (map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ) {
+		for (std::map<SOCKET,string>::iterator it = clients.begin(); it != clients.end(); ) {
 
 			if (FD_ISSET( it->first , &readfds))
 			{
@@ -149,11 +149,11 @@ public:
 	} 
 
 
-	vector<string> listClients();
+	std::vector<std::string> listClients();
 
 #else
 public:
-	wiServer(const string& newName = "SERVER", const string& ipaddress = "0.0.0.0", int port = PORT) {}
+	wiServer(const std::string& newName = "SERVER", const std::string& ipaddress = "0.0.0.0", int port = PORT) {}
 	template<typename T>
 	void Poll(T& data) {}
 

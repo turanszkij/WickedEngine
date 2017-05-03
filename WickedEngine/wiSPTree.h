@@ -7,10 +7,10 @@
 
 class Frustum;
 
-typedef forward_list<Cullable*> CulledList;
+typedef std::forward_list<Cullable*> CulledList;
 
-typedef forward_list<Object*> CulledObjectList;
-typedef unordered_map<Mesh*,CulledObjectList> CulledCollection;
+typedef std::forward_list<Object*> CulledObjectList;
+typedef std::unordered_map<Mesh*,CulledObjectList> CulledCollection;
 
 
 class wiSPTree
@@ -20,13 +20,13 @@ protected:
 	wiSPTree();
 public:
 	~wiSPTree();
-	void initialize(const vector<Cullable*>& objects);
-	void initialize(const vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax);
+	void initialize(const std::vector<Cullable*>& objects);
+	void initialize(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax);
 
 	struct Node{
 		int depth;
 		AABB box;
-		vector<Node*> children;
+		std::vector<Node*> children;
 		Node* parent;
 		int count;
 		CulledList objects;
@@ -68,7 +68,7 @@ public:
 	// Sort culled list by their distance to the origin point
 	static void Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE);
 
-	void AddObjects(Node* node, const vector<Cullable*>& newObjects);
+	void AddObjects(Node* node, const std::vector<Cullable*>& newObjects);
 	void getVisible(Frustum& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
 	void getVisible(AABB& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
 	void getVisible(SPHERE& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);

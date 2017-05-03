@@ -1,5 +1,7 @@
 #include "LoadingScreenComponent_BindLua.h"
 
+using namespace std;
+
 const char LoadingScreenComponent_BindLua::className[] = "LoadingScreenComponent";
 
 Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLua::methods[] = {

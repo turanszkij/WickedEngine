@@ -2,6 +2,8 @@
 #include "wiImageEffects_BindLua.h"
 #include "SpriteAnim_BindLua.h"
 
+using namespace std;
+
 const char wiSprite_BindLua::className[] = "Sprite";
 
 Luna<wiSprite_BindLua>::FunctionType wiSprite_BindLua::methods[] = {

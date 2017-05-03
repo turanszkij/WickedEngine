@@ -20,6 +20,7 @@
 // This should be written into any archive operation for future bacwards compatibility!
 int __editorVersion = 0;
 
+using namespace std;
 using namespace wiGraphicsTypes;
 using namespace wiRectPacker;
 
@@ -111,7 +112,7 @@ void EditorLoadingScreen::Unload()
 wiTranslator* translator = nullptr;
 bool translator_active = false;
 list<wiRenderer::Picked*> selected;
-map<Transform*,Transform*> savedParents;
+std::map<Transform*,Transform*> savedParents;
 wiRenderer::Picked hovered;
 void BeginTranslate()
 {
@@ -160,7 +161,7 @@ void EndTranslate()
 		if (x->transform != nullptr)
 		{
 			x->transform->detach();
-			map<Transform*,Transform*>::iterator it = savedParents.find(x->transform);
+			std::map<Transform*,Transform*>::iterator it = savedParents.find(x->transform);
 			if (it != savedParents.end())
 			{
 				x->transform->attachTo(it->second);

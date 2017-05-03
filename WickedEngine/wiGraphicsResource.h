@@ -125,7 +125,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11ShaderResourceView*			SRV_DX11;					// main resource SRV
-		vector<ID3D11ShaderResourceView*>	additionalSRVs_DX11;		// can be used for sub-resources if requested
+		std::vector<ID3D11ShaderResourceView*>	additionalSRVs_DX11;		// can be used for sub-resources if requested
 
 	protected:
 		GPUResource();
@@ -137,7 +137,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11UnorderedAccessView*			UAV_DX11;					// main resource UAV
-		vector<ID3D11UnorderedAccessView*>	additionalUAVs_DX11;		// can be used for sub-resources if requested
+		std::vector<ID3D11UnorderedAccessView*>	additionalUAVs_DX11;		// can be used for sub-resources if requested
 
 	protected:
 		GPUUnorderedResource();
@@ -237,7 +237,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11RenderTargetView*				RTV_DX11;
-		vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
+		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
 		bool								independentRTVArraySlices;
 		bool								independentRTVCubemapFaces;
 		bool								independentSRVMIPs;
@@ -275,7 +275,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		ID3D11DepthStencilView*				DSV_DX11;
-		vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
+		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
 		ID3D11Texture2D*					texture2D_DX11;
 		Texture2DDesc						desc;
 	public:
@@ -305,8 +305,8 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 	private:
-		vector<ID3D11Query*>		resource_DX11;
-		vector<int>					active;
+		std::vector<ID3D11Query*>		resource_DX11;
+		std::vector<int>					active;
 		GPUQueryDesc				desc;
 		int							async_frameshift;
 	public:

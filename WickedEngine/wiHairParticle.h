@@ -48,8 +48,8 @@ public:
 
 public:
 	wiHairParticle();
-	wiHairParticle(const string& newName, float newLen, int newCount
-		, const string& newMat, Object* newObject, const string& densityGroup, const string& lengthGroup);
+	wiHairParticle(const std::string& newName, float newLen, int newCount
+		, const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup);
 	void CleanUp();
 
 	void Generate();
@@ -61,11 +61,11 @@ public:
 
 	float length;
 	int count;
-	string name, densityG, lenG, materialName;
+	std::string name, densityG, lenG, materialName;
 	Material* material;
 	XMFLOAT4X4 OriginalMatrix_Inverse;
 	Object* object;
-	vector<Point> points;
+	std::vector<Point> points;
 	wiGraphicsTypes::GPUBuffer *vb;
 
 	void Serialize(wiArchive& archive);

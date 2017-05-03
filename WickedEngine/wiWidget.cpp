@@ -7,6 +7,7 @@
 #include "wiHelper.h"
 #include "wiInputManager.h"
 
+using namespace std;
 using namespace wiGraphicsTypes;
 
 
@@ -92,7 +93,7 @@ wiHashString wiWidget::GetName()
 {
 	return fastName;
 }
-void wiWidget::SetName(const string& value)
+void wiWidget::SetName(const std::string& value)
 {
 	name = value;
 	if (value.length() <= 0)
@@ -110,15 +111,15 @@ string wiWidget::GetText()
 {
 	return name;
 }
-void wiWidget::SetText(const string& value)
+void wiWidget::SetText(const std::string& value)
 {
 	text = value;
 }
-void wiWidget::SetTooltip(const string& value)
+void wiWidget::SetTooltip(const std::string& value)
 {
 	tooltip = value;
 }
-void wiWidget::SetScriptTip(const string& value)
+void wiWidget::SetScriptTip(const std::string& value)
 {
 	scriptTip = value;
 }
@@ -198,7 +199,7 @@ void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
 }
 
 
-wiButton::wiButton(const string& name) :wiWidget()
+wiButton::wiButton(const std::string& name) :wiWidget()
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -352,7 +353,7 @@ void wiButton::OnDragEnd(function<void(wiEventArgs args)> func)
 
 
 
-wiLabel::wiLabel(const string& name) :wiWidget()
+wiLabel::wiLabel(const std::string& name) :wiWidget()
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -404,7 +405,7 @@ void wiLabel::Render(wiGUI* gui)
 
 
 
-wiSlider::wiSlider(float start, float end, float defaultValue, float step, const string& name) :wiWidget()
+wiSlider::wiSlider(float start, float end, float defaultValue, float step, const std::string& name) :wiWidget()
 	,start(start), end(end), value(defaultValue), step(max(step, 1))
 {
 	SetName(name);
@@ -554,7 +555,7 @@ void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 
 
 
-wiCheckBox::wiCheckBox(const string& name) :wiWidget()
+wiCheckBox::wiCheckBox(const std::string& name) :wiWidget()
 	,checked(false)
 {
 	SetName(name);
@@ -687,7 +688,7 @@ bool wiCheckBox::GetCheck()
 
 
 
-wiComboBox::wiComboBox(const string& name) :wiWidget()
+wiComboBox::wiComboBox(const std::string& name) :wiWidget()
 , selected(-1), combostate(COMBOSTATE_INACTIVE), hovered(-1)
 {
 	SetName(name);
@@ -896,7 +897,7 @@ void wiComboBox::OnSelect(function<void(wiEventArgs args)> func)
 {
 	onSelect = move(func);
 }
-void wiComboBox::AddItem(const string& item)
+void wiComboBox::AddItem(const std::string& item)
 {
 	items.push_back(item);
 
@@ -907,7 +908,7 @@ void wiComboBox::AddItem(const string& item)
 }
 void wiComboBox::RemoveItem(int index)
 {
-	vector<string> newItems(0);
+	std::vector<string> newItems(0);
 	newItems.reserve(items.size());
 	for (size_t i = 0; i < items.size(); ++i)
 	{
@@ -963,7 +964,7 @@ int wiComboBox::GetSelected()
 
 
 static const float windowcontrolSize = 20.0f;
-wiWindow::wiWindow(wiGUI* gui, const string& name) :wiWidget()
+wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 , gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
@@ -1226,7 +1227,7 @@ bool wiWindow::IsMinimized()
 
 
 
-wiColorPicker::wiColorPicker(wiGUI* gui, const string& name) :wiWindow(gui, name)
+wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name) :wiWindow(gui, name)
 {
 	SetSize(XMFLOAT2(300, 260));
 	SetColor(wiColor::Ghost);
@@ -1381,7 +1382,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		HRESULT hr = S_OK;
 		// saturation
 		{
-			static vector<Vertex> vertices(0);
+			static std::vector<Vertex> vertices(0);
 			if (vb_saturation.IsValid() && !vertices.empty())
 			{
 				vertices[0].col = hue_color;
@@ -1408,7 +1409,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		}
 		// hue
 		{
-			vector<Vertex> vertices(0);
+			std::vector<Vertex> vertices(0);
 			for (float i = 0; i <= 100; i += 1.0f)
 			{
 				float p = i / 100;
@@ -1435,7 +1436,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		{
 			float _radius = 3;
 			float _width = 3;
-			vector<Vertex> vertices(0);
+			std::vector<Vertex> vertices(0);
 			for (float i = 0; i <= 100; i += 1.0f)
 			{
 				float p = i / 100;
@@ -1461,7 +1462,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		{
 			float _width = 20;
 
-			vector<Vertex> vertices(0);
+			std::vector<Vertex> vertices(0);
 			vertices.push_back({ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
 			vertices.push_back({ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
 			vertices.push_back({ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
