@@ -186,7 +186,7 @@ void wiSPTree::getVisible(AABB& frustum, CulledList& objects, SortType sortType,
 				type == SP_TREE_LOOSE_CULL ||
 				(type == SP_TREE_STRICT_CULL &&
 					contain_type == AABB::INSIDE ||
-					(contain_type == INTERSECTS && frustum.intersects(object->bounds))
+					(contain_type == AABB::INTERSECTS && frustum.intersects(object->bounds))
 					)
 				) {
 				objects.push_front(object);

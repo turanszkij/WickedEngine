@@ -7,6 +7,8 @@
 #include "wiHelper.h"
 #include "wiInputManager.h"
 
+#include <DirectXCollision.h>
+
 using namespace std;
 using namespace wiGraphicsTypes;
 

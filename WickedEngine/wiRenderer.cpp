@@ -29,6 +29,8 @@
 
 #include <algorithm>
 
+#include <DirectXCollision.h>
+
 using namespace std;
 using namespace wiGraphicsTypes;
 
