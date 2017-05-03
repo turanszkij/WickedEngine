@@ -2,6 +2,9 @@
 #include "CommonInclude.h"
 #include "wiThreadSafeManager.h"
 
+#include <vector>
+#include <map>
+
 class wiXInput;
 class wiDirectInput;
 class wiRawInput;

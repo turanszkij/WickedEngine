@@ -8,6 +8,8 @@
 #include "wiSPTree.h"
 #include "wiWindowRegistration.h"
 
+#include <unordered_set>
+
 struct Transform;
 struct Vertex;
 struct SkinnedVertex;

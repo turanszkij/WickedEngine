@@ -5,6 +5,8 @@
 #include "wiLoader.h"
 #include "ResourceMapping.h"
 
+#include <fstream>
+
 using namespace wiGraphicsTypes;
 
 #define WHITESPACE_SIZE 3

@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include "wiEnums.h"
 
+#include <list>
+
 class wiHashString;
 
 class wiWidget;

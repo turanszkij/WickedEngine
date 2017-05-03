@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include <stdint.h>
 
+#include <string>
+
 class wiArchive
 {
 private:

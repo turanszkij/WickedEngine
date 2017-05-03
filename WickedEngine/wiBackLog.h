@@ -5,6 +5,8 @@
 #include "wiImage.h"
 #include "wiLua.h"
 
+#include <deque>
+
 class wiBackLog
 {
 private:

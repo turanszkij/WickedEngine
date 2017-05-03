@@ -27,6 +27,8 @@
 #include "wiBackLog.h"
 #include "wiProfiler.h"
 
+#include <algorithm>
+
 using namespace wiGraphicsTypes;
 
 #pragma region STATICS

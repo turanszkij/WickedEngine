@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 
+#include <vector>
 
 class wiDepthTarget;
 

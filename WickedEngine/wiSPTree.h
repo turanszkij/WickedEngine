@@ -2,6 +2,9 @@
 #include "CommonInclude.h"
 #include "wiLoader.h"
 
+#include <unordered_map>
+#include <forward_list>
+
 class Frustum;
 
 typedef forward_list<Cullable*> CulledList;

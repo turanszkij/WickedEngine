@@ -14,6 +14,9 @@
 #define FORSYTH_IMPLEMENTATION
 #include "wiMeshOptimizer.h"
 
+#include <algorithm>
+#include <fstream>
+
 using namespace wiGraphicsTypes;
 
 void LoadWiArmatures(const string& directory, const string& name, const string& identifier, list<Armature*>& armatures)

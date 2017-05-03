@@ -4,29 +4,31 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDescriptors.h"
 
-interface ID3D11VertexShader;
-interface ID3D11PixelShader;
-interface ID3D11GeometryShader;
-interface ID3D11DomainShader;
-interface ID3D11HullShader;
-interface ID3D11ComputeShader;
-interface ID3D11SamplerState;
-interface ID3D11ShaderResourceView;
-interface ID3D11UnorderedAccessView;
-interface ID3D11Buffer;
-interface ID3D11InputLayout;
-interface ID3D11BlendState;
-interface ID3D11DepthStencilState;
-interface ID3D11RasterizerState;
-interface ID3D11RasterizerState2;
-interface ID3D11ClassLinkage;
-interface ID3D11RenderTargetView;
-interface ID3D11DepthStencilView;
-interface ID3D11Texture1D;
-interface ID3D11Texture2D;
-interface ID3D11Texture3D;
-interface ID3D11Query;
-interface ID3D11Predicate;
+#include <vector>
+
+struct ID3D11VertexShader;
+struct ID3D11PixelShader;
+struct ID3D11GeometryShader;
+struct ID3D11DomainShader;
+struct ID3D11HullShader;
+struct ID3D11ComputeShader;
+struct ID3D11SamplerState;
+struct ID3D11ShaderResourceView;
+struct ID3D11UnorderedAccessView;
+struct ID3D11Buffer;
+struct ID3D11InputLayout;
+struct ID3D11BlendState;
+struct ID3D11DepthStencilState;
+struct ID3D11RasterizerState;
+struct ID3D11RasterizerState2;
+struct ID3D11ClassLinkage;
+struct ID3D11RenderTargetView;
+struct ID3D11DepthStencilView;
+struct ID3D11Texture1D;
+struct ID3D11Texture2D;
+struct ID3D11Texture3D;
+struct ID3D11Query;
+struct ID3D11Predicate;
 
 namespace wiGraphicsTypes
 {

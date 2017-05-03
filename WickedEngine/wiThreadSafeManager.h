@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include "wiSpinLock.h"
 
+#include <mutex>
+
 class wiThreadSafeManager
 {
 protected:

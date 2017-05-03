@@ -4,6 +4,9 @@
 #include "wiGraphicsAPI.h"
 #include "wiHashString.h"
 
+#include <map>
+#include <unordered_map>
+
 class wiSound;
 
 class wiResourceManager : public wiThreadSafeManager

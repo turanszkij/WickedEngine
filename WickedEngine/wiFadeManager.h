@@ -4,6 +4,8 @@
 #include "wiTimer.h"
 #include "wiMath.h"
 
+#include <functional>
+
 class wiFadeManager
 {
 public:

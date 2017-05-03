@@ -133,9 +133,9 @@ namespace wiMath
 	}
 	XMFLOAT3 getQuadraticBezierPos(const XMFLOAT3& a, const XMFLOAT3&b, const XMFLOAT3& c, float t){
 		float param0, param1, param2;
-		param0 = pow(1 - t, 2);
+		param0 = powf(1 - t, 2);
 		param1 = 2 * (1 - t)*t;
-		param2 = pow(t, 2);
+		param2 = powf(t, 2);
 		float x = param0*a.x + param1*b.x + param2*c.x;
 		float y = param0*a.y + param1*b.y + param2*c.y;
 		float z = param0*a.z + param1*b.z + param2*c.z;
@@ -147,9 +147,9 @@ namespace wiMath
 	
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion)
 	{
-		float roll = atan2(2 * quaternion.x*quaternion.w - 2 * quaternion.y*quaternion.z, 1 - 2 * quaternion.x*quaternion.x - 2 * quaternion.z*quaternion.z);
-		float pitch = atan2(2 * quaternion.y*quaternion.w - 2 * quaternion.x*quaternion.z, 1 - 2 * quaternion.y*quaternion.y - 2 * quaternion.z*quaternion.z);
-		float yaw = asin(2 * quaternion.x*quaternion.y + 2 * quaternion.z*quaternion.w);
+		float roll = atan2f(2 * quaternion.x*quaternion.w - 2 * quaternion.y*quaternion.z, 1 - 2 * quaternion.x*quaternion.x - 2 * quaternion.z*quaternion.z);
+		float pitch = atan2f(2 * quaternion.y*quaternion.w - 2 * quaternion.x*quaternion.z, 1 - 2 * quaternion.y*quaternion.y - 2 * quaternion.z*quaternion.z);
+		float yaw = asinf(2 * quaternion.x*quaternion.y + 2 * quaternion.z*quaternion.w);
 
 		return XMFLOAT3(roll, pitch, yaw);
 	}
@@ -188,16 +188,16 @@ namespace wiMath
 
 	XMFLOAT3 HueToRGB(float H)
 	{
-		float R = abs(H * 6 - 3) - 1;
-		float G = 2 - abs(H * 6 - 2);
-		float B = 2 - abs(H * 6 - 4);
+		float R = fabsf(H * 6 - 3) - 1;
+		float G = 2 - fabsf(H * 6 - 2);
+		float B = 2 - fabsf(H * 6 - 4);
 		return XMFLOAT3(saturate(R), saturate(G), saturate(B));
 	}
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b)
 	{
 		float dot = a.x*b.x + a.y*b.y;      // dot product
 		float det = a.x*b.y - a.y*b.x;		// determinant
-		float angle = atan2(det, dot);		// atan2(y, x) or atan2(sin, cos)
+		float angle = atan2f(det, dot);		// atan2(y, x) or atan2(sin, cos)
 		if (angle < 0)
 		{
 			angle += XM_2PI;
@@ -208,13 +208,13 @@ namespace wiMath
 	{
 		float deg = 0;
 		float t = deg * XM_PI / 180.0f;
-		A = XMFLOAT4(radius*cos(t), radius*-sin(t), 0, 1);
+		A = XMFLOAT4(radius*cosf(t), radius*-sinf(t), 0, 1);
 		deg += 120;
 		t = deg * XM_PI / 180.0f;
-		B = XMFLOAT4(radius*cos(t), radius*-sin(t), 0, 1);
+		B = XMFLOAT4(radius*cosf(t), radius*-sinf(t), 0, 1);
 		deg += 120;
 		t = deg * XM_PI / 180.0f;
-		C = XMFLOAT4(radius*cos(t), radius*-sin(t), 0, 1);
+		C = XMFLOAT4(radius*cosf(t), radius*-sinf(t), 0, 1);
 	}
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp)
 	{

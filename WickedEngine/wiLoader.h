@@ -9,6 +9,12 @@
 #include "wiTransform.h"
 #include "wiIntersectables.h"
 
+#include <vector>
+#include <map>
+#include <list>
+#include <deque>
+#include <sstream>
+
 struct HitSphere;
 class wiParticle;
 class wiEmittedParticle;

@@ -6,6 +6,8 @@
 #include <locale>
 #include <direct.h>
 #include <chrono>
+#include <iomanip>
+#include <fstream>
 
 namespace wiHelper
 {

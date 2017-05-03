@@ -1,5 +1,7 @@
 #include "wiVersion.h"
 
+#include <sstream>
+
 namespace wiVersion
 {
 	// main engine core
@@ -7,7 +9,7 @@ namespace wiVersion
 	// minor features, major updates
 	const int minor = 11;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 39;
+	const int revision = 40;
 
 
 	long GetVersion()

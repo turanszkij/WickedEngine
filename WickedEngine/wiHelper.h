@@ -3,6 +3,9 @@
 
 #include "CommonInclude.h"
 
+#include <string>
+#include <vector>
+
 namespace wiHelper
 {
 	string toUpper(const string& s);

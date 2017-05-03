@@ -7,6 +7,9 @@
 #include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
 
+#include <sstream>
+#include <wincodec.h>
+
 namespace wiGraphicsTypes
 {
 // Engine -> Native converters

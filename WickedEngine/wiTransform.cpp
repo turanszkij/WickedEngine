@@ -1,6 +1,7 @@
 #include "wiTransform.h"
 #include "wiArchive.h"
 
+#include <vector>
 
 void Node::Serialize(wiArchive& archive)
 {

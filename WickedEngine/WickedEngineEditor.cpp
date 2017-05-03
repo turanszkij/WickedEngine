@@ -2,6 +2,8 @@
 #include "WickedEngineEditor.h"
 #include "Editor.h"
 
+#include <fstream>
+
 #define MAX_LOADSTRING 100
 
 extern "C" {

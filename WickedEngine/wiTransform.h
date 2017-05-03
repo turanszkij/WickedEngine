@@ -2,6 +2,8 @@
 #define _TRANSFORM_H_
 #include "CommonInclude.h"
 
+#include <set>
+
 class wiArchive;
 
 static unsigned long long __Unique_ID_Counter = 0;

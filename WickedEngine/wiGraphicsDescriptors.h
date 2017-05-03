@@ -342,7 +342,7 @@ namespace wiGraphicsTypes
 	};
 	struct VertexLayoutDesc
 	{
-		LPCSTR SemanticName;
+		char* SemanticName;
 		UINT SemanticIndex;
 		FORMAT Format;
 		UINT InputSlot;
@@ -353,7 +353,7 @@ namespace wiGraphicsTypes
 	struct StreamOutDeclaration
 	{
 		UINT Stream;
-		LPCSTR SemanticName;
+		char* SemanticName;
 		UINT SemanticIndex;
 		BYTE StartComponent;
 		BYTE ComponentCount;

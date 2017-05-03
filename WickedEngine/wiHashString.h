@@ -1,6 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
 
+#include <string>
+
 class wiHashString
 {
 private:

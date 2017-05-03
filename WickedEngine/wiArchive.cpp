@@ -1,6 +1,9 @@
 #include "wiArchive.h"
 #include "wiHelper.h"
 
+#include <fstream>
+#include <sstream>
+
 // this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
 uint64_t __archiveVersion = 7;
 // this is the version number of which below the archive is not compatible with the current version

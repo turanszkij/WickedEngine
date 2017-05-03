@@ -6,6 +6,8 @@
 #include "wiGraphicsAPI.h"
 #include "wiIntersectables.h"
 
+#include <list>
+
 class wiGUI;
 
 struct wiEventArgs

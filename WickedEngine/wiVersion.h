@@ -3,6 +3,8 @@
 
 #include "CommonInclude.h"
 
+#include <string>
+
 namespace wiVersion
 {
 	long GetVersion();

@@ -2,6 +2,9 @@
 #include "wiParticle.h"
 #include "ConstantBufferMapping.h"
 
+#include <set>
+#include <deque>
+
 struct Material;
 struct AABB;
 struct Light;

@@ -1,6 +1,8 @@
 #include "wiBackLog_BindLua.h"
 #include "wiBackLog.h"
 
+#include <sstream>
+
 
 namespace wiBackLog_BindLua
 {

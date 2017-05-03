@@ -5,6 +5,8 @@
 #include "wiRenderer.h"
 #include "wiTextureHelper.h"
 
+#include <fstream>
+
 using namespace wiGraphicsTypes;
 
 deque<string> wiBackLog::stream;

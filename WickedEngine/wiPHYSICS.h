@@ -1,6 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
 
+#include <vector>
+
 struct Mesh;
 struct Object;
 

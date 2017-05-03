@@ -3,6 +3,8 @@
 #include "wiHelper.h"
 #include "wiThreadSafeManager.h"
 
+#include <map>
+
 class wiCVars : public wiThreadSafeManager
 {
 public:
