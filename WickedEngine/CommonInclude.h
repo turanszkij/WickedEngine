@@ -1,7 +1,7 @@
 #ifndef WICKEDENGINE_COMMONINCLUDE_H
 #define WICKEDENGINE_COMMONINCLUDE_H
 
-// NOTE:
+// This is a helper include file pasted into all engine headers try to keep it minimal!
 // Do not include engine features in this file!
 
 
