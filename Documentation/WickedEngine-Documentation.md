@@ -83,6 +83,9 @@ The main renderer. The responsibility of this class is managing the scene graph,
 This also holds an instance of the GraphicsDevice.
 This is a fully static class which means that there can be only a single renderer per application instance.
 
+#### wiLoader
+This contains rendering and scene graph related classes like Meshes, Armatures, Objects, Transforms, etc.
+
 
 
 ### Physics
@@ -126,6 +129,17 @@ This struct has members defining the event parameters. A simple callback registe
 		}
 	});
 
+The wiEventArgs members are the following:
+	
+	- XMFLOAT2 clickPos;		- click position by the pointer
+	- XMFLOAT2 startPos;		- start point for a drag operation
+	- XMFLOAT2 deltaPos;		- delta vector for a drag operation
+	- XMFLOAT2 endPos;			- endpoint for a drag operation
+	- float fValue;				- floating point result for some events (for example a slider event)
+	- bool bValue;				- boolean result for some events (for example a checkbox click event)
+	- int iValue;				- integer value for some events (for example a slider event)
+	- XMFLOAT4 color;			- color value for a color picker event in linear rgba space with a range between 0 and 1
+	- std::string sValue;		- string result for some events (for example a combo box selection event)
 
 
 
