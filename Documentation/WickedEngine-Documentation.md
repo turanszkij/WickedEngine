@@ -125,7 +125,7 @@ This struct has members defining the event parameters. A simple callback registe
 		}
 		else
 		{
-			messaageBox("Disabled!");
+			messageBox("Disabled!");
 		}
 	});
 
