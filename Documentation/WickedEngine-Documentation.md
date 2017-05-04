@@ -83,16 +83,77 @@ The main renderer. The responsibility of this class is managing the scene graph,
 This also holds an instance of the GraphicsDevice.
 This is a fully static class which means that there can be only a single renderer per application instance.
 
+
+
 ### Physics
+This section provides description for the physics engine interface.
+
+#### wiPHYSICS
+An interface for physics engine integration. The current implementation uses Bullet physics (see wiBULLET) but a private HAVOK physics implementation is also available to use.
+
+#### wiBULLET
+implements the wiPHYSICS interface. Wraps up the open source Bullet physics engine. The source is incuded inside the project and builds itself automatically.
+
+
 
 ### GUI
+This section contains information about the graphical user interface usage.
+
+#### wiGUI
+Its purpose is to manages all widgets. Management consists of updating and rendering them.
+
+#### wiWidget
+This is an interface to GUI widgets. The following widgets are available:
+
+	- wiButton
+	- wiCheckBox
+	- wiLabel
+	- wiSlider
+	- wiComboBox
+	- wiWindow
+	- wiColorPicker
+
+Each widget can register callback events by implementing functions starting with "On" keywork, like OnClick(wiEventArgs args). Each callback sends an wiEventArgs struct for the receiver.
+This struct has members defining the event parameters. A simple callback register can look like this:
+
+	myCheckBox->OnClick([&](wiEventArgs args) {
+		if(args.bValue){
+			messageBox("Activated!");
+		}
+		else
+		{
+			messaageBox("Disabled!");
+		}
+	});
+
+
+
 
 ### Input
+This section is about the input manager instance.
+
+
+
 
 ### Helpers
+This section provides information about the various helper utilities.
 
-### Network
+
 
 ### Scripting
+This section contains documentation about the Lua scripting interface implementation side. For scripting API documentation refer to: [Wicked Engine Scripting API](ScriptingAPI-Documentation.md)
+
+
+
+
+### Network
+This section is about networking features.
+
+
+
 
 ### Tools
+This section describes engine tools.
+
+
+
