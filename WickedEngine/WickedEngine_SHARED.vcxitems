@@ -706,6 +706,7 @@
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
+    <Text Include="$(MSBuildThisFileDirectory)..\todo.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
   </ItemGroup>
   <ItemGroup>

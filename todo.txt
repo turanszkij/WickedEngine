@@ -1,0 +1,60 @@
+TODOS:		|
+-------------
+
+
+- Auto build system?
+
+- Auto testing system?
+
+- CMake or something?
+
+- Vulkan or DX12 renderer implementation
+
+- Normals should be transformed by inverse transpose world matrix when it is non uniformly scaled
+	But this complicates the instance buffer updating and requires additional bandwidth and also skeletal animations
+
+- Index buffers could be 16 bit in many cases especially on mobile platforms
+	This is an easy extension but the code will be uglier and harder to maintain. Now every index buffer is 32 bit.
+
+- Rewrite postprocess pipeline
+	Some stack based post process pipeline would be the nicest, the current one is very explicit and hard to debug
+
+- Physics engine synchronization overhaul
+	The physics for objects is only initialized on loading and cannot be changed afterwards which is not good. Soft bodies could be somewhat complicated to update.
+
+- Archive datafile compression
+
+- Parallax corrected environment probes
+	Shader extension is very simple but need to think of a nice to use editor widget to edit the bounding boxes for them
+
+- Textbox widget
+	I imagine it would be somewhat complicated to create a good one
+
+- Multiple scene management
+	Shouldn't be too hard.
+
+- Scene double buffering
+	Would allow for multithreaded scene graph update. Need to write copy for the whole scene, could be hard.
+
+- Window widgets should be rendered more nicely, for example the title bars and drag controls shouldn't be scaled across all axes
+
+- GUI resolution change handler
+
+- Custom shaders for materials
+
+- Custom shader editor
+
+- More robust font rendering
+
+- Particle system editor
+
+- Physics editor
+
+- 3D audio and placing sounds into the scene graph + sound editor
+
+- Network
+	Probably should be completely rewritten
+
+- Navmesh implementation, editor
+
+- AI editor
