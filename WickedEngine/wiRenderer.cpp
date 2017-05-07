@@ -255,10 +255,8 @@ void wiRenderer::SetUpStaticComponents()
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
-	GetDevice()->LOCK();
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
-	GetDevice()->UNLOCK();
 }
 void wiRenderer::CleanUpStatic()
 {
@@ -1330,6 +1328,11 @@ void wiRenderer::SetUpStates()
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 {
+	if (threadID == GRAPHICSTHREAD_IMMEDIATE)
+	{
+		GetDevice()->LOCK();
+	}
+
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
 		GetDevice()->BindSamplerPS(samplers[i], i, threadID);
@@ -1376,6 +1379,11 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 
 	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
 	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
+
+	if (threadID == GRAPHICSTHREAD_IMMEDIATE)
+	{
+		GetDevice()->UNLOCK();
+	}
 }
 void wiRenderer::RebindPersistentState(GRAPHICSTHREAD threadID)
 {
@@ -4907,8 +4915,17 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit
 	{
+		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
+		{
+			wiRenderer::GetDevice()->LOCK();
+		}
 		prevcb[threadID] = value;
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &prevcb[threadID], threadID);
+
+		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
+		{
+			wiRenderer::GetDevice()->UNLOCK();
+		}
 	}
 }
 void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
@@ -5425,9 +5442,7 @@ void wiRenderer::LoadWorldInfo(const std::string& dir, const std::string& name)
 {
 	LoadWiWorldInfo(/*dir*/"", name+".wiw", GetScene().worldInfo, GetScene().wind);
 
-	GetDevice()->LOCK();
 	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
-	GetDevice()->UNLOCK();
 }
 void wiRenderer::LoadDefaultLighting()
 {

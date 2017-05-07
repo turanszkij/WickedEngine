@@ -160,11 +160,9 @@ void MainComponent::Render()
 {
 	wiLua::GetGlobal()->Render();
 
-	wiRenderer::GetDevice()->LOCK();
 	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	getActiveComponent()->Render();
 	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
-	wiRenderer::GetDevice()->UNLOCK();
 }
 
 void MainComponent::Compose()
