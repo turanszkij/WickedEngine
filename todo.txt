@@ -10,6 +10,8 @@ TODOS:		|
 
 - Vulkan or DX12 renderer implementation
 
+- Inverse kinematics for skeletal animation
+
 - Normals should be transformed by inverse transpose world matrix when it is non uniformly scaled
 	But this complicates the instance buffer updating and requires additional bandwidth and also skeletal animations
 
