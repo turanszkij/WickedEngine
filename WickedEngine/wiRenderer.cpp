@@ -5489,7 +5489,14 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 			for (Object* object : model->objects) 
 			{
 				Mesh* mesh = object->mesh;
-				int pI = object->physicsObjectI;
+				int pI = object->physicsObjectID;
+
+				if (pI < 0 && (object->rigidBody || mesh->softBody))
+				{
+					// Register the objects with physics attributes that doesn't exist in the simulation
+					physicsEngine->registerObject(object);
+				}
+
 				if (pI >= 0) 
 				{
 					if (mesh->softBody) 
@@ -5527,7 +5534,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 		for (Model* model : GetScene().models)
 		{
 			for (Object* object : model->objects) {
-				int pI = object->physicsObjectI;
+				int pI = object->physicsObjectID;
 				if (pI >= 0 && !object->kinematic && (object->rigidBody || object->mesh->softBody)) {
 					PHYSICS::PhysicsTransform* transform(physicsEngine->getObject(pI));
 					object->translation_rest = transform->position;
@@ -5749,14 +5756,6 @@ void wiRenderer::AddModel(Model* model)
 	GetDevice()->LOCK();
 
 	GetScene().AddModel(model);
-
-	for (Object* o : model->objects)
-	{
-		if (physicsEngine != nullptr) {
-			physicsEngine->registerObject(o);
-		}
-	}
-
 
 	FixedUpdate();
 

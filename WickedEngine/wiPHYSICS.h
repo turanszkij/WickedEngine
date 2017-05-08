@@ -63,5 +63,8 @@ public:
 
 	virtual PhysicsTransform* getObject(int index)=0;
 
-	virtual void registerObject(Object* object)=0;
+	// add object to the simulation
+	virtual void registerObject(Object* object) = 0;
+	// remove object from simulation
+	virtual void removeObject(Object* object) = 0;
 };

@@ -64,7 +64,6 @@ wiBULLET::wiBULLET()
 	///-----initialization_end-----
 }
 
-
 wiBULLET::~wiBULLET()
 {
 	//cleanup in the reverse order of creation/initialization
@@ -624,6 +623,11 @@ void wiBULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
 	}
 }
 void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI){
+	if (objectI < 0)
+	{
+		return;
+	}
+
 	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
 	btRigidBody* rigidBody = btRigidBody::upcast(obj);
 	if(rigidBody){
@@ -661,13 +665,8 @@ PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 
 void wiBULLET::registerObject(Object* object){
 	if(object->rigidBody && object->mesh != nullptr && rigidBodyPhysicsEnabled){
-		//XMVECTOR s,r,t;
-		//XMMatrixDecompose(&s,&r,&t,XMLoadFloat4x4(&object->world));
 		XMFLOAT3 S,T;
 		XMFLOAT4 R;
-		//XMStoreFloat3(&S,s);
-		//XMStoreFloat4(&R,r);
-		//XMStoreFloat3(&T,t);
 		object->applyTransform();
 		object->attachTo(object->GetRoot());
 
@@ -681,7 +680,7 @@ void wiBULLET::registerObject(Object* object){
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic
 			);
-			object->physicsObjectI=++registeredObjects;
+			object->physicsObjectID = ++registeredObjects;
 		}
 		if(!object->collisionShape.compare("SPHERE")){
 			addSphere(
@@ -689,7 +688,7 @@ void wiBULLET::registerObject(Object* object){
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic
 			);
-			object->physicsObjectI=++registeredObjects;
+			object->physicsObjectID = ++registeredObjects;
 		}
 		if(!object->collisionShape.compare("CAPSULE")){
 			addCapsule(
@@ -697,7 +696,7 @@ void wiBULLET::registerObject(Object* object){
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic
 			);
-			object->physicsObjectI=++registeredObjects;
+			object->physicsObjectID = ++registeredObjects;
 		}
 		if(!object->collisionShape.compare("CONVEX_HULL")){
 			addConvexHull(
@@ -706,7 +705,7 @@ void wiBULLET::registerObject(Object* object){
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic
 			);
-			object->physicsObjectI=++registeredObjects;
+			object->physicsObjectID = ++registeredObjects;
 		}
 		if(!object->collisionShape.compare("MESH")){
 			addTriangleMesh(
@@ -715,7 +714,7 @@ void wiBULLET::registerObject(Object* object){
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic
 			);
-			object->physicsObjectI=++registeredObjects;
+			object->physicsObjectID = ++registeredObjects;
 		}
 	}
 
@@ -737,8 +736,18 @@ void wiBULLET::registerObject(Object* object){
 			,s,r,t
 			,object->mass,object->mesh->friction,object->restitution,object->damping
 		);
-		object->physicsObjectI=++registeredObjects;
+		object->physicsObjectID = ++registeredObjects;
 	}
+}
+void wiBULLET::removeObject(Object* object)
+{
+	if (object == nullptr || object->physicsObjectID < 0)
+	{
+		return;
+	}
+
+	deleteObject(object->physicsObjectID);
+	object->physicsObjectID = -1;
 }
 
 void wiBULLET::Update(float dt){
@@ -760,31 +769,7 @@ void wiBULLET::UnMarkForWrite(){
 void wiBULLET::ClearWorld(){
 	for(int i=dynamicsWorld->getNumCollisionObjects()-1;i>=0;i--)
 	{
-		btCollisionObject*	obj=dynamicsWorld->getCollisionObjectArray()[i];
-		btRigidBody*		body=btRigidBody::upcast(obj);
-		if(body&&body->getMotionState())
-		{
-			delete body->getMotionState();
-		}
-		while(dynamicsWorld->getNumConstraints())
-		{
-			btTypedConstraint*	pc=dynamicsWorld->getConstraint(0);
-			dynamicsWorld->removeConstraint(pc);
-			delete pc;
-		}
-		btSoftBody* softBody = btSoftBody::upcast(obj);
-		if (softBody)
-		{
-			((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softBody);
-		} else
-		{
-			btRigidBody* body = btRigidBody::upcast(obj);
-			if (body)
-				dynamicsWorld->removeRigidBody(body);
-			else
-				dynamicsWorld->removeCollisionObject(obj);
-		}
-		delete obj;
+		deleteObject(i);
 	}
 
 	//delete collision shapes
@@ -807,6 +792,39 @@ void wiBULLET::CleanUp(){
 	transforms.clear();
 }
 
+void wiBULLET::deleteObject(int id)
+{
+	btCollisionObject*	obj = dynamicsWorld->getCollisionObjectArray()[id];
+	btRigidBody*		body = btRigidBody::upcast(obj);
+
+	if (body && body->getMotionState())
+	{
+		delete body->getMotionState();
+	}
+	while (dynamicsWorld->getNumConstraints())
+	{
+		btTypedConstraint*	pc = dynamicsWorld->getConstraint(0);
+		dynamicsWorld->removeConstraint(pc);
+		delete pc;
+	}
+
+	btSoftBody* softBody = btSoftBody::upcast(obj);
+	if (softBody)
+	{
+		((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softBody);
+	}
+	else
+	{
+		btRigidBody* body = btRigidBody::upcast(obj);
+		if (body)
+			dynamicsWorld->removeRigidBody(body);
+		else
+			dynamicsWorld->removeCollisionObject(obj);
+	}
+	delete obj;
+
+	registeredObjects--;
+}
 
 
 void wiBULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {

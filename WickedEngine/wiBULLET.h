@@ -31,6 +31,8 @@ private:
 
 	static bool grab;
 	static RAY grabRay;
+
+	void deleteObject(int id);
 public:
 	wiBULLET();
 	~wiBULLET();
@@ -60,6 +62,7 @@ public:
 	PhysicsTransform* getObject(int index);
 
 	void registerObject(Object* object);
+	void removeObject(Object* object);
 
 	void Update(float dt);
 	void MarkForRead();

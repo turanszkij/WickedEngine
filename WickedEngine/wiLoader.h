@@ -474,7 +474,7 @@ struct Object : public Streamable, public Transform
 	wiGraphicsTypes::Texture2D* trailDistortTex;
 	wiGraphicsTypes::Texture2D* trailTex;
 
-	int physicsObjectI;
+	int physicsObjectID;
 
 	// occlusion result
 	wiGraphicsTypes::GPUQuery occlusionQuery;
@@ -488,7 +488,7 @@ struct Object : public Streamable, public Transform
 	// Is it controlled by the physics engine or an Armature?
 	bool isDynamic() const
 	{
-		return ((physicsObjectI >= 0 && !kinematic) || mesh->softBody || isArmatureDeformed());
+		return ((physicsObjectID >= 0 && !kinematic) || mesh->softBody || isArmatureDeformed());
 	}
 
 	Object(const std::string& newName = "");

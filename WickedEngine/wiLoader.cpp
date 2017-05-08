@@ -3677,10 +3677,10 @@ void Object::init()
 	eParticleSystems.resize(0);
 	hParticleSystems.resize(0);
 	rigidBody = kinematic = false;
-	collisionShape = "";
+	collisionShape = "BOX";
 	mass = friction = restitution = damping = 1.0f;
 	physicsType = "ACTIVE";
-	physicsObjectI = -1;
+	physicsObjectID = -1;
 	transparency = 0.0f;
 	color = XMFLOAT3(1, 1, 1);
 	trailDistortTex = nullptr;

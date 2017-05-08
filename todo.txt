@@ -21,9 +21,6 @@ TODOS:		|
 - Rewrite postprocess pipeline
 	Some stack based post process pipeline would be the nicest, the current one is very explicit and hard to debug
 
-- Physics engine synchronization overhaul
-	The physics for objects is only initialized on loading and cannot be changed afterwards which is not good. Soft bodies could be somewhat complicated to update.
-
 - Archive datafile compression
 
 - Parallax corrected environment probes

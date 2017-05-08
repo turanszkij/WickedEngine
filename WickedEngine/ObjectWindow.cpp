@@ -70,6 +70,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	simulationTypeComboBox->OnSelect([&](wiEventArgs args) {
 		if (object != nullptr)
 		{
+			wiRenderer::physicsEngine->removeObject(object);
+
 			switch (args.iValue)
 			{
 			case 0:
@@ -78,6 +80,10 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 				{
 					object->mesh->softBody = false;
 				}
+
+				kinematicCheckBox->SetEnabled(false);
+				physicsTypeComboBox->SetEnabled(false);
+				collisionShapeComboBox->SetEnabled(false);
 				break;
 			case 1:
 				object->rigidBody = true;
@@ -85,6 +91,10 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 				{
 					object->mesh->softBody = false;
 				}
+
+				kinematicCheckBox->SetEnabled(true);
+				physicsTypeComboBox->SetEnabled(true);
+				collisionShapeComboBox->SetEnabled(true);
 				break;
 			case 2:
 				object->rigidBody = false;
@@ -92,10 +102,17 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 				{
 					object->mesh->softBody = true;
 				}
+
+				kinematicCheckBox->SetEnabled(false);
+				physicsTypeComboBox->SetEnabled(true);
+				collisionShapeComboBox->SetEnabled(false);
 				break;
 			default:
 				break;
 			}
+
+			wiRenderer::physicsEngine->registerObject(object);
+
 		}
 	});
 	simulationTypeComboBox->SetSelected(0);
@@ -110,7 +127,11 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	kinematicCheckBox->OnClick([&](wiEventArgs args) {
 		if (object != nullptr)
 		{
+			wiRenderer::physicsEngine->removeObject(object);
+
 			object->kinematic = args.bValue;
+
+			wiRenderer::physicsEngine->registerObject(object);
 		}
 	});
 	objectWindow->AddWidget(kinematicCheckBox);
@@ -123,6 +144,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	physicsTypeComboBox->OnSelect([&](wiEventArgs args) {
 		if (object != nullptr)
 		{
+			wiRenderer::physicsEngine->removeObject(object);
+
 			switch (args.iValue)
 			{
 			case 0:
@@ -134,6 +157,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 			default:
 				break;
 			}
+
+			wiRenderer::physicsEngine->registerObject(object);
 		}
 	});
 	physicsTypeComboBox->SetSelected(0);
@@ -152,6 +177,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	collisionShapeComboBox->OnSelect([&](wiEventArgs args) {
 		if (object != nullptr)
 		{
+			wiRenderer::physicsEngine->removeObject(object);
+
 			switch (args.iValue)
 			{
 			case 0:
@@ -172,6 +199,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 			default:
 				break;
 			}
+
+			wiRenderer::physicsEngine->registerObject(object);
 		}
 	});
 	collisionShapeComboBox->SetSelected(0);
@@ -267,6 +296,7 @@ void ObjectWindow::SetObject(Object* obj)
 		}
 
 		objectWindow->SetEnabled(true);
+
 
 		switch (simulationTypeComboBox->GetSelected())
 		{
