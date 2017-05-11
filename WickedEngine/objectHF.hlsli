@@ -26,6 +26,7 @@
 #define xRefraction				texture_7
 #define	xWaterRipples			texture_8
 
+
 struct PixelInputType_Simple
 {
 	float4 pos								: SV_POSITION;
@@ -49,7 +50,6 @@ struct PixelInputType
 	float4 ReflectionMapSamplingPos			: TEXCOORD1;
 	float2 nor2D							: NORMAL2D;
 };
-
 
 struct GBUFFEROutputType
 {
@@ -81,8 +81,8 @@ inline void SpecularAA(in float3 N, inout float roughness)
 	[branch]
 	if (g_xWorld_SpecularAA > 0)
 	{
-		float3 ddxN = ddx(N);
-		float3 ddyN = ddy(N);
+		float3 ddxN = ddx_coarse(N);
+		float3 ddyN = ddy_coarse(N);
 		float curve = pow(max(dot(ddxN, ddxN), dot(ddyN, ddyN)), 1 - g_xWorld_SpecularAA);
 		roughness = max(roughness, curve);
 	}
@@ -104,18 +104,21 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	float curLayerHeight = 0;
 	float2 dtex = g_xMat_parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
 	float2 currentTextureCoords = UV;
-	float heightFromTexture = 1 - xDisplacementMap.Sample(sampler_objectshader, currentTextureCoords).r;
-	[unroll(NUM_PARALLAX_OCCLUSION_STEPS)]
-	while (heightFromTexture > curLayerHeight)
+	float2 derivX = ddx_coarse(UV);
+	float2 derivY = ddy_coarse(UV);
+	float heightFromTexture = 1 - xDisplacementMap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
+	uint iter = 0;
+	[loop]
+	while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
 	{
 		curLayerHeight += layerHeight;
 		currentTextureCoords -= dtex;
-		heightFromTexture = 1 - xDisplacementMap.Sample(sampler_objectshader, currentTextureCoords).r;
+		heightFromTexture = 1 - xDisplacementMap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
+		iter++;
 	}
 	float2 prevTCoords = currentTextureCoords + dtex;
 	float nextH = heightFromTexture - curLayerHeight;
-	float prevH = xDisplacementMap.Sample(sampler_objectshader, prevTCoords).r
-		- curLayerHeight + layerHeight;
+	float prevH = xDisplacementMap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
 	float weight = nextH / (nextH - prevH);
 	float2 finalTexCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
 	UV = finalTexCoords;
@@ -330,7 +333,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #define OBJECT_PS_OUT_GBUFFER																						\
 	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
 	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
-	Out.g1 = float4(encode(N), velocity);								/*FORMAT_R16G16B16_FLOAT*/					\
+	Out.g1 = float4(encode(N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
 	Out.g2 = float4(0, 0, sss, emissive);							/*FORMAT_R8G8B8A8_UNORM*/						\
 	Out.g3 = float4(roughness, reflectance, metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	return Out;
