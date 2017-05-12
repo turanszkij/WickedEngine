@@ -103,7 +103,7 @@ public:
 	~wiFont();
 
 	
-	void Draw(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE, bool scissorTest = false);
+	void Draw(GRAPHICSTHREAD threadID, bool scissorTest = false);
 
 
 	int textWidth();

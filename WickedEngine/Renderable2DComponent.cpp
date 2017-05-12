@@ -120,7 +120,7 @@ void Renderable2DComponent::Render()
 			}
 			if (y.font != nullptr)
 			{
-				y.font->Draw();
+				y.font->Draw(GRAPHICSTHREAD_IMMEDIATE);
 			}
 		}
 	}
@@ -135,7 +135,7 @@ void Renderable2DComponent::Compose()
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.presentFullScreen = true;
 
-	wiImage::Draw(rtFinal.GetTexture(), fx);
+	wiImage::Draw(rtFinal.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderableComponent::Compose();
 }

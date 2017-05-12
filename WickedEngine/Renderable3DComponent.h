@@ -71,13 +71,13 @@ protected:
 
 	std::vector<wiTaskThread*> workerThreads;
 
-	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
-	virtual void RenderReflections(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
-	virtual void RenderShadows(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
-	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
-	virtual void RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
-	virtual void RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID);
+	virtual void RenderReflections(GRAPHICSTHREAD threadID);
+	virtual void RenderShadows(GRAPHICSTHREAD threadID);
+	virtual void RenderScene(GRAPHICSTHREAD threadID) = 0;
+	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID);
+	virtual void RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID);
+	virtual void RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID);
 	virtual void RenderColorGradedComposition();
 public:
 	inline float getLightShaftQuality(){ return lightShaftQuality; }

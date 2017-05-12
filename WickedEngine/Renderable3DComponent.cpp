@@ -244,7 +244,7 @@ void Renderable3DComponent::Compose()
 
 	if (wiRenderer::GetDebugLightCulling())
 	{
-		wiImage::Draw((Texture2D*)wiRenderer::textures[TEXTYPE_2D_DEBUGUAV], wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()));
+		wiImage::Draw((Texture2D*)wiRenderer::textures[TEXTYPE_2D_DEBUGUAV], wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	Renderable2DComponent::Compose();
@@ -654,7 +654,7 @@ void Renderable3DComponent::RenderColorGradedComposition()
 		fx.presentFullScreen = false;
 		fx.process.clear();
 		fx.process.setStereogram(true);
-		wiImage::Draw(wiTextureHelper::getInstance()->getRandom64x64(), fx);
+		wiImage::Draw(wiTextureHelper::getInstance()->getRandom64x64(), fx, GRAPHICSTHREAD_IMMEDIATE);
 		wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 		return;
 	}
@@ -680,11 +680,11 @@ void Renderable3DComponent::RenderColorGradedComposition()
 
 	if (getSharpenFilterEnabled())
 	{
-		wiImage::Draw(rtFinal[0].GetTexture(), fx);
+		wiImage::Draw(rtFinal[0].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 	}
 	else
 	{
-		wiImage::Draw(rtFinal[1].GetTexture(), fx);
+		wiImage::Draw(rtFinal[1].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 	}
 	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 }

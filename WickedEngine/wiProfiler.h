@@ -40,7 +40,7 @@ public:
 	const std::unordered_map<std::string, Range*>& GetRanges() { return ranges; }
 
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
-	void DrawData(int x, int y, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	void DrawData(int x, int y, GRAPHICSTHREAD threadID);
 
 	bool ENABLED;
 

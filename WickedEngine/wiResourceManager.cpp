@@ -92,7 +92,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		{
 			Texture2D* image=nullptr;
 			{
-				wiRenderer::GetDevice()->CreateTextureFromFile(name.GetString().c_str(), &image, true);
+				wiRenderer::GetDevice()->CreateTextureFromFile(name.GetString().c_str(), &image, true, GRAPHICSTHREAD_IMMEDIATE);
 			}
 
 			if(image)

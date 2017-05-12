@@ -84,12 +84,12 @@ void ForwardRenderableComponent::Render()
 	}
 	else
 	{
-		RenderFrameSetUp();
-		RenderShadows();
-		RenderReflections();
-		RenderScene();
-		RenderSecondaryScene(rtMain, rtMain);
-		RenderComposition(rtMain, rtMain);
+		RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
+		RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
+		RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
+		RenderScene(GRAPHICSTHREAD_IMMEDIATE);
+		RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_IMMEDIATE);
+		RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	Renderable2DComponent::Render();

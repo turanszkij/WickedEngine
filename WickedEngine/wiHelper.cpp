@@ -61,7 +61,7 @@ namespace wiHelper
 			ss << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
 		else
 			ss << name;
-		if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(ss.str(), &wiRenderer::GetDevice()->GetBackBuffer())))
+		if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(ss.str(), &wiRenderer::GetDevice()->GetBackBuffer(), GRAPHICSTHREAD_IMMEDIATE)))
 		{
 			ss << " Saved successfully!";
 			wiBackLog::post(ss.str().c_str());

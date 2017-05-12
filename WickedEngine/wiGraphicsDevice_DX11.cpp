@@ -2635,7 +2635,7 @@ void GraphicsDevice_DX11::PresentBegin()
 {
 	LOCK();
 
-	BindViewports(1, &viewPort);
+	BindViewports(1, &viewPort, GRAPHICSTHREAD_IMMEDIATE);
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->OMSetRenderTargets(1, &renderTargetView, 0);
 	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ClearRenderTargetView(renderTargetView, ClearColor);

@@ -327,7 +327,7 @@ public:
 	// Render data that needs to be updated on the main thread!
 	static void UpdatePerFrameData(float dt);
 	static void UpdateRenderData(GRAPHICSTHREAD threadID);
-	static void OcclusionCulling_Render(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	static void OcclusionCulling_Render(GRAPHICSTHREAD threadID);
 	static void OcclusionCulling_Read();
 	static void UpdateImages();
 	static void ManageImages();
@@ -389,7 +389,7 @@ public:
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }
 	static wiGraphicsTypes::Texture2D* GetEnviromentMap(){ return enviroMap; }
-	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 	static wiWaterPlane GetWaterPlane();
 
 	static Transform* getTransformByName(const std::string& name);

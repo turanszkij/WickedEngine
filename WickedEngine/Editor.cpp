@@ -102,7 +102,7 @@ void EditorLoadingScreen::Compose()
 	__super::Compose();
 
 	wiFont("Loading...", wiFontProps(wiRenderer::GetDevice()->GetScreenWidth() / 2, wiRenderer::GetDevice()->GetScreenHeight() / 2, 50,
-		WIFALIGN_MID, WIFALIGN_MID)).Draw();
+		WIFALIGN_MID, WIFALIGN_MID)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 }
 void EditorLoadingScreen::Unload()
 {

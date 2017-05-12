@@ -2072,7 +2072,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_CUBE], threadID);
 		GetDevice()->BindPS(nullptr, threadID);
-		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP);
+		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
@@ -2921,7 +2921,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->EventBegin("Light Volume Render", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-		GetDevice()->BindVertexLayout(nullptr);
+		GetDevice()->BindVertexLayout(nullptr, threadID);
 		GetDevice()->BindVertexBuffer(nullptr, 0, 0, threadID);
 		GetDevice()->BindIndexBuffer(nullptr, threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,threadID);
@@ -5564,7 +5564,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 {
 	Mesh::CreateImpostorVB();
 
-	static const GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+	static const GRAPHICSTHREAD threadID;
 	static const int res = 256;
 
 	const AABB& bbox = mesh->aabb;

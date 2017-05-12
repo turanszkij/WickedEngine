@@ -11,7 +11,7 @@ protected:
 
 	virtual void ResizeBuffers();
 
-	virtual void RenderScene(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
+	virtual void RenderScene(GRAPHICSTHREAD threadID) override;
 public:
 	ForwardRenderableComponent();
 	virtual ~ForwardRenderableComponent();

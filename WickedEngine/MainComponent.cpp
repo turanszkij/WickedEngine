@@ -176,7 +176,7 @@ void MainComponent::Compose()
 		fx.siz.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
 		fx.siz.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
 		fx.opacity = fadeManager.opacity;
-		wiImage::Draw(wiTextureHelper::getInstance()->getColor(fadeManager.color), fx);
+		wiImage::Draw(wiTextureHelper::getInstance()->getColor(fadeManager.color), fx, GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	// Draw the information display
@@ -215,7 +215,7 @@ void MainComponent::Compose()
 			ss << endl;
 		}
 		ss.precision(2);
-		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw();
+		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	wiProfiler::GetInstance().DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);
@@ -224,8 +224,8 @@ void MainComponent::Compose()
 	if (colorGradingPaletteDisplayEnabled)
 	{
 		//wiImage::BatchBegin();
-		wiImage::Draw(wiTextureHelper::getInstance()->getColorGradeDefault(), wiImageEffects(0, 0, 256, 16));
-		wiImage::Draw(wiRenderer::GetColorGrading(), wiImageEffects(screenW-256.f, 0, 256, 16));
+		wiImage::Draw(wiTextureHelper::getInstance()->getColorGradeDefault(), wiImageEffects(0, 0, 256, 16), GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw(wiRenderer::GetColorGrading(), wiImageEffects(screenW-256.f, 0, 256, 16), GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	wiBackLog::Draw();

@@ -108,12 +108,12 @@ void DeferredRenderableComponent::Render()
 	}
 	else
 	{
-		RenderFrameSetUp();
-		RenderShadows();
-		RenderReflections();
-		RenderScene();
-		RenderSecondaryScene(rtGBuffer, GetFinalRT());
-		RenderComposition(GetFinalRT(), rtGBuffer);
+		RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
+		RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
+		RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
+		RenderScene(GRAPHICSTHREAD_IMMEDIATE);
+		RenderSecondaryScene(rtGBuffer, GetFinalRT(), GRAPHICSTHREAD_IMMEDIATE);
+		RenderComposition(GetFinalRT(), rtGBuffer, GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	Renderable2DComponent::Render();
