@@ -157,27 +157,6 @@ public:
 
 		ALIGN_16
 	};
-	GFX_STRUCT MaterialCB
-	{
-		XMFLOAT4 baseColor; // + alpha (.w)
-		XMFLOAT4 texMulAdd;
-		float roughness;
-		float reflectance;
-		float metalness;
-		float emissive;
-		float refractionIndex;
-		float subsurfaceScattering;
-		float normalMapStrength;
-		float parallaxOcclusionMapping;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
-
-		MaterialCB() {};
-		MaterialCB(const Material& mat) { Create(mat); };
-		void Create(const Material& mat);
-
-		ALIGN_16
-	};
 	GFX_STRUCT MiscCB
 	{
 		XMMATRIX mTransform;
@@ -461,7 +440,6 @@ public:
 	static void UpdateWorldCB(GRAPHICSTHREAD threadID);
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	static void UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID);
-	static void UpdateMaterialCB(const MaterialCB& value, GRAPHICSTHREAD threadID);
 	static void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);
 	static void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
 	static void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }

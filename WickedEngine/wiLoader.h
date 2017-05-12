@@ -8,6 +8,7 @@
 #include "wiFrustum.h"
 #include "wiTransform.h"
 #include "wiIntersectables.h"
+#include "ConstantBufferMapping.h"
 
 #include <vector>
 #include <map>
@@ -163,6 +164,30 @@ struct Material
 	std::string specularMapName;
 	wiGraphicsTypes::Texture2D* specularMap;
 
+	GFX_STRUCT MaterialCB
+	{
+		XMFLOAT4 baseColor; // + alpha (.w)
+		XMFLOAT4 texMulAdd;
+		float roughness;
+		float reflectance;
+		float metalness;
+		float emissive;
+		float refractionIndex;
+		float subsurfaceScattering;
+		float normalMapStrength;
+		float parallaxOcclusionMapping;
+
+		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
+
+		MaterialCB() {};
+		MaterialCB(const Material& mat) { Create(mat); };
+		void Create(const Material& mat);
+
+		ALIGN_16
+	};
+	MaterialCB gpuData;
+	wiGraphicsTypes::GPUBuffer constantBuffer;
+
 	bool toonshading;
 	bool water,shadeless;
 	float enviroReflection;
@@ -202,54 +227,7 @@ struct Material
 		init();
 	}
 	~Material();
-	void init()
-	{
-		diffuseColor = XMFLOAT3(1, 1, 1);
-
-		refMapName = "";
-		refMap = nullptr;
-
-		textureName = "";
-		texture = nullptr;
-		premultipliedTexture = false;
-		blendFlag = BLENDMODE::BLENDMODE_ALPHA;
-
-		normalMapName = "";
-		normalMap = nullptr;
-
-		displacementMapName = "";
-		displacementMap = nullptr;
-
-		specularMapName = "";
-		specularMap = nullptr;
-
-		toonshading = water = false;
-		enviroReflection = 0.0f;
-
-		specular = XMFLOAT4(0, 0, 0, 0);
-		specular_power = 50;
-		movingTex = XMFLOAT3(0, 0, 0);
-		framesToWaitForTexCoordOffset = 0;
-		texMulAdd = XMFLOAT4(1, 1, 0, 0);
-		isSky = water = shadeless = false;
-		cast_shadow = true;
-
-		// PBR props
-		baseColor = XMFLOAT3(1, 1, 1);
-		alpha = 1.0f;
-		roughness = 0.0f;
-		reflectance = 0.0f;
-		metalness = 0.0f;
-		refractionIndex = 0.0f;
-		subsurfaceScattering = 0.0f;
-		emissive = 0.0f;
-		normalMapStrength = 1.0f;
-		parallaxOcclusionMapping = 0.0f;
-
-		planar_reflections = false;
-
-		alphaRef = 1.0f; // no alpha test by default
-	}
+	void init();
 
 	bool IsTransparent() const { return alpha < 1.0f; }
 	bool IsWater() const { return water; }

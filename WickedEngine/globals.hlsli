@@ -99,19 +99,6 @@ CBUFFER(Camera_CommonCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_View;
 	float4x4	g_xCamera_Proj;
 	float3		g_xCamera_CamPos;				float xPadding0_Camera_CommonCB;
-}
-CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
-{
-	float4		g_xMat_baseColor;
-	float4		g_xMat_texMulAdd;
-	float		g_xMat_roughness;
-	float		g_xMat_reflectance;
-	float		g_xMat_metalness;
-	float		g_xMat_emissive;
-	float		g_xMat_refractionIndex;
-	float		g_xMat_subsurfaceScattering;
-	float		g_xMat_normalMapStrength;
-	float		g_xMat_parallaxOcclusionMapping;
 };
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {

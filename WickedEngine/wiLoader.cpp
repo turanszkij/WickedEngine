@@ -1354,6 +1354,64 @@ Material::~Material() {
 	displacementMap = nullptr;
 	specularMap = nullptr;
 }
+void Material::init()
+{
+	diffuseColor = XMFLOAT3(1, 1, 1);
+
+	refMapName = "";
+	refMap = nullptr;
+
+	textureName = "";
+	texture = nullptr;
+	premultipliedTexture = false;
+	blendFlag = BLENDMODE::BLENDMODE_ALPHA;
+
+	normalMapName = "";
+	normalMap = nullptr;
+
+	displacementMapName = "";
+	displacementMap = nullptr;
+
+	specularMapName = "";
+	specularMap = nullptr;
+
+	toonshading = water = false;
+	enviroReflection = 0.0f;
+
+	specular = XMFLOAT4(0, 0, 0, 0);
+	specular_power = 50;
+	movingTex = XMFLOAT3(0, 0, 0);
+	framesToWaitForTexCoordOffset = 0;
+	texMulAdd = XMFLOAT4(1, 1, 0, 0);
+	isSky = water = shadeless = false;
+	cast_shadow = true;
+
+	// PBR props
+	baseColor = XMFLOAT3(1, 1, 1);
+	alpha = 1.0f;
+	roughness = 0.0f;
+	reflectance = 0.0f;
+	metalness = 0.0f;
+	refractionIndex = 0.0f;
+	subsurfaceScattering = 0.0f;
+	emissive = 0.0f;
+	normalMapStrength = 1.0f;
+	parallaxOcclusionMapping = 0.0f;
+
+	planar_reflections = false;
+
+	alphaRef = 1.0f; // no alpha test by default
+
+
+	// constant buffer creation
+	GPUBufferDesc bd;
+	ZeroMemory(&bd, sizeof(bd));
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.ByteWidth = sizeof(MaterialCB);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
+}
 void Material::ConvertToPhysicallyBasedMaterial()
 {
 	baseColor = diffuseColor;
@@ -1508,6 +1566,20 @@ void Material::Serialize(wiArchive& archive)
 			archive << alphaRef;
 		}
 	}
+}
+
+void Material::MaterialCB::Create(const Material& mat)
+{
+	baseColor = XMFLOAT4(mat.baseColor.x, mat.baseColor.y, mat.baseColor.z, mat.alpha);
+	texMulAdd = mat.texMulAdd;
+	roughness = mat.roughness;
+	reflectance = mat.reflectance;
+	metalness = mat.metalness;
+	emissive = mat.emissive;
+	refractionIndex = mat.refractionIndex;
+	subsurfaceScattering = mat.subsurfaceScattering;
+	normalMapStrength = (mat.normalMap == nullptr ? 0 : mat.normalMapStrength);
+	parallaxOcclusionMapping = mat.parallaxOcclusionMapping;
 }
 #pragma endregion
 
