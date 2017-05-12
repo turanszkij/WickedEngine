@@ -257,6 +257,8 @@ void wiRenderer::SetUpStaticComponents()
 
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
+
+	Material::CreateImpostorMaterialCB();
 }
 void wiRenderer::CleanUpStatic()
 {
@@ -1799,8 +1801,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			{
 				Material* material = it.second;
 				materialGPUData.Create(*material);
-				// These will probably not change every time so only issue an update if it is necessary:
-				if (memcmp(&material->gpuData, &materialGPUData, sizeof(Material::MaterialCB) != 0))
+				// These will probably not change every time so only issue a GPU memory update if it is necessary:
+				if (memcmp(&material->gpuData, &materialGPUData, sizeof(Material::MaterialCB)) != 0)
 				{
 					material->gpuData = materialGPUData;
 					GetDevice()->UpdateBuffer(&material->constantBuffer, &materialGPUData, threadID);
@@ -3700,132 +3702,124 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			targetStencilRef = mesh->stencilRef;
 
-			//if (mesh->hasImpostor() && shaderType != SHADERTYPE_VOXELIZE)
-			//{
-			//	int k = 0;
-			//	for (const Object* instance : visibleInstances) 
-			//	{
-			//		if (instance->emitterType != Object::EmitterType::EMITTER_INVISIBLE) 
-			//		{
-			//			const float impostorThreshold = instance->bounds.getRadius();
-			//			float dist = wiMath::Distance(eye, instance->bounds.getCenter());
-			//			float dither = instance->transparency;
-			//			dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - impostorDistance) / impostorThreshold, 0, 1));
-			//			if (dither > 1.0f - FLT_EPSILON)
-			//				continue;
+			if (mesh->hasImpostor() && shaderType != SHADERTYPE_VOXELIZE)
+			{
+				int k = 0;
+				for (const Object* instance : visibleInstances) 
+				{
+					if (instance->emitterType != Object::EmitterType::EMITTER_INVISIBLE) 
+					{
+						const float impostorThreshold = instance->bounds.getRadius();
+						float dist = wiMath::Distance(eye, instance->bounds.getCenter());
+						float dither = instance->transparency;
+						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - impostorDistance) / impostorThreshold, 0, 1));
+						if (dither > 1.0f - FLT_EPSILON)
+							continue;
 
-			//			if (!occlusionCulling || !instance->IsOccluded())
-			//			{
-			//				XMStoreFloat4x4(&tempMat, mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world));
-			//				mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
-			//				++k;
-			//			}
-			//		}
-			//	}
-			//	if (k > 0)
-			//	{
-			//		mesh->UpdateRenderableInstances(k, threadID);
+						if (!occlusionCulling || !instance->IsOccluded())
+						{
+							XMStoreFloat4x4(&tempMat, mesh->aabb.getAsBoxMatrix()*XMLoadFloat4x4(&instance->world));
+							mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
+							++k;
+						}
+					}
+				}
+				if (k > 0)
+				{
+					mesh->UpdateRenderableInstances(k, threadID);
 
-			//		MaterialCB mcb;
-			//		ZeroMemory(&mcb, sizeof(mcb));
-			//		mcb.baseColor = XMFLOAT4(1, 1, 1, 1);
-			//		mcb.texMulAdd = XMFLOAT4(1, 1, 0, 0);
-			//		mcb.normalMapStrength = 1.0f;
-			//		mcb.roughness = 1.0f;
-			//		mcb.reflectance = 1.0f;
-			//		mcb.metalness = 1.0f;
-			//		UpdateMaterialCB(mcb, threadID);
+					GetDevice()->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 
-			//		if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-			//		{
-			//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
-			//		}
-			//		else
-			//		{
-			//			GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
-			//		}
+					if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+					{
+						GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
+					}
+					else
+					{
+						GetDevice()->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+					}
 
-			//		GetDevice()->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
+					GetDevice()->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
 
-			//		GetDevice()->BindIndexBuffer(nullptr, threadID);
+					GetDevice()->BindIndexBuffer(nullptr, threadID);
 
 
-			//		if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-			//		{
-			//			GPUBuffer* vbs[] = {
-			//				&Mesh::impostorVBs[VPROP_POS],
-			//				&Mesh::impostorVBs[VPROP_TEX],
-			//				&mesh->instanceBuffer
-			//			};
-			//			UINT strides[] = {
-			//				sizeof(XMFLOAT4),
-			//				sizeof(XMFLOAT4),
-			//				sizeof(Instance)
-			//			};
-			//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-			//		}
-			//		else
-			//		{
-			//			GPUBuffer* vbs[] = {
-			//				&Mesh::impostorVBs[VPROP_POS],
-			//				&Mesh::impostorVBs[VPROP_NOR],
-			//				&Mesh::impostorVBs[VPROP_TEX],
-			//				&Mesh::impostorVBs[VPROP_POS],
-			//				&mesh->instanceBuffer
-			//			};
-			//			UINT strides[] = {
-			//				sizeof(XMFLOAT4),
-			//				sizeof(XMFLOAT4),
-			//				sizeof(XMFLOAT4),
-			//				sizeof(XMFLOAT4),
-			//				sizeof(Instance)
-			//			};
-			//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-			//		}
+					if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+					{
+						GPUBuffer* vbs[] = {
+							&Mesh::impostorVBs[VPROP_POS],
+							&Mesh::impostorVBs[VPROP_TEX],
+							&mesh->instanceBuffer
+						};
+						UINT strides[] = {
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(Instance)
+						};
+						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					}
+					else
+					{
+						GPUBuffer* vbs[] = {
+							&Mesh::impostorVBs[VPROP_POS],
+							&Mesh::impostorVBs[VPROP_NOR],
+							&Mesh::impostorVBs[VPROP_TEX],
+							&Mesh::impostorVBs[VPROP_POS],
+							&mesh->instanceBuffer
+						};
+						UINT strides[] = {
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(XMFLOAT4),
+							sizeof(Instance)
+						};
+						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					}
 
-			//		GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
-			//		if (!easyTextureBind)
-			//		{
-			//			GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(1), TEXSLOT_ONDEMAND1, threadID);
-			//			GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
-			//			GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
-			//			GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
-			//		}
+					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
+					if (!easyTextureBind)
+					{
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(1), TEXSLOT_ONDEMAND1, threadID);
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
+						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
+					}
 
-			//		if (wireRender)
-			//		{
-			//			GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
-			//		}
-			//		else
-			//		{
-			//			switch (shaderType)
-			//			{
-			//			case SHADERTYPE_DEFERRED:
-			//				GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], threadID);
-			//				break;
-			//			case SHADERTYPE_FORWARD:
-			//				GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP], threadID);
-			//				break;
-			//			case SHADERTYPE_TILEDFORWARD:
-			//				GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], threadID);
-			//				break;
-			//			case SHADERTYPE_SHADOW:
-			//				GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
-			//				break;
-			//			case SHADERTYPE_SHADOWCUBE:
-			//				GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
-			//				break;
-			//			case SHADERTYPE_ALPHATESTONLY:
-			//				GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY], threadID);
-			//				break;
-			//			default:
-			//				GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TEXTUREONLY], threadID);
-			//				break;
-			//			}
-			//		}
-			//		GetDevice()->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
-			//	}
-			//}
+					if (wireRender)
+					{
+						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
+					}
+					else
+					{
+						switch (shaderType)
+						{
+						case SHADERTYPE_DEFERRED:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], threadID);
+							break;
+						case SHADERTYPE_FORWARD:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP], threadID);
+							break;
+						case SHADERTYPE_TILEDFORWARD:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], threadID);
+							break;
+						case SHADERTYPE_SHADOW:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
+							break;
+						case SHADERTYPE_SHADOWCUBE:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
+							break;
+						case SHADERTYPE_ALPHATESTONLY:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY], threadID);
+							break;
+						default:
+							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TEXTUREONLY], threadID);
+							break;
+						}
+					}
+					GetDevice()->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
+				}
+			}
 
 			if (shaderType == SHADERTYPE_VOXELIZE)
 			{

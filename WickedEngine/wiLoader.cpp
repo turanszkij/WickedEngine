@@ -1405,10 +1405,9 @@ void Material::init()
 
 	// constant buffer creation
 	GPUBufferDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.Usage = USAGE_DEFAULT; // try to keep it in default memory because it will probably be updated non frequently!
+	bd.CPUAccessFlags = 0;
 	bd.ByteWidth = sizeof(MaterialCB);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 }
@@ -1565,6 +1564,34 @@ void Material::Serialize(wiArchive& archive)
 		{
 			archive << alphaRef;
 		}
+	}
+}
+
+wiGraphicsTypes::GPUBuffer* Material::constantBuffer_Impostor = nullptr;
+void Material::CreateImpostorMaterialCB()
+{
+	// imposor material constantbuffer is always the same, because every param is baked into the textures
+	if (constantBuffer_Impostor == nullptr)
+	{
+		constantBuffer_Impostor = new wiGraphicsTypes::GPUBuffer;
+
+		MaterialCB mcb;
+		ZeroMemory(&mcb, sizeof(mcb));
+		mcb.baseColor = XMFLOAT4(1, 1, 1, 1);
+		mcb.texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		mcb.normalMapStrength = 1.0f;
+		mcb.roughness = 1.0f;
+		mcb.reflectance = 1.0f;
+		mcb.metalness = 1.0f;
+
+		GPUBufferDesc bd;
+		bd.BindFlags = BIND_CONSTANT_BUFFER;
+		bd.Usage = USAGE_IMMUTABLE;
+		bd.CPUAccessFlags = 0;
+		bd.ByteWidth = sizeof(MaterialCB);
+		SubresourceData initData;
+		initData.pSysMem = &mcb;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &initData, constantBuffer_Impostor);
 	}
 }
 

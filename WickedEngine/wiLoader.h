@@ -187,6 +187,8 @@ struct Material
 	};
 	MaterialCB gpuData;
 	wiGraphicsTypes::GPUBuffer constantBuffer;
+	static wiGraphicsTypes::GPUBuffer* constantBuffer_Impostor;
+	static void CreateImpostorMaterialCB();
 
 	bool toonshading;
 	bool water,shadeless;
