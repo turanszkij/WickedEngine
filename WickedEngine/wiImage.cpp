@@ -552,7 +552,7 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 
 	device->Draw(3,threadID);
 
-	device->EventEnd();
+	device->EventEnd(threadID);
 }
 
 

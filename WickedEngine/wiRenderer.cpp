@@ -2063,7 +2063,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 	if (!culledRenderer.empty())
 	{
-		GetDevice()->EventBegin("Occlusion Culling Render");
+		GetDevice()->EventBegin("Occlusion Culling Render", threadID);
 
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_OCCLUDEE], threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
@@ -2113,7 +2113,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 			}
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 	}
 
 	wiProfiler::GetInstance().EndRange(threadID); // Occlusion Culling Render
@@ -2132,7 +2132,7 @@ void wiRenderer::OcclusionCulling_Read()
 
 	if (!culledRenderer.empty())
 	{
-		GetDevice()->EventBegin("Occlusion Culling Read");
+		GetDevice()->EventBegin("Occlusion Culling Read", GRAPHICSTHREAD_IMMEDIATE);
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
@@ -2151,7 +2151,7 @@ void wiRenderer::OcclusionCulling_Read()
 			}
 		}
 
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
@@ -2203,11 +2203,11 @@ void wiRenderer::ManageWaterRipples(){
 }
 void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("Water Ripples");
+	GetDevice()->EventBegin("Water Ripples", threadID);
 	for(wiSprite* i:waterRipples){
 		i->DrawNormal(threadID);
 	}
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
@@ -4040,7 +4040,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledCollection& culledRenderer = culling.culledRenderer_opaque;
 
-	GetDevice()->EventBegin("DrawWorld");
+	GetDevice()->EventBegin("DrawWorld", threadID);
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
@@ -4071,7 +4071,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 
 }
 
@@ -4082,7 +4082,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledCollection& culledRenderer = culling.culledRenderer_transparent;
 
-	GetDevice()->EventBegin("DrawWorldTransparent");
+	GetDevice()->EventBegin("DrawWorldTransparent", threadID);
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
@@ -4113,7 +4113,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 
 
@@ -4149,7 +4149,7 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	GetDevice()->BindVertexLayout(nullptr, threadID);
 	GetDevice()->Draw(240,threadID);
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 {
@@ -4167,7 +4167,7 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 	GetDevice()->BindVertexLayout(nullptr, threadID);
 	GetDevice()->Draw(240, threadID);
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
@@ -4234,7 +4234,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("EnvironmentProbe Refresh");
+	GetDevice()->EventBegin("EnvironmentProbe Refresh", threadID);
 
 	for (EnvironmentProbe* probe : GetScene().environmentProbes)
 	{
@@ -4319,7 +4319,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	}
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
@@ -4438,7 +4438,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
 		}
 		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-		GetDevice()->EventEnd();
+		GetDevice()->EventEnd(threadID);
 
 		if (voxelSceneData.secondaryBounceEnabled)
 		{
@@ -4451,14 +4451,14 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 			GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
 			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
 			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-			GetDevice()->EventEnd();
+			GetDevice()->EventEnd(threadID);
 
 			GetDevice()->EventBegin("Voxel Scene Clear Normals", threadID);
 			GetDevice()->UnBindResources(1, 1, threadID);
 			GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
 			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
 			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-			GetDevice()->EventEnd();
+			GetDevice()->EventEnd(threadID);
 
 			result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
@@ -4485,7 +4485,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 	GetDevice()->BindResourcePS(result, TEXSLOT_VOXELRADIANCE, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID);
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
@@ -4679,7 +4679,7 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("Resolve MSAA DepthBuffer");
+	GetDevice()->EventBegin("Resolve MSAA DepthBuffer", threadID);
 
 	GetDevice()->BindResourceCS(src, TEXSLOT_ONDEMAND0, threadID);
 	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
@@ -4694,7 +4694,7 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
@@ -4752,7 +4752,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 	GetDevice()->BindCS(nullptr, threadID);
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
@@ -4807,7 +4807,7 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 	GetDevice()->BindCS(nullptr, threadID);
 
-	GetDevice()->EventEnd();
+	GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)

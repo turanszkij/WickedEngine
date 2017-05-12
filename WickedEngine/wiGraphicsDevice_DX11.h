@@ -133,9 +133,9 @@ namespace wiGraphicsTypes
 		virtual HRESULT SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 		virtual HRESULT SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
 
-		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void EventEnd(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
-		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) override;
+		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) override;
+		virtual void EventEnd(GRAPHICSTHREAD threadID) override;
+		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID) override;
 
 	private:
 		HRESULT CreateShaderResourceView(Texture1D* pTexture);

@@ -151,9 +151,9 @@ namespace wiGraphicsTypes
 		virtual HRESULT SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 		virtual HRESULT SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
 
-		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void EventEnd(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
-		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE) = 0;
+		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) = 0;
+		virtual void EventEnd(GRAPHICSTHREAD threadID) = 0;
+		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID) = 0;
 	};
 
 }

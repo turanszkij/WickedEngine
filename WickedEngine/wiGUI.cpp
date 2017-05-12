@@ -49,7 +49,7 @@ void wiGUI::Update(float dt)
 
 void wiGUI::Render()
 {
-	wiRenderer::GetDevice()->EventBegin("GUI");
+	wiRenderer::GetDevice()->EventBegin("GUI", GetGraphicsThread());
 	for (auto&x : widgets)
 	{
 		if (x->container == nullptr && x != activeWidget)
@@ -75,7 +75,7 @@ void wiGUI::Render()
 	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());
 	scissor[0].top = (LONG)(0);
 	wiRenderer::GetDevice()->SetScissorRects(1, scissor, GetGraphicsThread());
-	wiRenderer::GetDevice()->EventEnd();
+	wiRenderer::GetDevice()->EventEnd(GetGraphicsThread());
 }
 
 void wiGUI::AddWidget(wiWidget* widget)

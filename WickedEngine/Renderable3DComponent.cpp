@@ -324,7 +324,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 {
 	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-	wiRenderer::GetDevice()->EventBegin("Downsample Depth Buffer");
+	wiRenderer::GetDevice()->EventBegin("Downsample Depth Buffer", threadID);
 	{
 		// Downsample the depth buffer for the occlusion culling phase...
 		ViewPort viewPort;
@@ -342,7 +342,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
 		fx.process.clear();
 	}
-	wiRenderer::GetDevice()->EventEnd();
+	wiRenderer::GetDevice()->EventEnd(threadID);
 
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
@@ -372,7 +372,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 				wiImage::Draw(rtSun[0].GetTextureResolvedMSAA(threadID), fxs, threadID);
 			}
 		}
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	if (getEmittedParticlesEnabled())
@@ -389,7 +389,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 
 	rtSceneCopy.Activate(threadID, 0, 0, 0, 0); {
-		wiRenderer::GetDevice()->EventBegin("Refraction Target");
+		wiRenderer::GetDevice()->EventBegin("Refraction Target", threadID);
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.quality = QUALITY_NEAREST;
 		fx.presentFullScreen = true;
@@ -399,7 +399,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			// first draw light volumes to refraction target
 			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
 		}
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
@@ -415,7 +415,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
 		}
 
-		wiRenderer::GetDevice()->EventBegin("Contribute Emitters");
+		wiRenderer::GetDevice()->EventBegin("Contribute Emitters", threadID);
 		fx.presentFullScreen = true;
 		fx.blendFlag = BLENDMODE_ALPHA;
 		if (getEmittedParticlesEnabled()) {
@@ -426,13 +426,13 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		if (getEmittedParticlesEnabled()) {
 			wiImage::Draw(rtParticleAdditive.GetTexture(), fx, threadID);
 		}
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 
-		wiRenderer::GetDevice()->EventBegin("Contribute LightShafts");
+		wiRenderer::GetDevice()->EventBegin("Contribute LightShafts", threadID);
 		if (getLightShaftsEnabled()) {
 			wiImage::Draw(rtSun.back().GetTexture(), fx, threadID);
 		}
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 
 		if (getLensFlareEnabled())
 		{
@@ -449,7 +449,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawDebugEmitters(wiRenderer::getCamera(), threadID);
 		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
@@ -476,7 +476,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			fx.presentFullScreen = false;
 		}
 		wiProfiler::GetInstance().EndRange(threadID);
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	wiProfiler::GetInstance().EndRange(); // Secondary Scene
@@ -543,7 +543,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 			wiImage::Draw(rtBloom.back().GetTexture(), fx, threadID);
 			fx.presentFullScreen = false;
 		}
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 	if (getMotionBlurEnabled()) {
@@ -554,7 +554,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		fx.presentFullScreen = false;
 		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		fx.process.clear();
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 
@@ -579,7 +579,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 	}
 	fx.process.clear();
-	wiRenderer::GetDevice()->EventEnd();
+	wiRenderer::GetDevice()->EventEnd(threadID);
 
 	wiRenderTarget* rt0 = &rtFinal[0];
 	wiRenderTarget* rt1 = &rtFinal[1];
@@ -618,7 +618,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		fx.setMaskMap(nullptr);
 		//fx.setDepthMap(nullptr);
 		fx.process.clear();
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
 
@@ -637,7 +637,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	else
 		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 	fx.process.clear();
-	wiRenderer::GetDevice()->EventEnd();
+	wiRenderer::GetDevice()->EventEnd(threadID);
 
 
 	wiProfiler::GetInstance().EndRange(); // Post Processing 1
@@ -650,18 +650,18 @@ void Renderable3DComponent::RenderColorGradedComposition()
 
 	if (getStereogramEnabled())
 	{
-		wiRenderer::GetDevice()->EventBegin("Stereogram");
+		wiRenderer::GetDevice()->EventBegin("Stereogram", GRAPHICSTHREAD_IMMEDIATE);
 		fx.presentFullScreen = false;
 		fx.process.clear();
 		fx.process.setStereogram(true);
 		wiImage::Draw(wiTextureHelper::getInstance()->getRandom64x64(), fx);
-		wiRenderer::GetDevice()->EventEnd();
+		wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 		return;
 	}
 
 	if (getColorGradingEnabled())
 	{
-		wiRenderer::GetDevice()->EventBegin("Color Graded Composition");
+		wiRenderer::GetDevice()->EventBegin("Color Graded Composition", GRAPHICSTHREAD_IMMEDIATE);
 		if (wiRenderer::GetColorGrading() != nullptr){
 			fx.process.setColorGrade(true);
 			fx.setMaskMap(wiRenderer::GetColorGrading());
@@ -674,7 +674,7 @@ void Renderable3DComponent::RenderColorGradedComposition()
 	}
 	else
 	{
-		wiRenderer::GetDevice()->EventBegin("Composition");
+		wiRenderer::GetDevice()->EventBegin("Composition", GRAPHICSTHREAD_IMMEDIATE);
 		fx.presentFullScreen = true;
 	}
 
@@ -686,7 +686,7 @@ void Renderable3DComponent::RenderColorGradedComposition()
 	{
 		wiImage::Draw(rtFinal[1].GetTexture(), fx);
 	}
-	wiRenderer::GetDevice()->EventEnd();
+	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 }
 
 

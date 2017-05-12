@@ -109,7 +109,7 @@ void Renderable2DComponent::Render()
 {
 	rtFinal.Activate(GRAPHICSTHREAD_IMMEDIATE, 0.0f, 0.0f, 0.0f, 0);
 
-	wiRenderer::GetDevice()->EventBegin("Sprite Layers");
+	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
 	for (auto& x : layers)
 	{
 		for (auto& y : x.entities)
@@ -124,7 +124,7 @@ void Renderable2DComponent::Render()
 			}
 		}
 	}
-	wiRenderer::GetDevice()->EventEnd();
+	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 
 	GetGUI().Render();
 
