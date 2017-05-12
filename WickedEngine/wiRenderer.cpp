@@ -3994,9 +3994,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						}
 
 						PSTYPES realPS = GetPSTYPE(shaderType, material);
-						if (shaderType == SHADERTYPE_SHADOW && material->alphaRef > 1.0f - 1.0f/256.0f)
+						if ((shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_ALPHATESTONLY) && material->alphaRef > 1.0f - 1.0f/256.0f)
 						{
-							// bypass pixel shader for non alpha tested shadows
+							// bypass pixel shader for non alpha tested shadows/z-prepass
 							GetDevice()->BindPS(nullptr, threadID);
 						}
 						else
