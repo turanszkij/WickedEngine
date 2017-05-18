@@ -3817,6 +3817,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							break;
 						}
 					}
+					SetAlphaRef(0.75f, threadID);
 					GetDevice()->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
 				}
 			}
