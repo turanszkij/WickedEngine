@@ -21,7 +21,6 @@ struct VertexToPixelPostProcess
 	float2 tex				: TEXCOORD0;
 };
 
-
 CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 {
 	float4x4	xTransform;
@@ -40,6 +39,7 @@ CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 	float		xPadding1_ImageCB;
 	float		xPadding2_ImageCB;
 };
+
 CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
 {
 	float4		xPPParams0;
