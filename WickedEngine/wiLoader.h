@@ -9,6 +9,7 @@
 #include "wiTransform.h"
 #include "wiIntersectables.h"
 #include "ConstantBufferMapping.h"
+#include "ResourceMapping.h"
 
 #include <vector>
 #include <map>
@@ -606,7 +607,17 @@ public:
 
 	std::list<AnimationLayer*> animationLayers;
 	std::vector<Action> actions;
-	
+
+	GFX_STRUCT ShaderBoneType
+	{
+		XMMATRIX pose, prev;
+
+		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_BONE)
+
+		ALIGN_16
+	};
+	std::vector<ShaderBoneType> boneData;
+	wiGraphicsTypes::GPUBuffer boneBuffer;
 
 	Armature() :Transform(){
 		init();
@@ -645,6 +656,7 @@ public:
 	virtual void UpdateTransform();
 	void UpdateArmature();
 	void CreateFamily();
+	void CreateBuffers();
 	Bone* GetBone(const std::string& name);
 	void Serialize(wiArchive& archive);
 

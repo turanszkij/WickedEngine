@@ -611,12 +611,6 @@ void wiRenderer::LoadBuffers()
 	bd.Usage = USAGE_DYNAMIC;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-	bd.ByteWidth = sizeof(ShaderBoneType) * 100;
-	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(ShaderBoneType);
-	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_BONE]);
-
 	bd.ByteWidth = sizeof(LightArrayType) * MAX_LIGHTS;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -1818,6 +1812,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					&& mesh->streamoutBuffers[VPROP_POS].IsValid() && mesh->vertexBuffers[VPROP_POS].IsValid())
 				{
 #ifdef USE_GPU_SKINNING
+					Armature* armature = mesh->armature;
 
 					if (!streamOutSetUp)
 					{
@@ -1827,31 +1822,17 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						GetDevice()->BindVS(vertexShaders[VSTYPE_STREAMOUT], threadID);
 						GetDevice()->BindGS(geometryShaders[GSTYPE_STREAMOUT], threadID);
 						GetDevice()->BindPS(nullptr, threadID);
-						GetDevice()->BindResourceVS(resourceBuffers[RBTYPE_BONE], STRUCTUREDBUFFER_GETBINDSLOT(ShaderBoneType), threadID);
 					}
 
 					// Upload bones for skinning to shader
-					// Are statics thread safe here? - this is most likely only run by one thread at a time so I think in this case, yes
-					static unsigned int maxBoneCount = resourceBuffers[RBTYPE_BONE]->GetDesc().ByteWidth / sizeof(ShaderBoneType); 
-					static ShaderBoneType *bonebuf = nullptr;
-					if (bonebuf == nullptr)
+					for (unsigned int k = 0; k < armature->boneCollection.size(); k++) 
 					{
-						bonebuf = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
+						// Note the transpose: we NEED to transpose so that loading from the structured buffer is easier in the shader (avoid the many mov operations)
+						armature->boneData[k].pose = XMMatrixTranspose(XMLoadFloat4x4(&armature->boneCollection[k]->boneRelativity));
+						armature->boneData[k].prev = XMMatrixTranspose(XMLoadFloat4x4(&armature->boneCollection[k]->boneRelativityPrev));
 					}
-					if (mesh->armature->boneCollection.size() > maxBoneCount)
-					{
-						maxBoneCount = (int)mesh->armature->boneCollection.size() * 2;
-						if (bonebuf != nullptr)
-						{
-							_mm_free(bonebuf);
-						}
-						bonebuf = (ShaderBoneType*)_mm_malloc(sizeof(ShaderBoneType)*maxBoneCount, 16);
-					}
-					for (unsigned int k = 0; k < mesh->armature->boneCollection.size(); k++) {
-						bonebuf[k].pose = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativity));
-						bonebuf[k].prev = XMMatrixTranspose(XMLoadFloat4x4(&mesh->armature->boneCollection[k]->boneRelativityPrev));
-					}
-					GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_BONE], bonebuf, threadID, (int)(sizeof(ShaderBoneType) * mesh->armature->boneCollection.size()));
+					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
+					GetDevice()->BindResourceVS(&armature->boneBuffer, STRUCTUREDBUFFER_GETBINDSLOT(Armature::ShaderBoneType), threadID);
 
 					// Do the skinning
 					GPUBuffer* vbs[] = {

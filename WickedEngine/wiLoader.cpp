@@ -2728,6 +2728,11 @@ void Model::FinishLoading()
 			x->mesh->CreateVertexArrays();
 			x->mesh->Optimize();
 			x->mesh->CreateBuffers(x);
+
+			if (x->mesh->armature != nullptr)
+			{
+				x->mesh->armature->CreateBuffers();
+			}
 		}
 	}
 }
@@ -3561,6 +3566,20 @@ void Armature::CreateFamily()
 	for (unsigned int i = 0; i<rootbones.size(); ++i) {
 		RecursiveRest(this, rootbones[i]);
 	}
+}
+void Armature::CreateBuffers()
+{
+	boneData.resize(boneCollection.size());
+
+	GPUBufferDesc bd;
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+	bd.ByteWidth = sizeof(ShaderBoneType) * (UINT)boneCollection.size();
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(ShaderBoneType);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &boneBuffer);
 }
 Bone* Armature::GetBone(const std::string& name)
 {

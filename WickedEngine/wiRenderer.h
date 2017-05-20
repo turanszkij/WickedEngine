@@ -231,14 +231,6 @@ public:
 	};
 
 	// Resource Buffers:
-	GFX_STRUCT ShaderBoneType
-	{
-		XMMATRIX pose, prev;
-
-		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_BONE)
-
-		ALIGN_16
-	};
 
 	GFX_STRUCT LightArrayType
 	{
