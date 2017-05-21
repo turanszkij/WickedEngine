@@ -862,6 +862,7 @@ void wiRenderer::LoadShaders()
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS_alphatest.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_VOXELIZER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectGS_voxelizer.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_VOXEL] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelGS.cso", wiResourceManager::GEOMETRYSHADER));
 
@@ -3599,7 +3600,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 		realPS = PSTYPE_SHADOW_ALPHATEST;
 		break;
 	case SHADERTYPE_SHADOWCUBE:
-		realPS = PSTYPE_SHADOWCUBEMAPRENDER;
+		realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
 		break;
 	case SHADERTYPE_ENVMAPCAPTURE:
 		realPS = PSTYPE_ENVMAP;
