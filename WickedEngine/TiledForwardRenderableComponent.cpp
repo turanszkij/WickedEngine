@@ -30,7 +30,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		{
 			wiRenderer::SetAlphaRef(0.25f, threadID);
 		}
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_ALPHATESTONLY, nullptr, true, true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, nullptr, true, true);
 	}
 	wiProfiler::GetInstance().EndRange(threadID);
 

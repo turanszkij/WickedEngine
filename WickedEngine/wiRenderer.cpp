@@ -631,7 +631,7 @@ void wiRenderer::LoadShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr) {
 			vertexShaders[VSTYPE_OBJECT_DEBUG] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_OBJECT_POS] = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_OBJECT_DEBUG] = vsinfo->vertexLayout;
 		}
 	}
 	{
@@ -655,6 +655,24 @@ void wiRenderer::LoadShaders()
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_OBJECT_COMMON] = vsinfo->vertexShader;
 			vertexLayouts[VLTYPE_OBJECT_ALL] = vsinfo->vertexLayout;
+		}
+	}
+	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		};
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_Simple.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr) {
+			vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = vsinfo->vertexShader;
+			vertexLayouts[VLTYPE_OBJECT_POS] = vsinfo->vertexLayout;
 		}
 	}
 	{
@@ -2645,7 +2663,7 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->EventBegin("DebugEmitters", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS], threadID);
+		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_DEBUG], threadID);
 
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
@@ -3418,13 +3436,153 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
+VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material)
+{
+	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
 
+	bool alphatest = material->IsAlphaTestEnabled();
+
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+		realVL = VLTYPE_OBJECT_POS_TEX;
+		break;
+	case SHADERTYPE_DEFERRED:
+	case SHADERTYPE_FORWARD:
+	case SHADERTYPE_TILEDFORWARD:
+	case SHADERTYPE_VOXELIZE:
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realVL = VLTYPE_OBJECT_ALL;
+		break;
+	case SHADERTYPE_DEPTHONLY:
+	case SHADERTYPE_SHADOW:
+	case SHADERTYPE_SHADOWCUBE:
+		if (alphatest)
+		{
+			realVL = VLTYPE_OBJECT_POS_TEX;
+		}
+		else
+		{
+			realVL = VLTYPE_OBJECT_POS;
+		}
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
+	return realVL;
+}
+VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material)
+{
+	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
+
+	bool alphatest = material->IsAlphaTestEnabled();
+
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+		realVS = VSTYPE_OBJECT_SIMPLE;
+		break;
+	case SHADERTYPE_DEFERRED:
+	case SHADERTYPE_FORWARD:
+	case SHADERTYPE_TILEDFORWARD:
+		realVS = VSTYPE_OBJECT_COMMON;
+		break;
+	case SHADERTYPE_DEPTHONLY:
+		if (alphatest)
+		{
+			realVS = VSTYPE_OBJECT_SIMPLE;
+		}
+		else
+		{
+			realVS = VSTYPE_OBJECT_POSITIONSTREAM;
+		}
+		break;
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realVS = VSTYPE_ENVMAP;
+		break;
+	case SHADERTYPE_SHADOW:
+		if (alphatest)
+		{
+			realVS = VSTYPE_SHADOW_ALPHATEST;
+		}
+		else
+		{
+			realVS = VSTYPE_SHADOW;
+		}
+		break;
+	case SHADERTYPE_SHADOWCUBE:
+		if (alphatest)
+		{
+			realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+		}
+		else
+		{
+			realVS = VSTYPE_SHADOWCUBEMAPRENDER;
+		}
+		break;
+		break;
+	case SHADERTYPE_VOXELIZE:
+		realVS = VSTYPE_VOXELIZER;
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
+	return realVS;
+}
+GSTYPES GetGSTYPE(SHADERTYPE shaderType, const Material* const material)
+{
+	GSTYPES realGS = GSTYPE_NULL;
+
+	bool alphatest = material->IsAlphaTestEnabled();
+
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+		break;
+	case SHADERTYPE_DEFERRED:
+		break;
+	case SHADERTYPE_FORWARD:
+		break;
+	case SHADERTYPE_TILEDFORWARD:
+		break;
+	case SHADERTYPE_DEPTHONLY:
+		break;
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realGS = GSTYPE_ENVMAP;
+		break;
+	case SHADERTYPE_SHADOW:
+		break;
+	case SHADERTYPE_SHADOWCUBE:
+		if (alphatest)
+		{
+			realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+		}
+		else
+		{
+			realGS = GSTYPE_SHADOWCUBEMAPRENDER;
+		}
+		break;
+	case SHADERTYPE_VOXELIZE:
+		realGS = GSTYPE_VOXELIZER;
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
+	return realGS;
+}
 PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 {
 	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
 
 	bool transparent = material->IsTransparent();
 	bool water = material->IsWater();
+	bool alphatest = material->IsAlphaTestEnabled();
 
 	switch (shaderType)
 	{
@@ -3597,22 +3755,46 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 		}
 		break;
 	case SHADERTYPE_SHADOW:
-		realPS = PSTYPE_SHADOW_ALPHATEST;
+		if (alphatest)
+		{
+			realPS = PSTYPE_SHADOW_ALPHATEST;
+		}
+		else
+		{
+			realPS = PSTYPE_NULL;
+		}
 		break;
 	case SHADERTYPE_SHADOWCUBE:
-		realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+		if (alphatest)
+		{
+			realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+		}
+		else
+		{
+			realPS = PSTYPE_SHADOWCUBEMAPRENDER;
+		}
 		break;
 	case SHADERTYPE_ENVMAPCAPTURE:
 		realPS = PSTYPE_ENVMAP;
 		break;
-	case SHADERTYPE_ALPHATESTONLY:
-		realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+	case SHADERTYPE_DEPTHONLY:
+		if (alphatest)
+		{
+			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+		}
+		else
+		{
+			realPS = PSTYPE_NULL;
+		}
 		break;
 	case SHADERTYPE_VOXELIZE:
 		realPS = PSTYPE_VOXELIZER;
 		break;
-	default:
+	case SHADERTYPE_TEXTURE:
 		realPS = PSTYPE_OBJECT_TEXTUREONLY;
+		break;
+	default:
+		assert(0);
 		break;
 	}
 
@@ -3638,7 +3820,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			targetDepthStencilState = DSSTYPE_DEPTHREADEQUAL;
 		}
 
-		if (shaderType == SHADERTYPE_ALPHATESTONLY)
+		if (shaderType == SHADERTYPE_DEPTHONLY)
 		{
 			GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
 		}
@@ -3651,7 +3833,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 		}
 
-		bool easyTextureBind = shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_VOXELIZE;
+		bool easyTextureBind = shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_VOXELIZE;
 
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
 		{
@@ -3675,57 +3857,57 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			}
 
-			if (shaderType == SHADERTYPE_VOXELIZE)
-			{
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
-				GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
-				GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-			}
-			else
-			{
-				if (shaderType == SHADERTYPE_SHADOW)
-				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW_ALPHATEST], threadID);
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
-				}
-				else if (shaderType == SHADERTYPE_SHADOWCUBE)
-				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
-					GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
-				}
-				else if (shaderType == SHADERTYPE_ENVMAPCAPTURE)
-				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
-					GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-				}
-				else if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE)
-				{
-					if (tessellatorRequested)
-					{
-						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], threadID);
-						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID); // tessellator requires normals
-					}
-					else
-					{
-						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
-						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS_TEX], threadID);
-					}
-				}
-				else
-				{
-					if (tessellatorRequested)
-					{
-						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], threadID);
-					}
-					else
-					{
-						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
-					}
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-				}
-			}
+			//if (shaderType == SHADERTYPE_VOXELIZE)
+			//{
+			//	GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
+			//	GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
+			//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
+			//}
+			//else
+			//{
+			//	if (shaderType == SHADERTYPE_SHADOW)
+			//	{
+			//		GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW_ALPHATEST], threadID);
+			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
+			//	}
+			//	else if (shaderType == SHADERTYPE_SHADOWCUBE)
+			//	{
+			//		GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
+			//		GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
+			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
+			//	}
+			//	else if (shaderType == SHADERTYPE_ENVMAPCAPTURE)
+			//	{
+			//		GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
+			//		GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
+			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
+			//	}
+			//	else if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE)
+			//	{
+			//		if (tessellatorRequested)
+			//		{
+			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], threadID);
+			//			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID); // tessellator requires normals
+			//		}
+			//		else
+			//		{
+			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
+			//			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS_TEX], threadID);
+			//		}
+			//	}
+			//	else
+			//	{
+			//		if (tessellatorRequested)
+			//		{
+			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], threadID);
+			//		}
+			//		else
+			//		{
+			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
+			//		}
+			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
+			//	}
+			//}
 
 			if (tessellatorRequested)
 			{
@@ -3795,7 +3977,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GetDevice()->BindIndexBuffer(nullptr, threadID);
 
 
-					if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+					if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 					{
 						GPUBuffer* vbs[] = {
 							&Mesh::impostorVBs[VPROP_POS],
@@ -3808,6 +3990,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(Instance)
 						};
 						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS_TEX], threadID);
 					}
 					else
 					{
@@ -3826,6 +4009,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(Instance)
 						};
 						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
 					}
 
 					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
@@ -3836,6 +4020,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
 						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
 					}
+
+					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
 
 					if (wireRender)
 					{
@@ -3860,7 +4046,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case SHADERTYPE_SHADOWCUBE:
 							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
 							break;
-						case SHADERTYPE_ALPHATESTONLY:
+						case SHADERTYPE_DEPTHONLY:
 							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY], threadID);
 							break;
 						default:
@@ -3969,87 +4155,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				Material* material = subset.material;
 
-				if (!tessellatorRequested && (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
-				{
-					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-					if ((shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && material->alphaRef > 1.0f - 1.0f / 256.0f)
-					{
-						// bypass texcoord stream for non alphatested shadows and zprepass
-						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
-					}
-					else
-					{
-						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-					}
-				}
-				else
-				{
-					boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
-				}
-
-				// Only bind vertex buffers when the layout changes
-				if (boundVBType == BOUNDVERTEXBUFFERTYPE::NOTHING || boundVBType != boundVBType_Prev)
-				{
-					// Assemble the required vertex buffer:
-					switch (boundVBType)
-					{
-					case BOUNDVERTEXBUFFERTYPE::POSITION:
-						//{
-						//	GPUBuffer* vbs[] = {
-						//		(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-						//		&mesh->instanceBuffer
-						//	};
-						//	UINT strides[] = {
-						//		sizeof(XMFLOAT4),
-						//		sizeof(Instance)
-						//	};
-						//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-						//}
-						//break;
-					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
-						{
-							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-								&mesh->vertexBuffers[VPROP_TEX],
-								&mesh->instanceBuffer
-							};
-							UINT strides[] = {
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(Instance)
-							};
-							GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-						}
-						break;
-					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
-						{
-							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-								(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
-								&mesh->vertexBuffers[VPROP_TEX],
-								(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
-								&mesh->instanceBuffer,
-								&mesh->instanceBufferPrev,
-							};
-							UINT strides[] = {
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(Instance),
-								sizeof(InstancePrev),
-							};
-							GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID); 
-						}
-						break;
-					default:
-						assert(0);
-						break;
-					}
-				}
-				boundVBType_Prev = boundVBType;
-
-
 				bool subsetRenderable = false;
 
 				if (renderTypeFlags & RENDERTYPE_OPAQUE)
@@ -4071,6 +4176,87 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				if (subsetRenderable)
 				{
+
+					if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
+					{
+						// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
+						if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled())
+						{
+							// bypass texcoord stream for non alphatested shadows and zprepass
+							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
+						}
+						else
+						{
+							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+						}
+					}
+					else
+					{
+						boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
+					}
+
+					// Only bind vertex buffers when the layout changes
+					if (boundVBType == BOUNDVERTEXBUFFERTYPE::NOTHING || boundVBType != boundVBType_Prev)
+					{
+						// Assemble the required vertex buffer:
+						switch (boundVBType)
+						{
+						case BOUNDVERTEXBUFFERTYPE::POSITION:
+						{
+							GPUBuffer* vbs[] = {
+								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								&mesh->instanceBuffer
+							};
+							UINT strides[] = {
+								sizeof(XMFLOAT4),
+								sizeof(Instance)
+							};
+							GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						}
+						break;
+						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
+						{
+							GPUBuffer* vbs[] = {
+								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								&mesh->vertexBuffers[VPROP_TEX],
+								&mesh->instanceBuffer
+							};
+							UINT strides[] = {
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(Instance)
+							};
+							GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						}
+						break;
+						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
+						{
+							GPUBuffer* vbs[] = {
+								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
+								&mesh->vertexBuffers[VPROP_TEX],
+								(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
+								&mesh->instanceBuffer,
+								&mesh->instanceBufferPrev,
+							};
+							UINT strides[] = {
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(Instance),
+								sizeof(InstancePrev),
+							};
+							GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						}
+						break;
+						default:
+							assert(0);
+							break;
+						}
+					}
+					boundVBType_Prev = boundVBType;
+
 					GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
 
 					if (material->shadeless)
@@ -4085,6 +4271,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					GetDevice()->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 
+					VLTYPES realVL = GetVLTYPE(shaderType, material);
+					GetDevice()->BindVertexLayout(vertexLayouts[realVL], threadID);
+
+					VSTYPES realVS = GetVSTYPE(shaderType, material);
+					GetDevice()->BindVS(vertexShaders[realVS], threadID);
+
+					GSTYPES realGS = GetGSTYPE(shaderType, material);
+					GetDevice()->BindGS(geometryShaders[realGS], threadID);
+
 					if (!wireRender)
 					{
 						const GPUResource* res[] = {
@@ -4098,15 +4293,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						GetDevice()->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
 						PSTYPES realPS = GetPSTYPE(shaderType, material);
-						if ((shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_ALPHATESTONLY) && material->alphaRef > 1.0f - 1.0f/256.0f)
-						{
-							// bypass pixel shader for non alpha tested shadows/z-prepass
-							GetDevice()->BindPS(nullptr, threadID);
-						}
-						else
-						{
-							GetDevice()->BindPS(pixelShaders[realPS], threadID);
-						}
+						GetDevice()->BindPS(pixelShaders[realPS], threadID);
 					}
 					else
 					{

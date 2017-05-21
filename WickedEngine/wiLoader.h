@@ -236,6 +236,7 @@ struct Material
 	bool IsWater() const { return water; }
 	bool HasPlanarReflection() const { return planar_reflections || IsWater(); }
 	bool IsCastingShadow() const { return cast_shadow; }
+	bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 	RENDERTYPE GetRenderType() const
 	{
 		if (IsWater())
