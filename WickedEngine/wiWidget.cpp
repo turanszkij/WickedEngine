@@ -795,7 +795,7 @@ void wiComboBox::Update(wiGUI* gui, float dt )
 			hovered = -1;
 			for (size_t i = 0; i < items.size(); ++i)
 			{
-				if (i<firstItemVisible || i>firstItemVisible + maxVisibleItemCount)
+				if ((int)i<firstItemVisible || (int)i>firstItemVisible + maxVisibleItemCount)
 				{
 					continue;
 				}

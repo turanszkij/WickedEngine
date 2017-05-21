@@ -252,6 +252,8 @@ struct Material
 	const wiGraphicsTypes::Texture2D* GetReflectanceMap() const;
 	const wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 	void Serialize(wiArchive& archive);
+
+	ALIGN_16
 };
 struct RibbonVertex
 {
@@ -659,6 +661,8 @@ public:
 	void CreateBuffers();
 	Bone* GetBone(const std::string& name);
 	void Serialize(wiArchive& archive);
+
+	ALIGN_16
 
 private:
 	enum KeyFrameType {
