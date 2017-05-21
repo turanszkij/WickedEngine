@@ -36,9 +36,9 @@ class wiArchive;
 
 enum VERTEXPROPERTY
 {
-	VPROP_POS,		// pos
+	VPROP_POS,		// pos, wind
 	VPROP_NOR,		// normal, vertexao
-	VPROP_TEX,		// texcoord, materialindex, wind
+	VPROP_TEX,		// texcoord, materialindex, unused
 	VPROP_BON,		// boneindices
 	VPROP_WEI,		// boneweights
 	VPROP_COUNT,
@@ -46,15 +46,15 @@ enum VERTEXPROPERTY
 #define VPROP_PRE VPROP_BON // posprev
 struct SkinnedVertex
 {
-	XMFLOAT4 pos; //pos
+	XMFLOAT4 pos; //pos, wind
 	XMFLOAT4 nor; //normal, vertex ao
-	XMFLOAT4 tex; //tex, matIndex, wind
+	XMFLOAT4 tex; //tex, matIndex, unused
 	XMFLOAT4 bon; //bone indices
 	XMFLOAT4 wei; //bone weights
 
 
 	SkinnedVertex(){
-		pos=XMFLOAT4(0,0,0,1);
+		pos=XMFLOAT4(0,0,0,0);
 		nor=XMFLOAT4(0,0,0,1); 
 		tex=XMFLOAT4(0,0,0,0);
 		bon=XMFLOAT4(0,0,0,0);
@@ -71,13 +71,13 @@ struct SkinnedVertex
 };
 struct Vertex
 {
-	XMFLOAT4 pos; //pos
+	XMFLOAT4 pos; //pos, wind
 	XMFLOAT4 nor; //normal, vertex ao
-	XMFLOAT4 tex; //tex, matIndex, wind
+	XMFLOAT4 tex; //tex, matIndex, unused
 	XMFLOAT4 pre; //previous frame position
 
 	Vertex(){
-		pos=XMFLOAT4(0,0,0,1);
+		pos=XMFLOAT4(0,0,0,0);
 		nor=XMFLOAT4(0,0,0,1);
 		tex=XMFLOAT4(0,0,0,0);
 		pre=XMFLOAT4(0,0,0,0);

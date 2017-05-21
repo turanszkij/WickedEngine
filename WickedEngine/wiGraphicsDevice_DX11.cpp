@@ -1401,7 +1401,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -3051,7 +3051,7 @@ void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer* const *vertexBuffer
 {
 	assert(count <= 8);
 	ID3D11Buffer* res[8] = { 0 };
-	for (UINT i = 0; i < count; ++i)
+	for (int i = 0; i < count; ++i)
 	{
 		res[i] = vertexBuffers[i] != nullptr ? vertexBuffers[i]->resource_DX11 : nullptr;
 	}

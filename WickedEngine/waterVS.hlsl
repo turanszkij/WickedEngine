@@ -1,6 +1,6 @@
 #include "objectHF.hlsli"
 
-PixelInputType main(Input input)
+PixelInputType main(Input_Object_ALL input)
 {
 	PixelInputType Out = (PixelInputType)0;
 	

@@ -231,9 +231,6 @@
     <FxCompile Include="screenPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="shadowPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="skyPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -587,6 +584,24 @@
     </FxCompile>
     <FxCompile Include="objectPS_debug.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowVS_alphatest.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="shadowVS_alphatest.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowGS_alphatest.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="shadowPS_alphatest.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="cubeShadowPS_alphatest.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectVS_positionstream.hlsl">
+      <Filter>VS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

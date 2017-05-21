@@ -2,5 +2,5 @@
 
 float4 main( float4 pos : POSITION ) : SV_POSITION
 {
-	return mul(pos, g_xTransform);
+	return mul(float4(pos.xyz, 1), g_xTransform);
 }

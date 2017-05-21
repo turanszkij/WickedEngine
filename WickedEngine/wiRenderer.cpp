@@ -631,7 +631,7 @@ void wiRenderer::LoadShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr) {
 			vertexShaders[VSTYPE_OBJECT_DEBUG] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_OBJECT_DEBUG] = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_OBJECT_POS] = vsinfo->vertexLayout;
 		}
 	}
 	{
@@ -654,7 +654,7 @@ void wiRenderer::LoadShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_OBJECT_COMMON] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_OBJECT] = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_OBJECT_ALL] = vsinfo->vertexLayout;
 		}
 	}
 	{
@@ -672,10 +672,26 @@ void wiRenderer::LoadShaders()
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_Simple.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_OBJECT_SIMPLE] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_OBJECT_SIMPLE] = vsinfo->vertexLayout;
+			vertexLayouts[VLTYPE_OBJECT_POS_TEX] = vsinfo->vertexLayout;
 		}
 	}
+	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		};
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr) {
+			vertexShaders[VSTYPE_SHADOW] = vsinfo->vertexShader;
+			vertexLayouts[VLTYPE_SHADOW_POS] = vsinfo->vertexLayout;
+		}
+	}
 	{
 		VertexLayoutDesc layout[] =
 		{
@@ -688,13 +704,12 @@ void wiRenderer::LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
-		if (vsinfo != nullptr){
-			vertexShaders[VSTYPE_SHADOW] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_SHADOW] = vsinfo->vertexLayout;
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr) {
+			vertexShaders[VSTYPE_SHADOW_ALPHATEST] = vsinfo->vertexShader;
+			vertexLayouts[VLTYPE_SHADOW_POS_TEX] = vsinfo->vertexLayout;
 		}
 	}
-
 	{
 		VertexLayoutDesc oslayout[] =
 		{
@@ -772,7 +787,8 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SPHERE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_CUBE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vertexShaders[VSTYPE_SHADOWCUBE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
@@ -835,8 +851,9 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SKY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SHADOW] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOW_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
@@ -2627,7 +2644,7 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->EventBegin("DebugEmitters", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_DEBUG], threadID);
+		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS], threadID);
 
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
@@ -3207,7 +3224,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
 
 
 			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
@@ -3580,7 +3596,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 		}
 		break;
 	case SHADERTYPE_SHADOW:
-		realPS = PSTYPE_SHADOW;
+		realPS = PSTYPE_SHADOW_ALPHATEST;
 		break;
 	case SHADERTYPE_SHADOWCUBE:
 		realPS = PSTYPE_SHADOWCUBEMAPRENDER;
@@ -3662,38 +3678,38 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			{
 				GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
 				GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
-				GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
+				GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
 			}
 			else
 			{
 				if (shaderType == SHADERTYPE_SHADOW)
 				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW], threadID);
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW], threadID);
+					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW_ALPHATEST], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
 				}
 				else if (shaderType == SHADERTYPE_SHADOWCUBE)
 				{
-					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBE], threadID);
-					GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER], threadID);
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW], threadID);
+					GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
+					GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
 				}
 				else if (shaderType == SHADERTYPE_ENVMAPCAPTURE)
 				{
 					GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
 					GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
 				}
 				else if (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE)
 				{
 					if (tessellatorRequested)
 					{
 						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], threadID);
-						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID); // tessellator requires normals
+						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID); // tessellator requires normals
 					}
 					else
 					{
 						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
-						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_SIMPLE], threadID);
+						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS_TEX], threadID);
 					}
 				}
 				else
@@ -3706,7 +3722,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					{
 						GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
 					}
-					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
+					GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
 				}
 			}
 
@@ -3838,7 +3854,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_TILEDFORWARD], threadID);
 							break;
 						case SHADERTYPE_SHADOW:
-							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW], threadID);
+							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOW_ALPHATEST], threadID);
 							break;
 						case SHADERTYPE_SHADOWCUBE:
 							GetDevice()->BindPS(pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER], threadID);
@@ -3934,42 +3950,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				mesh->UpdateRenderableInstancesPrev(k, threadID);
 			}
 
-			if (!tessellatorRequested && (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
+			enum class BOUNDVERTEXBUFFERTYPE
 			{
-				// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-				GPUBuffer* vbs[] = {
-					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-					&mesh->vertexBuffers[VPROP_TEX],
-					&mesh->instanceBuffer
-				};
-				UINT strides[] = {
-					sizeof(XMFLOAT4),
-					sizeof(XMFLOAT4),
-					sizeof(Instance)
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-			}
-			else
-			{
-				// common vertex buffers:
-				GPUBuffer* vbs[] = {
-					(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-					(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
-					&mesh->vertexBuffers[VPROP_TEX],
-					(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
-					&mesh->instanceBuffer,
-					&mesh->instanceBufferPrev,
-				};
-				UINT strides[] = {
-					sizeof(XMFLOAT4),
-					sizeof(XMFLOAT4),
-					sizeof(XMFLOAT4),
-					sizeof(XMFLOAT4),
-					sizeof(Instance),
-					sizeof(InstancePrev),
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-			}
+				NOTHING,
+				POSITION,
+				POSITION_TEXCOORD,
+				EVERYTHING,
+			};
+			BOUNDVERTEXBUFFERTYPE boundVBType_Prev = BOUNDVERTEXBUFFERTYPE::NOTHING;
+			BOUNDVERTEXBUFFERTYPE boundVBType = BOUNDVERTEXBUFFERTYPE::NOTHING;
 
 			for (MeshSubset& subset : mesh->subsets)
 			{
@@ -3977,8 +3966,87 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				{
 					continue;
 				}
-
 				Material* material = subset.material;
+
+				if (!tessellatorRequested && (shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
+				{
+					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
+					if ((shaderType == SHADERTYPE_ALPHATESTONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && material->alphaRef > 1.0f - 1.0f / 256.0f)
+					{
+						// bypass texcoord stream for non alphatested shadows and zprepass
+						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
+					}
+					else
+					{
+						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+					}
+				}
+				else
+				{
+					boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
+				}
+
+				// Only bind vertex buffers when the layout changes
+				if (boundVBType == BOUNDVERTEXBUFFERTYPE::NOTHING || boundVBType != boundVBType_Prev)
+				{
+					// Assemble the required vertex buffer:
+					switch (boundVBType)
+					{
+					case BOUNDVERTEXBUFFERTYPE::POSITION:
+						//{
+						//	GPUBuffer* vbs[] = {
+						//		(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+						//		&mesh->instanceBuffer
+						//	};
+						//	UINT strides[] = {
+						//		sizeof(XMFLOAT4),
+						//		sizeof(Instance)
+						//	};
+						//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						//}
+						//break;
+					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
+						{
+							GPUBuffer* vbs[] = {
+								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								&mesh->vertexBuffers[VPROP_TEX],
+								&mesh->instanceBuffer
+							};
+							UINT strides[] = {
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(Instance)
+							};
+							GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						}
+						break;
+					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
+						{
+							GPUBuffer* vbs[] = {
+								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
+								&mesh->vertexBuffers[VPROP_TEX],
+								(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
+								&mesh->instanceBuffer,
+								&mesh->instanceBufferPrev,
+							};
+							UINT strides[] = {
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(XMFLOAT4),
+								sizeof(Instance),
+								sizeof(InstancePrev),
+							};
+							GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID); 
+						}
+						break;
+					default:
+						assert(0);
+						break;
+					}
+				}
+				boundVBType_Prev = boundVBType;
 
 
 				bool subsetRenderable = false;
@@ -5650,7 +5718,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
 	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT], threadID);
+	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
 	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
 	GetDevice()->BindPS(pixelShaders[PSTYPE_CAPTUREIMPOSTOR], threadID);
 

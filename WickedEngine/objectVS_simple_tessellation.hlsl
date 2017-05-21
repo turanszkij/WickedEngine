@@ -12,18 +12,18 @@ struct HullInputType
 };
 
 
-HullInputType main(Input input)
+HullInputType main(Input_Object_ALL input)
 {
 	HullInputType Out = (HullInputType)0;
 
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 
-	float4 pos = input.pos;
+	float4 pos = float4(input.pos.xyz, 1);
 
 
 	pos = mul(pos, WORLD);
-	affectWind(pos.xyz, input.tex.w, input.id, g_xFrame_Time);
+	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
 
 	float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
 

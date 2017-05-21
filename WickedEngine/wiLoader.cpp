@@ -534,7 +534,7 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 				case 'v': 
 					for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
 					{
-						currentMesh->vertices[vprop].push_back(XMFLOAT4(0,0,0,1));
+						currentMesh->vertices[vprop].push_back(XMFLOAT4(0,0,0,0));
 					}
 					file >> currentMesh->vertices[VPROP_POS].back().x;
 					file >> currentMesh->vertices[VPROP_POS].back().y;
@@ -2347,6 +2347,11 @@ void Mesh::Serialize(wiArchive& archive)
 				archive >> vertices[VPROP_TEX][i];
 				archive >> vertices[VPROP_BON][i];
 				archive >> vertices[VPROP_WEI][i];
+
+				if (archive.GetVersion() < 8)
+				{
+					vertices[VPROP_POS][i].w = vertices[VPROP_TEX][i].w;
+				}
 			}
 		}
 		// indices

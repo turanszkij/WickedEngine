@@ -23,13 +23,13 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, i
 		mp = boneBuffer[(uint)inBon[i]].prev;
 		m3 = (float3x3)m;
 
-		p += mul(pos, m)*inWei[i];
-		pp += mul(posPrev, mp)*inWei[i];
+		p += mul(float4(pos.xyz, 1), m)*inWei[i];
+		pp += mul(float4(posPrev.xyz, 1), mp)*inWei[i];
 		n += mul(nor.xyz, m3)*inWei[i];
 	}
 
 	bool w = any(inWei);
-	pos = w ? p : pos;
-	posPrev = w ? pp : posPrev;
+	pos.xyz = w ? p.xyz : pos.xyz;
+	posPrev.xyz = w ? pp.xyz : posPrev.xyz;
 	nor.xyz = w ? n : nor.xyz;
 }

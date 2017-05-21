@@ -2,7 +2,7 @@
 
 
 
-PixelInputType main(Input input)
+PixelInputType main(Input_Object_ALL input)
 {
 	PixelInputType Out = (PixelInputType)0;
 
@@ -13,8 +13,8 @@ PixelInputType main(Input input)
 	Out.instanceColor = input.instance.color_dither.rgb;
 	Out.dither = input.instance.color_dither.a;
 	
-	float4 pos = input.pos;
-	float4 posPrev = input.pre;
+	float4 pos = float4(input.pos.xyz, 1);
+	float4 posPrev = float4(input.pre.xyz, 1);
 
 	pos = mul( pos,WORLD );
 	posPrev = mul(posPrev, WORLDPREV);
@@ -23,8 +23,8 @@ PixelInputType main(Input input)
 	Out.clip = dot(pos, g_xClipPlane);
 		
 	float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
-	affectWind(pos.xyz, input.tex.w, input.id, g_xFrame_Time);
-	affectWind(posPrev.xyz, input.tex.w, input.id, g_xFrame_TimePrev);
+	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
+	affectWind(posPrev.xyz, input.pos.w, g_xFrame_TimePrev);
 
 
 	//VERTEX OFFSET MOTION BLUR

@@ -2,7 +2,7 @@
 #include "envMapHF.hlsli"
 
 
-VSOut main(Input input)
+VSOut main(Input_Object_ALL input)
 {
 	VSOut Out = (VSOut)0;
 

@@ -14,9 +14,14 @@ struct Input_InstancePrev
 	float4 wiPrev1 : MATIPREV1;
 	float4 wiPrev2 : MATIPREV2;
 };
-struct Input_Shadow
+
+struct Input_Shadow_POS
 {
-	uint id: SV_VertexID;
+	float4 pos : POSITION;
+	Input_Instance instance;
+};
+struct Input_Shadow_POS_TEX
+{
 	float4 pos : POSITION;
 	float4 tex : TEXCOORD0;
 	Input_Instance instance;
@@ -28,16 +33,19 @@ struct Input_Skinning
 	float4 bon : TEXCOORD0;
 	float4 wei : TEXCOORD1;
 };
-struct Input_Simple
+struct Input_Object_POS
 {
-	uint id: SV_VertexID;
+	float4 pos : POSITION;
+	Input_Instance instance;
+};
+struct Input_Object_POS_TEX
+{
 	float4 pos : POSITION;
 	float4 tex : TEXCOORD0;
 	Input_Instance instance;
 };
-struct Input
+struct Input_Object_ALL
 {
-	uint id: SV_VertexID;
 	float4 pos : POSITION;
 	float4 nor : NORMAL;
 	float4 tex : TEXCOORD0;
