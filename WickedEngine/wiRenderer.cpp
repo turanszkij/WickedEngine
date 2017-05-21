@@ -4583,6 +4583,12 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
+	static XMFLOAT4X4 _savedProjection;
+	if (memcmp(&_savedProjection, &getCamera()->Projection, sizeof(XMFLOAT4X4)) != 0)
+	{
+		_savedProjection = getCamera()->Projection;
+		frustumsComplete = false;
+	}
 	if(!frustumsComplete || _resolutionChanged)
 	{
 		frustumsComplete = true;
