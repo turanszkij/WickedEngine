@@ -661,15 +661,14 @@ void wiRenderer::LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_Simple.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr) {
 			vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = vsinfo->vertexShader;
 			vertexLayouts[VLTYPE_OBJECT_POS] = vsinfo->vertexLayout;
@@ -687,7 +686,7 @@ void wiRenderer::LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_Simple.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
 		if (vsinfo != nullptr){
 			vertexShaders[VSTYPE_OBJECT_SIMPLE] = vsinfo->vertexShader;
 			vertexLayouts[VLTYPE_OBJECT_POS_TEX] = vsinfo->vertexLayout;
@@ -698,10 +697,10 @@ void wiRenderer::LoadShaders()
 		{
 			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -3436,7 +3435,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
-VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material)
+VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
 {
 	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
 
@@ -3445,7 +3444,14 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material)
 	switch (shaderType)
 	{
 	case SHADERTYPE_TEXTURE:
-		realVL = VLTYPE_OBJECT_POS_TEX;
+		if (tessellatorRequested)
+		{
+			realVL = VLTYPE_OBJECT_ALL;
+		}
+		else
+		{
+			realVL = VLTYPE_OBJECT_POS_TEX;
+		}
 		break;
 	case SHADERTYPE_DEFERRED:
 	case SHADERTYPE_FORWARD:
@@ -3455,6 +3461,22 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material)
 		realVL = VLTYPE_OBJECT_ALL;
 		break;
 	case SHADERTYPE_DEPTHONLY:
+		if (tessellatorRequested)
+		{
+			realVL = VLTYPE_OBJECT_ALL;
+		}
+		else
+		{
+			if (alphatest)
+			{
+				realVL = VLTYPE_OBJECT_POS_TEX;
+			}
+			else
+			{
+				realVL = VLTYPE_OBJECT_POS;
+			}
+		}
+		break;
 	case SHADERTYPE_SHADOW:
 	case SHADERTYPE_SHADOWCUBE:
 		if (alphatest)
@@ -3473,7 +3495,7 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material)
 
 	return realVL;
 }
-VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material)
+VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
 {
 	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
 
@@ -3482,21 +3504,42 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material)
 	switch (shaderType)
 	{
 	case SHADERTYPE_TEXTURE:
-		realVS = VSTYPE_OBJECT_SIMPLE;
+		if (tessellatorRequested)
+		{
+			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
+		}
+		else
+		{
+			realVS = VSTYPE_OBJECT_SIMPLE;
+		}
 		break;
 	case SHADERTYPE_DEFERRED:
 	case SHADERTYPE_FORWARD:
 	case SHADERTYPE_TILEDFORWARD:
-		realVS = VSTYPE_OBJECT_COMMON;
-		break;
-	case SHADERTYPE_DEPTHONLY:
-		if (alphatest)
+		if (tessellatorRequested)
 		{
-			realVS = VSTYPE_OBJECT_SIMPLE;
+			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
 		}
 		else
 		{
-			realVS = VSTYPE_OBJECT_POSITIONSTREAM;
+			realVS = VSTYPE_OBJECT_COMMON;
+		}
+		break;
+	case SHADERTYPE_DEPTHONLY:
+		if (tessellatorRequested)
+		{
+			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
+		}
+		else
+		{
+			if (alphatest)
+			{
+				realVS = VSTYPE_OBJECT_SIMPLE;
+			}
+			else
+			{
+				realVS = VSTYPE_OBJECT_POSITIONSTREAM;
+			}
 		}
 		break;
 	case SHADERTYPE_ENVMAPCAPTURE:
@@ -4271,40 +4314,38 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					GetDevice()->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 
-					VLTYPES realVL = GetVLTYPE(shaderType, material);
+					VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested);
 					GetDevice()->BindVertexLayout(vertexLayouts[realVL], threadID);
 
-					VSTYPES realVS = GetVSTYPE(shaderType, material);
+					VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested);
 					GetDevice()->BindVS(vertexShaders[realVS], threadID);
 
 					GSTYPES realGS = GetGSTYPE(shaderType, material);
 					GetDevice()->BindGS(geometryShaders[realGS], threadID);
 
-					if (!wireRender)
-					{
-						const GPUResource* res[] = {
-							static_cast<const GPUResource*>(material->GetBaseColorMap()),
-							static_cast<const GPUResource*>(material->GetNormalMap()),
-							static_cast<const GPUResource*>(material->GetRoughnessMap()),
-							static_cast<const GPUResource*>(material->GetReflectanceMap()),
-							static_cast<const GPUResource*>(material->GetMetalnessMap()),
-							static_cast<const GPUResource*>(material->GetDisplacementMap()),
-						};
-						GetDevice()->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+					PSTYPES realPS = GetPSTYPE(shaderType, material);
+					GetDevice()->BindPS(pixelShaders[realPS], threadID);
 
-						PSTYPES realPS = GetPSTYPE(shaderType, material);
-						GetDevice()->BindPS(pixelShaders[realPS], threadID);
-					}
-					else
-					{
-						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
-					}
+					const GPUResource* res[] = {
+						static_cast<const GPUResource*>(material->GetBaseColorMap()),
+						static_cast<const GPUResource*>(material->GetNormalMap()),
+						static_cast<const GPUResource*>(material->GetRoughnessMap()),
+						static_cast<const GPUResource*>(material->GetReflectanceMap()),
+						static_cast<const GPUResource*>(material->GetMetalnessMap()),
+						static_cast<const GPUResource*>(material->GetDisplacementMap()),
+					};
+					GetDevice()->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 					if (tessellation)
 					{
 						GetDevice()->BindResourceDS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
 					}
 
 					SetAlphaRef(material->alphaRef, threadID);
+
+					if (wireRender)
+					{
+						GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
+					}
 
 					GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 				}
