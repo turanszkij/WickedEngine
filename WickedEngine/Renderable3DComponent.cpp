@@ -12,12 +12,9 @@ using namespace wiGraphicsTypes;
 
 Renderable3DComponent::Renderable3DComponent() : Renderable2DComponent()
 {
-	SAFE_INIT(smallDepth);
 }
 Renderable3DComponent::~Renderable3DComponent()
 {
-	SAFE_DELETE(smallDepth);
-
 	for (auto& wt : workerThreads)
 	{
 		delete wt;
@@ -39,7 +36,7 @@ wiRenderTarget
 ;
 std::vector<wiRenderTarget> Renderable3DComponent::rtSun, Renderable3DComponent::rtBloom, Renderable3DComponent::rtSSAO;
 wiDepthTarget Renderable3DComponent::dtDepthCopy;
-Texture2D* Renderable3DComponent::smallDepth;
+Texture2D* Renderable3DComponent::smallDepth = nullptr;
 void Renderable3DComponent::ResizeBuffers()
 {
 	Renderable2DComponent::ResizeBuffers();
