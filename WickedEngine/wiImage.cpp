@@ -244,8 +244,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	bool fullScreenEffect = false;
 
 	device->BindVertexLayout(nullptr, threadID);
-	device->BindVertexBuffer(nullptr, 0, 0, threadID);
-	device->BindIndexBuffer(nullptr, threadID);
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 	device->BindRasterizerState(rasterizerState, threadID);
 
@@ -538,8 +536,6 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 	device->BindDepthStencilState(depthStencilStateLess,stencilRef,threadID);
 
 	device->BindVertexLayout(nullptr, threadID);
-	device->BindVertexBuffer(nullptr, 0, 0, threadID);
-	device->BindIndexBuffer(nullptr, threadID);
 
 	device->BindVS(screenVS,threadID);
 	device->BindPS(deferredPS,threadID);

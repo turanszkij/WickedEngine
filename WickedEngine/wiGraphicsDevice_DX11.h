@@ -79,7 +79,14 @@ namespace wiGraphicsTypes
 		virtual void BindResourceDS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
 		virtual void BindResourceHS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
 		virtual void BindResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
-		virtual void BindUnorderedAccessResourceCS(const GPUUnorderedResource* buffer, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
+		virtual void BindResourcesPS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) override;
+		virtual void BindResourcesVS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) override;
+		virtual void BindResourcesGS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) override;
+		virtual void BindResourcesDS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) override;
+		virtual void BindResourcesHS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) override;
+		virtual void BindResourcesCS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) override;
+		virtual void BindUnorderedAccessResourceCS(const GPUUnorderedResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
+		virtual void BindUnorderedAccessResourcesCS(const GPUUnorderedResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) override;
 		virtual void UnBindResources(int slot, int num, GRAPHICSTHREAD threadID) override;
 		virtual void UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID) override;
 		virtual void BindSamplerPS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID) override;
@@ -94,8 +101,7 @@ namespace wiGraphicsTypes
 		virtual void BindConstantBufferDS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) override;
 		virtual void BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) override;
 		virtual void BindConstantBufferCS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) override;
-		virtual void BindVertexBuffer(const GPUBuffer* vertexBuffer, int slot, UINT stride, GRAPHICSTHREAD threadID) override;
-		virtual void BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, UINT count, const UINT* strides, GRAPHICSTHREAD threadID) override;
+		virtual void BindVertexBuffers(const GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, GRAPHICSTHREAD threadID) override;
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID) override;
 		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID) override;
 		virtual void BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID) override;
@@ -103,7 +109,6 @@ namespace wiGraphicsTypes
 		virtual void BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID) override;
 		virtual void BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID) override;
 		virtual void BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) override;
-		virtual void BindStreamOutTarget(const GPUBuffer* buffer, GRAPHICSTHREAD threadID) override;
 		virtual void BindStreamOutTargets(GPUBuffer* const *buffers, UINT count, GRAPHICSTHREAD threadID) override;
 		virtual void BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) override;
 		virtual void BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID) override;

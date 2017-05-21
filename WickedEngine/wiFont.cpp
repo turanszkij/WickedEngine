@@ -291,7 +291,14 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 		device->BindDepthStencilState(depthStencilState, 1, threadID);
 
 		device->BindBlendState(blendState, threadID);
-		device->BindVertexBuffer(vertexBuffer, 0, sizeof(Vertex), threadID);
+
+		const GPUBuffer* vbs[] = {
+			vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(Vertex),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 		device->BindIndexBuffer(indexBuffer, threadID);
 
 		device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND0, threadID);

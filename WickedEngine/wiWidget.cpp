@@ -1497,57 +1497,98 @@ void wiColorPicker::Render(wiGUI* gui)
 	wiRenderer::GetDevice()->BindPS(wiRenderer::pixelShaders[PSTYPE_LINE], threadID);
 	wiRenderer::GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
 
-	// render saturation triangle
 	wiRenderer::MiscCB cb;
-	cb.mTransform = XMMatrixTranspose(
-		XMMatrixRotationZ(-angle) *
-		XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
-		__cam
-	);
-	cb.mColor = XMFLOAT4(1, 1, 1, 1);
-	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-	wiRenderer::GetDevice()->BindVertexBuffer(&vb_saturation, 0, sizeof(Vertex), threadID);
-	wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+
+	// render saturation triangle
+	{
+		cb.mTransform = XMMatrixTranspose(
+			XMMatrixRotationZ(-angle) *
+			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
+			__cam
+		);
+		cb.mColor = XMFLOAT4(1, 1, 1, 1);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		const GPUBuffer* vbs[] = {
+			&vb_saturation,
+		};
+		const UINT strides[] = {
+			sizeof(Vertex),
+		};
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	}
 
 	// render hue circle
-	cb.mTransform = XMMatrixTranspose(
-		XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
-		__cam
-	);
-	cb.mColor = XMFLOAT4(1, 1, 1, 1);
-	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-	wiRenderer::GetDevice()->BindVertexBuffer(&vb_hue, 0, sizeof(Vertex), threadID);
-	wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	{
+		cb.mTransform = XMMatrixTranspose(
+			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
+			__cam
+		);
+		cb.mColor = XMFLOAT4(1, 1, 1, 1);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		const GPUBuffer* vbs[] = {
+			&vb_hue,
+		};
+		const UINT strides[] = {
+			sizeof(Vertex),
+		};
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	}
 
 	// render hue picker
-	cb.mTransform = XMMatrixTranspose(
-		XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
-		__cam
-	);
-	cb.mColor = XMFLOAT4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
-	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-	wiRenderer::GetDevice()->BindVertexBuffer(&vb_picker, 0, sizeof(Vertex), threadID);
-	wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	{
+		cb.mTransform = XMMatrixTranspose(
+			XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
+			__cam
+		);
+		cb.mColor = XMFLOAT4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		const GPUBuffer* vbs[] = {
+			&vb_picker,
+		};
+		const UINT strides[] = {
+			sizeof(Vertex),
+		};
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	}
 
 	// render saturation picker
-	cb.mTransform = XMMatrixTranspose(
-		XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
-		__cam
-	);
-	cb.mColor = XMFLOAT4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
-	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-	wiRenderer::GetDevice()->BindVertexBuffer(&vb_picker, 0, sizeof(Vertex), threadID);
-	wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	{
+		cb.mTransform = XMMatrixTranspose(
+			XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
+			__cam
+		);
+		cb.mColor = XMFLOAT4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		const GPUBuffer* vbs[] = {
+			&vb_picker,
+		};
+		const UINT strides[] = {
+			sizeof(Vertex),
+		};
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	}
 
 	// render preview
-	cb.mTransform = XMMatrixTranspose(
-		XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
-		__cam
-	);
-	cb.mColor = GetPickColor();
-	wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-	wiRenderer::GetDevice()->BindVertexBuffer(&vb_preview, 0, sizeof(Vertex), threadID);
-	wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	{
+		cb.mTransform = XMMatrixTranspose(
+			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
+			__cam
+		);
+		cb.mColor = GetPickColor();
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		const GPUBuffer* vbs[] = {
+			&vb_preview,
+		};
+		const UINT strides[] = {
+			sizeof(Vertex),
+		};
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+	}
 
 	// RGB values:
 	stringstream _rgb("");

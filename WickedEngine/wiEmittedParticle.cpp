@@ -334,7 +334,13 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 	
 		device->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
 
-		device->BindVertexBuffer(vertexBuffer,0,sizeof(Point),threadID);
+		const GPUBuffer* vbs[] = {
+			vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(Point),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 
 		if(!wireRender && material->texture) 
 			device->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);

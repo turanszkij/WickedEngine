@@ -413,7 +413,13 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 			device->BindGS(gs, threadID);
 		}
 
-		device->BindVertexBuffer(vb, 0, sizeof(Point), threadID);
+		const GPUBuffer* vbs[] = {
+			vb,
+		};
+		const UINT strides[] = {
+			sizeof(Point),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 		device->Draw((int)points.size(), threadID);
 
 		device->BindGS(nullptr,threadID);
