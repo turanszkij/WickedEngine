@@ -4005,14 +4005,14 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
 					}
 
-					GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(0), TEXSLOT_ONDEMAND0, threadID);
-					if (!easyTextureBind)
-					{
-						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(1), TEXSLOT_ONDEMAND1, threadID);
-						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(2), TEXSLOT_ONDEMAND2, threadID);
-						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(3), TEXSLOT_ONDEMAND3, threadID);
-						GetDevice()->BindResourcePS(mesh->impostorTarget.GetTexture(4), TEXSLOT_ONDEMAND4, threadID);
-					}
+					const GPUResource* res[] = {
+						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
+						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
+						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
+						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
+						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
+					};
+					GetDevice()->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
 					GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
 
@@ -4049,6 +4049,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 					SetAlphaRef(0.75f, threadID);
 					GetDevice()->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
+					prevVL = VLTYPE_NULL;
+					prevVS = VSTYPE_NULL;
+					prevPS = PSTYPE_NULL;
 				}
 			}
 
