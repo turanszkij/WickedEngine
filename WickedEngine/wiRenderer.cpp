@@ -3619,6 +3619,14 @@ GSTYPES GetGSTYPE(SHADERTYPE shaderType, const Material* const material)
 
 	return realGS;
 }
+HSTYPES GetHSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
+{
+	return tessellatorRequested ? HSTYPE_OBJECT : HSTYPE_NULL;
+}
+DSTYPES GetDSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
+{
+	return tessellatorRequested ? DSTYPE_OBJECT : DSTYPE_NULL;
+}
 PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 {
 	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
@@ -3850,6 +3858,13 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 	{
 		GetDevice()->EventBegin("RenderMeshes", threadID);
 
+		VLTYPES prevVL = VLTYPE_NULL;
+		VSTYPES prevVS = VSTYPE_NULL;
+		GSTYPES prevGS = GSTYPE_NULL;
+		HSTYPES prevHS = HSTYPE_NULL;
+		DSTYPES prevDS = DSTYPE_NULL;
+		PSTYPES prevPS = PSTYPE_NULL;
+
 		tessellation = tessellation && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
 		DSSTYPES targetDepthStencilState = DSSTYPE_DEFAULT;
@@ -3900,77 +3915,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			}
 
-			//if (shaderType == SHADERTYPE_VOXELIZE)
-			//{
-			//	GetDevice()->BindVS(vertexShaders[VSTYPE_VOXELIZER], threadID);
-			//	GetDevice()->BindGS(geometryShaders[GSTYPE_VOXELIZER], threadID);
-			//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-			//}
-			//else
-			//{
-			//	if (shaderType == SHADERTYPE_SHADOW)
-			//	{
-			//		GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOW_ALPHATEST], threadID);
-			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
-			//	}
-			//	else if (shaderType == SHADERTYPE_SHADOWCUBE)
-			//	{
-			//		GetDevice()->BindVS(vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
-			//		GetDevice()->BindGS(geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST], threadID);
-			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_SHADOW_POS_TEX], threadID);
-			//	}
-			//	else if (shaderType == SHADERTYPE_ENVMAPCAPTURE)
-			//	{
-			//		GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP], threadID);
-			//		GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP], threadID);
-			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-			//	}
-			//	else if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE)
-			//	{
-			//		if (tessellatorRequested)
-			//		{
-			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], threadID);
-			//			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID); // tessellator requires normals
-			//		}
-			//		else
-			//		{
-			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
-			//			GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS_TEX], threadID);
-			//		}
-			//	}
-			//	else
-			//	{
-			//		if (tessellatorRequested)
-			//		{
-			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION], threadID);
-			//		}
-			//		else
-			//		{
-			//			GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
-			//		}
-			//		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-			//	}
-			//}
-
 			if (tessellatorRequested)
 			{
 				TessellationCB tessCB;
 				tessCB.tessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
 				GetDevice()->BindConstantBufferHS(constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
-				GetDevice()->BindHS(hullShaders[HSTYPE_OBJECT], threadID);
-			}
-			else
-			{
-				GetDevice()->BindHS(nullptr, threadID);
-			}
-
-			if (tessellatorRequested) {
-				GetDevice()->BindDS(domainShaders[DSTYPE_OBJECT], threadID);
-			}
-			else 
-			{
-				GetDevice()->BindDS(nullptr, threadID);
 			}
 
 
@@ -4315,16 +4265,46 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GetDevice()->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 
 					VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested);
-					GetDevice()->BindVertexLayout(vertexLayouts[realVL], threadID);
+					if (prevVL != realVL)
+					{
+						prevVL = realVL;
+						GetDevice()->BindVertexLayout(vertexLayouts[realVL], threadID);
+					}
 
 					VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested);
-					GetDevice()->BindVS(vertexShaders[realVS], threadID);
+					if (prevVS != realVS)
+					{
+						prevVS = realVS;
+						GetDevice()->BindVS(vertexShaders[realVS], threadID);
+					}
 
 					GSTYPES realGS = GetGSTYPE(shaderType, material);
-					GetDevice()->BindGS(geometryShaders[realGS], threadID);
+					if (prevGS != realGS)
+					{
+						prevGS = realGS;
+						GetDevice()->BindGS(geometryShaders[realGS], threadID);
+					}
+
+					HSTYPES realHS = GetHSTYPE(shaderType, material, tessellatorRequested);
+					if (prevHS = realHS)
+					{
+						prevHS = realHS;
+						GetDevice()->BindHS(hullShaders[realHS], threadID);
+					}
+
+					DSTYPES realDS = GetDSTYPE(shaderType, material, tessellatorRequested);
+					if (prevDS != realDS)
+					{
+						prevDS = realDS;
+						GetDevice()->BindDS(domainShaders[realDS], threadID);
+					}
 
 					PSTYPES realPS = GetPSTYPE(shaderType, material);
-					GetDevice()->BindPS(pixelShaders[realPS], threadID);
+					if (prevPS != realPS)
+					{
+						prevPS = realPS;
+						GetDevice()->BindPS(pixelShaders[realPS], threadID);
+					}
 
 					const GPUResource* res[] = {
 						static_cast<const GPUResource*>(material->GetBaseColorMap()),
@@ -4335,7 +4315,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						static_cast<const GPUResource*>(material->GetDisplacementMap()),
 					};
 					GetDevice()->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-					if (tessellation)
+					if (tessellatorRequested)
 					{
 						GetDevice()->BindResourceDS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
 					}
