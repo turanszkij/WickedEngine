@@ -10,7 +10,7 @@
 using namespace wiGraphicsTypes;
 
 #pragma region STATICS
-BlendState		*wiImage::blendState = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateNoBlend = nullptr, *wiImage::blendStateAvg = nullptr;
+BlendState		*wiImage::blendState = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateNoBlend = nullptr, *wiImage::blendStateAvg = nullptr, *wiImage::blendStateDisable = nullptr;
 GPUBuffer       *wiImage::constantBuffer = nullptr, *wiImage::processCb = nullptr;
 
 VertexShader     *wiImage::vertexShader = nullptr,*wiImage::screenVS = nullptr;
@@ -120,7 +120,6 @@ void wiImage::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	// Create the depth stencil state.
 	depthStencilStateLess = new DepthStencilState;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateLess);
 
@@ -145,7 +144,6 @@ void wiImage::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	// Create the depth stencil state.
 	depthStencilStateGreater = new DepthStencilState;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateGreater);
 	
@@ -157,9 +155,7 @@ void wiImage::SetUpStates()
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_ALWAYS;
-
 	dsd.StencilEnable = false;
-	// Create the depth stencil state.
 	depthStencilStateDepthWrite = new DepthStencilState;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateDepthWrite);
 
@@ -174,7 +170,7 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	bd.IndependentBlendEnable=true;
+	bd.IndependentBlendEnable = false;
 	blendState = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
 
@@ -187,7 +183,7 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	//bd.IndependentBlendEnable=true;
+	bd.IndependentBlendEnable = false;
 	blendStateNoBlend = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateNoBlend);
 
@@ -200,7 +196,7 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	//bd.IndependentBlendEnable=true;
+	bd.IndependentBlendEnable = false;
 	blendStateAdd = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAdd);
 	
@@ -213,9 +209,16 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	//bd.IndependentBlendEnable=true;
+	bd.IndependentBlendEnable=false;
 	blendStateAvg = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAvg);
+	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStateAvg);
+
+	ZeroMemory(&bd, sizeof(bd));
+	bd.RenderTarget[0].BlendEnable = false;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
+	bd.IndependentBlendEnable=false;
+	blendStateDisable = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStateDisable);
 }
 
 void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -450,11 +453,13 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			{
 				device->BindPS(reprojectDepthBufferPS, threadID);
 				device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
+				device->BindBlendState(blendStateDisable, threadID);
 			}
 			else if (effects.process.downsampleDepthBuffer4x)
 			{
 				device->BindPS(downsampleDepthBufferPS, threadID);
 				device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
+				device->BindBlendState(blendStateDisable, threadID);
 			}
 			else if (effects.process.temporalAAResolve) {
 				device->BindPS(temporalAAResolvePS, threadID);
@@ -466,7 +471,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				device->UpdateBuffer(processCb, &prcb, threadID);
 			}
 			else {
-				wiHelper::messageBox("Postprocess branch not implemented!");
+				assert(0); // not impl
 			}
 		}
 		else{ 
@@ -563,6 +568,7 @@ void wiImage::CleanUp()
 	SAFE_DELETE(blendStateAdd);
 	SAFE_DELETE(blendStateNoBlend);
 	SAFE_DELETE(blendStateAvg);
+	SAFE_DELETE(blendStateDisable);
 
 	SAFE_DELETE(constantBuffer);
 	SAFE_DELETE(processCb);

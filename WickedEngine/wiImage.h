@@ -43,7 +43,7 @@ protected:
 		ALIGN_16
 	};
 	
-	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg;
+	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg, *blendStateDisable;
 	static wiGraphicsTypes::GPUBuffer       *constantBuffer, *processCb;
 
 	static wiGraphicsTypes::VertexShader     *vertexShader,*screenVS;
