@@ -623,15 +623,15 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v)
 							if(!nameB.compare(currentMesh->vertexGroups[v].name)){
 								gotvg=true;
-								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices[VPROP_TEX].size() - 1), weight));
+								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices[VPROP_POS].size() - 1), weight));
 								if(windAffection)
-									currentMesh->vertices[VPROP_TEX].back().w=weight;
+									currentMesh->vertices[VPROP_POS].back().w=weight;
 							}
 						if(!gotvg){
 							currentMesh->vertexGroups.push_back(VertexGroup(nameB));
 							currentMesh->vertexGroups.back().addVertex(VertexRef((int)(currentMesh->vertices[VPROP_POS].size() - 1), weight));
 							if(windAffection)
-								currentMesh->vertices[VPROP_TEX].back().w=weight;
+								currentMesh->vertices[VPROP_POS].back().w=weight;
 						}
 					}
 					break;
@@ -1759,7 +1759,7 @@ void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 			vertices[VPROP_POS][i].x = v[0];
 			vertices[VPROP_POS][i].y = v[1];
 			vertices[VPROP_POS][i].z = v[2];
-			vertices[VPROP_POS][i].w = 1;
+			vertices[VPROP_POS][i].w = 0;
 			if (!isBillboarded) {
 				vertices[VPROP_NOR][i].x = v[3];
 				vertices[VPROP_NOR][i].y = v[4];
@@ -1841,13 +1841,13 @@ void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 						gotvg = true;
 						vertexGroups[v].addVertex(VertexRef(i, weightValue));
 						if (windAffection)
-							vertices[VPROP_TEX][i].w = weightValue;
+							vertices[VPROP_POS][i].w = weightValue;
 					}
 				if (!gotvg) {
 					vertexGroups.push_back(VertexGroup(nameB));
 					vertexGroups.back().addVertex(VertexRef(i, weightValue));
 					if (windAffection)
-						vertices[VPROP_TEX][i].w = weightValue;
+						vertices[VPROP_POS][i].w = weightValue;
 				}
 #pragma endregion
 
