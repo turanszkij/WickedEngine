@@ -3983,6 +3983,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 						device->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS_TEX], threadID);
+						device->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
 					}
 					else
 					{
@@ -4002,6 +4003,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 						device->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
+						device->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
 					}
 
 					const GPUResource* res[] = {
@@ -4012,8 +4014,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
 					};
 					device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-
-					device->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
 
 					if (wireRender)
 					{
@@ -4140,7 +4140,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				EVERYTHING,
 			};
 			BOUNDVERTEXBUFFERTYPE boundVBType_Prev = BOUNDVERTEXBUFFERTYPE::NOTHING;
-			BOUNDVERTEXBUFFERTYPE boundVBType = BOUNDVERTEXBUFFERTYPE::NOTHING;
 
 			for (MeshSubset& subset : mesh->subsets)
 			{
@@ -4172,6 +4171,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (subsetRenderable)
 				{
 
+					BOUNDVERTEXBUFFERTYPE boundVBType;
 					if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
 					{
 						// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
@@ -4191,7 +4191,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 
 					// Only bind vertex buffers when the layout changes
-					if (boundVBType == BOUNDVERTEXBUFFERTYPE::NOTHING || boundVBType != boundVBType_Prev)
+					if (boundVBType != boundVBType_Prev)
 					{
 						// Assemble the required vertex buffer:
 						switch (boundVBType)

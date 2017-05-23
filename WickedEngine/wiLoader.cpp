@@ -2087,152 +2087,152 @@ void Mesh::CreateImpostorVB()
 		float stepX = 1.f / 6.f;
 
 		// front
-		impostorVertices[VPROP_POS][0] = XMFLOAT4(-1, 1, 0, 1);
+		impostorVertices[VPROP_POS][0] = XMFLOAT4(-1, 1, 0, 0);
 		impostorVertices[VPROP_NOR][0] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][0] = XMFLOAT4(0, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][1] = XMFLOAT4(-1, -1, 0, 1);
+		impostorVertices[VPROP_POS][1] = XMFLOAT4(-1, -1, 0, 0);
 		impostorVertices[VPROP_NOR][1] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][1] = XMFLOAT4(0, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][2] = XMFLOAT4(1, 1, 0, 1);
+		impostorVertices[VPROP_POS][2] = XMFLOAT4(1, 1, 0, 0);
 		impostorVertices[VPROP_NOR][2] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][2] = XMFLOAT4(stepX, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][3] = XMFLOAT4(-1, -1, 0, 1);
+		impostorVertices[VPROP_POS][3] = XMFLOAT4(-1, -1, 0, 0);
 		impostorVertices[VPROP_NOR][3] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][3] = XMFLOAT4(0, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][4] = XMFLOAT4(1, -1, 0, 1);
+		impostorVertices[VPROP_POS][4] = XMFLOAT4(1, -1, 0, 0);
 		impostorVertices[VPROP_NOR][4] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][4] = XMFLOAT4(stepX, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][5] = XMFLOAT4(1, 1, 0, 1);
+		impostorVertices[VPROP_POS][5] = XMFLOAT4(1, 1, 0, 0);
 		impostorVertices[VPROP_NOR][5] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][5] = XMFLOAT4(stepX, 0, 0, 0);
 
 		// right
-		impostorVertices[VPROP_POS][6] = XMFLOAT4(0, 1, -1, 1);
+		impostorVertices[VPROP_POS][6] = XMFLOAT4(0, 1, -1, 0);
 		impostorVertices[VPROP_NOR][6] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][6] = XMFLOAT4(stepX, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][7] = XMFLOAT4(0, -1, -1, 1);
+		impostorVertices[VPROP_POS][7] = XMFLOAT4(0, -1, -1, 0);
 		impostorVertices[VPROP_NOR][7] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][7] = XMFLOAT4(stepX, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][8] = XMFLOAT4(0, 1, 1, 1);
+		impostorVertices[VPROP_POS][8] = XMFLOAT4(0, 1, 1, 0);
 		impostorVertices[VPROP_NOR][8] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][8] = XMFLOAT4(stepX*2, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][9] = XMFLOAT4(0, -1, -1, 1);
+		impostorVertices[VPROP_POS][9] = XMFLOAT4(0, -1, -1, 0);
 		impostorVertices[VPROP_NOR][9] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][9] = XMFLOAT4(stepX, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][10] = XMFLOAT4(0, -1, 1, 1);
+		impostorVertices[VPROP_POS][10] = XMFLOAT4(0, -1, 1, 0);
 		impostorVertices[VPROP_NOR][10] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][10] = XMFLOAT4(stepX*2, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][11] = XMFLOAT4(0, 1, 1, 1);
+		impostorVertices[VPROP_POS][11] = XMFLOAT4(0, 1, 1, 0);
 		impostorVertices[VPROP_NOR][11] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][11] = XMFLOAT4(stepX*2, 0, 0, 0);
 
 		// back
-		impostorVertices[VPROP_POS][12] = XMFLOAT4(-1, 1, 0, 1);
+		impostorVertices[VPROP_POS][12] = XMFLOAT4(-1, 1, 0, 0);
 		impostorVertices[VPROP_NOR][12] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][12] = XMFLOAT4(stepX*3, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][13] = XMFLOAT4(1, 1, 0, 1);
+		impostorVertices[VPROP_POS][13] = XMFLOAT4(1, 1, 0, 0);
 		impostorVertices[VPROP_NOR][13] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][13] = XMFLOAT4(stepX * 2, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][14] = XMFLOAT4(-1, -1, 0, 1);
+		impostorVertices[VPROP_POS][14] = XMFLOAT4(-1, -1, 0, 0);
 		impostorVertices[VPROP_NOR][14] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][14] = XMFLOAT4(stepX*3, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][15] = XMFLOAT4(-1, -1, 0, 1);
+		impostorVertices[VPROP_POS][15] = XMFLOAT4(-1, -1, 0, 0);
 		impostorVertices[VPROP_NOR][15] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][15] = XMFLOAT4(stepX*3, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][16] = XMFLOAT4(1, 1, 0, 1);
+		impostorVertices[VPROP_POS][16] = XMFLOAT4(1, 1, 0, 0);
 		impostorVertices[VPROP_NOR][16] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][16] = XMFLOAT4(stepX*2, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][17] = XMFLOAT4(1, -1, 0, 1);
+		impostorVertices[VPROP_POS][17] = XMFLOAT4(1, -1, 0, 0);
 		impostorVertices[VPROP_NOR][17] = XMFLOAT4(0, 0, -1, 1);
 		impostorVertices[VPROP_TEX][17] = XMFLOAT4(stepX*2, 1, 0, 0);
 
 		// left
-		impostorVertices[VPROP_POS][18] = XMFLOAT4(0, 1, -1, 1);
+		impostorVertices[VPROP_POS][18] = XMFLOAT4(0, 1, -1, 0);
 		impostorVertices[VPROP_NOR][18] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][18] = XMFLOAT4(stepX*4, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][19] = XMFLOAT4(0, 1, 1, 1);
+		impostorVertices[VPROP_POS][19] = XMFLOAT4(0, 1, 1, 0);
 		impostorVertices[VPROP_NOR][19] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][19] = XMFLOAT4(stepX * 3, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][20] = XMFLOAT4(0, -1, -1, 1);
+		impostorVertices[VPROP_POS][20] = XMFLOAT4(0, -1, -1, 0);
 		impostorVertices[VPROP_NOR][20] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][20] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][21] = XMFLOAT4(0, -1, -1, 1);
+		impostorVertices[VPROP_POS][21] = XMFLOAT4(0, -1, -1, 0);
 		impostorVertices[VPROP_NOR][21] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][21] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][22] = XMFLOAT4(0, 1, 1, 1);
+		impostorVertices[VPROP_POS][22] = XMFLOAT4(0, 1, 1, 0);
 		impostorVertices[VPROP_NOR][22] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][22] = XMFLOAT4(stepX*3, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][23] = XMFLOAT4(0, -1, 1, 1);
+		impostorVertices[VPROP_POS][23] = XMFLOAT4(0, -1, 1, 0);
 		impostorVertices[VPROP_NOR][23] = XMFLOAT4(1, 0, 0, 1);
 		impostorVertices[VPROP_TEX][23] = XMFLOAT4(stepX*3, 1, 0, 0);
 
 		// bottom
-		impostorVertices[VPROP_POS][24] = XMFLOAT4(-1, 0, 1, 1);
+		impostorVertices[VPROP_POS][24] = XMFLOAT4(-1, 0, 1, 0);
 		impostorVertices[VPROP_NOR][24] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][24] = XMFLOAT4(stepX*4, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][25] = XMFLOAT4(1, 0, 1, 1);
+		impostorVertices[VPROP_POS][25] = XMFLOAT4(1, 0, 1, 0);
 		impostorVertices[VPROP_NOR][25] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][25] = XMFLOAT4(stepX * 5, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][26] = XMFLOAT4(-1, 0, -1, 1);
+		impostorVertices[VPROP_POS][26] = XMFLOAT4(-1, 0, -1, 0);
 		impostorVertices[VPROP_NOR][26] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][26] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][27] = XMFLOAT4(-1, 0, -1, 1);
+		impostorVertices[VPROP_POS][27] = XMFLOAT4(-1, 0, -1, 0);
 		impostorVertices[VPROP_NOR][27] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][27] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][28] = XMFLOAT4(1, 0, 1, 1);
+		impostorVertices[VPROP_POS][28] = XMFLOAT4(1, 0, 1, 0);
 		impostorVertices[VPROP_NOR][28] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][28] = XMFLOAT4(stepX*5, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][29] = XMFLOAT4(1, 0, -1, 1);
+		impostorVertices[VPROP_POS][29] = XMFLOAT4(1, 0, -1, 0);
 		impostorVertices[VPROP_NOR][29] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][29] = XMFLOAT4(stepX*5, 1, 0, 0);
 
 		// top
-		impostorVertices[VPROP_POS][30] = XMFLOAT4(-1, 0, 1, 1);
+		impostorVertices[VPROP_POS][30] = XMFLOAT4(-1, 0, 1, 0);
 		impostorVertices[VPROP_NOR][30] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][30] = XMFLOAT4(stepX*5, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][31] = XMFLOAT4(-1, 0, -1, 1);
+		impostorVertices[VPROP_POS][31] = XMFLOAT4(-1, 0, -1, 0);
 		impostorVertices[VPROP_NOR][31] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][31] = XMFLOAT4(stepX * 5, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][32] = XMFLOAT4(1, 0, 1, 1);
+		impostorVertices[VPROP_POS][32] = XMFLOAT4(1, 0, 1, 0);
 		impostorVertices[VPROP_NOR][32] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][32] = XMFLOAT4(stepX*6, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][33] = XMFLOAT4(-1, 0, -1, 1);
+		impostorVertices[VPROP_POS][33] = XMFLOAT4(-1, 0, -1, 0);
 		impostorVertices[VPROP_NOR][33] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][33] = XMFLOAT4(stepX*5, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][34] = XMFLOAT4(1, 0, -1, 1);
+		impostorVertices[VPROP_POS][34] = XMFLOAT4(1, 0, -1, 0);
 		impostorVertices[VPROP_NOR][34] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][34] = XMFLOAT4(stepX*6, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][35] = XMFLOAT4(1, 0, 1, 1);
+		impostorVertices[VPROP_POS][35] = XMFLOAT4(1, 0, 1, 0);
 		impostorVertices[VPROP_NOR][35] = XMFLOAT4(0, 1, 0, 1);
 		impostorVertices[VPROP_TEX][35] = XMFLOAT4(stepX*6, 0, 0, 0);
 
