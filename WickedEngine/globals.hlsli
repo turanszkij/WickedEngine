@@ -116,8 +116,6 @@ CBUFFER(APICB, CBSLOT_API)
 static const float		PI = 3.14159265358979323846;
 
 #define sqr(a)		((a)*(a))
-#define pow4(a)		(sqr(a)*sqr(a))
-#define pow8(a)		(pow4(a)*pow4(a))
 
 #ifdef DISABLE_ALPHATEST
 #define ALPHATEST(x)

@@ -62,7 +62,7 @@ public:
 		textureDesc.Format = format;
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Usage = USAGE_DEFAULT;
+		textureDesc.Usage = USAGE_IMMUTABLE;
 		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
 		textureDesc.MiscFlags = 0;

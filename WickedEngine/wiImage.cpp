@@ -264,8 +264,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		device->BindBlendState(blendState, threadID);
 
 
-	ImageCB cb;
-	PostProcessCB prcb;
 	{
 		switch (effects.stencilComp)
 		{
@@ -320,8 +318,10 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		return;
 	}
 
-	if(!effects.blur)
+	if(!effects.blur) // NORMAL IMAGE
 	{
+		ImageCB cb;
+
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			if(effects.typeFlag==SCREEN){
 				cb.mTransform = XMMatrixTranspose(
@@ -391,7 +391,10 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			device->BindPS(pixelShader, threadID);
 			fullScreenEffect = false;
 		}
-		else if(!effects.sunPos.x && !effects.sunPos.y){
+		else if(abs(effects.sunPos.x + effects.sunPos.y) < FLT_EPSILON) // POSTPROCESS
+		{
+			PostProcessCB prcb;
+
 			device->BindVS(screenVS, threadID);
 			fullScreenEffect = true;
 
@@ -474,7 +477,10 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				assert(0); // not impl
 			}
 		}
-		else{ 
+		else // LIGHTSHAFT
+		{
+			PostProcessCB prcb;
+
 			device->BindVS(screenVS,threadID);
 			device->BindPS(shaftPS,threadID);
 			fullScreenEffect = true;
@@ -493,7 +499,10 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		device->BindResourcePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
 		device->BindResourcePS(effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
 	}
-	else{ //BLUR
+	else // BLUR
+	{
+		PostProcessCB prcb;
+
 		device->BindVS(screenVS,threadID);
 		fullScreenEffect = true;
 		

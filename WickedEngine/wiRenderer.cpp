@@ -5875,11 +5875,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 	probe->transform(position);
 	probe->cubeMap.InitializeCube(resolution, true, FORMAT_R16G16B16A16_FLOAT, 0);
 
-	GetDevice()->LOCK();
-
 	scene->environmentProbes.push_back(probe);
-
-	GetDevice()->UNLOCK();
 }
 
 void wiRenderer::CreateImpostor(Mesh* mesh)

@@ -700,7 +700,7 @@ inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, i
 		float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
 		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		diff = abs(diff);
-		float blend = pow4(saturate(max(diff.x, max(diff.y, diff.z))));
+		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, uvw, N);
 		float4 reflection = ConeTraceReflection(texture_voxelradiance, uvw, N, V, roughness);

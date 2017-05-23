@@ -71,12 +71,12 @@ inline float4 ConeTraceReflection(in Texture3D<float4> voxels, in float3 uvw, in
 	uint mips;
 	voxels.GetDimensions(0, dim.x, dim.y, dim.z, mips);
 
-	float aperture = pow4(roughness);
+	float aperture = pow(roughness, 4);
 	float3 coneVec = reflect(-V, N) / g_xWorld_VoxelRadianceDataRes * float3(1, -1, 1);
 	float4 accumulation = 0;
 	float3 tc = uvw + coneVec;
 	float NdotV = saturate(dot(N, V));
-	coneVec *= lerp(0.25, 4, pow8(1 - NdotV));
+	coneVec *= lerp(0.25, 4, pow(1 - NdotV, 8));
 
 	uint i = 0;
 	while(accumulation.a < 1 && !any(tc - saturate(tc)))
