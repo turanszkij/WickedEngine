@@ -3854,6 +3854,8 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation, bool occlusionCulling)
 {
+	// Intensive section, optimize the shit out of it:
+
 	if (!culledRenderer.empty())
 	{
 		GraphicsDevice* device = GetDevice();
@@ -3862,16 +3864,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
-		DSSTYPES targetDepthStencilState = DSSTYPE_DEFAULT;
-		UINT targetStencilRef = STENCILREF_DEFAULT;
+		const DSSTYPES targetDepthStencilState = (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE) ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT;
+		UINT prevStencilRef = STENCILREF_DEFAULT;
+		device->BindDepthStencilState(depthStencils[targetDepthStencilState], prevStencilRef, threadID);
 
 		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 		XMFLOAT4X4 tempMat;
-		
-		if (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE)
-		{
-			targetDepthStencilState = DSSTYPE_DEPTHREADEQUAL;
-		}
 
 		if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 		{
@@ -3886,19 +3884,49 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			device->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 		}
 
-		bool easyTextureBind = 
+		const bool easyTextureBind = 
 			shaderType == SHADERTYPE_TEXTURE || 
 			shaderType == SHADERTYPE_SHADOW || 
 			shaderType == SHADERTYPE_SHADOWCUBE || 
 			shaderType == SHADERTYPE_DEPTHONLY || 
 			shaderType == SHADERTYPE_VOXELIZE;
 
-		bool impostorRequest = shaderType != SHADERTYPE_VOXELIZE && shaderType != SHADERTYPE_SHADOW && shaderType != SHADERTYPE_SHADOWCUBE && shaderType != SHADERTYPE_ENVMAPCAPTURE;
+		const bool impostorRequest = 
+			shaderType != SHADERTYPE_VOXELIZE && 
+			shaderType != SHADERTYPE_SHADOW && 
+			shaderType != SHADERTYPE_SHADOWCUBE && 
+			shaderType != SHADERTYPE_ENVMAPCAPTURE;
 
 		// Render impostors:
 		if (impostorRequest)
 		{
 			bool impostorRenderSetup = false;
+
+			// Assess the render params:
+			VLTYPES realVL = (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE) ? VLTYPE_OBJECT_POS_TEX : VLTYPE_OBJECT_ALL;
+			VSTYPES realVS = realVL == VLTYPE_OBJECT_POS_TEX ? VSTYPE_OBJECT_SIMPLE : VSTYPE_OBJECT_COMMON;
+			PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
+			if (!wireRender)
+			{
+				switch (shaderType)
+				{
+				case SHADERTYPE_DEFERRED:
+					realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+					break;
+				case SHADERTYPE_FORWARD:
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+					break;
+				case SHADERTYPE_TILEDFORWARD:
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
+					break;
+				case SHADERTYPE_DEPTHONLY:
+					realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+					break;
+				default:
+					realPS = PSTYPE_OBJECT_TEXTUREONLY;
+					break;
+				}
+			}
 
 			for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 			{
@@ -3910,12 +3938,16 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				if (!impostorRenderSetup)
 				{
+					// Bind the static impostor params once:
 					impostorRenderSetup = true;
 					device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 					device->BindIndexBuffer(nullptr, threadID);
 					device->BindPrimitiveTopology(TRIANGLELIST, threadID);
 					device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
-					device->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
+					device->BindVertexLayout(vertexLayouts[realVL], threadID);
+					device->BindVS(vertexShaders[realVS], threadID);
+					device->BindPS(pixelShaders[realPS], threadID);
+					SetAlphaRef(0.75f, threadID);
 				}
 
 				const CulledObjectList& visibleInstances = iter->second;
@@ -3925,120 +3957,84 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				int k = 0;
 				for (const Object* instance : visibleInstances)
 				{
-					if (instance->emitterType != Object::EmitterType::EMITTER_INVISIBLE)
+					if (instance->emitterType == Object::EmitterType::EMITTER_INVISIBLE || (occlusionCulling && instance->IsOccluded()))
+						continue;
+
+					const float impostorThreshold = instance->bounds.getRadius();
+					float dist = wiMath::Distance(eye, instance->bounds.getCenter());
+					float dither = instance->transparency;
+					dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
+					if (dither > 1.0f - FLT_EPSILON)
+						continue;
+
+					XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
+
+					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
+					mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
+
+					if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 					{
-						const float impostorThreshold = instance->bounds.getRadius();
-						float dist = wiMath::Distance(eye, instance->bounds.getCenter());
-						float dither = instance->transparency;
-						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
-						if (dither > 1.0f - FLT_EPSILON)
-							continue;
-
-						if (!occlusionCulling || !instance->IsOccluded())
-						{
-							XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
-
-							XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
-							mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
-
-							if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
-							{
-								XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
-								mesh->AddRenderableInstancePrev(InstancePrev(tempMat), k, threadID);
-								instancePrevUpdated = true;
-							}
-
-							++k;
-						}
+						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
+						mesh->AddRenderableInstancePrev(InstancePrev(tempMat), k, threadID);
+						instancePrevUpdated = true;
 					}
+
+					++k;
 				}
-				if (k > 0)
+				if (k < 1)
+					continue;
+
+				mesh->UpdateRenderableInstances(k, threadID);
+				if (instancePrevUpdated)
 				{
-					mesh->UpdateRenderableInstances(k, threadID);
-					if (instancePrevUpdated)
-					{
-						mesh->UpdateRenderableInstancesPrev(k, threadID);
-					}
-
-
-					if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE)
-					{
-						GPUBuffer* vbs[] = {
-							&Mesh::impostorVBs[VPROP_POS],
-							&Mesh::impostorVBs[VPROP_TEX],
-							&mesh->instanceBuffer
-						};
-						UINT strides[] = {
-							sizeof(XMFLOAT4),
-							sizeof(XMFLOAT4),
-							sizeof(Instance)
-						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-						device->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_POS_TEX], threadID);
-						device->BindVS(vertexShaders[VSTYPE_OBJECT_SIMPLE], threadID);
-					}
-					else
-					{
-						GPUBuffer* vbs[] = {
-							&Mesh::impostorVBs[VPROP_POS],
-							&Mesh::impostorVBs[VPROP_NOR],
-							&Mesh::impostorVBs[VPROP_TEX],
-							&Mesh::impostorVBs[VPROP_POS],
-							&mesh->instanceBuffer,
-							&mesh->instanceBufferPrev,
-						};
-						UINT strides[] = {
-							sizeof(XMFLOAT4),
-							sizeof(XMFLOAT4),
-							sizeof(XMFLOAT4),
-							sizeof(XMFLOAT4),
-							sizeof(Instance),
-							sizeof(Instance),
-						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-						device->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-						device->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
-					}
-
-					const GPUResource* res[] = {
-						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
-						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
-						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
-						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
-						static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
-					};
-					device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-
-					if (wireRender)
-					{
-						device->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
-					}
-					else
-					{
-						switch (shaderType)
-						{
-						case SHADERTYPE_DEFERRED:
-							device->BindPS(pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP], threadID);
-							break;
-						case SHADERTYPE_FORWARD:
-							device->BindPS(pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP], threadID);
-							break;
-						case SHADERTYPE_TILEDFORWARD:
-							device->BindPS(pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP], threadID);
-							break;
-						case SHADERTYPE_DEPTHONLY:
-							device->BindPS(pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY], threadID);
-							break;
-						default:
-							device->BindPS(pixelShaders[PSTYPE_OBJECT_TEXTUREONLY], threadID);
-							break;
-						}
-					}
-
-					SetAlphaRef(0.75f, threadID);
-
-					device->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
+					mesh->UpdateRenderableInstancesPrev(k, threadID);
 				}
+
+				if (realVL == VLTYPE_OBJECT_POS_TEX)
+				{
+					GPUBuffer* vbs[] = {
+						&Mesh::impostorVBs[VPROP_POS],
+						&Mesh::impostorVBs[VPROP_TEX],
+						&mesh->instanceBuffer
+					};
+					UINT strides[] = {
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(Instance)
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+				}
+				else
+				{
+					GPUBuffer* vbs[] = {
+						&Mesh::impostorVBs[VPROP_POS],
+						&Mesh::impostorVBs[VPROP_NOR],
+						&Mesh::impostorVBs[VPROP_TEX],
+						&Mesh::impostorVBs[VPROP_POS],
+						&mesh->instanceBuffer,
+						&mesh->instanceBufferPrev,
+					};
+					UINT strides[] = {
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(XMFLOAT4),
+						sizeof(Instance),
+						sizeof(Instance),
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+				}
+
+				const GPUResource* res[] = {
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
+				};
+				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+
+				device->DrawInstanced(6 * 6, k, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
 
 			}
 		}
@@ -4049,11 +4045,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		HSTYPES prevHS = HSTYPE_NULL;
 		DSTYPES prevDS = DSTYPE_NULL;
 		PSTYPES prevPS = PSTYPE_NULL;
+		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
+		RSTYPES prevRS = RSTYPE_FRONT;
 		device->BindVS(nullptr, threadID);
 		device->BindGS(nullptr, threadID);
 		device->BindHS(nullptr, threadID);
 		device->BindDS(nullptr, threadID);
 		device->BindPS(nullptr, threadID);
+		device->BindPrimitiveTopology(prevTOPOLOGY, threadID);
+		device->BindRasterizerState(rasterizers[prevRS], threadID);
 
 		// Render meshes:
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
@@ -4066,8 +4066,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			const CulledObjectList& visibleInstances = iter->second;
 
-			float tessF = mesh->getTessellationFactor();
-			bool tessellatorRequested = tessF > 0 && tessellation;
+			const float tessF = mesh->getTessellationFactor();
+			const bool tessellatorRequested = tessF > 0 && tessellation;
+
+			PRIMITIVETOPOLOGY realTOPOLOGY = TRIANGLELIST;
+			RSTYPES realRS = RSTYPE_FRONT;
 
 			if (tessellatorRequested)
 			{
@@ -4075,90 +4078,84 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				tessCB.tessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
 				device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
 				device->BindConstantBufferHS(constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
-				device->BindPrimitiveTopology(PATCHLIST, threadID);
+				realTOPOLOGY = PATCHLIST;
 			}
-			else
-			{
-				device->BindPrimitiveTopology(TRIANGLELIST, threadID);
-			}
-
-			targetStencilRef = mesh->stencilRef;
 
 			if (shaderType == SHADERTYPE_VOXELIZE)
 			{
-				device->BindRasterizerState(rasterizers[RSTYPE_VOXELIZE], threadID);
+				realRS = RSTYPE_VOXELIZE;
 			}
 			else
 			{
 				if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 				{
-					if (!mesh->doubleSided)
-					{
-						device->BindRasterizerState(rasterizers[RSTYPE_SHADOW], threadID);
-					}
-					else
-					{
-						device->BindRasterizerState(rasterizers[RSTYPE_SHADOW_DOUBLESIDED], threadID);
-					}
+					realRS = mesh->doubleSided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW;
 				}
 				else
 				{
 					if (!mesh->doubleSided)
 					{
-						device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+						realRS = wireRender ? RSTYPE_WIRE : RSTYPE_FRONT;
 					}
 					else
 					{
-						device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_DOUBLESIDED], threadID);
+						realRS = wireRender ? RSTYPE_WIRE : RSTYPE_DOUBLESIDED;
 					}
 				}
 			}
+
+			if (prevTOPOLOGY != realTOPOLOGY)
+			{
+				prevTOPOLOGY = realTOPOLOGY;
+				device->BindPrimitiveTopology(realTOPOLOGY, threadID);
+			}
+			if (prevRS != realRS)
+			{
+				prevRS = realRS;
+				device->BindRasterizerState(rasterizers[realRS], threadID);
+			}
+
 
 			bool instancePrevUpdated = false;
 
 			int k = 0;
 			for (const Object* instance : visibleInstances) 
 			{
-				if (instance->emitterType != Object::EmitterType::EMITTER_INVISIBLE)
+				if (instance->emitterType == Object::EmitterType::EMITTER_INVISIBLE || (occlusionCulling && instance->IsOccluded()))
+					continue;
+
+				float dither = instance->transparency;
+				if (impostorRequest)
 				{
-					float dither = instance->transparency;
-					if (impostorRequest)
-					{
-						// fade out to impostor...
-						const float impostorThreshold = instance->bounds.getRadius();
-						float dist = wiMath::Distance(eye, instance->bounds.getCenter());
-						if (mesh->hasImpostor())
-							dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh->impostorDistance) / impostorThreshold, 0, 1));
-					}
-					if (dither > 1.0f - FLT_EPSILON)
-						continue;
-
-					if (!occlusionCulling || !instance->IsOccluded())
-					{
-						if (mesh->softBody || instance->isArmatureDeformed())
-							tempMat = __identityMat;
-						else
-							tempMat = instance->world;
-						mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
-
-						if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
-						{
-							if (mesh->softBody || instance->isArmatureDeformed())
-								tempMat = __identityMat;
-							else
-								tempMat = instance->worldPrev;
-							mesh->AddRenderableInstancePrev(InstancePrev(tempMat), k, threadID);
-							instancePrevUpdated = true;
-						}
-						
-						++k;
-					}
+					// fade out to impostor...
+					const float impostorThreshold = instance->bounds.getRadius();
+					float dist = wiMath::Distance(eye, instance->bounds.getCenter());
+					if (mesh->hasImpostor())
+						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh->impostorDistance) / impostorThreshold, 0, 1));
 				}
+				if (dither > 1.0f - FLT_EPSILON)
+					continue;
+
+				if (mesh->softBody || instance->isArmatureDeformed())
+					tempMat = __identityMat;
+				else
+					tempMat = instance->world;
+				mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
+
+				if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
+				{
+					if (mesh->softBody || instance->isArmatureDeformed())
+						tempMat = __identityMat;
+					else
+						tempMat = instance->worldPrev;
+					mesh->AddRenderableInstancePrev(InstancePrev(tempMat), k, threadID);
+					instancePrevUpdated = true;
+				}
+						
+				++k;
 			}
 			if (k < 1)
-			{
 				continue;
-			}
 
 			mesh->UpdateRenderableInstances(k, threadID);
 			if (instancePrevUpdated)
@@ -4287,18 +4284,22 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					boundVBType_Prev = boundVBType;
 
 					device->BindIndexBuffer(&subset.indexBuffer, threadID);
+					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 
+					UINT realStencilRef = mesh->stencilRef;
 					if (material->shadeless)
 					{
-						targetStencilRef = STENCILREF_SHADELESS;
+						realStencilRef = STENCILREF_SHADELESS;
 					}
-					if (material->subsurfaceScattering > 0)
+					else if (material->subsurfaceScattering > 0)
 					{
-						targetStencilRef = STENCILREF_SKIN;
+						realStencilRef = STENCILREF_SKIN;
 					}
-					device->BindDepthStencilState(depthStencils[targetDepthStencilState], targetStencilRef, threadID);
-
-					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
+					if (prevStencilRef != realStencilRef)
+					{
+						prevStencilRef = realStencilRef;
+						device->BindDepthStencilState(depthStencils[targetDepthStencilState], realStencilRef, threadID);
+					}
 
 					VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested);
 					if (prevVL != realVL)
@@ -4339,31 +4340,34 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						device->BindResourceDS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
 					}
 
-					PSTYPES realPS = GetPSTYPE(shaderType, material);
-					if (prevPS != realPS)
+					if (wireRender)
 					{
-						prevPS = realPS;
-						device->BindPS(pixelShaders[realPS], threadID);
+						prevPS = PSTYPE_OBJECT_SIMPLEST;
+						device->BindPS(pixelShaders[prevPS], threadID);
 					}
-					if (realPS != PSTYPE_NULL)
+					else
 					{
-						const GPUResource* res[] = {
-							static_cast<const GPUResource*>(material->GetBaseColorMap()),
-							static_cast<const GPUResource*>(material->GetNormalMap()),
-							static_cast<const GPUResource*>(material->GetRoughnessMap()),
-							static_cast<const GPUResource*>(material->GetReflectanceMap()),
-							static_cast<const GPUResource*>(material->GetMetalnessMap()),
-							static_cast<const GPUResource*>(material->GetDisplacementMap()),
-						};
-						device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+						PSTYPES realPS = GetPSTYPE(shaderType, material);
+						if (prevPS != realPS)
+						{
+							prevPS = realPS;
+							device->BindPS(pixelShaders[realPS], threadID);
+						}
+						if (realPS != PSTYPE_NULL)
+						{
+							const GPUResource* res[] = {
+								static_cast<const GPUResource*>(material->GetBaseColorMap()),
+								static_cast<const GPUResource*>(material->GetNormalMap()),
+								static_cast<const GPUResource*>(material->GetRoughnessMap()),
+								static_cast<const GPUResource*>(material->GetReflectanceMap()),
+								static_cast<const GPUResource*>(material->GetMetalnessMap()),
+								static_cast<const GPUResource*>(material->GetDisplacementMap()),
+							};
+							device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+						}
 					}
 
 					SetAlphaRef(material->alphaRef, threadID);
-
-					if (wireRender)
-					{
-						device->BindPS(pixelShaders[PSTYPE_OBJECT_SIMPLEST], threadID);
-					}
 
 					device->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, threadID);
 				}
