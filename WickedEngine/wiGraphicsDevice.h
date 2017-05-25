@@ -83,6 +83,7 @@ namespace wiGraphicsTypes
 		}
 		static FORMAT GetBackBufferFormat();
 
+
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) = 0;
@@ -120,7 +121,7 @@ namespace wiGraphicsTypes
 		virtual void BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindConstantBufferCS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, int slot, int count, const UINT* strides, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID) = 0;

@@ -2372,7 +2372,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-		GetDevice()->BindIndexBuffer(&Cube::indexBuffer,threadID);
+		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT,threadID);
 
 		MiscCB sb;
 		for (auto& x : cubes)
@@ -2690,7 +2690,7 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 						sizeof(XMFLOAT4),
 					};
 					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-					GetDevice()->BindIndexBuffer(&y.indexBuffer, threadID);
+					GetDevice()->BindIndexBuffer(&y.indexBuffer, y.GetIndexFormat(), threadID);
 					GetDevice()->DrawIndexed((int)y.subsetIndices.size(), threadID);
 				}
 			}
@@ -3941,7 +3941,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					// Bind the static impostor params once:
 					impostorRenderSetup = true;
 					device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(Material::MaterialCB), threadID);
-					device->BindIndexBuffer(nullptr, threadID);
 					device->BindPrimitiveTopology(TRIANGLELIST, threadID);
 					device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
 					device->BindVertexLayout(vertexLayouts[realVL], threadID);
@@ -4283,7 +4282,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 					boundVBType_Prev = boundVBType;
 
-					device->BindIndexBuffer(&subset.indexBuffer, threadID);
+					device->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), threadID);
 					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 
 					UINT realStencilRef = mesh->stencilRef;
@@ -6044,7 +6043,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			}
 			if (!subset.material->IsTransparent() && !subset.material->isSky && !subset.material->water)
 			{
-				GetDevice()->BindIndexBuffer(&subset.indexBuffer, threadID);
+				GetDevice()->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), threadID);
 
 				GetDevice()->BindConstantBufferPS(&subset.material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 

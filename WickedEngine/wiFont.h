@@ -3,7 +3,8 @@
 #include "wiGraphicsAPI.h"
 #include "ConstantBufferMapping.h"
 #include "wiColor.h"
-#define MAX_TEXT 20000
+
+static const uint16_t MAX_TEXT = 10000;
 
 // Do not alter order because it is bound to lua manually
 enum wiFontAlign

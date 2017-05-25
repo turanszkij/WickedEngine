@@ -1615,6 +1615,7 @@ void Material::MaterialCB::Create(const Material& mat)
 MeshSubset::MeshSubset()
 {
 	material = nullptr;
+	indexFormat = INDEXFORMAT_16BIT;
 }
 MeshSubset::~MeshSubset()
 {
@@ -2065,12 +2066,30 @@ void Mesh::CreateBuffers(Object* object)
 			}
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
-			bd.ByteWidth = (UINT)(sizeof(unsigned int) * subset.subsetIndices.size());
 			bd.BindFlags = BIND_INDEX_BUFFER;
 			bd.CPUAccessFlags = 0;
 			ZeroMemory(&InitData, sizeof(InitData));
-			InitData.pSysMem = subset.subsetIndices.data();
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &subset.indexBuffer);
+			switch (subset.GetIndexFormat())
+			{
+			case INDEXFORMAT_16BIT:
+				{
+					vector<uint16_t> tmp;
+					tmp.reserve(subset.subsetIndices.size());
+					for (auto& x : subset.subsetIndices)
+					{
+						tmp.push_back(static_cast<uint16_t>(x));
+					}
+					bd.ByteWidth = (UINT)(sizeof(uint16_t) * tmp.size());
+					InitData.pSysMem = tmp.data();
+					wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &subset.indexBuffer);
+				}
+				break;
+			default:
+				bd.ByteWidth = (UINT)(sizeof(unsigned int) * subset.subsetIndices.size());
+				InitData.pSysMem = subset.subsetIndices.data();
+				wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &subset.indexBuffer);
+				break;
+			}
 		}
 
 
@@ -2288,6 +2307,11 @@ void Mesh::CreateVertexArrays()
 
 		MeshSubset& subset = subsets[materialIndex];
 		subset.subsetIndices.push_back(index);
+
+		if (index >= 65536)
+		{
+			subset.indexFormat = INDEXFORMAT_32BIT;
+		}
 	}
 
 	arraysComplete = true;

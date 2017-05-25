@@ -299,10 +299,14 @@ struct MeshSubset
 	Material* material;
 	wiGraphicsTypes::GPUBuffer	indexBuffer;
 
-	std::vector<unsigned int>		subsetIndices;
+	std::vector<unsigned int>	subsetIndices;
+
+	wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat;
 
 	MeshSubset();
 	~MeshSubset();
+
+	wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return indexFormat; }
 };
 struct Mesh
 {

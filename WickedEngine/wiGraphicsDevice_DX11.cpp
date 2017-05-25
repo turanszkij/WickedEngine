@@ -3057,10 +3057,10 @@ void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer* const *vertexBuffer
 	}
 	deviceContexts[threadID]->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res, strides, (UINT*)__nullBlob);
 }
-void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, GRAPHICSTHREAD threadID)
 {
 	ID3D11Buffer* res = indexBuffer != nullptr ? indexBuffer->resource_DX11 : nullptr;
-	deviceContexts[threadID]->IASetIndexBuffer(res, DXGI_FORMAT_R32_UINT, 0);
+	deviceContexts[threadID]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), 0);
 }
 void GraphicsDevice_DX11::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
 {

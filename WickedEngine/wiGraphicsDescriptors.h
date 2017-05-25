@@ -282,6 +282,11 @@ namespace wiGraphicsTypes
 		GPU_QUERY_TYPE_TIMESTAMP,			// retrieve time point of gpu execution
 		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,	// timestamp frequency information
 	};
+	enum INDEXBUFFER_FORMAT
+	{
+		INDEXFORMAT_16BIT,
+		INDEXFORMAT_32BIT,
+	};
 
 	// Flags ////////////////////////////////////////////
 	enum CLEAR_FLAG

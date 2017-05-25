@@ -102,7 +102,7 @@ namespace wiGraphicsTypes
 		virtual void BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) override;
 		virtual void BindConstantBufferCS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) override;
 		virtual void BindVertexBuffers(const GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, GRAPHICSTHREAD threadID) override;
-		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, GRAPHICSTHREAD threadID) override;
+		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, GRAPHICSTHREAD threadID) override;
 		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID) override;
 		virtual void BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID) override;
 		virtual void BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID) override;

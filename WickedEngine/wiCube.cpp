@@ -64,7 +64,7 @@ void Cube::SetUpVertices()
 	//	verts=NULL;
 	//}
 
-	unsigned int indices[]={
+	uint16_t indices[]={
 		0,1,1,2,0,3,0,4,1,5,4,5,
 		5,6,4,7,2,6,3,7,2,3,6,7
 	};

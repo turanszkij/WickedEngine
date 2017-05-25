@@ -235,9 +235,9 @@ void wiFont::LoadVertexBuffer()
 }
 void wiFont::LoadIndices()
 {
-	std::vector<unsigned long>indices;
+	std::vector<uint16_t>indices;
 	indices.resize(MAX_TEXT * 6);
-	for (unsigned long i = 0; i < MAX_TEXT * 4; i += 4) {
+	for (uint16_t i = 0; i < MAX_TEXT * 4; i += 4) {
 		indices[i / 4 * 6 + 0] = i / 4 * 4 + 0;
 		indices[i / 4 * 6 + 1] = i / 4 * 4 + 2;
 		indices[i / 4 * 6 + 2] = i / 4 * 4 + 1;
@@ -249,7 +249,7 @@ void wiFont::LoadIndices()
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
     bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(unsigned long) * MAX_TEXT * 6;
+	bd.ByteWidth = sizeof(uint16_t) * MAX_TEXT * 6;
     bd.BindFlags = BIND_INDEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	SubresourceData InitData;
@@ -299,7 +299,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-		device->BindIndexBuffer(indexBuffer, threadID);
+		device->BindIndexBuffer(indexBuffer, INDEXFORMAT_16BIT, threadID);
 
 		device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND0, threadID);
 

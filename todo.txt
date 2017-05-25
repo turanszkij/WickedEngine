@@ -15,9 +15,6 @@ TODOS:		|
 - Normals should be transformed by inverse transpose world matrix when it is non uniformly scaled
 	But this complicates the instance buffer updating and requires additional bandwidth and also skeletal animations
 
-- Index buffers could be 16 bit in many cases especially on mobile platforms
-	This is an easy extension but the code will be uglier and harder to maintain. Now every index buffer is 32 bit.
-
 - Rewrite postprocess pipeline
 	Some stack based post process pipeline would be the nicest, the current one is very explicit and hard to debug
 
