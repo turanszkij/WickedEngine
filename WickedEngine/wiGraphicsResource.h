@@ -21,7 +21,6 @@ struct ID3D11BlendState;
 struct ID3D11DepthStencilState;
 struct ID3D11RasterizerState;
 struct ID3D11RasterizerState2;
-struct ID3D11ClassLinkage;
 struct ID3D11RenderTargetView;
 struct ID3D11DepthStencilView;
 struct ID3D11Texture1D;
@@ -210,18 +209,6 @@ namespace wiGraphicsTypes
 
 		bool IsValid() { return resource_DX11 != nullptr; }
 		RasterizerStateDesc GetDesc() { return desc; }
-	};
-
-	class ClassLinkage
-	{
-		friend class GraphicsDevice_DX11;
-	private:
-		ID3D11ClassLinkage*	resource_DX11;
-	public:
-		ClassLinkage();
-		~ClassLinkage();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	struct VertexShaderInfo {

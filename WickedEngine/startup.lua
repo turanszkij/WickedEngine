@@ -54,12 +54,15 @@ runProcess(function()
 
 		if(input.Press(VK_F7)) then
 			-- LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\Scene\\Sponza\\","sponza");
-			local row = 32
-			for i = 1, row do
-				for j = 1, row do
-					LoadModel("C:\\PROJECTS\\BLENDER\\Stormtrooper\\", "Stormtrooper", "_"..i..j,matrix.Translation(Vector(i*2-row,0,j*2-row)));
+			runProcess(function()
+				local row = 16
+				for i = 1, row do
+					for j = 1, row do
+						LoadModel("C:\\PROJECTS\\BLENDER\\Stormtrooper\\", "Stormtrooper", "_"..i..j,matrix.Translation(Vector(i*2-row,0,j*2-row)));
+						waitSeconds(0.05)
+					end
 				end
-			end
+			end)
 		end
 		
 		update()

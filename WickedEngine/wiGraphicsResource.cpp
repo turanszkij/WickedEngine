@@ -137,15 +137,6 @@ namespace wiGraphicsTypes
 		SAFE_RELEASE(resource_DX11);
 	}
 
-	ClassLinkage::ClassLinkage()
-	{
-		SAFE_INIT(resource_DX11);
-	}
-	ClassLinkage::~ClassLinkage()
-	{
-		SAFE_RELEASE(resource_DX11);
-	}
-
 	VertexShaderInfo::VertexShaderInfo()
 	{
 		SAFE_INIT(vertexShader);

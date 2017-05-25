@@ -123,7 +123,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 				VertexShaderInfo* vertexShaderInfo = new VertexShaderInfo;
 				vertexShaderInfo->vertexShader = new VertexShader;
 				vertexShaderInfo->vertexLayout = new VertexLayout;
-				wiRenderer::GetDevice()->CreateVertexShader(buffer, bufferSize, NULL, vertexShaderInfo->vertexShader);
+				wiRenderer::GetDevice()->CreateVertexShader(buffer, bufferSize, vertexShaderInfo->vertexShader);
 				if (vertexLayoutDesc != nullptr && elementCount > 0){
 					wiRenderer::GetDevice()->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, vertexShaderInfo->vertexLayout);
 				}
@@ -141,7 +141,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 			size_t bufferSize;
 			if (wiHelper::readByteData(nameStr, &buffer, bufferSize)){
 				PixelShader* shader = new PixelShader;
-				wiRenderer::GetDevice()->CreatePixelShader(buffer, bufferSize, nullptr, shader);
+				wiRenderer::GetDevice()->CreatePixelShader(buffer, bufferSize, shader);
 				delete[] buffer;
 				success = shader;
 			}
@@ -156,10 +156,10 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 			size_t bufferSize;
 			if (wiHelper::readByteData(nameStr, &buffer, bufferSize)){
 				GeometryShader* shader = new GeometryShader;
-				wiRenderer::GetDevice()->CreateGeometryShader(buffer, bufferSize, nullptr, shader);
+				wiRenderer::GetDevice()->CreateGeometryShader(buffer, bufferSize, shader);
 				if (streamOutDecl != nullptr && elementCount > 0){
 					wiRenderer::GetDevice()->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
-						elementCount, NULL, 0, SO_NO_RASTERIZED_STREAM, NULL, shader);
+						elementCount, nullptr, 0, SO_NO_RASTERIZED_STREAM, shader);
 				}
 				delete[] buffer;
 				success = shader;
@@ -175,7 +175,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 			size_t bufferSize;
 			if (wiHelper::readByteData(nameStr, &buffer, bufferSize)){
 				HullShader* shader = new HullShader;
-				wiRenderer::GetDevice()->CreateHullShader(buffer, bufferSize, nullptr, shader);
+				wiRenderer::GetDevice()->CreateHullShader(buffer, bufferSize, shader);
 				delete[] buffer;
 				success = shader;
 			}
@@ -190,7 +190,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 			size_t bufferSize;
 			if (wiHelper::readByteData(nameStr, &buffer, bufferSize)){
 				DomainShader* shader = new DomainShader;
-				wiRenderer::GetDevice()->CreateDomainShader(buffer, bufferSize, nullptr, shader);
+				wiRenderer::GetDevice()->CreateDomainShader(buffer, bufferSize, shader);
 				delete[] buffer;
 				success = shader;
 			}
@@ -205,7 +205,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 			size_t bufferSize;
 			if (wiHelper::readByteData(nameStr, &buffer, bufferSize)) {
 				ComputeShader* shader = new ComputeShader;
-				wiRenderer::GetDevice()->CreateComputeShader(buffer, bufferSize, nullptr, shader);
+				wiRenderer::GetDevice()->CreateComputeShader(buffer, bufferSize, shader);
 				delete[] buffer;
 				success = shader;
 			}

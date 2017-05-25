@@ -2403,20 +2403,20 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, VertexShader *pVertexShader)
+HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 {
-	return device->CreateVertexShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pVertexShader->resource_DX11);
+	return device->CreateVertexShader(pShaderBytecode, BytecodeLength, nullptr, &pVertexShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, PixelShader *pPixelShader)
+HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 {
-	return device->CreatePixelShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pPixelShader->resource_DX11);
+	return device->CreatePixelShader(pShaderBytecode, BytecodeLength, nullptr, &pPixelShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, GeometryShader *pGeometryShader)
+HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 {
-	return device->CreateGeometryShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pGeometryShader->resource_DX11);
+	return device->CreateGeometryShader(pShaderBytecode, BytecodeLength, nullptr, &pGeometryShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateGeometryShaderWithStreamOutput(const void *pShaderBytecode, SIZE_T BytecodeLength, const StreamOutDeclaration *pSODeclaration,
-	UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, ClassLinkage* pClassLinkage, GeometryShader *pGeometryShader)
+	UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, GeometryShader *pGeometryShader)
 {
 	D3D11_SO_DECLARATION_ENTRY* decl = new D3D11_SO_DECLARATION_ENTRY[NumEntries];
 	for (UINT i = 0; i < NumEntries; ++i)
@@ -2433,23 +2433,23 @@ HRESULT GraphicsDevice_DX11::CreateGeometryShaderWithStreamOutput(const void *pS
 		RasterizedStream = D3D11_SO_NO_RASTERIZED_STREAM;
 
 	HRESULT hr = device->CreateGeometryShaderWithStreamOutput(pShaderBytecode, BytecodeLength, decl, NumEntries, pBufferStrides,
-		NumStrides, RasterizedStream, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pGeometryShader->resource_DX11);
+		NumStrides, RasterizedStream, nullptr, &pGeometryShader->resource_DX11);
 
 	SAFE_DELETE_ARRAY(decl);
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, HullShader *pHullShader)
+HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 {
-	return device->CreateHullShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pHullShader->resource_DX11);
+	return device->CreateHullShader(pShaderBytecode, BytecodeLength, nullptr, &pHullShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, DomainShader *pDomainShader)
+HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 {
-	return device->CreateDomainShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pDomainShader->resource_DX11);
+	return device->CreateDomainShader(pShaderBytecode, BytecodeLength, nullptr, &pDomainShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ClassLinkage* pClassLinkage, ComputeShader *pComputeShader)
+HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 {
-	return device->CreateComputeShader(pShaderBytecode, BytecodeLength, (pClassLinkage == nullptr ? nullptr : pClassLinkage->resource_DX11), &pComputeShader->resource_DX11);
+	return device->CreateComputeShader(pShaderBytecode, BytecodeLength, nullptr, &pComputeShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 {
