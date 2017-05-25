@@ -17,8 +17,8 @@ Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
 Devblog: https://turanszkij.wordpress.com/
 
 ### Platforms:
-- Windows PC Desktop (tested for version 0.11.0)
-- Universal Windows (tested for version 0.9.11)
+- Windows PC Desktop (validated version 0.11.60)
+- Universal Windows (validated version 0.11.60)
 
 ### Requirements:
 
@@ -27,7 +27,7 @@ Devblog: https://turanszkij.wordpress.com/
 - Windows SDK
 - DirectX11 SDK
 
-(Windows 7 support dropped from version 0.11.0!)
+(Windows 7 support discontinued from version 0.11.0!)
 
 
 ### Hardware: 

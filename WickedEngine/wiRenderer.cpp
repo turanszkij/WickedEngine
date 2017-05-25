@@ -2107,6 +2107,10 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 			for (Object* instance : visibleInstances)
 			{
 				GPUQuery& query = instance->occlusionQuery;
+				if (!query.IsValid())
+				{
+					continue;
+				}
 
 				if (instance->bounds.intersects(getCamera()->translation))
 				{
@@ -2167,6 +2171,11 @@ void wiRenderer::OcclusionCulling_Read()
 			for (Object* instance : visibleInstances)
 			{
 				GPUQuery& query = instance->occlusionQuery;
+				if (!query.IsValid())
+				{
+					continue;
+				}
+
 				while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
 			}
 		}
@@ -5799,11 +5808,13 @@ void wiRenderer::LoadWorldInfo(const std::string& dir, const std::string& name)
 }
 void wiRenderer::LoadDefaultLighting()
 {
+	GetScene().worldInfo.ambient = XMFLOAT3(0.3f, 0.3f, 0.3f);
+
 	Light* defaultLight = new Light();
 	defaultLight->name = "_WickedEngine_DefaultLight_";
 	defaultLight->SetType(Light::DIRECTIONAL);
 	defaultLight->color = XMFLOAT4(1, 1, 1, 1);
-	defaultLight->enerDis = XMFLOAT4(1, 0, 0, 0);
+	defaultLight->enerDis = XMFLOAT4(3, 0, 0, 0);
 	XMStoreFloat4(&defaultLight->rotation_rest, XMQuaternionRotationRollPitchYaw(0, -XM_PIDIV4, XM_PIDIV4));
 	defaultLight->UpdateTransform();
 	defaultLight->UpdateLight();

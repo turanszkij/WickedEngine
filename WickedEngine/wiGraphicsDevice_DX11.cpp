@@ -2589,6 +2589,10 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 }
 HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 {
+	HRESULT hr = E_FAIL;
+
+#ifndef _ARM // phone actually crashes on createquery :(
+
 	pQuery->desc = *pDesc;
 	pQuery->async_frameshift = pQuery->desc.async_latency;
 
@@ -2608,7 +2612,6 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 		desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
 	}
 
-	HRESULT hr = E_FAIL;
 	if (pQuery->desc.async_latency > 0)
 	{
 		pQuery->resource_DX11.resize(pQuery->desc.async_latency + 1);
@@ -2626,6 +2629,8 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 		hr = device->CreateQuery(&desc, &pQuery->resource_DX11[0]);
 		assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
 	}
+
+#endif // WINSTORE_SUPPORT
 
 	return hr;
 }
@@ -2707,7 +2712,7 @@ void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *p
 		}
 		else
 		{
-			assert(ppRenderTargets[i]->additionalRTVs_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+			assert(ppRenderTargets[i]->additionalRTVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
 			renderTargetViews[i] = ppRenderTargets[i]->additionalRTVs_DX11[arrayIndex];
 		}
 	}
@@ -2722,7 +2727,7 @@ void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *p
 		}
 		else
 		{
-			assert(depthStencilTexture->additionalDSVs_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+			assert(depthStencilTexture->additionalDSVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
 			depthStencilView = depthStencilTexture->additionalDSVs_DX11[arrayIndex];
 		}
 	}
@@ -2751,7 +2756,7 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRen
 		}
 		else
 		{
-			assert(ppRenderTargets[i]->additionalRTVs_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+			assert(ppRenderTargets[i]->additionalRTVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
 			renderTargetViews[i] = ppRenderTargets[i]->additionalRTVs_DX11[arrayIndex];
 		}
 	}
@@ -2766,7 +2771,7 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRen
 		}
 		else
 		{
-			assert(depthStencilTexture->additionalDSVs_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+			assert(depthStencilTexture->additionalDSVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
 			depthStencilView = depthStencilTexture->additionalDSVs_DX11[arrayIndex];
 		}
 	}
@@ -2781,7 +2786,7 @@ void GraphicsDevice_DX11::ClearRenderTarget(Texture* pTexture, const FLOAT Color
 	}
 	else
 	{
-		assert(pTexture->additionalRTVs_DX11.size() > arrayIndex && "Invalid rendertarget arrayIndex!");
+		assert(pTexture->additionalRTVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
 		deviceContexts[threadID]->ClearRenderTargetView(pTexture->additionalRTVs_DX11[arrayIndex], ColorRGBA);
 	}
 }
@@ -2799,7 +2804,7 @@ void GraphicsDevice_DX11::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags
 	}
 	else
 	{
-		assert(pTexture->additionalDSVs_DX11.size() > arrayIndex && "Invalid depthstencil arrayIndex!");
+		assert(pTexture->additionalDSVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
 		deviceContexts[threadID]->ClearDepthStencilView(pTexture->additionalDSVs_DX11[arrayIndex], _flags, Depth, Stencil);
 	}
 }
@@ -2813,7 +2818,7 @@ void GraphicsDevice_DX11::BindResourcePS(const GPUResource* resource, int slot, 
 		}
 		else
 		{
-			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			assert(resource->additionalSRVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 			deviceContexts[threadID]->PSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
 		}
 	}
@@ -2828,7 +2833,7 @@ void GraphicsDevice_DX11::BindResourceVS(const GPUResource* resource, int slot, 
 		}
 		else
 		{
-			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			assert(resource->additionalSRVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 			deviceContexts[threadID]->VSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
 		}
 	}
@@ -2843,7 +2848,7 @@ void GraphicsDevice_DX11::BindResourceGS(const GPUResource* resource, int slot, 
 		}
 		else
 		{
-			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			assert(resource->additionalSRVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 			deviceContexts[threadID]->GSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
 		}
 	}
@@ -2858,7 +2863,7 @@ void GraphicsDevice_DX11::BindResourceDS(const GPUResource* resource, int slot, 
 		}
 		else
 		{
-			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			assert(resource->additionalSRVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 			deviceContexts[threadID]->DSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
 		}
 	}
@@ -2873,7 +2878,7 @@ void GraphicsDevice_DX11::BindResourceHS(const GPUResource* resource, int slot, 
 		}
 		else
 		{
-			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			assert(resource->additionalSRVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 			deviceContexts[threadID]->HSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
 		}
 	}
@@ -2888,7 +2893,7 @@ void GraphicsDevice_DX11::BindResourceCS(const GPUResource* resource, int slot, 
 		}
 		else
 		{
-			assert(resource->additionalSRVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			assert(resource->additionalSRVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 			deviceContexts[threadID]->CSSetShaderResources(slot, 1, &resource->additionalSRVs_DX11[arrayIndex]);
 		}
 	}
@@ -2963,7 +2968,7 @@ void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUUnorderedResour
 		}
 		else
 		{
-			assert(resource->additionalUAVs_DX11.size() > arrayIndex && "Invalid arrayIndex!");
+			assert(resource->additionalUAVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 			deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->additionalUAVs_DX11[arrayIndex], nullptr);
 		}
 	}
