@@ -464,9 +464,10 @@ struct Object : public Streamable, public Transform
 
 	int physicsObjectID;
 
-	// occlusion result
-	wiGraphicsTypes::GPUQuery occlusionQuery;
-	bool skipOcclusionQuery;
+	// occlusion result history bitfield (32 bit->32 frame history)
+	uint32_t occlusionHistory;
+	// occlusion query pool index
+	int occlusionQueryID;
 
 	// Is it deformed with an armature?
 	bool isArmatureDeformed() const

@@ -64,6 +64,7 @@ void Editor::Initialize()
 	//wiRenderer::SetPointLightShadowProps(3, 512);
 	//wiRenderer::SetSpotLightShadowProps(3, 512);
 	wiRenderer::physicsEngine = new wiBULLET();
+	wiRenderer::SetOcclusionCullingEnabled(true);
 	wiHairParticle::Settings(400, 1000, 2000);
 
 

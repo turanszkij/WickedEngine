@@ -3832,14 +3832,8 @@ void Object::init()
 	color = XMFLOAT3(1, 1, 1);
 	trailDistortTex = nullptr;
 	trailTex = nullptr;
-	skipOcclusionQuery = true;
-
-	GPUQueryDesc desc;
-	desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
-	desc.MiscFlags = 0;
-	desc.async_latency = 1;
-	wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQuery);
-	occlusionQuery.result_passed = TRUE;
+	occlusionHistory = 0xFFFFFFFF;
+	occlusionQueryID = -1;
 }
 void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 	if (mesh != nullptr)
@@ -3968,7 +3962,11 @@ int Object::GetRenderTypes() const
 }
 bool Object::IsOccluded() const
 {
-	return !skipOcclusionQuery && occlusionQuery.result_passed == FALSE;
+	// Perform a conservative occlusion test:
+	// If it is visible in any frames in the history, it is determined visible in this frame
+	// But if all queries failed in the history, it is occluded.
+	// If it pops up for a frame after occluded, it is visible again for some frames
+	return ((occlusionQueryID >= 0) && (occlusionHistory & 0xFFFFFFFF) == 0);
 }
 XMMATRIX Object::GetOBB() const
 {

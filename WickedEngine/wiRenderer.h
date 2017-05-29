@@ -307,6 +307,8 @@ protected:
 		{}
 	} static voxelSceneData;
 
+	static wiGraphicsTypes::GPUQuery occlusionQueries[256];
+
 public:
 	static std::string SHADERPATH;
 
@@ -356,7 +358,7 @@ public:
 	static bool GetDebugLightCulling() { return debugLightCulling; }
 	static void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
 	static bool GetAdvancedLightCulling() { return advancedLightCulling; }
-	static void SetOcclusionCullingEnabled(bool enabled) { occlusionCulling = enabled; }
+	static void SetOcclusionCullingEnabled(bool enabled); // also inits query pool!
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static void SetTemporalAAEnabled(bool enabled) { temporalAA = enabled; }
 	static bool GetTemporalAAEnabled() { return temporalAA; }

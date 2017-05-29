@@ -61,11 +61,12 @@ float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
 XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
 float wiRenderer::RESOLUTIONSCALE = 1.0f;
+GPUQuery wiRenderer::occlusionQueries[];
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
-bool wiRenderer::occlusionCulling = true;
+bool wiRenderer::occlusionCulling = false;
 bool wiRenderer::temporalAA = false, wiRenderer::temporalAADEBUG = false;
 wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
 int wiRenderer::visibleCount;
@@ -2082,6 +2083,8 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 	wiProfiler::GetInstance().BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
 
+	int queryID = 0;
+
 	if (!culledRenderer.empty())
 	{
 		GetDevice()->EventBegin("Occlusion Culling Render", threadID);
@@ -2094,10 +2097,12 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		GetDevice()->BindPS(nullptr, threadID);
 		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
+		int queryID = 0;
+
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 		{
 			Mesh* mesh = iter->first;
-			if (!mesh->renderable || mesh->softBody) // todo: correct softbody
+			if (!mesh->renderable)
 			{
 				continue;
 			}
@@ -2106,25 +2111,30 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 			MiscCB cb;
 			for (Object* instance : visibleInstances)
 			{
-				GPUQuery& query = instance->occlusionQuery;
+				if(queryID >= ARRAYSIZE(occlusionQueries))
+				{
+					instance->occlusionQueryID = -1; // assign an invalid id from the pool
+					continue;
+				}
+				
+				// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
+				GPUQuery& query = occlusionQueries[queryID];
 				if (!query.IsValid())
 				{
 					continue;
 				}
 
-				if (instance->bounds.intersects(getCamera()->translation))
+				if (instance->bounds.intersects(getCamera()->translation) || mesh->softBody) // todo: correct softbody
 				{
-					// if the camera is inside the bounding box, then the object is most likely visible, so skip occlusion query and mark it as visible:
-					query.result_passed = true;
-					instance->skipOcclusionQuery = true;
+					// camera is inside the instance, mark it as visible in this frame:
+					instance->occlusionHistory |= 1;
 				}
 				else
 				{
-					if (instance->skipOcclusionQuery)
-					{
-						instance->skipOcclusionQuery = false;
-						continue;
-					}
+					// only query for occlusion if the camera is outside the instance
+					instance->occlusionQueryID = queryID; // just assign the id from the pool
+					queryID++;
+
 					// previous frame view*projection because these are drawn against the previous depth buffer:
 					cb.mTransform = XMMatrixTranspose(instance->GetOBB()*prevFrameCam->GetViewProjection()); 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
@@ -2170,13 +2180,29 @@ void wiRenderer::OcclusionCulling_Read()
 
 			for (Object* instance : visibleInstances)
 			{
-				GPUQuery& query = instance->occlusionQuery;
+				instance->occlusionHistory <<= 1; // advance history by 1 frame
+				if (instance->occlusionQueryID < 0)
+				{
+					instance->occlusionHistory |= 1; // mark this frame as visible
+					continue;
+				}
+				GPUQuery& query = occlusionQueries[instance->occlusionQueryID];
 				if (!query.IsValid())
 				{
+					instance->occlusionHistory |= 1; // mark this frame as visible
 					continue;
 				}
 
 				while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
+
+				if (query.result_passed == TRUE)
+				{
+					instance->occlusionHistory |= 1; // mark this frame as visible
+				}
+				else
+				{
+					// leave this frame as occluded
+				}
 			}
 		}
 
@@ -5636,7 +5662,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		{
 			continue;
 		}
-		if (onlyVisible && object->occlusionQuery.result_passed != TRUE)
+		if (onlyVisible && object->IsOccluded())
 		{
 			continue;
 		}
@@ -6205,4 +6231,28 @@ void wiRenderer::Remove(EnvironmentProbe* value)
 		GetScene().environmentProbes.remove(value);
 		value->detach();
 	}
+}
+
+
+void wiRenderer::SetOcclusionCullingEnabled(bool value)
+{
+	static bool initialized = false;
+
+	if (!initialized && value == true)
+	{
+		initialized = true;
+
+		GPUQueryDesc desc;
+		desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
+		desc.MiscFlags = 0;
+		desc.async_latency = 1;
+
+		for (int i = 0; i < ARRAYSIZE(occlusionQueries); ++i)
+		{
+			wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQueries[i]);
+			occlusionQueries[i].result_passed = TRUE;
+		}
+	}
+
+	occlusionCulling = value;
 }

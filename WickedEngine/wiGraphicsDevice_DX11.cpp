@@ -2591,8 +2591,6 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 {
 	HRESULT hr = E_FAIL;
 
-#ifndef _ARM // phone actually crashes on createquery :(
-
 	pQuery->desc = *pDesc;
 	pQuery->async_frameshift = pQuery->desc.async_latency;
 
@@ -2629,8 +2627,6 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 		hr = device->CreateQuery(&desc, &pQuery->resource_DX11[0]);
 		assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
 	}
-
-#endif // WINSTORE_SUPPORT
 
 	return hr;
 }
