@@ -357,10 +357,10 @@ void wiHairParticle::Generate()
 
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = USAGE_DYNAMIC;
+	bd.Usage = USAGE_IMMUTABLE;
 	bd.ByteWidth = (UINT)(sizeof(Point) * points.size());
 	bd.BindFlags = BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.CPUAccessFlags = 0;
 	SubresourceData data = {};
 	data.pSysMem = points.data();
 	vb = new GPUBuffer;
