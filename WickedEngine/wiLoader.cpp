@@ -2256,7 +2256,7 @@ void Mesh::CreateImpostorVB()
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
 		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(impostorVertices);
+		bd.ByteWidth = sizeof(impostorVertices[VPROP_POS]);
 		bd.BindFlags = BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		SubresourceData InitData;
