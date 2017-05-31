@@ -2259,9 +2259,11 @@ void Mesh::CreateImpostorVB()
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
 		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(impostorVertices);
-		bd.BindFlags = BIND_VERTEX_BUFFER;
+		bd.ByteWidth = sizeof(impostorVertices[VPROP_POS]);
+		bd.BindFlags = BIND_SHADER_RESOURCE;
 		bd.CPUAccessFlags = 0;
+		bd.StructureByteStride = sizeof(XMFLOAT4);
+		bd.Format = FORMAT_R32G32B32A32_FLOAT;
 		SubresourceData InitData;
 		ZeroMemory(&InitData, sizeof(InitData));
 		InitData.pSysMem = impostorVertices[VPROP_POS];

@@ -3868,7 +3868,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 					device->BindPrimitiveTopology(TRIANGLELIST, threadID);
 					device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
-					device->BindVertexLayout(vertexLayouts[realVL], threadID);
+					device->BindVertexLayout(nullptr, threadID);
 					device->BindVS(vertexShaders[realVS], threadID);
 					device->BindPS(pixelShaders[realPS], threadID);
 					SetAlphaRef(0.75f, threadID);
