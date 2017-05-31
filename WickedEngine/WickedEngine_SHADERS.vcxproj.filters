@@ -147,9 +147,6 @@
     <FxCompile Include="pointspriteGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
-    <FxCompile Include="sOGS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
     <FxCompile Include="bloomSeparatePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -313,9 +310,6 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="skyVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="sOVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="spotLightVS.hlsl">
