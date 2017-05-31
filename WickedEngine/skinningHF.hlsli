@@ -1,7 +1,5 @@
 #include "globals.hlsli"
 
-#define SKINNING_ON
-
 struct Bone
 {
 	float4x4 pose, prev;

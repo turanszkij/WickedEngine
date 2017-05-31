@@ -572,7 +572,8 @@ namespace wiGraphicsTypes
 		UINT BindFlags;
 		UINT CPUAccessFlags;
 		UINT MiscFlags;
-		UINT StructureByteStride;
+		UINT StructureByteStride; // needed for typed and structured buffer types!
+		FORMAT Format; // only needed for typed buffer!
 
 		GPUBufferDesc():
 			ByteWidth(0),
@@ -580,7 +581,8 @@ namespace wiGraphicsTypes
 			BindFlags(0),
 			CPUAccessFlags(0),
 			MiscFlags(0),
-			StructureByteStride(0)
+			StructureByteStride(0),
+			Format(FORMAT_UNKNOWN)
 		{}
 	};
 	struct GPUQueryDesc

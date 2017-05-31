@@ -11,4 +11,7 @@
 #define GENERATEMIPCHAIN_2D_BLOCK_SIZE 16
 #define GENERATEMIPCHAIN_3D_BLOCK_SIZE 8
 
+// Skinning compute params:
+#define SKINNING_COMPUTE_THREADCOUNT 256
+
 #endif

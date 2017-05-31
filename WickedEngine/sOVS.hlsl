@@ -9,9 +9,7 @@ streamOutput main(Input_Skinning input)
 
 	float4 posPrev = input.pos;
 
-#ifdef SKINNING_ON
 	Skinning(input.pos,posPrev,input.nor,input.bon,input.wei);
-#endif
 
 	Out.pos=input.pos;
 	Out.nor=input.nor;

@@ -901,6 +901,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -1851,12 +1852,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					if (!streamOutSetUp)
 					{
+						// Set up skinning shader
 						streamOutSetUp = true;
-						GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
-						GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_STREAMOUT], threadID);
-						GetDevice()->BindVS(vertexShaders[VSTYPE_STREAMOUT], threadID);
-						GetDevice()->BindGS(geometryShaders[GSTYPE_STREAMOUT], threadID);
-						GetDevice()->BindPS(nullptr, threadID);
+						GetDevice()->BindVertexLayout(nullptr, threadID);
+						GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
 					}
 
 					// Upload bones for skinning to shader
@@ -1867,29 +1866,25 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						armature->boneData[k].prev = XMMatrixTranspose(XMLoadFloat4x4(&armature->boneCollection[k]->boneRelativityPrev));
 					}
 					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
-					GetDevice()->BindResourceVS(&armature->boneBuffer, STRUCTUREDBUFFER_GETBINDSLOT(Armature::ShaderBoneType), threadID);
+					GetDevice()->BindResourceCS(&armature->boneBuffer, STRUCTUREDBUFFER_GETBINDSLOT(Armature::ShaderBoneType), threadID);
 
 					// Do the skinning
-					GPUBuffer* vbs[] = {
-						&mesh->vertexBuffers[VPROP_POS],
-						&mesh->vertexBuffers[VPROP_NOR],
-						&mesh->vertexBuffers[VPROP_BON],
-						&mesh->vertexBuffers[VPROP_WEI],
+					const GPUResource* vbs[] = {
+						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_POS]),
+						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_NOR]),
+						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_WEI]),
+						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_BON]),
 					};
-					UINT vbstrides[] = {
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
+					const GPUUnorderedResource* sos[] = {
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_POS]),
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_NOR]),
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_PRE]),
 					};
-					GPUBuffer* sos[] = {
-						&mesh->streamoutBuffers[VPROP_POS],
-						&mesh->streamoutBuffers[VPROP_NOR],
-						&mesh->streamoutBuffers[VPROP_PRE],
-					};
-					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), vbstrides, threadID);
-					GetDevice()->BindStreamOutTargets(sos, ARRAYSIZE(sos), threadID);
-					GetDevice()->Draw((int)mesh->vertices[VPROP_POS].size(), threadID);
+
+					GetDevice()->BindResourcesCS(vbs, TBSLOT_VERTEX_POS, ARRAYSIZE(vbs), threadID);
+					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
+
+					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices[VPROP_POS].size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
 
 				}
 
@@ -1906,14 +1901,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		if (streamOutSetUp)
 		{
 			// Unload skinning shader
-			GetDevice()->BindGS(nullptr, threadID);
-			GetDevice()->BindVS(nullptr, threadID);
-			GPUBuffer* sos[] = {
-				nullptr,
-				nullptr,
-				nullptr,
-			};
-			GetDevice()->BindStreamOutTargets(sos, ARRAYSIZE(sos), threadID);
+			GetDevice()->BindCS(nullptr, threadID);
+			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
+			GetDevice()->UnBindResources(TBSLOT_VERTEX_POS, 4, threadID);
 		}
 
 	}

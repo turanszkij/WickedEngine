@@ -1606,14 +1606,14 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 
 			D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
 			ZeroMemory(&srv_desc, sizeof(srv_desc));
-			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
-			srv_desc.BufferEx.FirstElement = 0;
 
 			if (desc.MiscFlags & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
 			{
 				// This is a Raw Buffer
 
 				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+				srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+				srv_desc.BufferEx.FirstElement = 0;
 				srv_desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
 				srv_desc.BufferEx.NumElements = desc.ByteWidth / 4;
 			}
@@ -1622,7 +1622,18 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 				// This is a Structured Buffer
 
 				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+				srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+				srv_desc.BufferEx.FirstElement = 0;
 				srv_desc.BufferEx.NumElements = desc.ByteWidth / desc.StructureByteStride;
+			}
+			else
+			{
+				// This is a Typed Buffer
+
+				srv_desc.Format = _ConvertFormat(pDesc->Format);
+				srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+				srv_desc.Buffer.FirstElement = 0;
+				srv_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
 			}
 
 			hr = device->CreateShaderResourceView(ppBuffer->resource_DX11, &srv_desc, &ppBuffer->SRV_DX11);
@@ -1649,6 +1660,13 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 				// This is a Structured Buffer
 
 				uav_desc.Format = DXGI_FORMAT_UNKNOWN;      // Format must be must be DXGI_FORMAT_UNKNOWN, when creating a View of a Structured Buffer
+				uav_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
+			}
+			else
+			{
+				// This is a Typed Buffer
+
+				uav_desc.Format = _ConvertFormat(pDesc->Format);
 				uav_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
 			}
 

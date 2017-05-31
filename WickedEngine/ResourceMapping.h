@@ -16,7 +16,7 @@
 #define UAVSLOT_DEBUGTEXTURE						7
 
 
-// Textures, StructuredBuffers (t slot):
+// Textures (t slot):
 
 #define TEXSLOT_DEPTH				0
 #define TEXSLOT_LINEARDEPTH			1
@@ -58,10 +58,17 @@
 
 #define TEXSLOT_COUNT		TEXSLOT_UNIQUE1
 
+// Structured Buffers (t slot):
 #define SBSLOT_BONE					0
 #define SBSLOT_TILEFRUSTUMS			25
 #define SBSLOT_LIGHTINDEXLIST		26
 #define SBSLOT_LIGHTARRAY			27
+
+// Typed Buffers (t slot):
+#define TBSLOT_VERTEX_POS			30
+#define TBSLOT_VERTEX_NOR			31
+#define TBSLOT_VERTEX_WEI			32
+#define TBSLOT_VERTEX_BON			33
 
 
 ///////////////////////////
@@ -83,6 +90,9 @@
 //////////
 
 // Automatically binds resources on the shader side:
+
+#define TYPEDBUFFER(name, type, slot) Buffer< type > name : register(t ## slot)
+#define RWTYPEDBUFFER(name, type, slot) RWBuffer< type > name : register(u ## slot)
 
 #define STRUCTUREDBUFFER(name, type, slot) StructuredBuffer< type > name : register(t ## slot)
 #define RWSTRUCTUREDBUFFER(name, type, slot) RWStructuredBuffer< type > name : register(u ## slot)

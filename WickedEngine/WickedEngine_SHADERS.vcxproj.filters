@@ -603,6 +603,9 @@
     <FxCompile Include="objectVS_positionstream.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="skinningCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
