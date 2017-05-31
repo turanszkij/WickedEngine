@@ -48,8 +48,6 @@ class  wiWaterPlane;
 typedef std::map<std::string, Mesh*> MeshCollection;
 typedef std::map<std::string, Material*> MaterialCollection;
 
-#define USE_GPU_SKINNING
-
 
 class wiRenderer
 {

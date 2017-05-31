@@ -1847,7 +1847,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices[VPROP_POS].empty()
 					&& mesh->streamoutBuffers[VPROP_POS].IsValid() && mesh->vertexBuffers[VPROP_POS].IsValid())
 				{
-#ifdef USE_GPU_SKINNING
 					Armature* armature = mesh->armature;
 
 					if (!streamOutSetUp)
@@ -1892,21 +1891,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->BindStreamOutTargets(sos, ARRAYSIZE(sos), threadID);
 					GetDevice()->Draw((int)mesh->vertices[VPROP_POS].size(), threadID);
 
-#else
-					// Doing skinning on the CPU
-					for (int vi = 0; vi < mesh->skinnedVertices.size(); ++vi)
-						mesh->skinnedVertices[vi] = TransformVertex(mesh, vi);
-#endif
 				}
 
 				// Upload CPU skinned vertex buffer (Soft body VB)
-#ifdef USE_GPU_SKINNING
-				// If GPU skinning is enabled, we only skin soft bodies on the CPU
 				if (mesh->softBody)
-#else
-				// Upload skinned vertex buffer to GPU
-				if (mesh->softBody || mesh->hasArmature())
-#endif
 				{
 					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_POS], mesh->vertices_Transformed[VPROP_POS].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_POS].size()));
 					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_NOR], mesh->vertices_Transformed[VPROP_NOR].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_NOR].size()));
@@ -1915,7 +1903,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 		}
 
-#ifdef USE_GPU_SKINNING
 		if (streamOutSetUp)
 		{
 			// Unload skinning shader
@@ -1928,7 +1915,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			};
 			GetDevice()->BindStreamOutTargets(sos, ARRAYSIZE(sos), threadID);
 		}
-#endif
 
 	}
 	GetDevice()->EventEnd(threadID);

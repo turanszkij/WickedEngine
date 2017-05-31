@@ -2017,13 +2017,8 @@ void Mesh::CreateBuffers(Object* object)
 		for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
 		{
 			ZeroMemory(&bd, sizeof(bd));
-#ifdef USE_GPU_SKINNING
 			bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
 			bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
-#else
-			bd.Usage = ((softBody || object->isArmatureDeformed()) ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
-			bd.CPUAccessFlags = ((softBody || object->isArmatureDeformed()) ? CPU_ACCESS_WRITE : 0);
-#endif
 			bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			ZeroMemory(&InitData, sizeof(InitData));
