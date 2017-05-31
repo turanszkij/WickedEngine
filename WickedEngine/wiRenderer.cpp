@@ -1828,6 +1828,13 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						// Set up skinning shader
 						streamOutSetUp = true;
 						GetDevice()->BindVertexLayout(nullptr, threadID);
+						GPUBuffer* vbs[] = {
+							nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
+						};
+						const UINT strides[] = {
+							0,0,0,0,0,0,0,0
+						};
+						GetDevice()->BindVertexBuffers(vbs, 0, 8, strides, threadID);
 						GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
 					}
 
