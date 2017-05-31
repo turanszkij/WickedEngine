@@ -2433,30 +2433,6 @@ HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, S
 {
 	return device->CreateGeometryShader(pShaderBytecode, BytecodeLength, nullptr, &pGeometryShader->resource_DX11);
 }
-HRESULT GraphicsDevice_DX11::CreateGeometryShaderWithStreamOutput(const void *pShaderBytecode, SIZE_T BytecodeLength, const StreamOutDeclaration *pSODeclaration,
-	UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, GeometryShader *pGeometryShader)
-{
-	D3D11_SO_DECLARATION_ENTRY* decl = new D3D11_SO_DECLARATION_ENTRY[NumEntries];
-	for (UINT i = 0; i < NumEntries; ++i)
-	{
-		decl[i].Stream = pSODeclaration[i].Stream;
-		decl[i].SemanticName = pSODeclaration[i].SemanticName;
-		decl[i].SemanticIndex = pSODeclaration[i].SemanticIndex;
-		decl[i].StartComponent = pSODeclaration[i].StartComponent;
-		decl[i].ComponentCount = pSODeclaration[i].ComponentCount;
-		decl[i].OutputSlot = pSODeclaration[i].OutputSlot;
-	}
-
-	if (RasterizedStream == SO_NO_RASTERIZED_STREAM)
-		RasterizedStream = D3D11_SO_NO_RASTERIZED_STREAM;
-
-	HRESULT hr = device->CreateGeometryShaderWithStreamOutput(pShaderBytecode, BytecodeLength, decl, NumEntries, pBufferStrides,
-		NumStrides, RasterizedStream, nullptr, &pGeometryShader->resource_DX11);
-
-	SAFE_DELETE_ARRAY(decl);
-
-	return hr;
-}
 HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 {
 	return device->CreateHullShader(pShaderBytecode, BytecodeLength, nullptr, &pHullShader->resource_DX11);
@@ -3129,17 +3105,6 @@ void GraphicsDevice_DX11::BindDepthStencilState(const DepthStencilState* state, 
 void GraphicsDevice_DX11::BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) 
 {
 	deviceContexts[threadID]->RSSetState(state != nullptr ? state->resource_DX11 : nullptr);
-}
-void GraphicsDevice_DX11::BindStreamOutTargets(GPUBuffer* const * buffers, UINT count, GRAPHICSTHREAD threadID)
-{
-	assert(count <= 8);
-	UINT offsetSO[8] = { 0 };
-	ID3D11Buffer* res[8] = { 0 };
-	for (UINT i = 0; i < count; ++i)
-	{
-		res[i] = buffers[i] != nullptr ? buffers[i]->resource_DX11 : nullptr;
-	}
-	deviceContexts[threadID]->SOSetTargets(count, res, offsetSO);
 }
 void GraphicsDevice_DX11::BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) 
 {

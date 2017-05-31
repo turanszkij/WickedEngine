@@ -61,7 +61,7 @@ const wiResourceManager::Resource* wiResourceManager::get(const wiHashString& na
 }
 
 void* wiResourceManager::add(const wiHashString& name, Data_Type newType
-	, VertexLayoutDesc* vertexLayoutDesc, UINT elementCount, StreamOutDeclaration* streamOutDecl)
+	, VertexLayoutDesc* vertexLayoutDesc, UINT elementCount)
 {
 	if (types.empty())
 		SetUp();
@@ -157,10 +157,6 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 			if (wiHelper::readByteData(nameStr, &buffer, bufferSize)){
 				GeometryShader* shader = new GeometryShader;
 				wiRenderer::GetDevice()->CreateGeometryShader(buffer, bufferSize, shader);
-				if (streamOutDecl != nullptr && elementCount > 0){
-					wiRenderer::GetDevice()->CreateGeometryShaderWithStreamOutput(buffer, bufferSize, streamOutDecl,
-						elementCount, nullptr, 0, SO_NO_RASTERIZED_STREAM, shader);
-				}
 				delete[] buffer;
 				success = shader;
 			}

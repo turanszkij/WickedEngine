@@ -35,8 +35,6 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader) = 0;
 		virtual HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader) = 0;
 		virtual HRESULT CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader) = 0;
-		virtual HRESULT CreateGeometryShaderWithStreamOutput(const void *pShaderBytecode, SIZE_T BytecodeLength, const StreamOutDeclaration *pSODeclaration,
-			UINT NumEntries, const UINT *pBufferStrides, UINT NumStrides, UINT RasterizedStream, GeometryShader *pGeometryShader) = 0;
 		virtual HRESULT CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader) = 0;
 		virtual HRESULT CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader) = 0;
 		virtual HRESULT CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader) = 0;
@@ -128,7 +126,6 @@ namespace wiGraphicsTypes
 		virtual void BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindStreamOutTargets(GPUBuffer* const *buffers, UINT count, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID) = 0;

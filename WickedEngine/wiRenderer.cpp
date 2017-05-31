@@ -728,33 +728,6 @@ void wiRenderer::LoadShaders()
 			vertexLayouts[VLTYPE_SHADOW_POS_TEX] = vsinfo->vertexLayout;
 		}
 	}
-	{
-		VertexLayoutDesc oslayout[] =
-		{
-			{ "POSITION",	0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",	1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		};
-		UINT numElements = ARRAYSIZE(oslayout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOVS.cso", wiResourceManager::VERTEXSHADER, oslayout, numElements));
-		if (vsinfo != nullptr){
-			vertexShaders[VSTYPE_STREAMOUT] = vsinfo->vertexShader;
-			vertexLayouts[VLTYPE_STREAMOUT] = vsinfo->vertexLayout;
-		}
-	}
-
-	{
-		StreamOutDeclaration pDecl[] =
-		{
-			// stream, semantic name, semantic index, start component, component count, output slot
-			{ 0, "SV_POSITION", 0, 0, 4,	0 },	// output all components of position
-			{ 0, "NORMAL",		0, 0, 4,	1 },	// output all components of the normal
-			{ 0, "TEXCOORD",	0, 0, 4,	2 },	// output all components of the previous frame position
-		};
-		UINT numElements = ARRAYSIZE(pDecl);
-		geometryShaders[GSTYPE_STREAMOUT] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sOGS.cso", wiResourceManager::GEOMETRYSHADER, nullptr, numElements, pDecl));
-	}
 
 	{
 		VertexLayoutDesc layout[] =

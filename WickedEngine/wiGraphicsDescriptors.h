@@ -355,15 +355,6 @@ namespace wiGraphicsTypes
 		INPUT_CLASSIFICATION InputSlotClass;
 		UINT InstanceDataStepRate;
 	};
-	struct StreamOutDeclaration
-	{
-		UINT Stream;
-		char* SemanticName;
-		UINT SemanticIndex;
-		BYTE StartComponent;
-		BYTE ComponentCount;
-		BYTE OutputSlot;
-	};
 	struct SampleDesc
 	{
 		UINT Count;
