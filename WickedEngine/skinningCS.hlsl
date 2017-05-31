@@ -1,10 +1,10 @@
 #include "globals.hlsli"
 #include "skinningHF.hlsli"
 
-TYPEDBUFFER(vertexBuffer_POS, float4, TBSLOT_VERTEX_POS);
-TYPEDBUFFER(vertexBuffer_NOR, float4, TBSLOT_VERTEX_NOR);
-TYPEDBUFFER(vertexBuffer_WEI, float4, TBSLOT_VERTEX_WEI);
-TYPEDBUFFER(vertexBuffer_BON, float4, TBSLOT_VERTEX_BON);
+TYPEDBUFFER(vertexBuffer_POS, float4, VBSLOT_0);
+TYPEDBUFFER(vertexBuffer_NOR, float4, VBSLOT_1);
+TYPEDBUFFER(vertexBuffer_WEI, float4, VBSLOT_2);
+TYPEDBUFFER(vertexBuffer_BON, float4, VBSLOT_3);
 
 RWTYPEDBUFFER(streamoutBuffer_POS, float4, 0);
 RWTYPEDBUFFER(streamoutBuffer_NOR, float4, 1);

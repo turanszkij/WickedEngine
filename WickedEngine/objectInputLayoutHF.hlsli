@@ -1,5 +1,7 @@
 #ifndef _MESH_INPUT_LAYOUT_HF_
 #define _MESH_INPUT_LAYOUT_HF_
+#include "ResourceMapping.h"
+
 
 struct Input_Instance
 {

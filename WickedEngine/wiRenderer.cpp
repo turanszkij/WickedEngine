@@ -1828,6 +1828,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						// Set up skinning shader
 						streamOutSetUp = true;
 						GetDevice()->BindVertexLayout(nullptr, threadID);
+						GetDevice()->UnBindResources(VBSLOT_0, 8, threadID);
 						GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
 					}
 
@@ -1854,7 +1855,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_PRE]),
 					};
 
-					GetDevice()->BindResourcesCS(vbs, TBSLOT_VERTEX_POS, ARRAYSIZE(vbs), threadID);
+					GetDevice()->BindResourcesCS(vbs, VBSLOT_0, ARRAYSIZE(vbs), threadID);
 					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
 
 					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices[VPROP_POS].size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
@@ -1876,7 +1877,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			// Unload skinning shader
 			GetDevice()->BindCS(nullptr, threadID);
 			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
-			GetDevice()->UnBindResources(TBSLOT_VERTEX_POS, 4, threadID);
+			GetDevice()->UnBindResources(VBSLOT_0, 4, threadID);
 		}
 
 	}
@@ -3419,66 +3420,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
-VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
-{
-	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
-
-	bool alphatest = material->IsAlphaTestEnabled();
-
-	switch (shaderType)
-	{
-	case SHADERTYPE_TEXTURE:
-		if (tessellatorRequested)
-		{
-			realVL = VLTYPE_OBJECT_ALL;
-		}
-		else
-		{
-			realVL = VLTYPE_OBJECT_POS_TEX;
-		}
-		break;
-	case SHADERTYPE_DEFERRED:
-	case SHADERTYPE_FORWARD:
-	case SHADERTYPE_TILEDFORWARD:
-	case SHADERTYPE_VOXELIZE:
-	case SHADERTYPE_ENVMAPCAPTURE:
-		realVL = VLTYPE_OBJECT_ALL;
-		break;
-	case SHADERTYPE_DEPTHONLY:
-		if (tessellatorRequested)
-		{
-			realVL = VLTYPE_OBJECT_ALL;
-		}
-		else
-		{
-			if (alphatest)
-			{
-				realVL = VLTYPE_OBJECT_POS_TEX;
-			}
-			else
-			{
-				realVL = VLTYPE_OBJECT_POS;
-			}
-		}
-		break;
-	case SHADERTYPE_SHADOW:
-	case SHADERTYPE_SHADOWCUBE:
-		if (alphatest)
-		{
-			realVL = VLTYPE_OBJECT_POS_TEX;
-		}
-		else
-		{
-			realVL = VLTYPE_OBJECT_POS;
-		}
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	return realVL;
-}
 VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
 {
 	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
@@ -3975,37 +3916,24 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				if (realVL == VLTYPE_OBJECT_POS_TEX)
 				{
-					GPUBuffer* vbs[] = {
-						&Mesh::impostorVBs[VPROP_POS],
-						&Mesh::impostorVBs[VPROP_TEX],
-						&mesh->instanceBuffer
+					const GPUResource* vbs[] = {
+						static_cast<const GPUResource*>(&Mesh::impostorVBs[VPROP_POS]),
+						static_cast<const GPUResource*>(&Mesh::impostorVBs[VPROP_TEX]),
+						static_cast<const GPUResource*>(&mesh->instanceBuffer)
 					};
-					UINT strides[] = {
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(Instance)
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					device->BindResourcesVS(vbs, VBSLOT_0, ARRAYSIZE(vbs), threadID);
 				}
 				else
 				{
-					GPUBuffer* vbs[] = {
-						&Mesh::impostorVBs[VPROP_POS],
-						&Mesh::impostorVBs[VPROP_NOR],
-						&Mesh::impostorVBs[VPROP_TEX],
-						&Mesh::impostorVBs[VPROP_POS],
-						&mesh->instanceBuffer,
-						&mesh->instanceBufferPrev,
+					const GPUResource* vbs[] = {
+						static_cast<const GPUResource*>(&Mesh::impostorVBs[VPROP_POS]),
+						static_cast<const GPUResource*>(&Mesh::impostorVBs[VPROP_NOR]),
+						static_cast<const GPUResource*>(&Mesh::impostorVBs[VPROP_TEX]),
+						static_cast<const GPUResource*>(&Mesh::impostorVBs[VPROP_POS]),
+						static_cast<const GPUResource*>(&mesh->instanceBuffer),
+						static_cast<const GPUResource*>(&mesh->instanceBufferPrev),
 					};
-					UINT strides[] = {
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(Instance),
-						sizeof(Instance),
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					device->BindResourcesVS(vbs, VBSLOT_0, ARRAYSIZE(vbs), threadID);
 				}
 
 				const GPUResource* res[] = {
@@ -4037,6 +3965,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		device->BindPS(nullptr, threadID);
 		device->BindPrimitiveTopology(prevTOPOLOGY, threadID);
 		device->BindRasterizerState(rasterizers[prevRS], threadID);
+		device->BindIndexBuffer(nullptr, INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT, threadID);
+		device->BindVertexLayout(nullptr, threadID);
 
 		// Render meshes:
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
@@ -4212,51 +4142,34 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						{
 						case BOUNDVERTEXBUFFERTYPE::POSITION:
 						{
-							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-								&mesh->instanceBuffer
+							const GPUResource* vbs[] = {
+								static_cast<const GPUResource*>(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								static_cast<const GPUResource*>(&mesh->instanceBuffer),
 							};
-							UINT strides[] = {
-								sizeof(XMFLOAT4),
-								sizeof(Instance)
-							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+							device->BindResourcesVS(vbs, VBSLOT_0, ARRAYSIZE(vbs), threadID);
 						}
 						break;
 						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 						{
-							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-								&mesh->vertexBuffers[VPROP_TEX],
-								&mesh->instanceBuffer
+							const GPUResource* vbs[] = {
+								static_cast<const GPUResource*>(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_TEX]),
+								static_cast<const GPUResource*>(&mesh->instanceBuffer)
 							};
-							UINT strides[] = {
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(Instance)
-							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+							device->BindResourcesVS(vbs, VBSLOT_0, ARRAYSIZE(vbs), threadID);
 						}
 						break;
 						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 						{
-							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-								(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
-								&mesh->vertexBuffers[VPROP_TEX],
-								(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
-								&mesh->instanceBuffer,
-								&mesh->instanceBufferPrev,
+							const GPUResource* vbs[] = {
+								static_cast<const GPUResource*>(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								static_cast<const GPUResource*>(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
+								static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_TEX]),
+								static_cast<const GPUResource*>(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
+								static_cast<const GPUResource*>(&mesh->instanceBuffer),
+								static_cast<const GPUResource*>(&mesh->instanceBufferPrev),
 							};
-							UINT strides[] = {
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(Instance),
-								sizeof(InstancePrev),
-							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+							device->BindResourcesVS(vbs, VBSLOT_0, ARRAYSIZE(vbs), threadID);
 						}
 						break;
 						default:
@@ -4282,13 +4195,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					{
 						prevStencilRef = realStencilRef;
 						device->BindDepthStencilState(depthStencils[targetDepthStencilState], realStencilRef, threadID);
-					}
-
-					VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested);
-					if (prevVL != realVL)
-					{
-						prevVL = realVL;
-						device->BindVertexLayout(vertexLayouts[realVL], threadID);
 					}
 
 					VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested);

@@ -3,13 +3,25 @@
 #include "windHF.hlsli"
 
 
+// Vertex layout declaration:
+TYPEDBUFFER(vertexBuffer_POS, float4, VBSLOT_0);
+STRUCTUREDBUFFER(instanceBuffer, Input_Instance, VBSLOT_1);
+
+
 struct VertexOut
 {
 	float4 pos				: SV_POSITION;
 };
 
-VertexOut main(Input_Shadow_POS input)
+VertexOut main(uint vID : SV_VERTEXID, uint instanceID : SV_INSTANCEID)
 {
+	// Custom fetch vertex buffer:
+	Input_Shadow_POS input;
+	input.pos = vertexBuffer_POS[vID];
+	input.instance = instanceBuffer[instanceID];
+
+
+
 	VertexOut Out = (VertexOut)0;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);

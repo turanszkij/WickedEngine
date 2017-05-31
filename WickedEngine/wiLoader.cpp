@@ -2001,10 +2001,13 @@ void Mesh::CreateBuffers(Object* object)
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DYNAMIC;
 			bd.ByteWidth = sizeof(Instance);
-			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			bd.StructureByteStride = sizeof(Instance);
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBuffer);
 			bd.ByteWidth = sizeof(InstancePrev);
+			bd.StructureByteStride = sizeof(InstancePrev);
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBufferPrev);
 		}
 
@@ -2020,7 +2023,7 @@ void Mesh::CreateBuffers(Object* object)
 			bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
 			bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
 			bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.StructureByteStride = sizeof(XMFLOAT4);
 			bd.Format = FORMAT_R32G32B32A32_FLOAT;
 			ZeroMemory(&InitData, sizeof(InitData));
@@ -2031,7 +2034,7 @@ void Mesh::CreateBuffers(Object* object)
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = USAGE_DEFAULT;
 				bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
-				bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
+				bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 				bd.CPUAccessFlags = 0;
 				bd.StructureByteStride = sizeof(XMFLOAT4);
 				bd.Format = FORMAT_R32G32B32A32_FLOAT;
