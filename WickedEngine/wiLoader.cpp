@@ -2003,11 +2003,9 @@ void Mesh::CreateBuffers(Object* object)
 			bd.ByteWidth = sizeof(Instance);
 			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-			bd.StructureByteStride = sizeof(Instance);
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBuffer);
 			bd.ByteWidth = sizeof(InstancePrev);
-			bd.StructureByteStride = sizeof(InstancePrev);
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBufferPrev);
 		}
 

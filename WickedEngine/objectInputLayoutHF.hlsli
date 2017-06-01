@@ -5,53 +5,53 @@
 
 struct Input_Instance
 {
-	float4 wi0 : MATI0;
-	float4 wi1 : MATI1;
-	float4 wi2 : MATI2;
-	float4 color_dither : COLOR_DITHER;
+	float4 wi0;
+	float4 wi1;
+	float4 wi2;
+	float4 color_dither;
 };
 struct Input_InstancePrev
 {
-	float4 wiPrev0 : MATIPREV0;
-	float4 wiPrev1 : MATIPREV1;
-	float4 wiPrev2 : MATIPREV2;
+	float4 wiPrev0;
+	float4 wiPrev1;
+	float4 wiPrev2;
 };
 
 struct Input_Shadow_POS
 {
-	float4 pos : POSITION;
+	float4 pos;
 	Input_Instance instance;
 };
 struct Input_Shadow_POS_TEX
 {
-	float4 pos : POSITION;
-	float4 tex : TEXCOORD0;
+	float4 pos;
+	float4 tex;
 	Input_Instance instance;
 };
 struct Input_Skinning
 {
-	float4 pos : POSITION;
-	float4 nor : NORMAL;
-	float4 bon : TEXCOORD0;
-	float4 wei : TEXCOORD1;
+	float4 pos;
+	float4 nor;
+	float4 bon;
+	float4 wei;
 };
 struct Input_Object_POS
 {
-	float4 pos : POSITION;
+	float4 pos;
 	Input_Instance instance;
 };
 struct Input_Object_POS_TEX
 {
-	float4 pos : POSITION;
-	float4 tex : TEXCOORD0;
+	float4 pos;
+	float4 tex;
 	Input_Instance instance;
 };
 struct Input_Object_ALL
 {
-	float4 pos : POSITION;
-	float4 nor : NORMAL;
-	float4 tex : TEXCOORD0;
-	float4 pre : TEXCOORD1;
+	float4 pos;
+	float4 nor;
+	float4 tex;
+	float4 pre;
 	Input_Instance instance;
 	Input_InstancePrev instancePrev;
 };

@@ -5,7 +5,7 @@
 
 // Vertex layout declaration:
 RAWBUFFER(vertexBuffer_POS, VBSLOT_0);
-STRUCTUREDBUFFER(instanceBuffer, Input_Instance, VBSLOT_1);
+RAWBUFFER(instanceBuffer, VBSLOT_1);
 
 
 struct VertexOut
@@ -19,7 +19,11 @@ VertexOut main(uint vID : SV_VERTEXID, uint instanceID : SV_INSTANCEID)
 	const uint fetchAddress = vID * 16;
 	Input_Shadow_POS input;
 	input.pos = asfloat(vertexBuffer_POS.Load4(fetchAddress));
-	input.instance = instanceBuffer[instanceID];
+	const uint fetchAddress_Instance = instanceID * 64;
+	input.instance.wi0 = asfloat(instanceBuffer.Load4(fetchAddress_Instance + 0));
+	input.instance.wi1 = asfloat(instanceBuffer.Load4(fetchAddress_Instance + 16));
+	input.instance.wi2 = asfloat(instanceBuffer.Load4(fetchAddress_Instance + 32));
+	input.instance.color_dither = asfloat(instanceBuffer.Load4(fetchAddress_Instance + 48));
 
 
 
