@@ -2024,8 +2024,7 @@ void Mesh::CreateBuffers(Object* object)
 			bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
 			bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
 			bd.BindFlags = BIND_SHADER_RESOURCE;
-			bd.StructureByteStride = sizeof(XMFLOAT4);
-			bd.Format = FORMAT_R32G32B32A32_FLOAT;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = vertices[vprop].data();
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffers[vprop]);
@@ -2036,8 +2035,7 @@ void Mesh::CreateBuffers(Object* object)
 				bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
 				bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 				bd.CPUAccessFlags = 0;
-				bd.StructureByteStride = sizeof(XMFLOAT4);
-				bd.Format = FORMAT_R32G32B32A32_FLOAT;
+				bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffers[vprop]);
 			}
 		}

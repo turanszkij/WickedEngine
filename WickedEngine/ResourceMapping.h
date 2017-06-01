@@ -93,6 +93,9 @@
 
 // Automatically binds resources on the shader side:
 
+#define RAWBUFFER(name,slot) ByteAddressBuffer name : register(t ## slot)
+#define RWRAWBUFFER(name,slot) RWByteAddressBuffer name : register(u ## slot)
+
 #define TYPEDBUFFER(name, type, slot) Buffer< type > name : register(t ## slot)
 #define RWTYPEDBUFFER(name, type, slot) RWBuffer< type > name : register(u ## slot)
 

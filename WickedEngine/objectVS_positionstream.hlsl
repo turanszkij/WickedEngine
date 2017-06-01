@@ -2,14 +2,15 @@
 
 
 // Vertex layout declaration:
-TYPEDBUFFER(vertexBuffer_POS, float4, VBSLOT_0);
+RAWBUFFER(vertexBuffer_POS, VBSLOT_0);
 STRUCTUREDBUFFER(instanceBuffer, Input_Instance, VBSLOT_1);
 
 float4 main(uint vID : SV_VERTEXID, uint instanceID : SV_INSTANCEID) : SV_POSITION
 {
 	// Custom fetch vertex buffer:
+	const uint fetchAddress = vID * 16;
 	Input_Object_POS input;
-	input.pos = vertexBuffer_POS[vID];
+	input.pos = asfloat(vertexBuffer_POS.Load4(fetchAddress));
 	input.instance = instanceBuffer[instanceID];
 
 
