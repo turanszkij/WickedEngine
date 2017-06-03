@@ -2026,6 +2026,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		x->UpdateRenderData(threadID);
 	}
+	for (wiHairParticle* hair : mainCameraCulling.culledHairParticleSystems)
+	{
+		hair->ComputeCulling(getCamera(), threadID);
+	}
 }
 void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {

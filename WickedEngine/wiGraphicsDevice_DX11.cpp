@@ -60,6 +60,8 @@ inline UINT _ParseResourceMiscFlags(UINT value)
 		_flag |= D3D11_RESOURCE_MISC_SHARED;
 	if (value & RESOURCE_MISC_TEXTURECUBE)
 		_flag |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (value & RESOURCE_MISC_DRAWINDIRECT_ARGS)
+		_flag |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
 	if (value & RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
 		_flag |= D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	if (value & RESOURCE_MISC_BUFFER_STRUCTURED)
@@ -931,6 +933,8 @@ inline UINT _ParseResourceMiscFlags_Inv(UINT value)
 		_flag |= RESOURCE_MISC_SHARED;
 	if (value & D3D11_RESOURCE_MISC_TEXTURECUBE)
 		_flag |= RESOURCE_MISC_TEXTURECUBE;
+	if (value & D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS)
+		_flag |= RESOURCE_MISC_DRAWINDIRECT_ARGS;
 	if (value & D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS)
 		_flag |= RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	if (value & D3D11_RESOURCE_MISC_BUFFER_STRUCTURED)
@@ -3151,6 +3155,14 @@ void GraphicsDevice_DX11::DrawInstanced(int vertexCount, int instanceCount, GRAP
 void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, 0, 0, 0);
+}
+void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+{
+	deviceContexts[threadID]->DrawInstancedIndirect(args->resource_DX11, args_offset);
+}
+void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+{
+	deviceContexts[threadID]->DrawIndexedInstancedIndirect(args->resource_DX11, args_offset);
 }
 void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 {

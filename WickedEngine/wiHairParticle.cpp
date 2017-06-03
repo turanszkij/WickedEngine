@@ -7,23 +7,27 @@
 #include "wiRandom.h"
 #include "ResourceMapping.h"
 #include "wiArchive.h"
+#include "ShaderInterop.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
 
-VertexLayout *wiHairParticle::il;
-VertexShader *wiHairParticle::vs;
+VertexLayout *wiHairParticle::il = nullptr;
+VertexShader *wiHairParticle::vs = nullptr;
 PixelShader *wiHairParticle::ps[],*wiHairParticle::qps[];
-GeometryShader *wiHairParticle::gs,*wiHairParticle::qgs;
-GPUBuffer *wiHairParticle::cbgs;
-DepthStencilState *wiHairParticle::dss;
-RasterizerState *wiHairParticle::rs, *wiHairParticle::ncrs;
-BlendState *wiHairParticle::bs;
+GeometryShader *wiHairParticle::gs = nullptr,*wiHairParticle::qgs = nullptr;
+ComputeShader *wiHairParticle::cs_RESET = nullptr;
+ComputeShader *wiHairParticle::cs_CULLING = nullptr;
+DepthStencilState *wiHairParticle::dss = nullptr;
+RasterizerState *wiHairParticle::rs = nullptr, *wiHairParticle::ncrs = nullptr;
+BlendState *wiHairParticle::bs = nullptr;
 int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
 {
+	cb = nullptr;
 	vb = nullptr;
+	ib = nullptr;
 	name = "";
 	densityG = "";
 	lenG = "";
@@ -36,7 +40,10 @@ wiHairParticle::wiHairParticle()
 wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int newCount
 						   , const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup)
 {
+	cb = nullptr;
 	vb = nullptr;
+	ib = nullptr;
+	drawargs = nullptr;
 	name=newName;
 	densityG=densityGroup;
 	lenG=lengthGroup;
@@ -64,7 +71,10 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 void wiHairParticle::CleanUp()
 {
 	points.clear();
+	SAFE_DELETE(cb);
 	SAFE_DELETE(vb);
+	SAFE_DELETE(ib);
+	SAFE_DELETE(drawargs);
 }
 
 void wiHairParticle::CleanUpStatic()
@@ -78,7 +88,8 @@ void wiHairParticle::CleanUpStatic()
 	}
 	SAFE_DELETE(gs);
 	SAFE_DELETE(qgs);
-	SAFE_DELETE(cbgs);
+	SAFE_DELETE(cs_RESET);
+	SAFE_DELETE(cs_CULLING);
 	SAFE_DELETE(dss);
 	SAFE_DELETE(rs);
 	SAFE_DELETE(ncrs);
@@ -119,6 +130,9 @@ void wiHairParticle::LoadShaders()
 	gs = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassGS.cso", wiResourceManager::GEOMETRYSHADER));
 	qgs = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qgrassGS.cso", wiResourceManager::GEOMETRYSHADER));
 
+	cs_RESET = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCulling_RESETCS.cso", wiResourceManager::COMPUTESHADER));
+	cs_CULLING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCullingCS.cso", wiResourceManager::COMPUTESHADER));
+
 }
 void wiHairParticle::SetUpStatic()
 {
@@ -126,19 +140,7 @@ void wiHairParticle::SetUpStatic()
 
 	LoadShaders();
 
-	
-	GPUBufferDesc bd;
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	cbgs = new GPUBuffer;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, cbgs );
 
-	
-
-	
 	RasterizerStateDesc rsd;
 	rsd.FillMode=FILL_SOLID;
 	rsd.CullMode=CULL_BACK;
@@ -352,20 +354,107 @@ void wiHairParticle::Generate()
 		}
 	}
 
-
+	SAFE_DELETE(cb);
 	SAFE_DELETE(vb);
+	SAFE_DELETE(ib);
 
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_IMMUTABLE;
 	bd.ByteWidth = (UINT)(sizeof(Point) * points.size());
-	bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 	bd.CPUAccessFlags = 0;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	SubresourceData data = {};
 	data.pSysMem = points.data();
 	vb = new GPUBuffer;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, vb);
+
+
+	//uint32_t* indices = new uint32_t[points.size()];
+	//for (size_t i = 0; i < points.size(); ++i)
+	//{
+	//	indices[i] = (uint32_t)i;
+	//}
+	//data.pSysMem = indices;
+
+	bd.Usage = USAGE_DEFAULT;
+	bd.ByteWidth = (UINT)(sizeof(uint32_t) * points.size());
+	bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	ib = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, /*&data*/nullptr, ib);
+
+
+	//IndirectDrawArgsIndexedInstanced args;
+	//args.BaseVertexLocation = 0;
+	//args.IndexCountPerInstance = (UINT)points.size();
+	//args.InstanceCount = 1;
+	//args.StartIndexLocation = 0;
+	//args.StartInstanceLocation = 0;
+	//data.pSysMem = &args;
+
+	bd.ByteWidth = (UINT)(sizeof(IndirectDrawArgsIndexedInstanced));
+	bd.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	bd.BindFlags = BIND_UNORDERED_ACCESS;
+	drawargs = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, /*&data*/nullptr, drawargs);
+
+
+
+
+	ZeroMemory(&bd, sizeof(bd));
+	bd.Usage = USAGE_DYNAMIC;
+	bd.ByteWidth = sizeof(ConstantBuffer);
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	cb = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb);
+
 }
+
+void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	device->EventBegin("HairParticle - Culling", threadID);
+
+	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
+	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
+
+	ConstantBuffer gcb;
+	gcb.mWorld = XMMatrixTranspose(renderMatrix);
+	gcb.color = material->baseColor;
+	gcb.LOD0 = (float)LOD[0];
+	gcb.LOD1 = (float)LOD[1];
+	gcb.LOD2 = (float)LOD[2];
+
+	device->UpdateBuffer(cb, &gcb, threadID);
+	device->BindConstantBufferCS(cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
+
+	device->BindResourceCS(vb, 0, threadID);
+
+	const GPUUnorderedResource* uavs[] = {
+		static_cast<const GPUUnorderedResource*>(drawargs),
+		static_cast<const GPUUnorderedResource*>(ib),
+	};
+	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+	// First clear the drawarg buffer:
+	device->BindCS(cs_RESET, threadID);
+	device->Dispatch(1, 1, 1, threadID);
+
+	// Then compute culling:
+	device->BindCS(cs_CULLING, threadID);
+	device->Dispatch((UINT)ceilf((float)points.size() / GRASS_CULLING_THREADCOUNT), 1, 1, threadID);
+
+	// Then reset state:
+	device->BindCS(nullptr, threadID);
+	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	device->UnBindResources(0, 1, threadID);
+
+	device->EventEnd(threadID);
+}
+
 void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
 	Texture2D* texture = material->texture;
@@ -375,7 +464,7 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin("HairParticle", threadID);
+		device->EventBegin("HairParticle - Draw", threadID);
 
 
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
@@ -391,18 +480,7 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 
 		device->BindRasterizerState(ncrs, threadID);
 
-		XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
-		XMMATRIX renderMatrix = inverseMat * object->getMatrix();
-
-		ConstantBuffer gcb;
-		gcb.mWorld = XMMatrixTranspose(renderMatrix);
-		gcb.color = material->baseColor;
-		gcb.LOD0 = (float)LOD[0];
-		gcb.LOD1 = (float)LOD[1];
-		gcb.LOD2 = (float)LOD[2];
-		
-		device->UpdateBuffer(cbgs,&gcb,threadID);
-		device->BindConstantBufferGS(cbgs, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->BindConstantBufferGS(cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 		if (texture)
 		{
@@ -420,7 +498,9 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 			sizeof(Point),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-		device->Draw((int)points.size(), threadID);
+		device->BindIndexBuffer(ib, INDEXBUFFER_FORMAT::INDEXFORMAT_32BIT, threadID);
+
+		device->DrawIndexedInstancedIndirect(drawargs, 0, threadID);
 
 		device->BindGS(nullptr,threadID);
 

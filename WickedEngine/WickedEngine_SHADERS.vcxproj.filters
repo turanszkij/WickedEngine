@@ -597,6 +597,12 @@
     <FxCompile Include="skinningCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="grassCullingCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="grassCulling_ResetCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

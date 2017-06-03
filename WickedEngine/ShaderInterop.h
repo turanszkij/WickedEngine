@@ -14,4 +14,7 @@
 // Skinning compute params:
 #define SKINNING_COMPUTE_THREADCOUNT 256
 
+// Grass culling params:
+#define GRASS_CULLING_THREADCOUNT 256
+
 #endif

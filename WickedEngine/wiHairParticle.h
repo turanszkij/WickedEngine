@@ -38,7 +38,8 @@ private:
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT], *qps[SHADERTYPE_COUNT];
 	static wiGraphicsTypes::GeometryShader *gs,*qgs;
-	static wiGraphicsTypes::GPUBuffer *cbgs;
+	static wiGraphicsTypes::ComputeShader *cs_RESET;
+	static wiGraphicsTypes::ComputeShader *cs_CULLING;
 	static wiGraphicsTypes::DepthStencilState *dss;
 	static wiGraphicsTypes::RasterizerState *rs,*ncrs;
 	static wiGraphicsTypes::BlendState *bs;
@@ -53,6 +54,7 @@ public:
 	void CleanUp();
 
 	void Generate();
+	void ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID);
 	void Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID);
 
 	static void CleanUpStatic();
@@ -66,7 +68,11 @@ public:
 	XMFLOAT4X4 OriginalMatrix_Inverse;
 	Object* object;
 	std::vector<Point> points;
+
+	wiGraphicsTypes::GPUBuffer *cb;
 	wiGraphicsTypes::GPUBuffer *vb;
+	wiGraphicsTypes::GPUBuffer *ib;
+	wiGraphicsTypes::GPUBuffer *drawargs;
 
 	void Serialize(wiArchive& archive);
 };

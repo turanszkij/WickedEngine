@@ -315,6 +315,7 @@ namespace wiGraphicsTypes
 		RESOURCE_MISC_GENERATE_MIPS = 0x1L,
 		RESOURCE_MISC_SHARED = 0x2L,
 		RESOURCE_MISC_TEXTURECUBE = 0x4L,
+		RESOURCE_MISC_DRAWINDIRECT_ARGS = 0x10L,
 		RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 0x20L,
 		RESOURCE_MISC_BUFFER_STRUCTURED = 0x40L,
 		RESOURCE_MISC_TILED = 0x40000L,
@@ -587,6 +588,36 @@ namespace wiGraphicsTypes
 			Type(GPU_QUERY_TYPE_OCCLUSION_PREDICATE),
 			MiscFlags(0),
 			async_latency(0)
+		{}
+	};
+	struct IndirectDrawArgsInstanced
+	{
+		UINT VertexCountPerInstance;
+		UINT InstanceCount;
+		UINT StartVertexLocation;
+		UINT StartInstanceLocation;
+
+		IndirectDrawArgsInstanced():
+			VertexCountPerInstance(0),
+			InstanceCount(0),
+			StartVertexLocation(0),
+			StartInstanceLocation(0)
+		{}
+	};
+	struct IndirectDrawArgsIndexedInstanced
+	{
+		UINT IndexCountPerInstance;
+		UINT InstanceCount;
+		UINT StartIndexLocation;
+		INT BaseVertexLocation;
+		UINT StartInstanceLocation;
+
+		IndirectDrawArgsIndexedInstanced() :
+			IndexCountPerInstance(0),
+			InstanceCount(0),
+			StartIndexLocation(0),
+			BaseVertexLocation(0),
+			StartInstanceLocation(0)
 		{}
 	};
 	struct SubresourceData

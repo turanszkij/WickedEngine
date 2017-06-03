@@ -117,6 +117,8 @@ namespace wiGraphicsTypes
 		virtual void DrawIndexed(int indexCount, GRAPHICSTHREAD threadID) override;
 		virtual void DrawInstanced(int vertexCount, int instanceCount, GRAPHICSTHREAD threadID) override;
 		virtual void DrawIndexedInstanced(int indexCount, int instanceCount, GRAPHICSTHREAD threadID) override;
+		virtual void DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID) override;
+		virtual void DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID) override;
 		virtual void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID) override;
 		virtual void GenerateMips(Texture* texture, GRAPHICSTHREAD threadID) override;
 		virtual void CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) override;
