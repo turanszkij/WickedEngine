@@ -35,7 +35,6 @@
     <None Include="postProcessHF.hlsli" />
     <None Include="quad.hlsli" />
     <None Include="reconstructPositionHF.hlsli" />
-    <None Include="skinningHF.hlsli" />
     <None Include="skyHF.hlsli" />
     <None Include="sOHF.hlsli" />
     <None Include="tangentComputeHF.hlsli" />

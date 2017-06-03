@@ -1,14 +1,48 @@
-#include "globals.hlsli"
-#include "skinningHF.hlsli"
+#include "ResourceMapping.h"
+#include "ShaderInterop.h"
 
-RAWBUFFER(vertexBuffer_POS, VBSLOT_0);
-RAWBUFFER(vertexBuffer_NOR, VBSLOT_1);
-RAWBUFFER(vertexBuffer_WEI, VBSLOT_2);
-RAWBUFFER(vertexBuffer_BON, VBSLOT_3);
+struct Bone
+{
+	float4x4 pose, prev;
+};
+STRUCTUREDBUFFER(boneBuffer, Bone, SKINNINGSLOT_IN_BONEBUFFER);
 
-RWRAWBUFFER(streamoutBuffer_POS, 0);
-RWRAWBUFFER(streamoutBuffer_NOR, 1);
-RWRAWBUFFER(streamoutBuffer_PRE, 2);
+RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
+RAWBUFFER(vertexBuffer_NOR, SKINNINGSLOT_IN_VERTEX_NOR);
+RAWBUFFER(vertexBuffer_WEI, SKINNINGSLOT_IN_VERTEX_WEI);
+RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
+
+RWRAWBUFFER(streamoutBuffer_POS, SKINNINGSLOT_OUT_VERTEX_POS);
+RWRAWBUFFER(streamoutBuffer_NOR, SKINNINGSLOT_OUT_VERTEX_NOR);
+RWRAWBUFFER(streamoutBuffer_PRE, SKINNINGSLOT_OUT_VERTEX_PRE);
+
+
+
+inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, in float4 inBon, in float4 inWei)
+{
+	float4 p = 0, pp = 0;
+	float3 n = 0;
+	float4x4 m, mp;
+	float3x3 m3;
+
+	[unroll]
+	for (uint i = 0; i < 4; i++)
+	{
+		m = boneBuffer[(uint)inBon[i]].pose;
+		mp = boneBuffer[(uint)inBon[i]].prev;
+		m3 = (float3x3)m;
+
+		p += mul(float4(pos.xyz, 1), m)*inWei[i];
+		pp += mul(float4(posPrev.xyz, 1), mp)*inWei[i];
+		n += mul(nor.xyz, m3)*inWei[i];
+	}
+
+	bool w = any(inWei);
+	pos.xyz = w ? p.xyz : pos.xyz;
+	posPrev.xyz = w ? pp.xyz : posPrev.xyz;
+	nor.xyz = w ? n : nor.xyz;
+}
+
 
 [numthreads(SKINNING_COMPUTE_THREADCOUNT, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

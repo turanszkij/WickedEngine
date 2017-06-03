@@ -59,18 +59,21 @@
 #define TEXSLOT_COUNT		TEXSLOT_UNIQUE1
 
 // Structured Buffers (t slot):
-#define SBSLOT_BONE					0
 #define SBSLOT_TILEFRUSTUMS			25
 #define SBSLOT_LIGHTINDEXLIST		26
 #define SBSLOT_LIGHTARRAY			27
 
-// Index/Vertex buffers (t slot):
-#define VBSLOT_0					30
-#define VBSLOT_1					31
-#define VBSLOT_2					32
-#define VBSLOT_3					33
-#define VBSLOT_4					34
-#define VBSLOT_5					35
+// Skinning:
+#define SKINNINGSLOT_IN_VERTEX_POS	0
+#define SKINNINGSLOT_IN_VERTEX_NOR	1
+#define SKINNINGSLOT_IN_VERTEX_WEI	2
+#define SKINNINGSLOT_IN_VERTEX_BON	3
+#define SKINNINGSLOT_IN_BONEBUFFER	4
+
+#define SKINNINGSLOT_OUT_VERTEX_POS	0
+#define SKINNINGSLOT_OUT_VERTEX_NOR	1
+#define SKINNINGSLOT_OUT_VERTEX_PRE	2
+
 
 
 ///////////////////////////

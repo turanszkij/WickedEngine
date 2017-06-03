@@ -61,9 +61,6 @@
     <None Include="reconstructPositionHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="skinningHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="skyHF.hlsli">
       <Filter>HF</Filter>
     </None>
