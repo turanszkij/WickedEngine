@@ -865,6 +865,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_RESET.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
@@ -4886,23 +4887,19 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		bd.StructureByteStride = _stride;
 		device->CreateBuffer(&bd, nullptr, frustumBuffer);
 	}
-	static GPUBuffer* lightCounterHelper_Opaque = nullptr;
-	static GPUBuffer* lightCounterHelper_Transparent = nullptr;
-	if (lightCounterHelper_Opaque == nullptr || lightCounterHelper_Transparent == nullptr)
+	static GPUBuffer* lightCounterHelper = nullptr;
+	if (lightCounterHelper == nullptr)
 	{
-		lightCounterHelper_Opaque = new GPUBuffer;
-		lightCounterHelper_Transparent = new GPUBuffer;
+		lightCounterHelper = new GPUBuffer;
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = sizeof(UINT) * 1;
+		bd.ByteWidth = sizeof(UINT) * 2;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS; // only used in the compute shader which is assembling the light index list, so no need for Shader Resource View
 		bd.CPUAccessFlags = 0;
-		bd.StructureByteStride = sizeof(UINT);
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, lightCounterHelper_Opaque);
-		device->CreateBuffer(&bd, nullptr, lightCounterHelper_Transparent);
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		device->CreateBuffer(&bd, nullptr, lightCounterHelper);
 	}
 	if (textures[TEXTYPE_2D_LIGHTGRID_OPAQUE] == nullptr || textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT] == nullptr || _resolutionChanged)
 	{
@@ -5016,16 +5013,21 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		}
 
 		const GPUUnorderedResource* uavs[] = {
-			static_cast<const GPUUnorderedResource*>(lightCounterHelper_Opaque),
-			static_cast<const GPUUnorderedResource*>(lightCounterHelper_Transparent),
+			static_cast<const GPUUnorderedResource*>(lightCounterHelper),
 			static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]),
 			static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]),
 			static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]),
 			static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]),
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE, ARRAYSIZE(uavs), threadID);
+		device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_LIGHTINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
 
 		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
+
+		// dispatch a reset shader for the helper resources
+		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_RESET], threadID);
+		device->Dispatch(1, 1, 1, threadID);
+
+		device->BindCS(nullptr, threadID);
 		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
 
 		device->EventEnd(threadID);

@@ -12,12 +12,11 @@ STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 STRUCTUREDBUFFER(Lights, LightArrayType, SBSLOT_LIGHTARRAY);
 #define lightCount xDispatchParams_value0
 
+globallycoherent RWRAWBUFFER(LightIndexCounter, UAVSLOT_LIGHTINDEXCOUNTERHELPER);
 
 // Global counter for current index into the light index list.
 // "o_" prefix indicates light lists for opaque geometry while 
 // "t_" prefix indicates light lists for transparent geometry.
-globallycoherent RWSTRUCTUREDBUFFER(o_LightIndexCounter, uint, UAVSLOT_LIGHTINDEXCOUNTERHELPER_OPAQUE);
-globallycoherent RWSTRUCTUREDBUFFER(t_LightIndexCounter, uint, UAVSLOT_LIGHTINDEXCOUNTERHELPER_TRANSPARENT);
 
 // Light index lists and light grids.
 RWSTRUCTUREDBUFFER(o_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_OPAQUE);
@@ -160,13 +159,6 @@ inline uint ContructLightMask(in float depthRangeMin, in float depthRangeRecip, 
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void main(ComputeShaderInput IN)
 {
-	if (IN.groupIndex == 0 && IN.groupID.x == 0 && IN.groupID.y == 0)
-	{
-		// reset the counter helpers -- maybe it should be done elsewhere? (other pass or updatesubresource)
-		o_LightIndexCounter[0] = 0;
-		t_LightIndexCounter[0] = 0;
-	}
-
 	// Calculate min & max depth in threadgroup / tile.
 	int2 texCoord = IN.dispatchThreadID.xy;
 	float fDepth = texture_depth.Load(int3(texCoord, 0)).r;
@@ -373,13 +365,15 @@ void main(ComputeShaderInput IN)
 	if (IN.groupIndex == 0)
 	{
 		// Update light grid for opaque geometry.
-		InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
+		//InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
+		LightIndexCounter.InterlockedAdd(0, o_LightCount, o_LightIndexStartOffset);
 		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
 	}
 	else if(IN.groupIndex == 1)
 	{
 		// Update light grid for transparent geometry.
-		InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
+		//InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
+		LightIndexCounter.InterlockedAdd(4, t_LightCount, t_LightIndexStartOffset);
 		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
 	}
 
