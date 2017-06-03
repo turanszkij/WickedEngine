@@ -64,11 +64,13 @@
 #define SBSLOT_LIGHTINDEXLIST		26
 #define SBSLOT_LIGHTARRAY			27
 
-// Typed Buffers (t slot):
-#define TBSLOT_VERTEX_POS			30
-#define TBSLOT_VERTEX_NOR			31
-#define TBSLOT_VERTEX_WEI			32
-#define TBSLOT_VERTEX_BON			33
+// Index/Vertex buffers (t slot):
+#define VBSLOT_0					30
+#define VBSLOT_1					31
+#define VBSLOT_2					32
+#define VBSLOT_3					33
+#define VBSLOT_4					34
+#define VBSLOT_5					35
 
 
 ///////////////////////////
@@ -90,6 +92,9 @@
 //////////
 
 // Automatically binds resources on the shader side:
+
+#define RAWBUFFER(name,slot) ByteAddressBuffer name : register(t ## slot)
+#define RWRAWBUFFER(name,slot) RWByteAddressBuffer name : register(u ## slot)
 
 #define TYPEDBUFFER(name, type, slot) Buffer< type > name : register(t ## slot)
 #define RWTYPEDBUFFER(name, type, slot) RWBuffer< type > name : register(u ## slot)

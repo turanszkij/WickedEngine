@@ -1861,7 +1861,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_PRE]),
 					};
 
-					GetDevice()->BindResourcesCS(vbs, TBSLOT_VERTEX_POS, ARRAYSIZE(vbs), threadID);
+					GetDevice()->BindResourcesCS(vbs, VBSLOT_0, ARRAYSIZE(vbs), threadID);
 					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
 
 					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices[VPROP_POS].size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
@@ -1883,7 +1883,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			// Unload skinning shader
 			GetDevice()->BindCS(nullptr, threadID);
 			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
-			GetDevice()->UnBindResources(TBSLOT_VERTEX_POS, 4, threadID);
+			GetDevice()->UnBindResources(VBSLOT_0, 4, threadID);
 		}
 
 	}
