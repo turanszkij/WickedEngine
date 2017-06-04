@@ -78,7 +78,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float4x4	g_xFrame_MainCamera_VP;			// View*Projection
 	float4x4	g_xFrame_MainCamera_View;
 	float4x4	g_xFrame_MainCamera_Proj;
-	float3		g_xFrame_MainCamera_CamPos;		float xPadding3_FrameCB;
+	float3		g_xFrame_MainCamera_CamPos;
+	float		g_xFrame_MainCamera_DistanceFromOrigin;
 	float4x4	g_xFrame_MainCamera_PrevV;
 	float4x4	g_xFrame_MainCamera_PrevP;
 	float4x4	g_xFrame_MainCamera_PrevVP;		// PrevView*PrevProjection
@@ -91,6 +92,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_MainCamera_ZNearP;
 	float3		g_xFrame_MainCamera_Up;
 	float		g_xFrame_MainCamera_ZFarP;
+	float4		g_xFrame_FrustumPlanesWS[6];	// Frustum planes in world space in order: left,right,top,bottom,near,far
 };
 // The following buffer contains properties for a temporary camera (eg. main camera, reflection camera, shadow camera...)
 CBUFFER(Camera_CommonCB, CBSLOT_RENDERER_CAMERA)

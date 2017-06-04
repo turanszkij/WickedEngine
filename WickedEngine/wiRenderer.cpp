@@ -5311,6 +5311,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mView = XMMatrixTranspose(camera->GetView());
 	cb.mProj = XMMatrixTranspose(camera->GetProjection());
 	cb.mCamPos = camera->translation;
+	cb.mCamDistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.mCamPos)));
 	cb.mPrevV = XMMatrixTranspose(prevCam->GetView());
 	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
 	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
@@ -5323,6 +5324,12 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mUp = camera->Up;
 	cb.mZNearP = camera->zNearP;
 	cb.mZFarP = camera->zFarP;
+	cb.mFrustumPlanesWS[0] = camera->frustum.getLeftPlane();
+	cb.mFrustumPlanesWS[1] = camera->frustum.getRightPlane();
+	cb.mFrustumPlanesWS[2] = camera->frustum.getTopPlane();
+	cb.mFrustumPlanesWS[3] = camera->frustum.getBottomPlane();
+	cb.mFrustumPlanesWS[4] = camera->frustum.getNearPlane();
+	cb.mFrustumPlanesWS[5] = camera->frustum.getFarPlane();
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }

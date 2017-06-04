@@ -82,7 +82,7 @@ bool SphereInsidePlane(Sphere sphere, Plane plane)
 	return dot(plane.N, sphere.c) - plane.d < -sphere.r;
 }
 // Check to see of a light is partially contained within the frustum.
-bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar)
+bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar) // this can only be used in view space
 {
 	bool result = true;
 
@@ -95,6 +95,20 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
 	for (int i = 0; i < 4 && result; i++)
 	{
 		if (SphereInsidePlane(sphere, frustum.planes[i]))
+		{
+			result = false;
+		}
+	}
+
+	return result;
+}
+bool SphereInsideFrustum(Sphere sphere, Plane planes[6]) // this can be used in world space
+{
+	bool result = true;
+
+	for (int i = 0; i < 6 && result; i++)
+	{
+		if (SphereInsidePlane(sphere, planes[i]))
 		{
 			result = false;
 		}
@@ -213,17 +227,17 @@ bool IntersectAABB(AABB a, AABB b)
 
 
 
-static const float4 frustumCorners[4] = {
-	float4(-1, -1, 1, 1),
-	float4(1, -1, 1, 1),
-	float4(-1, 1, 1, 1),
-	float4(1, 1, 1, 1)
-};
-static const Frustum frustum = {
-	ComputePlane(float3(0,0,0), frustumCorners[2].xyz, frustumCorners[0].xyz),
-	ComputePlane(float3(0,0,0), frustumCorners[1].xyz, frustumCorners[3].xyz),
-	ComputePlane(float3(0,0,0), frustumCorners[0].xyz, frustumCorners[1].xyz),
-	ComputePlane(float3(0,0,0), frustumCorners[3].xyz, frustumCorners[2].xyz)
-};
+//static const float4 frustumCorners[4] = {
+//	float4(-1, -1, 1, 1),
+//	float4(1, -1, 1, 1),
+//	float4(-1, 1, 1, 1),
+//	float4(1, 1, 1, 1)
+//};
+//static const Frustum frustum = {
+//	ComputePlane(float3(0,0,0), frustumCorners[2].xyz, frustumCorners[0].xyz),
+//	ComputePlane(float3(0,0,0), frustumCorners[1].xyz, frustumCorners[3].xyz),
+//	ComputePlane(float3(0,0,0), frustumCorners[0].xyz, frustumCorners[1].xyz),
+//	ComputePlane(float3(0,0,0), frustumCorners[3].xyz, frustumCorners[2].xyz)
+//};
 
 #endif // _CULLING_SHADER_HF_

@@ -126,7 +126,8 @@ public:
 		XMMATRIX mVP;
 		XMMATRIX mView;
 		XMMATRIX mProj;
-		XMFLOAT3 mCamPos;				float pad3;
+		XMFLOAT3 mCamPos;
+		float mCamDistanceFromOrigin;
 		XMMATRIX mPrevV;
 		XMMATRIX mPrevP;
 		XMMATRIX mPrevVP;
@@ -139,6 +140,7 @@ public:
 		float    mZNearP;
 		XMFLOAT3 mUp;
 		float    mZFarP;
+		XMFLOAT4 mFrustumPlanesWS[6];
 		
 		CB_SETBINDSLOT(CBSLOT_RENDERER_FRAME)
 

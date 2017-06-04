@@ -121,8 +121,12 @@ int Frustum::CheckBox(const AABB& box)
 	return(BOX_FRUSTUM_INTERSECTS);
 }
 
-XMFLOAT4 Frustum::getFarPlane(){return m_planes[1];}
-XMFLOAT4 Frustum::getNearPlane(){return m_planes[0];}
+const XMFLOAT4& Frustum::getLeftPlane() { return m_planesNorm[2]; }
+const XMFLOAT4& Frustum::getRightPlane() { return m_planesNorm[3]; }
+const XMFLOAT4& Frustum::getTopPlane() { return m_planesNorm[4]; }
+const XMFLOAT4& Frustum::getBottomPlane() { return m_planesNorm[5]; }
+const XMFLOAT4& Frustum::getFarPlane(){return m_planesNorm[1];}
+const XMFLOAT4& Frustum::getNearPlane(){return m_planesNorm[0];}
 XMFLOAT3 Frustum::getCamPos(){
 	return XMFLOAT3(-view._41,-view._42,-view._43);
 }

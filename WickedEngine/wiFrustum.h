@@ -22,8 +22,12 @@ public:
 #define BOX_FRUSTUM_INSIDE 2
 	int CheckBox(const AABB& box);
 
-	XMFLOAT4 getFarPlane();
-	XMFLOAT4 getNearPlane();
+	const XMFLOAT4& getLeftPlane();
+	const XMFLOAT4& getRightPlane();
+	const XMFLOAT4& getTopPlane();
+	const XMFLOAT4& getBottomPlane();
+	const XMFLOAT4& getFarPlane();
+	const XMFLOAT4& getNearPlane();
 	XMFLOAT3 getCamPos();
 };
 
