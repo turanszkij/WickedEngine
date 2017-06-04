@@ -25,7 +25,6 @@ public:
 	wiWindow*	objectWindow;
 
 	wiSlider*	ditherSlider;
-	wiButton*	colorPickerToggleButton;
 	wiColorPicker* colorPicker;
 
 	wiLabel*	physicsLabel;

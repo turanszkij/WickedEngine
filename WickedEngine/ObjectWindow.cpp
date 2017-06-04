@@ -17,7 +17,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	objectWindow->SetEnabled(false);
 	GUI->AddWidget(objectWindow);
 
-	float x = 200;
+	float x = 450;
 	float y = 0;
 
 	ditherSlider = new wiSlider(0, 1, 0, 1000, "Dither: ");
@@ -33,32 +33,25 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	objectWindow->AddWidget(ditherSlider);
 
 
-	colorPickerToggleButton = new wiButton("Color");
-	colorPickerToggleButton->SetTooltip("Adjust the object color.");
-	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += 30));
-	colorPickerToggleButton->OnClick([&](wiEventArgs args) {
-		colorPicker->SetVisible(!colorPicker->IsVisible());
-	});
-	objectWindow->AddWidget(colorPickerToggleButton);
-
-
 	colorPicker = new wiColorPicker(GUI, "Object Color");
-	colorPicker->SetVisible(false);
-	colorPicker->SetEnabled(false);
+	colorPicker->SetPos(XMFLOAT2(10, 30));
+	colorPicker->RemoveWidgets();
+	colorPicker->SetVisible(true);
+	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
 		if (object != nullptr)
 		{
-			object->color = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+			object->color = XMFLOAT3(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f));
 		}
 	});
-	GUI->AddWidget(colorPicker);
+	objectWindow->AddWidget(colorPicker);
 
 	y += 60;
 
 	physicsLabel = new wiLabel("PHYSICSLABEL");
-	physicsLabel->SetText("--- PHYSICS SETTINGS ---");
-	physicsLabel->SetPos(XMFLOAT2(x, y += 30));
-	physicsLabel->SetSize(XMFLOAT2(200, 20));
+	physicsLabel->SetText("PHYSICS SETTINGS");
+	physicsLabel->SetPos(XMFLOAT2(x - 30, y += 30));
+	physicsLabel->SetSize(XMFLOAT2(150, 20));
 	objectWindow->AddWidget(physicsLabel);
 
 	simulationTypeComboBox = new wiComboBox("Simulation Type:");
@@ -222,7 +215,6 @@ ObjectWindow::~ObjectWindow()
 {
 	SAFE_DELETE(objectWindow);
 	SAFE_DELETE(ditherSlider);
-	SAFE_DELETE(colorPickerToggleButton);
 	SAFE_DELETE(colorPicker);
 	SAFE_DELETE(physicsLabel);
 	SAFE_DELETE(simulationTypeComboBox);

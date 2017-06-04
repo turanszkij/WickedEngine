@@ -10,11 +10,11 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	lightWindow = new wiWindow(GUI, "Light Window");
-	lightWindow->SetSize(XMFLOAT2(400, 500));
+	lightWindow->SetSize(XMFLOAT2(650, 500));
 	//lightWindow->SetEnabled(false);
 	GUI->AddWidget(lightWindow);
 
-	float x = 200;
+	float x = 450;
 	float y = 0;
 	float step = 35;
 
@@ -135,7 +135,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 
 	addLightButton = new wiButton("Add Light");
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
-	addLightButton->SetSize(XMFLOAT2(180, 30));
+	addLightButton->SetSize(XMFLOAT2(150, 30));
 	addLightButton->OnClick([&](wiEventArgs args) {
 		Light* light = new Light;
 		light->enerDis = XMFLOAT4(2, 60, XM_PIDIV4, 0);
@@ -148,22 +148,16 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	lightWindow->AddWidget(addLightButton);
 
 
-	colorPickerToggleButton = new wiButton("Color");
-	colorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
-	colorPickerToggleButton->OnClick([&](wiEventArgs args) {
-		colorPicker->SetVisible(!colorPicker->IsVisible());
-	});
-	colorPickerToggleButton->SetTooltip("Toggle the light color picker.");
-	lightWindow->AddWidget(colorPickerToggleButton);
-
-
 	colorPicker = new wiColorPicker(GUI, "Light Color");
-	colorPicker->SetVisible(false);
-	colorPicker->SetEnabled(false);
+	colorPicker->SetPos(XMFLOAT2(10, 30));
+	colorPicker->RemoveWidgets();
+	colorPicker->SetVisible(true);
+	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
-		light->color = XMFLOAT4(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f), 1);
+		if(light!=nullptr)
+			light->color = XMFLOAT4(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f), 1);
 	});
-	GUI->AddWidget(colorPicker);
+	lightWindow->AddWidget(colorPicker);
 
 	typeSelectorComboBox = new wiComboBox("Type: ");
 	typeSelectorComboBox->SetPos(XMFLOAT2(x, y += step));
@@ -207,7 +201,6 @@ LightWindow::~LightWindow()
 	SAFE_DELETE(shadowCheckBox);
 	SAFE_DELETE(haloCheckBox);
 	SAFE_DELETE(addLightButton);
-	SAFE_DELETE(colorPickerToggleButton);
 	SAFE_DELETE(colorPicker);
 	SAFE_DELETE(typeSelectorComboBox);
 }

@@ -36,7 +36,6 @@ public:
 	wiCheckBox*	shadowCheckBox;
 	wiCheckBox*	haloCheckBox;
 	wiButton*	addLightButton;
-	wiButton*	colorPickerToggleButton;
 	wiColorPicker*	colorPicker;
 	wiComboBox*	typeSelectorComboBox;
 };
