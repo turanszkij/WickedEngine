@@ -56,7 +56,8 @@ float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false
-, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true;
+, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
+, wiRenderer::advancedRefractions = true;
 float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
 XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
@@ -3431,11 +3432,11 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
-VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
+VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
 {
 	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
 
-	bool alphatest = material->IsAlphaTestEnabled();
+	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
 
 	switch (shaderType)
 	{
@@ -3491,11 +3492,12 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool te
 
 	return realVL;
 }
-VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
+VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
 {
 	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
 
-	bool alphatest = material->IsAlphaTestEnabled();
+	bool water = material->IsWater();
+	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
 
 	switch (shaderType)
 	{
@@ -3518,7 +3520,14 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool te
 		}
 		else
 		{
-			realVS = VSTYPE_OBJECT_COMMON;
+			if (water)
+			{
+				realVS = VSTYPE_WATER;
+			}
+			else
+			{
+				realVS = VSTYPE_OBJECT_COMMON;
+			}
 		}
 		break;
 	case SHADERTYPE_DEPTHONLY:
@@ -3576,7 +3585,7 @@ GSTYPES GetGSTYPE(SHADERTYPE shaderType, const Material* const material)
 {
 	GSTYPES realGS = GSTYPE_NULL;
 
-	bool alphatest = material->IsAlphaTestEnabled();
+	bool alphatest = material->IsAlphaTestEnabled(); // do not mind the dithering alpha test!
 
 	switch (shaderType)
 	{
@@ -3623,13 +3632,13 @@ DSTYPES GetDSTYPE(SHADERTYPE shaderType, const Material* const material, bool te
 {
 	return tessellatorRequested ? DSTYPE_OBJECT : DSTYPE_NULL;
 }
-PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material)
+PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material, bool ditheringAlphaTest)
 {
 	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
 
 	bool transparent = material->IsTransparent();
 	bool water = material->IsWater();
-	bool alphatest = material->IsAlphaTestEnabled();
+	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
 
 	switch (shaderType)
 	{
@@ -4113,6 +4122,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			bool instancePrevUpdated = false;
 
+			bool forceAlphaTestForDithering = false;
+
 			int k = 0;
 			for (const Object* instance : visibleInstances) 
 			{
@@ -4130,6 +4141,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				if (dither > 1.0f - FLT_EPSILON)
 					continue;
+
+				forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
 
 				if (mesh->softBody || instance->isArmatureDeformed())
 					tempMat = __identityMat;
@@ -4201,7 +4214,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
 					{
 						// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-						if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled())
+						if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled() && !forceAlphaTestForDithering)
 						{
 							// bypass texcoord stream for non alphatested shadows and zprepass
 							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
@@ -4256,7 +4269,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
 								(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
 								&mesh->vertexBuffers[VPROP_TEX],
-								(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // TODO: rewrite this shit
+								(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // this is getting out of hand!
 								&mesh->instanceBuffer,
 								&mesh->instanceBufferPrev,
 							};
@@ -4296,14 +4309,14 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						device->BindDepthStencilState(depthStencils[targetDepthStencilState], realStencilRef, threadID);
 					}
 
-					VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested);
+					VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
 					if (prevVL != realVL)
 					{
 						prevVL = realVL;
 						device->BindVertexLayout(vertexLayouts[realVL], threadID);
 					}
 
-					VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested);
+					VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
 					if (prevVS != realVS)
 					{
 						prevVS = realVS;
@@ -4342,7 +4355,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 					else
 					{
-						PSTYPES realPS = GetPSTYPE(shaderType, material);
+						PSTYPES realPS = GetPSTYPE(shaderType, material, forceAlphaTestForDithering);
 						if (prevPS != realPS)
 						{
 							prevPS = realPS;
@@ -5271,6 +5284,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mVoxelRadianceDataConeTracingQuality = voxelSceneData.coneTracingQuality;
 	value.mVoxelRadianceDataFalloff = voxelSceneData.falloff;
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;
+	value.mAdvancedRefractions = GetAdvancedRefractionsEnabled() ? 1 : 0;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit
 	{
@@ -6224,4 +6238,9 @@ void wiRenderer::SetOcclusionCullingEnabled(bool value)
 	}
 
 	occlusionCulling = value;
+}
+
+bool wiRenderer::GetAdvancedRefractionsEnabled()
+{
+	return advancedRefractions && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT);
 }

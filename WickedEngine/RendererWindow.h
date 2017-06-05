@@ -35,6 +35,7 @@ public:
 	wiCheckBox* advancedLightCullingCheckBox;
 	wiCheckBox* debugLightCullingCheckBox;
 	wiCheckBox* tessellationCheckBox;
+	wiCheckBox* advancedRefractionsCheckBox;
 	wiCheckBox* envProbesCheckBox;
 	wiCheckBox* gridHelperCheckBox;
 	wiCheckBox* pickTypeObjectCheckBox;

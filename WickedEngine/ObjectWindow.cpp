@@ -21,7 +21,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	float y = 0;
 
 	ditherSlider = new wiSlider(0, 1, 0, 1000, "Dither: ");
-	ditherSlider->SetTooltip("Adjust dithered transparency of the object.");
+	ditherSlider->SetTooltip("Adjust dithered transparency of the object. This disables some optimizations so performance can be affected.");
 	ditherSlider->SetSize(XMFLOAT2(100, 30));
 	ditherSlider->SetPos(XMFLOAT2(x, y += 30));
 	ditherSlider->OnSlide([&](wiEventArgs args) {

@@ -16,7 +16,7 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 900));
+	rendererWindow->SetSize(XMFLOAT2(400, 950));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -192,9 +192,19 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 	tessellationCheckBox->OnClick([=](wiEventArgs args) {
 		component->setTessellationEnabled(args.bValue);
 	});
-	tessellationCheckBox->SetCheck(wiRenderer::GetToDrawDebugBoneLines());
+	tessellationCheckBox->SetCheck(false);
 	rendererWindow->AddWidget(tessellationCheckBox);
 	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
+
+	advancedRefractionsCheckBox = new wiCheckBox("Advanced Refractions: ");
+	advancedRefractionsCheckBox->SetTooltip("Enable advanced refraction rendering: rough transparent materials will be more matte. This needs additional support from the graphics driver.");
+	advancedRefractionsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	advancedRefractionsCheckBox->OnClick([=](wiEventArgs args) {
+		wiRenderer::SetAdvancedRefractionsEnabled(args.bValue);
+	});
+	advancedRefractionsCheckBox->SetCheck(wiRenderer::GetAdvancedRefractionsEnabled());
+	rendererWindow->AddWidget(advancedRefractionsCheckBox);
+	advancedRefractionsCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT));
 
 	envProbesCheckBox = new wiCheckBox("Env probe visualizer: ");
 	envProbesCheckBox->SetTooltip("Toggle visualization of environment probes as reflective spheres");
@@ -460,6 +470,7 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(advancedLightCullingCheckBox);
 	SAFE_DELETE(debugLightCullingCheckBox);
 	SAFE_DELETE(tessellationCheckBox);
+	SAFE_DELETE(advancedRefractionsCheckBox);
 	SAFE_DELETE(envProbesCheckBox);
 	SAFE_DELETE(gridHelperCheckBox);
 	SAFE_DELETE(pickTypeObjectCheckBox);

@@ -91,6 +91,7 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3
 	bumpColor = 2.0f * nortex.rgb - 1.0f;
 	bumpColor *= nortex.a;
 	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMat_normalMapStrength));
+	bumpColor *= g_xMat_normalMapStrength;
 }
 
 inline void SpecularAA(in float3 N, inout float roughness)
@@ -147,7 +148,7 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	float mipLevels;
 	xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
-	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, roughness * mipLevels);
+	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xWorld_AdvancedRefractions ? roughness * mipLevels : 0));
 	albedo.rgb = lerp(refractiveColor.rgb, albedo.rgb, color.a);
 	color.a = 1;
 }

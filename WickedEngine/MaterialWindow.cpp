@@ -108,7 +108,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(alphaSlider);
 
 	alphaRefSlider = new wiSlider(0, 1, 1.0f, 1000, "AlphaRef: ");
-	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold.");
+	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold. This disables some optimizations so performance can be affected.");
 	alphaRefSlider->SetSize(XMFLOAT2(100, 30));
 	alphaRefSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider->OnSlide([&](wiEventArgs args) {

@@ -22,7 +22,7 @@ PixelInputType main(Input_Object_ALL input)
 
 	Out.clip = dot(pos, g_xClipPlane);
 		
-	float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
+	float3 normal = mul(input.nor.xyz, (float3x3)WORLD);
 	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
 	affectWind(posPrev.xyz, input.pos.w, g_xFrame_TimePrev);
 
@@ -33,7 +33,7 @@ PixelInputType main(Input_Object_ALL input)
 		//pos = lerp(pos,posPrev,(offsetMod<0?((1-saturate(offsetMod))*(noiseTex.SampleLevel( sampler_linear_wrap,input.tex.xy,0 ).r)*0.6f):0));
 	//}
 
-	Out.pos = Out.pos2D = mul( pos, g_xCamera_VP );
+	Out.pos = Out.pos2D = mul(pos, g_xCamera_VP);
 	Out.pos2DPrev = mul(posPrev, g_xFrame_MainCamera_PrevVP);
 	Out.pos3D = pos.xyz;
 	Out.tex = input.tex.xy;

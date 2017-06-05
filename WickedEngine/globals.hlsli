@@ -60,7 +60,7 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	uint		g_xWorld_VoxelRadianceConeTracingQuality;
 	float		g_xWorld_VoxelRadianceFalloff;
 	float3		g_xWorld_VoxelRadianceDataCenter;
-	float		xPadding2_WorldCB;
+	bool		g_xWorld_AdvancedRefractions;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {

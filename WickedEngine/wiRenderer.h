@@ -105,7 +105,7 @@ public:
 		UINT mVoxelRadianceDataConeTracingQuality;
 		float mVoxelRadianceDataFalloff;
 		XMFLOAT3 mVoxelRadianceDataCenter;
-		float pad2;
+		BOOL mAdvancedRefractions;
 
 		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
 
@@ -265,7 +265,7 @@ protected:
 	
 
 
-	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, gridHelper, voxelHelper, advancedLightCulling;
+	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, gridHelper, voxelHelper, advancedLightCulling, advancedRefractions;
 	static bool requestReflectionRendering;
 
 
@@ -378,6 +378,8 @@ public:
 	static void SetVoxelRadianceFalloff(float value) { voxelSceneData.falloff = value; }
 	static void SetSpecularAAParam(float value) { SPECULARAA = value; }
 	static float GetSpecularAAParam() { return SPECULARAA; }
+	static void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
+	static bool GetAdvancedRefractionsEnabled(); // also needs additional driver support for now...
 	static bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 	static wiGraphicsTypes::Texture2D* GetColorGrading(){return colorGrading;};
 	static void SetColorGrading(wiGraphicsTypes::Texture2D* tex){colorGrading=tex;};
