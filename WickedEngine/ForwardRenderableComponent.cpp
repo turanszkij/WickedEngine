@@ -104,7 +104,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtMain.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_FORWARD, rtReflection.GetTexture(), true, true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_FORWARD, rtReflection.GetTexture(), getHairParticlesEnabled(), true);
 		wiRenderer::DrawSky(threadID);
 	}
 	rtMain.Deactivate(threadID);

@@ -30,7 +30,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		{
 			wiRenderer::SetAlphaRef(0.25f, threadID);
 		}
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, nullptr, true, true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, nullptr, getHairParticlesEnabled(), true);
 	}
 	wiProfiler::GetInstance().EndRange(threadID);
 
@@ -68,7 +68,7 @@ void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& ref
 	wiProfiler::GetInstance().BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
-		, rtWaterRipple.GetTexture(), threadID, getHairParticleAlphaCompositionEnabled(), true);
+		, rtWaterRipple.GetTexture(), threadID, getHairParticlesEnabled() && getHairParticleAlphaCompositionEnabled(), true);
 
 	wiProfiler::GetInstance().EndRange(); // Transparent Scene
 }
