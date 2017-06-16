@@ -30,19 +30,19 @@ void main(point GS_INPUT p[1], inout TriangleStream<VertextoPixel> triStream, ui
 {
 	float quadLength = p[0].inSizOpMir.x*0.5f;
 
-	const Plane planes[6] = {
-		{ g_xFrame_FrustumPlanesWS[0].xyz, -g_xFrame_FrustumPlanesWS[0].w }, // left plane
-		{ g_xFrame_FrustumPlanesWS[1].xyz, -g_xFrame_FrustumPlanesWS[1].w }, // right plane
-		{ g_xFrame_FrustumPlanesWS[2].xyz, -g_xFrame_FrustumPlanesWS[2].w }, // top plane
-		{ g_xFrame_FrustumPlanesWS[3].xyz, -g_xFrame_FrustumPlanesWS[3].w }, // bottom plane
-		{ g_xFrame_FrustumPlanesWS[4].xyz, -g_xFrame_FrustumPlanesWS[4].w }, // near plane
-		{ g_xFrame_FrustumPlanesWS[5].xyz, -g_xFrame_FrustumPlanesWS[5].w }, // far plane
-	};
-	Sphere sphere = { p[0].pos.xyz, quadLength };
-	if (!SphereInsideFrustum(sphere, planes))
-	{
-		return;
-	}
+	//const Plane planes[6] = {
+	//	{ g_xFrame_FrustumPlanesWS[0].xyz, -g_xFrame_FrustumPlanesWS[0].w }, // left plane
+	//	{ g_xFrame_FrustumPlanesWS[1].xyz, -g_xFrame_FrustumPlanesWS[1].w }, // right plane
+	//	{ g_xFrame_FrustumPlanesWS[2].xyz, -g_xFrame_FrustumPlanesWS[2].w }, // top plane
+	//	{ g_xFrame_FrustumPlanesWS[3].xyz, -g_xFrame_FrustumPlanesWS[3].w }, // bottom plane
+	//	{ g_xFrame_FrustumPlanesWS[4].xyz, -g_xFrame_FrustumPlanesWS[4].w }, // near plane
+	//	{ g_xFrame_FrustumPlanesWS[5].xyz, -g_xFrame_FrustumPlanesWS[5].w }, // far plane
+	//};
+	//Sphere sphere = { p[0].pos.xyz, quadLength };
+	//if (!SphereInsideFrustum(sphere, planes))
+	//{
+	//	return;
+	//}
 
 	VertextoPixel p1 = (VertextoPixel)0;
 	float2x2 rot = float2x2(

@@ -17,4 +17,8 @@
 // Grass culling params:
 #define GRASS_CULLING_THREADCOUNT 256
 
+// Bitonic sort params:
+#define BITONIC_BLOCK_SIZE 512
+#define TRANSPOSE_BLOCK_SIZE 16
+
 #endif

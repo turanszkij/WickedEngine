@@ -112,6 +112,9 @@
     <None Include="tonemapHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="bitonicSortHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -604,6 +607,12 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="lightCullingCS_RESET.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bitonicSort_hairparticleCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="matrixTransposeCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

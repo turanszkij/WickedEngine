@@ -34,12 +34,24 @@ private:
 
 		ALIGN_16
 	};
+	GFX_STRUCT BitonicSortConstantBuffer
+	{
+		UINT iLevel;
+		UINT iLevelMask;
+		UINT iWidth;
+		UINT iHeight;
+
+		ALIGN_16
+	};
 	static wiGraphicsTypes::VertexLayout *il;
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT], *qps[SHADERTYPE_COUNT];
 	static wiGraphicsTypes::GeometryShader *gs,*qgs;
 	static wiGraphicsTypes::ComputeShader *cs_RESET;
 	static wiGraphicsTypes::ComputeShader *cs_CULLING;
+	static wiGraphicsTypes::ComputeShader *cs_BITONICSORT;
+	static wiGraphicsTypes::ComputeShader *cs_TRANSPOSE;
+	static wiGraphicsTypes::GPUBuffer* cb_BITONIC;
 	static wiGraphicsTypes::DepthStencilState *dss;
 	static wiGraphicsTypes::RasterizerState *rs,*ncrs;
 	static wiGraphicsTypes::BlendState *bs;
@@ -67,11 +79,12 @@ public:
 	Material* material;
 	XMFLOAT4X4 OriginalMatrix_Inverse;
 	Object* object;
-	std::vector<Point> points;
+	size_t particleCount;
 
 	wiGraphicsTypes::GPUBuffer *cb;
 	wiGraphicsTypes::GPUBuffer *vb;
 	wiGraphicsTypes::GPUBuffer *ib;
+	wiGraphicsTypes::GPUBuffer *ib_transposed;
 	wiGraphicsTypes::GPUBuffer *drawargs;
 
 	void Serialize(wiArchive& archive);

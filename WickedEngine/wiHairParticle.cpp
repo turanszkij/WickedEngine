@@ -18,6 +18,9 @@ PixelShader *wiHairParticle::ps[],*wiHairParticle::qps[];
 GeometryShader *wiHairParticle::gs = nullptr,*wiHairParticle::qgs = nullptr;
 ComputeShader *wiHairParticle::cs_RESET = nullptr;
 ComputeShader *wiHairParticle::cs_CULLING = nullptr;
+ComputeShader *wiHairParticle::cs_BITONICSORT = nullptr;
+ComputeShader *wiHairParticle::cs_TRANSPOSE = nullptr;
+GPUBuffer *wiHairParticle::cb_BITONIC = nullptr;
 DepthStencilState *wiHairParticle::dss = nullptr;
 RasterizerState *wiHairParticle::rs = nullptr, *wiHairParticle::ncrs = nullptr;
 BlendState *wiHairParticle::bs = nullptr;
@@ -28,6 +31,7 @@ wiHairParticle::wiHairParticle()
 	cb = nullptr;
 	vb = nullptr;
 	ib = nullptr;
+	ib_transposed = nullptr;
 	name = "";
 	densityG = "";
 	lenG = "";
@@ -35,7 +39,8 @@ wiHairParticle::wiHairParticle()
 	count = 0;
 	material = nullptr;
 	object = nullptr;
-	materialName = "";
+	materialName = ""; 
+	particleCount = 0;
 }
 wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int newCount
 						   , const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup)
@@ -43,6 +48,7 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 	cb = nullptr;
 	vb = nullptr;
 	ib = nullptr;
+	ib_transposed = nullptr;
 	drawargs = nullptr;
 	name=newName;
 	densityG=densityGroup;
@@ -52,6 +58,7 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 	material=nullptr;
 	object = newObject;
 	materialName = newMat;
+	particleCount = 0;
 	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, object->getMatrix()));
 	for (MeshSubset& subset : object->mesh->subsets)
 	{
@@ -70,7 +77,6 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 
 void wiHairParticle::CleanUp()
 {
-	points.clear();
 	SAFE_DELETE(cb);
 	SAFE_DELETE(vb);
 	SAFE_DELETE(ib);
@@ -90,6 +96,9 @@ void wiHairParticle::CleanUpStatic()
 	SAFE_DELETE(qgs);
 	SAFE_DELETE(cs_RESET);
 	SAFE_DELETE(cs_CULLING);
+	SAFE_DELETE(cs_BITONICSORT);
+	SAFE_DELETE(cs_TRANSPOSE);
+	SAFE_DELETE(cb_BITONIC);
 	SAFE_DELETE(dss);
 	SAFE_DELETE(rs);
 	SAFE_DELETE(ncrs);
@@ -132,6 +141,8 @@ void wiHairParticle::LoadShaders()
 
 	cs_RESET = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCulling_RESETCS.cso", wiResourceManager::COMPUTESHADER));
 	cs_CULLING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCullingCS.cso", wiResourceManager::COMPUTESHADER));
+	cs_BITONICSORT = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bitonicSort_hairparticleCS.cso", wiResourceManager::COMPUTESHADER));
+	cs_TRANSPOSE = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "matrixTransposeCS.cso", wiResourceManager::COMPUTESHADER));
 
 }
 void wiHairParticle::SetUpStatic()
@@ -203,6 +214,18 @@ void wiHairParticle::SetUpStatic()
 	bld.AlphaToCoverageEnable=false; // maybe for msaa
 	bs = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bld,bs);
+
+
+
+	GPUBufferDesc bd;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.ByteWidth = sizeof(BitonicSortConstantBuffer);
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.MiscFlags = 0;
+	bd.StructureByteStride = 0;
+	bd.Usage = USAGE_DYNAMIC;
+	cb_BITONIC = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb_BITONIC);
 }
 void wiHairParticle::Settings(int l0,int l1,int l2)
 {
@@ -214,7 +237,7 @@ void wiHairParticle::Settings(int l0,int l1,int l2)
 
 void wiHairParticle::Generate()
 {
-	points.clear();
+	std::vector<Point> points;
 
 	Mesh* mesh = object->mesh;
 
@@ -354,14 +377,17 @@ void wiHairParticle::Generate()
 		}
 	}
 
+	particleCount = points.size();
+
 	SAFE_DELETE(cb);
 	SAFE_DELETE(vb);
 	SAFE_DELETE(ib);
+	SAFE_DELETE(ib_transposed);
 
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_IMMUTABLE;
-	bd.ByteWidth = (UINT)(sizeof(Point) * points.size());
+	bd.ByteWidth = (UINT)(sizeof(Point) * particleCount);
 	bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -371,34 +397,38 @@ void wiHairParticle::Generate()
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, vb);
 
 
-	//uint32_t* indices = new uint32_t[points.size()];
-	//for (size_t i = 0; i < points.size(); ++i)
-	//{
-	//	indices[i] = (uint32_t)i;
-	//}
-	//data.pSysMem = indices;
+	uint32_t* indices = new uint32_t[particleCount];
+	for (size_t i = 0; i < points.size(); ++i)
+	{
+		indices[i] = (uint32_t)i;
+	}
+	data.pSysMem = indices;
 
 	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = (UINT)(sizeof(uint32_t) * points.size());
+	bd.ByteWidth = (UINT)(sizeof(uint32_t) * particleCount);
 	bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	ib = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, /*&data*/nullptr, ib);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, ib);
+	ib_transposed = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, ib_transposed);
+
+	SAFE_DELETE_ARRAY(indices);
 
 
-	//IndirectDrawArgsIndexedInstanced args;
-	//args.BaseVertexLocation = 0;
-	//args.IndexCountPerInstance = (UINT)points.size();
-	//args.InstanceCount = 1;
-	//args.StartIndexLocation = 0;
-	//args.StartInstanceLocation = 0;
-	//data.pSysMem = &args;
+	IndirectDrawArgsIndexedInstanced args;
+	args.BaseVertexLocation = 0;
+	args.IndexCountPerInstance = (UINT)points.size();
+	args.InstanceCount = 1;
+	args.StartIndexLocation = 0;
+	args.StartInstanceLocation = 0;
+	data.pSysMem = &args;
 
 	bd.ByteWidth = (UINT)(sizeof(IndirectDrawArgsIndexedInstanced));
 	bd.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	drawargs = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, /*&data*/nullptr, drawargs);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, drawargs);
 
 
 
@@ -413,6 +443,7 @@ void wiHairParticle::Generate()
 
 }
 
+//#define ENABLE_CULLING
 void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -429,6 +460,9 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 	gcb.LOD2 = (float)LOD[2];
 
 	device->UpdateBuffer(cb, &gcb, threadID);
+
+#ifdef ENABLE_CULLING
+
 	device->BindConstantBufferCS(cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
 
 	device->BindResourceCS(vb, 0, threadID);
@@ -443,14 +477,77 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 	device->BindCS(cs_RESET, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 
-	// Then compute culling:
+	// Then compute frustum culling:
 	device->BindCS(cs_CULLING, threadID);
-	device->Dispatch((UINT)ceilf((float)points.size() / GRASS_CULLING_THREADCOUNT), 1, 1, threadID);
+	device->Dispatch((UINT)ceilf(static_cast<float>(particleCount) / GRASS_CULLING_THREADCOUNT), 1, 1, threadID);
+
+	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+
+	// Then sort the particles:
+	{
+		const UINT NUM_ELEMENTS = wiMath::GetNextPowerOfTwo((UINT)particleCount);
+		const UINT MATRIX_WIDTH = BITONIC_BLOCK_SIZE;
+		const UINT MATRIX_HEIGHT = NUM_ELEMENTS / BITONIC_BLOCK_SIZE;
+
+		device->BindConstantBufferCS(cb_BITONIC, 0, threadID);
+
+		// Sort the data
+		// First sort the rows for the levels <= to the block size
+		for (UINT level = 2; level <= BITONIC_BLOCK_SIZE; level = level * 2)
+		{
+			BitonicSortConstantBuffer cb = { level, level, MATRIX_HEIGHT, MATRIX_WIDTH };
+			device->UpdateBuffer(cb_BITONIC, &cb, threadID);
+
+			// Sort the row data
+			device->BindUnorderedAccessResourceCS(ib, 0, threadID);
+			device->BindCS(cs_BITONICSORT, threadID);
+			device->Dispatch(NUM_ELEMENTS / BITONIC_BLOCK_SIZE, 1, 1, threadID);
+		}
+
+		// Then sort the rows and columns for the levels > than the block size
+		// Transpose. Sort the Columns. Transpose. Sort the Rows.
+		for (UINT level = (BITONIC_BLOCK_SIZE * 2); level <= NUM_ELEMENTS; level = level * 2)
+		{
+			{
+				BitonicSortConstantBuffer cb = { (level / BITONIC_BLOCK_SIZE), (level & ~NUM_ELEMENTS) / BITONIC_BLOCK_SIZE, MATRIX_WIDTH, MATRIX_HEIGHT };
+				device->UpdateBuffer(cb_BITONIC, &cb, threadID);
+			}
+
+			// Transpose the data from buffer 1 into buffer 2
+			device->UnBindResources(0, 1, threadID);
+			device->BindUnorderedAccessResourceCS(ib_transposed, 0, threadID);
+			device->BindResourceCS(ib, 0, threadID);
+			device->BindCS(cs_TRANSPOSE, threadID);
+			device->Dispatch(MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, 1, threadID);
+
+			// Sort the transposed column data
+			device->BindCS(cs_BITONICSORT, threadID);
+			device->Dispatch(NUM_ELEMENTS / BITONIC_BLOCK_SIZE, 1, 1, threadID);
+
+			{
+				BitonicSortConstantBuffer cb = { BITONIC_BLOCK_SIZE, level, MATRIX_HEIGHT, MATRIX_WIDTH };
+				device->UpdateBuffer(cb_BITONIC, &cb, threadID);
+			}
+
+			// Transpose the data from buffer 2 back into buffer 1
+			device->UnBindResources(0, 1, threadID);
+			device->BindUnorderedAccessResourceCS(ib, 0, threadID);
+			device->BindResourceCS(ib_transposed, 0, threadID);
+			device->BindCS(cs_TRANSPOSE, threadID);
+			device->Dispatch(MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, 1, threadID);
+
+			// Sort the row data
+			device->BindCS(cs_BITONICSORT, threadID);
+			device->Dispatch(NUM_ELEMENTS / BITONIC_BLOCK_SIZE, 1, 1, threadID);
+		}
+	}
 
 	// Then reset state:
 	device->BindCS(nullptr, threadID);
 	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 	device->UnBindResources(0, 1, threadID);
+
+#endif // ENABLE_CULLING
 
 	device->EventEnd(threadID);
 }
