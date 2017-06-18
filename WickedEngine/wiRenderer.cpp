@@ -3859,7 +3859,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material, bool di
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation, bool occlusionCulling)
 {
-	// Intensive section, optimize the shit out of it:
+	// Intensive section, refactor and optimize!
 
 	if (!culledRenderer.empty())
 	{
