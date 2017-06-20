@@ -17,8 +17,8 @@ Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
 Devblog: https://turanszkij.wordpress.com/
 
 ### Platforms:
-- Windows PC Desktop (validated version 0.11.60)
-- Universal Windows (validated version 0.11.60)
+- Windows PC Desktop (validated version 0.11.73)
+- Universal Windows (validated version 0.11.73)
 
 ### Requirements:
 
