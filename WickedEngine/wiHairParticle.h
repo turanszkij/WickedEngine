@@ -12,13 +12,11 @@ class wiHairParticle :
 	public wiParticle
 {
 public:
-	GFX_STRUCT Point
+	struct Point
 	{
-		XMFLOAT4 posRand;
-		XMFLOAT4 normalLen;
-		XMFLOAT4 tangent;
-
-		ALIGN_16
+		XMFLOAT4 posLen;
+		UINT normalRand;
+		UINT tangent;
 	};
 private:
 	GFX_STRUCT ConstantBuffer

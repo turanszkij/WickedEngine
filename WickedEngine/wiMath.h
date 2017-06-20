@@ -43,5 +43,7 @@ namespace wiMath
 
 	// 64-iteration 4-dimensional Halton sequence (0 <= idx < 64)
 	const XMFLOAT4& GetHaltonSequence(int idx);
+
+	uint32_t CompressNormal(const XMFLOAT3& normal);
 };
 

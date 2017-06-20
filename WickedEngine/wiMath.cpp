@@ -518,7 +518,17 @@ namespace wiMath
 			XMFLOAT4(0.9960937500f, 0.1495198903f, 0.0432000000f, 0.4635568513f),
 			XMFLOAT4(0.0019531250f, 0.4828532236f, 0.2432000000f, 0.6064139942f),
 		};
-		assert(idx >= 0 && idx < ARRAYSIZE(HALTON));
-		return HALTON[idx];
+		return HALTON[idx % ARRAYSIZE(HALTON)];
+	}
+
+	uint32_t CompressNormal(const XMFLOAT3& normal)
+	{
+		uint32_t retval = 0;
+
+		retval |= (uint32_t)((uint8_t)(normal.x * 127.5f + 127.5f) << 0);
+		retval |= (uint32_t)((uint8_t)(normal.y * 127.5f + 127.5f) << 8);
+		retval |= (uint32_t)((uint8_t)(normal.z * 127.5f + 127.5f) << 16);
+
+		return retval;
 	}
 }

@@ -13,15 +13,15 @@ RWRAWBUFFER(indexBuffer, 1);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	const uint fetchAddress = DTid.x * vertexBuffer_stride;
-	float4 pos = float4(asfloat(vertexBuffer.Load3(fetchAddress)), 1);
+	float4 posLen = asfloat(vertexBuffer.Load4(fetchAddress));
+	float4 pos = float4(posLen.xyz, 1);
+	float len = posLen.w;
 	pos = mul(pos, xWorld);
 
 	if (distance(g_xFrame_MainCamera_CamPos, pos.xyz) > LOD2)
 	{
 		return;
 	}
-
-	float len = asfloat(vertexBuffer.Load(fetchAddress + 16 + 12));
 
 	const Plane planes[6] = {
 		{ g_xFrame_FrustumPlanesWS[0].xyz, -g_xFrame_FrustumPlanesWS[0].w }, // left plane

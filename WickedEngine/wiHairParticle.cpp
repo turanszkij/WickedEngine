@@ -110,8 +110,8 @@ void wiHairParticle::LoadShaders()
 	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TANGENT", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, FORMAT_R8G8B8A8_UNORM, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, FORMAT_R8G8B8A8_UNORM, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -360,16 +360,21 @@ void wiHairParticle::Generate()
 						,	g
 						);
 					int ti = wiRandom::getRandom(0, 2);
-					XMVECTOR tangent = XMVector3Normalize( XMVectorSubtract(pos[ti],pos[(ti+1)%3]) );
+					XMVECTOR tangent = XMVector3Normalize(XMVectorSubtract(pos[ti], pos[(ti + 1) % 3]));
 					
 					Point addP;
-					::XMStoreFloat4(&addP.posRand,vbar);
-					::XMStoreFloat4(&addP.normalLen,XMVector3Normalize(nbar));
-					::XMStoreFloat4(&addP.tangent,tangent);
+					::XMStoreFloat4(&addP.posLen,vbar);
+
+					XMFLOAT3 nor, tan;
+					::XMStoreFloat3(&nor,XMVector3Normalize(nbar));
+					::XMStoreFloat3(&tan,tangent);
+
+					addP.normalRand = wiMath::CompressNormal(nor);
+					addP.tangent = wiMath::CompressNormal(tan);
 
 					float lbar = lenMod[0] + f*(lenMod[1]-lenMod[0]) + g*(lenMod[2]-lenMod[0]);
-					addP.normalLen.w = length*lbar + (float)(wiRandom::getRandom(0, 1000) - 500)*0.001f*length*lbar;
-					addP.posRand.w = (float)wiRandom::getRandom(0, 1000);
+					addP.posLen.w = length*lbar + (float)(wiRandom::getRandom(0, 1000) - 500)*0.001f*length*lbar;
+					addP.normalRand |= (uint8_t)wiRandom::getRandom(0, 256) << 24;
 					points.push_back(addP);
 				}
 

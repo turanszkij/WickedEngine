@@ -6,7 +6,7 @@ void main(
 	inout TriangleStream< QGS_OUT > output
 )
 {
-	float grassLength = input[0].nor.w;
+	float grassLength = input[0].pos.w;
 	float3 root = mul(float4(input[0].pos.xyz,1), xWorld).xyz;
 
 	//const Plane planes[6] = {
@@ -31,11 +31,11 @@ void main(
 	frame.xy /= frame.y;
 	frame.x *= 0.5f;
 
-	uint rand = input[0].pos.w;
+	uint rand = input[0].nor.w;
 	//float3 viewDir = xView._m02_m12_m22;
 	float4 pos = float4(input[0].pos.xyz, 1);
 	float3 color = saturate(xColor.xyz + sin(pos.x - pos.y - pos.z)*0.013f)*0.5;
-	float3 normal = /*normalize(*/input[0].nor.xyz/*-wind)*/;
+	float3 normal = /*normalize(*/input[0].nor.xyz * 2 - 1/*-wind)*/;
 	float3 wind = sin(g_xFrame_Time + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz*0.03*grassLength;
 	float3 windPrev = sin(g_xFrame_Time + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz*0.03*grassLength;
 
