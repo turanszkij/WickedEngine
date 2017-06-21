@@ -12,7 +12,7 @@
 #define GENERATEMIPCHAIN_3D_BLOCK_SIZE 8
 
 // Skinning compute params:
-#define SKINNING_COMPUTE_THREADCOUNT 256
+#define SKINNING_COMPUTE_THREADCOUNT 1024
 
 // Grass culling params:
 #define GRASS_CULLING_THREADCOUNT 256

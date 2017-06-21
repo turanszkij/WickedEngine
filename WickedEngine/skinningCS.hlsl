@@ -24,9 +24,12 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, i
 	float3 n = 0;
 	float4x4 m, mp;
 	float3x3 m3;
+	float weisum = 0;
 
-	[unroll]
-	for (uint i = 0; i < 4; i++)
+	// force loop to reduce register pressure
+	// though this way we can not interleave TEX - ALU operations
+	[loop]
+	for (uint i = 0; ((i < 4) && (weisum<1.0f)); ++i)
 	{
 		m = boneBuffer[(uint)inBon[i]].pose;
 		mp = boneBuffer[(uint)inBon[i]].prev;
@@ -35,6 +38,8 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, i
 		p += mul(float4(pos.xyz, 1), m)*inWei[i];
 		pp += mul(float4(posPrev.xyz, 1), mp)*inWei[i];
 		n += mul(nor.xyz, m3)*inWei[i];
+
+		weisum += inWei[i];
 	}
 
 	bool w = any(inWei);
