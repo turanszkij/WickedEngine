@@ -2,7 +2,7 @@
 #include "grassHF_GS.hlsli"
 #include "cullingShaderHF.hlsli"
 
-static const uint vertexBuffer_stride = 16 * 3; // pos, normal, tangent 
+static const uint vertexBuffer_stride = 16 + 4 + 4; // pos, normal, tangent 
 RAWBUFFER(vertexBuffer, 0);
 
 RWRAWBUFFER(argumentBuffer, 0); // indirect draw args

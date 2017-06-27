@@ -5494,96 +5494,97 @@ wiWaterPlane wiRenderer::GetWaterPlane()
 wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& layer,
 	const std::string& layerDisable)
 {
+	std::vector<Picked> pickPoints;
+
+	// pick meshes...
 	CulledCollection culledRenderer;
 	CulledList culledObjects;
 	wiSPTree* searchTree = spTree;
-	if (searchTree)
+	if (searchTree != nullptr)
 	{
 		searchTree->getVisible(ray, culledObjects);
 
-		std::vector<Picked> pickPoints;
-
 		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable, true);
+	}
 
-		for (auto& model : GetScene().models)
+	// pick other...
+	for (auto& model : GetScene().models)
+	{
+		if (pickType & PICK_LIGHT)
 		{
-			if (pickType & PICK_LIGHT)
+			for (auto& light : model->lights)
 			{
-				for (auto& light : model->lights)
-				{
-					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&light->translation));
-					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(light->translation, cam->translation) * 0.05f)
-					{
-						Picked pick = Picked();
-						pick.transform = light;
-						pick.light = light;
-						pick.distance = wiMath::Distance(light->translation, ray.origin);
-						pickPoints.push_back(pick);
-					}
-					//if (light->bounds.intersects(ray))
-					//{
-					//	Picked pick = Picked();
-					//	pick.transform = light;
-					//	pick.light = light;
-					//	if (light->type == Light::DIRECTIONAL)
-					//	{
-					//		pick.distance = FLT_MAX;
-					//	}
-					//	else
-					//	{
-					//		pick.distance = wiMath::Distance(light->translation, ray.origin);
-					//	}
-					//	pickPoints.push_back(pick);
-					//}
-				}
-			}
-			if (pickType & PICK_DECAL)
-			{
-				for (auto& decal : model->decals)
-				{
-					XMVECTOR localOrigin=XMLoadFloat3(&ray.origin), localDirection=XMLoadFloat3(&ray.direction);
-					XMMATRIX localTransform = XMLoadFloat4x4(&decal->world);
-					localTransform = XMMatrixInverse(nullptr, localTransform);
-					localOrigin = XMVector3Transform(localOrigin, localTransform);
-					localDirection = XMVector3TransformNormal(localDirection, localTransform);
-					RAY localRay = RAY(localOrigin, localDirection);
-					if (AABB(XMFLOAT3(-1, -1, -1),XMFLOAT3(1, 1, 1)).intersects(localRay))
-					{
-						Picked pick = Picked();
-						pick.transform = decal;
-						pick.decal = decal;
-						pick.distance = wiMath::Distance(decal->translation, ray.origin);
-						pickPoints.push_back(pick);
-					}
-				}
-			}
-		}
-		if (pickType & PICK_ENVPROBE)
-		{
-			for (auto& x : GetScene().environmentProbes)
-			{
-				if (SPHERE(x->translation,1).intersects(ray))
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&light->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(light->translation, cam->translation) * 0.05f)
 				{
 					Picked pick = Picked();
-					pick.transform = x;
-					pick.envProbe = x;
-					pick.distance = wiMath::Distance(x->translation, ray.origin);
+					pick.transform = light;
+					pick.light = light;
+					pick.distance = wiMath::Distance(light->translation, ray.origin);
+					pickPoints.push_back(pick);
+				}
+				//if (light->bounds.intersects(ray))
+				//{
+				//	Picked pick = Picked();
+				//	pick.transform = light;
+				//	pick.light = light;
+				//	if (light->type == Light::DIRECTIONAL)
+				//	{
+				//		pick.distance = FLT_MAX;
+				//	}
+				//	else
+				//	{
+				//		pick.distance = wiMath::Distance(light->translation, ray.origin);
+				//	}
+				//	pickPoints.push_back(pick);
+				//}
+			}
+		}
+		if (pickType & PICK_DECAL)
+		{
+			for (auto& decal : model->decals)
+			{
+				XMVECTOR localOrigin = XMLoadFloat3(&ray.origin), localDirection = XMLoadFloat3(&ray.direction);
+				XMMATRIX localTransform = XMLoadFloat4x4(&decal->world);
+				localTransform = XMMatrixInverse(nullptr, localTransform);
+				localOrigin = XMVector3Transform(localOrigin, localTransform);
+				localDirection = XMVector3TransformNormal(localDirection, localTransform);
+				RAY localRay = RAY(localOrigin, localDirection);
+				if (AABB(XMFLOAT3(-1, -1, -1), XMFLOAT3(1, 1, 1)).intersects(localRay))
+				{
+					Picked pick = Picked();
+					pick.transform = decal;
+					pick.decal = decal;
+					pick.distance = wiMath::Distance(decal->translation, ray.origin);
 					pickPoints.push_back(pick);
 				}
 			}
 		}
-
-		if (!pickPoints.empty()){
-			Picked min = pickPoints.front();
-			for (unsigned int i = 1; i<pickPoints.size(); ++i){
-				if (pickPoints[i].distance < min.distance) {
-					min = pickPoints[i];
-				}
+	}
+	if (pickType & PICK_ENVPROBE)
+	{
+		for (auto& x : GetScene().environmentProbes)
+		{
+			if (SPHERE(x->translation, 1).intersects(ray))
+			{
+				Picked pick = Picked();
+				pick.transform = x;
+				pick.envProbe = x;
+				pick.distance = wiMath::Distance(x->translation, ray.origin);
+				pickPoints.push_back(pick);
 			}
-			return min;
 		}
+	}
 
+	if (!pickPoints.empty()) {
+		Picked min = pickPoints.front();
+		for (unsigned int i = 1; i < pickPoints.size(); ++i) {
+			if (pickPoints[i].distance < min.distance) {
+				min = pickPoints[i];
+			}
+		}
+		return min;
 	}
 
 	return Picked();

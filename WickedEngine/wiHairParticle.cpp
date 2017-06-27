@@ -449,6 +449,7 @@ void wiHairParticle::Generate()
 }
 
 //#define ENABLE_CULLING
+//#define ENABLE_SORTING
 void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -486,6 +487,7 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 	device->BindCS(cs_CULLING, threadID);
 	device->Dispatch((UINT)ceilf(static_cast<float>(particleCount) / GRASS_CULLING_THREADCOUNT), 1, 1, threadID);
 
+#ifdef ENABLE_SORTING
 	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 
 	// Then sort the particles:
@@ -546,6 +548,7 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 			device->Dispatch(NUM_ELEMENTS / BITONIC_BLOCK_SIZE, 1, 1, threadID);
 		}
 	}
+#endif // ENABLE_SORTING
 
 	// Then reset state:
 	device->BindCS(nullptr, threadID);

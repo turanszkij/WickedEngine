@@ -3168,6 +3168,10 @@ void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCount
 {
 	deviceContexts[threadID]->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
+void GraphicsDevice_DX11::DispatchIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+{
+	deviceContexts[threadID]->DispatchIndirect(args->resource_DX11, args_offset);
+}
 void GraphicsDevice_DX11::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->GenerateMips(texture->SRV_DX11);

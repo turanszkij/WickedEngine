@@ -620,6 +620,18 @@ namespace wiGraphicsTypes
 			StartInstanceLocation(0)
 		{}
 	};
+	struct IndirectDispatchArgs
+	{
+		UINT ThreadGroupCountX;
+		UINT ThreadGroupCountY;
+		UINT ThreadGroupCountZ;
+
+		IndirectDispatchArgs():
+			ThreadGroupCountX(0),
+			ThreadGroupCountY(0),
+			ThreadGroupCountZ(0)
+		{}
+	};
 	struct SubresourceData
 	{
 		const void *pSysMem;
