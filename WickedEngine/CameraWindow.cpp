@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CameraWindow.h"
 
-void ResetCam()
+void CameraWindow::ResetCam()
 {
 	wiRenderer::getCamera()->Clear();
 	wiRenderer::getCamera()->Translate(XMFLOAT3(0, 2, -10));
@@ -73,17 +73,15 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 	cameraWindow->Translate(XMFLOAT3(30, 30, 0));
 	cameraWindow->SetVisible(false);
-
-	ResetCam();
 }
 
 
 CameraWindow::~CameraWindow()
 {
+
 	SAFE_DELETE(orbitalCamTarget);
 
+	cameraWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(cameraWindow);
 	SAFE_DELETE(cameraWindow);
-	SAFE_DELETE(farPlaneSlider);
-	SAFE_DELETE(nearPlaneSlider);
-	SAFE_DELETE(fovSlider);
 }

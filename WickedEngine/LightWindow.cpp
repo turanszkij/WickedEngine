@@ -190,19 +190,9 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 
 LightWindow::~LightWindow()
 {
+	lightWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(lightWindow);
 	SAFE_DELETE(lightWindow);
-	SAFE_DELETE(energySlider);
-	SAFE_DELETE(distanceSlider);
-	SAFE_DELETE(radiusSlider);
-	SAFE_DELETE(widthSlider);
-	SAFE_DELETE(heightSlider);
-	SAFE_DELETE(fovSlider);
-	SAFE_DELETE(biasSlider);
-	SAFE_DELETE(shadowCheckBox);
-	SAFE_DELETE(haloCheckBox);
-	SAFE_DELETE(addLightButton);
-	SAFE_DELETE(colorPicker);
-	SAFE_DELETE(typeSelectorComboBox);
 }
 
 void LightWindow::SetLight(Light* light)

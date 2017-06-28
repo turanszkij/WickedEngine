@@ -101,13 +101,9 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 MeshWindow::~MeshWindow()
 {
+	meshWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(meshWindow);
 	SAFE_DELETE(meshWindow);
-	SAFE_DELETE(doubleSidedCheckBox);
-	SAFE_DELETE(massSlider);
-	SAFE_DELETE(frictionSlider);
-	SAFE_DELETE(impostorCreateButton);
-	SAFE_DELETE(impostorDistanceSlider);
-	SAFE_DELETE(tessellationFactorSlider);
 }
 
 void MeshWindow::SetMesh(Mesh* mesh)

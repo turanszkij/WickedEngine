@@ -107,16 +107,9 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 WorldWindow::~WorldWindow()
 {
+	worldWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(worldWindow);
 	SAFE_DELETE(worldWindow);
-	SAFE_DELETE(fogStartSlider);
-	SAFE_DELETE(fogEndSlider);
-	SAFE_DELETE(fogHeightSlider);
-	SAFE_DELETE(ambientColorPickerToggleButton);
-	SAFE_DELETE(ambientColorPicker);
-	SAFE_DELETE(horizonColorPickerToggleButton);
-	SAFE_DELETE(horizonColorPicker);
-	SAFE_DELETE(zenithColorPickerToggleButton);
-	SAFE_DELETE(zenithColorPicker);
 }
 
 void WorldWindow::UpdateFromRenderer()

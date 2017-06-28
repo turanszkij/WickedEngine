@@ -11,7 +11,7 @@ class wiComboBox;
 class RendererWindow
 {
 public:
-	RendererWindow(Renderable3DComponent* component);
+	RendererWindow(wiGUI* gui, Renderable3DComponent* component);
 	~RendererWindow();
 
 	wiGUI* GUI;

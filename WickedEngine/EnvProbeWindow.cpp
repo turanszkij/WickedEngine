@@ -68,11 +68,9 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 
 EnvProbeWindow::~EnvProbeWindow()
 {
+	envProbeWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(envProbeWindow);
 	SAFE_DELETE(envProbeWindow);
-	SAFE_DELETE(resolutionSlider);
-	SAFE_DELETE(realTimeCheckBox);
-	SAFE_DELETE(generateButton);
-	SAFE_DELETE(refreshButton);
 }
 
 void EnvProbeWindow::SetProbe(EnvironmentProbe* value)

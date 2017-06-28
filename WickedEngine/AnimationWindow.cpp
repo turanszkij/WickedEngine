@@ -208,20 +208,10 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 
 AnimationWindow::~AnimationWindow()
 {
+	animWindow->RemoveWidgets(true);
+
+	GUI->RemoveWidget(animWindow);
 	SAFE_DELETE(animWindow);
-	SAFE_DELETE(actionsComboBox);
-	SAFE_DELETE(blendSlider);
-	SAFE_DELETE(loopedCheckBox);
-
-	SAFE_DELETE(actionsComboBox1);
-	SAFE_DELETE(weightSlider1);
-	SAFE_DELETE(blendSlider1);
-	SAFE_DELETE(loopedCheckBox1);
-
-	SAFE_DELETE(actionsComboBox2);
-	SAFE_DELETE(weightSlider2);
-	SAFE_DELETE(blendSlider2);
-	SAFE_DELETE(loopedCheckBox2);
 }
 
 void AnimationWindow::SetArmature(Armature* armature)

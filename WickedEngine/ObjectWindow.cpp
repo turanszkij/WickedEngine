@@ -213,14 +213,9 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 ObjectWindow::~ObjectWindow()
 {
+	objectWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(objectWindow);
 	SAFE_DELETE(objectWindow);
-	SAFE_DELETE(ditherSlider);
-	SAFE_DELETE(colorPicker);
-	SAFE_DELETE(physicsLabel);
-	SAFE_DELETE(simulationTypeComboBox);
-	SAFE_DELETE(kinematicCheckBox);
-	SAFE_DELETE(physicsTypeComboBox);
-	SAFE_DELETE(collisionShapeComboBox);
 }
 
 

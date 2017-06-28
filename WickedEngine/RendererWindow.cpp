@@ -3,11 +3,9 @@
 #include "Renderable3DComponent.h"
 
 
-RendererWindow::RendererWindow(Renderable3DComponent* component)
+RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
-
-	GUI = &component->GetGUI();
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
@@ -450,40 +448,9 @@ RendererWindow::RendererWindow(Renderable3DComponent* component)
 
 RendererWindow::~RendererWindow()
 {
+	rendererWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(rendererWindow);
 	SAFE_DELETE(rendererWindow);
-	SAFE_DELETE(vsyncCheckBox);
-	SAFE_DELETE(vsyncCheckBox);
-	SAFE_DELETE(occlusionCullingCheckBox);
-	SAFE_DELETE(resolutionScaleSlider);
-	SAFE_DELETE(gammaSlider);
-	SAFE_DELETE(voxelRadianceCheckBox);
-	SAFE_DELETE(voxelRadianceDebugCheckBox);
-	SAFE_DELETE(voxelRadianceSecondaryBounceCheckBox);
-	SAFE_DELETE(voxelRadianceVoxelSizeSlider);
-	SAFE_DELETE(voxelRadianceConeTracingSlider);
-	SAFE_DELETE(voxelRadianceFalloffSlider);
-	SAFE_DELETE(specularAASlider);
-	SAFE_DELETE(partitionBoxesCheckBox);
-	SAFE_DELETE(boneLinesCheckBox);
-	SAFE_DELETE(debugEmittersCheckBox);
-	SAFE_DELETE(wireFrameCheckBox);
-	SAFE_DELETE(advancedLightCullingCheckBox);
-	SAFE_DELETE(debugLightCullingCheckBox);
-	SAFE_DELETE(tessellationCheckBox);
-	SAFE_DELETE(advancedRefractionsCheckBox);
-	SAFE_DELETE(envProbesCheckBox);
-	SAFE_DELETE(gridHelperCheckBox);
-	SAFE_DELETE(pickTypeObjectCheckBox);
-	SAFE_DELETE(pickTypeEnvProbeCheckBox);
-	SAFE_DELETE(pickTypeLightCheckBox);
-	SAFE_DELETE(pickTypeDecalCheckBox);
-	SAFE_DELETE(speedMultiplierSlider);
-	SAFE_DELETE(shadowProps2DComboBox);
-	SAFE_DELETE(shadowPropsCubeComboBox);
-	SAFE_DELETE(MSAAComboBox);
-	SAFE_DELETE(temporalAACheckBox);
-	SAFE_DELETE(textureQualityComboBox);
-	SAFE_DELETE(mipLodBiasSlider);
 }
 
 int RendererWindow::GetPickType()

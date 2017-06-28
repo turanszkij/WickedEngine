@@ -1050,10 +1050,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 }
 wiWindow::~wiWindow()
 {
-	SAFE_DELETE(closeButton);
-	SAFE_DELETE(moveDragger);
-	SAFE_DELETE(resizeDragger_BottomRight);
-	SAFE_DELETE(resizeDragger_UpperLeft);
+	RemoveWidgets(true);
 }
 void wiWindow::AddWidget(wiWidget* widget)
 {

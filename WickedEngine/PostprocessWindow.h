@@ -11,7 +11,7 @@ class wiSlider;
 class PostprocessWindow
 {
 public:
-	PostprocessWindow(Renderable3DComponent* component);
+	PostprocessWindow(wiGUI* gui, Renderable3DComponent* component);
 	~PostprocessWindow();
 
 	wiGUI* GUI;

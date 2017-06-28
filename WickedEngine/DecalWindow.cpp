@@ -49,9 +49,9 @@ DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 
 DecalWindow::~DecalWindow()
 {
+	decalWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(decalWindow);
 	SAFE_DELETE(decalWindow);
-	SAFE_DELETE(opacitySlider);
-	SAFE_DELETE(emissiveSlider);
 }
 
 void DecalWindow::SetDecal(Decal* decal)

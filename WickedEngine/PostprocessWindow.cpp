@@ -2,12 +2,9 @@
 #include "PostprocessWindow.h"
 
 
-PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(comp)
+PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : GUI(gui), component(comp)
 {
 	assert(component && "PostprocessWnd invalid component!");
-
-	GUI = &component->GetGUI();
-
 	assert(GUI && "Invalid GUI!");
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
@@ -191,21 +188,7 @@ PostprocessWindow::PostprocessWindow(Renderable3DComponent* comp) : component(co
 
 PostprocessWindow::~PostprocessWindow()
 {
+	ppWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(ppWindow);
 	SAFE_DELETE(ppWindow);
-	SAFE_DELETE(lensFlareCheckBox);
-	SAFE_DELETE(lightShaftsCheckBox);
-	SAFE_DELETE(ssaoCheckBox);
-	SAFE_DELETE(ssrCheckBox);
-	SAFE_DELETE(sssCheckBox);
-	SAFE_DELETE(eyeAdaptionCheckBox);
-	SAFE_DELETE(motionBlurCheckBox);
-	SAFE_DELETE(depthOfFieldCheckBox);
-	SAFE_DELETE(depthOfFieldFocusSlider);
-	SAFE_DELETE(depthOfFieldStrengthSlider);
-	SAFE_DELETE(bloomCheckBox);
-	SAFE_DELETE(fxaaCheckBox);
-	SAFE_DELETE(colorGradingCheckBox);
-	SAFE_DELETE(stereogramCheckBox);
-	SAFE_DELETE(sharpenFilterCheckBox);
-	SAFE_DELETE(sharpenFilterAmountSlider);
 }

@@ -375,34 +375,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 MaterialWindow::~MaterialWindow()
 {
+	materialWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(materialWindow);
 	SAFE_DELETE(materialWindow);
-	SAFE_DELETE(materialLabel);
-	SAFE_DELETE(waterCheckBox);
-	SAFE_DELETE(planarReflCheckBox);
-	SAFE_DELETE(shadowCasterCheckBox);
-	SAFE_DELETE(normalMapSlider);
-	SAFE_DELETE(roughnessSlider);
-	SAFE_DELETE(reflectanceSlider);
-	SAFE_DELETE(metalnessSlider);
-	SAFE_DELETE(alphaSlider);
-	SAFE_DELETE(refractionIndexSlider);
-	SAFE_DELETE(emissiveSlider);
-	SAFE_DELETE(sssSlider);
-	SAFE_DELETE(pomSlider);
-	SAFE_DELETE(movingTexSliderU);
-	SAFE_DELETE(movingTexSliderV);
-	SAFE_DELETE(texMulSliderX);
-	SAFE_DELETE(texMulSliderY);
-	SAFE_DELETE(colorPicker);
-	SAFE_DELETE(alphaRefSlider);
-
-	SAFE_DELETE(texture_baseColor_Label);
-	SAFE_DELETE(texture_normal_Label);
-	SAFE_DELETE(texture_displacement_Label);
-
-	SAFE_DELETE(texture_baseColor_Button);
-	SAFE_DELETE(texture_normal_Button);
-	SAFE_DELETE(texture_displacement_Button);
 }
 
 

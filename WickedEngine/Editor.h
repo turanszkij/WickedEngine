@@ -24,10 +24,7 @@ public:
 };
 
 class Editor;
-class EditorComponent 
-	: public DeferredRenderableComponent
-	//: public ForwardRenderableComponent
-	//: public TiledForwardRenderableComponent
+class EditorComponent : public Renderable2DComponent
 {
 private:
 	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex;
@@ -45,11 +42,22 @@ public:
 	AnimationWindow*		animWnd;
 
 	Editor*					main;
+
 	EditorLoadingScreen*	loader;
+	Renderable3DComponent*	renderPath;
+	enum RENDERPATH
+	{
+		RENDERPATH_FORWARD,
+		RENDERPATH_DEFERRED,
+		RENDERPATH_TILEDFORWARD,
+	};
+	void ChangeRenderPath(RENDERPATH path);
+	void DeleteWindows();
 
 	void Initialize() override;
 	void Load() override;
 	void Start() override;
+	void FixedUpdate() override;
 	void Update(float dt) override;
 	void Render() override;
 	void Compose() override;

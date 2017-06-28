@@ -13,6 +13,8 @@ public:
 	CameraWindow(wiGUI* gui);
 	~CameraWindow();
 
+	void ResetCam();
+
 	bool fpscamera; 
 	Transform* orbitalCamTarget;
 

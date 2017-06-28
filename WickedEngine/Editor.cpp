@@ -211,20 +211,70 @@ void ResetHistory();
 string AdvanceHistory();
 void ConsumeHistoryOperation(bool undo);
 
+void EditorComponent::ChangeRenderPath(RENDERPATH path)
+{
+	SAFE_DELETE(renderPath);
+
+	switch (path)
+	{
+	case EditorComponent::RENDERPATH_FORWARD:
+		renderPath = new ForwardRenderableComponent;
+		break;
+	case EditorComponent::RENDERPATH_DEFERRED:
+		renderPath = new DeferredRenderableComponent;
+		break;
+	case EditorComponent::RENDERPATH_TILEDFORWARD:
+		renderPath = new TiledForwardRenderableComponent;
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
+	renderPath->setShadowsEnabled(true);
+	renderPath->setReflectionsEnabled(true);
+	renderPath->setSSAOEnabled(false);
+	renderPath->setSSREnabled(false);
+	renderPath->setMotionBlurEnabled(false);
+	renderPath->setColorGradingEnabled(false);
+	renderPath->setEyeAdaptionEnabled(false);
+	renderPath->setFXAAEnabled(false);
+	renderPath->setDepthOfFieldEnabled(false);
+	renderPath->setLightShaftsEnabled(false);
+
+
+	renderPath->Initialize();
+	renderPath->Load();
+
+	DeleteWindows();
+
+	materialWnd = new MaterialWindow(&GetGUI());
+	postprocessWnd = new PostprocessWindow(&GetGUI(), renderPath);
+	worldWnd = new WorldWindow(&GetGUI());
+	objectWnd = new ObjectWindow(&GetGUI());
+	meshWnd = new MeshWindow(&GetGUI());
+	cameraWnd = new CameraWindow(&GetGUI());
+	rendererWnd = new RendererWindow(&GetGUI(), renderPath);
+	envProbeWnd = new EnvProbeWindow(&GetGUI());
+	decalWnd = new DecalWindow(&GetGUI());
+	lightWnd = new LightWindow(&GetGUI());
+	animWnd = new AnimationWindow(&GetGUI());
+}
+void EditorComponent::DeleteWindows()
+{
+	SAFE_DELETE(materialWnd);
+	SAFE_DELETE(postprocessWnd);
+	SAFE_DELETE(worldWnd);
+	SAFE_DELETE(objectWnd);
+	SAFE_DELETE(meshWnd);
+	SAFE_DELETE(cameraWnd);
+	SAFE_DELETE(decalWnd);
+	SAFE_DELETE(lightWnd);
+	SAFE_DELETE(animWnd);
+}
 
 void EditorComponent::Initialize()
 {
-	setShadowsEnabled(true);
-	setReflectionsEnabled(true);
-	setSSAOEnabled(false);
-	setSSREnabled(false);
-	setMotionBlurEnabled(false);
-	setColorGradingEnabled(false);
-	setEyeAdaptionEnabled(false);
-	setFXAAEnabled(false);
-	setDepthOfFieldEnabled(false);
-	setLightShaftsEnabled(false);
-
 	SAFE_INIT(materialWnd);
 	SAFE_INIT(postprocessWnd);
 	SAFE_INIT(worldWnd);
@@ -232,6 +282,14 @@ void EditorComponent::Initialize()
 	SAFE_INIT(meshWnd);
 	SAFE_INIT(cameraWnd);
 	SAFE_INIT(rendererWnd);
+	SAFE_INIT(decalWnd);
+	SAFE_INIT(lightWnd);
+	SAFE_INIT(animWnd);
+
+
+	SAFE_INIT(loader);
+	SAFE_INIT(renderPath);
+
 
 	__super::Initialize();
 }
@@ -242,17 +300,6 @@ void EditorComponent::Load()
 	translator = new wiTranslator;
 	translator->enabled = false;
 
-	materialWnd = new MaterialWindow(&GetGUI());
-	postprocessWnd = new PostprocessWindow(this);
-	worldWnd = new WorldWindow(&GetGUI());
-	objectWnd = new ObjectWindow(&GetGUI());
-	meshWnd = new MeshWindow(&GetGUI());
-	cameraWnd = new CameraWindow(&GetGUI());
-	rendererWnd = new RendererWindow(this);
-	envProbeWnd = new EnvProbeWindow(&GetGUI());
-	decalWnd = new DecalWindow(&GetGUI());
-	lightWnd = new LightWindow(&GetGUI());
-	animWnd = new AnimationWindow(&GetGUI());
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
@@ -362,6 +409,32 @@ void EditorComponent::Load()
 	////////////////////////////////////////////////////////////////////////////////////
 
 
+	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
+	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
+	renderPathComboBox->SetPos(XMFLOAT2(screenW - 125, 50));
+	renderPathComboBox->AddItem("Forward");
+	renderPathComboBox->AddItem("Deferred");
+	renderPathComboBox->AddItem("Tiled Forward");
+	renderPathComboBox->OnSelect([&](wiEventArgs args) {
+		switch (args.iValue)
+		{
+		case 0:
+			ChangeRenderPath(RENDERPATH_FORWARD);
+			break;
+		case 1:
+			ChangeRenderPath(RENDERPATH_DEFERRED);
+			break;
+		case 2:
+			ChangeRenderPath(RENDERPATH_TILEDFORWARD);
+			break;
+		default:
+			break;
+		}
+	});
+	renderPathComboBox->SetSelected(2);
+	renderPathComboBox->SetEnabled(true);
+	renderPathComboBox->SetTooltip("Choose a render path...");
+	GetGUI().AddWidget(renderPathComboBox);
 
 	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
 	translatorCheckBox->SetTooltip("Enable the translator tool");
@@ -730,6 +803,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(exitButton);
 
 
+	cameraWnd->ResetCam();
 
 	
 
@@ -741,6 +815,10 @@ void EditorComponent::Load()
 void EditorComponent::Start()
 {
 	__super::Start();
+}
+void EditorComponent::FixedUpdate()
+{
+	renderPath->FixedUpdate();
 }
 void EditorComponent::Update(float dt)
 {
@@ -1118,6 +1196,8 @@ void EditorComponent::Update(float dt)
 	}
 
 	__super::Update(dt);
+
+	renderPath->Update(dt);
 }
 void EditorComponent::Render()
 {
@@ -1175,10 +1255,14 @@ void EditorComponent::Render()
 		wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
 	}
 
+	renderPath->Render();
+
 	__super::Render();
 }
 void EditorComponent::Compose()
 {
+	renderPath->Compose();
+
 	__super::Compose();
 
 	if (rendererWnd->GetPickType() & PICK_LIGHT)
@@ -1228,21 +1312,12 @@ void EditorComponent::Compose()
 		}
 	}
 
-	//wiImage::Draw(GetDepthBuffer()->GetTexture(), wiImageEffects(0, 0, 400, 200), GRAPHICSTHREAD_IMMEDIATE);
-
 }
 void EditorComponent::Unload()
 {
-	// ...
-	SAFE_DELETE(materialWnd);
-	SAFE_DELETE(postprocessWnd);
-	SAFE_DELETE(worldWnd);
-	SAFE_DELETE(objectWnd);
-	SAFE_DELETE(meshWnd);
-	SAFE_DELETE(cameraWnd);
-	SAFE_DELETE(decalWnd);
-	SAFE_DELETE(lightWnd);
-	SAFE_DELETE(animWnd);
+	renderPath->Unload();
+
+	DeleteWindows();
 
 	SAFE_DELETE(translator);
 
