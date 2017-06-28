@@ -12,16 +12,16 @@ enum GRAPHICSTHREAD
 	GRAPHICSTHREAD_COUNT
 };
 
-// Do not alter order because it is bound to lua manually
+// Do not alter order or value because it is bound to lua manually!
 enum RENDERTYPE
 {
-	RENDERTYPE_VOID			= 0x0000000,
-	RENDERTYPE_OPAQUE		= 0x0000001,
-	RENDERTYPE_TRANSPARENT	= 0x0000010,
-	RENDERTYPE_WATER		= 0x0000100,
-	RENDERTYPE_LIGHT		= 0x0001000,
-	RENDERTYPE_DECAL		= 0x0010000,
-	RENDERTYPE_ENVPROBE		= 0x0100000,
+	RENDERTYPE_VOID			= 0,
+	RENDERTYPE_OPAQUE		= 1,
+	RENDERTYPE_TRANSPARENT	= 2,
+	RENDERTYPE_WATER		= 4,
+	RENDERTYPE_LIGHT		= 8,
+	RENDERTYPE_DECAL		= 16,
+	RENDERTYPE_ENVPROBE		= 32,
 };
 enum PICKTYPE
 {
@@ -48,7 +48,7 @@ enum SHADERTYPE
 	SHADERTYPE_COUNT
 };
 
-// stencils
+// engine stencil reference values. These can be in range of 0-127. 128-255 are for user stencil values.
 enum STENCILREF {
 	STENCILREF_EMPTY = 0x00,
 	STENCILREF_SKY = 0x01,
@@ -57,7 +57,7 @@ enum STENCILREF {
 	STENCILREF_CHARACTER = 0x04,
 	STENCILREF_SHADELESS = 0x05,
 	STENCILREF_SKIN = 0x06,
-	STENCILREF_LAST = 0xFF
+	STENCILREF_LAST = 0x0F
 };
 
 // constant buffers

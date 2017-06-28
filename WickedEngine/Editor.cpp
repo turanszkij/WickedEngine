@@ -182,6 +182,13 @@ void ClearSelected()
 	savedParents.clear();
 }
 
+enum EDITORSTENCILREF
+{
+	EDITORSTENCILREF_CLEAR = 0x00,
+	EDITORSTENCILREF_HIGHLIGHT = 0x01,
+	EDITORSTENCILREF_LAST = 0x0F,
+};
+
 
 wiArchive *clipboard_write = nullptr, *clipboard_read = nullptr;
 enum ClipboardItemType
@@ -880,6 +887,8 @@ void EditorComponent::Update(float dt)
 						Material* material = picked->object->mesh->subsets[picked->subsetIndex].material;
 
 						materialWnd->SetMaterial(material);
+
+						material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
 					}
 					if (picked->object->isArmatureDeformed())
 					{
@@ -1219,19 +1228,7 @@ void EditorComponent::Compose()
 		}
 	}
 
-
-	//// Test Halton sequence:
-	//for (int i = 0; i < 64; ++i)
-	//{
-	//	const XMFLOAT4& halton = wiMath::GetHaltonSequence(i);
-	//	wiImageEffects fx = wiImageEffects();
-	//	fx.pos.x = halton.x * wiRenderer::GetDevice()->GetScreenWidth();
-	//	fx.pos.y = halton.y * wiRenderer::GetDevice()->GetScreenHeight();
-	//	fx.siz = XMFLOAT2(10, 10);
-	//	fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//	fx.blendFlag = BLENDMODE_OPAQUE;
-	//	wiImage::Draw(wiTextureHelper::getInstance()->getWhite(), fx, GRAPHICSTHREAD_IMMEDIATE);
-	//}
+	//wiImage::Draw(GetDepthBuffer()->GetTexture(), wiImageEffects(0, 0, 400, 200), GRAPHICSTHREAD_IMMEDIATE);
 
 }
 void EditorComponent::Unload()

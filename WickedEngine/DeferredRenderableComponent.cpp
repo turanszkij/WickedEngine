@@ -287,6 +287,11 @@ wiRenderTarget& DeferredRenderableComponent::GetFinalRT()
 		return rtDeferred;
 }
 
+wiDepthTarget* DeferredRenderableComponent::GetDepthBuffer()
+{
+	return rtGBuffer.depth;
+}
+
 void DeferredRenderableComponent::setPreferredThreadingCount(unsigned short value)
 {
 	Renderable3DComponent::setPreferredThreadingCount(value);

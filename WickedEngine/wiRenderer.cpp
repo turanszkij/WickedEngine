@@ -4294,14 +4294,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					device->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), threadID);
 					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
 
-					UINT realStencilRef = mesh->stencilRef;
+					UINT realStencilRef = material->GetStencilRef();
+					// todo: better
 					if (material->shadeless)
 					{
-						realStencilRef = STENCILREF_SHADELESS;
+						realStencilRef = (material->userStencilRef << 4) | STENCILREF_SHADELESS;
 					}
 					else if (material->subsurfaceScattering > 0)
 					{
-						realStencilRef = STENCILREF_SKIN;
+						realStencilRef = (material->userStencilRef << 4) | STENCILREF_SKIN;
 					}
 					if (prevStencilRef != realStencilRef)
 					{
@@ -5983,7 +5984,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
-	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], mesh->stencilRef, threadID);
+	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], 0, threadID);
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
 	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);

@@ -127,6 +127,10 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().EndRange(); // Opaque Scene
 }
 
+wiDepthTarget* ForwardRenderableComponent::GetDepthBuffer()
+{
+	return rtMain.depth;
+}
 
 void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value)
 {

@@ -409,6 +409,11 @@ MaterialWindow::~MaterialWindow()
 
 void MaterialWindow::SetMaterial(Material* mat)
 {
+	if (material != nullptr)
+	{
+		material->SetUserStencilRef(0);
+	}
+
 	material = mat;
 	if (material != nullptr)
 	{

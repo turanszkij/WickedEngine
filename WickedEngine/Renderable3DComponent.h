@@ -80,6 +80,8 @@ protected:
 	virtual void RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID);
 	virtual void RenderColorGradedComposition();
 public:
+	virtual wiDepthTarget* GetDepthBuffer() = 0;
+
 	inline float getLightShaftQuality(){ return lightShaftQuality; }
 	inline float getBloomDownSample(){ return bloomDownSample; }
 	inline float getBloomStrength(){ return bloomStren; }

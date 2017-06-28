@@ -17,6 +17,8 @@ public:
 	DeferredRenderableComponent();
 	virtual ~DeferredRenderableComponent();
 
+	virtual wiDepthTarget* GetDepthBuffer() override;
+
 	virtual void setPreferredThreadingCount(unsigned short value) override;
 
 	virtual void Initialize() override;

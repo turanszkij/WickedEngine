@@ -1402,6 +1402,9 @@ void Material::init()
 
 	alphaRef = 1.0f; // no alpha test by default
 
+	engineStencilRef = STENCILREF::STENCILREF_DEFAULT;
+	userStencilRef = 0x00;
+
 
 	// constant buffer creation
 	GPUBufferDesc bd;
@@ -2453,7 +2456,7 @@ void Mesh::Serialize(wiArchive& archive)
 		archive >> doubleSided;
 		int temp;
 		archive >> temp;
-		stencilRef = (STENCILREF)temp;
+		//engineStencilRef = (STENCILREF)temp;
 		archive >> calculatedAO;
 		archive >> trailInfo.base;
 		archive >> trailInfo.tip;
@@ -2546,7 +2549,7 @@ void Mesh::Serialize(wiArchive& archive)
 		}
 		archive << renderable;
 		archive << doubleSided;
-		archive << (int)stencilRef;
+		archive << (int)0/*engineStencilRef*/;
 		archive << calculatedAO;
 		archive << trailInfo.base;
 		archive << trailInfo.tip;

@@ -220,6 +220,9 @@ struct Material
 
 	float alphaRef;
 
+	STENCILREF engineStencilRef;
+	uint8_t userStencilRef;
+
 
 	Material()
 	{
@@ -246,6 +249,16 @@ struct Material
 		return RENDERTYPE_OPAQUE;
 	}
 	void ConvertToPhysicallyBasedMaterial();
+	// User stencil ref could be anything from 0-127, greater will be truncated when using 8 bit stencil buffer!
+	void SetUserStencilRef(uint8_t value)
+	{
+		assert(value < 128);
+		userStencilRef = value;
+	}
+	UINT GetStencilRef()
+	{
+		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
+	}
 	const wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
 	const wiGraphicsTypes::Texture2D* GetNormalMap() const;
 	const wiGraphicsTypes::Texture2D* GetRoughnessMap() const;
@@ -328,7 +341,6 @@ public:
 	wiGraphicsTypes::GPUBuffer	instanceBufferPrev;
 
 	bool renderable,doubleSided;
-	STENCILREF stencilRef;
 
 	bool calculatedAO;
 
@@ -384,7 +396,6 @@ public:
 		indices.resize(0);
 		renderable=false;
 		doubleSided=false;
-		stencilRef = STENCILREF::STENCILREF_DEFAULT;
 		aabb=AABB();
 		trailInfo=RibbonTrail();
 		armature=nullptr;

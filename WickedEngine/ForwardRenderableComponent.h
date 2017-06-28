@@ -16,6 +16,8 @@ public:
 	ForwardRenderableComponent();
 	virtual ~ForwardRenderableComponent();
 
+	virtual wiDepthTarget* GetDepthBuffer() override;
+
 
 	virtual void setPreferredThreadingCount(unsigned short value) override;
 

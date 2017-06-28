@@ -713,10 +713,13 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("PutEnvProbe", PutEnvProbe);
 
 
-			wiLua::GetGlobal()->RunText("PICK_VOID = 0x0000000");
-			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 0x0000001");
-			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 0x0000010");
-			wiLua::GetGlobal()->RunText("PICK_WATER = 0x0000100");
+			wiLua::GetGlobal()->RunText("PICK_VOID = 0");
+			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 1");
+			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 2");
+			wiLua::GetGlobal()->RunText("PICK_WATER = 4");
+			wiLua::GetGlobal()->RunText("PICK_LIGHT = 8");
+			wiLua::GetGlobal()->RunText("PICK_DECAL = 16");
+			wiLua::GetGlobal()->RunText("PICK_ENVPROBE = 32");
 
 
 			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);
