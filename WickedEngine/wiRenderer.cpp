@@ -537,12 +537,17 @@ void wiRenderer::UpdateCubes(){
 
 bool wiRenderer::ResolutionChanged()
 {
+	//detect internal resolution change:
 	static float _savedresscale = GetResolutionScale();
-	if (_savedresscale != GetResolutionScale())
+	static long lastFrameInternalResChange = 0;
+	if (_savedresscale != GetResolutionScale() || lastFrameInternalResChange == GetDevice()->GetFrameCount())
 	{
 		_savedresscale = GetResolutionScale();
+		lastFrameInternalResChange = GetDevice()->GetFrameCount();
 		return true;
 	}
+
+	// detect device resolution change:
 	return GetDevice()->ResolutionChanged();
 }
 

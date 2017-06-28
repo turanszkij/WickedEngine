@@ -41,7 +41,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	rendererWindow->AddWidget(occlusionCullingCheckBox);
 
 	resolutionScaleSlider = new wiSlider(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
-	resolutionScaleSlider->SetTooltip("Adjust the gamma correction for the display device.");
+	resolutionScaleSlider->SetTooltip("Adjust the internal rendering resolution.");
 	resolutionScaleSlider->SetSize(XMFLOAT2(100, 30));
 	resolutionScaleSlider->SetPos(XMFLOAT2(x, y += 30));
 	resolutionScaleSlider->SetValue(wiRenderer::GetResolutionScale());
