@@ -1,9 +1,12 @@
+#define DIRECTIONALLIGHT_SOFT
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
+#include "packHF.hlsli"
+#include "reconstructPositionHF.hlsli"
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-RWTEXTURE2D(DebugTexture, float4, UAVSLOT_DEBUGTEXTURE);
+RWTEXTURE2D(DebugTexture, unorm float4, UAVSLOT_DEBUGTEXTURE);
 #endif
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
@@ -19,10 +22,16 @@ globallycoherent RWRAWBUFFER(LightIndexCounter, UAVSLOT_LIGHTINDEXCOUNTERHELPER)
 // "t_" prefix indicates light lists for transparent geometry.
 
 // Light index lists and light grids.
-RWSTRUCTUREDBUFFER(o_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_OPAQUE);
 RWSTRUCTUREDBUFFER(t_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_TRANSPARENT);
-RWTEXTURE2D(o_LightGrid, uint2, UAVSLOT_LIGHTGRID_OPAQUE);
 RWTEXTURE2D(t_LightGrid, uint2, UAVSLOT_LIGHTGRID_TRANSPARENT);
+
+#ifdef DEFERRED
+RWTEXTURE2D(deferred_Diffuse, float4, UAVSLOT_TILEDDEFERRED_DIFFUSE);
+RWTEXTURE2D(deferred_Specular, float4, UAVSLOT_TILEDDEFERRED_SPECULAR);
+#else
+RWSTRUCTUREDBUFFER(o_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_OPAQUE);
+RWTEXTURE2D(o_LightGrid, uint2, UAVSLOT_LIGHTGRID_OPAQUE);
+#endif
 
 // Group shared variables.
 groupshared uint uMinDepth;
@@ -362,6 +371,7 @@ void main(ComputeShaderInput IN)
 
 	// Update global memory with visible light buffer.
 	// First update the light grid (only thread 0 in group needs to do this)
+#ifndef DEFERRED
 	if (IN.groupIndex == 0)
 	{
 		// Update light grid for opaque geometry.
@@ -369,7 +379,9 @@ void main(ComputeShaderInput IN)
 		LightIndexCounter.InterlockedAdd(0, o_LightCount, o_LightIndexStartOffset);
 		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
 	}
-	else if(IN.groupIndex == 1)
+	else 
+#endif
+		if(IN.groupIndex == 1)
 	{
 		// Update light grid for transparent geometry.
 		//InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
@@ -377,22 +389,102 @@ void main(ComputeShaderInput IN)
 		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
 	}
 
+#ifndef DEFERRED
 	o_BitonicSort(IN.groupIndex);
 	t_BitonicSort(IN.groupIndex);
+#endif
 
 	GroupMemoryBarrierWithGroupSync();
 
 	// Now update the light index list (all threads).
+#ifndef DEFERRED
 	// For opaque goemetry.
 	for (i = IN.groupIndex; i < o_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
 	{
 		o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
 	}
+#endif
 	// For transparent geometry.
 	for (i = IN.groupIndex; i < t_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
 	{
 		t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
 	}
+
+#ifdef DEFERRED
+	// Light the pixels:
+	
+	float3 diffuse, specular;
+	float depth = texture_depth[texCoord];
+	float4 baseColor = texture_gbuffer0[texCoord];
+	float4 g1 = texture_gbuffer1[texCoord];
+	float4 g3 = texture_gbuffer3[texCoord];
+	float3 N = decode(g1.xy);
+	float roughness = g3.x;
+	float reflectance = g3.y;
+	float metalness = g3.z;
+	float ao = g3.w;
+	BRDF_HELPER_MAKEINPUTS(baseColor, reflectance, metalness);
+	float3 P = getPosition((float2)texCoord / g_xWorld_InternalResolution, depth);
+	float3 V = normalize(g_xCamera_CamPos - P);
+
+	[loop]
+	for (uint li = 0; li < o_LightCount; ++li)
+	{
+		uint lightIndex = o_LightList[li];
+		LightArrayType light = Lights[lightIndex];
+
+		LightingResult result = (LightingResult)0;
+
+		switch (light.type)
+		{
+		case 0/*DIRECTIONAL*/:
+		{
+			result = DirectionalLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 1/*POINT*/:
+		{
+			result = PointLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 2/*SPOT*/:
+		{
+			result = SpotLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 3/*SPHERE*/:
+		{
+			result = SphereLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 4/*DISC*/:
+		{
+			result = DiscLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 5/*RECTANGLE*/:
+		{
+			result = RectangleLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case 6/*TUBE*/:
+		{
+			result = TubeLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		default:break;
+		}
+
+		diffuse += max(0.0f, result.diffuse);
+		specular += max(0.0f, result.specular);
+	}
+
+	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
+
+	deferred_Diffuse[texCoord] = float4(diffuse, ao);
+	deferred_Specular[texCoord] = float4(specular, 1);
+
+#endif // DEFERRED
 
 #ifdef DEBUG_TILEDLIGHTCULLING
 	const float3 mapTex[] = {

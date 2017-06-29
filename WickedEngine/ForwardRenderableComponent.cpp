@@ -124,7 +124,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
 
-	wiProfiler::GetInstance().EndRange(); // Opaque Scene
+	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
 }
 
 wiDepthTarget* ForwardRenderableComponent::GetDepthBuffer()

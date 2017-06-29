@@ -871,6 +871,10 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_ADVANCED.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_ADVANCED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_RESET.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
@@ -4848,14 +4852,15 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		GetDevice()->BindResourceVS(result, TEXSLOT_VOXELRADIANCE, threadID);
 	}
 	GetDevice()->BindResourcePS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	GetDevice()->BindResourceCS(result, TEXSLOT_VOXELRADIANCE, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
+void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Tiled Light Culling", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::GetInstance().BeginRange("Tiled Light Processing", wiProfiler::DOMAIN_GPU, threadID);
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	int _width = GetInternalResolution().x;
@@ -4959,6 +4964,24 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]);
 		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]);
 	}
+	if (deferred && (textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV] == nullptr || textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV] == nullptr))
+	{
+		Texture2DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.ArraySize = 1;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Width = (UINT)_width;
+		desc.Height = (UINT)_height;
+		desc.MipLevels = 1;
+		desc.MiscFlags = 0;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]);
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]);
+	}
 
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
@@ -5012,33 +5035,78 @@ void wiRenderer::ComputeTiledLightCulling(GRAPHICSTHREAD threadID)
 			device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
 			if (GetAdvancedLightCulling())
 			{
-				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG], threadID);
+				if (deferred)
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED_DEBUG], threadID);
+				}
+				else
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG], threadID);
+				}
 			}
 			else
 			{
-				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
+				if (deferred)
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_DEBUG], threadID);
+				}
+				else
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
+				}
 			}
 		}
 		else
 		{
 			if (GetAdvancedLightCulling())
 			{
-				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED], threadID);
+				if (deferred)
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED], threadID);
+				}
+				else
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED], threadID);
+				}
 			}
 			else
 			{
-				device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
+				if (deferred)
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED], threadID);
+				}
+				else
+				{
+					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
+				}
 			}
 		}
 
-		const GPUUnorderedResource* uavs[] = {
-			static_cast<const GPUUnorderedResource*>(lightCounterHelper),
-			static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]),
-			static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]),
-			static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]),
-			static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]),
-		};
-		device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_LIGHTINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
+		if (deferred)
+		{
+			const GPUUnorderedResource* uavs[] = {
+				static_cast<const GPUUnorderedResource*>(lightCounterHelper),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]),
+				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]),
+			};
+			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_LIGHTINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
+
+			GetDevice()->BindResourceCS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+			GetDevice()->BindResourceCS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+		}
+		else
+		{
+			const GPUUnorderedResource* uavs[] = {
+				static_cast<const GPUUnorderedResource*>(lightCounterHelper),
+				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]),
+				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]),
+			};
+			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_LIGHTINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
+		}
 
 		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
 

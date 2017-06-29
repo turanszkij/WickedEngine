@@ -63,6 +63,7 @@
 #include "ForwardRenderableComponent.h"
 #include "DeferredRenderableComponent.h"
 #include "TiledForwardRenderableComponent.h"
+#include "TiledDeferredRenderableComponent.h"
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
 

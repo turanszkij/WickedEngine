@@ -479,7 +479,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-	wiProfiler::GetInstance().EndRange(); // Secondary Scene
+	wiProfiler::GetInstance().EndRange(threadID); // Secondary Scene
 }
 void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {
@@ -488,7 +488,7 @@ void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT,
 	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
 		, rtWaterRipple.GetTexture(), threadID, false, true);
 
-	wiProfiler::GetInstance().EndRange(); // Transparent Scene
+	wiProfiler::GetInstance().EndRange(threadID); // Transparent Scene
 }
 void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID)
 {
@@ -640,7 +640,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	wiRenderer::GetDevice()->EventEnd(threadID);
 
 
-	wiProfiler::GetInstance().EndRange(); // Post Processing 1
+	wiProfiler::GetInstance().EndRange(threadID); // Post Processing 1
 }
 void Renderable3DComponent::RenderColorGradedComposition()
 {

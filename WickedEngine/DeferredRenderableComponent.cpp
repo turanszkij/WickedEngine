@@ -169,9 +169,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawLights(wiRenderer::getCamera(), threadID);
 	}
 
-
-
-	if (getSSAOEnabled()){
+	if (getSSAOEnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = COMPARISON_LESS;
@@ -211,7 +209,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		rtSSS[1].Activate(threadID, 0, 0, 0, 0);
 		rtSSS[0].Activate(threadID, 0, 0, 0, 0);
 		static int sssPassCount = 6;
-		for (int i = 0; i < sssPassCount; ++i) 
+		for (int i = 0; i < sssPassCount; ++i)
 		{
 			wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 			rtSSS[i % 2].Set(threadID, rtGBuffer.depth);
@@ -264,7 +262,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 
-	if (getSSREnabled()){
+	if (getSSREnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
@@ -276,7 +274,8 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-	wiProfiler::GetInstance().EndRange(); // Opaque Scene
+
+	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
 }
 
 wiRenderTarget& DeferredRenderableComponent::GetFinalRT()

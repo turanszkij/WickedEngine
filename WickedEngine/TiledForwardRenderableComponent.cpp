@@ -48,7 +48,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
 
-	wiRenderer::ComputeTiledLightCulling(threadID);
+	wiRenderer::ComputeTiledLightCulling(false, threadID);
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
@@ -61,7 +61,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	rtMain.Deactivate(threadID);
 	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 
-	wiProfiler::GetInstance().EndRange(); // Opaque Scene
+	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
 }
 void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {
@@ -70,6 +70,6 @@ void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& ref
 	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
 		, rtWaterRipple.GetTexture(), threadID, getHairParticlesEnabled() && getHairParticleAlphaCompositionEnabled(), true);
 
-	wiProfiler::GetInstance().EndRange(); // Transparent Scene
+	wiProfiler::GetInstance().EndRange(threadID); // Transparent Scene
 }
 

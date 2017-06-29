@@ -615,6 +615,18 @@
     <FxCompile Include="matrixTransposeCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="lightCullingCS_DEFERRED.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightCullingCS_DEFERRED_ADVANCED.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightCullingCS_DEFERRED_ADVANCED_DEBUG.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightCullingCS_DEFERRED_DEBUG.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
