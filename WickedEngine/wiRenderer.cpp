@@ -1930,6 +1930,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &envProbeCB, threadID);
 		GetDevice()->BindResourcePS(envMaps[0], TEXSLOT_ENV0, threadID);
 		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
+		GetDevice()->BindResourceCS(envMaps[0], TEXSLOT_ENV0, threadID);
+		GetDevice()->BindResourceCS(envMaps[1], TEXSLOT_ENV1, threadID);
 	}
 
 	

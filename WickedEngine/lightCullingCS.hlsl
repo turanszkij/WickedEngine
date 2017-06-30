@@ -2,6 +2,7 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
+#include "envReflectionHF.hlsli"
 #include "packHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
@@ -335,6 +336,7 @@ void main(ComputeShaderInput IN)
 			o_AppendLight(i);
 		}
 		break;
+#ifndef DEFERRED
 		case 100:/*DECAL*/
 		{
 			Sphere sphere = { light.positionVS.xyz, light.range };
@@ -363,6 +365,7 @@ void main(ComputeShaderInput IN)
 			}
 		}
 		break;
+#endif // DEFERRED
 		}
 	}
 
@@ -390,6 +393,7 @@ void main(ComputeShaderInput IN)
 	}
 
 #ifndef DEFERRED
+	// Decals need sorting!
 	o_BitonicSort(IN.groupIndex);
 	t_BitonicSort(IN.groupIndex);
 #endif
@@ -480,6 +484,8 @@ void main(ComputeShaderInput IN)
 	}
 
 	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
+
+	specular = max(specular, EnvironmentReflection(N, V, P, roughness, f0));
 
 	deferred_Diffuse[texCoord] = float4(diffuse, ao);
 	deferred_Specular[texCoord] = float4(specular, 1);

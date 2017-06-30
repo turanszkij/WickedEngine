@@ -13,6 +13,9 @@
     <Filter Include="ENGINE">
       <UniqueIdentifier>{2d30408b-f788-42a8-9648-41561036e10a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ENGINE\Components">
+      <UniqueIdentifier>{a25b4076-72bb-4c78-8bc1-84c59a8984fd}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ENGINE\Common">
       <UniqueIdentifier>{3c39405f-ec30-4b72-9c32-68aefb4fb7a5}</UniqueIdentifier>
     </Filter>
@@ -57,9 +60,6 @@
     </Filter>
     <Filter Include="Documentation">
       <UniqueIdentifier>{052d6b54-4254-4260-ba34-79b6fb943b4a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ENGINE\RenderPaths">
-      <UniqueIdentifier>{a25b4076-72bb-4c78-8bc1-84c59a8984fd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -171,26 +171,26 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\DeferredRenderableComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\ForwardRenderableComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\LoadingScreenComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\MainComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\Renderable2DComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\Renderable3DComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\RenderableComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
@@ -1059,8 +1059,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\TiledForwardRenderableComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersectables.h">
       <Filter>ENGINE\Helpers</Filter>
@@ -1101,8 +1101,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\TiledDeferredRenderableComponent.h">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1226,26 +1226,26 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\ForwardRenderableComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\DeferredRenderableComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\LoadingScreenComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\MainComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\Renderable2DComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\Renderable3DComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\RenderableComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
@@ -1865,8 +1865,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\TiledForwardRenderableComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp">
       <Filter>ENGINE\Helpers</Filter>
@@ -1889,8 +1889,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\TiledDeferredRenderableComponent.cpp">
-      <Filter>ENGINE\RenderPaths</Filter>
+    <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

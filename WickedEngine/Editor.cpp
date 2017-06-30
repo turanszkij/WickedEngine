@@ -309,6 +309,42 @@ void EditorComponent::Load()
 
 	float step = 105, x = -step;
 
+
+
+	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
+	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
+	renderPathComboBox->SetPos(XMFLOAT2(screenW - 940, 0));
+	renderPathComboBox->AddItem("Forward");
+	renderPathComboBox->AddItem("Deferred");
+	renderPathComboBox->AddItem("Tiled Forward");
+	renderPathComboBox->AddItem("Tiled Deferred");
+	renderPathComboBox->OnSelect([&](wiEventArgs args) {
+		switch (args.iValue)
+		{
+		case 0:
+			ChangeRenderPath(RENDERPATH_FORWARD);
+			break;
+		case 1:
+			ChangeRenderPath(RENDERPATH_DEFERRED);
+			break;
+		case 2:
+			ChangeRenderPath(RENDERPATH_TILEDFORWARD);
+			break;
+		case 3:
+			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
+			break;
+		default:
+			break;
+		}
+	});
+	renderPathComboBox->SetSelected(2);
+	renderPathComboBox->SetEnabled(true);
+	renderPathComboBox->SetTooltip("Choose a render path...");
+	GetGUI().AddWidget(renderPathComboBox);
+
+
+
+
 	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
 	rendererWnd_Toggle->SetTooltip("Renderer settings window");
 	rendererWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
@@ -410,38 +446,6 @@ void EditorComponent::Load()
 
 
 	////////////////////////////////////////////////////////////////////////////////////
-
-
-	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
-	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
-	renderPathComboBox->SetPos(XMFLOAT2(screenW - 125, 50));
-	renderPathComboBox->AddItem("Forward");
-	renderPathComboBox->AddItem("Deferred");
-	renderPathComboBox->AddItem("Tiled Forward");
-	renderPathComboBox->AddItem("Tiled Deferred");
-	renderPathComboBox->OnSelect([&](wiEventArgs args) {
-		switch (args.iValue)
-		{
-		case 0:
-			ChangeRenderPath(RENDERPATH_FORWARD);
-			break;
-		case 1:
-			ChangeRenderPath(RENDERPATH_DEFERRED);
-			break;
-		case 2:
-			ChangeRenderPath(RENDERPATH_TILEDFORWARD);
-			break;
-		case 3:
-			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
-			break;
-		default:
-			break;
-		}
-	});
-	renderPathComboBox->SetSelected(2);
-	renderPathComboBox->SetEnabled(true);
-	renderPathComboBox->SetTooltip("Choose a render path...");
-	GetGUI().AddWidget(renderPathComboBox);
 
 	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
 	translatorCheckBox->SetTooltip("Enable the translator tool");
