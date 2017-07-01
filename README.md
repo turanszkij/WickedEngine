@@ -14,7 +14,7 @@ Run in Release mode for best performance. Debug mode has full debugging support 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 Video: https://www.youtube.com/watch?v=nNlfkrURqZQ <br/>
 Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
-Devblog: https://turanszkij.wordpress.com/
+Devblog: https://turanszkij.wordpress.com/ <br/>
 PC-Build: http://www.mediafire.com/file/jcr73t7pv82tma4/WickedEngine_0_12_1.rar
 
 ### Platforms:
