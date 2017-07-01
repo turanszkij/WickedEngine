@@ -50,6 +50,9 @@ This implements a Deferred rendering pipeline. Several screen space geometry buf
 It has a lower entry barrier performance wise than Tiled Forward rendering but has some disadvantages. It scales worse for increasing number of lights, has lower precision output and transparent objects are rendered using the 
 Forward rendering pipeline.
 
+##### TiledDeferredRenderableComponent
+The tiled deferred render path is using a G-buffer like traditional deferred rendering but all the lights are accumulated in a single compute shader pass. Transparent objects are rendered like in Forward+ mode.
+
 #### LoadingScreenComponent
 A helper engine component to load resources or an entire component. It can be activated by the MainComponent as a regular component but has some additional features which are not available in any other.
 
