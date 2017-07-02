@@ -15,7 +15,7 @@ Run in Release mode for best performance. Debug mode has full debugging support 
 Video: https://www.youtube.com/watch?v=nNlfkrURqZQ <br/>
 Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
 Devblog: https://turanszkij.wordpress.com/ <br/>
-PC-Build: http://www.mediafire.com/file/jcr73t7pv82tma4/WickedEngine_0_12_1.rar
+Windows 10 Build: http://www.mediafire.com/file/jcr73t7pv82tma4/WickedEngine_0_12_1.rar
 
 ### Platforms:
 - Windows PC Desktop (validated version 0.11.73)
@@ -25,15 +25,14 @@ PC-Build: http://www.mediafire.com/file/jcr73t7pv82tma4/WickedEngine_0_12_1.rar
 
 - Windows 10
 - Visual Studio 2015+
-- Windows SDK
-- DirectX11 SDK
+- Windows 10 SDK
 
 (Windows 7 support discontinued from version 0.11.0!)
 
 
 ### Hardware: 
 
-- DirectX 11+ Graphics card
+- DirectX 11 compatible GPU
 
 
 ### Usage: 
