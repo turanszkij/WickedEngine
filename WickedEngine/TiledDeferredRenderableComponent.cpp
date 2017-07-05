@@ -14,6 +14,7 @@ using namespace wiGraphicsTypes;
 TiledDeferredRenderableComponent::TiledDeferredRenderableComponent()
 {
 	DeferredRenderableComponent::setProperties();
+	setHairParticleAlphaCompositionEnabled(true);
 }
 
 
@@ -33,6 +34,10 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
+		if (getHairParticleAlphaCompositionEnabled())
+		{
+			wiRenderer::SetAlphaRef(0.25f, threadID);
+		}
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), getHairParticlesEnabled(), true);
 	}
 
