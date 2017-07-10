@@ -1,3 +1,4 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true)](https://ci.appveyor.com/project/turanszkij/wickedengine)
 ![Logo](logo/logo_small.png)
 ![Promo](logo/promo.png)
 

@@ -1926,6 +1926,7 @@
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md">
       <Filter>Documentation</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">

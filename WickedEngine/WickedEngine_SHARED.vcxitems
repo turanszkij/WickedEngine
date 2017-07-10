@@ -712,6 +712,7 @@
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />
