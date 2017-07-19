@@ -13,10 +13,10 @@ From now on you can easily set up a game project by using the component template
 Run in Release mode for best performance. Debug mode has full debugging support but poor performance.
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
-Video: https://www.youtube.com/watch?v=nNlfkrURqZQ <br/>
-Video of the Editor: https://www.youtube.com/watch?v=iMluDH8oaFg <br/>
-Devblog: https://turanszkij.wordpress.com/ <br/>
-Windows 10 Build: http://www.mediafire.com/file/jcr73t7pv82tma4/WickedEngine_0_12_1.rar
+[Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
+[Video](https://www.youtube.com/watch?v=nNlfkrURqZQ)<br/>
+[Video of the Editor](https://www.youtube.com/watch?v=iMluDH8oaFg)<br/>
+[Devblog](https://turanszkij.wordpress.com/)<br/>
 
 ### Platforms:
 - Windows PC Desktop (validated version 0.11.73)
@@ -25,15 +25,9 @@ Windows 10 Build: http://www.mediafire.com/file/jcr73t7pv82tma4/WickedEngine_0_1
 ### Requirements:
 
 - Windows 10
-- Visual Studio 2015+
-- Windows 10 SDK
-
-(Windows 7 support discontinued from version 0.11.0!)
-
-
-### Hardware: 
-
 - DirectX 11 compatible GPU
+- Visual Studio 2017
+- Windows 10 SDK
 
 
 ### Usage: 
@@ -61,7 +55,7 @@ Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole projec
 - ./WickedEngine.sln 					- Visual Studio Solution; 
 - ./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project; 
 - ./WickedEngine/BULLET/					- Bullet 2.82 Source files; 
-- ./WickedEngine/LUA/					- Lua 5.3.1 Source files; 
+- ./WickedEngine/LUA/					- Lua 5.3.3 Source files; 
 - ./WickedEngine/shaders/					- Binary shaders output; 
 - ./WickedEngine/models					- Sample model files
 - ./WickedEngine/ 						- C++ and shader source files; 
@@ -85,6 +79,8 @@ Test model and scene files are now available in the WickedEngine/models director
 ### Model import/export:
 
 You can export models from Blender with the provided python script: io_export_wicked_wi_bin.py
+Common model formats like FBX are not supported currently, only the custom model format which is exportable from Blender.<br/>
+
 Notes on exporting:
 - Names should not contain spaces inside Blender
 	The problem is the c++ side code which parses the text files such as it breaks parsing on spaces. 

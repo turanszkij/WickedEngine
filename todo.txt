@@ -2,10 +2,6 @@ TODOS:		|
 -------------
 
 
-- Auto build system?
-
-- Auto testing system?
-
 - CMake or something?
 
 - Vulkan or DX12 renderer implementation
@@ -28,9 +24,6 @@ TODOS:		|
 
 - Multiple scene management
 	Shouldn't be too hard.
-
-- Scene double buffering
-	Would allow for multithreaded scene graph update. Need to write copy for the whole scene, could be hard.
 
 - Window widgets should be rendered more nicely, for example the title bars and drag controls shouldn't be scaled across all axes
 
