@@ -14,6 +14,8 @@
 
 ![Promo](logo/promo.png)
 
+[![Join the chat at https://gitter.im/WickedEngine/Lobby](https://badges.gitter.im/WickedEngine/Lobby.svg)](https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ### Overview:
 
 Wicked Engine is an open-source game engine written in C++. For list of features, see features.txt.
