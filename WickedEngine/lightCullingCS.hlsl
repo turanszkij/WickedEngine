@@ -171,9 +171,9 @@ void main(ComputeShaderInput IN)
 {
 	// Calculate min & max depth in threadgroup / tile.
 	int2 texCoord = IN.dispatchThreadID.xy;
-	float fDepth = texture_depth.Load(int3(texCoord, 0)).r;
+	float depth = texture_depth[texCoord];
 
-	uint uDepth = asuint(fDepth);
+	uint uDepth = asuint(depth);
 
 	if (IN.groupIndex == 0) // Avoid contention by other threads in the group.
 	{
@@ -253,7 +253,7 @@ void main(ComputeShaderInput IN)
 	// We divide the minmax depth bounds to 32 equal slices
 	// then we mark the occupied depth slices with atomic or from each thread
 	// we do all this in linear (view) space
-	float realDepthVS = ScreenToView(float4(0, 0, fDepth, 1)).z;
+	float realDepthVS = ScreenToView(float4(0, 0, depth, 1)).z;
 	const float __depthRangeRecip = 32.0f / (maxDepthVS - minDepthVS);
 	const uint __depthmaskcellindex = max(0, min(32, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 	InterlockedOr(uDepthMask, 1 << __depthmaskcellindex);
@@ -418,7 +418,6 @@ void main(ComputeShaderInput IN)
 	// Light the pixels:
 	
 	float3 diffuse, specular;
-	float depth = texture_depth[texCoord];
 	float4 baseColor = texture_gbuffer0[texCoord];
 	float4 g1 = texture_gbuffer1[texCoord];
 	float4 g3 = texture_gbuffer3[texCoord];
