@@ -1,9 +1,18 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true)](https://ci.appveyor.com/project/turanszkij/wickedengine)
-![Logo](logo/logo_small.png)
-![Promo](logo/promo.png)
+<img align="left" src="logo/logo_small.png" width="128px"/>
 
 # Wicked Engine
-## Created by Turánszki János
+
+[![Build status][s1]][av] [![MIT/Apache][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
+
+[s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
+[s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
+[s3]: https://img.shields.io/badge/license-MIT%2FApache-blue.svg
+
+[av]: https://ci.appveyor.com/project/turanszkij/wickedengine
+[gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+[li]: COPYING
+
+![Promo](logo/promo.png)
 
 ### Overview:
 
