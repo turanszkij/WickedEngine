@@ -48,11 +48,13 @@ groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 groupshared uint o_LightCount;
 groupshared uint o_LightIndexStartOffset;
 groupshared uint o_LightList[MAX_LIGHTS_PER_TILE];
+groupshared bool o_needSorting;		// If there are decals in the tile, the list needs to be sorted
 
 // Transparent geometry light lists.
 groupshared uint t_LightCount;
 groupshared uint t_LightIndexStartOffset;
 groupshared uint t_LightList[MAX_LIGHTS_PER_TILE];
+groupshared bool t_needSorting;		// If there are decals in the tile, the list needs to be sorted
 
 // Add the light to the visible light list for opaque geometry.
 void o_AppendLight(uint lightIndex)
@@ -342,6 +344,7 @@ void main(ComputeShaderInput IN)
 			Sphere sphere = { light.positionVS.xyz, light.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
+				t_needSorting = true; // bool operations are atomic if I am not mistaken
 				t_AppendLight(i);
 
 				// unit AABB: 
@@ -359,6 +362,7 @@ void main(ComputeShaderInput IN)
 					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
+						o_needSorting = true; // bool operations are atomic if I am not mistaken
 						o_AppendLight(i);
 					}
 				}
@@ -394,8 +398,14 @@ void main(ComputeShaderInput IN)
 
 #ifndef DEFERRED
 	// Decals need sorting!
-	o_BitonicSort(IN.groupIndex);
-	t_BitonicSort(IN.groupIndex);
+	if (o_needSorting)
+	{
+		o_BitonicSort(IN.groupIndex);
+	}
+	if (t_needSorting)
+	{
+		t_BitonicSort(IN.groupIndex);
+	}
 #endif
 
 	GroupMemoryBarrierWithGroupSync();
