@@ -53,7 +53,7 @@ protected:
 
 	HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD & dwChunkSize, DWORD & dwChunkDataPosition);
 	HRESULT ReadChunkData(HANDLE hFile, void * buffer, DWORD buffersize, DWORD bufferoffset);
-	HRESULT OpenFile(TCHAR*);
+	HRESULT OpenFile(const TCHAR*);
 
 	HRESULT PlaySound(wiAudioEngine* engine);
 	void StopSound();

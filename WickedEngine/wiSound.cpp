@@ -135,7 +135,7 @@ HRESULT wiSound::ReadChunkData(HANDLE hFile, void * buffer, DWORD buffersize, DW
         hr = HRESULT_FROM_WIN32( GetLastError() );
     return hr;
 }
-HRESULT wiSound::OpenFile(TCHAR* strFileName)
+HRESULT wiSound::OpenFile(const TCHAR* strFileName)
 {
 	HRESULT hr;
 
@@ -195,11 +195,11 @@ HRESULT wiSound::OpenFile(TCHAR* strFileName)
 }
 HRESULT wiSound::Load(wstring filename)
 {
-	return OpenFile(filename._Myptr());
+	return OpenFile(filename.data());
 }
 HRESULT wiSound::Load(string filename)
 {
-	return OpenFile(wstring(filename.begin(),filename.end())._Myptr());
+	return OpenFile(wstring(filename.begin(),filename.end()).data());
 }
 void wiSound::Stop(){
 	StopSound();
