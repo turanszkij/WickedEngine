@@ -31,7 +31,8 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 	depthDesc.Height = height;
 	depthDesc.MipLevels = 1;
 	depthDesc.ArraySize = 1;
-	depthDesc.Format = FORMAT_R24G8_TYPELESS;
+	//depthDesc.Format = FORMAT_R24G8_TYPELESS;
+	depthDesc.Format = FORMAT_R32G8X24_TYPELESS; // better utilization of hardware
 	depthDesc.SampleDesc.Count = MSAAC;
 	// depthDesc.SampleDesc.Quality = 0; // auto-filll in device
 	depthDesc.Usage = USAGE_DEFAULT;

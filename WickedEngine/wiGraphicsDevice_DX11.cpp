@@ -1954,6 +1954,9 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 		case FORMAT_R24G8_TYPELESS:
 			shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 			break;
+		case FORMAT_R32G8X24_TYPELESS:
+			shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+			break;
 		default:
 			shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
 			break;
@@ -2288,6 +2291,9 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 			break;
 		case FORMAT_R24G8_TYPELESS:
 			depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			break;
+		case FORMAT_R32G8X24_TYPELESS:
+			depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 			break;
 		default:
 			depthStencilViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
