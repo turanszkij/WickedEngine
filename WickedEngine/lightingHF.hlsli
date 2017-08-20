@@ -51,7 +51,7 @@ struct LightingResult
 
 inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
-	float realDistance = shadowPos.z - bias;
+	float realDistance = 1 - shadowPos.z - bias; // 1 - is because reversed zbuffer for main scene
 	float sum = 0;
 	float retVal = 1; 
 #ifdef DIRECTIONALLIGHT_SOFT
@@ -156,7 +156,7 @@ inline LightingResult PointLight(in LightArrayType light, in float3 N, in float3
 		float sh = max(NdotL, 0);
 		[branch]
 		if (light.shadowMap_index >= 0) {
-			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / light.range * (1 - light.shadowBias)).r;
+			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - (dist / light.range * (1 - light.shadowBias))).r;
 		}
 		result.diffuse *= sh;
 		result.specular *= sh;
@@ -417,7 +417,7 @@ inline LightingResult SphereLight(in LightArrayType light, in float3 N, in float
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (_GetRadius(light) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - (dist / (_GetRadius(light) * 100) * (1 - light.shadowBias))).r;
 	}
 
 
@@ -464,7 +464,7 @@ inline LightingResult DiscLight(in LightArrayType light, in float3 N, in float3 
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (_GetRadius(light) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - (dist / (_GetRadius(light) * 100) * (1 - light.shadowBias))).r;
 	}
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
@@ -532,7 +532,7 @@ inline LightingResult RectangleLight(in LightArrayType light, in float3 N, in fl
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(_GetWidth(light),_GetHeight(light)) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - (dist / (max(_GetWidth(light),_GetHeight(light)) * 100) * (1 - light.shadowBias))).r;
 	}
 
 
@@ -653,7 +653,7 @@ inline LightingResult TubeLight(in LightArrayType light, in float3 N, in float3 
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(_GetRadius(light),_GetWidth(light))*100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - (dist / (max(_GetRadius(light),_GetWidth(light))*100) * (1 - light.shadowBias))).r;
 	}
 
 

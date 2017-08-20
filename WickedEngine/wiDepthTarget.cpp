@@ -79,7 +79,7 @@ void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 
 void wiDepthTarget::Clear(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->ClearDepthStencil(GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 1.0f, 0, threadID);
+	wiRenderer::GetDevice()->ClearDepthStencil(GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 0.0f, 0, threadID);
 	resolvedMSAAUptodate = false;
 }
 void wiDepthTarget::CopyFrom(const wiDepthTarget& from, GRAPHICSTHREAD threadID)

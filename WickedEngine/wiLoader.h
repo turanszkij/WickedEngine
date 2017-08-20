@@ -963,7 +963,7 @@ struct Camera:public Transform{
 	}
 	void UpdateProjection()
 	{
-		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP);
+		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP);
 		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
 		XMStoreFloat4x4(&this->Projection, P);
 		XMStoreFloat4x4(&this->InvProjection, InvP);

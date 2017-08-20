@@ -67,7 +67,7 @@ void wiFont::SetUpStates()
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.DepthFunc = COMPARISON_GREATER;
 
 	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;

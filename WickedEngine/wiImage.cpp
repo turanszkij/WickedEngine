@@ -107,7 +107,7 @@ void wiImage::SetUpStates()
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.DepthFunc = COMPARISON_GREATER;
 
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = DEFAULT_STENCIL_READ_MASK;
@@ -131,7 +131,7 @@ void wiImage::SetUpStates()
 	
 	dsd.DepthEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.DepthFunc = COMPARISON_GREATER;
 
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = DEFAULT_STENCIL_READ_MASK;
