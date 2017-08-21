@@ -554,7 +554,7 @@ struct Bone : public Transform
 	XMFLOAT4X4 recursivePose, recursiveRest, recursiveRestInv;
 
 	// These will be used in the skinning process to transform verts
-	XMFLOAT4X4 boneRelativity, boneRelativityPrev;
+	XMFLOAT4X4 boneRelativity;
 
 	float length;
 	bool connected;
@@ -629,7 +629,7 @@ public:
 
 	GFX_STRUCT ShaderBoneType
 	{
-		XMMATRIX pose, prev;
+		XMMATRIX pose;
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SKINNINGSLOT_IN_BONEBUFFER)
 

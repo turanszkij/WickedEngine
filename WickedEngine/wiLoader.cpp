@@ -3418,7 +3418,6 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 
 	XMStoreFloat4x4(&bone->world, boneMat);
 
-	bone->boneRelativityPrev = bone->boneRelativity;
 	XMStoreFloat4x4(&bone->boneRelativity, finalMat);
 
 	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
