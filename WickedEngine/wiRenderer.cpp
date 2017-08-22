@@ -1547,39 +1547,6 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX
 
 	return retV;
 }
-XMFLOAT3 wiRenderer::VertexVelocity(const Mesh* mesh, int vertexI)
-{
-	XMVECTOR pos = XMLoadFloat4(&mesh->vertices[VPROP_POS][vertexI]);
-	float inWei[4] = {
-		mesh->vertices[VPROP_WEI][vertexI].x
-		, mesh->vertices[VPROP_WEI][vertexI].y
-		, mesh->vertices[VPROP_WEI][vertexI].z
-		, mesh->vertices[VPROP_WEI][vertexI].w };
-	float inBon[4] = {
-		mesh->vertices[VPROP_BON][vertexI].x
-		, mesh->vertices[VPROP_BON][vertexI].y
-		, mesh->vertices[VPROP_BON][vertexI].z
-		, mesh->vertices[VPROP_BON][vertexI].w };
-	XMMATRIX sump;
-	XMMATRIX sumpPrev;
-	if (inWei[0] || inWei[1] || inWei[2] || inWei[3]) 
-	{
-		sump = sumpPrev = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-		for (unsigned int i = 0; i < 4; i++)
-		{
-			sump += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
-			sumpPrev += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativityPrev) * inWei[i];
-		}
-	}
-	else
-	{
-		sump = sumpPrev = XMMatrixIdentity();
-	}
-
-	XMFLOAT3 velocity;
-	XMStoreFloat3(&velocity, GetGameSpeed()*XMVectorSubtract(XMVector3Transform(pos, sump), XMVector3Transform(pos, sumpPrev)));
-	return velocity;
-}
 void wiRenderer::FixedUpdate()
 {
 	cam->UpdateTransform();
@@ -1860,7 +1827,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					{
 						// Note the transpose: we NEED to transpose so that loading from the structured buffer is easier in the shader (avoid the many mov operations)
 						armature->boneData[k].pose = XMMatrixTranspose(XMLoadFloat4x4(&armature->boneCollection[k]->boneRelativity));
-						armature->boneData[k].prev = XMMatrixTranspose(XMLoadFloat4x4(&armature->boneCollection[k]->boneRelativityPrev));
 					}
 					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
 					GetDevice()->BindResourceCS(&armature->boneBuffer, STRUCTUREDBUFFER_GETBINDSLOT(Armature::ShaderBoneType), threadID);

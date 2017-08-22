@@ -403,7 +403,6 @@ public:
 	static void RebindPersistentState(GRAPHICSTHREAD threadID);
 
 	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
-	static XMFLOAT3 VertexVelocity(const Mesh* mesh, int vertexI);
 
 	struct FrameCulling
 	{

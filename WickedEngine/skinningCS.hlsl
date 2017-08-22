@@ -3,7 +3,7 @@
 
 struct Bone
 {
-	float4x4 pose, prev;
+	float4x4 pose;
 };
 STRUCTUREDBUFFER(boneBuffer, Bone, SKINNINGSLOT_IN_BONEBUFFER);
 
@@ -18,11 +18,11 @@ RWRAWBUFFER(streamoutBuffer_PRE, SKINNINGSLOT_OUT_VERTEX_PRE);
 
 
 
-inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, in float4 inBon, in float4 inWei)
+inline void Skinning(inout float4 pos, inout float4 nor, in float4 inBon, in float4 inWei)
 {
 	float4 p = 0, pp = 0;
 	float3 n = 0;
-	float4x4 m, mp;
+	float4x4 m;
 	float3x3 m3;
 	float weisum = 0;
 
@@ -32,11 +32,9 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, i
 	for (uint i = 0; ((i < 4) && (weisum<1.0f)); ++i)
 	{
 		m = boneBuffer[(uint)inBon[i]].pose;
-		mp = boneBuffer[(uint)inBon[i]].prev;
 		m3 = (float3x3)m;
 
 		p += mul(float4(pos.xyz, 1), m)*inWei[i];
-		pp += mul(float4(posPrev.xyz, 1), mp)*inWei[i];
 		n += mul(nor.xyz, m3)*inWei[i];
 
 		weisum += inWei[i];
@@ -44,7 +42,6 @@ inline void Skinning(inout float4 pos, inout float4 posPrev, inout float4 nor, i
 
 	bool w = any(inWei);
 	pos.xyz = w ? p.xyz : pos.xyz;
-	posPrev.xyz = w ? pp.xyz : posPrev.xyz;
 	nor.xyz = w ? n : nor.xyz;
 }
 
@@ -58,21 +55,18 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	uint4 nor_u = vertexBuffer_NOR.Load4(fetchAddress);
 	uint4 wei_u = vertexBuffer_WEI.Load4(fetchAddress);
 	uint4 bon_u = vertexBuffer_BON.Load4(fetchAddress);
-	uint4 pre_u;
 
 	float4 pos = asfloat(pos_u);
 	float4 nor = asfloat(nor_u);
 	float4 wei = asfloat(wei_u);
 	float4 bon = asfloat(bon_u);
-	float4 pre = pos;
 
-	Skinning(pos, pre, nor, bon, wei);
+	Skinning(pos, nor, bon, wei);
 
 	pos_u =	asuint(pos);
 	nor_u = asuint(nor);
-	pre_u =	asuint(pre);
 
+	streamoutBuffer_PRE.Store4(fetchAddress, streamoutBuffer_POS.Load4(fetchAddress)); // copy prev frame current pos to current frame prev pos
 	streamoutBuffer_POS.Store4(fetchAddress, pos_u);
 	streamoutBuffer_NOR.Store4(fetchAddress, nor_u);
-	streamoutBuffer_PRE.Store4(fetchAddress, pre_u);
 }
