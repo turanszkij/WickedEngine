@@ -3,9 +3,6 @@
 
 #include "imageHF.hlsli"
 #include "packHF.hlsli"
-
-
-
 #include "depthConvertHF.hlsli"
 
 /*inline float getDepth(float4 c)
@@ -21,18 +18,6 @@ float loadDepth(float2 texCoord)
 	float2 dim;
 	texture_lineardepth.GetDimensions(dim.x, dim.y);
 	return texture_lineardepth.Load(int3(dim*texCoord, 0)).r;
-}
-float4 loadNormal(float2 texCoord)
-{
-	float2 dim;
-	texture_gbuffer1.GetDimensions(dim.x, dim.y);
-	return texture_gbuffer1.Load(int3(dim*texCoord, 0));
-}
-float4 loadVelocity(float2 texCoord)
-{
-	float2 dim;
-	texture_gbuffer2.GetDimensions(dim.x, dim.y);
-	return texture_gbuffer2.Load(int3(dim*texCoord, 0));
 }
 float4 loadMask(float2 texCoord)
 {

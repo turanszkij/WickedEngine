@@ -46,7 +46,7 @@ static const float3 AO_SAMPLES[ NUM_SAMPLES ] =
 float4 main(VertexToPixelPostProcess input ):SV_Target
 {
 
-	float3 normal = decode(loadNormal(input.tex.xy).xy);
+	float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp,input.tex.xy,0).xy);
 
 	float3 fres = normalize(xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0);
 
@@ -70,7 +70,7 @@ float4 main(VertexToPixelPostProcess input ):SV_Target
 		float2 newTex = ep.xy + ray.xy;
 
 		//occFrag = xNormalMap.SampleLevel(Sampler, newTex,0).xyz;
-		occFrag = decode(loadNormal(newTex).xy);
+		occFrag = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, newTex, 0).xy);
 		if(!occFrag.x && !occFrag.y && !occFrag.z)
 			break;
 
