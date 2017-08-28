@@ -5,13 +5,34 @@
 #include "packHF.hlsli"
 #include "depthConvertHF.hlsli"
 
-/*inline float getDepth(float4 c)
+
+float2 GetVelocity(in int2 pixel)
 {
-	float z_b = c.x;
-    float z_n = 2.0 * z_b - 1.0;
-    float lin = 2.0 * zNearP * zFarP / (zFarP + zNearP - z_n * (zFarP - zNearP));
-	return lin*0.01f;
-}*/
+#ifdef DILATE_VELOCITY
+	float bestDepth = g_xFrame_MainCamera_ZFarP;
+	int2 bestPixel = int2(0, 0);
+
+	[unroll]
+	for (int i = -1; i <= 1; ++i)
+	{
+		[unroll]
+		for (int j = -1; j <= 1; ++j)
+		{
+			float depth = texture_lineardepth[pixel];
+			[flatten]
+			if (depth < bestDepth)
+			{
+				bestDepth = depth;
+				bestPixel = pixel + int2(i, j);
+			}
+		}
+	}
+
+	return texture_gbuffer1[bestPixel].zw;
+#else
+	return texture_gbuffer1[pixel].zw;
+#endif // DILATE_VELOCITY
+}
 
 float loadDepth(float2 texCoord)
 {
