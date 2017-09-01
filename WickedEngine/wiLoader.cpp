@@ -4108,10 +4108,10 @@ void Light::UpdateLight()
 				if (shadowCam_dirLight.empty())
 				{
 					XMVECTOR a0, a, b0, b;
-					a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetInternalResolution().y, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetInternalResolution().y, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetInternalResolution().y, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetInternalResolution().y, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 					float size = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp0), XMVectorLerp(a0, a, lerp0))));
 					float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp1), XMVectorLerp(a0, a, lerp1))));
 					float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp2), XMVectorLerp(a0, a, lerp2))));
@@ -4125,8 +4125,8 @@ void Light::UpdateLight()
 				if (!shadowCam_dirLight.empty()) 
 				{
 					XMVECTOR c, d, e, e1, e2;
-					c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x * 0.5f, (float)wiRenderer::GetInternalResolution().y * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x * 0.5f, (float)wiRenderer::GetInternalResolution().y * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x * 0.5f, (float)wiRenderer::GetInternalResolution().y * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x * 0.5f, (float)wiRenderer::GetInternalResolution().y * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
 
 					// Avoid shadowmap texel swimming by aligning them to a discrete grid:
 					float f = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;

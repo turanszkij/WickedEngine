@@ -1202,8 +1202,8 @@ void wiRenderer::SetUpStates()
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthEnable = false;
-	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilEnable = true;
+	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
 	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
@@ -1219,7 +1219,7 @@ void wiRenderer::SetUpStates()
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthEnable = true;
-	dsd.DepthFunc = COMPARISON_GREATER;
+	dsd.DepthFunc = COMPARISON_LESS;
 	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
@@ -1233,7 +1233,8 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_LIGHT]);
 
-	
+
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
 	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
@@ -1651,7 +1652,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			if (camera==getCamera() && spTree_lights != nullptr) // only the main camera can render lights and write light array properties (yet)!
 			{
 				Frustum frustum;
-				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
+				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->realProjection, camera->View);
 
 				for (Model* model : GetScene().models)
 				{
@@ -5647,7 +5648,7 @@ wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, co
 RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 	Camera* cam = getCamera();
 	XMMATRIX V = cam->GetView();
-	XMMATRIX P = cam->GetProjection();
+	XMMATRIX P = cam->GetRealProjection();
 	XMMATRIX W = XMMatrixIdentity();
 	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 0, 1), 0, 0, cam->width, cam->height, 0.0f, 1.0f, P, V, W);
 	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0, cam->width, cam->height, 0.0f, 1.0f, P, V, W);

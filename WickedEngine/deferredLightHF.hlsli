@@ -29,16 +29,16 @@ struct LightOutputType
 	LightArrayType light = LightArray[PSIn.lightIndex];									\
 	float3 diffuse, specular;															\
 	float2 screenPos = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;		\
-	float depth = texture_depth.SampleLevel(sampler_point_clamp, screenPos, 0);			\
-	float4 baseColor = texture_gbuffer0.SampleLevel(sampler_point_clamp,screenPos,0);	\
-	float4 g1 = texture_gbuffer1.SampleLevel(sampler_point_clamp,screenPos,0);			\
-	float4 g3 = texture_gbuffer3.SampleLevel(sampler_point_clamp,screenPos,0);			\
+	float depth = texture_depth[PSIn.pos.xy];											\
+	float4 baseColor = texture_gbuffer0[PSIn.pos.xy];									\
+	float4 g1 = texture_gbuffer1[PSIn.pos.xy];											\
+	float4 g3 = texture_gbuffer3[PSIn.pos.xy];											\
 	float3 N = decode(g1.xy);															\
 	float roughness = g3.x;																\
 	float reflectance = g3.y;															\
 	float metalness = g3.z;																\
 	float ao = g3.w;																	\
-	BRDF_HELPER_MAKEINPUTS( baseColor, reflectance, metalness )							\
+	BRDF_HELPER_MAKEINPUTS(baseColor, reflectance, metalness)							\
 	float3 P = getPosition(screenPos, depth);											\
 	float3 V = normalize(g_xCamera_CamPos - P);
 
