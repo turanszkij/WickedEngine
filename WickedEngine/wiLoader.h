@@ -866,6 +866,7 @@ struct Camera:public Transform{
 	float fov;
 	Frustum frustum;
 	XMFLOAT4X4 InvView, InvProjection, InvVP;
+	XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
 	
 	Camera():Transform(){
 		width = height = zNearP = zFarP = fov = 0;
@@ -914,7 +915,7 @@ struct Camera:public Transform{
 		XMStoreFloat3(&this->At, At);
 		XMStoreFloat3(&this->Up, Up);
 
-		frustum.ConstructFrustum(zFarP, Projection, this->View);
+		frustum.ConstructFrustum(zFarP, realProjection, this->View);
 
 		XMMATRIX VP = XMMatrixMultiply(View, GetProjection());
 		XMStoreFloat4x4(&this->VP, VP);
@@ -954,7 +955,7 @@ struct Camera:public Transform{
 		XMStoreFloat3(&this->At, At);
 		XMStoreFloat3(&this->Up, Up);
 
-		frustum.ConstructFrustum(zFarP, Projection, this->View);
+		frustum.ConstructFrustum(zFarP, realProjection, this->View);
 
 		XMMATRIX VP = XMMatrixMultiply(View, GetProjection());
 		XMStoreFloat4x4(&this->VP, VP);
@@ -963,7 +964,8 @@ struct Camera:public Transform{
 	}
 	void UpdateProjection()
 	{
-		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP);
+		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
+		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP));
 		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
 		XMStoreFloat4x4(&this->Projection, P);
 		XMStoreFloat4x4(&this->InvProjection, InvP);
@@ -1020,6 +1022,12 @@ struct Camera:public Transform{
 	XMMATRIX GetInvViewProjection()
 	{
 		return XMLoadFloat4x4(&InvVP);
+	}
+
+	// when the projection matrix is modified for reverse zbuffering, this returns the normal projection
+	XMMATRIX GetRealProjection()
+	{
+		return XMLoadFloat4x4(&realProjection);
 	}
 	virtual void UpdateTransform();
 };

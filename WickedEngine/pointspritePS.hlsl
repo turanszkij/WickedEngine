@@ -15,7 +15,7 @@ float4 main(VertextoPixel PSIn) : SV_TARGET
 {
 	float2 pTex = float2(1,-1) * PSIn.pp.xy / PSIn.pp.w / 2.0f + 0.5f;
 	float4 depthScene=(texture_lineardepth.GatherRed(sampler_linear_clamp,pTex));
-	float depthFragment=PSIn.pp.z;
+	float depthFragment=PSIn.pp.w;
 	float fade = saturate(1.0/PSIn.opaAddDarkSiz.w*(max(max(depthScene.x,depthScene.y),max(depthScene.z,depthScene.w))-depthFragment));
 	//fade = depthScene<depthFragment?0:1;
 

@@ -1178,7 +1178,7 @@ void wiRenderer::SetUpStates()
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
 
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
@@ -1193,11 +1193,17 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEFAULT]);
 
+	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
+	dsd.StencilEnable = false;
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_SHADOW]);
+
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthEnable = false;
-	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilEnable = true;
+	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
 	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
@@ -1213,7 +1219,7 @@ void wiRenderer::SetUpStates()
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthEnable = true;
-	dsd.DepthFunc = COMPARISON_GREATER;
+	dsd.DepthFunc = COMPARISON_LESS;
 	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
@@ -1227,10 +1233,11 @@ void wiRenderer::SetUpStates()
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_LIGHT]);
 
-	
+
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
-	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
 	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
@@ -1247,7 +1254,7 @@ void wiRenderer::SetUpStates()
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
@@ -1263,7 +1270,7 @@ void wiRenderer::SetUpStates()
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.DepthFunc = COMPARISON_GREATER;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_HAIRALPHACOMPOSITION]);
 
 
@@ -1645,7 +1652,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			if (camera==getCamera() && spTree_lights != nullptr) // only the main camera can render lights and write light array properties (yet)!
 			{
 				Frustum frustum;
-				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->Projection, camera->View);
+				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->realProjection, camera->View);
 
 				for (Model* model : GetScene().models)
 				{
@@ -3217,9 +3224,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
-
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
-
 			GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
 
 			int shadowCounter_2D = 0;
@@ -3846,7 +3850,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
-		const DSSTYPES targetDepthStencilState = (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE) ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT;
+		DSSTYPES targetDepthStencilState = (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE) ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT;
+		targetDepthStencilState = (shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_SHADOW) ? DSSTYPE_SHADOW : targetDepthStencilState;
+
 		UINT prevStencilRef = STENCILREF_DEFAULT;
 		device->BindDepthStencilState(depthStencils[targetDepthStencilState], prevStencilRef, threadID);
 
@@ -5642,7 +5648,7 @@ wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, co
 RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 	Camera* cam = getCamera();
 	XMMATRIX V = cam->GetView();
-	XMMATRIX P = cam->GetProjection();
+	XMMATRIX P = cam->GetRealProjection();
 	XMMATRIX W = XMMatrixIdentity();
 	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 0, 1), 0, 0, cam->width, cam->height, 0.0f, 1.0f, P, V, W);
 	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0, cam->width, cam->height, 0.0f, 1.0f, P, V, W);

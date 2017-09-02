@@ -243,13 +243,14 @@ void main(ComputeShaderInput IN)
 	GroupMemoryBarrierWithGroupSync();
 
 	// Convert depth values to view space.
-	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
-	float maxDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1)).z;
-	float nearClipVS = ScreenToView(float4(0, 0, 0, 1)).z;
+	// The depth buffer is reversed!
+	float minDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1)).z;
+	float maxDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
+	float nearClipVS = ScreenToView(float4(0, 0, 1, 1)).z;
 
-	// Clipping plane for minimum depth value 
-	// (used for testing lights within the bounds of opaque geometry).
-	Plane minPlane = { float3(0, 0, 1), minDepthVS };
+	//// Clipping plane for minimum depth value 
+	//// (used for testing lights within the bounds of opaque geometry).
+	//Plane minPlane = { float3(0, 0, 1), minDepthVS };
 
 #ifdef ADVANCED_CULLING
 	// We divide the minmax depth bounds to 32 equal slices

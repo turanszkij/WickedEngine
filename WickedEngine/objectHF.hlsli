@@ -279,7 +279,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 #define OBJECT_PS_MAKE																								\
 	OBJECT_PS_MAKE_COMMON																							\
-	float lineardepth = input.pos2D.z;																				\
+	float lineardepth = input.pos2D.w;																				\
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;\
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
 	float2 velocity = ((input.pos2DPrev.xy/input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy/input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);

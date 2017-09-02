@@ -7,10 +7,10 @@ float main(VertexToPixelPostProcess PSIn) : SV_DEPTH
 	float4 samples2 = xTexture.GatherRed(sampler_point_clamp, PSIn.tex, int2(1,-1));
 	float4 samples3 = xTexture.GatherRed(sampler_point_clamp, PSIn.tex, int2(1,1));
 	
-	float max0 = max(samples0.x, max(samples0.y, max(samples0.z, samples0.w)));
-	float max1 = max(samples1.x, max(samples1.y, max(samples1.z, samples1.w)));
-	float max2 = max(samples2.x, max(samples2.y, max(samples2.z, samples2.w)));
-	float max3 = max(samples3.x, max(samples3.y, max(samples3.z, samples3.w)));
+	float min0 = min(samples0.x, min(samples0.y, min(samples0.z, samples0.w)));
+	float min1 = min(samples1.x, min(samples1.y, min(samples1.z, samples1.w)));
+	float min2 = min(samples2.x, min(samples2.y, min(samples2.z, samples2.w)));
+	float min3 = min(samples3.x, min(samples3.y, min(samples3.z, samples3.w)));
 
-	return max(max0, max(max1, max(max2, max3)));
+	return min(min0, min(min1, min(min2, min3)));
 }

@@ -183,7 +183,7 @@ void wiHairParticle::SetUpStatic()
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.DepthFunc = COMPARISON_GREATER;
 
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
