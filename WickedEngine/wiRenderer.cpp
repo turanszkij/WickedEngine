@@ -3139,7 +3139,7 @@ void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 				) * 100000;
 			}
 			
-			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.1f,1.0f,getCamera()->GetProjection(),getCamera()->GetView(),XMMatrixIdentity());
+			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.1f,1.0f,getCamera()->GetRealProjection(),getCamera()->GetView(),XMMatrixIdentity());
 
 			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
 				wiLensFlare::Draw(threadID,flarePos,l->lensFlareRimTextures);

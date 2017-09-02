@@ -265,6 +265,8 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	if (getSSREnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
+			fx.process.clear();
+			fx.presentFullScreen = false;
 			wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
 			fx.process.setSSR(true);
 			fx.setMaskMap(nullptr);

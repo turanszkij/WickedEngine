@@ -68,3 +68,4 @@ Real time Voxel Global Illumination (two light bounces)
 Real time Voxel Cone traced reflections
 Temporal Antialiasing
 Tiled deferred rendering
+Huge draw distance support with reversed Z-buffer

@@ -28,8 +28,8 @@ Run in Release mode for best performance. Debug mode has full debugging support 
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 
 ### Platforms:
-- Windows PC Desktop (validated version 0.11.73)
-- Universal Windows (validated version 0.11.73)
+- Windows PC Desktop (validated version 0.13.0)
+- Universal Windows (validated version 0.13.0)
 
 ### Requirements:
 
@@ -56,7 +56,7 @@ will load all features of the engine. If you want to use just a subset of featur
 with a WICKEDENGINE_INITIALIZER enum value, or multiple values joined by the | operator.
 For further details, please check the demo project at: https://github.com/turanszkij/WickedEngineDemos.
 
-Windows Store support: define WINSTORE_SUPPORT preprocessor for the whole project
+UWP support: define WINSTORE_SUPPORT preprocessor for the whole project
 
 
 ### Contents:
