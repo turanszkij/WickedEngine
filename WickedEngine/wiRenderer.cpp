@@ -1678,8 +1678,8 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					spTree_lights->getVisible(box, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
 				}
 
-				// We wouldn't have to sort, but we need unique lights and that only works with sorted forward_list!
-				spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_UNIQUE);
+				// We sort lights so that closer lights will have more priority for shadows!
+				spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
 
 				int i = (int)x.second.culledDecals.size(); // Index the light array after the decals
 				int shadowCounter_2D = 0;
@@ -1699,7 +1699,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 						switch (l->GetType())
 						{
 						case Light::DIRECTIONAL:
-							if (shadowCounter_2D < SHADOWCOUNT_2D)
+							if ((shadowCounter_2D + 2) < SHADOWCOUNT_2D)
 							{
 								l->shadowMap_index = shadowCounter_2D;
 								shadowCounter_2D += 3;
@@ -1733,14 +1733,16 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			}
 			for (auto& x : emitterSystems)
 			{
-				if (camera->frustum.CheckBox(*x->bounding_box))
+				if (camera->frustum.CheckBox(x->bounding_box))
 				{
 					culling.culledEmittedParticleSystems.push_back(x);
 					x->Update(dt*GetGameSpeed());
 				}
+				// emitter attached light can be bigger than bounding box so update it anyway!
+				x->UpdateAttachedLight(dt*GetGameSpeed());
 			}
 			std::sort(culling.culledEmittedParticleSystems.begin(), culling.culledEmittedParticleSystems.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {
-				return wiMath::DistanceSquared(camera->translation, a->bounding_box->getCenter()) > wiMath::DistanceSquared(camera->translation,b->bounding_box->getCenter());
+				return wiMath::DistanceSquared(camera->translation, a->bounding_box.getCenter()) > wiMath::DistanceSquared(camera->translation,b->bounding_box.getCenter());
 			});
 		}
 	}
@@ -1950,6 +1952,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 
 			Light* l = (Light*)c;
+			if (!l->IsActive())
+			{
+				continue;
+			}
 
 			lightArray[lightCounter].posWS = l->translation;
 			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].posWS), viewMatrix));
@@ -2909,7 +2915,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 		for (Cullable* c : culledLights)
 		{
 			Light* l = (Light*)c;
-			if (l->GetType() != type)
+			if (l->GetType() != type || !l->IsActive())
 				continue;
 
 			switch (type)
@@ -3270,7 +3276,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 				for (Cullable* c : culledLights)
 				{
 					Light* l = (Light*)c;
-					if (l->GetType() != type || !l->shadow)
+					if (l->GetType() != type || !l->shadow || !l->IsActive())
 					{
 						continue;
 					}
@@ -3279,7 +3285,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					{
 					case Light::DIRECTIONAL:
 					{
-						if (shadowCounter_2D >= SHADOWCOUNT_2D || l->shadowMap_index < 0 || l->shadowCam_dirLight.empty())
+						if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || l->shadowMap_index < 0 || l->shadowCam_dirLight.empty())
 							break;
 						shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 

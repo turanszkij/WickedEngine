@@ -1,12 +1,12 @@
 #pragma once
 #include "wiParticle.h"
 #include "ConstantBufferMapping.h"
+#include "wiIntersectables.h"
 
 #include <set>
 #include <deque>
 
 struct Material;
-struct AABB;
 struct Light;
 struct Camera;
 
@@ -71,8 +71,6 @@ private:
 	static void SetUpCB();
 	static void SetUpStates();
 	void LoadVertexBuffer();
-
-	static std::set<wiEmittedParticle*> systems;
 	
 
 	//std::std::vector<SkinnedVertex> emitterVertexList;
@@ -102,11 +100,11 @@ public:
 	static void CleanUpStatic();
 
 	int getCount();
-	static long getNumParticles();
 
 	void Update(float dt);
 	void Burst(float num);
 
+	void UpdateAttachedLight(float dt);
 	void UpdateRenderData(GRAPHICSTHREAD threadID);
 
 #define DRAW_DEFAULT 0
@@ -123,7 +121,7 @@ public:
 	Light* light;
 	std::string lightName;
 	
-	AABB* bounding_box;
+	AABB bounding_box;
 
 	float size,random_factor,normal_factor;
 	float count,life,random_life;

@@ -223,3 +223,5 @@ ModelManifest.xml
 /.vs/WickedEngine/v15/Browse.VC.db
 /WickedEngine/models/Stormtrooper/nsight_profiler.cfg
 *.cfg
+/WickedEngine/models/Sample/nosun.wiw
+/WickedEngine/models/Sample/nosun.wimf

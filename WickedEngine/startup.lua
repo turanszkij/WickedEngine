@@ -55,10 +55,11 @@ runProcess(function()
 		if(input.Press(VK_F7)) then
 			-- LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\Scene\\Sponza\\","sponza");
 			runProcess(function()
-				local row = 16
+				local row = 6
 				for i = 1, row do
 					for j = 1, row do
-						LoadModel("C:\\PROJECTS\\BLENDER\\Stormtrooper\\", "Stormtrooper", "_"..i..j,matrix.Translation(Vector(i*2-row,0,j*2-row)));
+						--LoadModel("C:\\PROJECTS\\BLENDER\\Stormtrooper\\", "Stormtrooper", "_"..i..j,matrix.Translation(Vector(i*2-row,0,j*2-row)));
+						LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\models\\Sample\\", "nosun", "_common",matrix.Translation(Vector(i*500-row*500,0,j*500-row*500)));
 						--waitSeconds(0.05)
 					end
 				end

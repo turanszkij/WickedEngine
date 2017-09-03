@@ -2677,6 +2677,8 @@ void Model::FinishLoading()
 				{
 					lights.push_back(e->light);
 				}
+
+				e->light->enerDis = XMFLOAT4(0, 0, 0, 0); // emitter light props will be filled on Update()
 			}
 		}
 	}

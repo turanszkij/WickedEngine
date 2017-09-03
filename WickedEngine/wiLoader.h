@@ -696,9 +696,9 @@ struct SHCAM{
 	float nearplane,farplane,size;
 
 	SHCAM(){
+		nearplane = 0.1f; farplane = 200, size = 0;
 		Init(XMQuaternionIdentity());
 		Create_Perspective(XM_PI/2.0f);
-		nearplane=0.1f;farplane=200,size=0;
 	}
 	//orthographic
 	SHCAM(float size, const XMVECTOR& dir, float nearP, float farP){
@@ -813,6 +813,8 @@ struct Light : public Cullable , public Transform
 	void SetType(LightType type);
 	LightType GetType() const { return type; }
 	void Serialize(wiArchive& archive);
+
+	bool IsActive() { return abs(enerDis.x + enerDis.y) > 0; }
 
 private:
 	LightType type;

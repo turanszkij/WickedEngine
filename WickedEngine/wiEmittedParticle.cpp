@@ -19,7 +19,6 @@ GPUBuffer           *wiEmittedParticle::constantBuffer = nullptr;
 BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
 DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
-set<wiEmittedParticle*> wiEmittedParticle::systems;
 
 
 static const int NUM_POS_SAMPLES = 30;
@@ -31,7 +30,6 @@ wiEmittedParticle::wiEmittedParticle()
 	object = nullptr;
 	materialName = "";
 	light = nullptr;
-	bounding_box = new AABB();
 	lightName = "";
 }
 wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
@@ -61,7 +59,6 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 	scaleY=newScaleY;
 	rotation = newRot;
 
-	bounding_box=new AABB();
 	light=nullptr;
 	CreateLight();
 
@@ -109,6 +106,7 @@ void wiEmittedParticle::CreateLight()
 		light->SetType(Light::POINT);
 		light->name = name + "_pslight";
 		light->shadow = true;
+		light->enerDis = XMFLOAT4(0, 0, 0, 0); // will be filled on Update()
 		lightName = light->name;
 	}
 }
@@ -168,18 +166,12 @@ void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 	vel.y*=vrand;
 	vel.z*=vrand;
 
-		//pos.x+=getNewPositionModifier();
-		//pos.y+=getNewPositionModifier();
-		//pos.z+=getNewPositionModifier();
-
 
 	points.push_back(Point(pos, XMFLOAT4(size, 1, (float)wiRandom::getRandom(0, 1), (float)wiRandom::getRandom(0, 1)), vel/*, XMFLOAT3(1,1,1)*/, getNewLifeSpan()
 		,rotation*getNewRotationModifier(),scaleX,scaleY ) );
 }
 void wiEmittedParticle::Update(float dt)
 {
-	systems.insert(this);
-
 	float gamespeed = wiRenderer::GetGameSpeed() * dt * 60; // it was created for 60 FPS in mind...
 
 	XMFLOAT3 minP=XMFLOAT3(FLOAT32_MAX,FLOAT32_MAX,FLOAT32_MAX)
@@ -192,16 +184,8 @@ void wiEmittedParticle::Update(float dt)
 		point.pos.y += point.vel.y*gamespeed;
 		point.pos.z += point.vel.z*gamespeed;
 		point.rot += point.rotVel*gamespeed;
-		
 
-		/*if(point.maxLife-point.life<point.maxLife*0.1f)
-			point.sizOpaMir.y-=0.05f*gamespeed;
-		if(point.maxLife-point.life>point.maxLife*0.9f)
-			point.sizOpaMir.y+=0.05f*gamespeed;
-		if(point.sizOpaMir.y<=0) point.sizOpaMir.y=0;
-		if(point.sizOpaMir.y>=1) point.sizOpaMir.y=1;*/
-
-		point.life-=/*1.0f/60.0f**/gamespeed;
+		point.life -= gamespeed;
 		point.life=wiMath::Clamp(point.life,0,point.maxLife);
 
 		float lifeLerp = point.life/point.maxLife;
@@ -212,7 +196,7 @@ void wiEmittedParticle::Update(float dt)
 		minP=wiMath::Min(XMFLOAT3(point.pos.x-point.sizOpaMir.x,point.pos.y-point.sizOpaMir.x,point.pos.z-point.sizOpaMir.x),minP);
 		maxP=wiMath::Max(XMFLOAT3(point.pos.x+point.sizOpaMir.x,point.pos.y+point.sizOpaMir.x,point.pos.z+point.sizOpaMir.x),maxP);
 	}
-	bounding_box->create(minP,maxP);
+	bounding_box.create(minP,maxP);
 
 	while(!points.empty() && points.front().life<=0)
 		points.pop_front();
@@ -243,13 +227,26 @@ void wiEmittedParticle::Update(float dt)
 	if((int)emit>0)
 		emit=0;
 	
-	
-	if(light!=nullptr)
-	{
-		// smooth light position to eliminate jitter
+}
+void wiEmittedParticle::Burst(float num)
+{
+	XMMATRIX t4=XMLoadFloat4x4(&transform4), t3=XMLoadFloat3x3(&transform3);
 
-		posSamples[currentSample] = bounding_box->getCenter();
-		radSamples[currentSample] = bounding_box->getRadius()*2;
+	static float burst = 0;
+	burst+=num;
+	for(int i=0;i<(int)burst;++i)
+		addPoint(t4,t3);
+	burst-=(int)burst;
+}
+
+void wiEmittedParticle::UpdateAttachedLight(float dt)
+{
+	if (light != nullptr)
+	{
+		// smooth light position to eliminate jitter:
+
+		posSamples[currentSample] = bounding_box.getCenter();
+		radSamples[currentSample] = bounding_box.getRadius() * 2;
 		energySamples[currentSample] = sqrt((float)points.size());
 
 		XMFLOAT3 pos = XMFLOAT3(0, 0, 0);
@@ -270,30 +267,12 @@ void wiEmittedParticle::Update(float dt)
 		energy *= INV_NUM_POS_SAMPLES;
 		currentSample = (currentSample + 1) % NUM_POS_SAMPLES;
 
-		light->translation_rest=pos;
+		light->translation_rest = pos;
 
 		light->enerDis = XMFLOAT4(energy, rad, 0, 0);
 		light->UpdateLight();
 	}
-	
-	//MAPPED_SUBRESOURCE mappedResource;
-	//Point* vertexPtr;
-	//GRAPHICSTHREAD_IMMEDIATE->Map(vertexBuffer,0,MAP_WRITE_DISCARD,0,&mappedResource);
-	//vertexPtr = (Point*)mappedResource.pData;
-	//memcpy(vertexPtr,renderPoints.data(),sizeof(Point)* renderPoints.size());
-	//GRAPHICSTHREAD_IMMEDIATE->Unmap(vertexBuffer,0);
 }
-void wiEmittedParticle::Burst(float num)
-{
-	XMMATRIX t4=XMLoadFloat4x4(&transform4), t3=XMLoadFloat3x3(&transform3);
-
-	static float burst = 0;
-	burst+=num;
-	for(int i=0;i<(int)burst;++i)
-		addPoint(t4,t3);
-	burst-=(int)burst;
-}
-
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	if (!points.empty())
@@ -367,11 +346,6 @@ void wiEmittedParticle::CleanUp()
 	points.clear();
 
 	SAFE_DELETE(vertexBuffer);
-
-	systems.erase(this);
-
-	delete bounding_box;
-	bounding_box=nullptr;
 
 	SAFE_DELETE_ARRAY(posSamples);
 	SAFE_DELETE_ARRAY(radSamples);
@@ -525,8 +499,6 @@ void wiEmittedParticle::SetUpStatic()
 	LoadShaders();
 	SetUpCB();
 	SetUpStates();
-
-	systems.clear();
 }
 void wiEmittedParticle::CleanUpStatic()
 {
@@ -541,14 +513,6 @@ void wiEmittedParticle::CleanUpStatic()
 	SAFE_DELETE(rasterizerState);
 	SAFE_DELETE(wireFrameRS);
 	SAFE_DELETE(depthStencilState);
-}
-long wiEmittedParticle::getNumParticles()
-{
-	long retval=0;
-	for(wiEmittedParticle* e:systems)
-		if(e)
-			retval+=e->getCount();
-	return retval;
 }
 
 void wiEmittedParticle::Serialize(wiArchive& archive)

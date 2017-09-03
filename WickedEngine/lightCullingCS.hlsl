@@ -195,8 +195,9 @@ void main(ComputeShaderInput IN)
 
 	GroupMemoryBarrierWithGroupSync();
 
-	float fMinDepth = asfloat(uMinDepth);
-	float fMaxDepth = asfloat(uMaxDepth);
+	// reversed depth buffer!
+	float fMinDepth = asfloat(uMaxDepth);
+	float fMaxDepth = asfloat(uMinDepth);
 
 	if (IN.groupIndex == 0)
 	{
@@ -243,9 +244,8 @@ void main(ComputeShaderInput IN)
 	GroupMemoryBarrierWithGroupSync();
 
 	// Convert depth values to view space.
-	// The depth buffer is reversed!
-	float minDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1)).z;
-	float maxDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
+	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
+	float maxDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1)).z;
 	float nearClipVS = ScreenToView(float4(0, 0, 1, 1)).z;
 
 	//// Clipping plane for minimum depth value 
