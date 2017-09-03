@@ -4091,6 +4091,7 @@ void Light::UpdateTransform()
 {
 	Transform::UpdateTransform();
 }
+
 void Light::UpdateLight()
 {
 	switch (type)
@@ -4099,45 +4100,67 @@ void Light::UpdateLight()
 		{
 			if (shadow)
 			{
-				// Set up three shadow cascades
-				static const float lerp0 = 0.5f;			//third slice distance from cam (percentage)
-				static const float lerp1 = 0.12f;			//second slice distance from cam (percentage)
-				static const float lerp2 = 0.016f;			//first slice distance from cam (percentage)
-				
+				XMFLOAT2 screen = XMFLOAT2((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+				Camera* camera = wiRenderer::getCamera();
+				float nearPlane = camera->zNearP;
+				float farPlane = camera->zFarP;
+				XMMATRIX view = camera->GetView();
+				XMMATRIX projection = camera->GetRealProjection();
+				XMMATRIX world = XMMatrixIdentity();
 
+				// Set up three shadow cascades (far - mid - near):
+				const float referenceFrustumDepth = 800.0f;									// this was the frustum depth used for reference
+				const float currentFrustumDepth = farPlane - nearPlane;						// current frustum depth
+				const float lerp0 = referenceFrustumDepth / currentFrustumDepth * 0.5f;		// third slice distance from cam (percentage)
+				const float lerp1 = referenceFrustumDepth / currentFrustumDepth * 0.12f;	// second slice distance from cam (percentage)
+				const float lerp2 = referenceFrustumDepth / currentFrustumDepth * 0.016f;	// first slice distance from cam (percentage)
+
+				// Create shadow cascades for main camera:
 				if (shadowCam_dirLight.empty())
 				{
-					XMVECTOR a0, a, b0, b;
-					a0 = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetInternalResolution().y, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					a = XMVector3Unproject(XMVectorSet(0, (float)wiRenderer::GetInternalResolution().y, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					b0 = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					b = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					float size = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp0), XMVectorLerp(a0, a, lerp0))));
-					float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp1), XMVectorLerp(a0, a, lerp1))));
-					float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b, lerp2), XMVectorLerp(a0, a, lerp2))));
-					XMVECTOR rot = XMQuaternionIdentity();
-
-					shadowCam_dirLight.push_back(SHCAM(size, rot, -wiRenderer::getCamera()->zFarP * 0.5f, wiRenderer::getCamera()->zFarP * 0.5f));
-					shadowCam_dirLight.push_back(SHCAM(size1, rot, -wiRenderer::getCamera()->zFarP * 0.5f, wiRenderer::getCamera()->zFarP * 0.5f));
-					shadowCam_dirLight.push_back(SHCAM(size2, rot, -wiRenderer::getCamera()->zFarP * 0.5f, wiRenderer::getCamera()->zFarP * 0.5f));
+					shadowCam_dirLight.resize(3);
 				}
 
+				// Place the shadow cascades inside the viewport:
 				if (!shadowCam_dirLight.empty()) 
 				{
-					XMVECTOR c, d, e, e1, e2;
-					c = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x * 0.5f, (float)wiRenderer::GetInternalResolution().y * 0.5f, 1, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
-					d = XMVector3Unproject(XMVectorSet((float)wiRenderer::GetInternalResolution().x * 0.5f, (float)wiRenderer::GetInternalResolution().y * 0.5f, 0, 1), 0, 0, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.0f, 1.0f, wiRenderer::getCamera()->GetRealProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+					// frustum top left - near
+					XMVECTOR a0 = XMVector3Unproject(XMVectorSet(0, 0, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+					// frustum top left - far
+					XMVECTOR a1 = XMVector3Unproject(XMVectorSet(0, 0, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+					// frustum bottom right - near
+					XMVECTOR b0 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+					// frustum bottom right - far
+					XMVECTOR b1 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+
+					// calculate cascade projection sizes:
+					float size0 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp0), XMVectorLerp(a0, a1, lerp0))));
+					float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp1), XMVectorLerp(a0, a1, lerp1))));
+					float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp2), XMVectorLerp(a0, a1, lerp2))));
+
+					XMVECTOR rotDefault = XMQuaternionIdentity();
+
+					// create shadow cascade projections:
+					shadowCam_dirLight[0] = SHCAM(size0, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+					shadowCam_dirLight[1] = SHCAM(size1, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+					shadowCam_dirLight[2] = SHCAM(size2, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+
+					// frustum center - near
+					XMVECTOR c = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+					// frustum center - far
+					XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 
 					// Avoid shadowmap texel swimming by aligning them to a discrete grid:
-					float f = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
-					e = XMVectorFloor(XMVectorLerp(d, c, lerp0) / f) * f;
-					f = shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
-					e1 = XMVectorFloor(XMVectorLerp(d, c, lerp1) / f) * f;
-					f = shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
-					e2 = XMVectorFloor(XMVectorLerp(d, c, lerp2) / f) * f;
+					float f0 = shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
+					float f1 = shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
+					float f2 = shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
+					XMVECTOR e0 = XMVectorFloor(XMVectorLerp(c, d, lerp0) / f0) * f0;
+					XMVECTOR e1 = XMVectorFloor(XMVectorLerp(c, d, lerp1) / f1) * f1;
+					XMVECTOR e2 = XMVectorFloor(XMVectorLerp(c, d, lerp2) / f2) * f2;
 
 					XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
-					shadowCam_dirLight[0].Update(rrr, e);
+
+					shadowCam_dirLight[0].Update(rrr, e0);
 					shadowCam_dirLight[1].Update(rrr, e1);
 					shadowCam_dirLight[2].Update(rrr, e2);
 				}

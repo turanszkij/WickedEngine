@@ -99,27 +99,31 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 		ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
 		ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
 		ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
-		[branch]if ((saturate(ShTex[2].x) == ShTex[2].x) && (saturate(ShTex[2].y) == ShTex[2].y) && (saturate(ShTex[2].z) == ShTex[2].z))
+
+		[branch]
+		if (!any(ShTex[2] - saturate(ShTex[2])))
 		{
 			const float shadows[] = {
 				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 1),
 				shadowCascade(ShPos[2],ShTex[2].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 2)
 			};
-			const float2 lerpVal = abs(ShTex[2].xy * 2 - 1);
-			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
+			const float3 lerpVal = abs(ShTex[2].xyz * 2 - 1);
+			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, max(lerpVal.y, lerpVal.z)), 4));
 		}
-		else[branch]if ((saturate(ShTex[1].x) == ShTex[1].x) && (saturate(ShTex[1].y) == ShTex[1].y) && (saturate(ShTex[1].z) == ShTex[1].z))
+		else if (!any(ShTex[1] - saturate(ShTex[1])))
 		{
 			const float shadows[] = {
 				shadowCascade(ShPos[0],ShTex[0].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 0),
 				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 1),
 			};
-			const float2 lerpVal = abs(ShTex[1].xy * 2 - 1);
-			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, lerpVal.y), 4));
+			const float3 lerpVal = abs(ShTex[1].xyz * 2 - 1);
+			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, max(lerpVal.y, lerpVal.z)), 4));
 		}
-		else[branch]if ((saturate(ShTex[0].x) == ShTex[0].x) && (saturate(ShTex[0].y) == ShTex[0].y) && (saturate(ShTex[0].z) == ShTex[0].z))
+		else if (!any(ShTex[0] - saturate(ShTex[0])))
 		{
-			sh *= shadowCascade(ShPos[0], ShTex[0].xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
+			const float shadow = shadowCascade(ShPos[0], ShTex[0].xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
+			const float3 lerpVal = abs(ShTex[0].xyz * 2 - 1);
+			sh *= lerp(shadow, 1, pow(max(lerpVal.x, max(lerpVal.y, lerpVal.z)), 4));
 		}
 	}
 
