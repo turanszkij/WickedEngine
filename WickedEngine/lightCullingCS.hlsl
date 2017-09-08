@@ -172,7 +172,8 @@ inline uint ContructLightMask(in float depthRangeMin, in float depthRangeRecip, 
 void main(ComputeShaderInput IN)
 {
 	// Calculate min & max depth in threadgroup / tile.
-	int2 texCoord = IN.dispatchThreadID.xy;
+	uint2 texCoord = IN.dispatchThreadID.xy;
+	texCoord = min(texCoord, GetInternalResolution() - 1); // avoid loading from outside the texture, it messes up the min-max depth!
 	float depth = texture_depth[texCoord];
 
 	uint uDepth = asuint(depth);
