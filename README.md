@@ -110,5 +110,5 @@ Notes on exporting:
 
 ### Graphics:
 
-![InformationSheet](information_sheet.png)
+![InformationSheet](Documentation/information_sheet.png)
 
