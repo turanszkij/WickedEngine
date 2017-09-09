@@ -223,20 +223,10 @@ void wiImage::SetUpStates()
 
 void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-	{
-		wiRenderer::GetDevice()->LOCK();
-	}
-
 	wiRenderer::GetDevice()->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 	wiRenderer::GetDevice()->BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 
 	wiRenderer::GetDevice()->BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
-
-	if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-	{
-		wiRenderer::GetDevice()->UNLOCK();
-	}
 }
 
 void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)

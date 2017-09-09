@@ -161,6 +161,8 @@ void MainComponent::Render()
 	wiLua::GetGlobal()->Render();
 
 	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	getActiveComponent()->Render();
 	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
 }

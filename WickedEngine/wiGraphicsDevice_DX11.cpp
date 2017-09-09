@@ -2653,7 +2653,7 @@ void GraphicsDevice_DX11::PresentEnd()
 
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->OMSetRenderTargets(0, nullptr, nullptr);
 
-	UnBindResources(0, TEXSLOT_COUNT, GRAPHICSTHREAD_IMMEDIATE);
+	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ClearState();
 
 	FRAMECOUNT++;
 
@@ -3237,39 +3237,6 @@ GPUBuffer* GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD
 	}
 
 	return debugbuf;
-}
-void GraphicsDevice_DX11::Map(GPUBuffer* resource, UINT subResource, MAP mapType, UINT mapFlags, MappedSubresource* mappedResource, GRAPHICSTHREAD threadID) {
-	assert(mapFlags == 0 && "MapFlags not implemented!");
-	D3D11_MAPPED_SUBRESOURCE d3dMappedResource;
-	D3D11_MAP d3dMapType = D3D11_MAP_WRITE_DISCARD;
-	switch (mapType)
-	{
-	case wiGraphicsTypes::MAP_READ:
-		d3dMapType = D3D11_MAP_READ;
-		break;
-	case wiGraphicsTypes::MAP_WRITE:
-		d3dMapType = D3D11_MAP_WRITE;
-		break;
-	case wiGraphicsTypes::MAP_READ_WRITE:
-		d3dMapType = D3D11_MAP_READ_WRITE;
-		break;
-	case wiGraphicsTypes::MAP_WRITE_DISCARD:
-		d3dMapType = D3D11_MAP_WRITE_DISCARD;
-		break;
-	case wiGraphicsTypes::MAP_WRITE_NO_OVERWRITE:
-		d3dMapType = D3D11_MAP_WRITE_NO_OVERWRITE;
-		break;
-	default:
-		break;
-	}
-	HRESULT hr = deviceContexts[threadID]->Map(resource->resource_DX11, subResource, d3dMapType, mapFlags, &d3dMappedResource);
-	mappedResource->pData = d3dMappedResource.pData;
-	mappedResource->DepthPitch = d3dMappedResource.DepthPitch;
-	mappedResource->RowPitch = d3dMappedResource.RowPitch;
-}
-void GraphicsDevice_DX11::Unmap(GPUBuffer* resource, UINT subResource, GRAPHICSTHREAD threadID) 
-{
-	deviceContexts[threadID]->Unmap(resource->resource_DX11, subResource);
 }
 void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
 {

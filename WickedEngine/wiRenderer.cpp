@@ -257,9 +257,6 @@ void wiRenderer::SetUpStaticComponents()
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
-	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
-
 	Material::CreateImpostorMaterialCB();
 }
 void wiRenderer::CleanUpStatic()
@@ -1349,11 +1346,6 @@ void wiRenderer::SetUpStates()
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-	{
-		GetDevice()->LOCK();
-	}
-
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
 		GetDevice()->BindSamplerPS(samplers[i], i, threadID);
@@ -1398,17 +1390,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 
 	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
 	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
-
-	if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-	{
-		GetDevice()->UNLOCK();
-	}
-}
-void wiRenderer::RebindPersistentState(GRAPHICSTHREAD threadID)
-{
-	BindPersistentState(threadID);
-
-	wiImage::BindPersistentState(threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const std::string& get)
@@ -1778,6 +1759,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	UpdateWorldCB(threadID); // only commits when parameters are changed
 	UpdateFrameCB(threadID);
+	BindPersistentState(threadID);
 	
 	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
 	GetDevice()->EventBegin("Skinning", threadID);

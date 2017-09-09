@@ -418,7 +418,6 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 
 		wiRenderer::samplers[SSLOT_OBJECTSHADER] = new wiGraphicsTypes::Sampler;
 		wiRenderer::GetDevice()->CreateSamplerState(&desc, wiRenderer::samplers[SSLOT_OBJECTSHADER]);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	textureQualityComboBox->SetSelected(3);
 	textureQualityComboBox->SetEnabled(true);
@@ -435,7 +434,6 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 		desc.MipLODBias = args.fValue;
 		wiRenderer::samplers[SSLOT_OBJECTSHADER] = new wiGraphicsTypes::Sampler;
 		wiRenderer::GetDevice()->CreateSamplerState(&desc, wiRenderer::samplers[SSLOT_OBJECTSHADER]);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	});
 	rendererWindow->AddWidget(mipLodBiasSlider);
 

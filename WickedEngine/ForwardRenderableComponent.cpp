@@ -143,10 +143,12 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		return;
 	}
 
+
 	switch (value) {
 	case 0:
 	case 1:
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 		break;
 	case 2:
 		workerThreads.push_back(new wiTaskThread([&]
@@ -157,6 +159,8 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
+			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
 			RenderShadows(GRAPHICSTHREAD_SCENE);
 			RenderScene(GRAPHICSTHREAD_SCENE);
 			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_SCENE);
@@ -164,9 +168,7 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
 
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_SCENE);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
 		wiRenderer::GetDevice()->ExecuteDeferredContexts();
 		break;
@@ -179,23 +181,25 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
+			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
 			RenderShadows(GRAPHICSTHREAD_SCENE);
 			RenderScene(GRAPHICSTHREAD_SCENE);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC1);
+			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC1);
 			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
+			wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), rtMain.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC1);
 			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
 			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
 		}));
 
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_SCENE);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_MISC1);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
 		wiRenderer::GetDevice()->ExecuteDeferredContexts();
 		break;
@@ -209,32 +213,37 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
+			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
 			RenderShadows(GRAPHICSTHREAD_SCENE);
 			RenderScene(GRAPHICSTHREAD_SCENE);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC1);
+			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC1);
 			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
+			wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), rtMain.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC1);
 			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
 		}));
 		workerThreads.push_back(new wiTaskThread([&]
 		{
+			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC2);
+			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC2);
 			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC2);
+			wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), rtMain.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC2);
 			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_MISC2);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);
 		}));
 
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_REFLECTIONS);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_SCENE);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_MISC1);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
-		wiRenderer::RebindPersistentState(GRAPHICSTHREAD_MISC2);
 		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);
 		wiRenderer::GetDevice()->ExecuteDeferredContexts();
 		break;
 	};
+
 }

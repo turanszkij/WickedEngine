@@ -400,7 +400,6 @@ public:
 
 	static void ReloadShaders(const std::string& path = "");
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
-	static void RebindPersistentState(GRAPHICSTHREAD threadID);
 
 	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 
