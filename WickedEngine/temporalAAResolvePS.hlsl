@@ -1,5 +1,5 @@
 // This can retrieve better velocity vectors so moving objects could be better anti aliased:
-#define DILATE_VELOCITY
+#define DILATE_VELOCITY_BEST_3X3
 
 #include "postProcessHF.hlsli"
 #include "reconstructPositionHF.hlsli"

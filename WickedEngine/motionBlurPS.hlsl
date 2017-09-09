@@ -1,4 +1,4 @@
-#define DILATE_VELOCITY
+#define DILATE_VELOCITY_AVG_FAR
 
 #include "postProcessHF.hlsli"
 #include "reconstructPositionHF.hlsli"

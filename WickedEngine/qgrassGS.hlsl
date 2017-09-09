@@ -37,7 +37,7 @@ void main(
 	float3 color = saturate(xColor.xyz + sin(pos.x - pos.y - pos.z)*0.013f)*0.5;
 	float3 normal = /*normalize(*/input[0].nor.xyz * 2 - 1/*-wind)*/;
 	float3 wind = sin(g_xFrame_Time + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz*0.03*grassLength;
-	float3 windPrev = sin(g_xFrame_Time + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz*0.03*grassLength;
+	float3 windPrev = sin(g_xFrame_TimePrev + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz*0.03*grassLength;
 
 	frame.xy *= grassLength;
 	pos.xyz -= normal*0.1*grassLength;
