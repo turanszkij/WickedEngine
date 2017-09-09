@@ -698,6 +698,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.png" />
+    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\information_sheet.png" />
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png" />
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
       <DeploymentContent>true</DeploymentContent>

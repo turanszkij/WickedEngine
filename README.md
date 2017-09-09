@@ -28,8 +28,8 @@ Run in Release mode for best performance. Debug mode has full debugging support 
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 
 ### Platforms:
-- Windows PC Desktop (validated version 0.13.0)
-- Universal Windows (validated version 0.13.0)
+- Windows PC Desktop (x86, x64) (validated version 0.13.0)
+- Universal Windows (PC, Phone, XBOX One) (validated version 0.13.0)
 
 ### Requirements:
 
@@ -91,20 +91,24 @@ You can export models from Blender with the provided python script: io_export_wi
 Common model formats like FBX are not supported currently, only the custom model format which is exportable from Blender.<br/>
 
 Notes on exporting:
-- Names should not contain spaces inside Blender
+- Names should not contain spaces inside Blender<br/>
 	The problem is the c++ side code which parses the text files such as it breaks parsing on spaces. 
 	Mesh files are already exported as binary, so those are okay
 	Suggested fix: write binary export for everything
-- Separate files generated
+- Separate files generated<br/>
 	I've written the exporter to write different categories of the scene to different files for easier debugging
 	from a text editor. If the exporter is rewritten to write binary for everything, such debugging will
 	not be possible so might as well merge the files (except mesh files and error message file)
-- Only animation supported is skeletal animation
-- Animation Action names should contain their armature's name so that the exporter matches them correctly
+- Only animation supported is skeletal animation<br/>
+- Animation Action names should contain their armature's name so that the exporter matches them correctly<br/>
 	Suggested fix: find a better way of matching armatures and actions
-- Animation only with linear curves (so no curves)
+- Animation only with linear curves (so no curves)<br/>
 	Suggested fix: implement curves support into the engine and the exporter
-- Only one uv map support
+- Only one uv map support<br/>
 	Light maps and other effects requiring multiple uv maps are not possible yet.
 	
+
+### Graphics:
+
+![InformationSheet](information_sheet.png)
 

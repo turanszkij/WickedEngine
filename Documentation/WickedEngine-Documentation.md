@@ -1,5 +1,9 @@
 # WickedEngine Documentation (work in progress)
 
+## Graphics
+
+![InformationSheet](information_sheet.png)
+
 ## Classes
 The most important classes are related as described in the following diagram: 
 ![ClassDiagram](classdiagram.png)
@@ -64,7 +68,7 @@ A helper engine component to load resources or an entire component. It can be ac
 
 
 
-### Graphics
+### Graphics Classes
 This section contains engine graphics rendering functionality documentation.
 
 #### API
