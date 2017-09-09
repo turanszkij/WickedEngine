@@ -1903,7 +1903,7 @@
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png">
       <Filter>Documentation</Filter>
     </Image>
-    <Image Include="C:\PROJECTS\WickedEngine\WickedEngine\..\Documentation\information_sheet.png">
+    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\information_sheet.png">
       <Filter>Documentation</Filter>
     </Image>
   </ItemGroup>
