@@ -629,7 +629,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -641,10 +641,10 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL",			0, Mesh::Vertex_NOR::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, Mesh::Vertex_TEX::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		1, Mesh::Vertex_POS::FORMAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -664,7 +664,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -681,8 +681,8 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -699,7 +699,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -716,8 +716,8 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",		0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1271,6 +1271,12 @@ void wiRenderer::SetUpStates()
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_HAIRALPHACOMPOSITION]);
 
 
+	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_ENVMAP]);
+
+
 	for (int i = 0; i < BSTYPE_LAST; ++i)
 	{
 		blendStates[i] = new BlendState;
@@ -1483,8 +1489,8 @@ Light* wiRenderer::getLightByName(const std::string& name)
 Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
 {
 	XMMATRIX sump;
-	XMVECTOR pos = XMLoadFloat4(&mesh->vertices_POS[vertexI].pos);
-	XMVECTOR nor = XMLoadFloat4(&mesh->vertices_NOR[vertexI].nor);
+	XMVECTOR pos = XMLoadHalf4(&mesh->vertices_POS[vertexI].pos);
+	XMVECTOR nor = XMLoadFloat4(&mesh->vertices_NOR[vertexI].GetNor_FULL());
 
 	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
 	{
@@ -1530,7 +1536,12 @@ Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, con
 
 	Mesh::Vertex_FULL retV(transformedP);
 	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
-	retV.tex = mesh->vertices_TEX[vertexI].tex;
+	retV.tex = XMFLOAT4(
+		mesh->vertices_TEX[vertexI].tex.x,
+		mesh->vertices_TEX[vertexI].tex.y,
+		mesh->vertices_TEX[vertexI].tex.z,
+		mesh->vertices_TEX[vertexI].tex.w
+	);
 
 	return retV;
 }
@@ -2660,7 +2671,7 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 						&x->object->mesh->vertexBuffer_POS,
 					};
 					const UINT strides[] = {
-						sizeof(XMFLOAT4),
+						sizeof(Mesh::Vertex_POS),
 					};
 					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 					GetDevice()->BindIndexBuffer(&y.indexBuffer, y.GetIndexFormat(), threadID);
@@ -3844,6 +3855,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 		DSSTYPES targetDepthStencilState = (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE) ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT;
 		targetDepthStencilState = (shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_SHADOW) ? DSSTYPE_SHADOW : targetDepthStencilState;
+		targetDepthStencilState = shaderType == SHADERTYPE_ENVMAPCAPTURE ? DSSTYPE_ENVMAP : targetDepthStencilState;
 
 		UINT prevStencilRef = STENCILREF_DEFAULT;
 		device->BindDepthStencilState(depthStencils[targetDepthStencilState], prevStencilRef, threadID);
@@ -3977,8 +3989,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						&mesh->instanceBuffer
 					};
 					UINT strides[] = {
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
+						sizeof(Mesh::Vertex_POS),
+						sizeof(Mesh::Vertex_TEX),
 						sizeof(Instance)
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
@@ -3994,10 +4006,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						&mesh->instanceBufferPrev,
 					};
 					UINT strides[] = {
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
-						sizeof(XMFLOAT4),
+						sizeof(Mesh::Vertex_POS),
+						sizeof(Mesh::Vertex_NOR),
+						sizeof(Mesh::Vertex_TEX),
+						sizeof(Mesh::Vertex_POS),
 						sizeof(Instance),
 						sizeof(Instance),
 					};
@@ -4217,7 +4229,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								&mesh->instanceBuffer
 							};
 							UINT strides[] = {
-								sizeof(XMFLOAT4),
+								sizeof(Mesh::Vertex_POS),
 								sizeof(Instance)
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
@@ -4231,8 +4243,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								&mesh->instanceBuffer
 							};
 							UINT strides[] = {
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
+								sizeof(Mesh::Vertex_POS),
+								sizeof(Mesh::Vertex_TEX),
 								sizeof(Instance)
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
@@ -4249,10 +4261,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								&mesh->instanceBufferPrev,
 							};
 							UINT strides[] = {
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
-								sizeof(XMFLOAT4),
+								sizeof(Mesh::Vertex_POS),
+								sizeof(Mesh::Vertex_NOR),
+								sizeof(Mesh::Vertex_TEX),
+								sizeof(Mesh::Vertex_POS),
 								sizeof(Instance),
 								sizeof(InstancePrev),
 							};
@@ -4631,7 +4643,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		{
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_ENVMAP], STENCILREF_SKY, threadID);
 			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 			GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], threadID);
@@ -5731,7 +5743,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			}
 			else
 			{
-				_vertices[i] = XMLoadFloat4(&mesh->vertices_POS[i].pos);
+				_vertices[i] = XMLoadHalf4(&mesh->vertices_POS[i].pos);
 			}
 		}
 
@@ -6012,10 +6024,10 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		&mesh->instanceBuffer
 	};
 	UINT strides[] = {
-		sizeof(XMFLOAT4),
-		sizeof(XMFLOAT4),
-		sizeof(XMFLOAT4),
-		sizeof(XMFLOAT4),
+		sizeof(Mesh::Vertex_POS),
+		sizeof(Mesh::Vertex_NOR),
+		sizeof(Mesh::Vertex_TEX),
+		sizeof(Mesh::Vertex_POS),
 		sizeof(Instance)
 	};
 	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);

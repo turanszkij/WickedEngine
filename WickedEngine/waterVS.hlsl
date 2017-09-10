@@ -12,7 +12,7 @@ PixelInputType main(Input_Object_ALL input)
 	Out.pos = Out.pos2D = mul(pos, g_xCamera_VP);
 	Out.pos3D = pos.xyz;
 	Out.tex = input.tex.xy;
-	Out.nor = mul(input.nor.xyz, (float3x3)WORLD);
+	Out.nor = mul(input.nor.xyz * 2 - 1, (float3x3)WORLD);
 	Out.nor = normalize(Out.nor);
 	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP).xy;
 

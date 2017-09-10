@@ -592,10 +592,8 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
 			mesh->vertices_Transformed_PRE[i].pos = mesh->vertices_Transformed_POS[i].pos;
-			mesh->vertices_Transformed_POS[i].pos = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), mesh->vertices_POS[i].pos.w);
-			mesh->vertices_Transformed_NOR[i].nor.x = -nodes[indexP].m_n.getX();
-			mesh->vertices_Transformed_NOR[i].nor.y = -nodes[indexP].m_n.getY();
-			mesh->vertices_Transformed_NOR[i].nor.z = -nodes[indexP].m_n.getZ();
+			mesh->vertices_Transformed_POS[i].pos = XMHALF4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), (float)mesh->vertices_POS[i].pos.w);
+			mesh->vertices_Transformed_NOR[i].FromFLOAT(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ()));
 		}
 	}
 }
@@ -704,7 +702,10 @@ void wiBULLET::registerObject(Object* object){
 			vector<XMFLOAT4> pos_stream(object->mesh->vertices_POS.size());
 			for (size_t i = 0; i < object->mesh->vertices_POS.size(); ++i)
 			{
-				pos_stream[i] = object->mesh->vertices_POS[i].pos;
+				pos_stream[i].x = object->mesh->vertices_POS[i].pos.x;
+				pos_stream[i].y = object->mesh->vertices_POS[i].pos.y;
+				pos_stream[i].z = object->mesh->vertices_POS[i].pos.z;
+				pos_stream[i].w = object->mesh->vertices_POS[i].pos.w;
 			}
 
 			addConvexHull(
@@ -719,7 +720,10 @@ void wiBULLET::registerObject(Object* object){
 			vector<XMFLOAT4> pos_stream(object->mesh->vertices_POS.size());
 			for (size_t i = 0; i < object->mesh->vertices_POS.size(); ++i)
 			{
-				pos_stream[i] = object->mesh->vertices_POS[i].pos;
+				pos_stream[i].x = object->mesh->vertices_POS[i].pos.x;
+				pos_stream[i].y = object->mesh->vertices_POS[i].pos.y;
+				pos_stream[i].z = object->mesh->vertices_POS[i].pos.z;
+				pos_stream[i].w = object->mesh->vertices_POS[i].pos.w;
 			}
 
 			addTriangleMesh(

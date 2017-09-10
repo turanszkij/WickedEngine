@@ -22,7 +22,7 @@ PixelInputType main(Input_Object_ALL input)
 
 	Out.clip = dot(pos, g_xClipPlane);
 		
-	float3 normal = mul(input.nor.xyz, (float3x3)WORLD);
+	float3 normal = mul(input.nor.xyz * 2 - 1, (float3x3)WORLD);
 	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
 	affectWind(posPrev.xyz, input.pos.w, g_xFrame_TimePrev);
 

@@ -2316,6 +2316,13 @@ void Mesh::CreateVertexArrays()
 	vertices_BON.resize(vertices_FULL.size());
 	for (size_t i = 0; i < vertices_FULL.size(); ++i)
 	{
+		// Normalize normals:
+		float alpha = vertices_FULL[i].nor.w;
+		XMVECTOR nor = XMLoadFloat4(&vertices_FULL[i].nor);
+		nor = XMVector3Normalize(nor);
+		XMStoreFloat4(&vertices_FULL[i].nor, nor);
+		vertices_FULL[i].nor.w = alpha;
+
 		// Normalize bone weights:
 		XMFLOAT4& wei = vertices_FULL[i].wei;
 		float len = wei.x + wei.y + wei.z + wei.w;
@@ -2327,11 +2334,11 @@ void Mesh::CreateVertexArrays()
 			wei.w /= len;
 		}
 
-		// Split and convert props:
-		vertices_POS[i].pos = vertices_FULL[i].pos;
-		vertices_NOR[i].nor = vertices_FULL[i].nor;
-		vertices_TEX[i].tex = vertices_FULL[i].tex;
-		vertices_BON[i] = Vertex_BON(vertices_FULL[i].ind, vertices_FULL[i].wei);
+		// Split and type conversion:
+		vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
+		vertices_NOR[i] = Vertex_NOR(vertices_FULL[i]);
+		vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
+		vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
 	}
 
 	// Save original vertices. This will be input for CPU skinning / soft bodies

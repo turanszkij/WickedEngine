@@ -237,8 +237,6 @@ struct VertexRef{
 };
 struct VertexGroup{
 	std::string name;
-	//std::vector<VertexRef> vertices;
-	//index,weight
 	std::map<int,float> vertices;
 	VertexGroup(){name="";}
 	VertexGroup(const std::string& n){name=n;}
@@ -287,15 +285,66 @@ public:
 	};
 	struct Vertex_POS
 	{
-		XMFLOAT4 pos;
+		XMHALF4 pos;
+
+		Vertex_POS() :pos(XMHALF4(0.0f, 0.0f, 0.0f, 0.0f)) {}
+		Vertex_POS(const Vertex_FULL& vert)
+		{
+			pos = XMHALF4(vert.pos.x, vert.pos.y, vert.pos.z, vert.pos.w);
+		}
+
+		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16B16A16_FLOAT;
 	};
 	struct Vertex_NOR
 	{
-		XMFLOAT4 nor;
+		uint32_t nor;
+
+		Vertex_NOR() :nor(0) {}
+		Vertex_NOR(const Vertex_FULL& vert)
+		{
+			nor = 0;
+
+			nor |= (uint8_t)((vert.nor.x * 0.5f + 0.5f) * 255.0f) << 0;
+			nor |= (uint8_t)((vert.nor.y * 0.5f + 0.5f) * 255.0f) << 8;
+			nor |= (uint8_t)((vert.nor.z * 0.5f + 0.5f) * 255.0f) << 16;
+			nor |= (uint8_t)(vert.nor.w * 255.0f) << 24; // ao (0-1)
+		}
+		inline void FromFLOAT(const XMFLOAT3& value)
+		{
+			uint8_t alpha = (nor >> 24) & 0x000000FF;
+
+			nor = 0;
+
+			nor |= (uint8_t)((value.x * 0.5f + 0.5f) * 255.0f) << 0;
+			nor |= (uint8_t)((value.y * 0.5f + 0.5f) * 255.0f) << 8;
+			nor |= (uint8_t)((value.z * 0.5f + 0.5f) * 255.0f) << 16;
+			nor |= alpha << 24;
+		}
+		inline XMFLOAT4 GetNor_FULL() const
+		{
+			XMFLOAT4 nor_FULL(0, 0, 0, 0);
+
+			nor_FULL.x = (float)((nor >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.y = (float)((nor >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.z = (float)((nor >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.w = (float)((nor >> 24) & 0x000000FF) / 255.0f;
+
+			return nor_FULL;
+		}
+
+		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R8G8B8A8_UNORM;
 	};
 	struct Vertex_TEX
 	{
-		XMFLOAT4 tex;
+		XMHALF4 tex;
+
+		Vertex_TEX() :tex(XMHALF4(0.0f, 0.0f, 0.0f, 0.0f)) {}
+		Vertex_TEX(const Vertex_FULL& vert)
+		{
+			tex = XMHALF4(vert.tex.x, vert.tex.y, vert.tex.z, vert.tex.w);
+		}
+
+		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16B16A16_FLOAT;
 	};
 	struct Vertex_BON
 	{
@@ -307,20 +356,20 @@ public:
 			ind = 0;
 			wei = 0;
 		}
-		Vertex_BON(const XMFLOAT4& ind_FULL, const XMFLOAT4& wei_FULL)
+		Vertex_BON(const Vertex_FULL& vert)
 		{
 			ind = 0;
 			wei = 0;
 
-			ind |= (uint8_t)ind_FULL.x << 0;
-			ind |= (uint8_t)ind_FULL.y << 8;
-			ind |= (uint8_t)ind_FULL.z << 16;
-			ind |= (uint8_t)ind_FULL.w << 24;
+			ind |= (uint8_t)vert.ind.x << 0;
+			ind |= (uint8_t)vert.ind.y << 8;
+			ind |= (uint8_t)vert.ind.z << 16;
+			ind |= (uint8_t)vert.ind.w << 24;
 
-			wei |= (uint8_t)(wei_FULL.x * 255.0f) << 0;
-			wei |= (uint8_t)(wei_FULL.y * 255.0f) << 8;
-			wei |= (uint8_t)(wei_FULL.z * 255.0f) << 16;
-			wei |= (uint8_t)(wei_FULL.w * 255.0f) << 24;
+			wei |= (uint8_t)(vert.wei.x * 255.0f) << 0;
+			wei |= (uint8_t)(vert.wei.y * 255.0f) << 8;
+			wei |= (uint8_t)(vert.wei.z * 255.0f) << 16;
+			wei |= (uint8_t)(vert.wei.w * 255.0f) << 24;
 		}
 		inline XMFLOAT4 GetInd_FULL() const
 		{
@@ -396,7 +445,6 @@ public:
 
 	wiRenderTarget	impostorTarget;
 	float impostorDistance;
-	//static wiGraphicsTypes::GPUBuffer	impostorVBs[VPROP_COUNT]; // omit weights, omit posprev
 	static wiGraphicsTypes::GPUBuffer impostorVB_POS;
 	static wiGraphicsTypes::GPUBuffer impostorVB_NOR;
 	static wiGraphicsTypes::GPUBuffer impostorVB_TEX;

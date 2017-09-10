@@ -28,7 +28,7 @@ HullInputType main(Input_Object_ALL input)
 	posPrev = mul(posPrev, WORLDPREV);
 
 
-	float3 normal = mul(normalize(input.nor.xyz), (float3x3)WORLD);
+	float3 normal = mul(normalize(input.nor.xyz * 2 - 1), (float3x3)WORLD);
 	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
 	affectWind(posPrev.xyz,input.pos.w, g_xFrame_TimePrev);
 
