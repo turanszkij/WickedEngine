@@ -15,7 +15,9 @@
 
 // Platform agnostic:
 #include <DirectXMath.h>
+#include <DirectXPackedVector.h>
 using namespace DirectX;
+using namespace DirectX::PackedVector;
 
 #define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
 #define SAFE_INIT(a) (a) = nullptr;

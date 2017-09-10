@@ -11,6 +11,8 @@
 #include "BulletSoftBody/btDefaultSoftBodySolver.h"
 #include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
 
+using namespace std;
+
 int PHYSICS::softBodyIterationCount=5;
 bool PHYSICS::rigidBodyPhysicsEnabled = true, PHYSICS::softBodyPhysicsEnabled = true;
 bool wiBULLET::grab=false;
@@ -585,15 +587,15 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
 		int gvg = mesh->goalVG;
-		for (unsigned int i = 0; i<mesh->vertices[VPROP_POS].size(); ++i)
+		for (unsigned int i = 0; i<mesh->vertices_POS.size(); ++i)
 		{
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
-			mesh->vertices_Transformed[VPROP_PRE][i] = mesh->vertices_Transformed[VPROP_POS][i];
-			mesh->vertices_Transformed[VPROP_POS][i] = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), mesh->vertices[VPROP_POS][i].w);
-			mesh->vertices_Transformed[VPROP_NOR][i].x = -nodes[indexP].m_n.getX();
-			mesh->vertices_Transformed[VPROP_NOR][i].y = -nodes[indexP].m_n.getY();
-			mesh->vertices_Transformed[VPROP_NOR][i].z = -nodes[indexP].m_n.getZ();
+			mesh->vertices_Transformed_PRE[i].pos = mesh->vertices_Transformed_POS[i].pos;
+			mesh->vertices_Transformed_POS[i].pos = XMFLOAT4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), mesh->vertices_POS[i].pos.w);
+			mesh->vertices_Transformed_NOR[i].nor.x = -nodes[indexP].m_n.getX();
+			mesh->vertices_Transformed_NOR[i].nor.y = -nodes[indexP].m_n.getY();
+			mesh->vertices_Transformed_NOR[i].nor.z = -nodes[indexP].m_n.getZ();
 		}
 	}
 }
@@ -699,8 +701,14 @@ void wiBULLET::registerObject(Object* object){
 			object->physicsObjectID = ++registeredObjects;
 		}
 		if(!object->collisionShape.compare("CONVEX_HULL")){
+			vector<XMFLOAT4> pos_stream(object->mesh->vertices_POS.size());
+			for (size_t i = 0; i < object->mesh->vertices_POS.size(); ++i)
+			{
+				pos_stream[i] = object->mesh->vertices_POS[i].pos;
+			}
+
 			addConvexHull(
-				object->mesh->vertices[VPROP_POS],
+				pos_stream,
 				S,R,T
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic
@@ -708,8 +716,14 @@ void wiBULLET::registerObject(Object* object){
 			object->physicsObjectID = ++registeredObjects;
 		}
 		if(!object->collisionShape.compare("MESH")){
+			vector<XMFLOAT4> pos_stream(object->mesh->vertices_POS.size());
+			for (size_t i = 0; i < object->mesh->vertices_POS.size(); ++i)
+			{
+				pos_stream[i] = object->mesh->vertices_POS[i].pos;
+			}
+
 			addTriangleMesh(
-				object->mesh->vertices[VPROP_POS],object->mesh->indices,
+				pos_stream,object->mesh->indices,
 				S,R,T
 				,object->mass,object->friction,object->restitution
 				,object->damping,object->kinematic

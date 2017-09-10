@@ -144,16 +144,16 @@ void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 	XMFLOAT3 pos;
 	XMFLOAT3 vel;
 	XMVECTOR& vbar=XMVectorBaryCentric(
-			XMLoadFloat4(&object->mesh->vertices[VPROP_POS][object->mesh->indices[gen[0]]])
-		,	XMLoadFloat4(&object->mesh->vertices[VPROP_POS][object->mesh->indices[gen[1]]])
-		,	XMLoadFloat4(&object->mesh->vertices[VPROP_POS][object->mesh->indices[gen[2]]])
+			XMLoadFloat4(&object->mesh->vertices_POS[object->mesh->indices[gen[0]]].pos)
+		,	XMLoadFloat4(&object->mesh->vertices_POS[object->mesh->indices[gen[1]]].pos)
+		,	XMLoadFloat4(&object->mesh->vertices_POS[object->mesh->indices[gen[2]]].pos)
 		,	f
 		,	g
 		);
 	XMVECTOR& nbar=XMVectorBaryCentric(
-			XMLoadFloat4(&object->mesh->vertices[VPROP_NOR][object->mesh->indices[gen[0]]])
-		,	XMLoadFloat4(&object->mesh->vertices[VPROP_NOR][object->mesh->indices[gen[1]]])
-		,	XMLoadFloat4(&object->mesh->vertices[VPROP_NOR][object->mesh->indices[gen[2]]])
+			XMLoadFloat4(&object->mesh->vertices_NOR[object->mesh->indices[gen[0]]].nor)
+		,	XMLoadFloat4(&object->mesh->vertices_NOR[object->mesh->indices[gen[1]]].nor)
+		,	XMLoadFloat4(&object->mesh->vertices_NOR[object->mesh->indices[gen[2]]].nor)
 		,	f
 		,	g
 		);

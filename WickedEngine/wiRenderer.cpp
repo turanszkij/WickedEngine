@@ -1480,24 +1480,24 @@ Light* wiRenderer::getLightByName(const std::string& name)
 	return nullptr;
 }
 
-Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
+Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
 {
 	XMMATRIX sump;
-	XMVECTOR pos = XMLoadFloat4(&mesh->vertices[VPROP_POS][vertexI]);
-	XMVECTOR nor = XMLoadFloat4(&mesh->vertices[VPROP_NOR][vertexI]);
+	XMVECTOR pos = XMLoadFloat4(&mesh->vertices_POS[vertexI].pos);
+	XMVECTOR nor = XMLoadFloat4(&mesh->vertices_NOR[vertexI].nor);
 
 	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
 	{
 		float inWei[4] = {
-			mesh->vertices[VPROP_WEI][vertexI].x
-			, mesh->vertices[VPROP_WEI][vertexI].y
-			, mesh->vertices[VPROP_WEI][vertexI].z
-			, mesh->vertices[VPROP_WEI][vertexI].w };
+			mesh->vertices_BON[vertexI].wei.x,
+			mesh->vertices_BON[vertexI].wei.y,
+			mesh->vertices_BON[vertexI].wei.z,
+			mesh->vertices_BON[vertexI].wei.w };
 		float inBon[4] = {
-			mesh->vertices[VPROP_BON][vertexI].x
-			, mesh->vertices[VPROP_BON][vertexI].y
-			, mesh->vertices[VPROP_BON][vertexI].z
-			, mesh->vertices[VPROP_BON][vertexI].w };
+			mesh->vertices_BON[vertexI].ind.x,
+			mesh->vertices_BON[vertexI].ind.y,
+			mesh->vertices_BON[vertexI].ind.z,
+			mesh->vertices_BON[vertexI].ind.w };
 		if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
 		{
 			sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -1522,10 +1522,9 @@ Vertex wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX
 
 	XMStoreFloat3(&transformedN, XMVector3Normalize(XMVector3TransformNormal(nor, sump)));
 
-	Vertex retV(transformedP);
+	Mesh::Vertex_FULL retV(transformedP);
 	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
-	retV.tex = mesh->vertices[VPROP_TEX][vertexI];
-	retV.pre = XMFLOAT4(0, 0, 0, 1);
+	retV.tex = mesh->vertices_TEX[vertexI].tex;
 
 	return retV;
 }
@@ -1787,8 +1786,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			{
 				Mesh* mesh = iter->second;
 
-				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices[VPROP_POS].empty()
-					&& mesh->streamoutBuffers[VPROP_POS].IsValid() && mesh->vertexBuffers[VPROP_POS].IsValid())
+				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices_POS.empty()
+					&& mesh->streamoutBuffer_POS.IsValid() && mesh->vertexBuffer_POS.IsValid())
 				{
 					Armature* armature = mesh->armature;
 
@@ -1818,30 +1817,29 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					// Do the skinning
 					const GPUResource* vbs[] = {
-						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_POS]),
-						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_NOR]),
-						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_WEI]),
-						static_cast<const GPUResource*>(&mesh->vertexBuffers[VPROP_BON]),
+						static_cast<const GPUResource*>(&mesh->vertexBuffer_POS),
+						static_cast<const GPUResource*>(&mesh->vertexBuffer_NOR),
+						static_cast<const GPUResource*>(&mesh->vertexBuffer_BON),
 					};
 					const GPUUnorderedResource* sos[] = {
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_POS]),
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_NOR]),
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffers[VPROP_PRE]),
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_POS),
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_NOR),
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_PRE),
 					};
 
 					GetDevice()->BindResourcesCS(vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
 					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
 
-					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices[VPROP_POS].size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
+					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
 
 				}
 
 				// Upload CPU skinned vertex buffer (Soft body VB)
 				if (mesh->softBody)
 				{
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_POS], mesh->vertices_Transformed[VPROP_POS].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_POS].size()));
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_NOR], mesh->vertices_Transformed[VPROP_NOR].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_NOR].size()));
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffers[VPROP_PRE], mesh->vertices_Transformed[VPROP_PRE].data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed[VPROP_PRE].size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertices_Transformed_POS.data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed_POS.size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_NOR, mesh->vertices_Transformed_NOR.data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed_NOR.size()));
+					GetDevice()->UpdateBuffer(&mesh->streamoutBuffer_PRE, mesh->vertices_Transformed_PRE.data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed_PRE.size()));
 				}
 			}
 		}
@@ -2653,7 +2651,7 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 				for (auto& y : x->object->mesh->subsets)
 				{
 					const GPUBuffer* vbs[] = {
-						&x->object->mesh->vertexBuffers[VPROP_POS],
+						&x->object->mesh->vertexBuffer_POS,
 					};
 					const UINT strides[] = {
 						sizeof(XMFLOAT4),
@@ -3968,8 +3966,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (realVL == VLTYPE_OBJECT_POS_TEX)
 				{
 					GPUBuffer* vbs[] = {
-						&Mesh::impostorVBs[VPROP_POS],
-						&Mesh::impostorVBs[VPROP_TEX],
+						&Mesh::impostorVB_POS,
+						&Mesh::impostorVB_TEX,
 						&mesh->instanceBuffer
 					};
 					UINT strides[] = {
@@ -3982,10 +3980,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				else
 				{
 					GPUBuffer* vbs[] = {
-						&Mesh::impostorVBs[VPROP_POS],
-						&Mesh::impostorVBs[VPROP_NOR],
-						&Mesh::impostorVBs[VPROP_TEX],
-						&Mesh::impostorVBs[VPROP_POS],
+						&Mesh::impostorVB_POS,
+						&Mesh::impostorVB_NOR,
+						&Mesh::impostorVB_TEX,
+						&Mesh::impostorVB_POS,
 						&mesh->instanceBuffer,
 						&mesh->instanceBufferPrev,
 					};
@@ -4209,7 +4207,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::POSITION:
 						{
 							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
+								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 								&mesh->instanceBuffer
 							};
 							UINT strides[] = {
@@ -4222,8 +4220,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 						{
 							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-								&mesh->vertexBuffers[VPROP_TEX],
+								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								&mesh->vertexBuffer_TEX,
 								&mesh->instanceBuffer
 							};
 							UINT strides[] = {
@@ -4237,10 +4235,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 						{
 							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-								(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
-								&mesh->vertexBuffers[VPROP_TEX],
-								(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[mesh->softBody ? VPROP_PRE : VPROP_POS]), // this is getting out of hand!
+								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								(mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
+								&mesh->vertexBuffer_TEX,
+								(mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
 								&mesh->instanceBuffer,
 								&mesh->instanceBufferPrev,
 							};
@@ -5703,11 +5701,11 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		}
 
 		Mesh* mesh = object->mesh;
-		if (mesh->vertices[VPROP_POS].size() >= _arraySize)
+		if (mesh->vertices_POS.size() >= _arraySize)
 		{
 			// grow preallocated vector helper array
 			_mm_free(_vertices);
-			_arraySize = (mesh->vertices[VPROP_POS].size() + 1) * 2;
+			_arraySize = (mesh->vertices_POS.size() + 1) * 2;
 			_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 		}
 
@@ -5717,8 +5715,8 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		XMVECTOR& rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 		XMVECTOR& rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-		Vertex _tmpvert;
-		for (size_t i = 0; i < mesh->vertices[VPROP_POS].size(); ++i)
+		Mesh::Vertex_FULL _tmpvert;
+		for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
 		{
 			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
 			{
@@ -5727,7 +5725,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			}
 			else
 			{
-				_vertices[i] = XMLoadFloat4(&mesh->vertices[VPROP_POS][i]);
+				_vertices[i] = XMLoadFloat4(&mesh->vertices_POS[i].pos);
 			}
 		}
 
@@ -5748,7 +5746,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
 				picked.distance = wiMath::Distance(pos, rayOrigin);
-				picked.subsetIndex = (int)mesh->vertices[VPROP_TEX][i0].z;
+				picked.subsetIndex = (int)mesh->vertices_TEX[i0].tex.z;
 				points.push_back(picked);
 			}
 		}
@@ -5919,7 +5917,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 							for (std::map<int, float>::iterator it = mesh->vertexGroups[gvg].vertices.begin(); it != mesh->vertexGroups[gvg].vertices.end(); ++it)
 							{
 								int vi = (*it).first;
-								Vertex tvert = TransformVertex(mesh, vi, worldMat);
+								Mesh::Vertex_FULL tvert = TransformVertex(mesh, vi, worldMat);
 								mesh->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
 								mesh->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
 								++j;
@@ -6001,10 +5999,10 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	mesh->UpdateRenderableInstances(1, threadID);
 
 	GPUBuffer* vbs[] = {
-		(mesh->streamoutBuffers[VPROP_POS].IsValid() ? &mesh->streamoutBuffers[VPROP_POS] : &mesh->vertexBuffers[VPROP_POS]),
-		(mesh->streamoutBuffers[VPROP_NOR].IsValid() ? &mesh->streamoutBuffers[VPROP_NOR] : &mesh->vertexBuffers[VPROP_NOR]),
-		&mesh->vertexBuffers[VPROP_TEX],
-		(mesh->streamoutBuffers[VPROP_PRE].IsValid() ? &mesh->streamoutBuffers[VPROP_PRE] : &mesh->vertexBuffers[VPROP_POS]),
+		(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+		(mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
+		&mesh->vertexBuffer_TEX,
+		(mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
 		&mesh->instanceBuffer
 	};
 	UINT strides[] = {

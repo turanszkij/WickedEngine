@@ -34,68 +34,68 @@ typedef std::map<std::string,Material*> MaterialCollection;
 
 class wiArchive;
 
-enum VERTEXPROPERTY
-{
-	VPROP_POS,		// pos, wind
-	VPROP_NOR,		// normal, vertexao
-	VPROP_TEX,		// texcoord, materialindex, unused
-	VPROP_BON,		// boneindices
-	VPROP_WEI,		// boneweights
-	VPROP_COUNT,
-};
-#define VPROP_PRE VPROP_BON // posprev
-struct SkinnedVertex
-{
-	XMFLOAT4 pos; //pos, wind
-	XMFLOAT4 nor; //normal, vertex ao
-	XMFLOAT4 tex; //tex, matIndex, unused
-	XMFLOAT4 bon; //bone indices
-	XMFLOAT4 wei; //bone weights
-
-
-	SkinnedVertex(){
-		pos=XMFLOAT4(0,0,0,0);
-		nor=XMFLOAT4(0,0,0,1); 
-		tex=XMFLOAT4(0,0,0,0);
-		bon=XMFLOAT4(0,0,0,0);
-		wei=XMFLOAT4(0,0,0,0);
-	};
-	SkinnedVertex(const XMFLOAT3& newPos){
-		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
-		nor=XMFLOAT4(0,0,0,1);
-		tex=XMFLOAT4(0,0,0,0);
-		bon=XMFLOAT4(0,0,0,0);
-		wei=XMFLOAT4(0,0,0,0);
-	}
-	//void Serialize(wiArchive& archive);
-};
-struct Vertex
-{
-	XMFLOAT4 pos; //pos, wind
-	XMFLOAT4 nor; //normal, vertex ao
-	XMFLOAT4 tex; //tex, matIndex, unused
-	XMFLOAT4 pre; //previous frame position
-
-	Vertex(){
-		pos=XMFLOAT4(0,0,0,0);
-		nor=XMFLOAT4(0,0,0,1);
-		tex=XMFLOAT4(0,0,0,0);
-		pre=XMFLOAT4(0,0,0,0);
-	};
-	Vertex(const XMFLOAT3& newPos){
-		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
-		nor=XMFLOAT4(0,0,0,1);
-		tex=XMFLOAT4(0,0,0,0);
-		pre=XMFLOAT4(0,0,0,0);
-	}
-	Vertex(const SkinnedVertex& copyFromSkinnedVert)
-	{
-		pos = copyFromSkinnedVert.pos;
-		nor = copyFromSkinnedVert.nor;
-		tex = copyFromSkinnedVert.tex;
-		pre = XMFLOAT4(0, 0, 0, 0);
-	}
-};
+//enum VERTEXPROPERTY
+//{
+//	VPROP_POS,		// pos, wind
+//	VPROP_NOR,		// normal, vertexao
+//	VPROP_TEX,		// texcoord, materialindex, unused
+//	VPROP_BON,		// boneindices
+//	VPROP_WEI,		// boneweights
+//	VPROP_COUNT,
+//};
+//#define VPROP_PRE VPROP_BON // posprev
+//struct SkinnedVertex
+//{
+//	XMFLOAT4 pos; //pos, wind
+//	XMFLOAT4 nor; //normal, vertex ao
+//	XMFLOAT4 tex; //tex, matIndex, unused
+//	XMFLOAT4 bon; //bone indices
+//	XMFLOAT4 wei; //bone weights
+//
+//
+//	SkinnedVertex(){
+//		pos=XMFLOAT4(0,0,0,0);
+//		nor=XMFLOAT4(0,0,0,1); 
+//		tex=XMFLOAT4(0,0,0,0);
+//		bon=XMFLOAT4(0,0,0,0);
+//		wei=XMFLOAT4(0,0,0,0);
+//	};
+//	SkinnedVertex(const XMFLOAT3& newPos){
+//		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
+//		nor=XMFLOAT4(0,0,0,1);
+//		tex=XMFLOAT4(0,0,0,0);
+//		bon=XMFLOAT4(0,0,0,0);
+//		wei=XMFLOAT4(0,0,0,0);
+//	}
+//	//void Serialize(wiArchive& archive);
+//};
+//struct Vertex
+//{
+//	XMFLOAT4 pos; //pos, wind
+//	XMFLOAT4 nor; //normal, vertex ao
+//	XMFLOAT4 tex; //tex, matIndex, unused
+//	XMFLOAT4 pre; //previous frame position
+//
+//	Vertex(){
+//		pos=XMFLOAT4(0,0,0,0);
+//		nor=XMFLOAT4(0,0,0,1);
+//		tex=XMFLOAT4(0,0,0,0);
+//		pre=XMFLOAT4(0,0,0,0);
+//	};
+//	Vertex(const XMFLOAT3& newPos){
+//		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
+//		nor=XMFLOAT4(0,0,0,1);
+//		tex=XMFLOAT4(0,0,0,0);
+//		pre=XMFLOAT4(0,0,0,0);
+//	}
+//	Vertex(const SkinnedVertex& copyFromSkinnedVert)
+//	{
+//		pos = copyFromSkinnedVert.pos;
+//		nor = copyFromSkinnedVert.nor;
+//		tex = copyFromSkinnedVert.tex;
+//		pre = XMFLOAT4(0, 0, 0, 0);
+//	}
+//};
 GFX_STRUCT Instance
 {
 	XMFLOAT4A mat0;
@@ -324,10 +324,59 @@ struct MeshSubset
 struct Mesh
 {
 public:
+	struct Vertex_FULL
+	{
+		XMFLOAT4 pos; //pos, wind
+		XMFLOAT4 nor; //normal, vertex ao
+		XMFLOAT4 tex; //tex, matIndex, unused
+		XMFLOAT4 ind; //bone indices
+		XMFLOAT4 wei; //bone weights
+	
+		Vertex_FULL(){
+			pos=XMFLOAT4(0,0,0,0);
+			nor=XMFLOAT4(0,0,0,1); 
+			tex=XMFLOAT4(0,0,0,0);
+			ind=XMFLOAT4(0,0,0,0);
+			wei=XMFLOAT4(0,0,0,0);
+		};
+		Vertex_FULL(const XMFLOAT3& newPos){
+			pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
+			nor=XMFLOAT4(0,0,0,1);
+			tex=XMFLOAT4(0,0,0,0);
+			ind=XMFLOAT4(0,0,0,0);
+			wei=XMFLOAT4(0,0,0,0);
+		}
+	};
+	struct Vertex_POS
+	{
+		XMFLOAT4 pos;
+	};
+	struct Vertex_NOR
+	{
+		XMFLOAT4 nor;
+	};
+	struct Vertex_TEX
+	{
+		XMFLOAT4 tex;
+	};
+	struct Vertex_BON
+	{
+		XMFLOAT4 ind;
+		XMFLOAT4 wei;
+	};
+
 	std::string name;
 	std::string parent;
-	std::vector<XMFLOAT4>		vertices_Transformed[VPROP_COUNT]; // for CPU skinning / soft body simulation
-	std::vector<XMFLOAT4>		vertices[VPROP_COUNT];
+	//std::vector<XMFLOAT4>		vertices_Transformed[VPROP_COUNT]; // for CPU skinning / soft body simulation
+	//std::vector<XMFLOAT4>		vertices[VPROP_COUNT];
+	std::vector<Vertex_FULL>	vertices_FULL;
+	std::vector<Vertex_POS>		vertices_POS; // position(xyz), wind(w)
+	std::vector<Vertex_NOR>		vertices_NOR; // normal
+	std::vector<Vertex_TEX>		vertices_TEX; // texcoords
+	std::vector<Vertex_BON>		vertices_BON; // bone indices, bone weights
+	std::vector<Vertex_POS>		vertices_Transformed_POS; // for soft body simulation
+	std::vector<Vertex_NOR>		vertices_Transformed_NOR; // for soft body simulation
+	std::vector<Vertex_POS>		vertices_Transformed_PRE; // for soft body simulation
 	std::vector<unsigned int>   indices;
 	std::vector<XMFLOAT3>		physicsverts;
 	std::vector<unsigned int>	physicsindices;
@@ -335,8 +384,15 @@ public:
 	std::vector<MeshSubset>		subsets;
 	std::vector<std::string>	materialNames;
 
-	wiGraphicsTypes::GPUBuffer	vertexBuffers[VPROP_COUNT];
-	wiGraphicsTypes::GPUBuffer	streamoutBuffers[VPROP_COUNT]; // omit texcoord, omit weights, change boneindices to posprev
+	//wiGraphicsTypes::GPUBuffer	vertexBuffers[VPROP_COUNT];
+	//wiGraphicsTypes::GPUBuffer	streamoutBuffers[VPROP_COUNT]; // omit texcoord, omit weights, change boneindices to posprev
+	wiGraphicsTypes::GPUBuffer	vertexBuffer_POS;
+	wiGraphicsTypes::GPUBuffer	vertexBuffer_NOR;
+	wiGraphicsTypes::GPUBuffer	vertexBuffer_TEX;
+	wiGraphicsTypes::GPUBuffer	vertexBuffer_BON;
+	wiGraphicsTypes::GPUBuffer	streamoutBuffer_POS;
+	wiGraphicsTypes::GPUBuffer	streamoutBuffer_NOR;
+	wiGraphicsTypes::GPUBuffer	streamoutBuffer_PRE;
 	wiGraphicsTypes::GPUBuffer	instanceBuffer;
 	wiGraphicsTypes::GPUBuffer	instanceBufferPrev;
 
@@ -363,7 +419,10 @@ public:
 
 	wiRenderTarget	impostorTarget;
 	float impostorDistance;
-	static wiGraphicsTypes::GPUBuffer	impostorVBs[VPROP_COUNT]; // omit weights, omit posprev
+	//static wiGraphicsTypes::GPUBuffer	impostorVBs[VPROP_COUNT]; // omit weights, omit posprev
+	static wiGraphicsTypes::GPUBuffer impostorVB_POS;
+	static wiGraphicsTypes::GPUBuffer impostorVB_NOR;
+	static wiGraphicsTypes::GPUBuffer impostorVB_TEX;
 
 	float tessellationFactor;
 

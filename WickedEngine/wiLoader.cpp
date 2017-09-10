@@ -532,29 +532,26 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 					}
 					break;
 				case 'v': 
-					for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
-					{
-						currentMesh->vertices[vprop].push_back(XMFLOAT4(0,0,0,0));
-					}
-					file >> currentMesh->vertices[VPROP_POS].back().x;
-					file >> currentMesh->vertices[VPROP_POS].back().y;
-					file >> currentMesh->vertices[VPROP_POS].back().z;
+					currentMesh->vertices_FULL.push_back(Mesh::Vertex_FULL());
+					file >> currentMesh->vertices_FULL.back().pos.x;
+					file >> currentMesh->vertices_FULL.back().pos.y;
+					file >> currentMesh->vertices_FULL.back().pos.z;
 					break;
 				case 'n':
 					if (currentMesh->isBillboarded){
-						currentMesh->vertices[VPROP_NOR].back().x = currentMesh->billboardAxis.x;
-						currentMesh->vertices[VPROP_NOR].back().y = currentMesh->billboardAxis.y;
-						currentMesh->vertices[VPROP_NOR].back().z = currentMesh->billboardAxis.z;
+						currentMesh->vertices_FULL.back().nor.x = currentMesh->billboardAxis.x;
+						currentMesh->vertices_FULL.back().nor.y = currentMesh->billboardAxis.y;
+						currentMesh->vertices_FULL.back().nor.z = currentMesh->billboardAxis.z;
 					}
 					else{
-						file >> currentMesh->vertices[VPROP_NOR].back().x;
-						file >> currentMesh->vertices[VPROP_NOR].back().y;
-						file >> currentMesh->vertices[VPROP_NOR].back().z;
+						file >> currentMesh->vertices_FULL.back().nor.x;
+						file >> currentMesh->vertices_FULL.back().nor.y;
+						file >> currentMesh->vertices_FULL.back().nor.z;
 					}
 					break;
 				case 'u':
-					file >> currentMesh->vertices[VPROP_TEX].back().x;
-					file >> currentMesh->vertices[VPROP_TEX].back().y;
+					file >> currentMesh->vertices_FULL.back().tex.x;
+					file >> currentMesh->vertices_FULL.back().tex.y;
 					//texCoordFill++;
 					break;
 				case 'w':
@@ -591,30 +588,30 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 							}
 						}
 						if (gotBone) { //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
-							if (!currentMesh->vertices[VPROP_WEI].back().x) {
-								currentMesh->vertices[VPROP_WEI].back().x = weight;
-								currentMesh->vertices[VPROP_BON].back().x = (float)BONEINDEX;
+							if (!currentMesh->vertices_FULL.back().wei.x) {
+								currentMesh->vertices_FULL.back().wei.x = weight;
+								currentMesh->vertices_FULL.back().ind.x = (float)BONEINDEX;
 							}
-							else if(!currentMesh->vertices[VPROP_WEI].back().y) {
-								currentMesh->vertices[VPROP_WEI].back().y=weight;
-								currentMesh->vertices[VPROP_BON].back().y=(float)BONEINDEX;
+							else if(!currentMesh->vertices_FULL.back().wei.y) {
+								currentMesh->vertices_FULL.back().wei.y=weight;
+								currentMesh->vertices_FULL.back().ind.y=(float)BONEINDEX;
 							}
-							else if(!currentMesh->vertices[VPROP_WEI].back().z) {
-								currentMesh->vertices[VPROP_WEI].back().z=weight;
-								currentMesh->vertices[VPROP_BON].back().z=(float)BONEINDEX;
+							else if(!currentMesh->vertices_FULL.back().wei.z) {
+								currentMesh->vertices_FULL.back().wei.z=weight;
+								currentMesh->vertices_FULL.back().ind.z=(float)BONEINDEX;
 							}
-							else if(!currentMesh->vertices[VPROP_WEI].back().w) {
-								currentMesh->vertices[VPROP_WEI].back().w = weight;
-								currentMesh->vertices[VPROP_BON].back().w = (float)BONEINDEX;
+							else if(!currentMesh->vertices_FULL.back().wei.w) {
+								currentMesh->vertices_FULL.back().wei.w = weight;
+								currentMesh->vertices_FULL.back().ind.w = (float)BONEINDEX;
 							}
 						}
 
 						 //(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
 
 						if(nameB.find("trailbase")!=string::npos)
-							currentMesh->trailInfo.base = (int)(currentMesh->vertices[VPROP_POS].size()-1);
+							currentMesh->trailInfo.base = (int)(currentMesh->vertices_FULL.size()-1);
 						else if(nameB.find("trailtip")!=string::npos)
-							currentMesh->trailInfo.tip = (int)(currentMesh->vertices[VPROP_POS].size()-1);
+							currentMesh->trailInfo.tip = (int)(currentMesh->vertices_FULL.size()-1);
 						
 						bool windAffection=false;
 						if(nameB.find("wind")!=string::npos)
@@ -623,15 +620,15 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v)
 							if(!nameB.compare(currentMesh->vertexGroups[v].name)){
 								gotvg=true;
-								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices[VPROP_POS].size() - 1), weight));
+								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices_FULL.size() - 1), weight));
 								if(windAffection)
-									currentMesh->vertices[VPROP_POS].back().w=weight;
+									currentMesh->vertices_FULL.back().pos.w=weight;
 							}
 						if(!gotvg){
 							currentMesh->vertexGroups.push_back(VertexGroup(nameB));
-							currentMesh->vertexGroups.back().addVertex(VertexRef((int)(currentMesh->vertices[VPROP_POS].size() - 1), weight));
+							currentMesh->vertexGroups.back().addVertex(VertexRef((int)(currentMesh->vertices_FULL.size() - 1), weight));
 							if(windAffection)
-								currentMesh->vertices[VPROP_POS].back().w=weight;
+								currentMesh->vertices_FULL.back().pos.w=weight;
 						}
 					}
 					break;
@@ -681,7 +678,7 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 					}
 					break;
 				case 'a':
-					file>>currentMesh->vertices[VPROP_TEX].back().z;
+					file>>currentMesh->vertices_FULL.back().tex.z;
 					break;
 				case 'B':
 					for(int corner=0;corner<8;++corner){
@@ -1658,7 +1655,10 @@ void VertexGroup::Serialize(wiArchive& archive)
 
 #pragma region MESH
 
-GPUBuffer Mesh::impostorVBs[VPROP_COUNT];
+//GPUBuffer Mesh::impostorVBs[VPROP_COUNT];
+GPUBuffer Mesh::impostorVB_POS;
+GPUBuffer Mesh::impostorVB_NOR;
+GPUBuffer Mesh::impostorVB_TEX;
 
 void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 	, const MaterialCollection& materialColl, const list<Armature*>& armatures, const std::string& identifier) {
@@ -1751,35 +1751,32 @@ void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 		memcpy(&vertexCount, buffer + offset, sizeof(int));
 		offset += sizeof(int);
 
-		for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
-		{
-			vertices[vprop].resize(vertexCount);
-		}
+		vertices_FULL.resize(vertexCount);
 
 		for (int i = 0; i<vertexCount; ++i) {
 			float v[8];
 			memcpy(v, buffer + offset, sizeof(float) * 8);
 			offset += sizeof(float) * 8;
-			vertices[VPROP_POS][i].x = v[0];
-			vertices[VPROP_POS][i].y = v[1];
-			vertices[VPROP_POS][i].z = v[2];
-			vertices[VPROP_POS][i].w = 0;
+			vertices_FULL[i].pos.x = v[0];
+			vertices_FULL[i].pos.y = v[1];
+			vertices_FULL[i].pos.z = v[2];
+			vertices_FULL[i].pos.w = 0;
 			if (!isBillboarded) {
-				vertices[VPROP_NOR][i].x = v[3];
-				vertices[VPROP_NOR][i].y = v[4];
-				vertices[VPROP_NOR][i].z = v[5];
+				vertices_FULL[i].nor.x = v[3];
+				vertices_FULL[i].nor.y = v[4];
+				vertices_FULL[i].nor.z = v[5];
 			}
 			else {
-				vertices[VPROP_NOR][i].x = billboardAxis.x;
-				vertices[VPROP_NOR][i].y = billboardAxis.y;
-				vertices[VPROP_NOR][i].z = billboardAxis.z;
+				vertices_FULL[i].nor.x = billboardAxis.x;
+				vertices_FULL[i].nor.y = billboardAxis.y;
+				vertices_FULL[i].nor.z = billboardAxis.z;
 			}
-			vertices[VPROP_TEX][i].x = v[6];
-			vertices[VPROP_TEX][i].y = v[7];
+			vertices_FULL[i].tex.x = v[6];
+			vertices_FULL[i].tex.y = v[7];
 			int matIndex;
 			memcpy(&matIndex, buffer + offset, sizeof(int));
 			offset += sizeof(int);
-			vertices[VPROP_TEX][i].z = (float)matIndex;
+			vertices_FULL[i].tex.z = (float)matIndex;
 
 			int weightCount = 0;
 			memcpy(&weightCount, buffer + offset, sizeof(int));
@@ -1810,21 +1807,21 @@ void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 						b++;
 					}
 					if (gotBone) { //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
-						if (!vertices[VPROP_WEI][i].x) {
-							vertices[VPROP_WEI][i].x = weightValue;
-							vertices[VPROP_BON][i].x = (float)BONEINDEX;
+						if (!vertices_FULL[i].wei.x) {
+							vertices_FULL[i].wei.x = weightValue;
+							vertices_FULL[i].ind.x = (float)BONEINDEX;
 						}
-						else if (!vertices[VPROP_WEI][i].y) {
-							vertices[VPROP_WEI][i].y = weightValue;
-							vertices[VPROP_BON][i].y = (float)BONEINDEX;
+						else if (!vertices_FULL[i].wei.y) {
+							vertices_FULL[i].wei.y = weightValue;
+							vertices_FULL[i].ind.y = (float)BONEINDEX;
 						}
-						else if (!vertices[VPROP_WEI][i].z) {
-							vertices[VPROP_WEI][i].z = weightValue;
-							vertices[VPROP_BON][i].z = (float)BONEINDEX;
+						else if (!vertices_FULL[i].wei.z) {
+							vertices_FULL[i].wei.z = weightValue;
+							vertices_FULL[i].ind.z = (float)BONEINDEX;
 						}
-						else if (!vertices[VPROP_WEI][i].w) {
-							vertices[VPROP_WEI][i].w = weightValue;
-							vertices[VPROP_BON][i].w = (float)BONEINDEX;
+						else if (!vertices_FULL[i].wei.w) {
+							vertices_FULL[i].wei.w = weightValue;
+							vertices_FULL[i].ind.w = (float)BONEINDEX;
 						}
 					}
 				}
@@ -1845,13 +1842,13 @@ void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 						gotvg = true;
 						vertexGroups[v].addVertex(VertexRef(i, weightValue));
 						if (windAffection)
-							vertices[VPROP_POS][i].w = weightValue;
+							vertices_FULL[i].pos.w = weightValue;
 					}
 				if (!gotvg) {
 					vertexGroups.push_back(VertexGroup(nameB));
 					vertexGroups.back().addVertex(VertexRef(i, weightValue));
 					if (windAffection)
-						vertices[VPROP_POS][i].w = weightValue;
+						vertices_FULL[i].pos.w = weightValue;
 				}
 #pragma endregion
 
@@ -1972,7 +1969,7 @@ void Mesh::Optimize()
 			_indices_in[i] = this->indices[i];
 		}
 
-		ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices->size()));
+		ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices_FULL.size()));
 
 		for (size_t i = 0; i < indices.size(); ++i)
 		{
@@ -1988,7 +1985,7 @@ void Mesh::CreateBuffers(Object* object)
 {
 	if (!buffersComplete) 
 	{
-		if (vertices[VPROP_POS].empty())
+		if (vertices_POS.empty())
 		{
 			renderable = false;
 		}
@@ -2017,37 +2014,68 @@ void Mesh::CreateBuffers(Object* object)
 			goalNormals.resize(vertexGroups[goalVG].vertices.size());
 		}
 
-		for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
 			bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
-			bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			ZeroMemory(&InitData, sizeof(InitData));
-			InitData.pSysMem = vertices[vprop].data();
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffers[vprop]);
 
-			if (object->isArmatureDeformed() && !softBody && vprop != VPROP_TEX && vprop != VPROP_WEI) {
+			InitData.pSysMem = vertices_POS.data();
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
+
+			InitData.pSysMem = vertices_NOR.data();
+			bd.ByteWidth = (UINT)(sizeof(Vertex_NOR) * vertices_NOR.size());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_NOR);
+
+			InitData.pSysMem = vertices_TEX.data();
+			bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
+
+			InitData.pSysMem = vertices_BON.data();
+			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
+
+			if (object->isArmatureDeformed()) {
 				ZeroMemory(&bd, sizeof(bd));
 				bd.Usage = USAGE_DEFAULT;
-				bd.ByteWidth = (UINT)(sizeof(XMFLOAT4) * vertices[vprop].size());
 				bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
 				bd.CPUAccessFlags = 0;
 				bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffers[vprop]);
+
+				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
+
+				bd.ByteWidth = (UINT)(sizeof(Vertex_NOR) * vertices_NOR.size());
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_NOR);
+
+				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
+			}
+
+			if (softBody)
+			{
+				ZeroMemory(&bd, sizeof(bd));
+				bd.Usage = USAGE_DYNAMIC;
+				bd.BindFlags = BIND_VERTEX_BUFFER;
+				bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+				bd.MiscFlags = 0;
+
+				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
 			}
 		}
 
 		//PHYSICALMAPPING
 		if (!physicsverts.empty() && physicalmapGP.empty())
 		{
-			for (unsigned int i = 0; i < vertices[VPROP_POS].size(); ++i) {
+			for (unsigned int i = 0; i < vertices_POS.size(); ++i) {
 				for (unsigned int j = 0; j < physicsverts.size(); ++j) {
-					if (fabs(vertices[VPROP_POS][i].x - physicsverts[j].x) < FLT_EPSILON
-						&&	fabs(vertices[VPROP_POS][i].y - physicsverts[j].y) < FLT_EPSILON
-						&&	fabs(vertices[VPROP_POS][i].z - physicsverts[j].z) < FLT_EPSILON
+					if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+						&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+						&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
 						)
 					{
 						physicalmapGP.push_back(j);
@@ -2098,176 +2126,180 @@ void Mesh::CreateBuffers(Object* object)
 }
 void Mesh::CreateImpostorVB()
 {
-	if (!impostorVBs[VPROP_POS].IsValid())
+	if (!impostorVB_POS.IsValid())
 	{
-		XMFLOAT4 impostorVertices[VPROP_COUNT][6 * 6];
+		XMFLOAT4 impostorVertices_POS[6 * 6];
+		XMFLOAT4 impostorVertices_NOR[6 * 6];
+		XMFLOAT4 impostorVertices_TEX[6 * 6];
 
 		float stepX = 1.f / 6.f;
 
 		// front
-		impostorVertices[VPROP_POS][0] = XMFLOAT4(-1, 1, 0, 0);
-		impostorVertices[VPROP_NOR][0] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][0] = XMFLOAT4(0, 0, 0, 0);
+		impostorVertices_POS[0] = XMFLOAT4(-1, 1, 0, 0);
+		impostorVertices_NOR[0] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[0] = XMFLOAT4(0, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][1] = XMFLOAT4(-1, -1, 0, 0);
-		impostorVertices[VPROP_NOR][1] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][1] = XMFLOAT4(0, 1, 0, 0);
+		impostorVertices_POS[1] = XMFLOAT4(-1, -1, 0, 0);
+		impostorVertices_NOR[1] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[1] = XMFLOAT4(0, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][2] = XMFLOAT4(1, 1, 0, 0);
-		impostorVertices[VPROP_NOR][2] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][2] = XMFLOAT4(stepX, 0, 0, 0);
+		impostorVertices_POS[2] = XMFLOAT4(1, 1, 0, 0);
+		impostorVertices_NOR[2] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[2] = XMFLOAT4(stepX, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][3] = XMFLOAT4(-1, -1, 0, 0);
-		impostorVertices[VPROP_NOR][3] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][3] = XMFLOAT4(0, 1, 0, 0);
+		impostorVertices_POS[3] = XMFLOAT4(-1, -1, 0, 0);
+		impostorVertices_NOR[3] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[3] = XMFLOAT4(0, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][4] = XMFLOAT4(1, -1, 0, 0);
-		impostorVertices[VPROP_NOR][4] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][4] = XMFLOAT4(stepX, 1, 0, 0);
+		impostorVertices_POS[4] = XMFLOAT4(1, -1, 0, 0);
+		impostorVertices_NOR[4] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[4] = XMFLOAT4(stepX, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][5] = XMFLOAT4(1, 1, 0, 0);
-		impostorVertices[VPROP_NOR][5] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][5] = XMFLOAT4(stepX, 0, 0, 0);
+		impostorVertices_POS[5] = XMFLOAT4(1, 1, 0, 0);
+		impostorVertices_NOR[5] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[5] = XMFLOAT4(stepX, 0, 0, 0);
 
 		// right
-		impostorVertices[VPROP_POS][6] = XMFLOAT4(0, 1, -1, 0);
-		impostorVertices[VPROP_NOR][6] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][6] = XMFLOAT4(stepX, 0, 0, 0);
+		impostorVertices_POS[6] = XMFLOAT4(0, 1, -1, 0);
+		impostorVertices_NOR[6] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[6] = XMFLOAT4(stepX, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][7] = XMFLOAT4(0, -1, -1, 0);
-		impostorVertices[VPROP_NOR][7] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][7] = XMFLOAT4(stepX, 1, 0, 0);
+		impostorVertices_POS[7] = XMFLOAT4(0, -1, -1, 0);
+		impostorVertices_NOR[7] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[7] = XMFLOAT4(stepX, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][8] = XMFLOAT4(0, 1, 1, 0);
-		impostorVertices[VPROP_NOR][8] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][8] = XMFLOAT4(stepX*2, 0, 0, 0);
+		impostorVertices_POS[8] = XMFLOAT4(0, 1, 1, 0);
+		impostorVertices_NOR[8] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[8] = XMFLOAT4(stepX*2, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][9] = XMFLOAT4(0, -1, -1, 0);
-		impostorVertices[VPROP_NOR][9] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][9] = XMFLOAT4(stepX, 1, 0, 0);
+		impostorVertices_POS[9] = XMFLOAT4(0, -1, -1, 0);
+		impostorVertices_NOR[9] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[9] = XMFLOAT4(stepX, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][10] = XMFLOAT4(0, -1, 1, 0);
-		impostorVertices[VPROP_NOR][10] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][10] = XMFLOAT4(stepX*2, 1, 0, 0);
+		impostorVertices_POS[10] = XMFLOAT4(0, -1, 1, 0);
+		impostorVertices_NOR[10] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[10] = XMFLOAT4(stepX*2, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][11] = XMFLOAT4(0, 1, 1, 0);
-		impostorVertices[VPROP_NOR][11] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][11] = XMFLOAT4(stepX*2, 0, 0, 0);
+		impostorVertices_POS[11] = XMFLOAT4(0, 1, 1, 0);
+		impostorVertices_NOR[11] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[11] = XMFLOAT4(stepX*2, 0, 0, 0);
 
 		// back
-		impostorVertices[VPROP_POS][12] = XMFLOAT4(-1, 1, 0, 0);
-		impostorVertices[VPROP_NOR][12] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][12] = XMFLOAT4(stepX*3, 0, 0, 0);
+		impostorVertices_POS[12] = XMFLOAT4(-1, 1, 0, 0);
+		impostorVertices_NOR[12] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[12] = XMFLOAT4(stepX*3, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][13] = XMFLOAT4(1, 1, 0, 0);
-		impostorVertices[VPROP_NOR][13] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][13] = XMFLOAT4(stepX * 2, 0, 0, 0);
+		impostorVertices_POS[13] = XMFLOAT4(1, 1, 0, 0);
+		impostorVertices_NOR[13] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[13] = XMFLOAT4(stepX * 2, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][14] = XMFLOAT4(-1, -1, 0, 0);
-		impostorVertices[VPROP_NOR][14] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][14] = XMFLOAT4(stepX*3, 1, 0, 0);
+		impostorVertices_POS[14] = XMFLOAT4(-1, -1, 0, 0);
+		impostorVertices_NOR[14] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[14] = XMFLOAT4(stepX*3, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][15] = XMFLOAT4(-1, -1, 0, 0);
-		impostorVertices[VPROP_NOR][15] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][15] = XMFLOAT4(stepX*3, 1, 0, 0);
+		impostorVertices_POS[15] = XMFLOAT4(-1, -1, 0, 0);
+		impostorVertices_NOR[15] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[15] = XMFLOAT4(stepX*3, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][16] = XMFLOAT4(1, 1, 0, 0);
-		impostorVertices[VPROP_NOR][16] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][16] = XMFLOAT4(stepX*2, 0, 0, 0);
+		impostorVertices_POS[16] = XMFLOAT4(1, 1, 0, 0);
+		impostorVertices_NOR[16] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[16] = XMFLOAT4(stepX*2, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][17] = XMFLOAT4(1, -1, 0, 0);
-		impostorVertices[VPROP_NOR][17] = XMFLOAT4(0, 0, -1, 1);
-		impostorVertices[VPROP_TEX][17] = XMFLOAT4(stepX*2, 1, 0, 0);
+		impostorVertices_POS[17] = XMFLOAT4(1, -1, 0, 0);
+		impostorVertices_NOR[17] = XMFLOAT4(0, 0, -1, 1);
+		impostorVertices_TEX[17] = XMFLOAT4(stepX*2, 1, 0, 0);
 
 		// left
-		impostorVertices[VPROP_POS][18] = XMFLOAT4(0, 1, -1, 0);
-		impostorVertices[VPROP_NOR][18] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][18] = XMFLOAT4(stepX*4, 0, 0, 0);
+		impostorVertices_POS[18] = XMFLOAT4(0, 1, -1, 0);
+		impostorVertices_NOR[18] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[18] = XMFLOAT4(stepX*4, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][19] = XMFLOAT4(0, 1, 1, 0);
-		impostorVertices[VPROP_NOR][19] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][19] = XMFLOAT4(stepX * 3, 0, 0, 0);
+		impostorVertices_POS[19] = XMFLOAT4(0, 1, 1, 0);
+		impostorVertices_NOR[19] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[19] = XMFLOAT4(stepX * 3, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][20] = XMFLOAT4(0, -1, -1, 0);
-		impostorVertices[VPROP_NOR][20] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][20] = XMFLOAT4(stepX*4, 1, 0, 0);
+		impostorVertices_POS[20] = XMFLOAT4(0, -1, -1, 0);
+		impostorVertices_NOR[20] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[20] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][21] = XMFLOAT4(0, -1, -1, 0);
-		impostorVertices[VPROP_NOR][21] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][21] = XMFLOAT4(stepX*4, 1, 0, 0);
+		impostorVertices_POS[21] = XMFLOAT4(0, -1, -1, 0);
+		impostorVertices_NOR[21] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[21] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][22] = XMFLOAT4(0, 1, 1, 0);
-		impostorVertices[VPROP_NOR][22] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][22] = XMFLOAT4(stepX*3, 0, 0, 0);
+		impostorVertices_POS[22] = XMFLOAT4(0, 1, 1, 0);
+		impostorVertices_NOR[22] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[22] = XMFLOAT4(stepX*3, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][23] = XMFLOAT4(0, -1, 1, 0);
-		impostorVertices[VPROP_NOR][23] = XMFLOAT4(1, 0, 0, 1);
-		impostorVertices[VPROP_TEX][23] = XMFLOAT4(stepX*3, 1, 0, 0);
+		impostorVertices_POS[23] = XMFLOAT4(0, -1, 1, 0);
+		impostorVertices_NOR[23] = XMFLOAT4(1, 0, 0, 1);
+		impostorVertices_TEX[23] = XMFLOAT4(stepX*3, 1, 0, 0);
 
 		// bottom
-		impostorVertices[VPROP_POS][24] = XMFLOAT4(-1, 0, 1, 0);
-		impostorVertices[VPROP_NOR][24] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][24] = XMFLOAT4(stepX*4, 0, 0, 0);
+		impostorVertices_POS[24] = XMFLOAT4(-1, 0, 1, 0);
+		impostorVertices_NOR[24] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[24] = XMFLOAT4(stepX*4, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][25] = XMFLOAT4(1, 0, 1, 0);
-		impostorVertices[VPROP_NOR][25] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][25] = XMFLOAT4(stepX * 5, 0, 0, 0);
+		impostorVertices_POS[25] = XMFLOAT4(1, 0, 1, 0);
+		impostorVertices_NOR[25] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[25] = XMFLOAT4(stepX * 5, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][26] = XMFLOAT4(-1, 0, -1, 0);
-		impostorVertices[VPROP_NOR][26] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][26] = XMFLOAT4(stepX*4, 1, 0, 0);
+		impostorVertices_POS[26] = XMFLOAT4(-1, 0, -1, 0);
+		impostorVertices_NOR[26] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[26] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][27] = XMFLOAT4(-1, 0, -1, 0);
-		impostorVertices[VPROP_NOR][27] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][27] = XMFLOAT4(stepX*4, 1, 0, 0);
+		impostorVertices_POS[27] = XMFLOAT4(-1, 0, -1, 0);
+		impostorVertices_NOR[27] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[27] = XMFLOAT4(stepX*4, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][28] = XMFLOAT4(1, 0, 1, 0);
-		impostorVertices[VPROP_NOR][28] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][28] = XMFLOAT4(stepX*5, 0, 0, 0);
+		impostorVertices_POS[28] = XMFLOAT4(1, 0, 1, 0);
+		impostorVertices_NOR[28] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[28] = XMFLOAT4(stepX*5, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][29] = XMFLOAT4(1, 0, -1, 0);
-		impostorVertices[VPROP_NOR][29] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][29] = XMFLOAT4(stepX*5, 1, 0, 0);
+		impostorVertices_POS[29] = XMFLOAT4(1, 0, -1, 0);
+		impostorVertices_NOR[29] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[29] = XMFLOAT4(stepX*5, 1, 0, 0);
 
 		// top
-		impostorVertices[VPROP_POS][30] = XMFLOAT4(-1, 0, 1, 0);
-		impostorVertices[VPROP_NOR][30] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][30] = XMFLOAT4(stepX*5, 0, 0, 0);
+		impostorVertices_POS[30] = XMFLOAT4(-1, 0, 1, 0);
+		impostorVertices_NOR[30] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[30] = XMFLOAT4(stepX*5, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][31] = XMFLOAT4(-1, 0, -1, 0);
-		impostorVertices[VPROP_NOR][31] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][31] = XMFLOAT4(stepX * 5, 1, 0, 0);
+		impostorVertices_POS[31] = XMFLOAT4(-1, 0, -1, 0);
+		impostorVertices_NOR[31] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[31] = XMFLOAT4(stepX * 5, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][32] = XMFLOAT4(1, 0, 1, 0);
-		impostorVertices[VPROP_NOR][32] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][32] = XMFLOAT4(stepX*6, 0, 0, 0);
+		impostorVertices_POS[32] = XMFLOAT4(1, 0, 1, 0);
+		impostorVertices_NOR[32] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[32] = XMFLOAT4(stepX*6, 0, 0, 0);
 
-		impostorVertices[VPROP_POS][33] = XMFLOAT4(-1, 0, -1, 0);
-		impostorVertices[VPROP_NOR][33] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][33] = XMFLOAT4(stepX*5, 1, 0, 0);
+		impostorVertices_POS[33] = XMFLOAT4(-1, 0, -1, 0);
+		impostorVertices_NOR[33] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[33] = XMFLOAT4(stepX*5, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][34] = XMFLOAT4(1, 0, -1, 0);
-		impostorVertices[VPROP_NOR][34] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][34] = XMFLOAT4(stepX*6, 1, 0, 0);
+		impostorVertices_POS[34] = XMFLOAT4(1, 0, -1, 0);
+		impostorVertices_NOR[34] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[34] = XMFLOAT4(stepX*6, 1, 0, 0);
 
-		impostorVertices[VPROP_POS][35] = XMFLOAT4(1, 0, 1, 0);
-		impostorVertices[VPROP_NOR][35] = XMFLOAT4(0, 1, 0, 1);
-		impostorVertices[VPROP_TEX][35] = XMFLOAT4(stepX*6, 0, 0, 0);
+		impostorVertices_POS[35] = XMFLOAT4(1, 0, 1, 0);
+		impostorVertices_NOR[35] = XMFLOAT4(0, 1, 0, 1);
+		impostorVertices_TEX[35] = XMFLOAT4(stepX*6, 0, 0, 0);
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
 		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(impostorVertices[VPROP_POS]);
 		bd.BindFlags = BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		SubresourceData InitData;
 		ZeroMemory(&InitData, sizeof(InitData));
-		InitData.pSysMem = impostorVertices[VPROP_POS];
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVBs[VPROP_POS]);
-		InitData.pSysMem = impostorVertices[VPROP_NOR];
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVBs[VPROP_NOR]);
-		InitData.pSysMem = impostorVertices[VPROP_TEX];
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVBs[VPROP_TEX]);
+		InitData.pSysMem = impostorVertices_POS;
+		bd.ByteWidth = sizeof(impostorVertices_POS);
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_POS);
+		InitData.pSysMem = impostorVertices_NOR;
+		bd.ByteWidth = sizeof(impostorVertices_NOR);
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_NOR);
+		InitData.pSysMem = impostorVertices_TEX;
+		bd.ByteWidth = sizeof(impostorVertices_TEX);
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
 	}
 }
 void Mesh::CreateVertexArrays()
@@ -2277,14 +2309,15 @@ void Mesh::CreateVertexArrays()
 		return;
 	}
 
-	// Save original vertices. This will be input for CPU skinning / soft bodies
-	vertices_Transformed[VPROP_POS] = vertices[VPROP_POS];
-	vertices_Transformed[VPROP_NOR] = vertices[VPROP_NOR];
-	vertices_Transformed[VPROP_PRE] = vertices[VPROP_POS]; // pre <- pos!!
-
-	// Normalize bone weights:
-	for (auto& wei : vertices[VPROP_WEI])
+	// De-interleave vertex arrays:
+	vertices_POS.resize(vertices_FULL.size());
+	vertices_NOR.resize(vertices_FULL.size());
+	vertices_TEX.resize(vertices_FULL.size());
+	vertices_BON.resize(vertices_FULL.size());
+	for (size_t i = 0; i < vertices_FULL.size(); ++i)
 	{
+		// Normalize bone weights:
+		XMFLOAT4& wei = vertices_FULL[i].wei;
 		float len = wei.x + wei.y + wei.z + wei.w;
 		if (len > 0)
 		{
@@ -2293,13 +2326,25 @@ void Mesh::CreateVertexArrays()
 			wei.z /= len;
 			wei.w /= len;
 		}
+
+		// Split and convert props:
+		vertices_POS[i].pos = vertices_FULL[i].pos;
+		vertices_NOR[i].nor = vertices_FULL[i].nor;
+		vertices_TEX[i].tex = vertices_FULL[i].tex;
+		vertices_BON[i].ind = vertices_FULL[i].ind;
+		vertices_BON[i].wei = vertices_FULL[i].wei;
 	}
+
+	// Save original vertices. This will be input for CPU skinning / soft bodies
+	vertices_Transformed_POS = vertices_POS;
+	vertices_Transformed_NOR = vertices_NOR;
+	vertices_Transformed_PRE = vertices_POS; // pre <- pos!!
 
 	// Map subset indices:
 	for (size_t i = 0; i < indices.size(); ++i)
 	{
 		unsigned int index = indices[i];
-		const XMFLOAT4& tex = vertices[VPROP_TEX][index];
+		const XMFLOAT4& tex = vertices_FULL[index].tex;
 		unsigned int materialIndex = (unsigned int)floor(tex.z);
 
 		assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
@@ -2359,21 +2404,18 @@ void Mesh::Serialize(wiArchive& archive)
 		{
 			size_t vertexCount;
 			archive >> vertexCount;
-			for (int vprop = 0; vprop < VPROP_COUNT; ++vprop)
-			{
-				vertices[vprop].resize(vertexCount);
-			}
+			vertices_FULL.resize(vertexCount);
 			for (size_t i = 0; i < vertexCount; ++i)
 			{
-				archive >> vertices[VPROP_POS][i];
-				archive >> vertices[VPROP_NOR][i];
-				archive >> vertices[VPROP_TEX][i];
-				archive >> vertices[VPROP_BON][i];
-				archive >> vertices[VPROP_WEI][i];
+				archive >> vertices_FULL[i].pos;
+				archive >> vertices_FULL[i].nor;
+				archive >> vertices_FULL[i].tex;
+				archive >> vertices_FULL[i].ind;
+				archive >> vertices_FULL[i].wei;
 
 				if (archive.GetVersion() < 8)
 				{
-					vertices[VPROP_POS][i].w = vertices[VPROP_TEX][i].w;
+					vertices_FULL[i].pos.w = vertices_FULL[i].tex.w;
 				}
 			}
 		}
@@ -2485,14 +2527,14 @@ void Mesh::Serialize(wiArchive& archive)
 
 		// vertices
 		{
-			archive << vertices[VPROP_POS].size();
-			for (size_t i = 0; i < vertices[VPROP_POS].size(); ++i)
+			archive << vertices_FULL.size();
+			for (size_t i = 0; i < vertices_FULL.size(); ++i)
 			{
-				archive << vertices[VPROP_POS][i];
-				archive << vertices[VPROP_NOR][i];
-				archive << vertices[VPROP_TEX][i];
-				archive << vertices[VPROP_BON][i];
-				archive << vertices[VPROP_WEI][i];
+				archive << vertices_FULL[i].pos;
+				archive << vertices_FULL[i].nor;
+				archive << vertices_FULL[i].tex;
+				archive << vertices_FULL[i].ind;
+				archive << vertices_FULL[i].wei;
 			}
 		}
 		// indices

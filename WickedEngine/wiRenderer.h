@@ -401,7 +401,7 @@ public:
 	static void ReloadShaders(const std::string& path = "");
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
 
-	static Vertex TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
+	static Mesh::Vertex_FULL TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 
 	struct FrameCulling
 	{

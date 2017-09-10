@@ -312,13 +312,17 @@ void wiHairParticle::Generate()
 			if (lenMod[m] < 0) lenMod[m] = 0;
 		}
 
-		Vertex verts[3];
-		verts[0].pos = mesh->vertices[VPROP_POS][vi[0]];
-		verts[0].nor = mesh->vertices[VPROP_NOR][vi[0]];
-		verts[1].pos = mesh->vertices[VPROP_POS][vi[1]];
-		verts[1].nor = mesh->vertices[VPROP_NOR][vi[1]];
-		verts[2].pos = mesh->vertices[VPROP_POS][vi[2]];
-		verts[2].nor = mesh->vertices[VPROP_NOR][vi[2]];
+		Mesh::Vertex_FULL verts[] = {
+			mesh->vertices_FULL[vi[0]],
+			mesh->vertices_FULL[vi[1]],
+			mesh->vertices_FULL[vi[2]],
+		};
+		//verts[0].pos = mesh->vertices_POS[vi[0]].pos;
+		//verts[0].nor = mesh->vertices_NOR[vi[0]].nor;
+		//verts[1].pos = mesh->vertices_POS[vi[1]].pos;
+		//verts[1].nor = mesh->vertices_NOR[vi[1]].nor;
+		//verts[2].pos = mesh->vertices_POS[vi[2]].pos;
+		//verts[2].nor = mesh->vertices_NOR[vi[2]].nor;
 
 		if(
 			(denMod[0]>FLT_EPSILON || denMod[1]>FLT_EPSILON || denMod[2]>FLT_EPSILON) &&
