@@ -1488,16 +1488,22 @@ Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, con
 
 	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
 	{
+		XMFLOAT4 ind = mesh->vertices_BON[vertexI].GetInd_FULL();
+		XMFLOAT4 wei = mesh->vertices_BON[vertexI].GetWei_FULL();
+
+
 		float inWei[4] = {
-			mesh->vertices_BON[vertexI].wei.x,
-			mesh->vertices_BON[vertexI].wei.y,
-			mesh->vertices_BON[vertexI].wei.z,
-			mesh->vertices_BON[vertexI].wei.w };
+			wei.x,
+			wei.y,
+			wei.z,
+			wei.w 
+		};
 		float inBon[4] = {
-			mesh->vertices_BON[vertexI].ind.x,
-			mesh->vertices_BON[vertexI].ind.y,
-			mesh->vertices_BON[vertexI].ind.z,
-			mesh->vertices_BON[vertexI].ind.w };
+			ind.x,
+			ind.y,
+			ind.z,
+			ind.w 
+		};
 		if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
 		{
 			sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);

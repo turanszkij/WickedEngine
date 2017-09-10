@@ -34,68 +34,6 @@ typedef std::map<std::string,Material*> MaterialCollection;
 
 class wiArchive;
 
-//enum VERTEXPROPERTY
-//{
-//	VPROP_POS,		// pos, wind
-//	VPROP_NOR,		// normal, vertexao
-//	VPROP_TEX,		// texcoord, materialindex, unused
-//	VPROP_BON,		// boneindices
-//	VPROP_WEI,		// boneweights
-//	VPROP_COUNT,
-//};
-//#define VPROP_PRE VPROP_BON // posprev
-//struct SkinnedVertex
-//{
-//	XMFLOAT4 pos; //pos, wind
-//	XMFLOAT4 nor; //normal, vertex ao
-//	XMFLOAT4 tex; //tex, matIndex, unused
-//	XMFLOAT4 bon; //bone indices
-//	XMFLOAT4 wei; //bone weights
-//
-//
-//	SkinnedVertex(){
-//		pos=XMFLOAT4(0,0,0,0);
-//		nor=XMFLOAT4(0,0,0,1); 
-//		tex=XMFLOAT4(0,0,0,0);
-//		bon=XMFLOAT4(0,0,0,0);
-//		wei=XMFLOAT4(0,0,0,0);
-//	};
-//	SkinnedVertex(const XMFLOAT3& newPos){
-//		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
-//		nor=XMFLOAT4(0,0,0,1);
-//		tex=XMFLOAT4(0,0,0,0);
-//		bon=XMFLOAT4(0,0,0,0);
-//		wei=XMFLOAT4(0,0,0,0);
-//	}
-//	//void Serialize(wiArchive& archive);
-//};
-//struct Vertex
-//{
-//	XMFLOAT4 pos; //pos, wind
-//	XMFLOAT4 nor; //normal, vertex ao
-//	XMFLOAT4 tex; //tex, matIndex, unused
-//	XMFLOAT4 pre; //previous frame position
-//
-//	Vertex(){
-//		pos=XMFLOAT4(0,0,0,0);
-//		nor=XMFLOAT4(0,0,0,1);
-//		tex=XMFLOAT4(0,0,0,0);
-//		pre=XMFLOAT4(0,0,0,0);
-//	};
-//	Vertex(const XMFLOAT3& newPos){
-//		pos=XMFLOAT4(newPos.x,newPos.y,newPos.z,1);
-//		nor=XMFLOAT4(0,0,0,1);
-//		tex=XMFLOAT4(0,0,0,0);
-//		pre=XMFLOAT4(0,0,0,0);
-//	}
-//	Vertex(const SkinnedVertex& copyFromSkinnedVert)
-//	{
-//		pos = copyFromSkinnedVert.pos;
-//		nor = copyFromSkinnedVert.nor;
-//		tex = copyFromSkinnedVert.tex;
-//		pre = XMFLOAT4(0, 0, 0, 0);
-//	}
-//};
 GFX_STRUCT Instance
 {
 	XMFLOAT4A mat0;
@@ -361,14 +299,55 @@ public:
 	};
 	struct Vertex_BON
 	{
-		XMFLOAT4 ind;
-		XMFLOAT4 wei;
+		uint32_t ind;
+		uint32_t wei;
+
+		Vertex_BON()
+		{
+			ind = 0;
+			wei = 0;
+		}
+		Vertex_BON(const XMFLOAT4& ind_FULL, const XMFLOAT4& wei_FULL)
+		{
+			ind = 0;
+			wei = 0;
+
+			ind |= (uint8_t)ind_FULL.x << 0;
+			ind |= (uint8_t)ind_FULL.y << 8;
+			ind |= (uint8_t)ind_FULL.z << 16;
+			ind |= (uint8_t)ind_FULL.w << 24;
+
+			wei |= (uint8_t)(wei_FULL.x * 255.0f) << 0;
+			wei |= (uint8_t)(wei_FULL.y * 255.0f) << 8;
+			wei |= (uint8_t)(wei_FULL.z * 255.0f) << 16;
+			wei |= (uint8_t)(wei_FULL.w * 255.0f) << 24;
+		}
+		inline XMFLOAT4 GetInd_FULL() const
+		{
+			XMFLOAT4 ind_FULL(0, 0, 0, 0);
+
+			ind_FULL.x = (float)((ind >> 0)  & 0x000000FF);
+			ind_FULL.y = (float)((ind >> 8)  & 0x000000FF);
+			ind_FULL.z = (float)((ind >> 16) & 0x000000FF);
+			ind_FULL.w = (float)((ind >> 24) & 0x000000FF);
+
+			return ind_FULL;
+		}
+		inline XMFLOAT4 GetWei_FULL() const
+		{
+			XMFLOAT4 wei_FULL(0, 0, 0, 0);
+
+			wei_FULL.x = (float)((wei >> 0)  & 0x000000FF) / 255.0f;
+			wei_FULL.y = (float)((wei >> 8)  & 0x000000FF) / 255.0f;
+			wei_FULL.z = (float)((wei >> 16) & 0x000000FF) / 255.0f;
+			wei_FULL.w = (float)((wei >> 24) & 0x000000FF) / 255.0f;
+
+			return wei_FULL;
+		}
 	};
 
 	std::string name;
 	std::string parent;
-	//std::vector<XMFLOAT4>		vertices_Transformed[VPROP_COUNT]; // for CPU skinning / soft body simulation
-	//std::vector<XMFLOAT4>		vertices[VPROP_COUNT];
 	std::vector<Vertex_FULL>	vertices_FULL;
 	std::vector<Vertex_POS>		vertices_POS; // position(xyz), wind(w)
 	std::vector<Vertex_NOR>		vertices_NOR; // normal
@@ -384,8 +363,6 @@ public:
 	std::vector<MeshSubset>		subsets;
 	std::vector<std::string>	materialNames;
 
-	//wiGraphicsTypes::GPUBuffer	vertexBuffers[VPROP_COUNT];
-	//wiGraphicsTypes::GPUBuffer	streamoutBuffers[VPROP_COUNT]; // omit texcoord, omit weights, change boneindices to posprev
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_POS;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_NOR;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_TEX;

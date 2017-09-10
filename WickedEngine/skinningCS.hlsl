@@ -50,23 +50,33 @@ void main( uint3 DTid : SV_DispatchThreadID )
 {
 	const uint stride_POS = 16;
 	const uint stride_NOR = 16;
-	const uint stride_BON_IND = 16;
-	const uint stride_BON_WEI = 16;
+	const uint stride_BON_IND = 4;
+	const uint stride_BON_WEI = 4;
 
 	const uint fetchAddress_POS = DTid.x * stride_POS;
 	const uint fetchAddress_NOR = DTid.x * stride_NOR;
-	const uint fetchAddress_BON_IND = DTid.x * (stride_BON_IND + stride_BON_WEI) + 0;
-	const uint fetchAddress_BON_WEI = DTid.x * (stride_BON_IND + stride_BON_WEI) + stride_BON_IND;
+	const uint fetchAddress_BON = DTid.x * (stride_BON_IND + stride_BON_WEI);
 
 	uint4 pos_u = vertexBuffer_POS.Load4(fetchAddress_POS);
 	uint4 nor_u = vertexBuffer_NOR.Load4(fetchAddress_NOR);
-	uint4 ind_u = vertexBuffer_BON.Load4(fetchAddress_BON_IND);
-	uint4 wei_u = vertexBuffer_BON.Load4(fetchAddress_BON_WEI);
+	uint2 ind_wei_u = vertexBuffer_BON.Load2(fetchAddress_BON);
 
 	float4 pos = asfloat(pos_u);
 	float4 nor = asfloat(nor_u);
-	float4 ind = asfloat(ind_u);
-	float4 wei = asfloat(wei_u);
+
+	// Unpack bone props:
+	float4 ind = 0;
+	float4 wei = 0;
+
+	ind.x = (float)((ind_wei_u.x >> 0)  & 0x000000FF);
+	ind.y = (float)((ind_wei_u.x >> 8)  & 0x000000FF);
+	ind.z = (float)((ind_wei_u.x >> 16) & 0x000000FF);
+	ind.w = (float)((ind_wei_u.x >> 24) & 0x000000FF);
+
+	wei.x = (float)((ind_wei_u.y >> 0)  & 0x000000FF) / 255.0f;
+	wei.y = (float)((ind_wei_u.y >> 8)  & 0x000000FF) / 255.0f;
+	wei.z = (float)((ind_wei_u.y >> 16) & 0x000000FF) / 255.0f;
+	wei.w = (float)((ind_wei_u.y >> 24) & 0x000000FF) / 255.0f;
 
 	Skinning(pos, nor, ind, wei);
 

@@ -145,11 +145,6 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 
 
 	switch (value) {
-	case 0:
-	case 1:
-		wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-		wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-		break;
 	case 2:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
@@ -167,10 +162,6 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_SCENE);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
 		}));
-
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		wiRenderer::GetDevice()->ExecuteDeferredContexts();
 		break;
 	case 3:
 		workerThreads.push_back(new wiTaskThread([&]
@@ -197,14 +188,8 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
 		}));
-
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
-		wiRenderer::GetDevice()->ExecuteDeferredContexts();
 		break;
 	case 4:
-	default:
 		workerThreads.push_back(new wiTaskThread([&]
 		{
 			RenderFrameSetUp(GRAPHICSTHREAD_REFLECTIONS);
@@ -237,12 +222,6 @@ void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value
 			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_MISC2);
 			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);
 		}));
-
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
-		wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);
-		wiRenderer::GetDevice()->ExecuteDeferredContexts();
 		break;
 	};
 

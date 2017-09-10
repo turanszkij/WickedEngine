@@ -2331,8 +2331,7 @@ void Mesh::CreateVertexArrays()
 		vertices_POS[i].pos = vertices_FULL[i].pos;
 		vertices_NOR[i].nor = vertices_FULL[i].nor;
 		vertices_TEX[i].tex = vertices_FULL[i].tex;
-		vertices_BON[i].ind = vertices_FULL[i].ind;
-		vertices_BON[i].wei = vertices_FULL[i].wei;
+		vertices_BON[i] = Vertex_BON(vertices_FULL[i].ind, vertices_FULL[i].wei);
 	}
 
 	// Save original vertices. This will be input for CPU skinning / soft bodies
