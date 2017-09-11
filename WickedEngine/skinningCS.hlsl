@@ -41,7 +41,7 @@ inline void Skinning(inout float4 pos, inout float4 nor, in float4 inBon, in flo
 
 	bool w = any(inWei);
 	pos.xyz = w ? p.xyz : pos.xyz;
-	nor.xyz = w ? normalize(n) : nor.xyz;
+	nor.xyz = w ? normalize(n.xyz) : nor.xyz;
 }
 
 
@@ -77,6 +77,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		nor.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		nor.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		nor.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		nor.w = (float)((nor_u >> 24) & 0x000000FF) / 255.0f; // occlusion
 	}
 
 
@@ -117,6 +118,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		nor_u |= (uint)((nor.x * 0.5f + 0.5f) * 255.0f) << 0;
 		nor_u |= (uint)((nor.y * 0.5f + 0.5f) * 255.0f) << 8;
 		nor_u |= (uint)((nor.z * 0.5f + 0.5f) * 255.0f) << 16;
+		nor_u |= (uint)(nor.w * 255.0f) << 24; // occlusion
 	}
 
 
