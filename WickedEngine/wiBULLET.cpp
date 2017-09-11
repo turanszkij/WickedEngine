@@ -592,7 +592,9 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
 			mesh->vertices_Transformed_PRE[i].pos = mesh->vertices_Transformed_POS[i].pos;
-			mesh->vertices_Transformed_POS[i].pos = XMHALF4(nodes[indexP].m_x.getX(), nodes[indexP].m_x.getY(), nodes[indexP].m_x.getZ(), (float)mesh->vertices_POS[i].pos.w);
+			mesh->vertices_Transformed_POS[i].pos.x = nodes[indexP].m_x.getX();
+			mesh->vertices_Transformed_POS[i].pos.y = nodes[indexP].m_x.getY();
+			mesh->vertices_Transformed_POS[i].pos.z = nodes[indexP].m_x.getZ();
 			mesh->vertices_Transformed_NOR[i].FromFLOAT(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ()));
 		}
 	}

@@ -10,6 +10,7 @@
 #include "wiIntersectables.h"
 #include "ConstantBufferMapping.h"
 #include "ResourceMapping.h"
+#include "ShaderInterop.h"
 
 #include <vector>
 #include <map>
@@ -285,6 +286,8 @@ public:
 	};
 	struct Vertex_POS
 	{
+#ifdef VERTEXBUFFER_HALFPOSITION
+
 		XMHALF4 pos;
 
 		Vertex_POS() :pos(XMHALF4(0.0f, 0.0f, 0.0f, 0.0f)) {}
@@ -292,8 +295,30 @@ public:
 		{
 			pos = XMHALF4(vert.pos.x, vert.pos.y, vert.pos.z, vert.pos.w);
 		}
+		inline XMVECTOR Load() const
+		{
+			return XMLoadHalf4(&pos);
+		}
 
 		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16B16A16_FLOAT;
+
+#else
+		
+		XMFLOAT4 pos;
+
+		Vertex_POS() :pos(XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)) {}
+		Vertex_POS(const Vertex_FULL& vert)
+		{
+			pos = vert.pos;
+		}
+		inline XMVECTOR Load() const
+		{
+			return XMLoadFloat4(&pos);
+		}
+
+		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R32G32B32A32_FLOAT;
+
+#endif // VERTEXBUFFER_HALFPOSITION
 	};
 	struct Vertex_NOR
 	{

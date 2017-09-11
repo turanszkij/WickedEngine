@@ -1489,7 +1489,7 @@ Light* wiRenderer::getLightByName(const std::string& name)
 Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
 {
 	XMMATRIX sump;
-	XMVECTOR pos = XMLoadHalf4(&mesh->vertices_POS[vertexI].pos);
+	XMVECTOR pos = mesh->vertices_POS[vertexI].Load();
 	XMVECTOR nor = XMLoadFloat4(&mesh->vertices_NOR[vertexI].GetNor_FULL());
 
 	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
@@ -5743,7 +5743,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			}
 			else
 			{
-				_vertices[i] = XMLoadHalf4(&mesh->vertices_POS[i].pos);
+				_vertices[i] = mesh->vertices_POS[i].Load();
 			}
 		}
 
