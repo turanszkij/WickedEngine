@@ -4131,7 +4131,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
 
-				if (mesh->softBody || instance->isArmatureDeformed())
+				if (mesh->softBody)
 					tempMat = __identityMat;
 				else
 					tempMat = instance->world;
@@ -4139,7 +4139,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 				{
-					if (mesh->softBody || instance->isArmatureDeformed())
+					if (mesh->softBody)
 						tempMat = __identityMat;
 					else
 						tempMat = instance->worldPrev;
@@ -5738,7 +5738,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		{
 			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
 			{
-				_tmpvert = TransformVertex(mesh, (int)i, objectMat_Inverse);
+				_tmpvert = TransformVertex(mesh, (int)i);
 				_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
 			}
 			else
