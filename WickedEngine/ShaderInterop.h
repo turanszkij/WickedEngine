@@ -1,9 +1,6 @@
 #ifndef _WICKEDENGINE_SHADERINTEROP_H_
 #define _WICKEDENGINE_SHADERINTEROP_H_
 
-
-//#define VERTEXBUFFER_HALFPOSITION
-
 // Tiled rendering params:
 #define BLOCK_SIZE	16
 #define MAX_LIGHTS	1024

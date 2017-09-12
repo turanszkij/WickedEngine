@@ -286,24 +286,6 @@ public:
 	};
 	struct Vertex_POS
 	{
-#ifdef VERTEXBUFFER_HALFPOSITION
-
-		XMHALF4 pos;
-
-		Vertex_POS() :pos(XMHALF4(0.0f, 0.0f, 0.0f, 0.0f)) {}
-		Vertex_POS(const Vertex_FULL& vert)
-		{
-			pos = XMHALF4(vert.pos.x, vert.pos.y, vert.pos.z, vert.pos.w);
-		}
-		inline XMVECTOR Load() const
-		{
-			return XMLoadHalf4(&pos);
-		}
-
-		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16B16A16_FLOAT;
-
-#else
-		
 		XMFLOAT4 pos;
 
 		Vertex_POS() :pos(XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)) {}
@@ -317,8 +299,6 @@ public:
 		}
 
 		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R32G32B32A32_FLOAT;
-
-#endif // VERTEXBUFFER_HALFPOSITION
 	};
 	struct Vertex_NOR
 	{
@@ -373,8 +353,8 @@ public:
 	};
 	struct Vertex_BON
 	{
-		uint32_t ind;
-		uint32_t wei;
+		uint64_t ind;
+		uint64_t wei;
 
 		Vertex_BON()
 		{
@@ -386,24 +366,24 @@ public:
 			ind = 0;
 			wei = 0;
 
-			ind |= (uint8_t)vert.ind.x << 0;
-			ind |= (uint8_t)vert.ind.y << 8;
-			ind |= (uint8_t)vert.ind.z << 16;
-			ind |= (uint8_t)vert.ind.w << 24;
+			ind |= (uint64_t)vert.ind.x << 0;
+			ind |= (uint64_t)vert.ind.y << 16;
+			ind |= (uint64_t)vert.ind.z << 32;
+			ind |= (uint64_t)vert.ind.w << 48;
 
-			wei |= (uint8_t)(vert.wei.x * 255.0f) << 0;
-			wei |= (uint8_t)(vert.wei.y * 255.0f) << 8;
-			wei |= (uint8_t)(vert.wei.z * 255.0f) << 16;
-			wei |= (uint8_t)(vert.wei.w * 255.0f) << 24;
+			wei |= (uint64_t)(vert.wei.x * 65535.0f) << 0;
+			wei |= (uint64_t)(vert.wei.y * 65535.0f) << 16;
+			wei |= (uint64_t)(vert.wei.z * 65535.0f) << 32;
+			wei |= (uint64_t)(vert.wei.w * 65535.0f) << 48;
 		}
 		inline XMFLOAT4 GetInd_FULL() const
 		{
 			XMFLOAT4 ind_FULL(0, 0, 0, 0);
 
-			ind_FULL.x = (float)((ind >> 0)  & 0x000000FF);
-			ind_FULL.y = (float)((ind >> 8)  & 0x000000FF);
-			ind_FULL.z = (float)((ind >> 16) & 0x000000FF);
-			ind_FULL.w = (float)((ind >> 24) & 0x000000FF);
+			ind_FULL.x = (float)((ind >> 0)  & 0x0000FFFF);
+			ind_FULL.y = (float)((ind >> 16)  & 0x0000FFFF);
+			ind_FULL.z = (float)((ind >> 32) & 0x0000FFFF);
+			ind_FULL.w = (float)((ind >> 48) & 0x0000FFFF);
 
 			return ind_FULL;
 		}
@@ -411,10 +391,10 @@ public:
 		{
 			XMFLOAT4 wei_FULL(0, 0, 0, 0);
 
-			wei_FULL.x = (float)((wei >> 0)  & 0x000000FF) / 255.0f;
-			wei_FULL.y = (float)((wei >> 8)  & 0x000000FF) / 255.0f;
-			wei_FULL.z = (float)((wei >> 16) & 0x000000FF) / 255.0f;
-			wei_FULL.w = (float)((wei >> 24) & 0x000000FF) / 255.0f;
+			wei_FULL.x = (float)((wei >> 0)  & 0x0000FFFF) / 65535.0f;
+			wei_FULL.y = (float)((wei >> 16) & 0x0000FFFF) / 65535.0f;
+			wei_FULL.z = (float)((wei >> 32) & 0x0000FFFF) / 65535.0f;
+			wei_FULL.w = (float)((wei >> 48) & 0x0000FFFF) / 65535.0f;
 
 			return wei_FULL;
 		}

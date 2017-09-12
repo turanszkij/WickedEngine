@@ -48,33 +48,18 @@ inline void Skinning(inout float4 pos, inout float4 nor, in float4 inBon, in flo
 [numthreads(SKINNING_COMPUTE_THREADCOUNT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-#ifdef VERTEXBUFFER_HALFPOSITION
-	const uint stride_POS = 8;
-#else
 	const uint stride_POS = 16;
-#endif // VERTEXBUFFER_HALFPOSITION
 	const uint stride_NOR = 4;
-	const uint stride_BON_IND = 4;
-	const uint stride_BON_WEI = 4;
+	const uint stride_BON_IND = 8;
+	const uint stride_BON_WEI = 8;
 
 	const uint fetchAddress_POS = DTid.x * stride_POS;
 	const uint fetchAddress_NOR = DTid.x * stride_NOR;
 	const uint fetchAddress_BON = DTid.x * (stride_BON_IND + stride_BON_WEI);
 
 	// Manual type-conversion for pos:
-#ifdef VERTEXBUFFER_HALFPOSITION
-	uint2 pos_u = vertexBuffer_POS.Load2(fetchAddress_POS);
-	float4 pos = 0;
-	{
-		pos.x = f16tof32((pos_u.x & 0x0000FFFF) >> 0);
-		pos.y = f16tof32((pos_u.x & 0xFFFF0000) >> 16);
-		pos.z = f16tof32((pos_u.y & 0x0000FFFF) >> 0);
-		pos.w = f16tof32((pos_u.y & 0xFFFF0000) >> 16);
-	}
-#else
 	uint4 pos_u = vertexBuffer_POS.Load4(fetchAddress_POS);
 	float4 pos = asfloat(pos_u);
-#endif // VERTEXBUFFER_HALFPOSITION
 
 
 	// Manual type-conversion for normal:
@@ -89,19 +74,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 	// Manual type-conversion for bone props:
-	uint2 ind_wei_u = vertexBuffer_BON.Load2(fetchAddress_BON);
+	uint4 ind_wei_u = vertexBuffer_BON.Load4(fetchAddress_BON);
 	float4 ind = 0;
 	float4 wei = 0;
 	{
-		ind.x = (float)((ind_wei_u.x >> 0) & 0x000000FF);
-		ind.y = (float)((ind_wei_u.x >> 8) & 0x000000FF);
-		ind.z = (float)((ind_wei_u.x >> 16) & 0x000000FF);
-		ind.w = (float)((ind_wei_u.x >> 24) & 0x000000FF);
+		ind.x = (float)((ind_wei_u.x >> 0) & 0x0000FFFF);
+		ind.y = (float)((ind_wei_u.x >> 16) & 0x0000FFFF);
+		ind.z = (float)((ind_wei_u.y >> 0) & 0x0000FFFF);
+		ind.w = (float)((ind_wei_u.y >> 16) & 0x0000FFFF);
 
-		wei.x = (float)((ind_wei_u.y >> 0) & 0x000000FF) / 255.0f;
-		wei.y = (float)((ind_wei_u.y >> 8) & 0x000000FF) / 255.0f;
-		wei.z = (float)((ind_wei_u.y >> 16) & 0x000000FF) / 255.0f;
-		wei.w = (float)((ind_wei_u.y >> 24) & 0x000000FF) / 255.0f;
+		wei.x = (float)((ind_wei_u.z >> 0) & 0x0000FFFF) / 65535.0f;
+		wei.y = (float)((ind_wei_u.z >> 16) & 0x0000FFFF) / 65535.0f;
+		wei.z = (float)((ind_wei_u.w >> 0) & 0x0000FFFF) / 65535.0f;
+		wei.w = (float)((ind_wei_u.w >> 16) & 0x0000FFFF) / 65535.0f;
 	}
 
 
@@ -111,17 +96,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 	// Manual type-conversion for pos:
-#ifdef VERTEXBUFFER_HALFPOSITION
-	pos_u = 0;
-	{
-		pos_u.x |= f32tof16(pos.x) << 0;
-		pos_u.x |= f32tof16(pos.y) << 16;
-		pos_u.y |= f32tof16(pos.z) << 0;
-		pos_u.y |= f32tof16(pos.w) << 16;
-	}
-#else
 	pos_u = asuint(pos);
-#endif // VERTEXBUFFER_HALFPOSITION
 
 
 	// Manual type-conversion for normal:
@@ -133,12 +108,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		nor_u |= (uint)(nor.w * 255.0f) << 24; // occlusion
 	}
 
-#ifdef VERTEXBUFFER_HALFPOSITION
-	streamoutBuffer_PRE.Store2(fetchAddress_POS, streamoutBuffer_POS.Load2(fetchAddress_POS)); // copy prev frame current pos to current frame prev pos
-	streamoutBuffer_POS.Store2(fetchAddress_POS, pos_u);
-#else
+	// Store data:
 	streamoutBuffer_PRE.Store4(fetchAddress_POS, streamoutBuffer_POS.Load4(fetchAddress_POS)); // copy prev frame current pos to current frame prev pos
 	streamoutBuffer_POS.Store4(fetchAddress_POS, pos_u);
-#endif // VERTEXBUFFER_HALFPOSITION
 	streamoutBuffer_NOR.Store(fetchAddress_NOR, nor_u);
 }
