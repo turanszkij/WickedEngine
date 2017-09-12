@@ -3332,12 +3332,22 @@ void Armature::UpdateTransform()
 {
 	Transform::UpdateTransform();
 
-	// calculate frame
-	for (Bone* root : rootbones) 
+	// Calculate local animation frame:
+	for (Bone* root : rootbones)
 	{
-		RecursiveBoneTransform(this, root, getMatrix());
+		RecursiveBoneTransform(this, root, XMMatrixIdentity());
 	}
 
+	// Local animation to world space and attachment transform:
+	XMMATRIX worldMatrix = getMatrix();
+	for (Bone* bone : boneCollection)
+	{
+		XMMATRIX boneMatrix = XMLoadFloat4x4(&bone->world);
+		boneMatrix = boneMatrix * worldMatrix;
+		XMStoreFloat4x4(&bone->world, boneMatrix);
+
+		bone->UpdateTransform();
+	}
 }
 void Armature::UpdateArmature()
 {
@@ -3473,9 +3483,6 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
 		RecursiveBoneTransform(armature, bone->childrenI[i], boneMat);
 	}
-
-	// Because bones are not updated in the regular Transform fashion, a separate update needs to be called
-	bone->UpdateTransform();
 }
 XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const std::vector<KeyFrame>& keyframeList, KeyFrameType type)
 {
