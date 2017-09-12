@@ -1854,9 +1854,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				// Upload CPU skinned vertex buffer (Soft body VB)
 				if (mesh->softBody)
 				{
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertices_Transformed_POS.data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed_POS.size()));
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_NOR, mesh->vertices_Transformed_NOR.data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed_NOR.size()));
-					GetDevice()->UpdateBuffer(&mesh->streamoutBuffer_PRE, mesh->vertices_Transformed_PRE.data(), threadID, (int)(sizeof(XMFLOAT4)*mesh->vertices_Transformed_PRE.size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertices_Transformed_POS.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size()));
+					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_NOR, mesh->vertices_Transformed_NOR.data(), threadID, (int)(sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size()));
+					GetDevice()->UpdateBuffer(&mesh->streamoutBuffer_PRE, mesh->vertices_Transformed_PRE.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size()));
 				}
 			}
 		}
