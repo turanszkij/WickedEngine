@@ -1826,7 +1826,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					// Upload bones for skinning to shader
 					for (unsigned int k = 0; k < armature->boneCollection.size(); k++) 
 					{
-						// Note the transpose: we NEED to transpose so that loading from the structured buffer is easier in the shader (avoid the many mov operations)
 						armature->boneData[k].Create(armature->boneCollection[k]->boneRelativity);
 					}
 					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
