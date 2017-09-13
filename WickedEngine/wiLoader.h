@@ -718,7 +718,16 @@ public:
 
 	GFX_STRUCT ShaderBoneType
 	{
-		XMMATRIX pose;
+		XMFLOAT4A pose0;
+		XMFLOAT4A pose1;
+		XMFLOAT4A pose2; 
+		
+		void Create(const XMFLOAT4X4& matIn)
+		{
+			pose0 = XMFLOAT4A(matIn._11, matIn._21, matIn._31, matIn._41);
+			pose1 = XMFLOAT4A(matIn._12, matIn._22, matIn._32, matIn._42);
+			pose2 = XMFLOAT4A(matIn._13, matIn._23, matIn._33, matIn._43);
+		}
 
 		STRUCTUREDBUFFER_SETBINDSLOT(SKINNINGSLOT_IN_BONEBUFFER)
 

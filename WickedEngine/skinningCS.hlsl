@@ -3,7 +3,9 @@
 
 struct Bone
 {
-	float4x4 pose;
+	float4 pose0;
+	float4 pose1;
+	float4 pose2;
 };
 STRUCTUREDBUFFER(boneBuffer, Bone, SKINNINGSLOT_IN_BONEBUFFER);
 
@@ -30,7 +32,15 @@ inline void Skinning(inout float4 pos, inout float4 nor, in float4 inBon, in flo
 	[loop]
 	for (uint i = 0; ((i < 4) && (weisum<1.0f)); ++i)
 	{
-		m = boneBuffer[(uint)inBon[i]].pose;
+		float4 pose0 = boneBuffer[(uint)inBon[i]].pose0;
+		float4 pose1 = boneBuffer[(uint)inBon[i]].pose1;
+		float4 pose2 = boneBuffer[(uint)inBon[i]].pose2;
+		m = float4x4(
+			float4(pose0.x, pose1.x, pose2.x, 0),
+			float4(pose0.y, pose1.y, pose2.y, 0),
+			float4(pose0.z, pose1.z, pose2.z, 0),
+			float4(pose0.w, pose1.w, pose2.w, 1)
+			);
 		m3 = (float3x3)m;
 
 		p += mul(float4(pos.xyz, 1), m)*inWei[i];

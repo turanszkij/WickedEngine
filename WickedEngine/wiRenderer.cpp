@@ -1827,7 +1827,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					for (unsigned int k = 0; k < armature->boneCollection.size(); k++) 
 					{
 						// Note the transpose: we NEED to transpose so that loading from the structured buffer is easier in the shader (avoid the many mov operations)
-						armature->boneData[k].pose = XMMatrixTranspose(XMLoadFloat4x4(&armature->boneCollection[k]->boneRelativity));
+						armature->boneData[k].Create(armature->boneCollection[k]->boneRelativity);
 					}
 					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
 					GetDevice()->BindResourceCS(&armature->boneBuffer, STRUCTUREDBUFFER_GETBINDSLOT(Armature::ShaderBoneType), threadID);
