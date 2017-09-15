@@ -1398,7 +1398,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	HRESULT hr = E_FAIL;
 
-	for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
+	for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
 	{
 		SAFE_INIT(commandLists[i]);
 		SAFE_INIT(deviceContexts[i]);
@@ -1419,7 +1419,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	{
 		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
 	};
 	UINT numFeatureLevels = ARRAYSIZE(featureLevels);
 
@@ -1439,9 +1438,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		wiHelper::messageBox(ss.str(), "Error!");
 		exit(1);
 	}
-
-	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
-	TESSELLATION = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
 
 	IDXGIDevice2 * pDXGIDevice;
 	hr = device->QueryInterface(__uuidof(IDXGIDevice2), (void **)&pDXGIDevice);
@@ -1483,7 +1479,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device, reinterpret_cast<IUnknown*>(window), &sd, nullptr, &swapChain);
 #endif
 
-	if (FAILED(hr)) 
+	if (FAILED(hr))
 	{
 		wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
 		exit(1);
@@ -1498,10 +1494,10 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	D3D11_FEATURE_DATA_THREADING threadingFeature;
 	device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
-	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists) 
+	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists)
 	{
 		MULTITHREADED_RENDERING = true;
-		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
+		for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
 		{
 			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
 				continue;
@@ -1516,11 +1512,24 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		MULTITHREADED_RENDERING = false;
 	}
 
+
+	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
+	TESSELLATION = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
+
+	//D3D11_FEATURE_DATA_D3D11_OPTIONS features_0;
+	//hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS, &features_0, sizeof(features_0));
+
+	//D3D11_FEATURE_DATA_D3D11_OPTIONS1 features_1;
+	//hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS1, &features_1, sizeof(features_1));
+
 	D3D11_FEATURE_DATA_D3D11_OPTIONS2 features_2;
-	hr = device->CheckFeatureSupport( D3D11_FEATURE_D3D11_OPTIONS2, &features_2, sizeof( features_2 ) );
+	hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS2, &features_2, sizeof(features_2));
 	CONSERVATIVE_RASTERIZATION = features_2.ConservativeRasterizationTier >= D3D11_CONSERVATIVE_RASTERIZATION_TIER_1;
 	RASTERIZER_ORDERED_VIEWS = features_2.ROVsSupported == TRUE;
 	UNORDEREDACCESSTEXTURE_LOAD_EXT = features_2.TypedUAVLoadAdditionalFormats == TRUE;
+
+	//D3D11_FEATURE_DATA_D3D11_OPTIONS3 features_3;
+	//hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS3, &features_3, sizeof(features_3));
 
 	// Create a render target view
 	backBuffer = NULL;
