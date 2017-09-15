@@ -88,6 +88,7 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 	[branch]
 	if (light.shadowMap_index >= 0)
 	{
+		// calculate shadow map texcoords:
 		float4 ShPos[3];
 		ShPos[0] = mul(float4(P, 1), light.shadowMat[0]);
 		ShPos[1] = mul(float4(P, 1), light.shadowMat[1]);
@@ -96,35 +97,40 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 		ShPos[1].xyz /= ShPos[1].w;
 		ShPos[2].xyz /= ShPos[2].w;
 		float3 ShTex[3];
-		ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
-		ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
-		ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) / 2.0f + 0.5f;
+		ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) * 0.5f + 0.5f;
+		ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) * 0.5f + 0.5f;
+		ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) * 0.5f + 0.5f;
 
+		// determine the main shadow cascade:
+		int cascade = -1;
+		[unroll]
+		for (uint i = 0; i < 3; ++i)
+		{
+			cascade = any(ShTex[i] - saturate(ShTex[i])) ? cascade : i;
+		}
+
+		// if we are within any cascade, sample shadow maps:
 		[branch]
-		if (!any(ShTex[2] - saturate(ShTex[2])))
+		if (cascade >= 0)
 		{
-			const float shadows[] = {
-				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 1),
-				shadowCascade(ShPos[2],ShTex[2].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 2)
-			};
-			const float3 lerpVal = abs(ShTex[2].xyz * 2 - 1);
-			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, max(lerpVal.y, lerpVal.z)), 4));
+			const float3 cascadeBlend = abs(ShTex[cascade] * 2 - 1);
+			const int2 cascades = uint2(cascade, cascade - 1);
+			float2 shadows = float2(1, 1);
+
+			// main shadow cascade sampling:
+			shadows[0] = shadowCascade(ShPos[cascades[0]], ShTex[cascades[0]].xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + cascades[0]);
+
+			// fallback shadow cascade sampling (far cascade has no fallback, so avoid sampling):
+			[branch]
+			if (cascades[1] >= 0)
+			{
+				shadows[1] = shadowCascade(ShPos[cascades[1]], ShTex[cascades[1]].xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + cascades[1]);
+			}
+
+			// blend the cascades:
+			sh *= lerp(shadows[0], shadows[1], pow(max(cascadeBlend.x, max(cascadeBlend.y, cascadeBlend.z)), 4));
 		}
-		else if (!any(ShTex[1] - saturate(ShTex[1])))
-		{
-			const float shadows[] = {
-				shadowCascade(ShPos[0],ShTex[0].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 0),
-				shadowCascade(ShPos[1],ShTex[1].xy, light.shadowKernel,light.shadowBias,light.shadowMap_index + 1),
-			};
-			const float3 lerpVal = abs(ShTex[1].xyz * 2 - 1);
-			sh *= lerp(shadows[1], shadows[0], pow(max(lerpVal.x, max(lerpVal.y, lerpVal.z)), 4));
-		}
-		else if (!any(ShTex[0] - saturate(ShTex[0])))
-		{
-			const float shadow = shadowCascade(ShPos[0], ShTex[0].xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
-			const float3 lerpVal = abs(ShTex[0].xyz * 2 - 1);
-			sh *= lerp(shadow, 1, pow(max(lerpVal.x, max(lerpVal.y, lerpVal.z)), 4));
-		}
+
 	}
 
 	result.diffuse *= sh;
@@ -218,12 +224,9 @@ inline LightingResult SpotLight(in LightArrayType light, in float3 N, in float3 
 			result.diffuse *= sh;
 			result.specular *= sh;
 
-			result.diffuse = max(result.diffuse, 0);
-			result.specular = max(result.specular, 0);
+			result.diffuse = max(0.0f, result.diffuse);
+			result.specular = max(0.0f, result.specular);
 		}
-
-		result.diffuse = max(0.0f, result.diffuse);
-		result.specular = max(0.0f, result.specular);
 	}
 
 	return result;
