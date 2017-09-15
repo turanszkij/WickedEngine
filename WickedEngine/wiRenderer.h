@@ -123,6 +123,8 @@ public:
 		int mSunLightArrayIndex;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
+		XMFLOAT3 mGlobalEnvMap0;		float pad2;
+		XMFLOAT3 mGlobalEnvMap1;		float pad3;
 		XMMATRIX mVP;
 		XMMATRIX mView;
 		XMMATRIX mProj;
@@ -289,6 +291,8 @@ protected:
 	static bool debugLightCulling;
 	static bool occlusionCulling;
 	static bool temporalAA, temporalAADEBUG;
+
+	static EnvironmentProbe* globalEnvProbes[2];
 
 	struct VoxelizedSceneData
 	{

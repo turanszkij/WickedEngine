@@ -1,5 +1,6 @@
 #ifndef _ENVIRONMENTMAPPING_HF_
 #define _ENVIRONMENTMAPPING_HF_
+#include "globals.hlsli"
 
 // #define ENVMAP_CAMERA_BLEND
 inline float3 EnvironmentReflection(in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
@@ -14,11 +15,11 @@ inline float3 EnvironmentReflection(in float3 N, in float3 V, in float3 P, in fl
 	float4 envCol0 = texture_env0.SampleLevel(sampler_linear_clamp, ref, roughness*mipLevels0);
 	float4 envCol1 = texture_env1.SampleLevel(sampler_linear_clamp, ref, roughness*mipLevels0);
 #ifdef ENVMAP_CAMERA_BLEND
-	float dist0 = distance(g_xCamera_CamPos, g_xTransform[0].xyz);
-	float dist1 = distance(g_xCamera_CamPos, g_xTransform[1].xyz);
+	float dist0 = distance(g_xCamera_CamPos, g_xFrame_GlobalEnvMap0);
+	float dist1 = distance(g_xCamera_CamPos, g_xFrame_GlobalEnvMap1);
 #else
-	float dist0 = distance(P, g_xTransform[0].xyz);
-	float dist1 = distance(P, g_xTransform[1].xyz);
+	float dist0 = distance(P, g_xFrame_GlobalEnvMap1);
+	float dist1 = distance(P, g_xFrame_GlobalEnvMap1);
 #endif
 	static const float blendStrength = 0.05f;
 	float blend = clamp((dist0 - dist1)*blendStrength, -1, 1)*0.5f + 0.5f;

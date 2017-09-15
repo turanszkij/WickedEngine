@@ -69,6 +69,7 @@ float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = false;
 bool wiRenderer::temporalAA = false, wiRenderer::temporalAADEBUG = false;
+EnvironmentProbe* wiRenderer::globalEnvProbes[] = { nullptr,nullptr };
 wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
@@ -1582,6 +1583,24 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	}
 	wiProfiler::GetInstance().EndRange(); // SPTree Update
 
+	// Environment probe sorting:
+	{
+		ZeroMemory(globalEnvProbes, sizeof(globalEnvProbes));
+		GetScene().environmentProbes.sort(
+			[&](EnvironmentProbe* a, EnvironmentProbe* b) {
+			return wiMath::DistanceSquared(a->translation, getCamera()->translation) < wiMath::DistanceSquared(b->translation, getCamera()->translation);
+		}
+		);
+		int envProbeInd = 0;
+		for (auto& x : GetScene().environmentProbes)
+		{
+			globalEnvProbes[envProbeInd] = x;
+			envProbeInd++;
+			if (envProbeInd >= ARRAYSIZE(globalEnvProbes))
+				break;
+		}
+	}
+
 	// Update Voxelization parameters:
 	if (spTree != nullptr)
 	{
@@ -1875,34 +1894,14 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	RefreshEnvProbes(threadID);
 
-	// Environment probe setup:
+	// Bind environment probes:
 	{
-		Texture2D* envMaps[] = { enviroMap, enviroMap };
-		XMFLOAT3 envMapPositions[] = { XMFLOAT3(0,0,0),XMFLOAT3(0,0,0) };
-		GetScene().environmentProbes.sort(
-			[&](EnvironmentProbe* a, EnvironmentProbe* b) {
-			return wiMath::DistanceSquared(a->translation, getCamera()->translation) < wiMath::DistanceSquared(b->translation, getCamera()->translation);
-		}
-		);
-		int envProbeInd = 0;
-		for (auto& x : GetScene().environmentProbes)
-		{
-			envMaps[envProbeInd] = x->cubeMap.GetTexture();
-			envMapPositions[envProbeInd] = x->translation;
-			envProbeInd++;
-			if (envProbeInd >= ARRAYSIZE(envMaps))
-				break;
-		}
-
-		MiscCB envProbeCB;
-		envProbeCB.mTransform.r[0] = XMLoadFloat3(&envMapPositions[0]);
-		envProbeCB.mTransform.r[1] = XMLoadFloat3(&envMapPositions[1]);
-		envProbeCB.mTransform = XMMatrixTranspose(envProbeCB.mTransform);
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &envProbeCB, threadID);
-		GetDevice()->BindResourcePS(envMaps[0], TEXSLOT_ENV0, threadID);
-		GetDevice()->BindResourcePS(envMaps[1], TEXSLOT_ENV1, threadID);
-		GetDevice()->BindResourceCS(envMaps[0], TEXSLOT_ENV0, threadID);
-		GetDevice()->BindResourceCS(envMaps[1], TEXSLOT_ENV1, threadID);
+		const GPUResource* envMaps[] = {
+			globalEnvProbes[0] == nullptr ? enviroMap : globalEnvProbes[0]->cubeMap.GetTexture(),
+			globalEnvProbes[1] == nullptr ? enviroMap : globalEnvProbes[1]->cubeMap.GetTexture(),
+		};
+		GetDevice()->BindResourcesPS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
+		GetDevice()->BindResourcesCS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
 	}
 
 	
@@ -5367,6 +5366,8 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mSunLightArrayIndex = GetSunArrayIndex();
 	cb.mTemporalAAJitter = temporalAAJitter;
 	cb.mTemporalAAJitterPrev = temporalAAJitterPrev;
+	cb.mGlobalEnvMap0 = globalEnvProbes[0] == nullptr ? XMFLOAT3(0, 0, 0) : globalEnvProbes[0]->translation;
+	cb.mGlobalEnvMap1 = globalEnvProbes[1] == nullptr ? XMFLOAT3(0, 0, 0) : globalEnvProbes[1]->translation;
 
 	auto camera = getCamera();
 	auto prevCam = prevFrameCam;
