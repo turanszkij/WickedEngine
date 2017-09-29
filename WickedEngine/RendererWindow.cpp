@@ -268,6 +268,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	shadowProps2DComboBox->AddItem("2048");
 	shadowProps2DComboBox->AddItem("4096");
 	shadowProps2DComboBox->OnSelect([&](wiEventArgs args) {
+		wiRenderer::SHADOWCOUNT_2D = 11;
 		switch (args.iValue)
 		{
 		case 0:
@@ -312,6 +313,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	shadowPropsCubeComboBox->AddItem("2048");
 	shadowPropsCubeComboBox->AddItem("4096");
 	shadowPropsCubeComboBox->OnSelect([&](wiEventArgs args) {
+		wiRenderer::SHADOWCOUNT_CUBE = 5;
 		switch (args.iValue)
 		{
 		case 0:
