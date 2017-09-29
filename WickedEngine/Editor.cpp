@@ -818,6 +818,8 @@ void EditorComponent::Load()
 			ss << "Look: Middle mouse button" << endl;
 			ss << "Select: Right mouse button" << endl;
 			ss << "Place decal/interact: Left mouse button when nothing is selected" << endl;
+			ss << "Camera speed: SHIFT button" << endl;
+			ss << "Camera up: E, down: Q" << endl;
 			ss << "Duplicate object (with instancing): Ctrl + D" << endl;
 			ss << "Undo: Ctrl + Z" << endl;
 			ss << "Redo: Ctrl + Y" << endl;
