@@ -313,7 +313,7 @@ void EditorComponent::Load()
 
 	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
 	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
-	renderPathComboBox->SetPos(XMFLOAT2(screenW - 940, 0));
+	renderPathComboBox->SetPos(XMFLOAT2(screenW - 55 - 940, 0));
 	renderPathComboBox->AddItem("Forward");
 	renderPathComboBox->AddItem("Deferred");
 	renderPathComboBox->AddItem("Tiled Forward");
@@ -449,7 +449,7 @@ void EditorComponent::Load()
 
 	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
 	translatorCheckBox->SetTooltip("Enable the translator tool");
-	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25, 0));
+	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25, 0));
 	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	translatorCheckBox->OnClick([=](wiEventArgs args) {
 		if(!args.bValue)
@@ -463,7 +463,7 @@ void EditorComponent::Load()
 	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T:");
 	{
 		isScalatorCheckBox->SetTooltip("Scale");
-		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 2, 22));
+		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25 - 40 * 2, 22));
 		isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
 		isScalatorCheckBox->OnClick([=](wiEventArgs args) {
 			translator->isScalator = args.bValue;
@@ -476,7 +476,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(isScalatorCheckBox);
 
 		isRotatorCheckBox->SetTooltip("Rotate");
-		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25 - 40 * 1, 22));
+		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25 - 40 * 1, 22));
 		isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
 		isRotatorCheckBox->OnClick([=](wiEventArgs args) {
 			translator->isRotator = args.bValue;
@@ -489,7 +489,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(isRotatorCheckBox);
 
 		isTranslatorCheckBox->SetTooltip("Translate");
-		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 105 * 6 - 25, 22));
+		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25, 22));
 		isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
 		isTranslatorCheckBox->OnClick([=](wiEventArgs args) {
 			translator->isTranslator = args.bValue;
@@ -505,7 +505,7 @@ void EditorComponent::Load()
 
 	wiButton* saveButton = new wiButton("Save");
 	saveButton->SetTooltip("Save the current scene as a model");
-	saveButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 6, 0));
+	saveButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6, 0));
 	saveButton->SetSize(XMFLOAT2(100, 40));
 	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
 	saveButton->SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -572,7 +572,7 @@ void EditorComponent::Load()
 
 	wiButton* modelButton = new wiButton("Load Model");
 	modelButton->SetTooltip("Load a model into the editor...");
-	modelButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 5, 0));
+	modelButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
 	modelButton->SetSize(XMFLOAT2(100, 40));
 	modelButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -626,7 +626,7 @@ void EditorComponent::Load()
 
 	wiButton* skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");
-	skyButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 4, 0));
+	skyButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
 	skyButton->SetSize(XMFLOAT2(100, 18));
 	skyButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	skyButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -670,7 +670,7 @@ void EditorComponent::Load()
 
 	wiButton* colorGradingButton = new wiButton("Color Grading");
 	colorGradingButton->SetTooltip("Load a color grading lookup texture...");
-	colorGradingButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 4, 22));
+	colorGradingButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 22));
 	colorGradingButton->SetSize(XMFLOAT2(100, 18));
 	colorGradingButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	colorGradingButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -714,7 +714,7 @@ void EditorComponent::Load()
 
 	wiButton* scriptButton = new wiButton("Load Script");
 	scriptButton->SetTooltip("Load a Lua script...");
-	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 3, 0));
+	scriptButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 3, 0));
 	scriptButton->SetSize(XMFLOAT2(100, 40));
 	scriptButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
 	scriptButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -749,7 +749,7 @@ void EditorComponent::Load()
 
 	wiButton* shaderButton = new wiButton("Load Shaders");
 	shaderButton->SetTooltip("Load shaders from the specified directory...");
-	shaderButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 2, 0));
+	shaderButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
 	shaderButton->SetSize(XMFLOAT2(100, 40));
 	shaderButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
 	shaderButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -784,10 +784,10 @@ void EditorComponent::Load()
 
 	wiButton* clearButton = new wiButton("Clear World");
 	clearButton->SetTooltip("Delete every model from the scene");
-	clearButton->SetPos(XMFLOAT2(screenW - 50 - 105 * 1, 0));
+	clearButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 1, 0));
 	clearButton->SetSize(XMFLOAT2(100, 40));
-	clearButton->SetColor(wiColor(190, 0, 0, 200), wiWidget::WIDGETSTATE::IDLE);
-	clearButton->SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
+	clearButton->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
+	clearButton->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	clearButton->OnClick([&](wiEventArgs args) {
 		selected.clear();
 		EndTranslate();
@@ -800,6 +800,49 @@ void EditorComponent::Load()
 		materialWnd->SetMaterial(nullptr);
 	});
 	GetGUI().AddWidget(clearButton);
+
+
+	wiButton* helpButton = new wiButton("?");
+	helpButton->SetTooltip("Help");
+	helpButton->SetPos(XMFLOAT2(screenW - 50 - 55, 0));
+	helpButton->SetSize(XMFLOAT2(50, 40));
+	helpButton->SetColor(wiColor(34, 158, 214, 200), wiWidget::WIDGETSTATE::IDLE);
+	helpButton->SetColor(wiColor(113, 183, 214, 255), wiWidget::WIDGETSTATE::FOCUS);
+	helpButton->OnClick([=](wiEventArgs args) {
+		static wiLabel* helpLabel = nullptr;
+		if (helpLabel == nullptr)
+		{
+			stringstream ss("");
+			ss << "Help: " << endl << "############" << endl << endl;
+			ss << "Move camera: WASD" << endl;
+			ss << "Look: Middle mouse button" << endl;
+			ss << "Select: Right mouse button" << endl;
+			ss << "Place decal/interact: Left mouse button when nothing is selected" << endl;
+			ss << "Duplicate object (with instancing): Ctrl + D" << endl;
+			ss << "Undo: Ctrl + Z" << endl;
+			ss << "Redo: Ctrl + Y" << endl;
+			ss << "Copy: Ctrl + C" << endl;
+			ss << "Paste: Ctrl + V" << endl;
+			ss << "Delete: DELETE button" << endl;
+			ss << "Script Console / backlog: HOME button" << endl;
+			ss << endl;
+			ss << "You can find sample models in the WickedEngine/models directory." << endl;
+			ss << "You can find a program configuration file at WickedEngine/config.ini" << endl;
+			ss << "You can find a startup script at WickedEngine/startup.lua (this will be executed on program start)" << endl;
+			ss << endl << endl << "For questions, bug reports, feedback, requests, please open an issue at:" << endl;
+			ss << "https://github.com/turanszkij/WickedEngine" << endl;
+
+			helpLabel = new wiLabel("HelpLabel");
+			helpLabel->SetText(ss.str());
+			helpLabel->SetSize(XMFLOAT2(screenW / 3.0f, screenH / 2.5f));
+			helpLabel->SetPos(XMFLOAT2(screenW / 2.0f - helpLabel->scale.x / 2.0f, screenH / 2.0f - helpLabel->scale.y / 2.0f));
+			helpLabel->SetVisible(false);
+			GetGUI().AddWidget(helpLabel);
+		}
+
+		helpLabel->SetVisible(!helpLabel->IsVisible());
+	});
+	GetGUI().AddWidget(helpButton);
 
 
 	wiButton* exitButton = new wiButton("X");

@@ -225,3 +225,4 @@ ModelManifest.xml
 *.cfg
 /WickedEngine/models/Sample/nosun.wiw
 /WickedEngine/models/Sample/nosun.wimf
+/.vs
