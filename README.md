@@ -49,6 +49,9 @@ Set the following dependencies to this library in Visual Studio this way in the 
 3. Linker -> General -> Additional Library Directories:
 	- Directory of your built .lib file (Debug or Release directory in the solution by default)
 
+Also be sure to compile with a non-DLL runtime library:
+	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded (for Release) or Multi threaded debug (for debug config)
+
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries.
 This will not load all the features for you however. For that, use the helper wiInitializer::InitializeComponents() which 

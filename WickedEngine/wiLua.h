@@ -72,6 +72,9 @@ public:
 	//try sending a signal to lua, which can fail because of thread conflicts
 	bool TrySignal(const std::string& name);
 
+	//kill every running background task (coroutine)
+	void KillProcesses();
+
 	//Static function wrappers from here on
 
 	//get string from lua on stack position

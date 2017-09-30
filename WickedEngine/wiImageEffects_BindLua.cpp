@@ -1,4 +1,5 @@
 #include "wiImageEffects_BindLua.h"
+#include "Vector_BindLua.h"
 
 const char wiImageEffects_BindLua::className[] = "ImageEffects";
 
@@ -29,13 +30,13 @@ wiImageEffects_BindLua::wiImageEffects_BindLua(const wiImageEffects& effects) :e
 
 int wiImageEffects_BindLua::GetPos(lua_State* L)
 {
-	wiLua::SSetFloat3(L, effects.pos);
-	return 3;
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&effects.pos)));
+	return 1;
 }
 int wiImageEffects_BindLua::GetSize(lua_State* L)
 {
-	wiLua::SSetFloat2(L, effects.siz);
-	return 2;
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&effects.siz)));
+	return 1;
 }
 int wiImageEffects_BindLua::GetOpacity(lua_State* L)
 {
@@ -63,15 +64,15 @@ int wiImageEffects_BindLua::SetPos(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		effects.pos.x = wiLua::SGetFloat(L, 1);
-		if (argc > 1)
-			effects.pos.y = wiLua::SGetFloat(L, 2);
-		if (argc > 2)
-			effects.pos.z = wiLua::SGetFloat(L, 3);
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMStoreFloat3(&effects.pos, vector->vector);
+		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetPos(float x,y,z) not enough arguments!");
+		wiLua::SError(L, "SetPos(Vector pos) not enough arguments!");
 	}
 	return 0;
 }
@@ -80,13 +81,15 @@ int wiImageEffects_BindLua::SetSize(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		effects.siz.x = wiLua::SGetFloat(L, 1);
-		if (argc > 1)
-			effects.siz.y = wiLua::SGetFloat(L, 2);
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMStoreFloat2(&effects.siz, vector->vector);
+		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetSize(float x,y) not enough arguments!");
+		wiLua::SError(L, "SetSize(Vector size) not enough arguments!");
 	}
 	return 0;
 }

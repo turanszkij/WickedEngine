@@ -135,6 +135,12 @@ function signal(signalName)
     end
 end
 
+-- Kill all processes
+function killProcesses()
+	WAITING_ON_SIGNAL = {}
+	WAITING_ON_TIME = {}
+end
+
 -- Store the delta time for the current frame
 local lastDeltaTime = 0
 function setDeltaTime(dt)

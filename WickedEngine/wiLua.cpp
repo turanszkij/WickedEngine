@@ -280,6 +280,11 @@ bool wiLua::TrySignal(const std::string& name)
 	return true;
 }
 
+void wiLua::KillProcesses()
+{
+	RunText("killProcesses();");
+}
+
 int wiLua::DebugOut(lua_State* L)
 {
 	int argc = lua_gettop(L); 
