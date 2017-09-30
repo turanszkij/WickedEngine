@@ -209,6 +209,11 @@
       <DeploymentContent>true</DeploymentContent>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="sound\music.wav">
+      <DeploymentContent>true</DeploymentContent>
+    </Media>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

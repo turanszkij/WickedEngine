@@ -24,13 +24,7 @@ void Tests::Initialize()
 
 	wiProfiler::GetInstance().ENABLED = false;
 
-	wiInitializer::InitializeComponents(
-		wiInitializer::WICKEDENGINE_INITIALIZE_RENDERER
-		| wiInitializer::WICKEDENGINE_INITIALIZE_IMAGE
-		| wiInitializer::WICKEDENGINE_INITIALIZE_FONT
-		| wiInitializer::WICKEDENGINE_INITIALIZE_SOUND
-		| wiInitializer::WICKEDENGINE_INITIALIZE_MISC
-	);
+	wiInitializer::InitializeComponents();
 
 	activateComponent(new TestsRenderer);
 }
@@ -51,9 +45,9 @@ TestsRenderer::TestsRenderer()
 
 
 	wiComboBox* testSelector = new wiComboBox("TestSelector");
-	testSelector->SetText("");
-	testSelector->SetSize(XMFLOAT2(120, 20));
-	testSelector->SetPos(XMFLOAT2(5, 60));
+	testSelector->SetText("Demo: ");
+	testSelector->SetSize(XMFLOAT2(100, 20));
+	testSelector->SetPos(XMFLOAT2(50, 80));
 	testSelector->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	testSelector->AddItem("HelloWorld");
@@ -88,6 +82,45 @@ TestsRenderer::TestsRenderer()
 	});
 	testSelector->SetSelected(0);
 	GetGUI().AddWidget(testSelector);
+
+
+	wiButton* audioTest = new wiButton("AudioTest");
+	audioTest->SetText("Play Test Audio");
+	audioTest->SetSize(XMFLOAT2(161, 20));
+	audioTest->SetPos(XMFLOAT2(10, 110));
+	audioTest->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
+	audioTest->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
+	audioTest->OnClick([=](wiEventArgs args) {
+		static wiMusic music("sound/music.wav");
+		static bool playing = false;
+
+		if (playing)
+		{
+			music.Stop();
+			audioTest->SetText("Play Test Audio");
+		}
+		else
+		{
+			music.Play();
+			audioTest->SetText("Stop Test Audio");
+		}
+
+		playing = !playing;
+	});
+	GetGUI().AddWidget(audioTest);
+
+
+	wiSlider* volume = new wiSlider(0, 100, 50, 100, "Volume");
+	volume->SetText("Volume: ");
+	volume->SetSize(XMFLOAT2(85, 20));
+	volume->SetPos(XMFLOAT2(65, 140));
+	volume->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
+	volume->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
+	volume->OnSlide([](wiEventArgs args) {
+		wiMusic::SetVolume(args.fValue / 100.0f);
+	});
+	GetGUI().AddWidget(volume);
+
 }
 TestsRenderer::~TestsRenderer()
 {

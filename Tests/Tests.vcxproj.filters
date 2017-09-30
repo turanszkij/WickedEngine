@@ -14,6 +14,9 @@
     <Filter Include="images">
       <UniqueIdentifier>{115a0548-191e-4f7c-bd01-95f6c7de7afe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sound">
+      <UniqueIdentifier>{2300de17-ec3d-4e75-b143-e18829ba9361}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -67,5 +70,10 @@
     <ResourceCompile Include="Tests.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="sound\music.wav">
+      <Filter>sound</Filter>
+    </Media>
   </ItemGroup>
 </Project>
