@@ -69,7 +69,7 @@ TestsRenderer::TestsRenderer()
 		{
 		case 0:
 		{
-			wiSprite* sprite = new wiSprite("HelloWorld.png");
+			wiSprite* sprite = new wiSprite("images/HelloWorld.png");
 			sprite->effects.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
 			sprite->effects.siz = XMFLOAT2(200, 100);
 			sprite->effects.pivot = XMFLOAT2(0.5f, 0.5f);

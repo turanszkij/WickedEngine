@@ -11,6 +11,9 @@
     <Filter Include="fonts">
       <UniqueIdentifier>{71eaf3c0-2e45-4073-b714-cb4f7576c99f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="images">
+      <UniqueIdentifier>{115a0548-191e-4f7c-bd01-95f6c7de7afe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -49,6 +52,9 @@
     </Image>
     <Image Include="Tests.ico">
       <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="images\HelloWorld.png">
+      <Filter>images</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

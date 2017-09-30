@@ -204,18 +204,30 @@
     <ClCompile Include="WorldWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="fonts\default_font.dds" />
-    <Image Include="images\arealight.dds" />
-    <Image Include="images\blood1.png" />
-    <Image Include="images\directional_light.dds" />
+    <Image Include="fonts\default_font.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="images\arealight.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="images\blood1.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="images\directional_light.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
     <Image Include="images\leaf.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="images\pointlight.dds" />
+    <Image Include="images\pointlight.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
     <Image Include="images\ripple.png">
       <DeploymentContent>true</DeploymentContent>
     </Image>
-    <Image Include="images\spotlight.dds" />
+    <Image Include="images\spotlight.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
     <Image Include="small.ico" />
     <Image Include="Editor.ico" />
   </ItemGroup>
@@ -223,9 +235,16 @@
     <ResourceCompile Include="Editor.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="config.ini" />
-    <None Include="fonts\default_font.wifont" />
-    <None Include="startup.lua" />
+    <None Include="config.ini">
+      <FileType>Discomap</FileType>
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="fonts\default_font.wifont">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="startup.lua">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WickedEngine\WickedEngine_SHADERS.vcxproj">

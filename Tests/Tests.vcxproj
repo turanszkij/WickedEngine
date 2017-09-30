@@ -186,7 +186,10 @@
     <ResourceCompile Include="Tests.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="fonts\default_font.dds" />
+    <Image Include="fonts\default_font.dds">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
+    <Image Include="images\HelloWorld.png" />
     <Image Include="small.ico" />
     <Image Include="Tests.ico" />
   </ItemGroup>
@@ -199,8 +202,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="fonts\default_font.wifont" />
-    <None Include="test_script.lua" />
+    <None Include="fonts\default_font.wifont">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="test_script.lua">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
