@@ -2,15 +2,15 @@
 
 # Wicked Engine
 
-[![Build status][s1]][av] [![MIT/Apache][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
+[![Build status][s1]][av] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
-[s3]: https://img.shields.io/badge/license-MIT%2FApache-blue.svg
+[s3]: https://img.shields.io/badge/License-MIT-yellow.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-[li]: COPYING
+[li]: https://opensource.org/licenses/MIT
 
 ![Promo](logo/promo.png)
 
@@ -48,8 +48,7 @@ Set the following dependencies to this library in Visual Studio this way in the 
 	- ./WickedEngine
 3. Linker -> General -> Additional Library Directories:
 	- Directory of your built .lib file (Debug or Release directory in the solution by default)
-
-Also be sure to compile with a non-DLL runtime library for Release builds:
+4. Also be sure to compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
