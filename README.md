@@ -63,15 +63,14 @@ UWP support: define WINSTORE_SUPPORT preprocessor for the whole project
 
 ### Contents:
 
-- ./WickedEngine.sln 					- Visual Studio Solution; 
-- ./WickedEngine/WickedEngine.vcxproj		- Visual Studio Project; 
-- ./WickedEngine/BULLET/					- Bullet 2.82 Source files; 
-- ./WickedEngine/LUA/					- Lua 5.3.3 Source files; 
-- ./WickedEngine/shaders/					- Binary shaders output; 
-- ./WickedEngine/models					- Sample model files
-- ./WickedEngine/ 						- C++ and shader source files; 
-- ./WickedEngine/Utility 					- C++ source files for utility helpers;
-- ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene; 
+- ./Documentation/						- Documentation files
+- ./logo/								- Logo artwork images
+- ./models/								- Sample model files
+- ./WickedEngine/						- Wicked Engine Library project
+- ./Editor/								- Editor project
+- ./Tests/								- Testing framework project
+- ./WickedEngine.sln 					- Visual Studio Solution
+- ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene
 
 ### Scripting API:
 

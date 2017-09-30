@@ -1,10 +1,8 @@
+// WickedEngineTests.cpp : Defines the entry point for the application.
+//
+
 #include "stdafx.h"
-#include "WickedEngineEditor.h"
-#include "Editor.h"
-
-#include <fstream>
-
-using namespace std;
+#include "main.h"
 
 #define MAX_LOADSTRING 100
 
@@ -16,14 +14,7 @@ extern "C" {
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-Editor editor;
-
-
-enum Hotkeys
-{
-	UNUSED = 0,
-	PRINTSCREEN = 1,
-};
+Tests tests;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -43,7 +34,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_WICKEDENGINEGAME, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_WICKEDENGINETESTS, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -52,9 +43,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WICKEDENGINEGAME));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WICKEDENGINETESTS));
 
-	editor.Initialize();
+	tests.Initialize();
 
 
 	MSG msg = { 0 };
@@ -66,7 +57,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			editor.run();
+			tests.run();
 
 		}
 	}
@@ -92,11 +83,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WICKEDENGINEGAME));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WICKEDENGINETESTS));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    //wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_WICKEDENGINEGAME);
-	wcex.lpszMenuName = L"";
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_WICKEDENGINETESTS);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -117,58 +107,21 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
-   bool borderless = false;
-   string voidStr = "";
-
-   ifstream file("config.ini");
-   if (file.is_open())
-   {
-	   int enabled;
-	   file >> voidStr >> enabled;
-	   if (enabled != 0)
-	   {
-		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> editor.fullscreen >> voidStr >> borderless;
-		   editor.screenW = w;
-		   editor.screenH = h;
-	   }
-   }
-   file.close();
-
-   HWND hWnd = NULL;
-
-   if (borderless)
-   {
-	   hWnd = CreateWindowEx(WS_EX_APPWINDOW,
-		     szWindowClass,
-		     szTitle,
-		     WS_POPUP,
-		     x, y, w, h,
-		     NULL,
-		     NULL,
-		     hInstance,
-		     NULL
-		    );
-   }
-   else
-   {
-	   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-		   x, y, w, h, NULL, NULL, hInstance, NULL);
-   }
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
       return FALSE;
    }
 
-   if (!editor.setWindow(hWnd, hInst))
-	   return false;
-
+   if (!tests.setWindow(hWnd, hInst))
+   {
+	   return FALSE;
+   }
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
-
-   RegisterHotKey(hWnd, PRINTSCREEN, 0, VK_SNAPSHOT);
 
    return TRUE;
 }
@@ -202,78 +155,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             default:
                 return DefWindowProc(hWnd, message, wParam, lParam);
             }
-        } 
+        }
         break;
-	case WM_MBUTTONDOWN:
-		ShowCursor(false);
-		break;
-	case WM_MBUTTONUP:
-		ShowCursor(true);
-		break;
-	case WM_MOUSEWHEEL:
-		{
-		XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
-		float delta = GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
-		wiInputManager::GetInstance()->setpointer(XMFLOAT4(pointer.x, pointer.y, delta, 0));
-		}
-		break;
-	case WM_KEYDOWN:
-		switch (wParam)
-		{
-		case VK_HOME:
-			wiBackLog::Toggle();
-			break;
-		case VK_UP:
-			if (wiBackLog::isActive())
-				wiBackLog::historyPrev();
-			break;
-		case VK_DOWN:
-			if (wiBackLog::isActive())
-				wiBackLog::historyNext();
-			break;
-		case VK_NEXT:
-			if (wiBackLog::isActive())
-				wiBackLog::Scroll(10);
-			break;
-		case VK_PRIOR:
-			if (wiBackLog::isActive())
-				wiBackLog::Scroll(-10);
-			break;
-		default:
-			break;
-		}
-		break;
-	case WM_HOTKEY:
-		switch (wParam)
-		{
-		case PRINTSCREEN:
-			{
-				wiHelper::screenshot();
-			}
-			break;
-		default:
-			break;
-		}
-		break;
-	case WM_CHAR:
-		switch (wParam)
-		{
-		case VK_BACK:
-			if (wiBackLog::isActive())
-				wiBackLog::deletefromInput();
-			break;
-		case VK_RETURN:
-			if (wiBackLog::isActive())
-				wiBackLog::acceptInput();
-			break;
-		default:
-			if (wiBackLog::isActive()) {
-				const char c = (const char)(TCHAR)wParam;
-				wiBackLog::input(c);
-			}
-			break;
-		}
-		break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;

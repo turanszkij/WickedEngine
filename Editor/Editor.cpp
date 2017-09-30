@@ -48,6 +48,8 @@ void Editor::Initialize()
 	infoDisplay.cpuinfo = false;
 	infoDisplay.resolution = true;
 
+	wiRenderer::SHADERPATH = "../WickedEngine/shaders/";
+
 	wiInitializer::InitializeComponents(
 		wiInitializer::WICKEDENGINE_INITIALIZE_RENDERER
 		| wiInitializer::WICKEDENGINE_INITIALIZE_IMAGE

@@ -4,7 +4,7 @@ debugout("Begin script: test_script.lua");
 
 
 -- Load a model:
-local model = LoadModel("../WickedEngine/models/Stormtrooper/", "Stormtrooper");
+local model = LoadModel("../models/Stormtrooper/", "Stormtrooper");
 
 -- Load an image:
 local sprite = Sprite("HelloWorld.png");

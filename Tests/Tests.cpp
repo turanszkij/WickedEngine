@@ -78,7 +78,7 @@ TestsRenderer::TestsRenderer()
 			break;
 		}
 		case 1:
-			wiRenderer::LoadModel("../WickedEngine/models/Stormtrooper/", "Stormtrooper");
+			wiRenderer::LoadModel("../models/Stormtrooper/", "Stormtrooper");
 			break;
 		case 2:
 			wiLua::GetGlobal()->RunFile("test_script.lua");
