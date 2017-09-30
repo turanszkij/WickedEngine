@@ -830,9 +830,10 @@ void EditorComponent::Load()
 			ss << "Delete: DELETE button" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
-			ss << "You can find sample models in the WickedEngine/models directory." << endl;
-			ss << "You can find a program configuration file at WickedEngine/config.ini" << endl;
-			ss << "You can find a startup script at WickedEngine/startup.lua (this will be executed on program start)" << endl;
+			ss << "You can find sample models in the models directory. Try to load one." << endl;
+			ss << "You can also export models from Blender with the io_export_wicked_wi_bin.py script." << endl;
+			ss << "You can find a program configuration file at Editor/config.ini" << endl;
+			ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << endl;
 			ss << endl << endl << "For questions, bug reports, feedback, requests, please open an issue at:" << endl;
 			ss << "https://github.com/turanszkij/WickedEngine" << endl;
 

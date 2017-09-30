@@ -298,7 +298,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	shadowProps2DComboBox->SetSelected(4);
 	shadowProps2DComboBox->SetEnabled(true);
-	shadowProps2DComboBox->SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights...");
+	shadowProps2DComboBox->SetTooltip("Choose a shadow quality preset for 2D shadow maps (spotlights, directional lights)...");
 	shadowProps2DComboBox->SetScriptTip("SetShadowProps2D(int resolution, int count, int softShadowQuality)");
 	rendererWindow->AddWidget(shadowProps2DComboBox);
 
