@@ -57,7 +57,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			tests.run();
+			tests.Run();
 
 		}
 	}
@@ -115,7 +115,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   if (!tests.setWindow(hWnd, hInst))
+   if (!tests.SetWindow(hWnd, hInst))
    {
 	   return FALSE;
    }

@@ -12,9 +12,10 @@ Tests::~Tests()
 
 void Tests::Initialize()
 {
-	MainComponent::Initialize();
-
+	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
+	// otherwise, shaders will be loaded from the working directory
 	wiRenderer::SHADERPATH = "../WickedEngine/shaders/";
+	MainComponent::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -22,11 +23,9 @@ void Tests::Initialize()
 	infoDisplay.cpuinfo = false;
 	infoDisplay.resolution = true;
 
-	wiProfiler::GetInstance().ENABLED = false;
-
-	wiInitializer::InitializeComponents();
-
 	activateComponent(new TestsRenderer);
+
+	wiProfiler::GetInstance().ENABLED = false;
 }
 
 

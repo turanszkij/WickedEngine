@@ -12,6 +12,7 @@
 #include "wiTextureHelper.h"
 #include "wiFrameRate.h"
 #include "wiProfiler.h"
+#include "wiInitializer.h"
 
 using namespace std;
 
@@ -47,6 +48,8 @@ MainComponent::~MainComponent()
 
 void MainComponent::Initialize()
 {
+	wiInitializer::InitializeComponents();
+
 	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
 }
 
@@ -80,7 +83,7 @@ void MainComponent::activateComponent(RenderableComponent* component, int fadeFr
 	}
 }
 
-void MainComponent::run()
+void MainComponent::Run()
 {
 	wiProfiler::GetInstance().BeginFrame();
 	wiProfiler::GetInstance().BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
@@ -234,7 +237,7 @@ void MainComponent::Compose()
 }
 
 #ifndef WINSTORE_SUPPORT
-bool MainComponent::setWindow(wiWindowRegistration::window_type window, HINSTANCE hInst)
+bool MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst)
 {
 	this->window = window;
 	this->instance = hInst;
@@ -254,7 +257,7 @@ bool MainComponent::setWindow(wiWindowRegistration::window_type window, HINSTANC
 	return true;
 }
 #else
-bool MainComponent::setWindow(wiWindowRegistration::window_type window)
+bool MainComponent::SetWindow(wiWindowRegistration::window_type window)
 {
 	screenW = (int)window->Bounds.Width;
 	screenH = (int)window->Bounds.Height;

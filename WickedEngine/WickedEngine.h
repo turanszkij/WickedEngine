@@ -73,15 +73,7 @@
 #pragma comment(lib,"WickedEngine_UWP.lib")
 #else
 #pragma comment(lib,"WickedEngine_Windows.lib")
-#pragma comment(lib,"ws2_32.lib")
-#pragma comment(lib,"winmm.lib")
-#pragma comment(lib,"pdh.lib")
 #endif // WINSTORE_SUPPORT
-
-#pragma comment(lib,"d3d11.lib")
-#pragma comment(lib,"Dxgi.lib")
-#pragma comment(lib,"comctl32.lib")
-#pragma comment(lib,"dxguid.lib")
 
 #endif // _WIN32
 

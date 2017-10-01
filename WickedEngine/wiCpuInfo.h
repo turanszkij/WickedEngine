@@ -3,6 +3,7 @@
 
 #ifndef WINSTORE_SUPPORT
 #include <Pdh.h>
+#pragma comment(lib,"pdh.lib")
 #endif
 
 class wiCpuInfo

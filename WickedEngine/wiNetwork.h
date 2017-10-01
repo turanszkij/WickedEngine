@@ -8,7 +8,9 @@
 #include <string>
 #include <sstream>
 
-
+#ifndef WINSTORE_SUPPORT
+#pragma comment(lib,"ws2_32.lib")
+#endif
 
 class wiNetwork
 {

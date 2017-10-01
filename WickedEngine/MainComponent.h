@@ -26,7 +26,8 @@ public:
 	int screenW, screenH;
 	bool fullscreen;
 
-	void run();
+	// Runs the main engine loop
+	void Run();
 
 	void activateComponent(RenderableComponent* component, int fadeFrames = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
 	RenderableComponent* getActiveComponent(){ return activeComponent; }
@@ -40,6 +41,7 @@ public:
 	int		getTargetFrameRate(){ return targetFrameRate; }
 	void	setApplicationControlLostThreshold(int value){ applicationControlLostThreshold = value; }
 
+	// Initializes all engine components
 	virtual void Initialize();
 	virtual void Update(float dt);
 	virtual void FixedUpdate();
@@ -50,9 +52,9 @@ public:
 
 #ifndef WINSTORE_SUPPORT
 	HINSTANCE instance;
-	bool setWindow(wiWindowRegistration::window_type window, HINSTANCE hInst);
+	bool SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst);
 #else
-	bool setWindow(wiWindowRegistration::window_type window);
+	bool SetWindow(wiWindowRegistration::window_type window);
 #endif
 
 

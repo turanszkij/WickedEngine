@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Editor.h"
-#include "wiInitializer.h"
 #include "wiRenderer.h"
 #include "MaterialWindow.h"
 #include "PostprocessWindow.h"
@@ -39,7 +38,9 @@ Editor::~Editor()
 
 void Editor::Initialize()
 {
-
+	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
+	// otherwise, shaders will be loaded from the working directory
+	wiRenderer::SHADERPATH = "../WickedEngine/shaders/"; 
 	MainComponent::Initialize();
 
 	infoDisplay.active = true;
@@ -47,16 +48,6 @@ void Editor::Initialize()
 	infoDisplay.fpsinfo = true;
 	infoDisplay.cpuinfo = false;
 	infoDisplay.resolution = true;
-
-	wiRenderer::SHADERPATH = "../WickedEngine/shaders/";
-
-	wiInitializer::InitializeComponents(
-		wiInitializer::WICKEDENGINE_INITIALIZE_RENDERER
-		| wiInitializer::WICKEDENGINE_INITIALIZE_IMAGE
-		| wiInitializer::WICKEDENGINE_INITIALIZE_FONT
-		| wiInitializer::WICKEDENGINE_INITIALIZE_SOUND
-		| wiInitializer::WICKEDENGINE_INITIALIZE_MISC
-		);
 
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::EMITTERSENABLED = true;

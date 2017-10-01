@@ -14,41 +14,25 @@ using namespace std;
 namespace wiInitializer
 {
 
-	void InitializeComponents(int requestedFeautures)
+	void InitializeComponents()
 	{
-		if (requestedFeautures & WICKEDENGINE_INITIALIZE_MISC)
-		{
-			wiBackLog::Initialize();
-			wiFrameRate::Initialize();
-			wiCpuInfo::Initialize();
-		}
+		wiBackLog::Initialize();
+		wiFrameRate::Initialize();
+		wiCpuInfo::Initialize();
 
-		if (requestedFeautures & WICKEDENGINE_INITIALIZE_RENDERER)
-		{
-			wiRenderer::SetUpStaticComponents();
-			wiLensFlare::Initialize();
-		}
+		wiRenderer::SetUpStaticComponents();
+		wiLensFlare::Initialize();
 
-		if (requestedFeautures & WICKEDENGINE_INITIALIZE_IMAGE)
-		{
-			wiImage::Load();
-		}
+		wiImage::Load();
 
-		if (requestedFeautures & WICKEDENGINE_INITIALIZE_FONT)
-		{
-			wiFont::Initialize();
-			wiFont::SetUpStaticComponents();
-		}
+		wiFont::Initialize();
+		wiFont::SetUpStaticComponents();
 
-		if (requestedFeautures & WICKEDENGINE_INITIALIZE_SOUND)
+		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
 		{
-			if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
-			{
-				stringstream ss("");
-				ss << "Failed to Initialize Audio Device!";
-				wiHelper::messageBox(ss.str());
-			}
+			stringstream ss("");
+			ss << "Failed to Initialize Audio Device!";
+			wiHelper::messageBox(ss.str());
 		}
-
 	}
 }

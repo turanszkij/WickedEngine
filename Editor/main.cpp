@@ -66,7 +66,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			editor.run();
+			editor.Run();
 
 		}
 	}
@@ -161,7 +161,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   if (!editor.setWindow(hWnd, hInst))
+   if (!editor.SetWindow(hWnd, hInst))
 	   return false;
 
 
