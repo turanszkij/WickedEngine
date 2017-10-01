@@ -12,24 +12,23 @@
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [li]: https://opensource.org/licenses/MIT
 
-![Promo](logo/promo.png)
-
 ### Overview:
 
-Wicked Engine is an open-source game engine written in C++. For list of features, see features.txt.
-Demos are available at: https://github.com/turanszkij/WickedEngineDemos
-From now on you can easily set up a game project by using the component templates. (see the demos for examples)
-Run in Release mode for best performance. Debug mode has full debugging support but poor performance.
+Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
+
+The interface is designed to be somewhat similar to the widely popular XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers and all together project structure. However, it makes use of the C++ programming language instead of C#, which enables lower level and more performant code in the hand of experienced developers. On the other hand, the developer can also make use of the widely popular Lua scripting language for faster iteration times and more flexible code structure.
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
-[Video](https://www.youtube.com/watch?v=nNlfkrURqZQ)<br/>
-[Video of the Editor](https://www.youtube.com/watch?v=iMluDH8oaFg)<br/>
+[Features](features.txt)<br/>
 [Devblog](https://turanszkij.wordpress.com/)<br/>
+[Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
+
+![Promo](logo/promo.png)
 
 ### Platforms:
-- Windows PC Desktop (x86, x64) (validated version 0.13.0)
-- Universal Windows (PC, Phone, XBOX One) (validated version 0.13.0)
+- Windows PC Desktop (x86, x64)
+- Universal Windows (PC, Phone, XBOX One)
 
 ### Requirements:
 
@@ -39,27 +38,24 @@ Run in Release mode for best performance. Debug mode has full debugging support 
 - Windows 10 SDK
 
 
-### Usage: 
+### Getting started: 
 
-Set the following dependencies to this library in Visual Studio this way in the implementing project:
+Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. Then set the following dependencies to this library in Visual Studio this way in the implementing project:
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
 	- ./WickedEngine
 3. Linker -> General -> Additional Library Directories:
-	- Directory of your built .lib file (Debug or Release directory in the solution by default)
+	- Directory of your built .lib file (For example ./x64/Release)
 4. Also be sure to compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
-in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries.
-This will not load all the features for you however. For that, use the helper wiInitializer::InitializeComponents() which 
-will load all features of the engine. If you want to use just a subset of features, specify in the parameters of the function
-with a WICKEDENGINE_INITIALIZER enum value, or multiple values joined by the | operator.
-For further details, please check the demo project at: https://github.com/turanszkij/WickedEngineDemos.
+in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. But this will not render anything for you yet, because first you must initialize the engine. For this, you should create a main program component by deriving from MainComponent class of Wicked Engine and initialize it appropriately by calling its Initialize() and SetWindow() functions, and calling its run() function inside the main message loop. You should also activate a RenderableComponent for the rendering to begin. You can see an example for this inside the Tests and Editor projects.
 
-UWP support: define WINSTORE_SUPPORT preprocessor for the whole project
+If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 
+When everything is initialized properly, you should see a black screen. From this point, you can make an application by writing scripts in either C++ or Lua code. Please see the Tests project for such examples.
 
 ### Contents:
 
