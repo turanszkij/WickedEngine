@@ -36,6 +36,7 @@ void main(
 		output[i].pos = float4((input[i].pos.xyz - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataSize, 1);
 
 		// Project onto dominant axis:
+		[flatten]
 		if (maxi == 0)
 		{
 			output[i].pos.xyz = output[i].pos.zyx;
