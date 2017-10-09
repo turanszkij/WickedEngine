@@ -169,7 +169,7 @@ wiProfiler::wiProfiler()
 	desc.Type = GPU_QUERY_TYPE_TIMESTAMP_DISJOINT;
 	wiRenderer::GetDevice()->CreateQuery(&desc, &disjoint);
 
-	ENABLED = true;
+	ENABLED = false;
 }
 wiProfiler::~wiProfiler()
 {

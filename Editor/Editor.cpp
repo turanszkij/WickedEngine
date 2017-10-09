@@ -40,7 +40,8 @@ void Editor::Initialize()
 {
 	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
 	// otherwise, shaders will be loaded from the working directory
-	wiRenderer::SHADERPATH = "../WickedEngine/shaders/"; 
+	wiRenderer::SHADERPATH = "../WickedEngine/shaders/";
+	wiFont::FONTPATH = "../WickedEngine/fonts/"; // search for fonts elsewhere
 	MainComponent::Initialize();
 
 	infoDisplay.active = true;

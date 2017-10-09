@@ -12,7 +12,7 @@ using namespace wiGraphicsTypes;
 
 #define WHITESPACE_SIZE 3
 
-
+std::string			wiFont::FONTPATH = "fonts/";
 GPUBuffer			*wiFont::vertexBuffer = nullptr, *wiFont::indexBuffer = nullptr;
 VertexLayout		*wiFont::vertexLayout = nullptr;
 VertexShader		*wiFont::vertexShader = nullptr;
@@ -406,8 +406,8 @@ wiFont::wiFontStyle::wiFontStyle(const std::string& newName)
 	ZeroMemory(lookup, sizeof(lookup));
 
 	std::stringstream ss(""),ss1("");
-	ss<<"fonts/"<<name<<".wifont";
-	ss1<<"fonts/"<<name<<".dds";
+	ss<<FONTPATH<<name<<".wifont";
+	ss1<<FONTPATH<<name<<".dds";
 	std::ifstream file(ss.str());
 	if(file.is_open())
 	{

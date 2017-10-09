@@ -4,6 +4,7 @@
 #include "ConstantBufferMapping.h"
 #include "wiColor.h"
 
+
 static const uint16_t MAX_TEXT = 10000;
 
 // Do not alter order because it is bound to lua manually
@@ -38,6 +39,8 @@ public:
 
 class wiFont
 {
+public:
+	static std::string FONTPATH;
 protected:
 	GFX_STRUCT Vertex
 	{

@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Tests.h"
-#include "wiProfiler.h"
 
 
 Tests::Tests()
@@ -15,6 +14,7 @@ void Tests::Initialize()
 	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
 	// otherwise, shaders will be loaded from the working directory
 	wiRenderer::SHADERPATH = "../WickedEngine/shaders/";
+	wiFont::FONTPATH = "../WickedEngine/fonts/"; // search for fonts elsewhere
 	MainComponent::Initialize();
 
 	infoDisplay.active = true;
@@ -24,8 +24,6 @@ void Tests::Initialize()
 	infoDisplay.resolution = true;
 
 	activateComponent(new TestsRenderer);
-
-	wiProfiler::GetInstance().ENABLED = false;
 }
 
 

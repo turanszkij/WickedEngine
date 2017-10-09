@@ -73,7 +73,7 @@ public:
 		// text size
 		int size;
 
-		InfoDisplayer() :active(false), watermark(true), fpsinfo(true), cpuinfo(true), 
+		InfoDisplayer() :active(false), watermark(true), fpsinfo(false), cpuinfo(false), 
 			resolution(false), size(-1)
 		{}
 	};

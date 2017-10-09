@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Editor", "Editor\Editor.vcx
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tests", "Tests\Tests.vcxproj", "{3A9EA3D0-A795-46ED-A737-7164E90DC309}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Template_Windows", "Template_Windows\Template_Windows.vcxproj", "{76AA3D37-3252-4785-9334-3FC6B8CC07DE}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		WickedEngine\WickedEngine_SHARED.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
@@ -84,6 +86,16 @@ Global
 		{3A9EA3D0-A795-46ED-A737-7164E90DC309}.Release|Win32.Build.0 = Release|Win32
 		{3A9EA3D0-A795-46ED-A737-7164E90DC309}.Release|x64.ActiveCfg = Release|x64
 		{3A9EA3D0-A795-46ED-A737-7164E90DC309}.Release|x64.Build.0 = Release|x64
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Debug|ARM.ActiveCfg = Debug|Win32
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Debug|Win32.Build.0 = Debug|Win32
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Debug|x64.ActiveCfg = Debug|x64
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Debug|x64.Build.0 = Debug|x64
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Release|ARM.ActiveCfg = Release|Win32
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Release|Win32.ActiveCfg = Release|Win32
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Release|Win32.Build.0 = Release|Win32
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Release|x64.ActiveCfg = Release|x64
+		{76AA3D37-3252-4785-9334-3FC6B8CC07DE}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

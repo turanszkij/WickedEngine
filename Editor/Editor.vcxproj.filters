@@ -11,9 +11,6 @@
     <Filter Include="Code">
       <UniqueIdentifier>{314039e9-0e24-4816-b0cf-d87020800f22}</UniqueIdentifier>
     </Filter>
-    <Filter Include="fonts">
-      <UniqueIdentifier>{f08bcf7d-cb6a-426e-9615-b648dbad219a}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CameraWindow.h">
@@ -134,9 +131,6 @@
     <Image Include="images\arealight.dds">
       <Filter>images</Filter>
     </Image>
-    <Image Include="fonts\default_font.dds">
-      <Filter>fonts</Filter>
-    </Image>
     <Image Include="Editor.ico">
       <Filter>Resource Files</Filter>
     </Image>
@@ -144,9 +138,6 @@
   <ItemGroup>
     <None Include="config.ini" />
     <None Include="startup.lua" />
-    <None Include="fonts\default_font.wifont">
-      <Filter>fonts</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Editor.rc">
