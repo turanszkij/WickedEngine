@@ -1919,29 +1919,11 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		XMMATRIX viewMatrix = cam->GetView();
 
 		UINT lightCounter = 0;
-		for (Decal* decal : mainCameraCulling.culledDecals)
-		{
-			if (lightCounter == MAX_LIGHTS)
-			{
-				assert(0); // too much lights!
-				lightCounter--;
-				break;
-			}
-			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
-			lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
-			lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
-			lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
-			lightArray[lightCounter].col = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
-			lightArray[lightCounter].energy = decal->emissive;
-			lightArray[lightCounter].type = 100;
-
-			lightCounter++;
-		}
 		for (Cullable* c : culledLights)
 		{
 			if (lightCounter == MAX_LIGHTS)
 			{
-				assert(0); // too much lights!
+				assert(0); // too many lights!
 				lightCounter--;
 				break;
 			}
@@ -2005,6 +1987,25 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			lightCounter++;
 		}
+		for (Decal* decal : mainCameraCulling.culledDecals)
+		{
+			if (lightCounter == MAX_LIGHTS)
+			{
+				assert(0); // too many lights!
+				lightCounter--;
+				break;
+			}
+			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
+			lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
+			lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
+			lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
+			lightArray[lightCounter].col = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
+			lightArray[lightCounter].energy = decal->emissive;
+			lightArray[lightCounter].type = 100;
+
+			lightCounter++;
+		}
+
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
 	}
 
