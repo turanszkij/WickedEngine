@@ -102,7 +102,7 @@ void o_BitonicSort( in uint localIdxFlattened )
 			uint nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + ( 2 * nMergeSubSize - 1 ) - index_low : index_high + nMergeSubSize + index_low;
 			if( nSwapElem < numArray && index < numArray )
 			{
-				if( o_LightList[ index ] > o_LightList[ nSwapElem ] )
+				if( o_LightList[ index ] < o_LightList[ nSwapElem ] )
 				{
 					uint uTemp = o_LightList[ index ];
 					o_LightList[ index ] = o_LightList[ nSwapElem ];
@@ -136,7 +136,7 @@ void t_BitonicSort( in uint localIdxFlattened )
 			uint nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + ( 2 * nMergeSubSize - 1 ) - index_low : index_high + nMergeSubSize + index_low;
 			if( nSwapElem < numArray && index < numArray )
 			{
-				if( t_LightList[ index ] > t_LightList[ nSwapElem ] )
+				if( t_LightList[ index ] < t_LightList[ nSwapElem ] )
 				{
 					uint uTemp = t_LightList[ index ];
 					t_LightList[ index ] = t_LightList[ nSwapElem ];

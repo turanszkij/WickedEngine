@@ -172,6 +172,10 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	specular = 0;
 	diffuse = 0;
 
+#ifndef DISABLE_DECALS
+	float4 decalAccumulation = 0;
+#endif
+
 	[loop]
 	for (uint i = 0; i < lightCount; i++)
 	{
@@ -220,18 +224,26 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #ifndef DISABLE_DECALS
 		case 100/*DECAL*/:
 		{
+			[branch]
+			if (decalAccumulation.a > (1.0f - 1.0f / 255.0f))
+			{
+				break; // early out if decal accumulation is already at maximum
+			}
 			float3 clipSpace = mul(float4(P, 1), light.shadowMat[0]).xyz;
 			float3 projTex = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 			[branch]
 			if ((saturate(projTex.x) == projTex.x) && (saturate(projTex.y) == projTex.y) && (saturate(projTex.z) == projTex.z))
 			{ 
-				// can't do mipmapping here because of the variable length loop :(
+				// todo: hack in some fake mipmapping here:
 				float4 decalColor = texture_decalatlas.SampleLevel(sampler_linear_clamp, projTex.xy*light.texMulAdd.xy + light.texMulAdd.zw, 0);
 				float edgeBlend = 1 - pow(saturate(abs(clipSpace.z)), 8); // blend out if close to cube Z
 				decalColor.a *= edgeBlend;
 				decalColor *= light.color;
-				albedo.rgb = lerp(albedo.rgb, decalColor.rgb, decalColor.a);
 				result.specular = decalColor.rgb * light.energy * edgeBlend; // apply emissive (light.energy = decal.emissive)
+				// perform manual blending of decals:
+				// they are sorted top-to-bottom, but blending is performed bottom-to-top
+				decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
+				decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
 			}
 		}
 		break;
@@ -242,6 +254,10 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		diffuse += max(0.0f, result.diffuse);
 		specular += max(0.0f, result.specular);
 	}
+
+#ifndef DISABLE_DECALS
+	albedo.rgb = lerp(albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
+#endif
 }
 
 
