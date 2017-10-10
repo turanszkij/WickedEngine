@@ -65,6 +65,7 @@ When everything is initialized properly, you should see a black screen. From thi
 - ./WickedEngine/						- Wicked Engine Library project
 - ./Editor/								- Editor project
 - ./Tests/								- Testing framework project
+- ./Template_Windows					- Template project for Windows applications
 - ./WickedEngine.sln 					- Visual Studio Solution
 - ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene
 
