@@ -646,7 +646,7 @@ namespace wiRenderer_BindLua
 
 	int ClearWorld(lua_State* L)
 	{
-		wiRenderer::CleanUpStaticTemp();
+		wiRenderer::ClearWorld();
 		return 0;
 	}
 	int ReloadShaders(lua_State* L)

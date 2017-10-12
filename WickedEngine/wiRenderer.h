@@ -516,7 +516,7 @@ public:
 	
 	static std::deque<wiSprite*> images;
 	static std::deque<wiSprite*> waterRipples;
-	static void CleanUpStaticTemp();
+	static void ClearWorld();
 
 
 	static wiRenderTarget normalMapRT, imagesRT, imagesRTAdd;

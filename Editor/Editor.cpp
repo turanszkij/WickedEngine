@@ -65,6 +65,8 @@ void Editor::Initialize()
 	//wiFont::addFontStyle("basic");
 	wiInputManager::GetInstance()->addXInput(new wiXInput());
 
+	wiProfiler::GetInstance().ENABLED = true;
+
 	renderComponent = new EditorComponent;
 	renderComponent->Initialize();
 	loader = new EditorLoadingScreen;
@@ -785,7 +787,7 @@ void EditorComponent::Load()
 	clearButton->OnClick([&](wiEventArgs args) {
 		selected.clear();
 		EndTranslate();
-		wiRenderer::CleanUpStaticTemp();
+		wiRenderer::ClearWorld();
 		objectWnd->SetObject(nullptr);
 		meshWnd->SetMesh(nullptr);
 		lightWnd->SetLight(nullptr);

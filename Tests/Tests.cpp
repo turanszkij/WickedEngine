@@ -52,7 +52,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Lua Script");
 	testSelector->OnSelect([=](wiEventArgs args) {
 
-		wiRenderer::CleanUpStaticTemp();
+		wiRenderer::ClearWorld();
 		this->clearSprites();
 		wiLua::GetGlobal()->KillProcesses();
 

@@ -335,7 +335,7 @@ void wiRenderer::CleanUpStatic()
 
 	SAFE_DELETE(graphicsDevice);
 }
-void wiRenderer::CleanUpStaticTemp()
+void wiRenderer::ClearWorld()
 {
 	emitterSystems.clear();
 	
