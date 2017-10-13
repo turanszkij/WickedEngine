@@ -1,4 +1,3 @@
-#include "cube.hlsli"
 #include "globals.hlsli"
 
 struct VertexToPixel{
@@ -10,7 +9,7 @@ VertexToPixel main( uint vid : SV_VERTEXID )
 {
 	VertexToPixel Out = (VertexToPixel)0;
 		
-	float4 pos = CUBE[vid];
+	float4 pos = float4(CreateCube(vid) * 2 - 1, 1);
 	Out.pos = Out.pos2D = mul(pos, g_xTransform);
 
 	return Out;

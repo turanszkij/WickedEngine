@@ -1232,12 +1232,29 @@ void wiRenderer::SetUpStates()
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_LIGHT]);
 
 
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthEnable = true;
+	dsd.StencilEnable = true;
+	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.StencilReadMask = 0xFF;
+	dsd.StencilWriteMask = 0x00;
+	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DECAL]);
+
+
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
 	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
 	dsd.StencilReadMask = 0xFF;
-	dsd.StencilWriteMask = 0xFF;
+	dsd.StencilWriteMask = 0x00;
 	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
@@ -1294,6 +1311,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable=false;
+	bd.IndependentBlendEnable = false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_OPAQUE]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
@@ -1304,7 +1322,8 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.AlphaToCoverageEnable=false;
+	bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_TRANSPARENT]);
 
 
@@ -1313,8 +1332,8 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.IndependentBlendEnable=false,
 	bd.AlphaToCoverageEnable=false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_ADDITIVE]);
@@ -1332,8 +1351,8 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
 	bd.IndependentBlendEnable=false,
 	bd.AlphaToCoverageEnable=false;
@@ -1348,7 +1367,23 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = false;
 	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_INVERSE]);
+
+
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE;
+	bd.RenderTarget[1] = bd.RenderTarget[0];
+	bd.RenderTarget[1].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN;
+	bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = true;
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_DECAL]);
 }
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -1697,7 +1732,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 				// We sort lights so that closer lights will have more priority for shadows!
 				spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
 
-				int i = (int)x.second.culledDecals.size(); // Index the light array after the decals
+				int i = 0;
 				int shadowCounter_2D = 0;
 				int shadowCounter_Cube = 0;
 				for (auto& c : culling.culledLights)
@@ -4537,11 +4572,11 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 		device->BindVS(vertexShaders[VSTYPE_DECAL], threadID);
 		device->BindPS(pixelShaders[PSTYPE_DECAL], threadID);
-		device->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-		device->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-		device->BindDepthStencilState(depthStencils[DSSTYPE_STENCILREAD_MATCH], STENCILREF::STENCILREF_DEFAULT, threadID);
+		device->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+		device->BindBlendState(blendStates[BSTYPE_DECAL], threadID);
+		device->BindDepthStencilState(depthStencils[DSSTYPE_DECAL], STENCILREF::STENCILREF_DEFAULT, threadID);
 		device->BindVertexLayout(nullptr, threadID);
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
 		for (Decal* decal : model->decals) 
 		{
@@ -4569,7 +4604,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 				dcbps.front = decal->front;
 				device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
 
-				device->Draw(36, threadID);
+				device->Draw(14, threadID);
 
 			}
 
@@ -4745,8 +4780,8 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 		// Tell the voxelizer about the lights in the light array (exclude decals)
 		MiscCB cb;
-		cb.mColor.x = (float)culling.culledDecals.size();
-		cb.mColor.y = cb.mColor.x + (float)culling.culledLight_count;
+		cb.mColor.x = 0;
+		cb.mColor.y = (float)culling.culledLight_count;
 		// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
 		// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
 		cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
