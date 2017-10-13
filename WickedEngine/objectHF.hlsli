@@ -108,7 +108,7 @@ inline void SpecularAA(in float3 N, inout float roughness)
 
 inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, in float3 V, in float roughness, in float3 f0)
 {
-	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz*0.1f, 0);
+	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz*g_xMat_normalMapStrength, 0);
 	float f90 = saturate(50.0 * dot(f0, 0.33));
 	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
 	return colorReflection.rgb * F;
@@ -295,8 +295,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #define OBJECT_PS_MAKE																								\
 	OBJECT_PS_MAKE_COMMON																							\
 	float lineardepth = input.pos2D.w;																				\
-	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;\
-	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w / 2.0f + 0.5f;								\
+	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;\
+	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w * 0.5f + 0.5f;								\
 	float2 velocity = ((input.pos2DPrev.xy/input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy/input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
 #define OBJECT_PS_COMPUTETANGENTSPACE										\
