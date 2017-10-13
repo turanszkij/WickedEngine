@@ -45,16 +45,16 @@ groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 #define MAX_LIGHTS_PER_TILE 1024
 
 // Opaque geometry light lists.
-groupshared uint o_LightCount;
-groupshared uint o_LightIndexStartOffset;
+groupshared uint o_LightCount = 0;
+groupshared uint o_LightIndexStartOffset = 0;
 groupshared uint o_LightList[MAX_LIGHTS_PER_TILE];
-groupshared bool o_needSorting;		// If there are decals in the tile, the list needs to be sorted
+groupshared uint o_decalCount = 0;
 
 // Transparent geometry light lists.
-groupshared uint t_LightCount;
-groupshared uint t_LightIndexStartOffset;
+groupshared uint t_LightCount = 0;
+groupshared uint t_LightIndexStartOffset = 0;
 groupshared uint t_LightList[MAX_LIGHTS_PER_TILE];
-groupshared bool t_needSorting;		// If there are decals in the tile, the list needs to be sorted
+groupshared uint t_decalCount = 0;
 
 // Add the light to the visible light list for opaque geometry.
 void o_AppendLight(uint lightIndex)
@@ -346,7 +346,7 @@ void main(ComputeShaderInput IN)
 			Sphere sphere = { light.positionVS.xyz, light.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				t_needSorting = true; // bool operations are atomic if I am not mistaken
+				InterlockedAdd(t_decalCount, 1);
 				t_AppendLight(i);
 
 				// unit AABB: 
@@ -364,7 +364,7 @@ void main(ComputeShaderInput IN)
 					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
-						o_needSorting = true; // bool operations are atomic if I am not mistaken
+						InterlockedAdd(o_decalCount, 1);
 						o_AppendLight(i);
 					}
 				}
@@ -383,28 +383,24 @@ void main(ComputeShaderInput IN)
 #ifndef DEFERRED
 	if (IN.groupIndex == 0)
 	{
-		// Update light grid for opaque geometry.
-		//InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
 		LightIndexCounter.InterlockedAdd(0, o_LightCount, o_LightIndexStartOffset);
-		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
+		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, (o_LightCount & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
 	}
 	else 
 #endif
 		if(IN.groupIndex == 1)
 	{
-		// Update light grid for transparent geometry.
-		//InterlockedAdd(t_LightIndexCounter[0], t_LightCount, t_LightIndexStartOffset);
 		LightIndexCounter.InterlockedAdd(4, t_LightCount, t_LightIndexStartOffset);
-		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, t_LightCount);
+		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, (t_LightCount & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
 	}
 
 #ifndef DEFERRED
 	// Decals need sorting!
-	if (o_needSorting)
+	if (o_decalCount > 0)
 	{
 		o_BitonicSort(IN.groupIndex);
 	}
-	if (t_needSorting)
+	if (t_decalCount > 0)
 	{
 		t_BitonicSort(IN.groupIndex);
 	}

@@ -167,13 +167,15 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 {
 	uint2 tileIndex = uint2(floor(pixel / BLOCK_SIZE));
 	uint startOffset = LightGrid[tileIndex].x;
-	uint lightCount = LightGrid[tileIndex].y;
+	uint lightCount_DecalCount = LightGrid[tileIndex].y;
+	uint lightCount = lightCount_DecalCount & 0x00FFFFFF;
 
 	specular = 0;
 	diffuse = 0;
 
 #ifndef DISABLE_DECALS
 	float4 decalAccumulation = 0;
+	uint decalCount = (lightCount_DecalCount & 0xFF000000) >> 24;
 #endif
 
 	[loop]
@@ -224,11 +226,6 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #ifndef DISABLE_DECALS
 		case 100/*DECAL*/:
 		{
-			[branch]
-			if (decalAccumulation.a > (1.0f - 1.0f / 255.0f))
-			{
-				break; // early out if decal accumulation is already at maximum
-			}
 			float3 clipSpace = mul(float4(P, 1), light.shadowMat[0]).xyz;
 			float3 projTex = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 			[branch]
@@ -244,6 +241,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 				// they are sorted top-to-bottom, but blending is performed bottom-to-top
 				decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
 				decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+				// if the accumulation reached 1, we skip the rest of the decals:
+				i = decalAccumulation.a < 1 ? i : decalCount - 1;
 			}
 		}
 		break;
