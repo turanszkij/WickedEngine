@@ -2030,6 +2030,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				lightCounter--;
 				break;
 			}
+			lightArray[lightCounter].posWS = decal->translation;
 			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
 			lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
 			lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
@@ -5313,7 +5314,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 					ZeroMemory(&desc, sizeof(desc));
 					desc.Width = (UINT)bins[0].size.w;
 					desc.Height = (UINT)bins[0].size.h;
-					desc.MipLevels = 1;
+					desc.MipLevels = 6;
 					desc.ArraySize = 1;
 					desc.Format = FORMAT_B8G8R8A8_UNORM; // png decals are loaded into this format! todo: DXT!
 					desc.SampleDesc.Count = 1;
@@ -5325,9 +5326,15 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 					device->CreateTexture2D(&desc, nullptr, &atlasTexture);
 
-					for (auto& it : storedTextures)
+					for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
 					{
-						device->CopyTexture2D_Region(atlasTexture, 0, it.second.x, it.second.y, it.first, 0, threadID);
+						for (auto& it : storedTextures)
+						{
+							if (mip < it.first->GetDesc().MipLevels)
+							{
+								device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
+							}
+						}
 					}
 				}
 				else

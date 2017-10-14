@@ -176,6 +176,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #ifndef DISABLE_DECALS
 	float4 decalAccumulation = 0;
 	uint decalCount = (lightCount_DecalCount & 0xFF000000) >> 24;
+	float3 P_dx = ddx_coarse(P);
+	float3 P_dy = ddy_coarse(P);
 #endif
 
 	[loop]
@@ -226,13 +228,16 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #ifndef DISABLE_DECALS
 		case 100/*DECAL*/:
 		{
-			float3 clipSpace = mul(float4(P, 1), light.shadowMat[0]).xyz;
-			float3 projTex = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+			float4x4 decalProjection = light.shadowMat[0];
+			float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
+			float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 			[branch]
-			if ((saturate(projTex.x) == projTex.x) && (saturate(projTex.y) == projTex.y) && (saturate(projTex.z) == projTex.z))
-			{ 
-				// todo: hack in some fake mipmapping here:
-				float4 decalColor = texture_decalatlas.SampleLevel(sampler_linear_clamp, projTex.xy*light.texMulAdd.xy + light.texMulAdd.zw, 0);
+			if (!any(uvw - saturate(uvw)))
+			{
+				// mipmapping needs to be performed by hand:
+				float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * light.texMulAdd.xy;
+				float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * light.texMulAdd.xy;
+				float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*light.texMulAdd.xy + light.texMulAdd.zw, decalDX, decalDY);
 				float edgeBlend = 1 - pow(saturate(abs(clipSpace.z)), 8); // blend out if close to cube Z
 				decalColor.a *= edgeBlend;
 				decalColor *= light.color;
