@@ -4894,11 +4894,11 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	// Calc dispatchparams
 	DispatchParamsCB dispatchParams;
 	{
-		dispatchParams.numThreads[0] = (UINT)ceilf(_width / (float)BLOCK_SIZE);
-		dispatchParams.numThreads[1] = (UINT)ceilf(_height / (float)BLOCK_SIZE);
+		dispatchParams.numThreads[0] = (UINT)ceilf(_width / (float)TILED_CULLING_BLOCKSIZE);
+		dispatchParams.numThreads[1] = (UINT)ceilf(_height / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.numThreads[2] = 1;
-		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)BLOCK_SIZE);
-		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)BLOCK_SIZE);
+		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)TILED_CULLING_BLOCKSIZE);
+		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.numThreadGroups[2] = 1;
 		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count + (UINT)frameCullings[getCamera()].culledDecals.size(); // light count (forward_list does not have size())
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);

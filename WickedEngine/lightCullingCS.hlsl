@@ -168,7 +168,7 @@ inline uint ContructLightMask(in float depthRangeMin, in float depthRangeRecip, 
 	return uLightMask;
 }
 
-[numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
+[numthreads(TILED_CULLING_BLOCKSIZE, TILED_CULLING_BLOCKSIZE, 1)]
 void main(ComputeShaderInput IN)
 {
 	// Calculate min & max depth in threadgroup / tile.
@@ -208,22 +208,22 @@ void main(ComputeShaderInput IN)
 		float3 viewSpace[8];
 
 		// Top left point, near
-		viewSpace[0] = ScreenToView(float4(IN.groupID.xy * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[0] = ScreenToView(float4(IN.groupID.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 		// Top right point, near
-		viewSpace[1] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[1] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 		// Bottom left point, near
-		viewSpace[2] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[2] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 		// Bottom right point, near
-		viewSpace[3] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * BLOCK_SIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[3] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 
 		// Top left point, far
-		viewSpace[4] = ScreenToView(float4(IN.groupID.xy * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[4] = ScreenToView(float4(IN.groupID.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 		// Top right point, far
-		viewSpace[5] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[5] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 		// Bottom left point, far
-		viewSpace[6] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[6] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 		// Bottom right point, far
-		viewSpace[7] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * BLOCK_SIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[7] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 
 		float3 minAABB = 10000000;
 		float3 maxAABB = -10000000;
@@ -266,7 +266,7 @@ void main(ComputeShaderInput IN)
 
 	// Cull lights
 	// Each thread in a group will cull 1 light until all lights have been culled.
-	for (uint i = IN.groupIndex; i < lightCount; i += BLOCK_SIZE * BLOCK_SIZE)
+	for (uint i = IN.groupIndex; i < lightCount; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
 		LightArrayType light = Lights[i];
 
@@ -411,13 +411,13 @@ void main(ComputeShaderInput IN)
 	// Now update the light index list (all threads).
 #ifndef DEFERRED
 	// For opaque goemetry.
-	for (i = IN.groupIndex; i < o_ArrayLength; i += BLOCK_SIZE * BLOCK_SIZE)
+	for (i = IN.groupIndex; i < o_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
 		o_LightIndexList[o_ArrayIndexStartOffset + i] = o_Array[i];
 	}
 #endif
 	// For transparent geometry.
-	for (i = IN.groupIndex; i < t_ArrayLength; i += BLOCK_SIZE * BLOCK_SIZE)
+	for (i = IN.groupIndex; i < t_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
 		t_LightIndexList[t_ArrayIndexStartOffset + i] = t_Array[i];
 	}

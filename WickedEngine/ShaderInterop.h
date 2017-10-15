@@ -2,7 +2,7 @@
 #define _WICKEDENGINE_SHADERINTEROP_H_
 
 // Tiled rendering params:
-#define BLOCK_SIZE	16
+#define TILED_CULLING_BLOCKSIZE	16
 #define MAX_LIGHTS	1024
 
 

@@ -4,7 +4,7 @@
 // View space frustums for the grid cells.
 RWSTRUCTUREDBUFFER(out_Frustums, Frustum, UAVSLOT_TILEFRUSTUMS);
 
-[numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
+[numthreads(TILED_CULLING_BLOCKSIZE, TILED_CULLING_BLOCKSIZE, 1)]
 void main(ComputeShaderInput IN)
 {
 	// View space eye position is always at the origin.
@@ -14,13 +14,13 @@ void main(ComputeShaderInput IN)
 	// frustum vertices.
 	float4 screenSpace[4];
 	// Top left point
-	screenSpace[0] = float4(IN.dispatchThreadID.xy * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[0] = float4(IN.dispatchThreadID.xy * TILED_CULLING_BLOCKSIZE, 1.0f, 1.0f);
 	// Top right point
-	screenSpace[1] = float4(float2(IN.dispatchThreadID.x + 1, IN.dispatchThreadID.y) * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[1] = float4(float2(IN.dispatchThreadID.x + 1, IN.dispatchThreadID.y) * TILED_CULLING_BLOCKSIZE, 1.0f, 1.0f);
 	// Bottom left point
-	screenSpace[2] = float4(float2(IN.dispatchThreadID.x, IN.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[2] = float4(float2(IN.dispatchThreadID.x, IN.dispatchThreadID.y + 1) * TILED_CULLING_BLOCKSIZE, 1.0f, 1.0f);
 	// Bottom right point
-	screenSpace[3] = float4(float2(IN.dispatchThreadID.x + 1, IN.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
+	screenSpace[3] = float4(float2(IN.dispatchThreadID.x + 1, IN.dispatchThreadID.y + 1) * TILED_CULLING_BLOCKSIZE, 1.0f, 1.0f);
 
 	float3 viewSpace[4];
 	// Now convert the screen space points to view space

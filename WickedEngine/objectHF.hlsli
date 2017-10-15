@@ -165,7 +165,7 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P, in float3 f0, inout float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
-	uint2 tileIndex = uint2(floor(pixel / BLOCK_SIZE));
+	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
 	uint startOffset = LightGrid[tileIndex].x;
 	uint arrayProperties = LightGrid[tileIndex].y;
 	uint arrayLength = arrayProperties & 0x00FFFFFF; // count of every element in the tile
