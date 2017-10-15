@@ -19,7 +19,7 @@ public:
 		UINT tangent;
 	};
 private:
-	GFX_STRUCT ConstantBuffer
+	CBUFFER(ConstantBuffer, CBSLOT_OTHER_HAIRPARTICLE)
 	{
 		XMMATRIX mWorld;
 		XMFLOAT3 color; float __pad0;
@@ -27,19 +27,13 @@ private:
 		float LOD1;
 		float LOD2;
 		float __pad1;
-
-		CB_SETBINDSLOT(CBSLOT_OTHER_HAIRPARTICLE)
-
-		ALIGN_16
 	};
-	GFX_STRUCT BitonicSortConstantBuffer
+	CBUFFER(BitonicSortConstantBuffer, 0)
 	{
 		UINT iLevel;
 		UINT iLevelMask;
 		UINT iWidth;
 		UINT iHeight;
-
-		ALIGN_16
 	};
 	static wiGraphicsTypes::VertexLayout *il;
 	static wiGraphicsTypes::VertexShader *vs;

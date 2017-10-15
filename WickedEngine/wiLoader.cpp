@@ -1595,7 +1595,7 @@ void Material::CreateImpostorMaterialCB()
 	}
 }
 
-void Material::MaterialCB::Create(const Material& mat)
+void MaterialCB::Create(const Material& mat)
 {
 	baseColor = XMFLOAT4(mat.baseColor.x, mat.baseColor.y, mat.baseColor.z, mat.alpha);
 	texMulAdd = mat.texMulAdd;

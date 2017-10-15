@@ -1,5 +1,4 @@
 #include "wiRenderer.h"
-#include "ShaderInterop.h"
 #include "wiFrameRate.h"
 #include "wiHairParticle.h"
 #include "wiEmittedParticle.h"
@@ -20,7 +19,6 @@
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
-#include "ResourceMapping.h"
 #include "wiGraphicsDevice_DX11.h"
 #include "wiTranslator.h"
 #include "wiRectPacker.h"
@@ -1430,8 +1428,8 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 
-	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
-	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], STRUCTUREDBUFFER_GETBINDSLOT(LightArrayType), threadID);
+	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
+	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const std::string& get)
@@ -1839,13 +1837,13 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		for (Model* model : GetScene().models)
 		{
 			// Update material constant buffers:
-			Material::MaterialCB materialGPUData;
+			MaterialCB materialGPUData;
 			for (auto& it : model->materials)
 			{
 				Material* material = it.second;
 				materialGPUData.Create(*material);
 				// These will probably not change every time so only issue a GPU memory update if it is necessary:
-				if (memcmp(&material->gpuData, &materialGPUData, sizeof(Material::MaterialCB)) != 0)
+				if (memcmp(&material->gpuData, &materialGPUData, sizeof(MaterialCB)) != 0)
 				{
 					material->gpuData = materialGPUData;
 					GetDevice()->UpdateBuffer(&material->constantBuffer, &materialGPUData, threadID);
@@ -1883,7 +1881,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						armature->boneData[k].Create(armature->boneCollection[k]->boneRelativity);
 					}
 					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
-					GetDevice()->BindResourceCS(&armature->boneBuffer, STRUCTUREDBUFFER_GETBINDSLOT(Armature::ShaderBoneType), threadID);
+					GetDevice()->BindResourceCS(&armature->boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, threadID);
 
 					// Do the skinning
 					const GPUResource* vbs[] = {
@@ -1969,10 +1967,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				continue;
 			}
 
-			lightArray[lightCounter].posWS = l->translation;
-			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].posWS), viewMatrix));
-			lightArray[lightCounter].distance = l->enerDis.y;
-			lightArray[lightCounter].col = l->color;
+			lightArray[lightCounter].positionWS = l->translation;
+			XMStoreFloat3(&lightArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].positionWS), viewMatrix));
+			lightArray[lightCounter].range = l->enerDis.y;
+			lightArray[lightCounter].color = l->color;
 			lightArray[lightCounter].energy = l->enerDis.x;
 			lightArray[lightCounter].type = l->GetType();
 			lightArray[lightCounter].shadowBias = l->shadowBias;
@@ -2014,7 +2012,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				XMMATRIX lightMat = XMLoadFloat4x4(&l->world);
 				XMStoreFloat3(&lightArray[lightCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // left dir
 				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
-				XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
+				XMStoreFloat3(&lightArray[lightCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
 				lightArray[lightCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
 			}
 			break;
@@ -2030,12 +2028,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				lightCounter--;
 				break;
 			}
-			lightArray[lightCounter].posWS = decal->translation;
-			XMStoreFloat3(&lightArray[lightCounter].posVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
-			lightArray[lightCounter].distance = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
+			lightArray[lightCounter].positionWS = decal->translation;
+			XMStoreFloat3(&lightArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
+			lightArray[lightCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
 			lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
 			lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
-			lightArray[lightCounter].col = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
+			lightArray[lightCounter].color = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
 			lightArray[lightCounter].energy = decal->emissive;
 			lightArray[lightCounter].type = 100;
 
@@ -3967,7 +3965,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				{
 					// Bind the static impostor params once:
 					impostorRenderSetup = true;
-					device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(Material::MaterialCB), threadID);
+					device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(MaterialCB), threadID);
 					device->BindPrimitiveTopology(TRIANGLELIST, threadID);
 					device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
 					device->BindVertexLayout(vertexLayouts[realVL], threadID);
@@ -4314,7 +4312,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					boundVBType_Prev = boundVBType;
 
 					device->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), threadID);
-					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
+					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
 					UINT realStencilRef = material->GetStencilRef();
 					// todo: better
@@ -6161,7 +6159,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			{
 				GetDevice()->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), threadID);
 
-				GetDevice()->BindConstantBufferPS(&subset.material->constantBuffer, CB_GETBINDSLOT(Material::MaterialCB), threadID);
+				GetDevice()->BindConstantBufferPS(&subset.material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
 				GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 				GetDevice()->BindResourcePS(subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);

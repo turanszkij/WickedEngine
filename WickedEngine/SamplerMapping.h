@@ -30,16 +30,4 @@
 
 #define SSLOT_COUNT				(SSLOT_COUNT_PERSISTENT + SSLOT_COUNT_ONDEMAND)
 
-///////////////////////////
-// Helpers:
-///////////////////////////
-
-// Shader:
-//////////
-
-// Automatically binds samplers on the shader side:
-// Needs macro expansion
-#define SAMPLERSTATE(name, slot) SamplerState name : register(s ## slot);
-#define SAMPLERCOMPARISONSTATE(name, slot) SamplerComparisonState name : register(s ## slot);
-
 #endif // _SAMPLER_MAPPING_H_

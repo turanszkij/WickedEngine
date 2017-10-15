@@ -356,7 +356,7 @@ void main(ComputeShaderInput IN)
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				b.transform(light.shadowMat[0]); // shadowMat[0] : decal inverse box matrix!
+				b.transform(light.shadowMatrix[0]); // shadowMatrix[0] : decal inverse box matrix!
 
 				if (IntersectAABB(a, b))
 				{

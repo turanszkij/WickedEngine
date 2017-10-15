@@ -4,32 +4,6 @@
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
 
-struct LightArrayType
-{
-	float3 positionVS; // View Space!
-	float range;
-	// --
-	float4 color;
-	// --
-	float3 positionWS;
-	float energy;
-	// --
-	float3 directionVS;
-	float shadowKernel;
-	// --
-	float3 directionWS;
-	uint type;
-	// --
-	float shadowBias;
-	int shadowMap_index;
-	float coneAngle;
-	float coneAngleCos;
-	// --
-	float4 texMulAdd;
-	// --
-	float4x4 shadowMat[3];
-};
-
 TEXTURE2D(LightGrid, uint2, TEXSLOT_LIGHTGRID);
 STRUCTUREDBUFFER(LightIndexList, uint, SBSLOT_LIGHTINDEXLIST);
 STRUCTUREDBUFFER(LightArray, LightArrayType, SBSLOT_LIGHTARRAY);
@@ -90,9 +64,9 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 	{
 		// calculate shadow map texcoords:
 		float4 ShPos[3];
-		ShPos[0] = mul(float4(P, 1), light.shadowMat[0]);
-		ShPos[1] = mul(float4(P, 1), light.shadowMat[1]);
-		ShPos[2] = mul(float4(P, 1), light.shadowMat[2]);
+		ShPos[0] = mul(float4(P, 1), light.shadowMatrix[0]);
+		ShPos[1] = mul(float4(P, 1), light.shadowMatrix[1]);
+		ShPos[2] = mul(float4(P, 1), light.shadowMatrix[2]);
 		ShPos[0].xyz /= ShPos[0].w;
 		ShPos[1].xyz /= ShPos[1].w;
 		ShPos[2].xyz /= ShPos[2].w;
@@ -212,7 +186,7 @@ inline LightingResult SpotLight(in LightArrayType light, in float3 N, in float3 
 			[branch]
 			if (light.shadowMap_index >= 0)
 			{
-				float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+				float4 ShPos = mul(float4(P, 1), light.shadowMatrix[0]);
 				ShPos.xyz /= ShPos.w;
 				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]

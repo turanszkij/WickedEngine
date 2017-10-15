@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
-#include "ConstantBufferMapping.h"
+#include "ShaderInterop.h"
 
 class wiImageEffects;
 enum BLENDMODE;
@@ -11,7 +11,7 @@ class wiImage
 private:
 	//static mutex MUTEX;
 protected:
-	GFX_STRUCT ImageCB
+	CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 	{
 		XMMATRIX	mTransform;
 		XMFLOAT4	mTexMulAdd;
@@ -28,19 +28,11 @@ protected:
 		float		pad0;
 		float		pad1;
 		float		pad2;
-
-		CB_SETBINDSLOT(CBSLOT_IMAGE_IMAGE)
-
-		ALIGN_16
 	};
-	GFX_STRUCT PostProcessCB
+	CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
 	{
 		float params0[4];
 		float params1[4];
-
-		CB_SETBINDSLOT(CBSLOT_IMAGE_POSTPROCESS)
-
-		ALIGN_16
 	};
 	
 	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg, *blendStateDisable;

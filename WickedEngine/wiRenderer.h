@@ -1,10 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
+#include "ShaderInterop.h"
 #include "wiEnums.h"
 #include "wiGraphicsAPI.h"
-#include "SamplerMapping.h"
-#include "ConstantBufferMapping.h"
-#include "ResourceMapping.h"
 #include "wiSPTree.h"
 #include "wiWindowRegistration.h"
 
@@ -90,7 +88,7 @@ public:
 
 	// Constant Buffers:
 	// Persistent buffers:
-	GFX_STRUCT WorldCB
+	CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	{
 		XMFLOAT2 mScreenWidthHeight;
 		XMFLOAT2 mInternalResolution;
@@ -106,12 +104,8 @@ public:
 		float mVoxelRadianceDataFalloff;
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		BOOL mAdvancedRefractions;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_WORLD)
-
-		ALIGN_16
 	};
-	GFX_STRUCT FrameCB
+	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
 		float mTime;
 		float mTimePrev;
@@ -143,118 +137,57 @@ public:
 		XMFLOAT3 mUp;
 		float    mZFarP;
 		XMFLOAT4 mFrustumPlanesWS[6];
-		
-		CB_SETBINDSLOT(CBSLOT_RENDERER_FRAME)
-
-		ALIGN_16
 	};
-	GFX_STRUCT CameraCB
+	CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	{
 		XMMATRIX mVP;
 		XMMATRIX mView;
 		XMMATRIX mProj;
 		XMFLOAT3 mCamPos;				float pad0;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_CAMERA)
-
-		ALIGN_16
 	};
-	GFX_STRUCT MiscCB
+	CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 	{
 		XMMATRIX mTransform;
 		XMFLOAT4 mColor;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_MISC)
-
-		ALIGN_16
 	};
 
 	// On demand buffers:
-	GFX_STRUCT VolumeLightCB
+	CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 	{
 		XMMATRIX world;
 		XMFLOAT4 col;
 		XMFLOAT4 enerdis;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_VOLUMELIGHT)
-
-		ALIGN_16
 	};
-	GFX_STRUCT DecalCB
+	CBUFFER(DecalCB, CBSLOT_RENDERER_DECAL)
 	{
 		XMMATRIX mDecalVP;
 		int hasTexNor;
 		XMFLOAT3 eye;
 		float opacity;
 		XMFLOAT3 front;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_DECAL)
-
-		ALIGN_16
 	};
-	GFX_STRUCT CubeMapRenderCB
+	CBUFFER(CubeMapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 	{
 		XMMATRIX mViewProjection[6];
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_CUBEMAPRENDER)
-
-		ALIGN_16
 	};
-	GFX_STRUCT APICB
+	CBUFFER(APICB, CBSLOT_API)
 	{
 		XMFLOAT4 clipPlane;
 		float	alphaRef;
 		float	pad[3];
 
 		APICB(const XMFLOAT4& clipPlane = XMFLOAT4(0, 0, 0, 0), float alphaRef = 0.75f) :clipPlane(clipPlane), alphaRef(alphaRef) {}
-
-		CB_SETBINDSLOT(CBSLOT_API)
-
-		ALIGN_16
 	};
-	GFX_STRUCT TessellationCB
+	CBUFFER(TessellationCB, CBSLOT_RENDERER_TESSELLATION)
 	{
 		XMFLOAT4 tessellationFactors;
-		
-		CB_SETBINDSLOT(CBSLOT_RENDERER_TESSELLATION)
-
-		ALIGN_16
 	};
-	GFX_STRUCT DispatchParamsCB
+	CBUFFER(DispatchParamsCB, CBSLOT_RENDERER_DISPATCHPARAMS)
 	{
 		UINT numThreadGroups[3];	
 		UINT value0;
 		UINT numThreads[3];
 		UINT value1;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_DISPATCHPARAMS)
-
-		ALIGN_16
-	};
-
-	// Resource Buffers:
-
-	GFX_STRUCT LightArrayType
-	{
-		XMFLOAT3 posVS;
-		float distance;
-		XMFLOAT4 col;
-		XMFLOAT3 posWS;
-		float energy;
-		XMFLOAT3 directionVS;
-		float shadowKernel;
-		XMFLOAT3 directionWS;
-		UINT type;
-		float shadowBias;
-		int shadowMap_index;
-		float coneAngle;
-		float coneAngleCos;
-		XMFLOAT4 texMulAdd;
-		XMMATRIX shadowMatrix[3];
-
-		STRUCTUREDBUFFER_SETBINDSLOT(SBSLOT_LIGHTARRAY)
-
-		ALIGN_16
 	};
 
 protected:

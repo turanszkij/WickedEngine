@@ -1,6 +1,6 @@
 #pragma once
 #include "wiParticle.h"
-#include "ConstantBufferMapping.h"
+#include "ShaderInterop.h"
 #include "wiIntersectables.h"
 
 #include <set>
@@ -45,15 +45,11 @@ private:
 	};
 	std::deque<Point> points;
 
-	GFX_STRUCT ConstantBuffer
+	CBUFFER(ConstantBuffer, CBSLOT_OTHER_EMITTEDPARTICLE)
 	{
 		XMFLOAT2	mAdd;
 		float		mMotionBlurAmount;
 		float		padding;
-
-		CB_SETBINDSLOT(CBSLOT_OTHER_EMITTEDPARTICLE)
-
-		ALIGN_16
 	};
 	wiGraphicsTypes::GPUBuffer		   *vertexBuffer;
 	static wiGraphicsTypes::VertexLayout   *vertexLayout;

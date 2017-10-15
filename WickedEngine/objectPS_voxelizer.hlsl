@@ -41,7 +41,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 				[branch]
 				if (light.shadowMap_index >= 0)
 				{
-					float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+					float4 ShPos = mul(float4(P, 1), light.shadowMatrix[0]);
 					ShPos.xyz /= ShPos.w;
 					float3 ShTex = ShPos.xyz*float3(1, -1, 1) / 2.0f + 0.5f;
 
@@ -103,7 +103,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 						[branch]
 						if (light.shadowMap_index >= 0)
 						{
-							float4 ShPos = mul(float4(P, 1), light.shadowMat[0]);
+							float4 ShPos = mul(float4(P, 1), light.shadowMatrix[0]);
 							ShPos.xyz /= ShPos.w;
 							float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 							[branch]

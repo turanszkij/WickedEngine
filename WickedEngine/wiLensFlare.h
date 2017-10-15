@@ -2,7 +2,7 @@
 #define LENSFLARE
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
-#include "ConstantBufferMapping.h"
+#include "ShaderInterop.h"
 
 class wiLensFlare
 {
@@ -16,14 +16,10 @@ private:
 	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
 	static wiGraphicsTypes::BlendState			*blendState;
 
-	GFX_STRUCT ConstantBuffer
+	CBUFFER(ConstantBuffer, CBSLOT_OTHER_LENSFLARE)
 	{
 		XMVECTOR mSunPos;
 		XMFLOAT4 mScreen;
-
-		CB_SETBINDSLOT(CBSLOT_OTHER_LENSFLARE)
-
-		ALIGN_16
 	};
 
 public:

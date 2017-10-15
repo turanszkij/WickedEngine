@@ -1,7 +1,7 @@
 #pragma once 
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
-#include "ConstantBufferMapping.h"
+#include "ShaderInterop.h"
 #include "wiColor.h"
 
 

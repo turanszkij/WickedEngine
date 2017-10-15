@@ -33,28 +33,4 @@
 
 
 
-///////////////////////////
-// Helpers:
-///////////////////////////
-
-// CPP:
-/////////
-
-#define CONSTANTBUFFER_BINDSLOT __ConstantBuffer_BindSlot__
-// Add this to a struct to match that with a bind slot:
-#define CB_SETBINDSLOT(slot) static const int CONSTANTBUFFER_BINDSLOT = (slot);
-// Get bindslot from a struct which is matched with a bind slot:
-#define CB_GETBINDSLOT(structname) structname::CONSTANTBUFFER_BINDSLOT
-
-
-
-// Shader:
-//////////
-
-// Automatically binds constantbuffers on the shader side:
-// Needs macro expansion
-#define CBUFFER_X(name, slot) cbuffer name : register(b ## slot)
-#define CBUFFER(name, slot) CBUFFER_X(name, slot)
-
-
 #endif // _CONSTANTBUFFER_MAPPING_H_

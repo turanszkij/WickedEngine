@@ -8,8 +8,6 @@
 #include "wiFrustum.h"
 #include "wiTransform.h"
 #include "wiIntersectables.h"
-#include "ConstantBufferMapping.h"
-#include "ResourceMapping.h"
 #include "ShaderInterop.h"
 
 #include <vector>
@@ -82,6 +80,23 @@ GFX_STRUCT InstancePrev
 
 	ALIGN_16
 };
+CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
+{
+	XMFLOAT4 baseColor; // + alpha (.w)
+	XMFLOAT4 texMulAdd;
+	float roughness;
+	float reflectance;
+	float metalness;
+	float emissive;
+	float refractionIndex;
+	float subsurfaceScattering;
+	float normalMapStrength;
+	float parallaxOcclusionMapping;
+
+	MaterialCB() {};
+	MaterialCB(const Material& mat) { Create(mat); };
+	void Create(const Material& mat);
+};
 struct Material
 {
 	std::string name;
@@ -104,27 +119,6 @@ struct Material
 	std::string specularMapName;
 	wiGraphicsTypes::Texture2D* specularMap;
 
-	GFX_STRUCT MaterialCB
-	{
-		XMFLOAT4 baseColor; // + alpha (.w)
-		XMFLOAT4 texMulAdd;
-		float roughness;
-		float reflectance;
-		float metalness;
-		float emissive;
-		float refractionIndex;
-		float subsurfaceScattering;
-		float normalMapStrength;
-		float parallaxOcclusionMapping;
-
-		CB_SETBINDSLOT(CBSLOT_RENDERER_MATERIAL)
-
-		MaterialCB() {};
-		MaterialCB(const Material& mat) { Create(mat); };
-		void Create(const Material& mat);
-
-		ALIGN_16
-	};
 	MaterialCB gpuData;
 	wiGraphicsTypes::GPUBuffer constantBuffer;
 	static wiGraphicsTypes::GPUBuffer* constantBuffer_Impostor;
@@ -728,8 +722,6 @@ public:
 			pose1 = XMFLOAT4A(matIn._12, matIn._22, matIn._32, matIn._42);
 			pose2 = XMFLOAT4A(matIn._13, matIn._23, matIn._33, matIn._43);
 		}
-
-		STRUCTUREDBUFFER_SETBINDSLOT(SKINNINGSLOT_IN_BONEBUFFER)
 
 		ALIGN_16
 	};

@@ -189,7 +189,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	{
 		LightArrayType decal = LightArray[LightIndexList[startOffset + iterator]];
 
-		float4x4 decalProjection = decal.shadowMat[0];
+		float4x4 decalProjection = decal.shadowMatrix[0];
 		float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
 		float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		[branch]
