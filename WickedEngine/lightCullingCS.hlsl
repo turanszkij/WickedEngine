@@ -45,25 +45,25 @@ groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 #define MAX_LIGHTS_PER_TILE 1024
 
 // Opaque geometry light lists.
-groupshared uint o_LightCount = 0;
-groupshared uint o_LightIndexStartOffset = 0;
-groupshared uint o_LightList[MAX_LIGHTS_PER_TILE];
+groupshared uint o_ArrayLength = 0;
+groupshared uint o_ArrayIndexStartOffset = 0;
+groupshared uint o_Array[MAX_LIGHTS_PER_TILE];
 groupshared uint o_decalCount = 0;
 
 // Transparent geometry light lists.
-groupshared uint t_LightCount = 0;
-groupshared uint t_LightIndexStartOffset = 0;
-groupshared uint t_LightList[MAX_LIGHTS_PER_TILE];
+groupshared uint t_ArrayLength = 0;
+groupshared uint t_ArrayIndexStartOffset = 0;
+groupshared uint t_Array[MAX_LIGHTS_PER_TILE];
 groupshared uint t_decalCount = 0;
 
 // Add the light to the visible light list for opaque geometry.
 void o_AppendLight(uint lightIndex)
 {
 	uint index; // Index into the visible lights array.
-	InterlockedAdd(o_LightCount, 1, index);
+	InterlockedAdd(o_ArrayLength, 1, index);
 	if (index < MAX_LIGHTS_PER_TILE)
 	{
-		o_LightList[index] = lightIndex;
+		o_Array[index] = lightIndex;
 	}
 }
 
@@ -71,17 +71,17 @@ void o_AppendLight(uint lightIndex)
 void t_AppendLight(uint lightIndex)
 {
 	uint index; // Index into the visible lights array.
-	InterlockedAdd(t_LightCount, 1, index);
+	InterlockedAdd(t_ArrayLength, 1, index);
 	if (index < MAX_LIGHTS_PER_TILE)
 	{
-		t_LightList[index] = lightIndex;
+		t_Array[index] = lightIndex;
 	}
 }
 
 // Decals NEED correct order, so a sorting is required on the LDS light array!
 void o_BitonicSort( in uint localIdxFlattened )
 {
-	uint numArray = o_LightCount;
+	uint numArray = o_ArrayLength;
 
 	// Round the number of particles up to the nearest power of two
 	uint numArrayPowerOfTwo = 1;
@@ -102,11 +102,11 @@ void o_BitonicSort( in uint localIdxFlattened )
 			uint nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + ( 2 * nMergeSubSize - 1 ) - index_low : index_high + nMergeSubSize + index_low;
 			if( nSwapElem < numArray && index < numArray )
 			{
-				if( o_LightList[ index ] < o_LightList[ nSwapElem ] )
+				if( o_Array[ index ] < o_Array[ nSwapElem ] )
 				{
-					uint uTemp = o_LightList[ index ];
-					o_LightList[ index ] = o_LightList[ nSwapElem ];
-					o_LightList[ nSwapElem ] = uTemp;
+					uint uTemp = o_Array[ index ];
+					o_Array[ index ] = o_Array[ nSwapElem ];
+					o_Array[ nSwapElem ] = uTemp;
 				}
 			}
 			GroupMemoryBarrierWithGroupSync();
@@ -115,7 +115,7 @@ void o_BitonicSort( in uint localIdxFlattened )
 }
 void t_BitonicSort( in uint localIdxFlattened )
 {
-	uint numArray = t_LightCount;
+	uint numArray = t_ArrayLength;
 
 	// Round the number of particles up to the nearest power of two
 	uint numArrayPowerOfTwo = 1;
@@ -136,11 +136,11 @@ void t_BitonicSort( in uint localIdxFlattened )
 			uint nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + ( 2 * nMergeSubSize - 1 ) - index_low : index_high + nMergeSubSize + index_low;
 			if( nSwapElem < numArray && index < numArray )
 			{
-				if( t_LightList[ index ] < t_LightList[ nSwapElem ] )
+				if( t_Array[ index ] < t_Array[ nSwapElem ] )
 				{
-					uint uTemp = t_LightList[ index ];
-					t_LightList[ index ] = t_LightList[ nSwapElem ];
-					t_LightList[ nSwapElem ] = uTemp;
+					uint uTemp = t_Array[ index ];
+					t_Array[ index ] = t_Array[ nSwapElem ];
+					t_Array[ nSwapElem ] = uTemp;
 				}
 			}
 			GroupMemoryBarrierWithGroupSync();
@@ -182,8 +182,8 @@ void main(ComputeShaderInput IN)
 	{
 		uMinDepth = 0xffffffff;
 		uMaxDepth = 0;
-		o_LightCount = 0;
-		t_LightCount = 0;
+		o_ArrayLength = 0;
+		t_ArrayLength = 0;
 
 		// Get frustum from frustum buffer:
 		GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreads.x)]; // numthreads is from the frustum computation phase, so not actual number of threads here
@@ -383,15 +383,15 @@ void main(ComputeShaderInput IN)
 #ifndef DEFERRED
 	if (IN.groupIndex == 0)
 	{
-		LightIndexCounter.InterlockedAdd(0, o_LightCount, o_LightIndexStartOffset);
-		o_LightGrid[IN.groupID.xy] = uint2(o_LightIndexStartOffset, (o_LightCount & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
+		LightIndexCounter.InterlockedAdd(0, o_ArrayLength, o_ArrayIndexStartOffset);
+		o_LightGrid[IN.groupID.xy] = uint2(o_ArrayIndexStartOffset, (o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
 	}
 	else 
 #endif
 		if(IN.groupIndex == 1)
 	{
-		LightIndexCounter.InterlockedAdd(4, t_LightCount, t_LightIndexStartOffset);
-		t_LightGrid[IN.groupID.xy] = uint2(t_LightIndexStartOffset, (t_LightCount & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
+		LightIndexCounter.InterlockedAdd(4, t_ArrayLength, t_ArrayIndexStartOffset);
+		t_LightGrid[IN.groupID.xy] = uint2(t_ArrayIndexStartOffset, (t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
 	}
 
 #ifndef DEFERRED
@@ -411,15 +411,15 @@ void main(ComputeShaderInput IN)
 	// Now update the light index list (all threads).
 #ifndef DEFERRED
 	// For opaque goemetry.
-	for (i = IN.groupIndex; i < o_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
+	for (i = IN.groupIndex; i < o_ArrayLength; i += BLOCK_SIZE * BLOCK_SIZE)
 	{
-		o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
+		o_LightIndexList[o_ArrayIndexStartOffset + i] = o_Array[i];
 	}
 #endif
 	// For transparent geometry.
-	for (i = IN.groupIndex; i < t_LightCount; i += BLOCK_SIZE * BLOCK_SIZE)
+	for (i = IN.groupIndex; i < t_ArrayLength; i += BLOCK_SIZE * BLOCK_SIZE)
 	{
-		t_LightIndexList[t_LightIndexStartOffset + i] = t_LightList[i];
+		t_LightIndexList[t_ArrayIndexStartOffset + i] = t_Array[i];
 	}
 
 #ifdef DEFERRED
@@ -439,9 +439,9 @@ void main(ComputeShaderInput IN)
 	float3 V = normalize(g_xCamera_CamPos - P);
 
 	[loop]
-	for (uint li = 0; li < o_LightCount; ++li)
+	for (uint li = 0; li < o_ArrayLength; ++li)
 	{
-		uint lightIndex = o_LightList[li];
+		uint lightIndex = o_Array[li];
 		LightArrayType light = Lights[lightIndex];
 
 		LightingResult result = (LightingResult)0;
@@ -510,7 +510,7 @@ void main(ComputeShaderInput IN)
 	};
 	const uint mapTexLen = 5;
 	const uint maxHeat = 50;
-	float l = saturate((float)o_LightCount / maxHeat) * mapTexLen;
+	float l = saturate((float)o_ArrayLength / maxHeat) * mapTexLen;
 	float3 a = mapTex[floor(l)];
 	float3 b = mapTex[ceil(l)];
 	float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);

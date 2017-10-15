@@ -167,24 +167,60 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 {
 	uint2 tileIndex = uint2(floor(pixel / BLOCK_SIZE));
 	uint startOffset = LightGrid[tileIndex].x;
-	uint lightCount_DecalCount = LightGrid[tileIndex].y;
-	uint lightCount = lightCount_DecalCount & 0x00FFFFFF;
+	uint arrayProperties = LightGrid[tileIndex].y;
+	uint arrayLength = arrayProperties & 0x00FFFFFF; // count of every element in the tile
+	uint decalCount = (arrayProperties & 0xFF000000) >> 24; // count of just the decals in the tile
+	uint iterator = 0;
 
 	specular = 0;
 	diffuse = 0;
 
-#ifndef DISABLE_DECALS
+#ifdef DISABLE_DECALS
+	// decals are disabled, set the iterator to skip decals:
+	iterator = decalCount;
+#else
+	// decals are enabled, loop through them first:
 	float4 decalAccumulation = 0;
-	uint decalCount = (lightCount_DecalCount & 0xFF000000) >> 24;
 	float3 P_dx = ddx_coarse(P);
 	float3 P_dy = ddy_coarse(P);
+
+	[loop]
+	for (; iterator < decalCount; ++iterator)
+	{
+		LightArrayType decal = LightArray[LightIndexList[startOffset + iterator]];
+
+		float4x4 decalProjection = decal.shadowMat[0];
+		float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
+		float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		[branch]
+		if (!any(uvw - saturate(uvw)))
+		{
+			// mipmapping needs to be performed by hand:
+			float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+			float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+			float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
+			// blend out if close to cube Z:
+			float edgeBlend = 1 - pow(saturate(abs(clipSpace.z)), 8);
+			decalColor.a *= edgeBlend;
+			decalColor *= decal.color;
+			// apply emissive:
+			specular += max(0, decalColor.rgb * decal.energy * edgeBlend);
+			// perform manual blending of decals:
+			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+			decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
+			decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+			// if the accumulation reached 1, we skip the rest of the decals:
+			iterator = decalAccumulation.a < 1 ? iterator : decalCount - 1;
+		}
+	}
+
+	albedo.rgb = lerp(albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
 #endif
 
 	[loop]
-	for (uint i = 0; i < lightCount; i++)
+	for (; iterator < arrayLength; iterator++)
 	{
-		uint lightIndex = LightIndexList[startOffset + i];
-		LightArrayType light = LightArray[lightIndex];
+		LightArrayType light = LightArray[LightIndexList[startOffset + iterator]];
 
 		LightingResult result = (LightingResult)0;
 
@@ -225,43 +261,11 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			result = TubeLight(light, N, V, P, roughness, f0);
 		}
 		break;
-#ifndef DISABLE_DECALS
-		case 100/*DECAL*/:
-		{
-			float4x4 decalProjection = light.shadowMat[0];
-			float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
-			float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-			[branch]
-			if (!any(uvw - saturate(uvw)))
-			{
-				// mipmapping needs to be performed by hand:
-				float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * light.texMulAdd.xy;
-				float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * light.texMulAdd.xy;
-				float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*light.texMulAdd.xy + light.texMulAdd.zw, decalDX, decalDY);
-				float edgeBlend = 1 - pow(saturate(abs(clipSpace.z)), 8); // blend out if close to cube Z
-				decalColor.a *= edgeBlend;
-				decalColor *= light.color;
-				result.specular = decalColor.rgb * light.energy * edgeBlend; // apply emissive (light.energy = decal.emissive)
-				// perform manual blending of decals:
-				// they are sorted top-to-bottom, but blending is performed bottom-to-top
-				decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-				decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
-				// if the accumulation reached 1, we skip the rest of the decals:
-				i = decalAccumulation.a < 1 ? i : decalCount - 1;
-			}
-		}
-		break;
-#endif
-		default:break;
 		}
 
 		diffuse += max(0.0f, result.diffuse);
 		specular += max(0.0f, result.specular);
 	}
-
-#ifndef DISABLE_DECALS
-	albedo.rgb = lerp(albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
-#endif
 }
 
 
