@@ -4,17 +4,13 @@
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
 
-TEXTURE2D(LightGrid, uint2, TEXSLOT_LIGHTGRID);
-STRUCTUREDBUFFER(LightIndexList, uint, SBSLOT_LIGHTINDEXLIST);
-STRUCTUREDBUFFER(LightArray, LightArrayType, SBSLOT_LIGHTARRAY);
-
 inline float3 GetSunColor()
 {
-	return LightArray[g_xFrame_SunLightArrayIndex].color.rgb;
+	return EntityArray[g_xFrame_SunEntityArrayIndex].color.rgb;
 }
 inline float3 GetSunDirection()
 {
-	return LightArray[g_xFrame_SunLightArrayIndex].directionWS;
+	return EntityArray[g_xFrame_SunEntityArrayIndex].directionWS;
 }
 
 struct LightingResult
@@ -47,7 +43,7 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, f
 }
 
 
-inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult DirectionalLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result;
 	float3 lightColor = light.color.rgb*light.energy;
@@ -114,7 +110,7 @@ inline LightingResult DirectionalLight(in LightArrayType light, in float3 N, in 
 	result.specular = max(0.0f, result.specular);
 	return result;
 }
-inline LightingResult PointLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult PointLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
 
@@ -151,7 +147,7 @@ inline LightingResult PointLight(in LightArrayType light, in float3 N, in float3
 
 	return result;
 }
-inline LightingResult SpotLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult SpotLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
 
@@ -372,14 +368,14 @@ float illuminanceSphereOrDisk(float cosTheta, float sinSigmaSqr)
 	return max(illuminance, 0.0f);
 }
 
-inline float3 _GetLeft(LightArrayType light) { return light.directionWS; }
-inline float3 _GetUp(LightArrayType light) { return light.directionVS; }
-inline float3 _GetFront(LightArrayType light) { return light.positionVS; }
-inline float _GetRadius(LightArrayType light) { return light.texMulAdd.x; }
-inline float _GetWidth(LightArrayType light) { return light.texMulAdd.y; }
-inline float _GetHeight(LightArrayType light) { return light.texMulAdd.z; }
+inline float3 _GetLeft(ShaderEntityType light) { return light.directionWS; }
+inline float3 _GetUp(ShaderEntityType light) { return light.directionVS; }
+inline float3 _GetFront(ShaderEntityType light) { return light.positionVS; }
+inline float _GetRadius(ShaderEntityType light) { return light.texMulAdd.x; }
+inline float _GetWidth(ShaderEntityType light) { return light.texMulAdd.y; }
+inline float _GetHeight(ShaderEntityType light) { return light.texMulAdd.z; }
 
-inline LightingResult SphereLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
 
@@ -423,7 +419,7 @@ inline LightingResult SphereLight(in LightArrayType light, in float3 N, in float
 
 	return result;
 }
-inline LightingResult DiscLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
 
@@ -471,7 +467,7 @@ inline LightingResult DiscLight(in LightArrayType light, in float3 N, in float3 
 
 	return result;
 }
-inline LightingResult RectangleLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
 
@@ -579,7 +575,7 @@ inline LightingResult RectangleLight(in LightArrayType light, in float3 N, in fl
 
 	return result;
 }
-inline LightingResult TubeLight(in LightArrayType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
 

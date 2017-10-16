@@ -114,7 +114,7 @@ public:
 		float mWindWaveSize;
 		float mWindRandomness;
 		UINT mFrameCount;
-		int mSunLightArrayIndex;
+		int mSunEntityArrayIndex;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
 		XMFLOAT3 mGlobalEnvMap0;		float pad2;

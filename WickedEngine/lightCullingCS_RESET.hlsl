@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 
-RWRAWBUFFER(LightIndexCounter, UAVSLOT_LIGHTINDEXCOUNTERHELPER);
+RWRAWBUFFER(LightIndexCounter, UAVSLOT_ENTITYINDEXCOUNTERHELPER);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

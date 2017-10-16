@@ -156,7 +156,7 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
-	LightingResult result = DirectionalLight(LightArray[g_xFrame_SunLightArrayIndex], N, V, P, roughness, f0);
+	LightingResult result = DirectionalLight(EntityArray[g_xFrame_SunEntityArrayIndex], N, V, P, roughness, f0);
 	diffuse = result.diffuse;
 	specular = result.specular;
 }
@@ -166,8 +166,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	inout float3 diffuse, out float3 specular)
 {
 	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	uint startOffset = LightGrid[tileIndex].x;
-	uint arrayProperties = LightGrid[tileIndex].y;
+	uint startOffset = EntityGrid[tileIndex].x;
+	uint arrayProperties = EntityGrid[tileIndex].y;
 	uint arrayLength = arrayProperties & 0x00FFFFFF; // count of every element in the tile
 	uint decalCount = (arrayProperties & 0xFF000000) >> 24; // count of just the decals in the tile
 	uint iterator = 0;
@@ -187,7 +187,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	[loop]
 	for (; iterator < decalCount; ++iterator)
 	{
-		LightArrayType decal = LightArray[LightIndexList[startOffset + iterator]];
+		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator]];
 
 		float4x4 decalProjection = decal.shadowMatrix[0];
 		float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
@@ -220,7 +220,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	[loop]
 	for (; iterator < arrayLength; iterator++)
 	{
-		LightArrayType light = LightArray[LightIndexList[startOffset + iterator]];
+		ShaderEntityType light = EntityArray[EntityIndexList[startOffset + iterator]];
 
 		LightingResult result = (LightingResult)0;
 

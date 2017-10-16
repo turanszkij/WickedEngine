@@ -18,6 +18,10 @@ TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE)
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE)
 
+TEXTURE2D(EntityGrid, uint2, TEXSLOT_LIGHTGRID);
+STRUCTUREDBUFFER(EntityIndexList, uint, SBSLOT_LIGHTINDEXLIST);
+STRUCTUREDBUFFER(EntityArray, ShaderEntityType, SBSLOT_LIGHTARRAY);
+
 TEXTURE2D(texture_0, float4, TEXSLOT_ONDEMAND0)
 TEXTURE2D(texture_1, float4, TEXSLOT_ONDEMAND1)
 TEXTURE2D(texture_2, float4, TEXSLOT_ONDEMAND2)
@@ -68,7 +72,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
 	uint		g_xFrame_FrameCount;
-	int			g_xFrame_SunLightArrayIndex;
+	int			g_xFrame_SunEntityArrayIndex;
 	float2		g_xFrame_TemporalAAJitter;
 	float2		g_xFrame_TemporalAAJitterPrev;
 	float3		g_xFrame_GlobalEnvMap0;			float xPadding2_FrameCB;

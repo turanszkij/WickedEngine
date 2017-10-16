@@ -26,7 +26,7 @@ struct LightOutputType
 // MACROS
 
 #define DEFERREDLIGHT_MAKEPARAMS														\
-	LightArrayType light = LightArray[PSIn.lightIndex];									\
+	ShaderEntityType light = EntityArray[PSIn.lightIndex];									\
 	float3 diffuse, specular;															\
 	float2 screenPos = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;		\
 	float depth = texture_depth[PSIn.pos.xy];											\

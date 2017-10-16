@@ -614,11 +614,11 @@ void wiRenderer::LoadBuffers()
 	bd.Usage = USAGE_DYNAMIC;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-	bd.ByteWidth = sizeof(LightArrayType) * MAX_LIGHTS;
+	bd.ByteWidth = sizeof(ShaderEntityType) * MAX_LIGHTS;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(LightArrayType);
-	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTARRAY]);
+	bd.StructureByteStride = sizeof(ShaderEntityType);
+	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
 
 	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
@@ -1428,8 +1428,8 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 
-	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
-	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_LIGHTARRAY], SBSLOT_LIGHTARRAY, threadID);
+	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_LIGHTARRAY, threadID);
+	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_LIGHTARRAY, threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const std::string& get)
@@ -1946,8 +1946,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		const CulledList& culledLights = mainCameraCulling.culledLights;
 
-		static LightArrayType* lightArray = (LightArrayType*)_mm_malloc(sizeof(LightArrayType)*MAX_LIGHTS, 16);
-		ZeroMemory(lightArray, sizeof(LightArrayType)*MAX_LIGHTS);
+		static ShaderEntityType* lightArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_LIGHTS, 16);
+		ZeroMemory(lightArray, sizeof(ShaderEntityType)*MAX_LIGHTS);
 
 		XMMATRIX viewMatrix = cam->GetView();
 
@@ -2040,7 +2040,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			lightCounter++;
 		}
 
-		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_LIGHTARRAY], lightArray, threadID, (int)(sizeof(LightArrayType)*lightCounter));
+		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], lightArray, threadID, (int)(sizeof(ShaderEntityType)*lightCounter));
 	}
 
 	// Update visible particlesystem vertices:
@@ -4427,8 +4427,8 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
-		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
-		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
+		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_ENTITYGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
 	}
 
 	if (grass)
@@ -4469,8 +4469,8 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
-		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
-		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
+		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
 	}
 
 	if (grass)
@@ -4871,7 +4871,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Tiled Light Processing", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::GetInstance().BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	int _width = GetInternalResolution().x;
@@ -4898,7 +4898,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.numThreadGroups[2] = 1;
-		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count + (UINT)frameCullings[getCamera()].culledDecals.size(); // light count (forward_list does not have size())
+		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count + (UINT)frameCullings[getCamera()].culledDecals.size(); // entity count (forward_list does not have size())
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
 		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 	}
@@ -4931,15 +4931,15 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		ZeroMemory(&bd, sizeof(bd));
 		bd.ByteWidth = sizeof(UINT) * 2;
 		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_UNORDERED_ACCESS; // only used in the compute shader which is assembling the light index list, so no need for Shader Resource View
+		bd.BindFlags = BIND_UNORDERED_ACCESS; // only used in the compute shader which is assembling the entity index list, so no need for Shader Resource View
 		bd.CPUAccessFlags = 0;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		device->CreateBuffer(&bd, nullptr, lightCounterHelper);
 	}
-	if (textures[TEXTYPE_2D_LIGHTGRID_OPAQUE] == nullptr || textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT] == nullptr || _resolutionChanged)
+	if (textures[TEXTYPE_2D_ENTITYGRID_OPAQUE] == nullptr || textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT] == nullptr || _resolutionChanged)
 	{
-		SAFE_DELETE(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]);
-		SAFE_DELETE(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]);
+		SAFE_DELETE(textures[TEXTYPE_2D_ENTITYGRID_OPAQUE]);
+		SAFE_DELETE(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]);
 
 		Texture2DDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -4954,15 +4954,15 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 		desc.Usage = USAGE_DEFAULT;
-		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]);
-		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]);
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_ENTITYGRID_OPAQUE]);
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]);
 	}
 	if (_resolutionChanged)
 	{
-		SAFE_DELETE(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]);
-		SAFE_DELETE(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]);
-		resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE] = new GPUBuffer;
-		resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT] = new GPUBuffer;
+		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
+		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
+		resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE] = new GPUBuffer;
+		resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT] = new GPUBuffer;
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
@@ -4972,8 +4972,8 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		bd.CPUAccessFlags = 0;
 		bd.StructureByteStride = sizeof(UINT);
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]);
-		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]);
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
 	}
 	if (deferred && (textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV] == nullptr || textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV] == nullptr))
 	{
@@ -5034,8 +5034,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 	// Perform the culling
 	{
-
-		device->EventBegin("Light Culling", threadID);
+		device->EventBegin("Entity Culling", threadID);
 
 		device->UnBindResources(TEXSLOT_LIGHTGRID, SBSLOT_LIGHTINDEXLIST - TEXSLOT_LIGHTGRID + 1, threadID);
 
@@ -5098,11 +5097,11 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 			const GPUUnorderedResource* uavs[] = {
 				static_cast<const GPUUnorderedResource*>(lightCounterHelper),
 				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]),
-				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]),
+				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
 				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]),
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]),
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_LIGHTINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
+			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
 
 			GetDevice()->BindResourceCS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 			GetDevice()->BindResourceCS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
@@ -5111,12 +5110,12 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		{
 			const GPUUnorderedResource* uavs[] = {
 				static_cast<const GPUUnorderedResource*>(lightCounterHelper),
-				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_OPAQUE]),
-				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_LIGHTINDEXLIST_TRANSPARENT]),
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_OPAQUE]),
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_LIGHTGRID_TRANSPARENT]),
+				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]),
+				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_ENTITYGRID_OPAQUE]),
+				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]),
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_LIGHTINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
+			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
 		}
 
 		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
@@ -5404,7 +5403,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindWaveSize = wind.waveSize;
 	cb.mWindDirection = wind.direction;
 	cb.mFrameCount = (UINT)GetDevice()->GetFrameCount();
-	cb.mSunLightArrayIndex = GetSunArrayIndex();
+	cb.mSunEntityArrayIndex = GetSunArrayIndex();
 	cb.mTemporalAAJitter = temporalAAJitter;
 	cb.mTemporalAAJitterPrev = temporalAAJitterPrev;
 	cb.mGlobalEnvMap0 = globalEnvProbes[0] == nullptr ? XMFLOAT3(0, 0, 0) : globalEnvProbes[0]->translation;

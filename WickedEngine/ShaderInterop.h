@@ -65,7 +65,7 @@
 
 
 
-struct LightArrayType
+struct ShaderEntityType
 {
 	float3 positionVS; // View Space!
 	float range;

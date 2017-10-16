@@ -26,7 +26,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		uint lightCount = (uint)g_xColor.y;
 		for (uint i = lightIndexStart; i < lightCount; ++i)
 		{
-			LightArrayType light = LightArray[i];
+			ShaderEntityType light = EntityArray[i];
 
 			LightingResult result = (LightingResult)0;
 

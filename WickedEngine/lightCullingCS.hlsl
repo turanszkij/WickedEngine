@@ -12,26 +12,24 @@ RWTEXTURE2D(DebugTexture, unorm float4, UAVSLOT_DEBUGTEXTURE);
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
+#define entityCount xDispatchParams_value0
 
-STRUCTUREDBUFFER(Lights, LightArrayType, SBSLOT_LIGHTARRAY);
-#define lightCount xDispatchParams_value0
+globallycoherent RWRAWBUFFER(EntityIndexCounter, UAVSLOT_ENTITYINDEXCOUNTERHELPER);
 
-globallycoherent RWRAWBUFFER(LightIndexCounter, UAVSLOT_LIGHTINDEXCOUNTERHELPER);
+// Global counter for current index into the entity index list.
+// "o_" prefix indicates entity lists for opaque geometry while 
+// "t_" prefix indicates entity lists for transparent geometry.
 
-// Global counter for current index into the light index list.
-// "o_" prefix indicates light lists for opaque geometry while 
-// "t_" prefix indicates light lists for transparent geometry.
-
-// Light index lists and light grids.
-RWSTRUCTUREDBUFFER(t_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_TRANSPARENT);
-RWTEXTURE2D(t_LightGrid, uint2, UAVSLOT_LIGHTGRID_TRANSPARENT);
+// Light index lists and entity grids.
+RWSTRUCTUREDBUFFER(t_EntityIndexList, uint, UAVSLOT_ENTITYINDEXLIST_TRANSPARENT);
+RWTEXTURE2D(t_EntityGrid, uint2, UAVSLOT_ENTITYGRID_TRANSPARENT);
 
 #ifdef DEFERRED
 RWTEXTURE2D(deferred_Diffuse, float4, UAVSLOT_TILEDDEFERRED_DIFFUSE);
 RWTEXTURE2D(deferred_Specular, float4, UAVSLOT_TILEDDEFERRED_SPECULAR);
 #else
-RWSTRUCTUREDBUFFER(o_LightIndexList, uint, UAVSLOT_LIGHTINDEXLIST_OPAQUE);
-RWTEXTURE2D(o_LightGrid, uint2, UAVSLOT_LIGHTGRID_OPAQUE);
+RWSTRUCTUREDBUFFER(o_EntityIndexList, uint, UAVSLOT_ENTITYINDEXLIST_OPAQUE);
+RWTEXTURE2D(o_EntityGrid, uint2, UAVSLOT_ENTITYGRID_OPAQUE);
 #endif
 
 // Group shared variables.
@@ -44,46 +42,46 @@ groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 
 #define MAX_LIGHTS_PER_TILE 1024
 
-// Opaque geometry light lists.
+// Opaque geometry entity lists.
 groupshared uint o_ArrayLength = 0;
 groupshared uint o_ArrayIndexStartOffset = 0;
 groupshared uint o_Array[MAX_LIGHTS_PER_TILE];
 groupshared uint o_decalCount = 0;
 
-// Transparent geometry light lists.
+// Transparent geometry entity lists.
 groupshared uint t_ArrayLength = 0;
 groupshared uint t_ArrayIndexStartOffset = 0;
 groupshared uint t_Array[MAX_LIGHTS_PER_TILE];
 groupshared uint t_decalCount = 0;
 
-// Add the light to the visible light list for opaque geometry.
-void o_AppendLight(uint lightIndex)
+// Add the entity to the visible entity list for opaque geometry.
+void o_AppendEntity(uint entityIndex)
 {
-	uint index; // Index into the visible lights array.
+	uint index;
 	InterlockedAdd(o_ArrayLength, 1, index);
 	if (index < MAX_LIGHTS_PER_TILE)
 	{
-		o_Array[index] = lightIndex;
+		o_Array[index] = entityIndex;
 	}
 }
 
-// Add the light to the visible light list for transparent geometry.
-void t_AppendLight(uint lightIndex)
+// Add the entity to the visible entity list for transparent geometry.
+void t_AppendEntity(uint entityIndex)
 {
-	uint index; // Index into the visible lights array.
+	uint index;
 	InterlockedAdd(t_ArrayLength, 1, index);
 	if (index < MAX_LIGHTS_PER_TILE)
 	{
-		t_Array[index] = lightIndex;
+		t_Array[index] = entityIndex;
 	}
 }
 
-// Decals NEED correct order, so a sorting is required on the LDS light array!
+// Decals NEED correct order, so a sorting is required on the LDS entity array!
 void o_BitonicSort( in uint localIdxFlattened )
 {
 	uint numArray = o_ArrayLength;
 
-	// Round the number of particles up to the nearest power of two
+	// Round the number of entities up to the nearest power of two
 	uint numArrayPowerOfTwo = 1;
 	while( numArrayPowerOfTwo < numArray )
 		numArrayPowerOfTwo <<= 1;
@@ -117,7 +115,7 @@ void t_BitonicSort( in uint localIdxFlattened )
 {
 	uint numArray = t_ArrayLength;
 
-	// Round the number of particles up to the nearest power of two
+	// Round the number of entities up to the nearest power of two
 	uint numArrayPowerOfTwo = 1;
 	while( numArrayPowerOfTwo < numArray )
 		numArrayPowerOfTwo <<= 1;
@@ -148,19 +146,19 @@ void t_BitonicSort( in uint localIdxFlattened )
 	}
 }
 
-inline uint ContructLightMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)
+inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)
 {
-	// We create a light mask to decide if the light is really touching something
-	// If we do an OR operation with the depth slices mask, we instantly get if the light is contributing or not
+	// We create a entity mask to decide if the entity is really touching something
+	// If we do an OR operation with the depth slices mask, we instantly get if the entity is contributing or not
 	// we do this in view space
 
 	uint uLightMask = 0;
-	const float fLightMin = bounds.c.z - bounds.r;
-	const float fLightMax = bounds.c.z + bounds.r;
-	const uint __lightmaskcellindexSTART = max(0, min(32, floor((fLightMin - depthRangeMin) * depthRangeRecip)));
-	const uint __lightmaskcellindexEND = max(0, min(32, floor((fLightMax - depthRangeMin) * depthRangeRecip)));
+	const float fMin = bounds.c.z - bounds.r;
+	const float fMax = bounds.c.z + bounds.r;
+	const uint __entitymaskcellindexSTART = max(0, min(32, floor((fMin - depthRangeMin) * depthRangeRecip)));
+	const uint __entitymaskcellindexEND = max(0, min(32, floor((fMax - depthRangeMin) * depthRangeRecip)));
 
-	for (uint c = __lightmaskcellindexSTART; c <= __lightmaskcellindexEND; ++c) // TODO: maybe better way?
+	for (uint c = __entitymaskcellindexSTART; c <= __entitymaskcellindexEND; ++c)
 	{
 		uLightMask |= 1 << c;
 	}
@@ -249,10 +247,6 @@ void main(ComputeShaderInput IN)
 	float maxDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1)).z;
 	float nearClipVS = ScreenToView(float4(0, 0, 1, 1)).z;
 
-	//// Clipping plane for minimum depth value 
-	//// (used for testing lights within the bounds of opaque geometry).
-	//Plane minPlane = { float3(0, 0, 1), minDepthVS };
-
 #ifdef ADVANCED_CULLING
 	// We divide the minmax depth bounds to 32 equal slices
 	// then we mark the occupied depth slices with atomic or from each thread
@@ -264,30 +258,30 @@ void main(ComputeShaderInput IN)
 	GroupMemoryBarrierWithGroupSync();
 #endif
 
-	// Cull lights
-	// Each thread in a group will cull 1 light until all lights have been culled.
-	for (uint i = IN.groupIndex; i < lightCount; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
+	// Cull entities
+	// Each thread in a group will cull 1 entity until all entities have been culled.
+	for (uint i = IN.groupIndex; i < entityCount; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
-		LightArrayType light = Lights[i];
+		ShaderEntityType entity = EntityArray[i];
 
-		switch (light.type)
+		switch (entity.type)
 		{
 		case 1/*POINT_LIGHT*/:
 		{
-			Sphere sphere = { light.positionVS.xyz, light.range }; 
+			Sphere sphere = { entity.positionVS.xyz, entity.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				// Add light to light list for transparent geometry.
-				t_AppendLight(i);
+				// Add entity to entity list for transparent geometry.
+				t_AppendEntity(i);
 
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than just frustum culling
 				{
-					// Add light to light list for opaque geometry.
+					// Add entity to entity list for opaque geometry.
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
-						o_AppendLight(i);
+						o_AppendEntity(i);
 					}
 				}
 			}
@@ -296,34 +290,34 @@ void main(ComputeShaderInput IN)
 		case 2/*SPOT_LIGHT*/:
 		{
 			//// This is a cone culling for the spotlights:
-			//float coneRadius = tan(/*radians*/(light.coneAngle)) * light.range;
-			//Cone cone = { light.positionVS.xyz, light.range, -light.directionVS.xyz, coneRadius };
+			//float coneRadius = tan(/*radians*/(entity.coneAngle)) * entity.range;
+			//Cone cone = { entity.positionVS.xyz, entity.range, -entity.directionVS.xyz, coneRadius };
 			//if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
 			//{
-			//	// Add light to light list for transparent geometry.
-			//	t_AppendLight(i);
+			//	// Add entity to entity list for transparent geometry.
+			//	t_AppendEntity(i);
 			//	if (!ConeInsidePlane(cone, minPlane))
 			//	{
-			//		// Add light to light list for opaque geometry.
-			//		o_AppendLight(i);
+			//		// Add entity to entity list for opaque geometry.
+			//		o_AppendEntity(i);
 			//	}
 			//}
 
 			// Instead of cone culling, I construct a tight fitting sphere around the spotlight cone:
-			const float r = light.range * 0.5f / (light.coneAngleCos * light.coneAngleCos);
-			Sphere sphere = { light.positionVS.xyz - light.directionVS * r, r };
+			const float r = entity.range * 0.5f / (entity.coneAngleCos * entity.coneAngleCos);
+			Sphere sphere = { entity.positionVS.xyz - entity.directionVS * r, r };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				// Add light to light list for transparent geometry.
-				t_AppendLight(i);
+				// Add entity to entity list for transparent geometry.
+				t_AppendEntity(i);
 
 				if (SphereIntersectsAABB(sphere, GroupAABB))
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
-						o_AppendLight(i);
+						o_AppendEntity(i);
 					}
 				}
 
@@ -336,18 +330,18 @@ void main(ComputeShaderInput IN)
 		case 5/*RECTANGLE_LIGHT*/:
 		case 6/*TUBE_LIGHT*/:
 		{
-			t_AppendLight(i);
-			o_AppendLight(i);
+			t_AppendEntity(i);
+			o_AppendEntity(i);
 		}
 		break;
 #ifndef DEFERRED
 		case 100:/*DECAL*/
 		{
-			Sphere sphere = { light.positionVS.xyz, light.range };
+			Sphere sphere = { entity.positionVS.xyz, entity.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
 				InterlockedAdd(t_decalCount, 1);
-				t_AppendLight(i);
+				t_AppendEntity(i);
 
 				// unit AABB: 
 				AABB a;
@@ -356,16 +350,16 @@ void main(ComputeShaderInput IN)
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				b.transform(light.shadowMatrix[0]); // shadowMatrix[0] : decal inverse box matrix!
+				b.transform(entity.shadowMatrix[0]); // shadowMatrix[0] : decal inverse box matrix!
 
 				if (IntersectAABB(a, b))
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ContructLightMask(minDepthVS, __depthRangeRecip, sphere))
+					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
 						InterlockedAdd(o_decalCount, 1);
-						o_AppendLight(i);
+						o_AppendEntity(i);
 					}
 				}
 			}
@@ -378,20 +372,20 @@ void main(ComputeShaderInput IN)
 	// Wait till all threads in group have caught up.
 	GroupMemoryBarrierWithGroupSync();
 
-	// Update global memory with visible light buffer.
-	// First update the light grid (only thread 0 in group needs to do this)
+	// Update global memory with visible entity buffer.
+	// First update the entity grid (only thread 0 in group needs to do this)
 #ifndef DEFERRED
 	if (IN.groupIndex == 0)
 	{
-		LightIndexCounter.InterlockedAdd(0, o_ArrayLength, o_ArrayIndexStartOffset);
-		o_LightGrid[IN.groupID.xy] = uint2(o_ArrayIndexStartOffset, (o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
+		EntityIndexCounter.InterlockedAdd(0, o_ArrayLength, o_ArrayIndexStartOffset);
+		o_EntityGrid[IN.groupID.xy] = uint2(o_ArrayIndexStartOffset, (o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
 	}
 	else 
 #endif
 		if(IN.groupIndex == 1)
 	{
-		LightIndexCounter.InterlockedAdd(4, t_ArrayLength, t_ArrayIndexStartOffset);
-		t_LightGrid[IN.groupID.xy] = uint2(t_ArrayIndexStartOffset, (t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
+		EntityIndexCounter.InterlockedAdd(4, t_ArrayLength, t_ArrayIndexStartOffset);
+		t_EntityGrid[IN.groupID.xy] = uint2(t_ArrayIndexStartOffset, (t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
 	}
 
 #ifndef DEFERRED
@@ -408,18 +402,18 @@ void main(ComputeShaderInput IN)
 
 	GroupMemoryBarrierWithGroupSync();
 
-	// Now update the light index list (all threads).
+	// Now update the entity index list (all threads).
 #ifndef DEFERRED
 	// For opaque goemetry.
 	for (i = IN.groupIndex; i < o_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
-		o_LightIndexList[o_ArrayIndexStartOffset + i] = o_Array[i];
+		o_EntityIndexList[o_ArrayIndexStartOffset + i] = o_Array[i];
 	}
 #endif
 	// For transparent geometry.
 	for (i = IN.groupIndex; i < t_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
-		t_LightIndexList[t_ArrayIndexStartOffset + i] = t_Array[i];
+		t_EntityIndexList[t_ArrayIndexStartOffset + i] = t_Array[i];
 	}
 
 #ifdef DEFERRED
@@ -441,46 +435,46 @@ void main(ComputeShaderInput IN)
 	[loop]
 	for (uint li = 0; li < o_ArrayLength; ++li)
 	{
-		uint lightIndex = o_Array[li];
-		LightArrayType light = Lights[lightIndex];
+		uint entityIndex = o_Array[li];
+		ShaderEntityType entity = EntityArray[entityIndex];
 
 		LightingResult result = (LightingResult)0;
 
-		switch (light.type)
+		switch (entity.type)
 		{
 		case 0/*DIRECTIONAL*/:
 		{
-			result = DirectionalLight(light, N, V, P, roughness, f0);
+			result = DirectionalLight(entity, N, V, P, roughness, f0);
 		}
 		break;
 		case 1/*POINT*/:
 		{
-			result = PointLight(light, N, V, P, roughness, f0);
+			result = PointLight(entity, N, V, P, roughness, f0);
 		}
 		break;
 		case 2/*SPOT*/:
 		{
-			result = SpotLight(light, N, V, P, roughness, f0);
+			result = SpotLight(entity, N, V, P, roughness, f0);
 		}
 		break;
 		case 3/*SPHERE*/:
 		{
-			result = SphereLight(light, N, V, P, roughness, f0);
+			result = SphereLight(entity, N, V, P, roughness, f0);
 		}
 		break;
 		case 4/*DISC*/:
 		{
-			result = DiscLight(light, N, V, P, roughness, f0);
+			result = DiscLight(entity, N, V, P, roughness, f0);
 		}
 		break;
 		case 5/*RECTANGLE*/:
 		{
-			result = RectangleLight(light, N, V, P, roughness, f0);
+			result = RectangleLight(entity, N, V, P, roughness, f0);
 		}
 		break;
 		case 6/*TUBE*/:
 		{
-			result = TubeLight(light, N, V, P, roughness, f0);
+			result = TubeLight(entity, N, V, P, roughness, f0);
 		}
 		break;
 		default:break;
