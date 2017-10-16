@@ -4109,7 +4109,7 @@ Light::Light():Transform() {
 	lensFlareRimTextures.resize(0);
 	lensFlareNames.resize(0);
 	shadowMap_index = -1;
-	lightArray_index = 0;
+	entityArray_index = 0;
 	radius = 1.0f;
 	width = 1.0f;
 	height = 1.0f;

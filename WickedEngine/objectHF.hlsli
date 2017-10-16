@@ -189,7 +189,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	{
 		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator]];
 
-		float4x4 decalProjection = decal.shadowMatrix[0];
+		float4x4 decalProjection = decal.GetProjection();
 		float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
 		float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		[branch]
@@ -198,13 +198,13 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			// mipmapping needs to be performed by hand:
 			float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
 			float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-			float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
+			float4 decalColor = texture_decalatlas.SampleGrad(sampler_objectshader, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
 			// blend out if close to cube Z:
 			float edgeBlend = 1 - pow(saturate(abs(clipSpace.z)), 8);
 			decalColor.a *= edgeBlend;
 			decalColor *= decal.color;
 			// apply emissive:
-			specular += max(0, decalColor.rgb * decal.energy * edgeBlend);
+			specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 			// perform manual blending of decals:
 			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 			decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
@@ -226,37 +226,37 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 		switch (light.type)
 		{
-		case 0/*DIRECTIONAL*/:
+		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
 			result = DirectionalLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 1/*POINT*/:
+		case ENTITY_TYPE_POINTLIGHT:
 		{
 			result = PointLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 2/*SPOT*/:
+		case ENTITY_TYPE_SPOTLIGHT:
 		{
 			result = SpotLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 3/*SPHERE*/:
+		case ENTITY_TYPE_SPHERELIGHT:
 		{
 			result = SphereLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 4/*DISC*/:
+		case ENTITY_TYPE_DISCLIGHT:
 		{
 			result = DiscLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 5/*RECTANGLE*/:
+		case ENTITY_TYPE_RECTANGLELIGHT:
 		{
 			result = RectangleLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 6/*TUBE*/:
+		case ENTITY_TYPE_TUBELIGHT:
 		{
 			result = TubeLight(light, N, V, P, roughness, f0);
 		}

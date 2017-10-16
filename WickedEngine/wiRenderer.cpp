@@ -391,7 +391,7 @@ int wiRenderer::GetSunArrayIndex()
 	{
 		for (Light* l : model->lights)
 			if (l->GetType() == Light::DIRECTIONAL)
-				return l->lightArray_index;
+				return l->entityArray_index;
 	}
 	return -1;
 }
@@ -614,7 +614,7 @@ void wiRenderer::LoadBuffers()
 	bd.Usage = USAGE_DYNAMIC;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-	bd.ByteWidth = sizeof(ShaderEntityType) * MAX_LIGHTS;
+	bd.ByteWidth = sizeof(ShaderEntityType) * MAX_SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntityType);
@@ -1737,7 +1737,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 				{
 					culling.culledLight_count++;
 					Light* l = (Light*)c;
-					l->lightArray_index = i;
+					l->entityArray_index = i;
 
 					// Link shadowmaps to lights till there are free slots
 
@@ -1946,15 +1946,15 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		const CulledList& culledLights = mainCameraCulling.culledLights;
 
-		static ShaderEntityType* lightArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_LIGHTS, 16);
-		ZeroMemory(lightArray, sizeof(ShaderEntityType)*MAX_LIGHTS);
+		static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
+		ZeroMemory(entityArray, sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
 
 		XMMATRIX viewMatrix = cam->GetView();
 
 		UINT lightCounter = 0;
 		for (Cullable* c : culledLights)
 		{
-			if (lightCounter == MAX_LIGHTS)
+			if (lightCounter == MAX_SHADER_ENTITY_COUNT)
 			{
 				assert(0); // too many lights!
 				lightCounter--;
@@ -1967,41 +1967,41 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				continue;
 			}
 
-			lightArray[lightCounter].positionWS = l->translation;
-			XMStoreFloat3(&lightArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&lightArray[lightCounter].positionWS), viewMatrix));
-			lightArray[lightCounter].range = l->enerDis.y;
-			lightArray[lightCounter].color = l->color;
-			lightArray[lightCounter].energy = l->enerDis.x;
-			lightArray[lightCounter].type = l->GetType();
-			lightArray[lightCounter].shadowBias = l->shadowBias;
-			lightArray[lightCounter].shadowMap_index = l->shadowMap_index;
+			entityArray[lightCounter].type = l->GetType();
+			entityArray[lightCounter].positionWS = l->translation;
+			XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[lightCounter].positionWS), viewMatrix));
+			entityArray[lightCounter].range = l->enerDis.y;
+			entityArray[lightCounter].color = l->color;
+			entityArray[lightCounter].energy = l->enerDis.x;
+			entityArray[lightCounter].shadowBias = l->shadowBias;
+			entityArray[lightCounter].shadowMap_index = l->shadowMap_index;
 			switch (l->GetType())
 			{
 			case Light::DIRECTIONAL:
 			{
-				lightArray[lightCounter].directionWS = l->GetDirection();
-				for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(), ARRAYSIZE(lightArray[lightCounter].shadowMatrix)); ++shmap) {
-					lightArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
+				entityArray[lightCounter].directionWS = l->GetDirection();
+				for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(), ARRAYSIZE(entityArray[lightCounter].shadowMatrix)); ++shmap) {
+					entityArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
 				}
-				lightArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 			}
 			break;
 			case Light::SPOT:
 			{
-				lightArray[lightCounter].coneAngle = (l->enerDis.z * 0.5f);
-				lightArray[lightCounter].coneAngleCos = cosf(lightArray[lightCounter].coneAngle);
-				lightArray[lightCounter].directionWS = l->GetDirection();
-				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&lightArray[lightCounter].directionWS), viewMatrix));
+				entityArray[lightCounter].coneAngle = (l->enerDis.z * 0.5f);
+				entityArray[lightCounter].coneAngleCos = cosf(entityArray[lightCounter].coneAngle);
+				entityArray[lightCounter].directionWS = l->GetDirection();
+				XMStoreFloat3(&entityArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[lightCounter].directionWS), viewMatrix));
 				if (l->shadow && l->shadowMap_index >= 0 && !l->shadowCam_spotLight.empty())
 				{
-					lightArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
+					entityArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
 				}
-				lightArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 			}
 			break;
 			case Light::POINT:
 			{
-				lightArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
+				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
 			}
 			break;
 			case Light::SPHERE:
@@ -2010,10 +2010,11 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			case Light::TUBE:
 			{
 				XMMATRIX lightMat = XMLoadFloat4x4(&l->world);
-				XMStoreFloat3(&lightArray[lightCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // left dir
-				XMStoreFloat3(&lightArray[lightCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
-				XMStoreFloat3(&lightArray[lightCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
-				lightArray[lightCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
+				// Note: area lights are facing back by default
+				XMStoreFloat3(&entityArray[lightCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // right dir
+				XMStoreFloat3(&entityArray[lightCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
+				XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
+				entityArray[lightCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
 			}
 			break;
 			}
@@ -2022,25 +2023,25 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 		for (Decal* decal : mainCameraCulling.culledDecals)
 		{
-			if (lightCounter == MAX_LIGHTS)
+			if (lightCounter == MAX_SHADER_ENTITY_COUNT)
 			{
 				assert(0); // too many lights!
 				lightCounter--;
 				break;
 			}
-			lightArray[lightCounter].positionWS = decal->translation;
-			XMStoreFloat3(&lightArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
-			lightArray[lightCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
-			lightArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
-			lightArray[lightCounter].texMulAdd = decal->atlasMulAdd;
-			lightArray[lightCounter].color = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
-			lightArray[lightCounter].energy = decal->emissive;
-			lightArray[lightCounter].type = 100;
+			entityArray[lightCounter].type = ENTITY_TYPE_DECAL;
+			entityArray[lightCounter].positionWS = decal->translation;
+			XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
+			entityArray[lightCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
+			entityArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
+			entityArray[lightCounter].texMulAdd = decal->atlasMulAdd;
+			entityArray[lightCounter].color = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
+			entityArray[lightCounter].energy = decal->emissive;
 
 			lightCounter++;
 		}
 
-		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], lightArray, threadID, (int)(sizeof(ShaderEntityType)*lightCounter));
+		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, (int)(sizeof(ShaderEntityType)*lightCounter));
 	}
 
 	// Update visible particlesystem vertices:
@@ -2957,7 +2958,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			case Light::TUBE:
 				{
 					MiscCB miscCb;
-					miscCb.mColor.x = (float)l->lightArray_index;
+					miscCb.mColor.x = (float)l->entityArray_index;
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					GetDevice()->Draw(3, threadID); // full screen triangle
@@ -2966,7 +2967,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			case Light::POINT:
 				{
 					MiscCB miscCb;
-					miscCb.mColor.x = (float)l->lightArray_index;
+					miscCb.mColor.x = (float)l->entityArray_index;
 					float sca = l->enerDis.y + 1;
 					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z) * camera->GetViewProjection());
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
@@ -2977,7 +2978,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 			case Light::SPOT:
 				{
 					MiscCB miscCb;
-					miscCb.mColor.x = (float)l->lightArray_index;
+					miscCb.mColor.x = (float)l->entityArray_index;
 					const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
 					miscCb.mTransform = XMMatrixTranspose(
 						XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*

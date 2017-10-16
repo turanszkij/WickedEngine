@@ -32,7 +32,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 
 			switch (light.type)
 			{
-			case 0/*DIRECTIONAL*/:
+			case ENTITY_TYPE_DIRECTIONALLIGHT:
 			{
 				float3 L = light.directionWS;
 
@@ -54,7 +54,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 				result.diffuse = lightColor;
 			}
 			break;
-			case 1/*POINT*/:
+			case ENTITY_TYPE_POINTLIGHT:
 			{
 				float3 L = light.positionWS - P;
 				float dist = length(L);
@@ -78,7 +78,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 				}
 			}
 			break;
-			case 2/*SPOT*/:
+			case ENTITY_TYPE_SPOTLIGHT:
 			{
 				float3 L = light.positionWS - P;
 				float dist = length(L);

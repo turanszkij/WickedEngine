@@ -368,13 +368,6 @@ float illuminanceSphereOrDisk(float cosTheta, float sinSigmaSqr)
 	return max(illuminance, 0.0f);
 }
 
-inline float3 _GetLeft(ShaderEntityType light) { return light.directionWS; }
-inline float3 _GetUp(ShaderEntityType light) { return light.directionVS; }
-inline float3 _GetFront(ShaderEntityType light) { return light.positionVS; }
-inline float _GetRadius(ShaderEntityType light) { return light.texMulAdd.x; }
-inline float _GetWidth(ShaderEntityType light) { return light.texMulAdd.y; }
-inline float _GetHeight(ShaderEntityType light) { return light.texMulAdd.z; }
-
 inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result = (LightingResult)0;
@@ -388,13 +381,13 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 	float cosTheta = clamp(dot(N, L), -0.999, 0.999); // Clamp to avoid edge case 
 															// We need to prevent the object penetrating into the surface 
 															// and we must avoid divide by 0, thus the 0.9999f 
-	float sqrLightRadius = _GetRadius(light) * _GetRadius(light);
+	float sqrLightRadius = light.GetRadius() * light.GetRadius();
 	float sinSigmaSqr = min(sqrLightRadius / sqrDist, 0.9999f);
 	float fLight = illuminanceSphereOrDisk(cosTheta, sinSigmaSqr);
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (_GetRadius(light) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
 	}
 
 
@@ -404,7 +397,7 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 		r = getSpecularDominantDirArea(N, r, roughness);
 
 		float3 centerToRay = dot(Lunormalized, r) * r - Lunormalized;
-		float3 closestPoint = Lunormalized + centerToRay * saturate(_GetRadius(light) / length(centerToRay));
+		float3 closestPoint = Lunormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
 		L = normalize(closestPoint);
 	}
 
@@ -429,10 +422,10 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 
 	float sqrDist = dot(Lunormalized, Lunormalized);
 
-	float3 lightPlaneNormal = _GetFront(light);
+	float3 lightPlaneNormal = light.GetFront();
 
 	float cosTheta = clamp(dot(N, L), -0.999, 0.999);
-	float sqrLightRadius = _GetRadius(light) * _GetRadius(light);
+	float sqrLightRadius = light.GetRadius() * light.GetRadius();
 	// Do not let the surface penetrate the light 
 	float sinSigmaSqr = sqrLightRadius / (sqrLightRadius + max(sqrLightRadius, sqrDist));
 	// Multiply by saturate(dot(planeNormal , -L)) to better match ground truth. 
@@ -441,7 +434,7 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (_GetRadius(light) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
 	}
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
@@ -452,7 +445,7 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 		float t = Trace_plane(P, r, light.positionWS, lightPlaneNormal);
 		float3 p = P + r*t;
 		float3 centerToRay = p - light.positionWS;
-		float3 closestPoint = Lunormalized + centerToRay * saturate(_GetRadius(light) / length(centerToRay));
+		float3 closestPoint = Lunormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
 		L = normalize(closestPoint);
 	}
 
@@ -477,11 +470,11 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 	L /= dist;
 
 
-	float3 lightPlaneNormal = _GetFront(light);
-	float3 lightLeft = _GetLeft(light);
-	float3 lightUp = _GetUp(light);
-	float lightWidth = _GetWidth(light);
-	float lightHeight = _GetHeight(light);
+	float3 lightPlaneNormal = light.GetFront();
+	float3 lightLeft = light.GetRight();
+	float3 lightUp = light.GetUp();
+	float lightWidth = light.GetWidth();
+	float lightHeight = light.GetHeight();
 	float3 worldPos = P;
 	float3 worldNormal = N;
 
@@ -509,7 +502,7 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(_GetWidth(light),_GetHeight(light)) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(light.GetWidth(),light.GetHeight()) * 100) * (1 - light.shadowBias)).r;
 	}
 
 
@@ -585,8 +578,8 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 	float sqrDist = dot(Lunormalized, Lunormalized);
 
-	float3 lightLeft = _GetLeft(light);
-	float lightWidth = _GetWidth(light);
+	float3 lightLeft = light.GetRight();
+	float lightWidth = light.GetWidth();
 	float3 worldPos = P;
 	float3 worldNormal = N;
 
@@ -600,10 +593,10 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 	float3 left = lightLeft;
 	float3 up = cross(lightLeft, forward);
 
-	float3 p0 = light.positionWS - left * (0.5 * lightWidth) + _GetRadius(light) * up;
-	float3 p1 = light.positionWS - left * (0.5 * lightWidth) - _GetRadius(light) * up;
-	float3 p2 = light.positionWS + left * (0.5 * lightWidth) - _GetRadius(light) * up;
-	float3 p3 = light.positionWS + left * (0.5 * lightWidth) + _GetRadius(light) * up;
+	float3 p0 = light.positionWS - left * (0.5 * lightWidth) + light.GetRadius() * up;
+	float3 p1 = light.positionWS - left * (0.5 * lightWidth) - light.GetRadius() * up;
+	float3 p2 = light.positionWS + left * (0.5 * lightWidth) - light.GetRadius() * up;
+	float3 p3 = light.positionWS + left * (0.5 * lightWidth) + light.GetRadius() * up;
 
 
 	float solidAngle = RectangleSolidAngle(worldPos, p0, p1, p2, p3);
@@ -622,7 +615,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 	float sqrSphereDistance = dot(sphereUnormL, sphereUnormL);
 
 	float fLightSphere = PI * saturate(dot(sphereL, worldNormal)) *
-		((_GetRadius(light) * _GetRadius(light)) / sqrSphereDistance);
+		((light.GetRadius() * light.GetRadius()) / sqrSphereDistance);
 
 	fLight += fLightSphere;
 
@@ -630,7 +623,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(_GetRadius(light),_GetWidth(light))*100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(light.GetRadius(),light.GetWidth())*100) * (1 - light.shadowBias)).r;
 	}
 
 
@@ -651,7 +644,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 		// Then I place a sphere on that point and calculate the lisght vector like for sphere light.
 		float3 centerToRay = dot(L, r) * r - L;
-		float3 closestPoint = L + centerToRay * saturate(_GetRadius(light) / length(centerToRay));
+		float3 closestPoint = L + centerToRay * saturate(light.GetRadius() / length(centerToRay));
 		L = normalize(closestPoint);
 	}
 

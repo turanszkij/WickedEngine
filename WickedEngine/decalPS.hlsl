@@ -57,7 +57,7 @@ PixelOutputType main(VertexToPixel PSIn)
 	//	Out.nor.xyz=normal;
 	//}
 	if(hasTexNor & 0x0000001){
-		Out.col=texture_0.Sample(sampler_aniso_clamp,projTex.xy);
+		Out.col=texture_0.Sample(sampler_objectshader,projTex.xy);
 		Out.col.a*=opacity;
 		float3 edgeBlend = clipSpace.xyz;
 		edgeBlend = abs(edgeBlend);

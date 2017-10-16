@@ -862,13 +862,13 @@ struct SHCAM{
 struct Light : public Cullable , public Transform
 {
 	enum LightType {
-		DIRECTIONAL,
-		POINT,
-		SPOT,
-		SPHERE,
-		DISC,
-		RECTANGLE,
-		TUBE,
+		DIRECTIONAL			= ENTITY_TYPE_DIRECTIONALLIGHT,
+		POINT				= ENTITY_TYPE_POINTLIGHT,
+		SPOT				= ENTITY_TYPE_SPOTLIGHT,
+		SPHERE				= ENTITY_TYPE_SPHERELIGHT,
+		DISC				= ENTITY_TYPE_DISCLIGHT,
+		RECTANGLE			= ENTITY_TYPE_RECTANGLELIGHT,
+		TUBE				= ENTITY_TYPE_TUBELIGHT,
 		LIGHTTYPE_COUNT,
 	};
 
@@ -882,7 +882,7 @@ struct Light : public Cullable , public Transform
 	static wiGraphicsTypes::Texture2D* shadowMapArray_2D;
 	static wiGraphicsTypes::Texture2D* shadowMapArray_Cube;
 	int shadowMap_index;
-	int lightArray_index;
+	int entityArray_index;
 
 	std::vector<SHCAM> shadowCam_pointLight;
 	std::vector<SHCAM> shadowCam_dirLight;

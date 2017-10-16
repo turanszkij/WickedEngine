@@ -40,18 +40,18 @@ groupshared AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 groupshared AABB GroupAABB_WS;		// frustum AABB in world space
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 
-#define MAX_LIGHTS_PER_TILE 1024
+#define MAX_ENTITY_COUNT_PER_TILE 1024
 
 // Opaque geometry entity lists.
 groupshared uint o_ArrayLength = 0;
 groupshared uint o_ArrayIndexStartOffset = 0;
-groupshared uint o_Array[MAX_LIGHTS_PER_TILE];
+groupshared uint o_Array[MAX_ENTITY_COUNT_PER_TILE];
 groupshared uint o_decalCount = 0;
 
 // Transparent geometry entity lists.
 groupshared uint t_ArrayLength = 0;
 groupshared uint t_ArrayIndexStartOffset = 0;
-groupshared uint t_Array[MAX_LIGHTS_PER_TILE];
+groupshared uint t_Array[MAX_ENTITY_COUNT_PER_TILE];
 groupshared uint t_decalCount = 0;
 
 // Add the entity to the visible entity list for opaque geometry.
@@ -59,7 +59,7 @@ void o_AppendEntity(uint entityIndex)
 {
 	uint index;
 	InterlockedAdd(o_ArrayLength, 1, index);
-	if (index < MAX_LIGHTS_PER_TILE)
+	if (index < MAX_ENTITY_COUNT_PER_TILE)
 	{
 		o_Array[index] = entityIndex;
 	}
@@ -70,7 +70,7 @@ void t_AppendEntity(uint entityIndex)
 {
 	uint index;
 	InterlockedAdd(t_ArrayLength, 1, index);
-	if (index < MAX_LIGHTS_PER_TILE)
+	if (index < MAX_ENTITY_COUNT_PER_TILE)
 	{
 		t_Array[index] = entityIndex;
 	}
@@ -266,7 +266,7 @@ void main(ComputeShaderInput IN)
 
 		switch (entity.type)
 		{
-		case 1/*POINT_LIGHT*/:
+		case ENTITY_TYPE_POINTLIGHT:
 		{
 			Sphere sphere = { entity.positionVS.xyz, entity.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
@@ -287,7 +287,7 @@ void main(ComputeShaderInput IN)
 			}
 		}
 		break;
-		case 2/*SPOT_LIGHT*/:
+		case ENTITY_TYPE_SPOTLIGHT:
 		{
 			//// This is a cone culling for the spotlights:
 			//float coneRadius = tan(/*radians*/(entity.coneAngle)) * entity.range;
@@ -324,18 +324,18 @@ void main(ComputeShaderInput IN)
 			}
 		}
 		break;
-		case 0/*DIRECTIONAL_LIGHT*/:
-		case 3/*SPHERE_LIGHT*/:
-		case 4/*DISC_LIGHT*/:
-		case 5/*RECTANGLE_LIGHT*/:
-		case 6/*TUBE_LIGHT*/:
+		case ENTITY_TYPE_DIRECTIONALLIGHT:
+		case ENTITY_TYPE_SPHERELIGHT:
+		case ENTITY_TYPE_DISCLIGHT:
+		case ENTITY_TYPE_RECTANGLELIGHT:
+		case ENTITY_TYPE_TUBELIGHT:
 		{
 			t_AppendEntity(i);
 			o_AppendEntity(i);
 		}
 		break;
 #ifndef DEFERRED
-		case 100:/*DECAL*/
+		case ENTITY_TYPE_DECAL:
 		{
 			Sphere sphere = { entity.positionVS.xyz, entity.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
@@ -350,7 +350,7 @@ void main(ComputeShaderInput IN)
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				b.transform(entity.shadowMatrix[0]); // shadowMatrix[0] : decal inverse box matrix!
+				b.transform(entity.GetProjection());
 
 				if (IntersectAABB(a, b))
 				{
@@ -436,48 +436,47 @@ void main(ComputeShaderInput IN)
 	for (uint li = 0; li < o_ArrayLength; ++li)
 	{
 		uint entityIndex = o_Array[li];
-		ShaderEntityType entity = EntityArray[entityIndex];
+		ShaderEntityType light = EntityArray[entityIndex];
 
 		LightingResult result = (LightingResult)0;
 
-		switch (entity.type)
+		switch (light.type)
 		{
-		case 0/*DIRECTIONAL*/:
+		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
-			result = DirectionalLight(entity, N, V, P, roughness, f0);
+			result = DirectionalLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 1/*POINT*/:
+		case ENTITY_TYPE_POINTLIGHT:
 		{
-			result = PointLight(entity, N, V, P, roughness, f0);
+			result = PointLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 2/*SPOT*/:
+		case ENTITY_TYPE_SPOTLIGHT:
 		{
-			result = SpotLight(entity, N, V, P, roughness, f0);
+			result = SpotLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 3/*SPHERE*/:
+		case ENTITY_TYPE_SPHERELIGHT:
 		{
-			result = SphereLight(entity, N, V, P, roughness, f0);
+			result = SphereLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 4/*DISC*/:
+		case ENTITY_TYPE_DISCLIGHT:
 		{
-			result = DiscLight(entity, N, V, P, roughness, f0);
+			result = DiscLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 5/*RECTANGLE*/:
+		case ENTITY_TYPE_RECTANGLELIGHT:
 		{
-			result = RectangleLight(entity, N, V, P, roughness, f0);
+			result = RectangleLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		case 6/*TUBE*/:
+		case ENTITY_TYPE_TUBELIGHT:
 		{
-			result = TubeLight(entity, N, V, P, roughness, f0);
+			result = TubeLight(light, N, V, P, roughness, f0);
 		}
 		break;
-		default:break;
 		}
 
 		diffuse += max(0.0f, result.diffuse);

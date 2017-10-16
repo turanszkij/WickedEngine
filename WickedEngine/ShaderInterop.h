@@ -64,38 +64,51 @@
 #endif // __cplusplus
 
 
+#define ENTITY_TYPE_DIRECTIONALLIGHT	0
+#define ENTITY_TYPE_POINTLIGHT			1
+#define ENTITY_TYPE_SPOTLIGHT			2
+#define ENTITY_TYPE_SPHERELIGHT			3
+#define ENTITY_TYPE_DISCLIGHT			4
+#define ENTITY_TYPE_RECTANGLELIGHT		5
+#define ENTITY_TYPE_TUBELIGHT			6
+#define ENTITY_TYPE_DECAL				100
 
 struct ShaderEntityType
 {
-	float3 positionVS; // View Space!
+	uint type;
+	float3 positionVS;
 	float range;
-	// --
+	float3 directionVS;
 	float4 color;
-	// --
 	float3 positionWS;
 	float energy;
-	// --
-	float3 directionVS;
-	float shadowKernel;
-	// --
 	float3 directionWS;
-	uint type;
-	// --
+	float shadowKernel;
 	float shadowBias;
 	int shadowMap_index;
 	float coneAngle;
 	float coneAngleCos;
-	// --
 	float4 texMulAdd;
-	// --
 	matrix shadowMatrix[3];
+
+	// Load area light props:
+	inline float3 GetRight() { return directionWS; }
+	inline float3 GetUp() { return directionVS; }
+	inline float3 GetFront() { return positionVS; }
+	inline float GetRadius() { return texMulAdd.x; }
+	inline float GetWidth() { return texMulAdd.y; }
+	inline float GetHeight() { return texMulAdd.z; }
+
+	// Load decal props:
+	inline matrix GetProjection() { return shadowMatrix[0]; }
+	inline float GetEmissive() { return energy; }
 };
 
 
 
 // Tiled rendering params:
 #define TILED_CULLING_BLOCKSIZE	16
-#define MAX_LIGHTS	1024
+#define MAX_SHADER_ENTITY_COUNT	1024
 
 
 // MIP Generator params:
