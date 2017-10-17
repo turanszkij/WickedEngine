@@ -61,8 +61,8 @@
 
 // Structured Buffers (t slot):
 #define SBSLOT_TILEFRUSTUMS			25
-#define SBSLOT_LIGHTINDEXLIST		26
-#define SBSLOT_LIGHTARRAY			27
+#define SBSLOT_ENTITYINDEXLIST		26
+#define SBSLOT_ENTITYARRAY			27
 
 // Skinning:
 #define SKINNINGSLOT_IN_VERTEX_POS	0

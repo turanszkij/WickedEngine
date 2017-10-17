@@ -1428,8 +1428,8 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 
-	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_LIGHTARRAY, threadID);
-	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_LIGHTARRAY, threadID);
+	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
+	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const std::string& get)
@@ -4428,7 +4428,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
-		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_LIGHTINDEXLIST, threadID);
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_ENTITYGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
 	}
 
@@ -4470,7 +4470,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
-		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_LIGHTINDEXLIST, threadID);
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
 		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
 	}
 
@@ -5037,7 +5037,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	{
 		device->EventBegin("Entity Culling", threadID);
 
-		device->UnBindResources(TEXSLOT_LIGHTGRID, SBSLOT_LIGHTINDEXLIST - TEXSLOT_LIGHTGRID + 1, threadID);
+		device->UnBindResources(TEXSLOT_LIGHTGRID, SBSLOT_ENTITYINDEXLIST - TEXSLOT_LIGHTGRID + 1, threadID);
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		
