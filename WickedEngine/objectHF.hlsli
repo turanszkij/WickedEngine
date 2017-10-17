@@ -202,7 +202,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			// blend out if close to cube Z:
 			float edgeBlend = 1 - pow(saturate(abs(clipSpace.z)), 8);
 			decalColor.a *= edgeBlend;
-			decalColor *= decal.color;
+			decalColor *= decal.GetColor();
 			// apply emissive:
 			specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 			// perform manual blending of decals:

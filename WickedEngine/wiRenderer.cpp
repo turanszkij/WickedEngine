@@ -1971,7 +1971,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[lightCounter].positionWS = l->translation;
 			XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[lightCounter].positionWS), viewMatrix));
 			entityArray[lightCounter].range = l->enerDis.y;
-			entityArray[lightCounter].color = l->color;
+			entityArray[lightCounter].color = wiMath::CompressColor(l->color);
 			entityArray[lightCounter].energy = l->enerDis.x;
 			entityArray[lightCounter].shadowBias = l->shadowBias;
 			entityArray[lightCounter].shadowMap_index = l->shadowMap_index;
@@ -1988,8 +1988,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			break;
 			case Light::SPOT:
 			{
-				entityArray[lightCounter].coneAngle = (l->enerDis.z * 0.5f);
-				entityArray[lightCounter].coneAngleCos = cosf(entityArray[lightCounter].coneAngle);
+				entityArray[lightCounter].coneAngleCos = cosf(l->enerDis.z * 0.5f);
 				entityArray[lightCounter].directionWS = l->GetDirection();
 				XMStoreFloat3(&entityArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[lightCounter].directionWS), viewMatrix));
 				if (l->shadow && l->shadowMap_index >= 0 && !l->shadowCam_spotLight.empty())
@@ -2035,7 +2034,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[lightCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
 			entityArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
 			entityArray[lightCounter].texMulAdd = decal->atlasMulAdd;
-			entityArray[lightCounter].color = XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity());
+			entityArray[lightCounter].color = wiMath::CompressColor(XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity()));
 			entityArray[lightCounter].energy = decal->emissive;
 
 			lightCounter++;

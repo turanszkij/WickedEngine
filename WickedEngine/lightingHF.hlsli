@@ -6,7 +6,7 @@
 
 inline float3 GetSunColor()
 {
-	return EntityArray[g_xFrame_SunEntityArrayIndex].color.rgb;
+	return EntityArray[g_xFrame_SunEntityArrayIndex].GetColor().rgb;
 }
 inline float3 GetSunDirection()
 {
@@ -46,7 +46,7 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, f
 inline LightingResult DirectionalLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
 {
 	LightingResult result;
-	float3 lightColor = light.color.rgb*light.energy;
+	float3 lightColor = light.GetColor().rgb*light.energy;
 
 	float3 L = light.directionWS.xyz;
 	BRDF_MAKE(N, L, V);
@@ -122,7 +122,7 @@ inline LightingResult PointLight(in ShaderEntityType light, in float3 N, in floa
 	{
 		L /= dist;
 
-		float3 lightColor = light.color.rgb*light.energy;
+		float3 lightColor = light.GetColor().rgb*light.energy;
 
 		BRDF_MAKE(N, L, V);
 		result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
@@ -159,7 +159,7 @@ inline LightingResult SpotLight(in ShaderEntityType light, in float3 N, in float
 	{
 		L /= dist;
 
-		float3 lightColor = light.color.rgb*light.energy;
+		float3 lightColor = light.GetColor().rgb*light.energy;
 
 		float SpotFactor = dot(L, light.directionWS);
 		float spotCutOff = light.coneAngleCos;
@@ -401,7 +401,7 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 		L = normalize(closestPoint);
 	}
 
-	float3 lightColor = light.color.rgb*light.energy;
+	float3 lightColor = light.GetColor().rgb*light.energy;
 
 	BRDF_MAKE(N, L, V);
 	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;
@@ -449,7 +449,7 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 		L = normalize(closestPoint);
 	}
 
-	float3 lightColor = light.color.rgb*light.energy;
+	float3 lightColor = light.GetColor().rgb*light.energy;
 
 	BRDF_MAKE(N, L, V);
 	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;
@@ -557,7 +557,7 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 		L = normalize(L); // TODO: Is it necessary?
 	}
 
-	float3 lightColor = light.color.rgb*light.energy;
+	float3 lightColor = light.GetColor().rgb*light.energy;
 
 	BRDF_MAKE(N, L, V);
 	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;
@@ -648,7 +648,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 		L = normalize(closestPoint);
 	}
 
-	float3 lightColor = light.color.rgb*light.energy;
+	float3 lightColor = light.GetColor().rgb*light.energy;
 
 	BRDF_MAKE(N, L, V);
 	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;

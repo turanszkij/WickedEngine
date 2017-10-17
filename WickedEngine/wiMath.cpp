@@ -531,4 +531,15 @@ namespace wiMath
 
 		return retval;
 	}
+	uint32_t CompressColor(const XMFLOAT4& color)
+	{
+		uint32_t retval = 0;
+
+		retval |= (uint32_t)((uint8_t)(saturate(color.x) * 255.0f) << 0);
+		retval |= (uint32_t)((uint8_t)(saturate(color.y) * 255.0f) << 8);
+		retval |= (uint32_t)((uint8_t)(saturate(color.z) * 255.0f) << 16);
+		retval |= (uint32_t)((uint8_t)(saturate(color.w) * 255.0f) << 24);
+
+		return retval;
+	}
 }

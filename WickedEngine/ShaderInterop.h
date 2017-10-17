@@ -79,17 +79,29 @@ struct ShaderEntityType
 	float3 positionVS;
 	float range;
 	float3 directionVS;
-	float4 color;
 	float3 positionWS;
 	float energy;
+	uint color;
 	float3 directionWS;
+	float coneAngleCos;
 	float shadowKernel;
 	float shadowBias;
 	int shadowMap_index;
-	float coneAngle;
-	float coneAngleCos;
 	float4 texMulAdd;
 	matrix shadowMatrix[3];
+
+	// Load uncompressed color:
+	inline float4 GetColor()
+	{
+		float4 fColor;
+
+		fColor.x = (float)((color >> 0) & 0x000000FF) / 255.0f;
+		fColor.y = (float)((color >> 8) & 0x000000FF) / 255.0f;
+		fColor.z = (float)((color >> 16) & 0x000000FF) / 255.0f;
+		fColor.w = (float)((color >> 24) & 0x000000FF) / 255.0f;
+
+		return fColor;
+	}
 
 	// Load area light props:
 	inline float3 GetRight() { return directionWS; }
