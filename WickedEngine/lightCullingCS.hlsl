@@ -374,7 +374,7 @@ void main(ComputeShaderInput IN)
 	// Wait till all threads in group have caught up.
 	GroupMemoryBarrierWithGroupSync();
 
-	const uint exportStartOffset = flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy * MAX_SHADER_ENTITY_COUNT_PER_TILE);
+	const uint exportStartOffset = flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
 
 	// Update global memory with visible entity buffer.
 	// First update the entity grid (only thread 0 in group needs to do this)
