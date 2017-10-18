@@ -19,14 +19,13 @@ private:
 	struct Point
 	{
 		XMFLOAT3 pos;
-		XMFLOAT4 sizOpaMir;
-		//XMFLOAT3 col;
 		float rot;
+		XMFLOAT4 sizOpaMir;
 		XMFLOAT3 vel;
 		float rotVel;
 		float life;
 		float maxLife;
-		float sizBeginEnd[2];
+		XMFLOAT2 sizBeginEnd;
 
 		Point(){}
 		Point(const XMFLOAT3& newPos, const XMFLOAT4& newSizOpaMir, const XMFLOAT3& newVel/*, const XMFLOAT3& newCol*/, float newLife, float newRotVel
@@ -39,8 +38,8 @@ private:
 			life=maxLife=newLife;
 			rot=newRotVel;
 			rotVel=newRotVel;
-			sizBeginEnd[0] = sizOpaMir.x;
-			sizBeginEnd[1] = sizOpaMir.x*scaleX;
+			sizBeginEnd.x = sizOpaMir.x;
+			sizBeginEnd.y = sizOpaMir.x*scaleX;
 		}
 	};
 	std::deque<Point> points;
@@ -51,11 +50,9 @@ private:
 		float		mMotionBlurAmount;
 		float		padding;
 	};
-	wiGraphicsTypes::GPUBuffer		   *vertexBuffer;
-	static wiGraphicsTypes::VertexLayout   *vertexLayout;
+	wiGraphicsTypes::GPUBuffer		   *particleBuffer;
 	static wiGraphicsTypes::VertexShader  *vertexShader;
 	static wiGraphicsTypes::PixelShader   *pixelShader,*simplestPS;
-	static wiGraphicsTypes::GeometryShader *geometryShader;
 	static wiGraphicsTypes::GPUBuffer           *constantBuffer;
 	static wiGraphicsTypes::BlendState		*blendStateAlpha,*blendStateAdd;
 	static wiGraphicsTypes::RasterizerState		*rasterizerState,*wireFrameRS;
