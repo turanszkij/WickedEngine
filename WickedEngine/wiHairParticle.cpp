@@ -12,10 +12,8 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-VertexLayout *wiHairParticle::il = nullptr;
 VertexShader *wiHairParticle::vs = nullptr;
-PixelShader *wiHairParticle::ps[],*wiHairParticle::qps[];
-GeometryShader *wiHairParticle::gs = nullptr,*wiHairParticle::qgs = nullptr;
+PixelShader *wiHairParticle::ps[];
 ComputeShader *wiHairParticle::cs_RESET = nullptr;
 ComputeShader *wiHairParticle::cs_CULLING = nullptr;
 ComputeShader *wiHairParticle::cs_BITONICSORT = nullptr;
@@ -29,7 +27,7 @@ int wiHairParticle::LOD[3];
 wiHairParticle::wiHairParticle()
 {
 	cb = nullptr;
-	vb = nullptr;
+	particleBuffer = nullptr;
 	ib = nullptr;
 	ib_transposed = nullptr;
 	name = "";
@@ -46,7 +44,7 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 						   , const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup)
 {
 	cb = nullptr;
-	vb = nullptr;
+	particleBuffer = nullptr;
 	ib = nullptr;
 	ib_transposed = nullptr;
 	drawargs = nullptr;
@@ -78,22 +76,18 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 void wiHairParticle::CleanUp()
 {
 	SAFE_DELETE(cb);
-	SAFE_DELETE(vb);
+	SAFE_DELETE(particleBuffer);
 	SAFE_DELETE(ib);
 	SAFE_DELETE(drawargs);
 }
 
 void wiHairParticle::CleanUpStatic()
 {
-	SAFE_DELETE(il);
 	SAFE_DELETE(vs);
 	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
 	{
 		SAFE_DELETE(ps[i]);
-		SAFE_DELETE(qps[i]);
 	}
-	SAFE_DELETE(gs);
-	SAFE_DELETE(qgs);
 	SAFE_DELETE(cs_RESET);
 	SAFE_DELETE(cs_CULLING);
 	SAFE_DELETE(cs_BITONICSORT);
@@ -106,38 +100,20 @@ void wiHairParticle::CleanUpStatic()
 }
 void wiHairParticle::LoadShaders()
 {
-
-	VertexLayoutDesc layout[] =
-	{
-		{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, FORMAT_R8G8B8A8_UNORM, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TANGENT", 0, FORMAT_R8G8B8A8_UNORM, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-	};
-	UINT numElements = ARRAYSIZE(layout);
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassVS.cso", wiResourceManager::VERTEXSHADER));
 	if (vsinfo != nullptr) {
 		vs = vsinfo->vertexShader;
-		il = vsinfo->vertexLayout;
 	}
 
 	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
 	{
 		SAFE_INIT(ps[i]);
-		SAFE_INIT(qps[i]);
 	}
-
-	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_deferred.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 	
-	qps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	qps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_deferred.cso", wiResourceManager::PIXELSHADER));
-	qps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
-	qps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
-
-	gs = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassGS.cso", wiResourceManager::GEOMETRYSHADER));
-	qgs = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qgrassGS.cso", wiResourceManager::GEOMETRYSHADER));
+	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_deferred.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
 	cs_RESET = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCulling_RESETCS.cso", wiResourceManager::COMPUTESHADER));
 	cs_CULLING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCullingCS.cso", wiResourceManager::COMPUTESHADER));
@@ -317,12 +293,6 @@ void wiHairParticle::Generate()
 			mesh->vertices_FULL[vi[1]],
 			mesh->vertices_FULL[vi[2]],
 		};
-		//verts[0].pos = mesh->vertices_POS[vi[0]].pos;
-		//verts[0].nor = mesh->vertices_NOR[vi[0]].nor;
-		//verts[1].pos = mesh->vertices_POS[vi[1]].pos;
-		//verts[1].nor = mesh->vertices_NOR[vi[1]].nor;
-		//verts[2].pos = mesh->vertices_POS[vi[2]].pos;
-		//verts[2].nor = mesh->vertices_NOR[vi[2]].nor;
 
 		if(
 			(denMod[0]>FLT_EPSILON || denMod[1]>FLT_EPSILON || denMod[2]>FLT_EPSILON) &&
@@ -389,7 +359,7 @@ void wiHairParticle::Generate()
 	particleCount = points.size();
 
 	SAFE_DELETE(cb);
-	SAFE_DELETE(vb);
+	SAFE_DELETE(particleBuffer);
 	SAFE_DELETE(ib);
 	SAFE_DELETE(ib_transposed);
 
@@ -402,8 +372,8 @@ void wiHairParticle::Generate()
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	SubresourceData data = {};
 	data.pSysMem = points.data();
-	vb = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, vb);
+	particleBuffer = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, particleBuffer);
 
 
 	uint32_t* indices = new uint32_t[particleCount];
@@ -567,7 +537,7 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
 	Texture2D* texture = material->texture;
-	PixelShader* _ps = texture != nullptr ? qps[shaderType] : ps[shaderType];
+	PixelShader* _ps = ps[shaderType];
 	if (_ps == nullptr)
 		return;
 
@@ -576,40 +546,27 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		device->EventBegin("HairParticle - Draw", threadID);
 
 
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
-		device->BindVertexLayout(il,threadID);
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
+		device->BindVertexLayout(nullptr,threadID);
 		device->BindPS(_ps,threadID);
 		device->BindVS(vs,threadID);
 
 		if(texture)
 		{
 			device->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
-			device->BindResourceGS(texture,TEXSLOT_ONDEMAND0,threadID);
+			device->BindResourceVS(texture,TEXSLOT_ONDEMAND0,threadID);
 		}
 
 		device->BindRasterizerState(ncrs, threadID);
 
-		device->BindConstantBufferGS(cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->BindConstantBufferVS(cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		if (texture)
-		{
-			device->BindGS(qgs, threadID);
-		}
-		else
-		{
-			device->BindGS(gs, threadID);
-		}
+		device->BindResourceVS(particleBuffer, 0, threadID);
 
-		const GPUBuffer* vbs[] = {
-			vb,
-		};
-		const UINT strides[] = {
-			sizeof(Point),
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-		device->BindIndexBuffer(ib, INDEXBUFFER_FORMAT::INDEXFORMAT_32BIT, threadID);
+		device->Draw((int)particleCount * 12, threadID);
 
-		device->DrawIndexedInstancedIndirect(drawargs, 0, threadID);
+		//device->BindIndexBuffer(ib, INDEXBUFFER_FORMAT::INDEXFORMAT_32BIT, threadID);
+		//device->DrawIndexedInstancedIndirect(drawargs, 0, threadID);
 
 		device->BindGS(nullptr,threadID);
 

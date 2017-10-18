@@ -288,6 +288,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 		bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
+		device->BindVertexLayout(nullptr, threadID);
 		device->BindPS(wireRender?simplestPS:pixelShader,threadID);
 		device->BindVS(vertexShader,threadID);
 

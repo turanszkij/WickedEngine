@@ -57,7 +57,7 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 
 	float3 quadPos = BILLBOARD[vertexID];
 
-	float2 uv = quadPos.xy * 0.5f + 0.5f;
+	float2 uv = quadPos.xy * float2(0.5f, -0.5f) + 0.5f;
 	uv.x = particle.sizOpaMir.z > 0 ? 1.0f - uv.x : uv.x;
 	uv.y = particle.sizOpaMir.w > 0 ? 1.0f - uv.y : uv.y;
 	
