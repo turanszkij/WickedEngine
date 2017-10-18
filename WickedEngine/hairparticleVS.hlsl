@@ -81,6 +81,11 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	float3 wind = sin(g_xFrame_Time + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz * patchPos.y * 0.03f;
 	float3 windPrev = sin(g_xFrame_TimePrev + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz * patchPos.y * 0.03f;
 
+	// transform particle by the emitter object matrix:
+	pos.xyz = mul(float4(pos.xyz, 1), xWorld).xyz;
+	normal = mul(normal, (float3x3)xWorld);
+	tangent = mul(tangent, (float3x3)xWorld);
+
 	// rotate the patch into the tangent space of the emitting triangle:
 	float3x3 TBN = float3x3(tangent, normal, cross(normal, tangent));
 	patchPos = mul(patchPos, TBN);
