@@ -1,18 +1,17 @@
-#include "grassHF_GS.hlsli"
-#include "grassHF_PS.hlsli"
+#define DISABLE_DECALS
+#include "globals.hlsli"
+#include "objectHF.hlsli"
+#include "hairparticleHF.hlsli"
 #include "ditherHF.hlsli"
 
-GBUFFEROutputType_Thin main(QGS_OUT input)
+[earlydepthstencil]
+GBUFFEROutputType_Thin main(VertexToPixel input)
 {
-#ifdef GRASS_FADE_DITHER
-	clip(dither(input.pos.xy) - input.fade);
-#endif
-
 	float4 baseColor = texture_0.Sample(sampler_linear_clamp, input.tex);
-	ALPHATEST(baseColor.a)
-	float opacity = 1; // keep edge diffuse shading
+	baseColor.a *= 1.0 - input.fade;
+	clip(baseColor.a - 1.0f / 256.0f); // cancel heaviest overdraw for the alpha composition effect
+	float opacity = 1;
 	baseColor = DEGAMMA(baseColor);
-	baseColor.a = 1; // do not blend
 	float4 color = baseColor;
 	float3 P = input.pos3D;
 	float3 V = g_xCamera_CamPos - P;
@@ -33,7 +32,9 @@ GBUFFEROutputType_Thin main(QGS_OUT input)
 
 	OBJECT_PS_LIGHT_BEGIN
 
-	OBJECT_PS_LIGHT_DIRECTIONAL
+	OBJECT_PS_LIGHT_TILED
+
+	OBJECT_PS_VOXELRADIANCE
 
 	OBJECT_PS_LIGHT_END
 

@@ -1,8 +1,8 @@
-#include "grassHF_GS.hlsli"
-#include "grassHF_PS.hlsli"
+#include "globals.hlsli"
+#include "hairparticleHF.hlsli"
 #include "ditherHF.hlsli"
 
-void main(QGS_OUT PSIn)
+void main(VertexToPixel PSIn)
 {
 #ifdef GRASS_FADE_DITHER
 	clip(dither(PSIn.pos.xy) - PSIn.fade);

@@ -14,8 +14,6 @@ using namespace wiGraphicsTypes;
 
 VertexShader *wiHairParticle::vs = nullptr;
 PixelShader *wiHairParticle::ps[];
-ComputeShader *wiHairParticle::cs_RESET = nullptr;
-ComputeShader *wiHairParticle::cs_CULLING = nullptr;
 ComputeShader *wiHairParticle::cs_BITONICSORT = nullptr;
 ComputeShader *wiHairParticle::cs_TRANSPOSE = nullptr;
 GPUBuffer *wiHairParticle::cb_BITONIC = nullptr;
@@ -88,8 +86,6 @@ void wiHairParticle::CleanUpStatic()
 	{
 		SAFE_DELETE(ps[i]);
 	}
-	SAFE_DELETE(cs_RESET);
-	SAFE_DELETE(cs_CULLING);
 	SAFE_DELETE(cs_BITONICSORT);
 	SAFE_DELETE(cs_TRANSPOSE);
 	SAFE_DELETE(cb_BITONIC);
@@ -100,7 +96,7 @@ void wiHairParticle::CleanUpStatic()
 }
 void wiHairParticle::LoadShaders()
 {
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassVS.cso", wiResourceManager::VERTEXSHADER));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticleVS.cso", wiResourceManager::VERTEXSHADER));
 	if (vsinfo != nullptr) {
 		vs = vsinfo->vertexShader;
 	}
@@ -110,13 +106,11 @@ void wiHairParticle::LoadShaders()
 		SAFE_INIT(ps[i]);
 	}
 	
-	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_deferred.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "qGrassPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
-	cs_RESET = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCulling_RESETCS.cso", wiResourceManager::COMPUTESHADER));
-	cs_CULLING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "grassCullingCS.cso", wiResourceManager::COMPUTESHADER));
 	cs_BITONICSORT = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bitonicSort_hairparticleCS.cso", wiResourceManager::COMPUTESHADER));
 	cs_TRANSPOSE = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "matrixTransposeCS.cso", wiResourceManager::COMPUTESHADER));
 

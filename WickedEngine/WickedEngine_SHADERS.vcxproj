@@ -16,6 +16,7 @@
     <None Include="cylinder.hlsli" />
     <None Include="depthConvertHF.hlsli" />
     <None Include="ditherHF.hlsli" />
+    <None Include="emittedparticleHF.hlsli" />
     <None Include="envMapHF.hlsli" />
     <None Include="envReflectionHF.hlsli" />
     <None Include="fogHF.hlsli" />
@@ -23,8 +24,7 @@
     <None Include="fxaa.hlsli" />
     <None Include="generateMIPChainHF.hlsli" />
     <None Include="globals.hlsli" />
-    <None Include="grassHF_GS.hlsli" />
-    <None Include="grassHF_PS.hlsli" />
+    <None Include="hairparticleHF.hlsli" />
     <None Include="icosphere.hlsli" />
     <None Include="imageHF.hlsli" />
     <None Include="deferredLightHF.hlsli" />
@@ -167,31 +167,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="grassCullingCS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="grassCulling_ResetCS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="grassGS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Geometry</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="grassPS_alphatestonly.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="grassPS_deferred.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="grassPS_forward_dirlight.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="grassPS_tiledforward.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="grassVS.hlsl">
+    <FxCompile Include="hairparticleVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="horizontalBlurPS.hlsl">
@@ -414,32 +390,25 @@
     <FxCompile Include="pointLightVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="pointspriteGS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Geometry</ShaderType>
-    </FxCompile>
-    <FxCompile Include="pointspritePS.hlsl">
+    <FxCompile Include="emittedparticlePS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="pointspritePS_simplest.hlsl">
+    <FxCompile Include="emittedparticlePS_simplest.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="pointspriteVS.hlsl">
+    <FxCompile Include="emittedparticleVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="qgrassGS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Geometry</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">5.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="qGrassPS_alphatestonly.hlsl">
+    <FxCompile Include="hairparticlePS_alphatestonly.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="qGrassPS_deferred.hlsl">
+    <FxCompile Include="hairparticlePS_deferred.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="qGrassPS_forward_dirlight.hlsl">
+    <FxCompile Include="hairparticlePS_forward_dirlight.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="qGrassPS_tiledforward.hlsl">
+    <FxCompile Include="hairparticlePS_tiledforward.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="rectangleLightPS.hlsl">

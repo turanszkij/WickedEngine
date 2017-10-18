@@ -37,8 +37,6 @@ private:
 	};
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
-	static wiGraphicsTypes::ComputeShader *cs_RESET;
-	static wiGraphicsTypes::ComputeShader *cs_CULLING;
 	static wiGraphicsTypes::ComputeShader *cs_BITONICSORT;
 	static wiGraphicsTypes::ComputeShader *cs_TRANSPOSE;
 	static wiGraphicsTypes::GPUBuffer* cb_BITONIC;

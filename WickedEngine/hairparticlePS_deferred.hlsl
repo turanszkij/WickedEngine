@@ -1,8 +1,9 @@
-#include "grassHF_GS.hlsli"
-#include "grassHF_PS.hlsli"
+#include "globals.hlsli"
+#include "objectHF.hlsli"
+#include "hairparticleHF.hlsli"
 #include "ditherHF.hlsli"
 
-GBUFFEROutputType main(QGS_OUT input)
+GBUFFEROutputType main(VertexToPixel input)
 {
 #ifdef GRASS_FADE_DITHER
 	clip(dither(input.pos.xy) - input.fade);
