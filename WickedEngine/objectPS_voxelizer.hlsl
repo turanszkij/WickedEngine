@@ -131,7 +131,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		uint normal_encoded = EncodeNormal(N);
 
 		// output:
-		uint id = to1D(writecoord, g_xWorld_VoxelRadianceDataRes);
+		uint id = flatten3D(writecoord, g_xWorld_VoxelRadianceDataRes);
 		InterlockedMax(output[id].colorMask, color_encoded);
 		InterlockedMax(output[id].normalMask, normal_encoded);
 	}

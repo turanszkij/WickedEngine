@@ -2,19 +2,6 @@
 #define _CULLING_SHADER_HF_
 #include "ShaderInterop.h"
 
-CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
-{
-	// Number of groups dispatched. (This parameter is not available as an HLSL system value!)
-	uint3	xDispatchParams_numThreadGroups;
-	uint	xDispatchParams_value0; // extra value / padding
-
-					  // Total number of threads dispatched. (Also not available as an HLSL system value!)
-					  // Note: This value may be less than the actual number of threads executed 
-					  // if the screen size is not evenly divisible by the block size.
-	uint3	xDispatchParams_numThreads;
-	uint	xDispatchParams_value1; // extra value / padding
-}
-
 struct Plane
 {
 	float3	N;		// Plane normal.
@@ -63,7 +50,7 @@ float4 ClipToView(float4 clip)
 float4 ScreenToView(float4 screen)
 {
 	// Convert to normalized texture coordinates
-	float2 texCoord = screen.xy / GetInternalResolution();
+	float2 texCoord = screen.xy * g_xWorld_InternalResolution_Inverse;
 
 	// Convert to clip space
 	float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2.0f - 1.0f, screen.z, screen.w);

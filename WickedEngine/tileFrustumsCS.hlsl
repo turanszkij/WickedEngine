@@ -1,6 +1,14 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 
+CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
+{
+	uint3	xDispatchParams_numThreadGroups;
+	uint	xDispatchParams_value0;
+	uint3	xDispatchParams_numThreads;
+	uint	xDispatchParams_value1;
+}
+
 // View space frustums for the grid cells.
 RWSTRUCTUREDBUFFER(out_Frustums, Frustum, UAVSLOT_TILEFRUSTUMS);
 
@@ -44,7 +52,6 @@ void main(ComputeShaderInput IN)
 	// Store the computed frustum in global memory (if our thread ID is in bounds of the grid).
 	if (IN.dispatchThreadID.x < xDispatchParams_numThreads.x && IN.dispatchThreadID.y < xDispatchParams_numThreads.y)
 	{
-		uint index = IN.dispatchThreadID.x + (IN.dispatchThreadID.y * xDispatchParams_numThreads.x);
-		out_Frustums[index] = frustum;
+		out_Frustums[flatten2D(IN.dispatchThreadID.xy, xDispatchParams_numThreads.xy)] = frustum;
 	}
 }

@@ -6,6 +6,14 @@
 #include "packHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
+CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
+{
+	uint3	xDispatchParams_numThreadGroups;
+	uint	xDispatchParams_value0;
+	uint3	xDispatchParams_numThreads;
+	uint	xDispatchParams_value1;
+}
+
 #ifdef DEBUG_TILEDLIGHTCULLING
 RWTEXTURE2D(DebugTexture, unorm float4, UAVSLOT_DEBUGTEXTURE);
 #endif
@@ -14,22 +22,18 @@ STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
 #define entityCount xDispatchParams_value0
 
-globallycoherent RWRAWBUFFER(EntityIndexCounter, UAVSLOT_ENTITYINDEXCOUNTERHELPER);
-
 // Global counter for current index into the entity index list.
 // "o_" prefix indicates entity lists for opaque geometry while 
 // "t_" prefix indicates entity lists for transparent geometry.
 
 // Light index lists and entity grids.
 RWSTRUCTUREDBUFFER(t_EntityIndexList, uint, UAVSLOT_ENTITYINDEXLIST_TRANSPARENT);
-RWTEXTURE2D(t_EntityGrid, uint2, UAVSLOT_ENTITYGRID_TRANSPARENT);
 
 #ifdef DEFERRED
 RWTEXTURE2D(deferred_Diffuse, float4, UAVSLOT_TILEDDEFERRED_DIFFUSE);
 RWTEXTURE2D(deferred_Specular, float4, UAVSLOT_TILEDDEFERRED_SPECULAR);
 #else
 RWSTRUCTUREDBUFFER(o_EntityIndexList, uint, UAVSLOT_ENTITYINDEXLIST_OPAQUE);
-RWTEXTURE2D(o_EntityGrid, uint2, UAVSLOT_ENTITYGRID_OPAQUE);
 #endif
 
 // Group shared variables.
@@ -40,18 +44,16 @@ groupshared AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 groupshared AABB GroupAABB_WS;		// frustum AABB in world space
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 
-#define MAX_ENTITY_COUNT_PER_TILE 1024
-
 // Opaque geometry entity lists.
 groupshared uint o_ArrayLength = 0;
-groupshared uint o_ArrayIndexStartOffset = 0;
-groupshared uint o_Array[MAX_ENTITY_COUNT_PER_TILE];
+//groupshared uint o_ArrayIndexStartOffset = 0;
+groupshared uint o_Array[MAX_SHADER_ENTITY_COUNT_PER_TILE];
 groupshared uint o_decalCount = 0;
 
 // Transparent geometry entity lists.
 groupshared uint t_ArrayLength = 0;
-groupshared uint t_ArrayIndexStartOffset = 0;
-groupshared uint t_Array[MAX_ENTITY_COUNT_PER_TILE];
+//groupshared uint t_ArrayIndexStartOffset = 0;
+groupshared uint t_Array[MAX_SHADER_ENTITY_COUNT_PER_TILE];
 groupshared uint t_decalCount = 0;
 
 // Add the entity to the visible entity list for opaque geometry.
@@ -59,7 +61,7 @@ void o_AppendEntity(uint entityIndex)
 {
 	uint index;
 	InterlockedAdd(o_ArrayLength, 1, index);
-	if (index < MAX_ENTITY_COUNT_PER_TILE)
+	if (index < MAX_SHADER_ENTITY_COUNT_PER_TILE)
 	{
 		o_Array[index] = entityIndex;
 	}
@@ -70,7 +72,7 @@ void t_AppendEntity(uint entityIndex)
 {
 	uint index;
 	InterlockedAdd(t_ArrayLength, 1, index);
-	if (index < MAX_ENTITY_COUNT_PER_TILE)
+	if (index < MAX_SHADER_ENTITY_COUNT_PER_TILE)
 	{
 		t_Array[index] = entityIndex;
 	}
@@ -170,9 +172,9 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 void main(ComputeShaderInput IN)
 {
 	// Calculate min & max depth in threadgroup / tile.
-	uint2 texCoord = IN.dispatchThreadID.xy;
-	texCoord = min(texCoord, GetInternalResolution() - 1); // avoid loading from outside the texture, it messes up the min-max depth!
-	float depth = texture_depth[texCoord];
+	uint2 pixel = IN.dispatchThreadID.xy;
+	pixel = min(pixel, GetInternalResolution() - 1); // avoid loading from outside the texture, it messes up the min-max depth!
+	float depth = texture_depth[pixel];
 
 	uint uDepth = asuint(depth);
 
@@ -184,7 +186,7 @@ void main(ComputeShaderInput IN)
 		t_ArrayLength = 0;
 
 		// Get frustum from frustum buffer:
-		GroupFrustum = in_Frustums[IN.groupID.x + (IN.groupID.y * xDispatchParams_numThreads.x)]; // numthreads is from the frustum computation phase, so not actual number of threads here
+		GroupFrustum = in_Frustums[flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy)];
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -372,20 +374,24 @@ void main(ComputeShaderInput IN)
 	// Wait till all threads in group have caught up.
 	GroupMemoryBarrierWithGroupSync();
 
+	const uint exportStartOffset = flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy * MAX_SHADER_ENTITY_COUNT_PER_TILE);
+
 	// Update global memory with visible entity buffer.
 	// First update the entity grid (only thread 0 in group needs to do this)
 #ifndef DEFERRED
 	if (IN.groupIndex == 0)
 	{
-		EntityIndexCounter.InterlockedAdd(0, o_ArrayLength, o_ArrayIndexStartOffset);
-		o_EntityGrid[IN.groupID.xy] = uint2(o_ArrayIndexStartOffset, (o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
+		//EntityIndexCounter.InterlockedAdd(0, o_ArrayLength, o_ArrayIndexStartOffset);
+		//o_EntityGrid[IN.groupID.xy] = uint2(o_ArrayIndexStartOffset, (o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
+		o_EntityIndexList[exportStartOffset] = uint((o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
 	}
 	else 
 #endif
 		if(IN.groupIndex == 1)
 	{
-		EntityIndexCounter.InterlockedAdd(4, t_ArrayLength, t_ArrayIndexStartOffset);
-		t_EntityGrid[IN.groupID.xy] = uint2(t_ArrayIndexStartOffset, (t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
+		//EntityIndexCounter.InterlockedAdd(4, t_ArrayLength, t_ArrayIndexStartOffset);
+		//t_EntityGrid[IN.groupID.xy] = uint2(t_ArrayIndexStartOffset, (t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
+		t_EntityIndexList[exportStartOffset] = uint((t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
 	}
 
 #ifndef DEFERRED
@@ -407,30 +413,32 @@ void main(ComputeShaderInput IN)
 	// For opaque goemetry.
 	for (i = IN.groupIndex; i < o_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
-		o_EntityIndexList[o_ArrayIndexStartOffset + i] = o_Array[i];
+		//o_EntityIndexList[o_ArrayIndexStartOffset + i] = o_Array[i];
+		o_EntityIndexList[exportStartOffset + 1 + i] = o_Array[i];
 	}
 #endif
 	// For transparent geometry.
 	for (i = IN.groupIndex; i < t_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
-		t_EntityIndexList[t_ArrayIndexStartOffset + i] = t_Array[i];
+		//t_EntityIndexList[t_ArrayIndexStartOffset + i] = t_Array[i];
+		t_EntityIndexList[exportStartOffset + 1 + i] = t_Array[i];
 	}
 
 #ifdef DEFERRED
 	// Light the pixels:
 	
 	float3 diffuse, specular;
-	float4 baseColor = texture_gbuffer0[texCoord];
-	float4 g1 = texture_gbuffer1[texCoord];
-	float4 g3 = texture_gbuffer3[texCoord];
+	float4 baseColor = texture_gbuffer0[pixel];
+	float4 g1 = texture_gbuffer1[pixel];
+	float4 g3 = texture_gbuffer3[pixel];
 	float3 N = decode(g1.xy);
 	float roughness = g3.x;
 	float reflectance = g3.y;
 	float metalness = g3.z;
 	float ao = g3.w;
 	BRDF_HELPER_MAKEINPUTS(baseColor, reflectance, metalness);
-	float3 P = getPosition((float2)texCoord / g_xWorld_InternalResolution, depth);
-	float3 V = normalize(g_xCamera_CamPos - P);
+	float3 P = getPosition((float2)pixel * g_xWorld_InternalResolution_Inverse, depth);
+	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 
 	[loop]
 	for (uint li = 0; li < o_ArrayLength; ++li)
@@ -487,8 +495,8 @@ void main(ComputeShaderInput IN)
 
 	specular = max(specular, EnvironmentReflection(N, V, P, roughness, f0));
 
-	deferred_Diffuse[texCoord] = float4(diffuse, ao);
-	deferred_Specular[texCoord] = float4(specular, 1);
+	deferred_Diffuse[pixel] = float4(diffuse, ao);
+	deferred_Specular[pixel] = float4(specular, 1);
 
 #endif // DEFERRED
 
@@ -507,6 +515,6 @@ void main(ComputeShaderInput IN)
 	float3 a = mapTex[floor(l)];
 	float3 b = mapTex[ceil(l)];
 	float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
-	DebugTexture[texCoord] = heatmap;
+	DebugTexture[pixel] = heatmap;
 #endif
 }

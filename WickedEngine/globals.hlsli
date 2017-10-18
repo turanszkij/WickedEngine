@@ -18,7 +18,6 @@ TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE)
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE)
 
-TEXTURE2D(EntityGrid, uint2, TEXSLOT_LIGHTGRID);
 STRUCTUREDBUFFER(EntityIndexList, uint, SBSLOT_ENTITYINDEXLIST);
 STRUCTUREDBUFFER(EntityArray, ShaderEntityType, SBSLOT_ENTITYARRAY);
 
@@ -49,7 +48,9 @@ SAMPLERSTATE(			sampler_objectshader,	SSLOT_OBJECTSHADER	)
 CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 {
 	float2		g_xWorld_ScreenWidthHeight;
+	float2		g_xWorld_ScreenWidthHeight_Inverse;
 	float2		g_xWorld_InternalResolution;
+	float2		g_xWorld_InternalResolution_Inverse;
 	float		g_xWorld_Gamma;
 	float3		g_xWorld_Horizon;
 	float3		g_xWorld_Zenith;				float xPadding0_WorldCB;
@@ -62,6 +63,7 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float		g_xWorld_VoxelRadianceFalloff;
 	float3		g_xWorld_VoxelRadianceDataCenter;
 	bool		g_xWorld_AdvancedRefractions;
+	uint3		g_xWorld_EntityCullingTileCount; uint xPadding2_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
@@ -152,13 +154,24 @@ struct ComputeShaderInput
 
 // Helpers:
 
+// 2D array index to flattened 1D array index
+inline uint flatten2D(uint2 coord, uint2 dim)
+{
+	return coord.x + coord.y * dim.x;
+}
+// flattened array index to 2D array index
+inline uint2 unflatten2D(uint idx, uint2 dim)
+{
+	return uint2(idx % dim.x, idx / dim.x);
+}
+
 // 3D array index to flattened 1D array index
-inline uint to1D(uint3 coord, uint3 dim)
+inline uint flatten3D(uint3 coord, uint3 dim)
 {
 	return (coord.z * dim.x * dim.y) + (coord.y * dim.x) + coord.x;
 }
 // flattened array index to 3D array index
-inline uint3 to3D(uint idx, uint3 dim)
+inline uint3 unflatten3D(uint idx, uint3 dim)
 {
 	const uint z = idx / (dim.x * dim.y);
 	idx -= (z * dim.x * dim.y);

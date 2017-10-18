@@ -166,10 +166,11 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	inout float3 diffuse, out float3 specular)
 {
 	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	uint startOffset = EntityGrid[tileIndex].x;
-	uint arrayProperties = EntityGrid[tileIndex].y;
+	uint startOffset = flatten2D(tileIndex, g_xWorld_EntityCullingTileCount.x * MAX_SHADER_ENTITY_COUNT_PER_TILE);
+	uint arrayProperties = EntityIndexList[startOffset];
 	uint arrayLength = arrayProperties & 0x00FFFFFF; // count of every element in the tile
 	uint decalCount = (arrayProperties & 0xFF000000) >> 24; // count of just the decals in the tile
+	startOffset += 1; // first element was the itemcount
 	uint iterator = 0;
 
 	specular = 0;

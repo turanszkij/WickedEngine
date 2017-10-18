@@ -871,7 +871,6 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_ADVANCED.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_ADVANCED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_RESET.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
@@ -4428,7 +4427,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
-		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_ENTITYGRID_OPAQUE], TEXSLOT_LIGHTGRID, threadID);
 	}
 
 	if (grass)
@@ -4470,7 +4468,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
-		GetDevice()->BindResourcePS(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT], TEXSLOT_LIGHTGRID, threadID);
 	}
 
 	if (grass)
@@ -4869,6 +4866,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd(threadID);
 }
 
+
 void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
@@ -4876,7 +4874,8 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 	int _width = GetInternalResolution().x;
 	int _height = GetInternalResolution().y;
-	UINT averageLightCountPerTile = 256;
+
+	const XMUINT3 tileCount = GetEntityCullingTileCount();
 
 	static int _savedWidth = 0;
 	static int _savedHeight = 0;
@@ -4886,21 +4885,6 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		_resolutionChanged = true;
 		_savedWidth = _width;
 		_savedHeight = _height;
-	}
-
-
-	// Calc dispatchparams
-	DispatchParamsCB dispatchParams;
-	{
-		dispatchParams.numThreads[0] = (UINT)ceilf(_width / (float)TILED_CULLING_BLOCKSIZE);
-		dispatchParams.numThreads[1] = (UINT)ceilf(_height / (float)TILED_CULLING_BLOCKSIZE);
-		dispatchParams.numThreads[2] = 1;
-		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)TILED_CULLING_BLOCKSIZE);
-		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)TILED_CULLING_BLOCKSIZE);
-		dispatchParams.numThreadGroups[2] = 1;
-		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count + (UINT)frameCullings[getCamera()].culledDecals.size(); // entity count (forward_list does not have size())
-		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 	}
 
 	static GPUBuffer* frustumBuffer = nullptr;
@@ -4914,48 +4898,13 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = _stride * dispatchParams.numThreads[0] * dispatchParams.numThreads[1] * dispatchParams.numThreads[2]; // storing 4 planes for every tile
+		bd.ByteWidth = _stride * tileCount.x * tileCount.y * tileCount.z; // storing 4 planes for every tile
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
 		bd.CPUAccessFlags = 0;
 		bd.StructureByteStride = _stride;
 		device->CreateBuffer(&bd, nullptr, frustumBuffer);
-	}
-	static GPUBuffer* lightCounterHelper = nullptr;
-	if (lightCounterHelper == nullptr)
-	{
-		lightCounterHelper = new GPUBuffer;
-
-		GPUBufferDesc bd;
-		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = sizeof(UINT) * 2;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_UNORDERED_ACCESS; // only used in the compute shader which is assembling the entity index list, so no need for Shader Resource View
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		device->CreateBuffer(&bd, nullptr, lightCounterHelper);
-	}
-	if (textures[TEXTYPE_2D_ENTITYGRID_OPAQUE] == nullptr || textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT] == nullptr || _resolutionChanged)
-	{
-		SAFE_DELETE(textures[TEXTYPE_2D_ENTITYGRID_OPAQUE]);
-		SAFE_DELETE(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]);
-
-		Texture2DDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
-		desc.ArraySize = 1;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_R32G32_UINT;
-		desc.Width = dispatchParams.numThreads[0];
-		desc.Height = dispatchParams.numThreads[1];
-		desc.MipLevels = 1;
-		desc.MiscFlags = 0;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
-		desc.Usage = USAGE_DEFAULT;
-		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_ENTITYGRID_OPAQUE]);
-		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]);
 	}
 	if (_resolutionChanged)
 	{
@@ -4966,7 +4915,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		GPUBufferDesc bd;
 		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = sizeof(UINT) * dispatchParams.numThreads[0] * dispatchParams.numThreads[1]* dispatchParams.numThreads[2] * averageLightCountPerTile;
+		bd.ByteWidth = sizeof(UINT) * tileCount.x * tileCount.y * tileCount.z * MAX_SHADER_ENTITY_COUNT_PER_TILE;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		bd.CPUAccessFlags = 0;
@@ -5007,6 +4956,17 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		frustumsComplete = true;
 		device->BindUnorderedAccessResourceCS(frustumBuffer, UAVSLOT_TILEFRUSTUMS, threadID);
 		device->BindCS(computeShaders[CSTYPE_TILEFRUSTUMS], threadID);
+
+		DispatchParamsCB dispatchParams;
+		dispatchParams.numThreads[0] = tileCount.x;
+		dispatchParams.numThreads[1] = tileCount.y;
+		dispatchParams.numThreads[2] = 1;
+		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)TILED_CULLING_BLOCKSIZE);
+		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)TILED_CULLING_BLOCKSIZE);
+		dispatchParams.numThreadGroups[2] = 1;
+		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+
 		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 		device->UnBindUnorderedAccessResources(UAVSLOT_TILEFRUSTUMS, 1, threadID);
 	}
@@ -5036,7 +4996,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	{
 		device->EventBegin("Entity Culling", threadID);
 
-		device->UnBindResources(TEXSLOT_LIGHTGRID, SBSLOT_ENTITYINDEXLIST - TEXSLOT_LIGHTGRID + 1, threadID);
+		device->UnBindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		
@@ -5092,16 +5052,25 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 			}
 		}
 
+		DispatchParamsCB dispatchParams;
+		dispatchParams.numThreadGroups[0] = tileCount.x;
+		dispatchParams.numThreadGroups[1] = tileCount.y;
+		dispatchParams.numThreadGroups[2] = 1;
+		dispatchParams.numThreads[0] = dispatchParams.numThreadGroups[0] * TILED_CULLING_BLOCKSIZE;
+		dispatchParams.numThreads[1] = dispatchParams.numThreadGroups[1] * TILED_CULLING_BLOCKSIZE;
+		dispatchParams.numThreads[2] = 1;
+		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count + (UINT)frameCullings[getCamera()].culledDecals.size(); // entity count (forward_list does not have size())
+		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+
 		if (deferred)
 		{
 			const GPUUnorderedResource* uavs[] = {
-				static_cast<const GPUUnorderedResource*>(lightCounterHelper),
 				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]),
 				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
 				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]),
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]),
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
+			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
 			GetDevice()->BindResourceCS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 			GetDevice()->BindResourceCS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
@@ -5109,20 +5078,13 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		else
 		{
 			const GPUUnorderedResource* uavs[] = {
-				static_cast<const GPUUnorderedResource*>(lightCounterHelper),
 				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]),
 				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_ENTITYGRID_OPAQUE]),
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_ENTITYGRID_TRANSPARENT]),
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXCOUNTERHELPER, ARRAYSIZE(uavs), threadID);
+			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
 		}
 
-		device->Dispatch(dispatchParams.numThreads[0], dispatchParams.numThreads[1], dispatchParams.numThreads[2], threadID);
-
-		// dispatch a reset shader for the helper resources
-		device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_RESET], threadID);
-		device->Dispatch(1, 1, 1, threadID);
+		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 
 		device->BindCS(nullptr, threadID);
 		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
@@ -5361,7 +5323,9 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	ZeroMemory(&value, sizeof(value));
 
 	value.mScreenWidthHeight = XMFLOAT2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
+	value.mScreenWidthHeight_Inverse = XMFLOAT2(1.0f / value.mScreenWidthHeight.x, 1.0f / value.mScreenWidthHeight.y);
 	value.mInternalResolution = XMFLOAT2((float)GetInternalResolution().x, (float)GetInternalResolution().y);
+	value.mInternalResolution_Inverse = XMFLOAT2(1.0f / value.mInternalResolution.x, 1.0f / value.mInternalResolution.y);
 	value.mGamma = GetGamma();
 	auto& world = GetScene().worldInfo;
 	value.mAmbient = world.ambient;
@@ -5375,6 +5339,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mVoxelRadianceDataFalloff = voxelSceneData.falloff;
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 	value.mAdvancedRefractions = GetAdvancedRefractionsEnabled() ? 1 : 0;
+	value.mEntityCullingTileCount = GetEntityCullingTileCount();
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit
 	{

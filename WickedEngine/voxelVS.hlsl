@@ -12,7 +12,7 @@ VSOut main( uint vertexID : SV_VERTEXID )
 {
 	VSOut o;
 
-	uint3 coord = to3D(vertexID, g_xWorld_VoxelRadianceDataRes);
+	uint3 coord = unflatten3D(vertexID, g_xWorld_VoxelRadianceDataRes);
 	o.pos = float4(coord, 1);
 	o.col = texture_voxelradiance[coord];
 

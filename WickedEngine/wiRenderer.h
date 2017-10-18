@@ -91,7 +91,9 @@ public:
 	CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	{
 		XMFLOAT2 mScreenWidthHeight;
+		XMFLOAT2 mScreenWidthHeight_Inverse;
 		XMFLOAT2 mInternalResolution;
+		XMFLOAT2 mInternalResolution_Inverse;
 		float	 mGamma;
 		XMFLOAT3 mHorizon;
 		XMFLOAT3 mZenith;				float pad0;
@@ -104,6 +106,7 @@ public:
 		float mVoxelRadianceDataFalloff;
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		BOOL mAdvancedRefractions;
+		XMUINT3 mEntityCullingTileCount; uint32_t pad2;
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
@@ -364,6 +367,14 @@ public:
 		}
 	};
 	static std::unordered_map<Camera*, FrameCulling> frameCullings;
+
+	inline static XMUINT3 GetEntityCullingTileCount()
+	{
+		return XMUINT3(
+			(UINT)ceilf((float)GetInternalResolution().x / (float)TILED_CULLING_BLOCKSIZE),
+			(UINT)ceilf((float)GetInternalResolution().y / (float)TILED_CULLING_BLOCKSIZE),
+			1);
+	}
 	
 public:
 	

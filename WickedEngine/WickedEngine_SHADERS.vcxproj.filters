@@ -606,9 +606,6 @@
     <FxCompile Include="grassCulling_ResetCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="lightCullingCS_RESET.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="bitonicSort_hairparticleCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>

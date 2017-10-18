@@ -7,18 +7,16 @@
 // Unordered Access Resources (u slot):
 
 #define UAVSLOT_TILEFRUSTUMS						0
-#define UAVSLOT_ENTITYINDEXCOUNTERHELPER				0
-#define UAVSLOT_ENTITYINDEXLIST_OPAQUE				1
-#define UAVSLOT_ENTITYINDEXLIST_TRANSPARENT			2
-#define UAVSLOT_ENTITYGRID_OPAQUE					3
-#define UAVSLOT_ENTITYGRID_TRANSPARENT				4
+#define UAVSLOT_ENTITYINDEXLIST_OPAQUE				0
+#define UAVSLOT_ENTITYINDEXLIST_TRANSPARENT			1
 #define UAVSLOT_DEBUGTEXTURE						7
-#define UAVSLOT_TILEDDEFERRED_DIFFUSE				1
-#define UAVSLOT_TILEDDEFERRED_SPECULAR				3
+#define UAVSLOT_TILEDDEFERRED_DIFFUSE				0
+#define UAVSLOT_TILEDDEFERRED_SPECULAR				2
 
 
 // Textures (t slot):
 
+// These are reserved slots for the renderer:
 #define TEXSLOT_DEPTH				0
 #define TEXSLOT_LINEARDEPTH			1
 
@@ -39,6 +37,8 @@
 
 #define TEXSLOT_VOXELRADIANCE		14
 
+
+// Ondemand textures are 2d textures and declared in shader globals, these can be used independently in any shader:
 #define TEXSLOT_ONDEMAND0			15
 #define TEXSLOT_ONDEMAND1			16
 #define TEXSLOT_ONDEMAND2			17
@@ -51,18 +51,16 @@
 #define TEXSLOT_ONDEMAND9			24
 #define TEXSLOT_ONDEMAND_COUNT	(TEXSLOT_ONDEMAND9 - TEXSLOT_ONDEMAND0 + 1)
 
-#define TEXSLOT_LIGHTGRID			25
-
-// Ondemand textures are 2d textures and declared in shader globals, these can be used independently in any shader
-#define TEXSLOT_UNIQUE0				26
-#define TEXSLOT_UNIQUE1				27
+// These are reserved for demand of any type of textures in specific shaders:
+#define TEXSLOT_UNIQUE0				25
+#define TEXSLOT_UNIQUE1				26
 
 #define TEXSLOT_COUNT		TEXSLOT_UNIQUE1
 
 // Structured Buffers (t slot):
 #define SBSLOT_TILEFRUSTUMS			25
-#define SBSLOT_ENTITYINDEXLIST		26
-#define SBSLOT_ENTITYARRAY			27
+#define SBSLOT_ENTITYINDEXLIST		25
+#define SBSLOT_ENTITYARRAY			26
 
 // Skinning:
 #define SKINNINGSLOT_IN_VERTEX_POS	0
