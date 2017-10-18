@@ -11,10 +11,8 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-VertexLayout	*wiEmittedParticle::vertexLayout = nullptr;
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader = nullptr,*wiEmittedParticle::simplestPS = nullptr;
-GeometryShader		*wiEmittedParticle::geometryShader = nullptr;
 GPUBuffer           *wiEmittedParticle::constantBuffer = nullptr;
 BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
@@ -187,7 +185,7 @@ void wiEmittedParticle::Update(float dt)
 		point.life=wiMath::Clamp(point.life,0,point.maxLife);
 
 		float lifeLerp = point.life/point.maxLife;
-		point.sizOpaMir.x=wiMath::Lerp(point.sizBeginEnd[1],point.sizBeginEnd[0],lifeLerp);
+		point.sizOpaMir.x=wiMath::Lerp(point.sizBeginEnd.y,point.sizBeginEnd.x,lifeLerp);
 		point.sizOpaMir.y=wiMath::Lerp(1,0,lifeLerp);
 
 		
@@ -276,7 +274,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	if (!points.empty())
 	{
 		std::vector<Point> renderPoints = std::vector<Point>(points.begin(), points.end());
-		wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
+		wiRenderer::GetDevice()->UpdateBuffer(particleBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
 	}
 }
 
@@ -289,13 +287,10 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 
 		bool additive = (material->blendFlag==BLENDMODE_ADDITIVE || material->premultipliedTexture);
 
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::POINTLIST,threadID);
-		device->BindVertexLayout(vertexLayout,threadID);
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
+		device->BindVertexLayout(nullptr, threadID);
 		device->BindPS(wireRender?simplestPS:pixelShader,threadID);
 		device->BindVS(vertexShader,threadID);
-		device->BindGS(geometryShader,threadID);
-		
-		//device->BindResourcePS(depth,1,threadID);
 
 		ConstantBuffer cb;
 		cb.mAdd.x = additive ? 1.0f : 0.0f;
@@ -304,27 +299,20 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 		
 
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
-		device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 		device->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);
 		device->BindDepthStencilState(depthStencilState,1,threadID);
 	
 		device->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
 
-		const GPUBuffer* vbs[] = {
-			vertexBuffer,
-		};
-		const UINT strides[] = {
-			sizeof(Point),
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		device->BindResourceVS(particleBuffer, 0, threadID);
 
 		if(!wireRender && material->texture) 
 			device->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
-		device->Draw((int)points.size(),threadID);
+		device->Draw((int)points.size() * 6,threadID);
 
 
-		device->BindGS(nullptr,threadID);
 		device->EventEnd(threadID);
 	}
 }
@@ -343,7 +331,7 @@ void wiEmittedParticle::CleanUp()
 
 	points.clear();
 
-	SAFE_DELETE(vertexBuffer);
+	SAFE_DELETE(particleBuffer);
 
 	SAFE_DELETE_ARRAY(posSamples);
 	SAFE_DELETE_ARRAY(radSamples);
@@ -356,26 +344,14 @@ void wiEmittedParticle::CleanUp()
 
 void wiEmittedParticle::LoadShaders()
 {
-	VertexLayoutDesc layout[] =
-	{
-		{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		//{ "TEXCOORD", 2, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "ROTATION", 0, FORMAT_R32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "VELOCITY", 0, FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-	};
-	UINT numElements = ARRAYSIZE(layout);
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteVS.cso", wiResourceManager::VERTEXSHADER));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
-		vertexLayout = vsinfo->vertexLayout;
 	}
 
 
 	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS.cso", wiResourceManager::PIXELSHADER));
 	simplestPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspritePS_simplest.cso", wiResourceManager::PIXELSHADER));
-
-	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "pointspriteGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 
@@ -481,16 +457,18 @@ void wiEmittedParticle::SetUpStates()
 }
 void wiEmittedParticle::LoadVertexBuffer()
 {
-	vertexBuffer=NULL;
+	particleBuffer = nullptr;
 
 	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
     bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof( Point ) * MAX_PARTICLES;
-    bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.ByteWidth = sizeof(Point) * MAX_PARTICLES;
+    bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	vertexBuffer = new GPUBuffer;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, vertexBuffer );
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(Point);
+	particleBuffer = new GPUBuffer;
+    wiRenderer::GetDevice()->CreateBuffer( &bd, nullptr, particleBuffer );
 }
 void wiEmittedParticle::SetUpStatic()
 {
@@ -500,11 +478,9 @@ void wiEmittedParticle::SetUpStatic()
 }
 void wiEmittedParticle::CleanUpStatic()
 {
-	SAFE_DELETE(vertexLayout);
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(pixelShader);
 	SAFE_DELETE(simplestPS);
-	SAFE_DELETE(geometryShader);
 	SAFE_DELETE(constantBuffer);
 	SAFE_DELETE(blendStateAlpha);
 	SAFE_DELETE(blendStateAdd);

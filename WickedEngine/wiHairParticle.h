@@ -35,10 +35,8 @@ private:
 		UINT iWidth;
 		UINT iHeight;
 	};
-	static wiGraphicsTypes::VertexLayout *il;
 	static wiGraphicsTypes::VertexShader *vs;
-	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT], *qps[SHADERTYPE_COUNT];
-	static wiGraphicsTypes::GeometryShader *gs,*qgs;
+	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
 	static wiGraphicsTypes::ComputeShader *cs_RESET;
 	static wiGraphicsTypes::ComputeShader *cs_CULLING;
 	static wiGraphicsTypes::ComputeShader *cs_BITONICSORT;
@@ -74,7 +72,7 @@ public:
 	size_t particleCount;
 
 	wiGraphicsTypes::GPUBuffer *cb;
-	wiGraphicsTypes::GPUBuffer *vb;
+	wiGraphicsTypes::GPUBuffer *particleBuffer;
 	wiGraphicsTypes::GPUBuffer *ib;
 	wiGraphicsTypes::GPUBuffer *ib_transposed;
 	wiGraphicsTypes::GPUBuffer *drawargs;
