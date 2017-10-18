@@ -44,16 +44,17 @@ groupshared AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 groupshared AABB GroupAABB_WS;		// frustum AABB in world space
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 
+// Allow a bit more room for sorting, culling etc. in LDS and also deferred
+#define LDS_ENTITYCOUNT (MAX_SHADER_ENTITY_COUNT_PER_TILE * 2)
+
 // Opaque geometry entity lists.
 groupshared uint o_ArrayLength = 0;
-//groupshared uint o_ArrayIndexStartOffset = 0;
-groupshared uint o_Array[MAX_SHADER_ENTITY_COUNT_PER_TILE];
+groupshared uint o_Array[LDS_ENTITYCOUNT];
 groupshared uint o_decalCount = 0;
 
 // Transparent geometry entity lists.
 groupshared uint t_ArrayLength = 0;
-//groupshared uint t_ArrayIndexStartOffset = 0;
-groupshared uint t_Array[MAX_SHADER_ENTITY_COUNT_PER_TILE];
+groupshared uint t_Array[LDS_ENTITYCOUNT];
 groupshared uint t_decalCount = 0;
 
 // Add the entity to the visible entity list for opaque geometry.
@@ -61,7 +62,7 @@ void o_AppendEntity(uint entityIndex)
 {
 	uint index;
 	InterlockedAdd(o_ArrayLength, 1, index);
-	if (index < MAX_SHADER_ENTITY_COUNT_PER_TILE)
+	if (index < LDS_ENTITYCOUNT)
 	{
 		o_Array[index] = entityIndex;
 	}
@@ -72,7 +73,7 @@ void t_AppendEntity(uint entityIndex)
 {
 	uint index;
 	InterlockedAdd(t_ArrayLength, 1, index);
-	if (index < MAX_SHADER_ENTITY_COUNT_PER_TILE)
+	if (index < LDS_ENTITYCOUNT)
 	{
 		t_Array[index] = entityIndex;
 	}
@@ -381,17 +382,13 @@ void main(ComputeShaderInput IN)
 #ifndef DEFERRED
 	if (IN.groupIndex == 0)
 	{
-		//EntityIndexCounter.InterlockedAdd(0, o_ArrayLength, o_ArrayIndexStartOffset);
-		//o_EntityGrid[IN.groupID.xy] = uint2(o_ArrayIndexStartOffset, (o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
-		o_EntityIndexList[exportStartOffset] = uint((o_ArrayLength & 0x00FFFFFF) | ((o_decalCount & 0x000000FF) << 24));
+		o_EntityIndexList[exportStartOffset] = uint(min(o_ArrayLength & 0x00FFFFFF, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1) | ((o_decalCount & 0x000000FF) << 24));
 	}
 	else 
 #endif
 		if(IN.groupIndex == 1)
 	{
-		//EntityIndexCounter.InterlockedAdd(4, t_ArrayLength, t_ArrayIndexStartOffset);
-		//t_EntityGrid[IN.groupID.xy] = uint2(t_ArrayIndexStartOffset, (t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
-		t_EntityIndexList[exportStartOffset] = uint((t_ArrayLength & 0x00FFFFFF) | ((t_decalCount & 0x000000FF) << 24));
+		t_EntityIndexList[exportStartOffset] = uint(min(t_ArrayLength & 0x00FFFFFF, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1) | ((t_decalCount & 0x000000FF) << 24));
 	}
 
 #ifndef DEFERRED
@@ -404,23 +401,27 @@ void main(ComputeShaderInput IN)
 	{
 		t_BitonicSort(IN.groupIndex);
 	}
-#endif
 
+	// Do not allow to export more than the buffer size allows, it could trash neighbor tiles!
+	if (IN.groupIndex == 0)
+	{
+		o_ArrayLength = min(o_ArrayLength, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1);
+		t_ArrayLength = min(t_ArrayLength, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1);
+	}
 	GroupMemoryBarrierWithGroupSync();
+#endif
 
 	// Now update the entity index list (all threads).
 #ifndef DEFERRED
 	// For opaque goemetry.
 	for (i = IN.groupIndex; i < o_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
-		//o_EntityIndexList[o_ArrayIndexStartOffset + i] = o_Array[i];
 		o_EntityIndexList[exportStartOffset + 1 + i] = o_Array[i];
 	}
 #endif
 	// For transparent geometry.
 	for (i = IN.groupIndex; i < t_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
-		//t_EntityIndexList[t_ArrayIndexStartOffset + i] = t_Array[i];
 		t_EntityIndexList[exportStartOffset + 1 + i] = t_Array[i];
 	}
 
