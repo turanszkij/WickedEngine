@@ -402,25 +402,21 @@ void main(ComputeShaderInput IN)
 		t_BitonicSort(IN.groupIndex);
 	}
 
-	// Do not allow to export more than the buffer size allows, it could trash neighbor tiles!
-	if (IN.groupIndex == 0)
-	{
-		o_ArrayLength = min(o_ArrayLength, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1);
-		t_ArrayLength = min(t_ArrayLength, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1);
-	}
 	GroupMemoryBarrierWithGroupSync();
 #endif
 
 	// Now update the entity index list (all threads).
 #ifndef DEFERRED
 	// For opaque goemetry.
-	for (i = IN.groupIndex; i < o_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
+	const uint o_clampedArrayLength = min(o_ArrayLength, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1);
+	for (i = IN.groupIndex; i < o_clampedArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
 		o_EntityIndexList[exportStartOffset + 1 + i] = o_Array[i];
 	}
 #endif
 	// For transparent geometry.
-	for (i = IN.groupIndex; i < t_ArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
+	const uint t_clampedArrayLength = min(t_ArrayLength, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1);
+	for (i = IN.groupIndex; i < t_clampedArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{
 		t_EntityIndexList[exportStartOffset + 1 + i] = t_Array[i];
 	}
