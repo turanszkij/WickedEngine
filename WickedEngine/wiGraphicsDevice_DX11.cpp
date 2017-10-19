@@ -2694,18 +2694,18 @@ void GraphicsDevice_DX11::FinishCommandList(GRAPHICSTHREAD thread)
 
 void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) 
 {
-	D3D11_VIEWPORT* pd3dViewPorts = new D3D11_VIEWPORT[NumViewports];
+	assert(NumViewports <= 6);
+	D3D11_VIEWPORT d3dViewPorts[6];
 	for (UINT i = 0; i < NumViewports; ++i)
 	{
-		pd3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;
-		pd3dViewPorts[i].TopLeftY = pViewports[i].TopLeftY;
-		pd3dViewPorts[i].Width = pViewports[i].Width;
-		pd3dViewPorts[i].Height = pViewports[i].Height;
-		pd3dViewPorts[i].MinDepth = pViewports[i].MinDepth;
-		pd3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
+		d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;
+		d3dViewPorts[i].TopLeftY = pViewports[i].TopLeftY;
+		d3dViewPorts[i].Width = pViewports[i].Width;
+		d3dViewPorts[i].Height = pViewports[i].Height;
+		d3dViewPorts[i].MinDepth = pViewports[i].MinDepth;
+		d3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
 	}
-	deviceContexts[threadID]->RSSetViewports(NumViewports, pd3dViewPorts);
-	SAFE_DELETE_ARRAY(pd3dViewPorts);
+	deviceContexts[threadID]->RSSetViewports(NumViewports, d3dViewPorts);
 }
 void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUUnorderedResource* const *ppUAVs, int slotUAV, int countUAV,
 	GRAPHICSTHREAD threadID, int arrayIndex)
