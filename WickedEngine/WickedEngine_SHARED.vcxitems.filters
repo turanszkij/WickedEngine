@@ -1915,7 +1915,6 @@
     <Text Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.txt">
       <Filter>Documentation</Filter>
     </Text>
-    <Text Include="$(MSBuildThisFileDirectory)..\todo.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
