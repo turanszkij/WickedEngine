@@ -3,6 +3,9 @@
 # Wicked Engine
 
 [![Build status][s1]][av] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
+<a href="https://twitter.com/intent/follow?screen_name=turanszkij">
+        <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
+            alt="follow on Twitter"></a>
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
