@@ -21,7 +21,7 @@ struct LightingResult
 
 inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
-	float realDistance = shadowPos.z - bias;
+	float realDistance = shadowPos.z + bias;
 	float sum = 0;
 	float retVal = 1; 
 #ifdef DIRECTIONALLIGHT_SOFT
@@ -136,7 +136,7 @@ inline LightingResult PointLight(in ShaderEntityType light, in float3 N, in floa
 		float sh = max(NdotL, 0);
 		[branch]
 		if (light.shadowMap_index >= 0) {
-			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / light.range * (1 - light.shadowBias)).r;
+			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 		}
 		result.diffuse *= sh;
 		result.specular *= sh;

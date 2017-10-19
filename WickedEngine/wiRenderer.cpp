@@ -979,18 +979,21 @@ void wiRenderer::SetUpStates()
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MaxAnisotropy = 16;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_WRAP]);
 	
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
+	samplerDesc.MaxAnisotropy = 16;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_MIRROR]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MaxAnisotropy = 16;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_OBJECTSHADER]);
 
 	ZeroMemory( &samplerDesc, sizeof(SamplerDesc) );
@@ -999,8 +1002,8 @@ void wiRenderer::SetUpStates()
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 16;
-	samplerDesc.ComparisonFunc = COMPARISON_LESS_EQUAL;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_CMP_DEPTH]);
 
 	for (int i = 0; i < SSTYPE_LAST; ++i)
@@ -1049,7 +1052,7 @@ void wiRenderer::SetUpStates()
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias = 4.0f;
+	rs.SlopeScaledDepthBias = -2.0f;
 	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
@@ -1062,7 +1065,7 @@ void wiRenderer::SetUpStates()
 	rs.FrontCounterClockwise=true;
 	rs.DepthBias=0;
 	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias = 5.0f;
+	rs.SlopeScaledDepthBias = -2.0f;
 	rs.DepthClipEnable=true;
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
@@ -1173,7 +1176,7 @@ void wiRenderer::SetUpStates()
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER;
 
 	dsd.StencilEnable = true;
 	dsd.StencilReadMask = 0xFF;
@@ -1190,7 +1193,7 @@ void wiRenderer::SetUpStates()
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilEnable = false;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_SHADOW]);
 
@@ -1201,7 +1204,7 @@ void wiRenderer::SetUpStates()
 	dsd.StencilEnable = false;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
+	dsd.FrontFace.StencilFunc = COMPARISON_LESS;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
@@ -1249,7 +1252,7 @@ void wiRenderer::SetUpStates()
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
-	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilReadMask = 0xFF;
 	dsd.StencilWriteMask = 0x00;
 	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
@@ -1266,7 +1269,7 @@ void wiRenderer::SetUpStates()
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
@@ -1288,7 +1291,7 @@ void wiRenderer::SetUpStates()
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	dsd.DepthFunc = COMPARISON_LESS_EQUAL;
+	dsd.DepthFunc = COMPARISON_GREATER;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_ENVMAP]);
 
 
@@ -3340,7 +3343,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								if (!culledRenderer.empty())
 								{
 									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
-									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, l->shadowMap_index + index);
+									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index + index);
 
 									CameraCB cb;
 									cb.mVP = l->shadowCam_dirLight[index].getVP();
@@ -3359,7 +3362,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 						shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
 						Frustum frustum;
-						frustum.ConstructFrustum(l->shadowCam_spotLight[0].farplane, l->shadowCam_spotLight[0].Projection, l->shadowCam_spotLight[0].View);
+						frustum.ConstructFrustum(l->shadowCam_spotLight[0].farplane, l->shadowCam_spotLight[0].realProjection, l->shadowCam_spotLight[0].View);
 						if (spTree != nullptr)
 						{
 							CulledList culledObjects;
@@ -3376,7 +3379,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							if (!culledRenderer.empty())
 							{
 								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
-								GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 1.0f, 0, threadID, l->shadowMap_index);
+								GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
 
 								CameraCB cb;
 								cb.mVP = l->shadowCam_spotLight[0].getVP();
@@ -3413,7 +3416,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							if (!culledRenderer.empty())
 							{
 								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_Cube, threadID, l->shadowMap_index);
-								GetDevice()->ClearDepthStencil(Light::shadowMapArray_Cube, CLEAR_DEPTH, 1.0f, 0, threadID, l->shadowMap_index);
+								GetDevice()->ClearDepthStencil(Light::shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
 
 								MiscCB miscCb;
 								miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, 1.0f / l->GetRange()); // reciprocal range, to avoid division in shader

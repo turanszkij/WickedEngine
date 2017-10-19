@@ -782,6 +782,7 @@ private:
 };
 struct SHCAM{	
 	XMFLOAT4X4 View,Projection;
+	XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
 	XMFLOAT3 Eye,At,Up;
 	float nearplane,farplane,size;
 
@@ -818,13 +819,17 @@ struct SHCAM{
 		XMStoreFloat4x4( &View, rView);
 	}
 	void Create_Ortho(float size){
-		XMMATRIX rProjection = XMMatrixOrthographicOffCenterLH(-size*0.5f,size*0.5f,-size*0.5f,size*0.5f,nearplane,farplane);
+		XMMATRIX rProjection = XMMatrixOrthographicOffCenterLH(-size*0.5f,size*0.5f,-size*0.5f,size*0.5f,farplane,nearplane);
 		XMStoreFloat4x4( &Projection, rProjection);
+		rProjection = XMMatrixOrthographicOffCenterLH(-size*0.5f, size*0.5f, -size*0.5f, size*0.5f, nearplane, farplane);
+		XMStoreFloat4x4(&realProjection, rProjection);
 		this->size=size;
 	}
 	void Create_Perspective(float fov){
-		XMMATRIX rProjection = XMMatrixPerspectiveFovLH(fov,1,nearplane,farplane);
-		XMStoreFloat4x4( &Projection, rProjection);
+		XMMATRIX rProjection = XMMatrixPerspectiveFovLH(fov,1,farplane,nearplane);
+		XMStoreFloat4x4( &Projection, rProjection); 
+		rProjection = XMMatrixPerspectiveFovLH(fov, 1, nearplane, farplane);
+		XMStoreFloat4x4(&realProjection, rProjection);
 	}
 	void Update(const XMVECTOR& pos){
 		XMStoreFloat4x4( &View , XMMatrixTranslationFromVector(-pos) 
