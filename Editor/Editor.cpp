@@ -864,6 +864,7 @@ void EditorComponent::Load()
 	spotLightTex = *(Texture2D*)Content.add("images/spotlight.dds");
 	dirLightTex = *(Texture2D*)Content.add("images/directional_light.dds");
 	areaLightTex = *(Texture2D*)Content.add("images/arealight.dds");
+	decalTex = *(Texture2D*)Content.add("images/decal.dds");
 }
 void EditorComponent::Start()
 {
@@ -1318,9 +1319,9 @@ void EditorComponent::Compose()
 
 	__super::Compose();
 
-	if (rendererWnd->GetPickType() & PICK_LIGHT)
+	for (auto& x : wiRenderer::GetScene().models)
 	{
-		for (auto& x : wiRenderer::GetScene().models)
+		if (rendererWnd->GetPickType() & PICK_LIGHT)
 		{
 			for (auto& y : x->lights)
 			{
@@ -1363,6 +1364,40 @@ void EditorComponent::Compose()
 				}
 			}
 		}
+
+
+		if (rendererWnd->GetPickType() & PICK_DECAL)
+		{
+			for (auto& y : x->decals)
+			{
+				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+
+				wiImageEffects fx;
+				fx.pos = y->translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+				if (hovered.decal == y)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->decal == y)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
+
+
+				wiImage::Draw(&decalTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+
+			}
+		}
+
 	}
 
 }
