@@ -71,7 +71,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 
 					[branch]
 					if (light.shadowMap_index >= 0) {
-						lightColor *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / light.range * (1 - light.shadowBias)).r;
+						lightColor *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 					}
 
 					result.diffuse = lightColor;

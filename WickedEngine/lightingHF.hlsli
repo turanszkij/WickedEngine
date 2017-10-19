@@ -67,9 +67,9 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in float3 N, i
 		ShPos[1].xyz /= ShPos[1].w;
 		ShPos[2].xyz /= ShPos[2].w;
 		float3 ShTex[3];
-		ShTex[0] = ShPos[0].xyz*float3(1, -1, 1) * 0.5f + 0.5f;
-		ShTex[1] = ShPos[1].xyz*float3(1, -1, 1) * 0.5f + 0.5f;
-		ShTex[2] = ShPos[2].xyz*float3(1, -1, 1) * 0.5f + 0.5f;
+		ShTex[0] = ShPos[0].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		ShTex[1] = ShPos[1].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		ShTex[2] = ShPos[2].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 		// determine the main shadow cascade:
 		int cascade = -1;
@@ -387,7 +387,7 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
 	}
 
 
@@ -434,7 +434,7 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
 	}
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
@@ -502,7 +502,7 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(light.GetWidth(),light.GetHeight()) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - dist / (max(light.GetWidth(),light.GetHeight()) * 100) * (1 - light.shadowBias)).r;
 	}
 
 
@@ -623,7 +623,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 	[branch]
 	if (light.shadowMap_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), dist / (max(light.GetRadius(),light.GetWidth())*100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - dist / (max(light.GetRadius(),light.GetWidth())*100) * (1 - light.shadowBias)).r;
 	}
 
 
