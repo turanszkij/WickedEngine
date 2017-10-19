@@ -4,27 +4,16 @@
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	float2 pTex = float2(1,-1) * PSIn.pp.xy / PSIn.pp.w / 2.0f + 0.5f;
-	float4 depthScene=(texture_lineardepth.GatherRed(sampler_linear_clamp,pTex));
-	float depthFragment=PSIn.pp.w;
-	float fade = saturate(1.0/PSIn.opaAddDarkSiz.w*(max(max(depthScene.x,depthScene.y),max(depthScene.z,depthScene.w))-depthFragment));
-	//fade = depthScene<depthFragment?0:1;
+	float2 pTex = PSIn.pos2D.xy / PSIn.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
+	float4 depthScene = (texture_lineardepth.GatherRed(sampler_linear_clamp, pTex));
+	float depthFragment = PSIn.pos2D.w;
+	float fade = saturate(1.0 / PSIn.opaAddDarkSiz.w*(max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 
 	float4 color = float4(0,0,0,0);
 	color=texture_0.Sample(sampler_linear_clamp,PSIn.tex);
 
-	[branch]
-	if(PSIn.opaAddDarkSiz.z)
-	{
-		color.rgb=float3(0,0,0);
-	}
-	else{
-		color.a-=PSIn.opaAddDarkSiz.x;
-		color.a*=fade;
-	}
+	color.rgb = PSIn.opaAddDarkSiz.z > 0 ? 0 : color.rgb;
+	color.a = (color.a - PSIn.opaAddDarkSiz.x) * fade;
 
-	//color.rgb*=PSIn.col.rgb;
-
-	//return clamp( color, 0, inf );
 	return max(color, 0);
 }

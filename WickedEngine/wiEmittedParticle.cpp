@@ -336,8 +336,6 @@ void wiEmittedParticle::CleanUp()
 	SAFE_DELETE_ARRAY(posSamples);
 	SAFE_DELETE_ARRAY(radSamples);
 	SAFE_DELETE_ARRAY(energySamples);
-
-	//delete(this);
 }
 
 

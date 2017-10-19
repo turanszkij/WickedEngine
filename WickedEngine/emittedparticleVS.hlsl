@@ -8,15 +8,6 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		padding;
 };
 
-
-// 2;3  5
-// +----+
-// |\   |
-// | \  |
-// |  \ |
-// |   \|
-// +----+
-// 0    1;4
 static const float3 BILLBOARD[] = {
 	float3(-1, -1, 0),	// 0
 	float3(1, -1, 0),	// 1
@@ -68,12 +59,12 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	float quadLength = particle.sizOpaMir.x;
 	quadPos *= quadLength;
 
-	// TODO: this will be removed after particle system editor is completed
+	// TODO: this will be removed when particle system editor is completed
 	quadPos *= 0.05f;
 
 	// scale the billboard along view space motion vector:
 	float3 velocity = mul(particle.vel, (float3x3)g_xCamera_View);
-	quadPos += normalize(velocity * dot(quadPos, velocity)) * xMotionBlurAmount;
+	quadPos += dot(quadPos, velocity) * velocity * xMotionBlurAmount;
 
 
 	// copy to output:
@@ -84,7 +75,7 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 
 	Out.tex = uv;
 	Out.opaAddDarkSiz = float4(saturate(particle.sizOpaMir.y), xAdd.x, xAdd.y, particle.sizOpaMir.x);
-	Out.pp = Out.pos;
+	Out.pos2D = Out.pos;
 
 	return Out;
 }
