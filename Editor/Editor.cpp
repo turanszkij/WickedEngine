@@ -90,7 +90,7 @@ void EditorLoadingScreen::Load()
 	sprite.effects.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.9f, wiRenderer::GetDevice()->GetScreenHeight()*0.8f, 0);
 	sprite.effects.siz = XMFLOAT2(128,128);
 	sprite.effects.pivot = XMFLOAT2(0.5f, 0.5f);
-	sprite.effects.quality + QUALITY_BILINEAR;
+	sprite.effects.quality = QUALITY_BILINEAR;
 	sprite.effects.blendFlag = BLENDMODE_ALPHA;
 	addSprite(&sprite);
 
