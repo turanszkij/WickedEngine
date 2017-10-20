@@ -10,11 +10,12 @@
 using namespace wiGraphicsTypes;
 
 #pragma region STATICS
-BlendState		*wiImage::blendState = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateNoBlend = nullptr, *wiImage::blendStateAvg = nullptr, *wiImage::blendStateDisable = nullptr;
+BlendState		*wiImage::blendState = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateNoBlend = nullptr, *wiImage::blendStateMax = nullptr, *wiImage::blendStateDisable = nullptr;
 GPUBuffer       *wiImage::constantBuffer = nullptr, *wiImage::processCb = nullptr;
 
 VertexShader     *wiImage::vertexShader = nullptr,*wiImage::screenVS = nullptr;
-PixelShader      *wiImage::pixelShader = nullptr, *wiImage::blurHPS = nullptr, *wiImage::blurVPS = nullptr, *wiImage::shaftPS = nullptr, *wiImage::outlinePS = nullptr
+PixelShader		 *wiImage::imagePS = nullptr, *wiImage::imagePS_separatenormalmap = nullptr, *wiImage::imagePS_distortion = nullptr, *wiImage::imagePS_distortion_masked = nullptr, *wiImage::imagePS_masked = nullptr;
+PixelShader      *wiImage::blurHPS = nullptr, *wiImage::blurVPS = nullptr, *wiImage::shaftPS = nullptr, *wiImage::outlinePS = nullptr
 	, *wiImage::dofPS = nullptr, *wiImage::motionBlurPS = nullptr, *wiImage::bloomSeparatePS = nullptr, *wiImage::fxaaPS = nullptr, *wiImage::ssaoPS = nullptr, *wiImage::deferredPS = nullptr
 	, *wiImage::ssssPS = nullptr, *wiImage::linDepthPS = nullptr, *wiImage::colorGradePS = nullptr, *wiImage::ssrPS = nullptr, *wiImage::screenPS = nullptr, *wiImage::stereogramPS = nullptr
 	, *wiImage::tonemapPS = nullptr, *wiImage::reprojectDepthBufferPS = nullptr, *wiImage::downsampleDepthBufferPS = nullptr, *wiImage::temporalAAResolvePS = nullptr, *wiImage::sharpenPS = nullptr;
@@ -59,7 +60,12 @@ void wiImage::LoadShaders()
 	vertexShader = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imageVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	screenVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS.cso", wiResourceManager::PIXELSHADER));
+	imagePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS.cso", wiResourceManager::PIXELSHADER));
+	imagePS_separatenormalmap = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
+	imagePS_distortion = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_distortion.cso", wiResourceManager::PIXELSHADER));
+	imagePS_distortion_masked = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_distortion_masked.cso", wiResourceManager::PIXELSHADER));
+	imagePS_masked = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
+
 	blurHPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
 	blurVPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
 	shaftPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
@@ -210,8 +216,8 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	bd.IndependentBlendEnable=false;
-	blendStateAvg = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStateAvg);
+	blendStateMax = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStateMax);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable = false;
@@ -249,7 +255,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	else if (effects.blendFlag == BLENDMODE_OPAQUE)
 		device->BindBlendState(blendStateNoBlend, threadID);
 	else if (effects.blendFlag == BLENDMODE_MAX)
-		device->BindBlendState(blendStateAvg, threadID);
+		device->BindBlendState(blendStateMax, threadID);
 	else
 		device->BindBlendState(blendState, threadID);
 
@@ -358,27 +364,51 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 			cb.mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
 			cb.mColor = effects.col;
+			cb.mColor.x *= 1 - effects.fade;
+			cb.mColor.y *= 1 - effects.fade;
+			cb.mColor.z *= 1 - effects.fade;
+			cb.mColor.w *= effects.opacity;
 			cb.mPivot = effects.pivot;
 			cb.mMirror = effects.mirror;
 			cb.mPivot = effects.pivot;
-			
-
-			int normalmapmode = 0;
-			if(effects.distortionMap && effects.refractionSource)
-				normalmapmode=1;
-			if(effects.extractNormalMap==true)
-				normalmapmode=2;
-			cb.mNormalmapSeparate = normalmapmode;
 			cb.mMipLevel = effects.mipLevel;
-			cb.mFade = effects.fade;
-			cb.mOpacity = effects.opacity;
-			cb.mMask = effects.maskMap != nullptr;
-			cb.mDistort = effects.distortionMap != nullptr;
 
 			device->UpdateBuffer(constantBuffer, &cb, threadID);
 
 			device->BindVS(vertexShader, threadID);
-			device->BindPS(pixelShader, threadID);
+
+			// Determine relevant image rendering pixel shader:
+			bool NormalmapSeparate = effects.extractNormalMap;
+			bool Mask = effects.maskMap != nullptr;
+			bool Distort = effects.distortionMap != nullptr;
+			if (NormalmapSeparate)
+			{
+				device->BindPS(imagePS_separatenormalmap, threadID);
+			}
+			else
+			{
+				if (Mask)
+				{
+					if (Distort)
+					{
+						device->BindPS(imagePS_distortion_masked, threadID);
+					}
+					else
+					{
+						device->BindPS(imagePS_masked, threadID);
+					}
+				}
+				else if(Distort)
+				{
+					device->BindPS(imagePS_distortion, threadID);
+				}
+				else
+				{
+					device->BindPS(imagePS, threadID);
+				}
+			}
+
+
 			fullScreenEffect = false;
 		}
 		else if(abs(effects.sunPos.x + effects.sunPos.y) < FLT_EPSILON) // POSTPROCESS
@@ -566,7 +596,7 @@ void wiImage::CleanUp()
 	SAFE_DELETE(blendState);
 	SAFE_DELETE(blendStateAdd);
 	SAFE_DELETE(blendStateNoBlend);
-	SAFE_DELETE(blendStateAvg);
+	SAFE_DELETE(blendStateMax);
 	SAFE_DELETE(blendStateDisable);
 
 	SAFE_DELETE(constantBuffer);
@@ -581,7 +611,11 @@ void wiImage::CleanUp()
 
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(screenVS);
-	SAFE_DELETE(pixelShader);
+	SAFE_DELETE(imagePS);
+	SAFE_DELETE(imagePS_separatenormalmap);
+	SAFE_DELETE(imagePS_distortion);
+	SAFE_DELETE(imagePS_distortion_masked);
+	SAFE_DELETE(imagePS_masked);
 	SAFE_DELETE(blurHPS);
 	SAFE_DELETE(blurVPS);
 	SAFE_DELETE(shaftPS);

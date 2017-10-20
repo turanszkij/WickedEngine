@@ -18,16 +18,7 @@ protected:
 		XMFLOAT4	mColor;
 		XMFLOAT2	mPivot;
 		UINT		mMirror;
-
-		UINT		mMask;
-		UINT		mDistort;
-		UINT		mNormalmapSeparate;
 		float		mMipLevel;
-		float		mFade;
-		float		mOpacity;
-		float		pad0;
-		float		pad1;
-		float		pad2;
 	};
 	CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
 	{
@@ -35,11 +26,12 @@ protected:
 		float params1[4];
 	};
 	
-	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateAvg, *blendStateDisable;
+	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateMax, *blendStateDisable;
 	static wiGraphicsTypes::GPUBuffer       *constantBuffer, *processCb;
 
 	static wiGraphicsTypes::VertexShader     *vertexShader,*screenVS;
-	static wiGraphicsTypes::PixelShader      *pixelShader,*blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS
+	static wiGraphicsTypes::PixelShader		 *imagePS, *imagePS_separatenormalmap, *imagePS_distortion, *imagePS_distortion_masked, *imagePS_masked;
+	static wiGraphicsTypes::PixelShader      *blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS
 		,*fxaaPS,*ssaoPS,*ssssPS,*deferredPS,*linDepthPS,*colorGradePS,*ssrPS, *screenPS, *stereogramPS, *tonemapPS, *reprojectDepthBufferPS, *downsampleDepthBufferPS
 		,*temporalAAResolvePS, *sharpenPS;
 	

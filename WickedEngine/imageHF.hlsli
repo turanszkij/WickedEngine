@@ -12,8 +12,8 @@ SAMPLERSTATE(Sampler, SSLOT_ONDEMAND0);
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
-	float2 tex				: TEXCOORD0; //intex,movingtex
-	float4 dis				: TEXCOORD1; //distortion
+	float2 tex				: TEXCOORD0;
+	float4 pos2D			: TEXCOORD1;
 };
 struct VertexToPixelPostProcess
 {
@@ -29,16 +29,7 @@ CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 	float4		xColor;
 	float2		xPivot;
 	uint		xMirror;
-
-	uint		xMask;
-	uint		xDistort;
-	uint		xNormalmapSeparate;
 	float		xMipLevel;
-	float		xFade;
-	float		xOpacity;
-	float		xPadding0_ImageCB;
-	float		xPadding1_ImageCB;
-	float		xPadding2_ImageCB;
 };
 CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
 {

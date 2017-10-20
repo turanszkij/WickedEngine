@@ -18,7 +18,7 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 
 	Out.tex.xy = inTex * xTexMulAdd.xy + xTexMulAdd.zw;
 
-	Out.dis = Out.pos;
+	Out.pos2D = Out.pos;
 
 	return Out;
 }

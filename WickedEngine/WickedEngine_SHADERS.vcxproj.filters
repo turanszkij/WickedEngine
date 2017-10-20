@@ -597,6 +597,18 @@
     <FxCompile Include="hairparticlePS_tiledforward.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="imagePS_distortion.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_masked.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_distortion_masked.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_separatenormalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
