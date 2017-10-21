@@ -294,22 +294,25 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 
 		ConstantBuffer cb;
 		cb.mAdd.x = additive ? 1.0f : 0.0f;
-		cb.mAdd.y = (FLAG==DRAW_DARK?true:false);
+		cb.mAdd.y = (FLAG == DRAW_DARK ? true : false);
 		cb.mMotionBlurAmount = motionBlurAmount;
 		
 
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
 		device->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		device->BindRasterizerState(wireRender?wireFrameRS:rasterizerState,threadID);
-		device->BindDepthStencilState(depthStencilState,1,threadID);
+		device->BindRasterizerState(wireRender ? wireFrameRS : rasterizerState, threadID);
+		device->BindDepthStencilState(depthStencilState, 1, threadID);
 	
-		device->BindBlendState((additive?blendStateAdd:blendStateAlpha),threadID);
+		device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
 
 		device->BindResourceVS(particleBuffer, 0, threadID);
 
-		if(!wireRender && material->texture) 
-			device->BindResourcePS(material->texture,TEXSLOT_ONDEMAND0,threadID);
+		if (!wireRender && material->texture)
+		{
+			device->BindResourcePS(material->texture, TEXSLOT_ONDEMAND0, threadID);
+		}
+
 		device->Draw((int)points.size() * 6,threadID);
 
 
@@ -363,7 +366,7 @@ void wiEmittedParticle::SetUpCB()
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	constantBuffer = new GPUBuffer;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, constantBuffer );
+    wiRenderer::GetDevice()->CreateBuffer( &bd, nullptr, constantBuffer );
 }
 void wiEmittedParticle::SetUpStates()
 {

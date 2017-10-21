@@ -4046,7 +4046,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						sizeof(Mesh::Vertex_TEX),
 						sizeof(Mesh::Vertex_POS),
 						sizeof(Instance),
-						sizeof(Instance),
+						sizeof(InstancePrev),
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 				}
@@ -6020,23 +6020,29 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	GetDevice()->LOCK();
 
+	BindPersistentState(threadID);
+
 	static const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 	mesh->AddRenderableInstance(Instance(__identity), 0, threadID);
 	mesh->UpdateRenderableInstances(1, threadID);
+	mesh->AddRenderableInstancePrev(InstancePrev(__identity), 0, threadID);
+	mesh->UpdateRenderableInstancesPrev(1, threadID);
 
 	GPUBuffer* vbs[] = {
 		(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 		(mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 		&mesh->vertexBuffer_TEX,
 		(mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
-		&mesh->instanceBuffer
+		&mesh->instanceBuffer,
+		&mesh->instanceBufferPrev
 	};
 	UINT strides[] = {
 		sizeof(Mesh::Vertex_POS),
 		sizeof(Mesh::Vertex_NOR),
 		sizeof(Mesh::Vertex_TEX),
 		sizeof(Mesh::Vertex_POS),
-		sizeof(Instance)
+		sizeof(Instance),
+		sizeof(InstancePrev)
 	};
 	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
 
@@ -6142,11 +6148,12 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	}
 	GetDevice()->GenerateMips(mesh->impostorTarget.GetTexture(), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd_col.png", mesh->impostorTarget.GetTexture(0), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd_nor.png", mesh->impostorTarget.GetTexture(1), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd_rou.png", mesh->impostorTarget.GetTexture(2), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd_ref.png", mesh->impostorTarget.GetTexture(3), threadID);
-	//GetDevice()->SaveTexturePNG("d:\\asd_met.png", mesh->impostorTarget.GetTexture(4), threadID);
+
+	//GetDevice()->SaveTexturePNG("C:\\Users\\turanszkij\\Documents\\asd_col.png", mesh->impostorTarget.GetTexture(0), threadID);
+	//GetDevice()->SaveTexturePNG("C:\\Users\\turanszkij\\Documents\\asd_nor.png", mesh->impostorTarget.GetTexture(1), threadID);
+	//GetDevice()->SaveTexturePNG("C:\\Users\\turanszkij\\Documents\\asd_rou.png", mesh->impostorTarget.GetTexture(2), threadID);
+	//GetDevice()->SaveTexturePNG("C:\\Users\\turanszkij\\Documents\\asd_ref.png", mesh->impostorTarget.GetTexture(3), threadID);
+	//GetDevice()->SaveTexturePNG("C:\\Users\\turanszkij\\Documents\\asd_met.png", mesh->impostorTarget.GetTexture(4), threadID);
 
 	mesh->impostorTarget.viewPort = savedViewPort;
 	*cam = savedCam;

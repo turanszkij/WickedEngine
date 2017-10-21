@@ -8,6 +8,7 @@
 #include "ResourceMapping.h"
 #include "wiArchive.h"
 #include "ShaderInterop.h"
+#include "wiTextureHelper.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -530,10 +531,13 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
-	Texture2D* texture = material->texture;
 	PixelShader* _ps = ps[shaderType];
 	if (_ps == nullptr)
 		return;
+
+
+	Texture2D* texture = material->texture;
+	texture = texture == nullptr ? wiTextureHelper::getInstance()->getWhite() : texture;
 
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -561,8 +565,6 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 
 		//device->BindIndexBuffer(ib, INDEXBUFFER_FORMAT::INDEXFORMAT_32BIT, threadID);
 		//device->DrawIndexedInstancedIndirect(drawargs, 0, threadID);
-
-		device->BindGS(nullptr,threadID);
 
 		device->EventEnd(threadID);
 	}
