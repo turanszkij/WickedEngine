@@ -6,6 +6,7 @@ CBUFFER(LensFlareCB, CBSLOT_OTHER_LENSFLARE)
 	float4		xSunPos; // light position
 	float4		xScreen; // screen dimensions
 };
+SAMPLERCOMPARISONSTATE(samplercmp, SSLOT_ONDEMAND0)
 
 struct InVert
 {
@@ -106,7 +107,7 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 			// Returns 0.0 if all samples in a bilinear kernel are greater than reference value
 			// Returns 1.0 if all samples in a bilinear kernel are less or equal than refernce value
 			// Can return in between values based on bilinear filtering
-			accdepth += texture_lineardepth.SampleCmpLevelZero(sampler_cmp_depth, xSunPos.xy + float2(x, y), referenceDepth).r;
+			accdepth += texture_lineardepth.SampleCmpLevelZero(samplercmp, xSunPos.xy + float2(x, y), referenceDepth).r;
 		}
 	}
 	accdepth /= samples;

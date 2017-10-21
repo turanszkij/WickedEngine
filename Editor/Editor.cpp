@@ -874,6 +874,8 @@ void EditorComponent::Start()
 }
 void EditorComponent::FixedUpdate()
 {
+	__super::FixedUpdate();
+
 	renderPath->FixedUpdate();
 }
 void EditorComponent::Update(float dt)
@@ -1314,12 +1316,13 @@ void EditorComponent::Render()
 	renderPath->Render();
 
 	__super::Render();
+
 }
 void EditorComponent::Compose()
 {
 	renderPath->Compose();
 
-	__super::Compose();
+	//__super::Compose();
 
 	for (auto& x : wiRenderer::GetScene().models)
 	{

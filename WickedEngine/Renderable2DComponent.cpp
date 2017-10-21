@@ -107,7 +107,7 @@ void Renderable2DComponent::FixedUpdate()
 }
 void Renderable2DComponent::Render()
 {
-	rtFinal.Activate(GRAPHICSTHREAD_IMMEDIATE, 0.0f, 0.0f, 0.0f, 0);
+	rtFinal.Activate(GRAPHICSTHREAD_IMMEDIATE, 0.0f, 0.0f, 0.0f, 0.0f);
 
 	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
 	for (auto& x : layers)
@@ -116,7 +116,7 @@ void Renderable2DComponent::Render()
 		{
 			if (y.sprite != nullptr)
 			{
-				y.sprite->Draw();
+				y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
 			}
 			if (y.font != nullptr)
 			{
@@ -134,6 +134,7 @@ void Renderable2DComponent::Compose()
 {
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.presentFullScreen = true;
+	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 
 	wiImage::Draw(rtFinal.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 

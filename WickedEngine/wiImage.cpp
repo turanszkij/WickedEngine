@@ -10,7 +10,7 @@
 using namespace wiGraphicsTypes;
 
 #pragma region STATICS
-BlendState		*wiImage::blendState = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateNoBlend = nullptr, *wiImage::blendStateMax = nullptr, *wiImage::blendStateDisable = nullptr;
+BlendState		*wiImage::blendStateAlpha = nullptr, *wiImage::blendStatePremul = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateOpaque = nullptr, *wiImage::blendStateDisable = nullptr;
 GPUBuffer       *wiImage::constantBuffer = nullptr, *wiImage::processCb = nullptr;
 
 VertexShader     *wiImage::vertexShader = nullptr,*wiImage::screenVS = nullptr;
@@ -173,51 +173,45 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
-	blendState = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
-
-	ZeroMemory(&bd, sizeof(bd));
-	bd.RenderTarget[0].BlendEnable=false;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	bd.IndependentBlendEnable = false;
-	blendStateNoBlend = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateNoBlend);
+	blendStateAlpha = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAlpha);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.IndependentBlendEnable = false;
+	blendStatePremul = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStatePremul);
+
+	ZeroMemory(&bd, sizeof(bd));
+	bd.RenderTarget[0].BlendEnable=false;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.IndependentBlendEnable = false;
+	blendStateOpaque = new BlendState;
+	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateOpaque);
+
+	ZeroMemory(&bd, sizeof(bd));
+	bd.RenderTarget[0].BlendEnable=true;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
 	blendStateAdd = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAdd);
-	
-	ZeroMemory(&bd, sizeof(bd));
-	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_COLOR;
-	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = BLEND_OP_MAX;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	bd.IndependentBlendEnable=false;
-	blendStateMax = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStateMax);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable = false;
@@ -249,15 +243,15 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	device->BindResourcePS(texture, TEXSLOT_ONDEMAND0, threadID);
 
 	if (effects.blendFlag == BLENDMODE_ALPHA)
-		device->BindBlendState(blendState, threadID);
+		device->BindBlendState(blendStateAlpha, threadID);
+	else if (effects.blendFlag == BLENDMODE_PREMULTIPLIED)
+		device->BindBlendState(blendStatePremul, threadID);
 	else if (effects.blendFlag == BLENDMODE_ADDITIVE)
 		device->BindBlendState(blendStateAdd, threadID);
 	else if (effects.blendFlag == BLENDMODE_OPAQUE)
-		device->BindBlendState(blendStateNoBlend, threadID);
-	else if (effects.blendFlag == BLENDMODE_MAX)
-		device->BindBlendState(blendStateMax, threadID);
+		device->BindBlendState(blendStateOpaque, threadID);
 	else
-		device->BindBlendState(blendState, threadID);
+		device->BindBlendState(blendStateAlpha, threadID);
 
 
 	{
@@ -578,7 +572,7 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 	device->BindResourcePS(lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
 	device->BindResourcePS(ao,TEXSLOT_ONDEMAND2,threadID);
 
-	device->BindBlendState(blendStateNoBlend,threadID);
+	device->BindBlendState(blendStateOpaque,threadID);
 
 	device->Draw(3,threadID);
 
@@ -593,10 +587,10 @@ void wiImage::Load(){
 }
 void wiImage::CleanUp()
 {
-	SAFE_DELETE(blendState);
+	SAFE_DELETE(blendStateAlpha);
+	SAFE_DELETE(blendStatePremul);
 	SAFE_DELETE(blendStateAdd);
-	SAFE_DELETE(blendStateNoBlend);
-	SAFE_DELETE(blendStateMax);
+	SAFE_DELETE(blendStateOpaque);
 	SAFE_DELETE(blendStateDisable);
 
 	SAFE_DELETE(constantBuffer);

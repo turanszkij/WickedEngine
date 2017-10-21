@@ -278,7 +278,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 }
 
-void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
+void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 {
 	if(!points.empty())
 	{
@@ -294,7 +294,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 
 		ConstantBuffer cb;
 		cb.mAdd.x = additive ? 1.0f : 0.0f;
-		cb.mAdd.y = (FLAG == DRAW_DARK ? true : false);
+		cb.mAdd.y = 0.0f;
 		cb.mMotionBlurAmount = motionBlurAmount;
 		
 
@@ -318,14 +318,6 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID, int FLAG)
 
 		device->EventEnd(threadID);
 	}
-}
-void wiEmittedParticle::DrawPremul(GRAPHICSTHREAD threadID, int FLAG){
-	if(material->premultipliedTexture)
-		Draw(threadID,FLAG);
-}
-void wiEmittedParticle::DrawNonPremul(GRAPHICSTHREAD threadID, int FLAG){
-	if(!material->premultipliedTexture)
-		Draw(threadID,FLAG);
 }
 
 
@@ -432,24 +424,24 @@ void wiEmittedParticle::SetUpStates()
 	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA_SAT;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable=false;
 	blendStateAlpha = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAlpha);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA_SAT;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable=false;

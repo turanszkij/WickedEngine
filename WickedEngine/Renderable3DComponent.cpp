@@ -29,7 +29,6 @@ wiRenderTarget
 	, Renderable3DComponent::rtWaterRipple
 	, Renderable3DComponent::rtLinearDepth
 	, Renderable3DComponent::rtParticle
-	, Renderable3DComponent::rtParticleAdditive
 	, Renderable3DComponent::rtFinal[2]
 	, Renderable3DComponent::rtDof[3]
 	, Renderable3DComponent::rtTemporalAA[2]
@@ -72,9 +71,6 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, FORMAT_R32_FLOAT);
 	rtParticle.Initialize(
 		(UINT)(wiRenderer::GetInternalResolution().x*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getAlphaParticleDownSample())
-		, false, FORMAT_R16G16B16A16_FLOAT);
-	rtParticleAdditive.Initialize(
-		(UINT)(wiRenderer::GetInternalResolution().x*getAdditiveParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getAdditiveParticleDownSample())
 		, false, FORMAT_R16G16B16A16_FLOAT);
 	rtWaterRipple.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
@@ -235,8 +231,6 @@ void Renderable3DComponent::Update(float dt)
 
 void Renderable3DComponent::Compose()
 {
-	RenderableComponent::Compose();
-
 	RenderColorGradedComposition();
 
 	if (wiRenderer::GetDebugLightCulling())
@@ -374,11 +368,8 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	if (getEmittedParticlesEnabled())
 	{
-		rtParticle.Activate(threadID, 0, 0, 0, 0);  //OFFSCREEN RENDER ALPHAPARTICLES
+		rtParticle.Activate(threadID, 0, 0, 0, 0);
 		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), threadID);
-		
-		rtParticleAdditive.Activate(threadID, 0, 0, 0, 1);  //OFFSCREEN RENDER ADDITIVEPARTICLES
-		wiRenderer::DrawSoftPremulParticles(wiRenderer::getCamera(), threadID);
 	}
 
 	rtWaterRipple.Activate(threadID, 0, 0, 0, 0); {
@@ -417,22 +408,18 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 		wiRenderer::GetDevice()->EventBegin("Contribute Emitters", threadID);
 		fx.presentFullScreen = true;
-		fx.blendFlag = BLENDMODE_ALPHA;
+		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 		if (getEmittedParticlesEnabled()) {
 			wiImage::Draw(rtParticle.GetTexture(), fx, threadID);
 		}
-
-		fx.blendFlag = BLENDMODE_ADDITIVE;
-		if (getEmittedParticlesEnabled()) {
-			wiImage::Draw(rtParticleAdditive.GetTexture(), fx, threadID);
-		}
 		wiRenderer::GetDevice()->EventEnd(threadID);
 
-		wiRenderer::GetDevice()->EventBegin("Contribute LightShafts", threadID);
 		if (getLightShaftsEnabled()) {
+			wiRenderer::GetDevice()->EventBegin("Contribute LightShafts", threadID);
+			fx.blendFlag = BLENDMODE_ADDITIVE;
 			wiImage::Draw(rtSun.back().GetTexture(), fx, threadID);
+			wiRenderer::GetDevice()->EventEnd(threadID);
 		}
-		wiRenderer::GetDevice()->EventEnd(threadID);
 
 		if (getLensFlareEnabled())
 		{
@@ -645,7 +632,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 void Renderable3DComponent::RenderColorGradedComposition()
 {
 	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-	fx.blendFlag = BLENDMODE_OPAQUE;
+	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 	fx.quality = QUALITY_BILINEAR;
 
 	if (getStereogramEnabled())

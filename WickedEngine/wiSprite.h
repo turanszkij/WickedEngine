@@ -23,7 +23,7 @@ public:
 	void Update(float);
 	void Update();
 	void Draw(wiGraphicsTypes::Texture2D* refracRes, GRAPHICSTHREAD threadID);
-	void Draw();
+	void Draw(GRAPHICSTHREAD threadID);
 	void DrawNormal(GRAPHICSTHREAD threadID);
 
 	std::string name;

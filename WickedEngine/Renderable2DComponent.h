@@ -62,6 +62,8 @@ public:
 	virtual void Render();
 	virtual void Compose();
 
+	wiGraphicsTypes::Texture2D* GetRenderResult() { return rtFinal.GetTexture(); }
+
 	void addSprite(wiSprite* sprite, const std::string& layer = DEFAULT_RENDERLAYER);
 	void removeSprite(wiSprite* sprite);
 	void clearSprites();

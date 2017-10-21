@@ -404,8 +404,7 @@ public:
 	static void DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
-	static void DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark = false);
+	static void DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawImagesAdd(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	//alpha-opaque

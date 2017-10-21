@@ -67,8 +67,8 @@ void wiSprite::Draw(Texture2D* refracRes, GRAPHICSTHREAD threadID){
 		wiImage::Draw(texturePointer,effects,threadID);
 	}
 }
-void wiSprite::Draw(){
-	wiSprite::Draw(NULL,GRAPHICSTHREAD_IMMEDIATE);
+void wiSprite::Draw(GRAPHICSTHREAD threadID){
+	wiSprite::Draw(nullptr, threadID);
 }
 void wiSprite::DrawNormal(GRAPHICSTHREAD threadID){
 	if(normalPointer && effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){

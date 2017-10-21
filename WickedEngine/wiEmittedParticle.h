@@ -100,11 +100,7 @@ public:
 	void UpdateAttachedLight(float dt);
 	void UpdateRenderData(GRAPHICSTHREAD threadID);
 
-#define DRAW_DEFAULT 0
-#define DRAW_DARK 1
-	void Draw(GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
-	void DrawPremul(GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
-	void DrawNonPremul(GRAPHICSTHREAD threadID, int FLAG = DRAW_DEFAULT);
+	void Draw(GRAPHICSTHREAD threadID);
 	void CleanUp();
 
 	std::string name;

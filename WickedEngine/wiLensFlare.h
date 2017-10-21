@@ -15,6 +15,7 @@ private:
 	static wiGraphicsTypes::RasterizerState		*rasterizerState;
 	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
 	static wiGraphicsTypes::BlendState			*blendState;
+	static wiGraphicsTypes::Sampler				*samplercmp;
 
 	CBUFFER(ConstantBuffer, CBSLOT_OTHER_LENSFLARE)
 	{

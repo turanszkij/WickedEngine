@@ -10,6 +10,7 @@ PixelShader *wiLensFlare::pixelShader = nullptr;
 GeometryShader *wiLensFlare::geometryShader = nullptr;
 VertexShader *wiLensFlare::vertexShader = nullptr;
 VertexLayout *wiLensFlare::inputLayout = nullptr;
+Sampler *wiLensFlare::samplercmp = nullptr;
 RasterizerState *wiLensFlare::rasterizerState = nullptr;
 DepthStencilState *wiLensFlare::depthStencilState = nullptr;
 BlendState *wiLensFlare::blendState = nullptr;
@@ -28,6 +29,7 @@ void wiLensFlare::CleanUp(){
 	SAFE_DELETE(rasterizerState);
 	SAFE_DELETE(depthStencilState);
 	SAFE_DELETE(blendState);
+	SAFE_DELETE(samplercmp);
 }
 void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<Texture2D*>& rims){
 
@@ -54,8 +56,6 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		device->BindDepthStencilState(depthStencilState,1,threadID);
 		device->BindBlendState(blendState,threadID);
 
-		//device->BindResourceGS(depthMap,0,threadID);
-
 		int i=0;
 		for(Texture2D* x : rims){
 			if(x!=nullptr){
@@ -64,6 +64,10 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 				i++;
 			}
 		}
+
+		device->BindSamplerGS(samplercmp, SSLOT_ONDEMAND0, threadID);
+
+
 		device->Draw(i,threadID);
 
 		
@@ -156,13 +160,25 @@ void wiLensFlare::SetUpStates()
 	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
 	blendState = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
+
+
+	SamplerDesc samplerDesc;
+	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.ComparisonFunc = COMPARISON_LESS_EQUAL;
+	samplercmp = new Sampler;
+	wiRenderer::GetDevice()->CreateSamplerState(&samplerDesc, samplercmp);
 }

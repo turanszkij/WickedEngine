@@ -26,7 +26,7 @@ protected:
 		float params1[4];
 	};
 	
-	static wiGraphicsTypes::BlendState		*blendState, *blendStateAdd, *blendStateNoBlend, *blendStateMax, *blendStateDisable;
+	static wiGraphicsTypes::BlendState		*blendStateAlpha, *blendStatePremul, *blendStateAdd, *blendStateOpaque, *blendStateDisable;
 	static wiGraphicsTypes::GPUBuffer       *constantBuffer, *processCb;
 
 	static wiGraphicsTypes::VertexShader     *vertexShader,*screenVS;

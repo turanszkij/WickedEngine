@@ -1318,7 +1318,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
@@ -1328,11 +1328,11 @@ void wiRenderer::SetUpStates()
 
 
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.IndependentBlendEnable=false,
 	bd.AlphaToCoverageEnable=false;
@@ -1351,12 +1351,23 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
 	bd.IndependentBlendEnable=false,
 	bd.AlphaToCoverageEnable=false;
 	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_DEFERREDLIGHT]);
+
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.IndependentBlendEnable = false,
+	bd.AlphaToCoverageEnable = false;
+	GetDevice()->CreateBlendState(&bd, blendStates[PSTYPE_ENVIRONMENTALLIGHT]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_INV_DEST_COLOR;
 	bd.RenderTarget[0].DestBlend = BLEND_ZERO;
@@ -1375,7 +1386,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE;
@@ -2719,22 +2730,13 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 	}
 }
 
-void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark)
+void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	FrameCulling& culling = frameCullings[camera];
 
 	for (wiEmittedParticle* e : culling.culledEmittedParticleSystems)
 	{
-		e->DrawNonPremul(threadID, dark);
-	}
-}
-void wiRenderer::DrawSoftPremulParticles(Camera* camera, GRAPHICSTHREAD threadID, bool dark)
-{
-	FrameCulling& culling = frameCullings[camera];
-
-	for (wiEmittedParticle* e : culling.culledEmittedParticleSystems)
-	{
-		e->DrawPremul(threadID, dark);
+		e->Draw(threadID);
 	}
 }
 void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
@@ -2885,7 +2887,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
-		GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_ENVIRONMENTLIGHT], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID); // just full screen triangle so we can use it
 		GetDevice()->BindPS(pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], threadID);
@@ -5581,7 +5583,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 					Picked pick = Picked();
 					pick.transform = light;
 					pick.light = light;
-					pick.distance = wiMath::Distance(light->translation, ray.origin);
+					pick.distance = wiMath::Distance(light->translation, ray.origin) * 0.95f;
 					pickPoints.push_back(pick);
 				}
 				//if (light->bounds.intersects(ray))
@@ -5605,18 +5607,30 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 		{
 			for (auto& decal : model->decals)
 			{
-				XMVECTOR localOrigin = XMLoadFloat3(&ray.origin), localDirection = XMLoadFloat3(&ray.direction);
-				XMMATRIX localTransform = XMLoadFloat4x4(&decal->world);
-				localTransform = XMMatrixInverse(nullptr, localTransform);
-				localOrigin = XMVector3Transform(localOrigin, localTransform);
-				localDirection = XMVector3TransformNormal(localDirection, localTransform);
-				RAY localRay = RAY(localOrigin, localDirection);
-				if (AABB(XMFLOAT3(-1, -1, -1), XMFLOAT3(1, 1, 1)).intersects(localRay))
+				//XMVECTOR localOrigin = XMLoadFloat3(&ray.origin), localDirection = XMLoadFloat3(&ray.direction);
+				//XMMATRIX localTransform = XMLoadFloat4x4(&decal->world);
+				//localTransform = XMMatrixInverse(nullptr, localTransform);
+				//localOrigin = XMVector3Transform(localOrigin, localTransform);
+				//localDirection = XMVector3TransformNormal(localDirection, localTransform);
+				//RAY localRay = RAY(localOrigin, localDirection);
+				//if (AABB(XMFLOAT3(-1, -1, -1), XMFLOAT3(1, 1, 1)).intersects(localRay))
+				//{
+				//	Picked pick = Picked();
+				//	pick.transform = decal;
+				//	pick.decal = decal;
+				//	pick.distance = wiMath::Distance(decal->translation, ray.origin);
+				//	pickPoints.push_back(pick);
+				//}
+
+				// decals are now picked like lights instead (user experience reasons)
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&decal->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(decal->translation, cam->translation) * 0.05f)
 				{
 					Picked pick = Picked();
 					pick.transform = decal;
 					pick.decal = decal;
-					pick.distance = wiMath::Distance(decal->translation, ray.origin);
+					pick.distance = wiMath::Distance(decal->translation, ray.origin) * 0.95f;
 					pickPoints.push_back(pick);
 				}
 			}

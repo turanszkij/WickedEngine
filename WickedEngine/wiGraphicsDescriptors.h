@@ -541,7 +541,7 @@ namespace wiGraphicsTypes
 			DestBlend(BLEND_INV_SRC_ALPHA),
 			BlendOp(BLEND_OP_ADD),
 			SrcBlendAlpha(BLEND_ONE),
-			DestBlendAlpha(BLEND_INV_SRC_ALPHA),
+			DestBlendAlpha(BLEND_ONE),
 			BlendOpAlpha(BLEND_OP_ADD),
 			RenderTargetWriteMask(COLOR_WRITE_ENABLE_ALL)
 		{}
