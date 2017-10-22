@@ -4680,7 +4680,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		{
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_ENVMAP], STENCILREF_SKY, threadID);
+			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
 			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 			GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], threadID);
