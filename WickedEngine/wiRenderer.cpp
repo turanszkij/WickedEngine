@@ -5788,7 +5788,8 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
 				picked.distance = wiMath::Distance(pos, rayOrigin);
-				picked.subsetIndex = (int)mesh->vertices_TEX[i0].tex.z;
+				XMVECTOR& tmpTex = XMLoadHalf4(&mesh->vertices_TEX[i0].tex);
+				picked.subsetIndex = (int)XMVectorGetZ(tmpTex); // half has no normal conversion, so have to do load-store
 				points.push_back(picked);
 			}
 		}
