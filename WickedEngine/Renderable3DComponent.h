@@ -115,7 +115,7 @@ public:
 	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
 	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 	inline bool getHairParticleAlphaCompositionEnabled() { return hairParticleAlphaComposition; }
-	inline bool getSharpenFilterEnabled() { return sharpenFilterEnabled; }
+	inline bool getSharpenFilterEnabled() { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
 
 	inline UINT getMSAASampleCount() { return msaaSampleCount; }
 
