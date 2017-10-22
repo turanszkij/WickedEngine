@@ -406,13 +406,14 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
 		}
 
-		wiRenderer::GetDevice()->EventBegin("Contribute Emitters", threadID);
 		fx.presentFullScreen = true;
-		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+
 		if (getEmittedParticlesEnabled()) {
+			wiRenderer::GetDevice()->EventBegin("Contribute Emitters", threadID);
+			fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 			wiImage::Draw(rtParticle.GetTexture(), fx, threadID);
+			wiRenderer::GetDevice()->EventEnd(threadID);
 		}
-		wiRenderer::GetDevice()->EventEnd(threadID);
 
 		if (getLightShaftsEnabled()) {
 			wiRenderer::GetDevice()->EventBegin("Contribute LightShafts", threadID);
@@ -443,6 +444,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	{
 		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
 		wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
+		fx.blendFlag = BLENDMODE_ALPHA;
 		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
 		int history = 1 - current;
 		rtTemporalAA[current].Activate(threadID); {
@@ -457,7 +459,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		shadedSceneRT.Set(threadID, nullptr, false, 0); {
 			fx.presentFullScreen = true;
-			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.quality = QUALITY_NEAREST;
 			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
 			fx.presentFullScreen = false;

@@ -178,7 +178,7 @@ void wiLensFlare::SetUpStates()
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = COMPARISON_LESS_EQUAL;
+	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
 	samplercmp = new Sampler;
 	wiRenderer::GetDevice()->CreateSamplerState(&samplerDesc, samplercmp);
 }

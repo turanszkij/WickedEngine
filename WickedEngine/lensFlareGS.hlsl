@@ -83,17 +83,14 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 		break;
 	default:break;
 	};
-	
-	// determine depthmap dimensions (could be screen dimensions from the constantbuffer)
-	float2 depthMapSize;
-	texture_lineardepth.GetDimensions(depthMapSize.x,depthMapSize.y);
-	flareSize /= depthMapSize;
 
-	float referenceDepth = xSunPos.z * g_xFrame_MainCamera_ZFarP;
+	flareSize /= GetScreenResolution();
+
+	float referenceDepth = 1 - xSunPos.z;
 
 	// determine the flare opacity:
 	// These values work well for me, but should be tweakable
-	const float2 step = 1.0f / (depthMapSize*xSunPos.z);
+	const float2 step = 1.0f / (GetInternalResolution()*xSunPos.z);
 	const float2 range = 10.5f * step;
 	float samples = 0.0f;
 	float accdepth = 0.0f;
@@ -102,12 +99,12 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 		for (float x = -range.x; x <= range.x; x += step.x)
 		{
 			samples += 1.0f;
-			// SampleCmpLevelZero also makes a comparison by using a LESS_EQUAL comparison sampler
-			// It compares the reference depth value to the linear depthmap value.
+			// SampleCmpLevelZero also makes a comparison by using a comparison sampler
+			// It compares the reference depth value to the depthmap value.
 			// Returns 0.0 if all samples in a bilinear kernel are greater than reference value
 			// Returns 1.0 if all samples in a bilinear kernel are less or equal than refernce value
 			// Can return in between values based on bilinear filtering
-			accdepth += texture_lineardepth.SampleCmpLevelZero(samplercmp, xSunPos.xy + float2(x, y), referenceDepth).r;
+			accdepth += texture_depth.SampleCmpLevelZero(samplercmp, xSunPos.xy + float2(x, y), referenceDepth).r;
 		}
 	}
 	accdepth /= samples;

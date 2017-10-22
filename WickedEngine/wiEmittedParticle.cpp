@@ -184,8 +184,8 @@ void wiEmittedParticle::Update(float dt)
 		point.life -= gamespeed;
 		point.life=wiMath::Clamp(point.life,0,point.maxLife);
 
-		float lifeLerp = point.life/point.maxLife;
-		point.sizOpaMir.x=wiMath::Lerp(point.sizBeginEnd.y,point.sizBeginEnd.x,lifeLerp);
+		float lifeLerp = 1 - point.life/point.maxLife;
+		point.sizOpaMir.x=wiMath::Lerp(point.sizBeginEnd.x,point.sizBeginEnd.y,lifeLerp);
 		point.sizOpaMir.y=wiMath::Lerp(1,0,lifeLerp);
 
 		
@@ -424,10 +424,10 @@ void wiEmittedParticle::SetUpStates()
 	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA_SAT;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
@@ -437,7 +437,7 @@ void wiEmittedParticle::SetUpStates()
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA_SAT;
+	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
