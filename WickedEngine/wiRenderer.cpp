@@ -1367,7 +1367,7 @@ void wiRenderer::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.IndependentBlendEnable = false,
 	bd.AlphaToCoverageEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[PSTYPE_ENVIRONMENTALLIGHT]);
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_INV_DEST_COLOR;
 	bd.RenderTarget[0].DestBlend = BLEND_ZERO;
@@ -2887,7 +2887,7 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
-		GetDevice()->BindBlendState(blendStates[BSTYPE_ENVIRONMENTLIGHT], threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_ENVIRONMENTALLIGHT], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
 		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID); // just full screen triangle so we can use it
 		GetDevice()->BindPS(pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], threadID);
