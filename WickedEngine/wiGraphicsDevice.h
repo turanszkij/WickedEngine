@@ -118,8 +118,8 @@ namespace wiGraphicsTypes
 		virtual void BindConstantBufferDS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindConstantBufferCS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, int slot, int count, const UINT* strides, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID) = 0;
@@ -145,6 +145,8 @@ namespace wiGraphicsTypes
 		virtual void CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID) = 0;
 		virtual void MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) = 0;
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) = 0;
+		// Returns the starting byte offset of the appended data
+		virtual size_t AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID) = 0;
 		virtual GPUBuffer* DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) = 0;
 		virtual void SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;

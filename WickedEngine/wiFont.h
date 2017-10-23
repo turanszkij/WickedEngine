@@ -5,8 +5,6 @@
 #include "wiColor.h"
 
 
-static const uint16_t MAX_TEXT = 10000;
-
 // Do not alter order because it is bound to lua manually
 enum wiFontAlign
 {
@@ -50,7 +48,8 @@ protected:
 		ALIGN_16
 	};
 	static std::vector<Vertex> vertexList;
-	static wiGraphicsTypes::GPUBuffer           *vertexBuffer, *indexBuffer;
+	static wiGraphicsTypes::GPURingBuffer       *vertexBuffer;
+	static wiGraphicsTypes::GPUBuffer           *indexBuffer;
 
 	static wiGraphicsTypes::VertexLayout		*vertexLayout;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
@@ -91,7 +90,7 @@ private:
 	static std::vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(const std::wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID);
+	static void ModifyGeo(const std::wstring& text, wiFontProps props, int style);
 
 public:
 	static void Initialize();

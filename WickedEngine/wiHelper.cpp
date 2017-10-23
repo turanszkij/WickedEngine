@@ -88,8 +88,8 @@ namespace wiHelper
 		static bool __initComplete = false;
 		if (!__initComplete)
 		{
-			LPSTR fileName = new CHAR[MAX_TEXT];
-			GetModuleFileNameA(NULL, fileName, MAX_TEXT);
+			LPSTR fileName = new CHAR[1024];
+			GetModuleFileNameA(NULL, fileName, 1024);
 			__appDir = GetDirectoryFromPath(fileName);
 			delete[] fileName;
 			__initComplete = true;

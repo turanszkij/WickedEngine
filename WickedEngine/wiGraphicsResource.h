@@ -157,6 +157,18 @@ namespace wiGraphicsTypes
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
+	class GPURingBuffer : public GPUBuffer
+	{
+		friend class GraphicsDevice_DX11;
+	private:
+		size_t byteOffset;
+	public:
+		GPURingBuffer() :byteOffset(0) {}
+		virtual ~GPURingBuffer() {}
+
+		size_t GetByteOffset() { return byteOffset; }
+	};
+
 	class VertexLayout
 	{
 		friend class GraphicsDevice_DX11;

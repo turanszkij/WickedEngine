@@ -1511,7 +1511,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), threadID);
 	}
 
@@ -1529,7 +1529,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), threadID);
 	}
 
@@ -1547,7 +1547,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
 	}
 
@@ -1565,7 +1565,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
 	}
 
@@ -1583,7 +1583,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
 	}
 

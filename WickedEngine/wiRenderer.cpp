@@ -1886,7 +1886,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						const UINT strides[] = {
 							0,0,0,0,0,0,0,0
 						};
-						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 						GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
 					}
 
@@ -2333,7 +2333,7 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 			const UINT strides[] = {
 				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 			};
-			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 			GetDevice()->Draw(2, threadID);
 		}
 
@@ -2371,7 +2371,7 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		GetDevice()->Draw(2, threadID);
 	}
 
@@ -2403,8 +2403,8 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT,threadID);
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
 		MiscCB sb;
 		for (auto& x : cubes)
@@ -2467,7 +2467,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
 				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 				GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
@@ -2499,7 +2499,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
 				GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 				GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
@@ -2531,7 +2531,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				sb.mTransform = XMMatrixTranspose(mat);
 				sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -2648,7 +2648,7 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		GetDevice()->Draw(gridVertexCount, threadID);
 
 
@@ -2721,8 +2721,8 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 					const UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
 					};
-					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-					GetDevice()->BindIndexBuffer(&y.indexBuffer, y.GetIndexFormat(), threadID);
+					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+					GetDevice()->BindIndexBuffer(&y.indexBuffer, y.GetIndexFormat(), 0, threadID);
 					GetDevice()->DrawIndexed((int)y.subsetIndices.size(), threadID);
 				}
 			}
@@ -2817,7 +2817,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 				const UINT strides[] = {
 					sizeof(RibbonVertex),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				GetDevice()->Draw((int)trails.size(),threadID);
 
 				trails.clear();
@@ -4032,7 +4032,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						sizeof(Mesh::Vertex_TEX),
 						sizeof(Instance)
 					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				}
 				else
 				{
@@ -4052,7 +4052,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						sizeof(Instance),
 						sizeof(InstancePrev),
 					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				}
 
 				const GPUResource* res[] = {
@@ -4271,7 +4271,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Mesh::Vertex_POS),
 								sizeof(Instance)
 							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 						}
 						break;
 						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
@@ -4286,7 +4286,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Mesh::Vertex_TEX),
 								sizeof(Instance)
 							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 						}
 						break;
 						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
@@ -4307,7 +4307,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Instance),
 								sizeof(InstancePrev),
 							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 						}
 						break;
 						default:
@@ -4317,7 +4317,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 					boundVBType_Prev = boundVBType;
 
-					device->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), threadID);
+					device->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), 0, threadID);
 					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
 					UINT realStencilRef = material->GetStencilRef();
@@ -6061,7 +6061,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		sizeof(Instance),
 		sizeof(InstancePrev)
 	};
-	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
+	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 
 
 	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
@@ -6147,7 +6147,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			}
 			if (!subset.material->IsTransparent() && !subset.material->isSky && !subset.material->water)
 			{
-				GetDevice()->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), threadID);
+				GetDevice()->BindIndexBuffer(&subset.indexBuffer, subset.GetIndexFormat(), 0, threadID);
 
 				GetDevice()->BindConstantBufferPS(&subset.material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 

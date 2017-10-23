@@ -10,10 +10,14 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
+#define TEXT_BUFFER_SIZE 100000;
+#define MAX_TEXT 10000
+
 #define WHITESPACE_SIZE 3
 
 std::string			wiFont::FONTPATH = "fonts/";
-GPUBuffer			*wiFont::vertexBuffer = nullptr, *wiFont::indexBuffer = nullptr;
+GPURingBuffer		*wiFont::vertexBuffer = nullptr;
+GPUBuffer			*wiFont::indexBuffer = nullptr;
 VertexLayout		*wiFont::vertexLayout = nullptr;
 VertexShader		*wiFont::vertexShader = nullptr;
 PixelShader			*wiFont::pixelShader = nullptr;
@@ -21,8 +25,8 @@ BlendState			*wiFont::blendState = nullptr;
 RasterizerState		*wiFont::rasterizerState = nullptr;
 RasterizerState		*wiFont::rasterizerState_Scissor = nullptr;
 DepthStencilState	*wiFont::depthStencilState = nullptr;
-std::vector<wiFont::Vertex> wiFont::vertexList;
 std::vector<wiFont::wiFontStyle> wiFont::fontStyles;
+std::vector<wiFont::Vertex> wiFont::vertexList;
 
 wiFont::wiFont(const std::string& text, wiFontProps props, int style) : props(props), style(style)
 {
@@ -39,6 +43,44 @@ wiFont::~wiFont()
 
 void wiFont::Initialize()
 {
+}
+
+
+void wiFont::LoadVertexBuffer()
+{
+	GPUBufferDesc bd;
+	ZeroMemory(&bd, sizeof(bd));
+	bd.Usage = USAGE_DYNAMIC;
+	bd.ByteWidth = sizeof(Vertex) * TEXT_BUFFER_SIZE;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+	vertexBuffer = new GPURingBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, vertexBuffer);
+}
+void wiFont::LoadIndices()
+{
+	uint16_t indices[MAX_TEXT * 6];
+	for (uint16_t i = 0; i < MAX_TEXT * 4; i += 4) {
+		indices[i / 4 * 6 + 0] = i + 0;
+		indices[i / 4 * 6 + 1] = i + 2;
+		indices[i / 4 * 6 + 2] = i + 1;
+		indices[i / 4 * 6 + 3] = i + 1;
+		indices[i / 4 * 6 + 4] = i + 2;
+		indices[i / 4 * 6 + 5] = i + 3;
+	}
+
+	GPUBufferDesc bd;
+	ZeroMemory(&bd, sizeof(bd));
+	bd.Usage = USAGE_IMMUTABLE;
+	bd.ByteWidth = sizeof(indices);
+	bd.BindFlags = BIND_INDEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+	SubresourceData InitData;
+	ZeroMemory(&InitData, sizeof(InitData));
+	InitData.pSysMem = indices;
+	indexBuffer = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer);
 }
 
 void wiFont::SetUpStates()
@@ -157,15 +199,20 @@ void wiFont::CleanUpStatic()
 }
 
 
-void wiFont::ModifyGeo(const std::wstring& text, wiFontProps props, int style, GRAPHICSTHREAD threadID)
+void wiFont::ModifyGeo(const std::wstring& text, wiFontProps props, int style)
 {
+	size_t vertexCount = text.length() * 4;
+	if (vertexList.size() < vertexCount)
+	{
+		vertexList.resize((vertexCount + 1) * 2);
+	}
+
 	const int lineHeight = (props.size < 0 ? fontStyles[style].lineHeight : props.size);
 	const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyles[style].lineHeight);
 
 	int line = 0;
 	int pos = 0;
-	vertexList.resize(text.length() * 4);
-	for (unsigned int i = 0; i<vertexList.size(); i += 4)
+	for (unsigned int i = 0; i<vertexCount; i += 4)
 	{
 		bool compatible = false;
 		wiFontStyle::LookUp lookup;
@@ -217,119 +264,90 @@ void wiFont::ModifyGeo(const std::wstring& text, wiFontProps props, int style, G
 			vertexList[i + 3].Tex = XMFLOAT2(0, 0);
 		}
 	}
-
-	wiRenderer::GetDevice()->UpdateBuffer(vertexBuffer, vertexList.data(), threadID, (int)(sizeof(Vertex) * text.length() * 4));
-	
 }
 
-void wiFont::LoadVertexBuffer()
-{
-	GPUBufferDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(Vertex) * MAX_TEXT * 4;
-	bd.BindFlags = BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	vertexBuffer = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, vertexBuffer);
-}
-void wiFont::LoadIndices()
-{
-	std::vector<uint16_t>indices;
-	indices.resize(MAX_TEXT * 6);
-	for (uint16_t i = 0; i < MAX_TEXT * 4; i += 4) {
-		indices[i / 4 * 6 + 0] = i / 4 * 4 + 0;
-		indices[i / 4 * 6 + 1] = i / 4 * 4 + 2;
-		indices[i / 4 * 6 + 2] = i / 4 * 4 + 1;
-		indices[i / 4 * 6 + 3] = i / 4 * 4 + 1;
-		indices[i / 4 * 6 + 4] = i / 4 * 4 + 2;
-		indices[i / 4 * 6 + 5] = i / 4 * 4 + 3;
-	}
-	
-	GPUBufferDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
-    bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(uint16_t) * MAX_TEXT * 6;
-    bd.BindFlags = BIND_INDEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-	SubresourceData InitData;
-	ZeroMemory(&InitData, sizeof(InitData));
-	InitData.pSysMem = indices.data();
-	indexBuffer = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer);
-}
 
 void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 {
+	if (text.length() <= 0)
+	{
+		return;
+	}
 
 	wiFontProps newProps = props;
 
-	if(props.h_align==WIFALIGN_CENTER || props.h_align==WIFALIGN_MID)
-		newProps.posX-= textWidth()/2;
-	else if(props.h_align==WIFALIGN_RIGHT)
+	if (props.h_align == WIFALIGN_CENTER || props.h_align == WIFALIGN_MID)
+		newProps.posX -= textWidth() / 2;
+	else if (props.h_align == WIFALIGN_RIGHT)
 		newProps.posX -= textWidth();
 	if (props.v_align == WIFALIGN_CENTER || props.h_align == WIFALIGN_MID)
-		newProps.posY -= textHeight()/2;
-	else if(props.v_align==WIFALIGN_BOTTOM)
+		newProps.posY -= textHeight() / 2;
+	else if (props.v_align == WIFALIGN_BOTTOM)
 		newProps.posY -= textHeight();
 
-	
-	ModifyGeo(text, newProps, style, threadID);
 
-	if(text.length()>0)
+	ModifyGeo(text, newProps, style);
+
+
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	device->EventBegin("Font", threadID);
+
+	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
+	device->BindVertexLayout(vertexLayout, threadID);
+	device->BindVS(vertexShader, threadID);
+	device->BindPS(pixelShader, threadID);
+
+
+	device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
+	device->BindDepthStencilState(depthStencilState, 1, threadID);
+
+	device->BindBlendState(blendState, threadID);
+
+	UINT vboffset = (UINT)device->AppendRingBuffer(vertexBuffer, vertexList.data(), sizeof(Vertex) * text.length() * 4, threadID);
+
+	const GPUBuffer* vbs[] = {
+		vertexBuffer,
+	};
+	const UINT strides[] = {
+		sizeof(Vertex),
+	};
+	const UINT offsets[] = {
+		vboffset,
+	};
+	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+
+	assert(text.length() / 6 < 65536 && "The index buffer currently only supports so many charaters!");
+	device->BindIndexBuffer(indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+
+	device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND0, threadID);
+
+	wiRenderer::MiscCB cb;
+
+	if (newProps.shadowColor.a > 0)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin("Font", threadID);
-	
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-		device->BindVertexLayout(vertexLayout,threadID);
-		device->BindVS(vertexShader,threadID);
-		device->BindPS(pixelShader,threadID);
-
-
-		device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
-		device->BindDepthStencilState(depthStencilState, 1, threadID);
-
-		device->BindBlendState(blendState, threadID);
-
-		const GPUBuffer* vbs[] = {
-			vertexBuffer,
-		};
-		const UINT strides[] = {
-			sizeof(Vertex),
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, threadID);
-		device->BindIndexBuffer(indexBuffer, INDEXFORMAT_16BIT, threadID);
-
-		device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND0, threadID);
-
-		wiRenderer::MiscCB cb;
-
-		if (newProps.shadowColor.a > 0)
-		{
-			// font shadow render:
-			cb.mTransform = XMMatrixTranspose(
-				XMMatrixTranslation((float)newProps.posX+1, (float)newProps.posY+1, 0)
-				* device->GetScreenProjection()
-			);
-			cb.mColor = XMFLOAT4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
-			device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-
-			device->DrawIndexed((int)text.length() * 6, threadID);
-		}
-
-		// font base render:
+		// font shadow render:
 		cb.mTransform = XMMatrixTranspose(
-			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
+			XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 			* device->GetScreenProjection()
 		);
-		cb.mColor = XMFLOAT4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
-		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC],&cb,threadID);
+		cb.mColor = XMFLOAT4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
+		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 		device->DrawIndexed((int)text.length() * 6, threadID);
-
-		device->EventEnd(threadID);
 	}
+
+	// font base render:
+	cb.mTransform = XMMatrixTranspose(
+		XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
+		* device->GetScreenProjection()
+	);
+	cb.mColor = XMFLOAT4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
+	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+	device->DrawIndexed((int)text.length() * 6, threadID);
+
+	device->EventEnd(threadID);
 }
 
 
