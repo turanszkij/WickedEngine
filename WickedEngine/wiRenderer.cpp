@@ -611,9 +611,8 @@ void wiRenderer::LoadBuffers()
 		resourceBuffers[i] = new GPUBuffer;
 	}
 
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
+	bd.Usage = USAGE_DEFAULT;
+	bd.CPUAccessFlags = 0;
 	bd.ByteWidth = sizeof(ShaderEntityType) * MAX_SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -1442,9 +1441,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 
 	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
-
-	GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
-	GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const std::string& get)
@@ -2056,6 +2052,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, (int)(sizeof(ShaderEntityType)*lightCounter));
+
+		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
+		GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
 	}
 
 	// Update visible particlesystem vertices:

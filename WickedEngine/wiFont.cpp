@@ -10,7 +10,6 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-#define TEXT_BUFFER_SIZE 100000;
 #define MAX_TEXT 10000
 
 #define WHITESPACE_SIZE 3
@@ -51,7 +50,7 @@ void wiFont::LoadVertexBuffer()
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(Vertex) * TEXT_BUFFER_SIZE;
+	bd.ByteWidth = 1024 * 1024; // just allocate 2MB to font renderer ring buffer..
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
@@ -317,7 +316,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 	};
 	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
-	assert(text.length() / 6 < 65536 && "The index buffer currently only supports so many charaters!");
+	assert(text.length() * 4 < 65536 && "The index buffer currently only supports so many characters!");
 	device->BindIndexBuffer(indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
 	device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND0, threadID);

@@ -3218,7 +3218,7 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 		assert(SUCCEEDED(hr) && "GPUBuffer growing failed!");
 	}
 
-	if (buffer->desc.Usage == USAGE_DYNAMIC) 
+	if (buffer->desc.Usage == USAGE_DYNAMIC)
 	{
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 		hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -3226,9 +3226,20 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 		memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
 		deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
 	}
-	else 
+	else if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER || dataSize < 0)
 	{
 		deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, nullptr, data, 0, 0);
+	}
+	else
+	{
+		D3D11_BOX box = {};
+		box.left = 0;
+		box.right = static_cast<UINT>(dataSize);
+		box.top = 0;
+		box.bottom = 1;
+		box.front = 0;
+		box.back = 1;
+		deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, &box, data, 0, 0);
 	}
 }
 size_t GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID)
@@ -3236,22 +3247,24 @@ size_t GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* 
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 	assert(buffer->desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
 
-	bool wrap = buffer->desc.ByteWidth < buffer->byteOffset + dataSize;
-	size_t realByteOffset = wrap ? 0 : buffer->byteOffset;
-	buffer->byteOffset = wrap ? 0 : buffer->byteOffset + dataSize;
+	size_t position = buffer->byteOffset;
+	bool wrap = position + dataSize > buffer->desc.ByteWidth;
+	position = wrap ? 0 : position;
 
 	if (buffer->desc.Usage == USAGE_DYNAMIC)
 	{
+		// Issue buffer rename (realloc) on wrap, otherwise just append data:
+		D3D11_MAP mapping = wrap ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE_NO_OVERWRITE;
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		HRESULT hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource);
+		HRESULT hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, mapping, 0, &mappedResource);
 		assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
-		memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(mappedResource.pData) + realByteOffset), data, dataSize);
+		memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(mappedResource.pData) + position), data, dataSize);
 		deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
 	}
 	else
 	{
 		D3D11_BOX box = {};
-		box.left = static_cast<UINT>(realByteOffset);
+		box.left = static_cast<UINT>(position);
 		box.right = static_cast<UINT>(box.left + dataSize);
 		box.top = 0;
 		box.bottom = 1;
@@ -3260,7 +3273,8 @@ size_t GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* 
 		deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, &box, data, 0, 0);
 	}
 	
-	return realByteOffset;
+	buffer->byteOffset = position + dataSize;
+	return position;
 }
 GPUBuffer* GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) 
 {
