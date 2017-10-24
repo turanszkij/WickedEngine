@@ -271,13 +271,18 @@ void wiEmittedParticle::UpdateAttachedLight(float dt)
 		light->UpdateLight();
 	}
 }
+
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	if (!points.empty())
 	{
-		std::vector<Point> renderPoints = std::vector<Point>(points.begin(), points.end());
-		//wiRenderer::GetDevice()->UpdateBuffer(particleBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
-		particleBufferOffset = wiRenderer::GetDevice()->AppendRingBuffer(dynamicPool, renderPoints.data(), sizeof(Point)* renderPoints.size(), threadID);
+		static std::vector<Point> renderPoints[GRAPHICSTHREAD_COUNT];
+		if (renderPoints[threadID].size() < points.size())
+		{
+			renderPoints[threadID].resize((points.size() + 1) * 2);
+		}
+		renderPoints[threadID].insert(renderPoints[threadID].begin(), points.begin(), points.end());
+		particleBufferOffset = wiRenderer::GetDevice()->AppendRingBuffer(dynamicPool, renderPoints[threadID].data(), sizeof(Point)* renderPoints[threadID].size(), threadID);
 	}
 }
 
