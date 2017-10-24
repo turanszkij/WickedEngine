@@ -13,6 +13,7 @@ using namespace wiGraphicsTypes;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader = nullptr,*wiEmittedParticle::simplestPS = nullptr;
+GPURingBuffer *wiEmittedParticle::dynamicPool = nullptr;
 GPUBuffer           *wiEmittedParticle::constantBuffer = nullptr;
 BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
@@ -29,9 +30,11 @@ wiEmittedParticle::wiEmittedParticle()
 	materialName = "";
 	light = nullptr;
 	lightName = "";
+	particleBufferOffset = 0;
 }
 wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
-		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot){
+		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot)
+{
 	name=newName;
 	object=newObject;
 	materialName = newMat;
@@ -60,8 +63,6 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 	light=nullptr;
 	CreateLight();
 
-	LoadVertexBuffer();
-
 	XMFLOAT4X4 transform = XMFLOAT4X4(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
 	transform4 = transform;
 	transform3 = XMFLOAT3X3(
@@ -71,6 +72,7 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 		);
 
 	motionBlurAmount = 0.0f;
+	particleBufferOffset = 0;
 
 	SetupLightInterpolators();
 }
@@ -274,7 +276,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	if (!points.empty())
 	{
 		std::vector<Point> renderPoints = std::vector<Point>(points.begin(), points.end());
-		wiRenderer::GetDevice()->UpdateBuffer(particleBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
+		//wiRenderer::GetDevice()->UpdateBuffer(particleBuffer, renderPoints.data(), threadID, (int)(sizeof(Point)* renderPoints.size()));
+		particleBufferOffset = wiRenderer::GetDevice()->AppendRingBuffer(dynamicPool, renderPoints.data(), sizeof(Point)* renderPoints.size(), threadID);
 	}
 }
 
@@ -296,6 +299,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 		cb.mAdd.x = additive ? 1.0f : 0.0f;
 		cb.mAdd.y = 0.0f;
 		cb.mMotionBlurAmount = motionBlurAmount;
+		cb.mBufferOffset = particleBufferOffset / sizeof(Point);
 		
 
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
@@ -306,7 +310,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 	
 		device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
 
-		device->BindResourceVS(particleBuffer, 0, threadID);
+		device->BindResourceVS(wiRenderer::dynamicVertexBufferPool, 0, threadID);
 
 		if (!wireRender && material->texture)
 		{
@@ -325,8 +329,6 @@ void wiEmittedParticle::CleanUp()
 {
 
 	points.clear();
-
-	SAFE_DELETE(particleBuffer);
 
 	SAFE_DELETE_ARRAY(posSamples);
 	SAFE_DELETE_ARRAY(radSamples);
@@ -349,7 +351,7 @@ void wiEmittedParticle::LoadShaders()
 
 
 }
-void wiEmittedParticle::SetUpCB()
+void wiEmittedParticle::LoadBuffers()
 {
 	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
@@ -358,7 +360,16 @@ void wiEmittedParticle::SetUpCB()
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	constantBuffer = new GPUBuffer;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, nullptr, constantBuffer );
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer);
+
+	bd.Usage = USAGE_DYNAMIC;
+	bd.ByteWidth = sizeof(Point) * 1024 * 1024;
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(Point);
+	dynamicPool = new GPURingBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, dynamicPool);
 }
 void wiEmittedParticle::SetUpStates()
 {
@@ -448,25 +459,10 @@ void wiEmittedParticle::SetUpStates()
 	blendStateAdd = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAdd);
 }
-void wiEmittedParticle::LoadVertexBuffer()
-{
-	particleBuffer = nullptr;
-
-	GPUBufferDesc bd;
-	ZeroMemory( &bd, sizeof(bd) );
-    bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(Point) * MAX_PARTICLES;
-    bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(Point);
-	particleBuffer = new GPUBuffer;
-    wiRenderer::GetDevice()->CreateBuffer( &bd, nullptr, particleBuffer );
-}
 void wiEmittedParticle::SetUpStatic()
 {
 	LoadShaders();
-	SetUpCB();
+	LoadBuffers();
 	SetUpStates();
 }
 void wiEmittedParticle::CleanUpStatic()
@@ -503,7 +499,6 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		archive >> motionBlurAmount;
 		archive >> lightName;
 
-		LoadVertexBuffer();
 		SetupLightInterpolators();
 	}
 	else

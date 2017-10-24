@@ -5,7 +5,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
 	float2		xAdd;
 	float		xMotionBlurAmount;
-	float		padding;
+	uint		bufferOffset;
 };
 
 static const float3 BILLBOARD[] = {
@@ -40,7 +40,7 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	uint instanceID = fakeIndex / 6;
 
 	// load particle data:
-	Particle particle = particleBuffer[instanceID];
+	Particle particle = particleBuffer[instanceID + bufferOffset];
 
 	// expand the point into a billboard in view space:
 	float3 quadPos = BILLBOARD[vertexID];

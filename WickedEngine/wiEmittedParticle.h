@@ -48,9 +48,10 @@ private:
 	{
 		XMFLOAT2	mAdd;
 		float		mMotionBlurAmount;
-		float		padding;
+		UINT		mBufferOffset;
 	};
-	wiGraphicsTypes::GPUBuffer		   *particleBuffer;
+	UINT particleBufferOffset;
+	static wiGraphicsTypes::GPURingBuffer *dynamicPool;
 	static wiGraphicsTypes::VertexShader  *vertexShader;
 	static wiGraphicsTypes::PixelShader   *pixelShader,*simplestPS;
 	static wiGraphicsTypes::GPUBuffer           *constantBuffer;
@@ -61,12 +62,8 @@ private:
 public:
 	static void LoadShaders();
 private:
-	static void SetUpCB();
+	static void LoadBuffers();
 	static void SetUpStates();
-	void LoadVertexBuffer();
-	
-
-	//std::std::vector<SkinnedVertex> emitterVertexList;
 	
 	float getNewVelocityModifier(){ return 1+((rand()%10001+1)*0.0001f)*random_factor;}
 	float getNewPositionModifier(){ return (rand()%((int)(random_factor*1000)+1))*0.001f - random_factor*0.5f; }
