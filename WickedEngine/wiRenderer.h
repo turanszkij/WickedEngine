@@ -74,6 +74,7 @@ public:
 	static wiGraphicsTypes::Texture				*textures[TEXTYPE_LAST];
 	static wiGraphicsTypes::Sampler				*customsamplers[SSTYPE_LAST];
 
+	static wiGraphicsTypes::GPURingBuffer		*dynamicVertexBufferPool;
 	
 	static float GAMMA;
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;

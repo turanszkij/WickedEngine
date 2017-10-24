@@ -146,7 +146,7 @@ namespace wiGraphicsTypes
 		virtual void MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) = 0;
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) = 0;
 		// Returns the starting byte offset of the appended data
-		virtual size_t AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID) = 0;
+		virtual UINT AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID) = 0;
 		virtual GPUBuffer* DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) = 0;
 		virtual void SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;

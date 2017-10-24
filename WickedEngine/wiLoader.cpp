@@ -1996,23 +1996,6 @@ void Mesh::CreateBuffers(Object* object)
 
 		GPUBufferDesc bd;
 		SubresourceData InitData;
-		if (!instanceBuffer.IsValid())
-		{
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(Instance);
-			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBuffer);
-			bd.ByteWidth = sizeof(InstancePrev);
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &instanceBufferPrev);
-		}
-
-
-		if (goalVG >= 0) {
-			goalPositions.resize(vertexGroups[goalVG].vertices.size());
-			goalNormals.resize(vertexGroups[goalVG].vertices.size());
-		}
 
 		{
 			ZeroMemory(&bd, sizeof(bd));
@@ -2374,41 +2357,14 @@ void Mesh::CreateVertexArrays()
 		}
 	}
 
+	if (goalVG >= 0) {
+		goalPositions.resize(vertexGroups[goalVG].vertices.size());
+		goalNormals.resize(vertexGroups[goalVG].vertices.size());
+	}
+
 	arraysComplete = true;
 }
 
-std::vector<Instance> meshInstances[GRAPHICSTHREAD_COUNT];
-std::vector<InstancePrev> meshInstancesPrev[GRAPHICSTHREAD_COUNT];
-void Mesh::AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID)
-{
-	if (numerator >= (int)meshInstances[threadID].size())
-	{
-		// grow buffer
-		meshInstances[threadID].resize((meshInstances[threadID].size() + 1) * 2);
-	}
-
-	// fill buffer
-	meshInstances[threadID][numerator] = instance;
-}
-void Mesh::AddRenderableInstancePrev(const InstancePrev& instance, int numerator, GRAPHICSTHREAD threadID)
-{
-	if (numerator >= (int)meshInstancesPrev[threadID].size())
-	{
-		// grow buffer
-		meshInstancesPrev[threadID].resize((meshInstancesPrev[threadID].size() + 1) * 2);
-	}
-
-	// fill buffer
-	meshInstancesPrev[threadID][numerator] = instance;
-}
-void Mesh::UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID)
-{
-	wiRenderer::GetDevice()->UpdateBuffer(&instanceBuffer, meshInstances[threadID].data(), threadID, sizeof(Instance)*count);
-}
-void Mesh::UpdateRenderableInstancesPrev(int count, GRAPHICSTHREAD threadID)
-{
-	wiRenderer::GetDevice()->UpdateBuffer(&instanceBufferPrev, meshInstancesPrev[threadID].data(), threadID, sizeof(InstancePrev)*count);
-}
 void Mesh::Serialize(wiArchive& archive)
 {
 	if (archive.IsReadMode())
@@ -2800,14 +2756,8 @@ void Model::FinishLoading()
 		if (x->mesh != nullptr)
 		{
 			// Ribbon trails
-			if (x->mesh->trailInfo.base >= 0 && x->mesh->trailInfo.tip >= 0) {
-				GPUBufferDesc bd;
-				ZeroMemory(&bd, sizeof(bd));
-				bd.Usage = USAGE_DYNAMIC;
-				bd.ByteWidth = sizeof(RibbonVertex) * 1000;
-				bd.BindFlags = BIND_VERTEX_BUFFER;
-				bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-				wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, &x->trailBuff);
+			if (x->mesh->trailInfo.base >= 0 && x->mesh->trailInfo.tip >= 0)
+			{
 				x->trailTex = wiTextureHelper::getInstance()->getTransparent();
 				x->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
 			}

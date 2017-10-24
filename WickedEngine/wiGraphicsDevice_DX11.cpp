@@ -3242,7 +3242,7 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 		deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, &box, data, 0, 0);
 	}
 }
-size_t GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID)
+UINT GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID)
 {
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 	assert(buffer->desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
@@ -3274,7 +3274,7 @@ size_t GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* 
 	}
 	
 	buffer->byteOffset = position + dataSize;
-	return position;
+	return static_cast<UINT>(position);
 }
 GPUBuffer* GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) 
 {

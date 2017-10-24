@@ -40,16 +40,11 @@ GFX_STRUCT Instance
 	XMFLOAT4A mat2;
 	XMFLOAT4A color_dither; //rgb:color, a:dither
 
-	Instance(float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)){
-		mat0 = XMFLOAT4A(1, 0, 0, 0);
-		mat0 = XMFLOAT4A(0, 1, 0, 0);
-		mat0 = XMFLOAT4A(0, 0, 1, 0);
-		color_dither = XMFLOAT4A(color.x, color.y, color.z, dither);
-	}
+	Instance(){}
 	Instance(const XMFLOAT4X4& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)){
 		Create(matIn, dither, color);
 	}
-	void Create(const XMFLOAT4X4& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1))
+	inline void Create(const XMFLOAT4X4& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1))
 	{
 		mat0 = XMFLOAT4A(matIn._11, matIn._21, matIn._31, matIn._41);
 		mat1 = XMFLOAT4A(matIn._12, matIn._22, matIn._32, matIn._42);
@@ -65,13 +60,12 @@ GFX_STRUCT InstancePrev
 	XMFLOAT4A mat1;
 	XMFLOAT4A mat2;
 
-	InstancePrev()
-	{
-		mat0 = XMFLOAT4A(1, 0, 0, 0);
-		mat1 = XMFLOAT4A(0, 1, 0, 0);
-		mat2 = XMFLOAT4A(0, 0, 1, 0);
-	}
+	InstancePrev(){}
 	InstancePrev(const XMFLOAT4X4& matIn)
+	{
+		Create(matIn);
+	}
+	inline void Create(const XMFLOAT4X4& matIn)
 	{
 		mat0 = XMFLOAT4A(matIn._11, matIn._21, matIn._31, matIn._41);
 		mat1 = XMFLOAT4A(matIn._12, matIn._22, matIn._32, matIn._42);
@@ -418,8 +412,6 @@ public:
 	wiGraphicsTypes::GPUBuffer	streamoutBuffer_POS;
 	wiGraphicsTypes::GPUBuffer	streamoutBuffer_NOR;
 	wiGraphicsTypes::GPUBuffer	streamoutBuffer_PRE;
-	wiGraphicsTypes::GPUBuffer	instanceBuffer;
-	wiGraphicsTypes::GPUBuffer	instanceBufferPrev;
 
 	bool renderable,doubleSided;
 
@@ -469,10 +461,6 @@ public:
 	static void CreateImpostorVB();
 	bool arraysComplete;
 	void CreateVertexArrays();
-	void AddRenderableInstance(const Instance& instance, int numerator, GRAPHICSTHREAD threadID);
-	void AddRenderableInstancePrev(const InstancePrev& instance, int numerator, GRAPHICSTHREAD threadID);
-	void UpdateRenderableInstances(int count, GRAPHICSTHREAD threadID);
-	void UpdateRenderableInstancesPrev(int count, GRAPHICSTHREAD threadID);
 	void init()
 	{
 		parent="";
@@ -552,7 +540,6 @@ struct Object : public Streamable, public Transform
 	
 	//RIBBON TRAIL
 	std::deque<RibbonVertex> trail;
-	wiGraphicsTypes::GPUBuffer trailBuff;
 	wiGraphicsTypes::Texture2D* trailDistortTex;
 	wiGraphicsTypes::Texture2D* trailTex;
 

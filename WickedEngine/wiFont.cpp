@@ -303,7 +303,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 
 	device->BindBlendState(blendState, threadID);
 
-	UINT vboffset = (UINT)device->AppendRingBuffer(vertexBuffer, vertexList.data(), sizeof(Vertex) * text.length() * 4, threadID);
+	UINT vboffset = device->AppendRingBuffer(vertexBuffer, vertexList.data(), sizeof(Vertex) * text.length() * 4, threadID);
 
 	const GPUBuffer* vbs[] = {
 		vertexBuffer,

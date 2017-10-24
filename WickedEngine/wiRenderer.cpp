@@ -50,6 +50,8 @@ GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
 Texture				*wiRenderer::textures[TEXTYPE_LAST];
 Sampler				*wiRenderer::customsamplers[SSTYPE_LAST];
 
+GPURingBuffer		*wiRenderer::dynamicVertexBufferPool;
+
 float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
@@ -329,6 +331,8 @@ void wiRenderer::CleanUpStatic()
 		SAFE_DELETE(customsamplers[i]);
 	}
 
+	SAFE_DELETE(dynamicVertexBufferPool);
+
 	if (physicsEngine) physicsEngine->CleanUp();
 
 	SAFE_DELETE(graphicsDevice);
@@ -550,12 +554,23 @@ bool wiRenderer::ResolutionChanged()
 
 void wiRenderer::LoadBuffers()
 {
+	GPUBufferDesc bd;
+
+	// Ring buffer allows fast allocation of dynamic buffers for one frame:
+	dynamicVertexBufferPool = new GPURingBuffer;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.ByteWidth = 1024 * 1024 * 128;
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.MiscFlags = 0;
+	GetDevice()->CreateBuffer(&bd, nullptr, dynamicVertexBufferPool);
+
+
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
 		constantBuffers[i] = new GPUBuffer;
 	}
 
-    GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 
@@ -2763,7 +2778,8 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 
 	for (Object* o : objectsWithTrails)
 	{
-		if(o->trailBuff.IsValid() && o->trail.size()>=4){
+		if (o->trail.size() >= 4)
+		{
 
 			GetDevice()->BindResourcePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
 			GetDevice()->BindResourcePS(o->trailTex, TEXSLOT_ONDEMAND2, threadID);
@@ -2772,52 +2788,56 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 
 			int bounds = (int)o->trail.size();
 			trails.reserve(bounds * 10);
-			int req = bounds-3;
-			for(int k=0;k<req;k+=2)
+			int req = bounds - 3;
+			for (int k = 0; k < req; k += 2)
 			{
 				static const float trailres = 10.f;
-				for(float r=0.0f;r<=1.0f;r+=1.0f/trailres)
+				for (float r = 0.0f; r <= 1.0f; r += 1.0f / trailres)
 				{
 					XMVECTOR point0 = XMVectorCatmullRom(
-						XMLoadFloat3( &o->trail[k?(k-2):0].pos )
-						,XMLoadFloat3( &o->trail[k].pos )
-						,XMLoadFloat3( &o->trail[k+2].pos )
-						,XMLoadFloat3( &o->trail[k+6<bounds?(k+6):(bounds-2)].pos )
-						,r
+						XMLoadFloat3(&o->trail[k ? (k - 2) : 0].pos)
+						, XMLoadFloat3(&o->trail[k].pos)
+						, XMLoadFloat3(&o->trail[k + 2].pos)
+						, XMLoadFloat3(&o->trail[k + 6 < bounds ? (k + 6) : (bounds - 2)].pos)
+						, r
 					),
-					point1 = XMVectorCatmullRom(
-						XMLoadFloat3( &o->trail[k?(k-1):1].pos )
-						,XMLoadFloat3( &o->trail[k+1].pos )
-						,XMLoadFloat3( &o->trail[k+3].pos )
-						,XMLoadFloat3( &o->trail[k+5<bounds?(k+5):(bounds-1)].pos )
-						,r
-					);
-					XMFLOAT3 xpoint0,xpoint1;
-					XMStoreFloat3(&xpoint0,point0);
-					XMStoreFloat3(&xpoint1,point1);
+						point1 = XMVectorCatmullRom(
+							XMLoadFloat3(&o->trail[k ? (k - 1) : 1].pos)
+							, XMLoadFloat3(&o->trail[k + 1].pos)
+							, XMLoadFloat3(&o->trail[k + 3].pos)
+							, XMLoadFloat3(&o->trail[k + 5 < bounds ? (k + 5) : (bounds - 1)].pos)
+							, r
+						);
+					XMFLOAT3 xpoint0, xpoint1;
+					XMStoreFloat3(&xpoint0, point0);
+					XMStoreFloat3(&xpoint1, point1);
 					trails.push_back(RibbonVertex(xpoint0
 						, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 0), XMFLOAT2((float)(k + 1) / (float)bounds, 0), r)
 						, wiMath::Lerp(o->trail[k].col, o->trail[k + 2].col, r)
 						, 1
-						));
+					));
 					trails.push_back(RibbonVertex(xpoint1
 						, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 1), XMFLOAT2((float)(k + 1) / (float)bounds, 1), r)
 						, wiMath::Lerp(o->trail[k + 1].col, o->trail[k + 3].col, r)
 						, 1
-						));
+					));
 				}
 			}
-			if(!trails.empty()){
-				GetDevice()->UpdateBuffer(&o->trailBuff,trails.data(),threadID,(int)(sizeof(RibbonVertex)*trails.size()));
+			if (!trails.empty())
+			{
+				UINT trailOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, trails.data(), sizeof(RibbonVertex)*trails.size(), threadID);
 
 				const GPUBuffer* vbs[] = {
-					&o->trailBuff,
+					dynamicVertexBufferPool
 				};
 				const UINT strides[] = {
-					sizeof(RibbonVertex),
+					sizeof(RibbonVertex)
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->Draw((int)trails.size(),threadID);
+				const UINT offsets[] = {
+					trailOffset
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+				GetDevice()->Draw((int)trails.size(), threadID);
 
 				trails.clear();
 			}
@@ -3901,6 +3921,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 		XMFLOAT4X4 tempMat;
 
+		Instance instances[1024];
+		InstancePrev instancesPrev[1024];
+
 		if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 		{
 			device->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
@@ -3996,15 +4019,17 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
 
+					assert(k < ARRAYSIZE(instances) && "Instance buffer full!");
+
 					XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
 
 					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
-					mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
+					instances[k].Create(tempMat, dither, instance->color);
 
 					if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 					{
 						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
-						mesh->AddRenderableInstancePrev(InstancePrev(tempMat), k, threadID);
+						instancesPrev[k].Create(tempMat);
 						instancePrevUpdated = true;
 					}
 
@@ -4013,10 +4038,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (k < 1)
 					continue;
 
-				mesh->UpdateRenderableInstances(k, threadID);
+				UINT instanceOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(Instance)*k, threadID);
+				UINT instancePrevOffset = 0;
 				if (instancePrevUpdated)
 				{
-					mesh->UpdateRenderableInstancesPrev(k, threadID);
+					instancePrevOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(InstancePrev)*k, threadID);
 				}
 
 				if (realVL == VLTYPE_OBJECT_POS_TEX)
@@ -4024,14 +4050,19 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					GPUBuffer* vbs[] = {
 						&Mesh::impostorVB_POS,
 						&Mesh::impostorVB_TEX,
-						&mesh->instanceBuffer
+						dynamicVertexBufferPool
 					};
 					UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
 						sizeof(Mesh::Vertex_TEX),
 						sizeof(Instance)
 					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+					UINT offsets[] = {
+						0,
+						0,
+						instanceOffset
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 				}
 				else
 				{
@@ -4040,8 +4071,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						&Mesh::impostorVB_NOR,
 						&Mesh::impostorVB_TEX,
 						&Mesh::impostorVB_POS,
-						&mesh->instanceBuffer,
-						&mesh->instanceBufferPrev,
+						dynamicVertexBufferPool,
+						dynamicVertexBufferPool
 					};
 					UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
@@ -4051,7 +4082,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						sizeof(Instance),
 						sizeof(InstancePrev),
 					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+					UINT offsets[] = {
+						0,
+						0,
+						0,
+						0,
+						instanceOffset,
+						instancePrevOffset
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 				}
 
 				const GPUResource* res[] = {
@@ -4167,13 +4206,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (dither > 1.0f - FLT_EPSILON)
 					continue;
 
+				assert(k < ARRAYSIZE(instances) && "Instance buffer full!");
+
 				forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
 
 				if (mesh->softBody)
 					tempMat = __identityMat;
 				else
 					tempMat = instance->world;
-				mesh->AddRenderableInstance(Instance(tempMat, dither, instance->color), k, threadID);
+				instances[k].Create(tempMat, dither, instance->color);
 
 				if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 				{
@@ -4181,7 +4222,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						tempMat = __identityMat;
 					else
 						tempMat = instance->worldPrev;
-					mesh->AddRenderableInstancePrev(InstancePrev(tempMat), k, threadID);
+					instancesPrev[k].Create(tempMat);
 					instancePrevUpdated = true;
 				}
 						
@@ -4190,10 +4231,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			if (k < 1)
 				continue;
 
-			mesh->UpdateRenderableInstances(k, threadID);
+			UINT instanceOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(Instance)*k, threadID);
+			UINT instancePrevOffset = 0;
 			if (instancePrevUpdated)
 			{
-				mesh->UpdateRenderableInstancesPrev(k, threadID);
+				instancePrevOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(InstancePrev)*k, threadID);
 			}
 
 			enum class BOUNDVERTEXBUFFERTYPE
@@ -4264,13 +4306,17 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						{
 							GPUBuffer* vbs[] = {
 								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-								&mesh->instanceBuffer
+								dynamicVertexBufferPool
 							};
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
 								sizeof(Instance)
 							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+							UINT offsets[] = {
+								0,
+								instanceOffset
+							};
+							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 						}
 						break;
 						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
@@ -4278,14 +4324,19 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							GPUBuffer* vbs[] = {
 								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 								&mesh->vertexBuffer_TEX,
-								&mesh->instanceBuffer
+								dynamicVertexBufferPool
 							};
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
 								sizeof(Mesh::Vertex_TEX),
 								sizeof(Instance)
 							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+							UINT offsets[] = {
+								0,
+								0,
+								instanceOffset
+							};
+							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 						}
 						break;
 						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
@@ -4295,8 +4346,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								(mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 								&mesh->vertexBuffer_TEX,
 								(mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
-								&mesh->instanceBuffer,
-								&mesh->instanceBufferPrev,
+								dynamicVertexBufferPool,
+								dynamicVertexBufferPool
 							};
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
@@ -4306,7 +4357,14 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Instance),
 								sizeof(InstancePrev),
 							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+							UINT offsets[] = {
+								0,
+								0,
+								0,
+								0,
+								instanceOffset
+							};
+							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 						}
 						break;
 						default:
@@ -6038,19 +6096,19 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	BindPersistentState(threadID);
 
-	static const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-	mesh->AddRenderableInstance(Instance(__identity), 0, threadID);
-	mesh->UpdateRenderableInstances(1, threadID);
-	mesh->AddRenderableInstancePrev(InstancePrev(__identity), 0, threadID);
-	mesh->UpdateRenderableInstancesPrev(1, threadID);
+	const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+	const Instance instance(__identity);
+	const InstancePrev instancePrev(__identity);
+	const UINT instanceOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, &instance, sizeof(instance), threadID);
+	const UINT instancePrevOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, &instancePrev, sizeof(instancePrev), threadID);
 
 	GPUBuffer* vbs[] = {
 		(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 		(mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 		&mesh->vertexBuffer_TEX,
 		(mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
-		&mesh->instanceBuffer,
-		&mesh->instanceBufferPrev
+		dynamicVertexBufferPool,
+		dynamicVertexBufferPool
 	};
 	UINT strides[] = {
 		sizeof(Mesh::Vertex_POS),
@@ -6060,7 +6118,10 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		sizeof(Instance),
 		sizeof(InstancePrev)
 	};
-	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	UINT offsets[] = {
+		0,0,0,0,instanceOffset,instancePrevOffset
+	};
+	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
 
 	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
