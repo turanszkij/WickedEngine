@@ -1405,7 +1405,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -3207,11 +3207,6 @@ void GraphicsDevice_DX11::MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GR
 }
 void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 {
-	if (dataSize == 0)
-	{
-		return;
-	}
-
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 
 	if (dataSize == 0)
@@ -3255,11 +3250,6 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 }
 UINT GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID)
 {
-	if (dataSize == 0)
-	{
-		return 0;
-	}
-
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 	assert(buffer->desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
 

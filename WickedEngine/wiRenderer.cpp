@@ -559,7 +559,7 @@ void wiRenderer::LoadBuffers()
 	// Ring buffer allows fast allocation of dynamic buffers for one frame:
 	dynamicVertexBufferPool = new GPURingBuffer;
 	bd.BindFlags = BIND_VERTEX_BUFFER;
-	bd.ByteWidth = 1024 * 1024 * 128;
+	bd.ByteWidth = 1024 * 1024 * 64;
 	bd.Usage = USAGE_DYNAMIC;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;

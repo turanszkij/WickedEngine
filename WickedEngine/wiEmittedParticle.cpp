@@ -310,7 +310,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 	
 		device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
 
-		device->BindResourceVS(wiRenderer::dynamicVertexBufferPool, 0, threadID);
+		device->BindResourceVS(dynamicPool, 0, threadID);
 
 		if (!wireRender && material->texture)
 		{
