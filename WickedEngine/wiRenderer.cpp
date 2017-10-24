@@ -4362,7 +4362,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								0,
 								0,
 								0,
-								instanceOffset
+								instanceOffset,
+								instancePrevOffset
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 						}

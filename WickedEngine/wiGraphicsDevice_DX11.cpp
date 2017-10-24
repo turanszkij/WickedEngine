@@ -3208,6 +3208,12 @@ void GraphicsDevice_DX11::MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GR
 void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 {
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
+
+	if (dataSize == 0)
+	{
+		return;
+	}
+
 	HRESULT hr;
 	if (dataSize > (int)buffer->desc.ByteWidth) 
 	{
@@ -3246,6 +3252,11 @@ UINT GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* da
 {
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 	assert(buffer->desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
+
+	if (dataSize == 0)
+	{
+		return 0xFFFFFFFF;
+	}
 
 	size_t position = buffer->byteOffset;
 	bool wrap = position + dataSize > buffer->desc.ByteWidth;
