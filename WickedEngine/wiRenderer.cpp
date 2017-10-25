@@ -5821,14 +5821,25 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		XMVECTOR& rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
 		Mesh::Vertex_FULL _tmpvert;
-		for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+
+		if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
 		{
-			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
+			for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
 			{
 				_tmpvert = TransformVertex(mesh, (int)i);
 				_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
 			}
-			else
+		}
+		else if (mesh->hasDynamicVB())
+		{
+			for (size_t i = 0; i < mesh->vertices_Transformed_POS.size(); ++i)
+			{
+				_vertices[i] = mesh->vertices_Transformed_POS[i].Load();
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
 			{
 				_vertices[i] = mesh->vertices_POS[i].Load();
 			}
