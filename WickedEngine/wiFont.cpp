@@ -50,7 +50,7 @@ void wiFont::LoadVertexBuffer()
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = 1024 * 1024; // just allocate 2MB to font renderer ring buffer..
+	bd.ByteWidth = 1024 * 1024; // just allocate 1MB to font renderer ring buffer..
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 

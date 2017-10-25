@@ -3214,10 +3214,12 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 		return;
 	}
 
+	dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+
 	HRESULT hr;
 	if (dataSize > (int)buffer->desc.ByteWidth) 
 	{
-		// grow the buffer if new datasize exceeds buffer size
+		// grow the buffer if new datasize exceeds buffer size (TODO: disallow, contention hazard!)
 		buffer->resource_DX11->Release();
 		buffer->desc.ByteWidth = dataSize * 2;
 		hr = CreateBuffer(&buffer->desc, nullptr, buffer);
@@ -3258,8 +3260,10 @@ UINT GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* da
 		return 0xFFFFFFFF;
 	}
 
+	dataSize = min(buffer->desc.ByteWidth, dataSize);
+
 	size_t position = buffer->byteOffset;
-	bool wrap = position + dataSize > buffer->desc.ByteWidth;
+	bool wrap = position + dataSize > buffer->desc.ByteWidth || buffer->residentFrame != FRAMECOUNT;
 	position = wrap ? 0 : position;
 
 	if (buffer->desc.Usage == USAGE_DYNAMIC)
@@ -3284,7 +3288,10 @@ UINT GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* da
 		deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, &box, data, 0, 0);
 	}
 	
+	// TODO: contention?
 	buffer->byteOffset = position + dataSize;
+	buffer->residentFrame = FRAMECOUNT;
+
 	return static_cast<UINT>(position);
 }
 GPUBuffer* GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) 

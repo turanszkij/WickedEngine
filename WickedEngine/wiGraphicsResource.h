@@ -162,10 +162,12 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 	private:
 		size_t byteOffset;
+		uint64_t residentFrame;
 	public:
-		GPURingBuffer() :byteOffset(0) {}
+		GPURingBuffer() : byteOffset(0), residentFrame(0) {}
 		virtual ~GPURingBuffer() {}
 
+		// The next appending to buffer will start at this offset
 		size_t GetByteOffset() { return byteOffset; }
 	};
 

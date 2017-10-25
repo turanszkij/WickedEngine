@@ -13,7 +13,7 @@ namespace wiGraphicsTypes
 	class GraphicsDevice : public wiThreadSafeManager
 	{
 	protected:
-		long FRAMECOUNT;
+		uint64_t FRAMECOUNT;
 		bool VSYNC;
 		int SCREENWIDTH, SCREENHEIGHT;
 		bool FULLSCREEN;
@@ -52,7 +52,7 @@ namespace wiGraphicsTypes
 
 		bool GetVSyncEnabled() { return VSYNC; }
 		void SetVSyncEnabled(bool value) { VSYNC = value; }
-		long GetFrameCount() { return FRAMECOUNT; }
+		uint64_t GetFrameCount() { return FRAMECOUNT; }
 
 		int GetScreenWidth() { return SCREENWIDTH; }
 		int GetScreenHeight() { return SCREENHEIGHT; }
