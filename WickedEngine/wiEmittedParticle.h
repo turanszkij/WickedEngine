@@ -1,19 +1,22 @@
 #pragma once
-#include "wiParticle.h"
+#include "CommonInclude.h"
+#include "wiGraphicsAPI.h"
 #include "ShaderInterop.h"
 #include "wiIntersectables.h"
 
 #include <set>
 #include <deque>
 
+struct SkinnedVertex;
+struct Mesh;
+struct Object;
 struct Material;
 struct Light;
 struct Camera;
 
 class wiArchive;
 
-class wiEmittedParticle :
-	public wiParticle
+class wiEmittedParticle
 {
 private:
 	struct Point

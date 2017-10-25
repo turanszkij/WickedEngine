@@ -332,7 +332,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h" />
@@ -671,7 +670,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiProfiler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp" />

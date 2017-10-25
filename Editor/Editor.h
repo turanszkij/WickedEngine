@@ -17,6 +17,7 @@ class EditorLoadingScreen : public LoadingScreenComponent
 {
 private:
 	wiSprite sprite;
+	wiFont font;
 public:
 	void Load() override;
 	void Compose() override;

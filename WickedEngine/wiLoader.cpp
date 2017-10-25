@@ -1997,7 +1997,7 @@ void Mesh::CreateBuffers(Object* object)
 		GPUBufferDesc bd;
 		SubresourceData InitData;
 
-		if (!softBody) // softbodies will write the global dynamic vertex buffer pool (except for texcoords)!
+		if (!hasDynamicVB()) // dynamic vertex buffers will be written to the global pool by the renderer instead!
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
@@ -2040,6 +2040,7 @@ void Mesh::CreateBuffers(Object* object)
 			}
 		}
 
+		// texture coordinate buffers are always static:
 		ZeroMemory(&bd, sizeof(bd));
 		bd.Usage = USAGE_IMMUTABLE;
 		bd.CPUAccessFlags = 0;

@@ -19,6 +19,7 @@ BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::bl
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
 DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
 
+#define MAX_PARTICLES 10000
 
 static const int NUM_POS_SAMPLES = 30;
 static const float INV_NUM_POS_SAMPLES = 1.0f / NUM_POS_SAMPLES;
@@ -297,7 +298,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 		device->BindVertexLayout(nullptr, threadID);
-		device->BindPS(wireRender?simplestPS:pixelShader,threadID);
+		device->BindPS(wiRenderer::IsWireRender() ? simplestPS : pixelShader, threadID);
 		device->BindVS(vertexShader,threadID);
 
 		ConstantBuffer cb;
@@ -310,14 +311,14 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
 		device->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		device->BindRasterizerState(wireRender ? wireFrameRS : rasterizerState, threadID);
+		device->BindRasterizerState(wiRenderer::IsWireRender() ? wireFrameRS : rasterizerState, threadID);
 		device->BindDepthStencilState(depthStencilState, 1, threadID);
 	
 		device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
 
 		device->BindResourceVS(dynamicPool, 0, threadID);
 
-		if (!wireRender && material->texture)
+		if (!wiRenderer::IsWireRender() && material->texture)
 		{
 			device->BindResourcePS(material->texture, TEXSLOT_ONDEMAND0, threadID);
 		}

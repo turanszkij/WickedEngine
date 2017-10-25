@@ -63,6 +63,7 @@ float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::d
 XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
 float wiRenderer::RESOLUTIONSCALE = 1.0f;
 GPUQuery wiRenderer::occlusionQueries[];
+UINT wiRenderer::entityArrayOffset = 0;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -632,6 +633,8 @@ void wiRenderer::LoadBuffers()
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntityType);
+	SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYARRAY]);
+	resourceBuffers[RBTYPE_ENTITYARRAY] = new GPURingBuffer;
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
 
 	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
@@ -1851,132 +1854,15 @@ void wiRenderer::UpdatePerFrameData(float dt)
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
-	UpdateWorldCB(threadID); // only commits when parameters are changed
-	UpdateFrameCB(threadID);
-	BindPersistentState(threadID);
-	
-	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
-	GetDevice()->EventBegin("Skinning", threadID);
-	{
-		bool streamOutSetUp = false;
-
-		for (Model* model : GetScene().models)
-		{
-			// Update material constant buffers:
-			MaterialCB materialGPUData;
-			for (auto& it : model->materials)
-			{
-				Material* material = it.second;
-				materialGPUData.Create(*material);
-				// These will probably not change every time so only issue a GPU memory update if it is necessary:
-				if (memcmp(&material->gpuData, &materialGPUData, sizeof(MaterialCB)) != 0)
-				{
-					material->gpuData = materialGPUData;
-					GetDevice()->UpdateBuffer(&material->constantBuffer, &materialGPUData, threadID);
-				}
-			}
-
-			// Skinning:
-			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
-			{
-				Mesh* mesh = iter->second;
-
-				if (mesh->hasArmature() && !mesh->softBody && mesh->renderable && !mesh->vertices_POS.empty()
-					&& mesh->streamoutBuffer_POS.IsValid() && mesh->vertexBuffer_POS.IsValid())
-				{
-					Armature* armature = mesh->armature;
-
-					if (!streamOutSetUp)
-					{
-						// Set up skinning shader
-						streamOutSetUp = true;
-						GetDevice()->BindVertexLayout(nullptr, threadID);
-						GPUBuffer* vbs[] = {
-							nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
-						};
-						const UINT strides[] = {
-							0,0,0,0,0,0,0,0
-						};
-						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-						GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
-					}
-
-					// Upload bones for skinning to shader
-					for (unsigned int k = 0; k < armature->boneCollection.size(); k++) 
-					{
-						armature->boneData[k].Create(armature->boneCollection[k]->boneRelativity);
-					}
-					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
-					GetDevice()->BindResourceCS(&armature->boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, threadID);
-
-					// Do the skinning
-					const GPUResource* vbs[] = {
-						static_cast<const GPUResource*>(&mesh->vertexBuffer_POS),
-						static_cast<const GPUResource*>(&mesh->vertexBuffer_NOR),
-						static_cast<const GPUResource*>(&mesh->vertexBuffer_BON),
-					};
-					const GPUUnorderedResource* sos[] = {
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_POS),
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_NOR),
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_PRE),
-					};
-
-					GetDevice()->BindResourcesCS(vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
-					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
-
-					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
-
-				}
-
-				// Upload CPU skinned vertex buffer (Soft body VB)
-				if (mesh->softBody)
-				{
-					//GetDevice()->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertices_Transformed_POS.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size()));
-					//GetDevice()->UpdateBuffer(&mesh->vertexBuffer_NOR, mesh->vertices_Transformed_NOR.data(), threadID, (int)(sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size()));
-					//GetDevice()->UpdateBuffer(&mesh->streamoutBuffer_PRE, mesh->vertices_Transformed_PRE.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size()));
-					mesh->bufferOffset_POS = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_POS.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size(), threadID);
-					mesh->bufferOffset_NOR = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_NOR.data(), sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size(), threadID);
-					mesh->bufferOffset_PRE = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_PRE.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size(), threadID);
-				}
-			}
-		}
-
-		if (streamOutSetUp)
-		{
-			// Unload skinning shader
-			GetDevice()->BindCS(nullptr, threadID);
-			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
-			GetDevice()->UnBindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, threadID);
-		}
-
-	}
-	GetDevice()->EventEnd(threadID);
-	wiProfiler::GetInstance().EndRange(threadID); // skinning
-
-
-	RefreshEnvProbes(threadID);
-
-	// Bind environment probes:
-	{
-		const GPUResource* envMaps[] = {
-			globalEnvProbes[0] == nullptr ? enviroMap : globalEnvProbes[0]->cubeMap.GetTexture(),
-			globalEnvProbes[1] == nullptr ? enviroMap : globalEnvProbes[1]->cubeMap.GetTexture(),
-		};
-		GetDevice()->BindResourcesPS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
-		GetDevice()->BindResourcesCS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
-	}
-
-	
 	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
 
 	ManageDecalAtlas(threadID);
-	
-	// Fill Light Array with lights + decals in the frustum
+
+	// Fill Light Array with lights + decals in the frustum:
 	{
 		const CulledList& culledLights = mainCameraCulling.culledLights;
 
 		static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
-		ZeroMemory(entityArray, sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
 
 		XMMATRIX viewMatrix = cam->GetView();
 
@@ -2069,10 +1955,125 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			lightCounter++;
 		}
 
-		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, (int)(sizeof(ShaderEntityType)*lightCounter));
+		entityArrayOffset = GetDevice()->AppendRingBuffer(static_cast<GPURingBuffer*>(resourceBuffers[RBTYPE_ENTITYARRAY]), entityArray, sizeof(ShaderEntityType)*lightCounter, threadID);
+		entityArrayOffset /= sizeof(ShaderEntityType);
 
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
 		GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
+	}
+
+
+	// These should be after entity array update because that updates some constants!
+	UpdateWorldCB(threadID); // only commits when parameters are changed
+	UpdateFrameCB(threadID);
+	BindPersistentState(threadID);
+
+	
+	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
+	GetDevice()->EventBegin("Skinning", threadID);
+	{
+		bool streamOutSetUp = false;
+
+		for (Model* model : GetScene().models)
+		{
+			// Update material constant buffers:
+			MaterialCB materialGPUData;
+			for (auto& it : model->materials)
+			{
+				Material* material = it.second;
+				materialGPUData.Create(*material);
+				// These will probably not change every time so only issue a GPU memory update if it is necessary:
+				if (memcmp(&material->gpuData, &materialGPUData, sizeof(MaterialCB)) != 0)
+				{
+					material->gpuData = materialGPUData;
+					GetDevice()->UpdateBuffer(&material->constantBuffer, &materialGPUData, threadID);
+				}
+			}
+
+			// Skinning:
+			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
+			{
+				Mesh* mesh = iter->second;
+
+				if (mesh->hasArmature() && !mesh->hasDynamicVB() && mesh->renderable && !mesh->vertices_POS.empty()
+					&& mesh->streamoutBuffer_POS.IsValid() && mesh->vertexBuffer_POS.IsValid())
+				{
+					Armature* armature = mesh->armature;
+
+					if (!streamOutSetUp)
+					{
+						// Set up skinning shader
+						streamOutSetUp = true;
+						GetDevice()->BindVertexLayout(nullptr, threadID);
+						GPUBuffer* vbs[] = {
+							nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
+						};
+						const UINT strides[] = {
+							0,0,0,0,0,0,0,0
+						};
+						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+						GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
+					}
+
+					// Upload bones for skinning to shader
+					for (unsigned int k = 0; k < armature->boneCollection.size(); k++) 
+					{
+						armature->boneData[k].Create(armature->boneCollection[k]->boneRelativity);
+					}
+					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
+					GetDevice()->BindResourceCS(&armature->boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, threadID);
+
+					// Do the skinning
+					const GPUResource* vbs[] = {
+						static_cast<const GPUResource*>(&mesh->vertexBuffer_POS),
+						static_cast<const GPUResource*>(&mesh->vertexBuffer_NOR),
+						static_cast<const GPUResource*>(&mesh->vertexBuffer_BON),
+					};
+					const GPUUnorderedResource* sos[] = {
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_POS),
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_NOR),
+						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_PRE),
+					};
+
+					GetDevice()->BindResourcesCS(vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
+					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
+
+					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
+
+				}
+				else if (mesh->hasDynamicVB())
+				{
+					// Upload CPU skinned vertex buffer (Soft body VB)
+					mesh->bufferOffset_POS = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_POS.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size(), threadID);
+					mesh->bufferOffset_NOR = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_NOR.data(), sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size(), threadID);
+					mesh->bufferOffset_PRE = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_PRE.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size(), threadID);
+				}
+			}
+		}
+
+		if (streamOutSetUp)
+		{
+			// Unload skinning shader
+			GetDevice()->BindCS(nullptr, threadID);
+			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
+			GetDevice()->UnBindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, threadID);
+		}
+
+	}
+	GetDevice()->EventEnd(threadID);
+	wiProfiler::GetInstance().EndRange(threadID); // skinning
+
+
+	RefreshEnvProbes(threadID);
+
+	// Bind environment probes:
+	{
+		const GPUResource* envMaps[] = {
+			globalEnvProbes[0] == nullptr ? enviroMap : globalEnvProbes[0]->cubeMap.GetTexture(),
+			globalEnvProbes[1] == nullptr ? enviroMap : globalEnvProbes[1]->cubeMap.GetTexture(),
+		};
+		GetDevice()->BindResourcesPS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
+		GetDevice()->BindResourcesCS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
 	}
 
 	// Update visible particlesystem vertices:
@@ -4308,7 +4309,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::POSITION:
 						{
 							GPUBuffer* vbs[] = {
-								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 								dynamicVertexBufferPool
 							};
 							UINT strides[] = {
@@ -4316,7 +4317,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Instance)
 							};
 							UINT offsets[] = {
-								mesh->softBody ? mesh->bufferOffset_POS : 0,
+								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 								instanceOffset
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
@@ -4325,7 +4326,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 						{
 							GPUBuffer* vbs[] = {
-								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 								&mesh->vertexBuffer_TEX,
 								dynamicVertexBufferPool
 							};
@@ -4335,7 +4336,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Instance)
 							};
 							UINT offsets[] = {
-								mesh->softBody ? mesh->bufferOffset_POS : 0,
+								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 								0,
 								instanceOffset
 							};
@@ -4345,10 +4346,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 						{
 							GPUBuffer* vbs[] = {
-								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
+								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 								&mesh->vertexBuffer_TEX,
-								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
+								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
 								dynamicVertexBufferPool,
 								dynamicVertexBufferPool
 							};
@@ -4361,10 +4362,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(InstancePrev),
 							};
 							UINT offsets[] = {
-								mesh->softBody ? mesh->bufferOffset_POS : 0,
-								mesh->softBody ? mesh->bufferOffset_NOR : 0,
+								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
+								mesh->hasDynamicVB() ? mesh->bufferOffset_NOR : 0,
 								0,
-								mesh->softBody ? mesh->bufferOffset_PRE : 0,
+								mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
 								instanceOffset,
 								instancePrevOffset
 							};
@@ -5428,6 +5429,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
 	FrameCB cb;
 
+	cb.mEntityArrayOffset = entityArrayOffset;
 	cb.mTime = renderTime;
 	cb.mTimePrev = renderTime_Prev;
 	cb.mDeltaTime = deltaTime;
@@ -6107,10 +6109,10 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	const UINT instancePrevOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, &instancePrev, sizeof(instancePrev), threadID);
 
 	GPUBuffer* vbs[] = {
-		(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-		(mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
+		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 		&mesh->vertexBuffer_TEX,
-		(mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
+		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
 		dynamicVertexBufferPool,
 		dynamicVertexBufferPool
 	};
@@ -6123,7 +6125,12 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		sizeof(InstancePrev)
 	};
 	UINT offsets[] = {
-		0,0,0,0,instanceOffset,instancePrevOffset
+		mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
+		mesh->hasDynamicVB() ? mesh->bufferOffset_NOR : 0,
+		0,
+		mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
+		instanceOffset,
+		instancePrevOffset
 	};
 	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 

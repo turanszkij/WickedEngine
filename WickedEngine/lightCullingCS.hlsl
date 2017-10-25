@@ -441,7 +441,7 @@ void main(ComputeShaderInput IN)
 	for (uint li = 0; li < o_ArrayLength; ++li)
 	{
 		uint entityIndex = o_Array[li];
-		ShaderEntityType light = EntityArray[entityIndex];
+		ShaderEntityType light = EntityArray[entityIndex + g_xFrame_EntityArrayOffset];
 
 		LightingResult result = (LightingResult)0;
 

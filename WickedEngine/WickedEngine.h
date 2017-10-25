@@ -20,7 +20,6 @@
 #include "wiFrameRate.h"
 #include "wiCpuInfo.h"
 #include "wiLoader.h"
-#include "wiParticle.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiRenderer.h"

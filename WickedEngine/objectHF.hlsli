@@ -188,7 +188,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	[loop]
 	for (; iterator < decalCount; ++iterator)
 	{
-		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator]];
+		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator] + g_xFrame_EntityArrayOffset];
 
 		float4x4 decalProjection = decal.GetProjection();
 		float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
@@ -221,7 +221,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	[loop]
 	for (; iterator < arrayLength; iterator++)
 	{
-		ShaderEntityType light = EntityArray[EntityIndexList[startOffset + iterator]];
+		ShaderEntityType light = EntityArray[EntityIndexList[startOffset + iterator] + g_xFrame_EntityArrayOffset];
 
 		LightingResult result = (LightingResult)0;
 

@@ -1,15 +1,19 @@
 #pragma once
-#include "wiParticle.h"
-#include "ConstantBufferMapping.h"
+#include "CommonInclude.h"
+#include "wiGraphicsAPI.h"
+#include "ShaderInterop.h"
 #include "wiSPTree.h"
 
+
+struct SkinnedVertex;
+struct Mesh;
+struct Object;
 struct Material;
 struct Camera;
 
 class wiArchive;
 
-class wiHairParticle :
-	public wiParticle
+class wiHairParticle
 {
 public:
 	struct Point

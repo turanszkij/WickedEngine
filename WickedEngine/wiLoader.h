@@ -497,8 +497,9 @@ public:
 		bufferOffset_PRE = 0;
 	}
 	
-	bool hasArmature()const { return armature != nullptr; }
-	bool hasImpostor()const { return impostorTarget.IsInitialized(); }
+	bool hasArmature() const { return armature != nullptr; }
+	bool hasImpostor() const { return impostorTarget.IsInitialized(); }
+	bool hasDynamicVB() const { return softBody; }
 	float getTessellationFactor() { return tessellationFactor; }
 	void Serialize(wiArchive& archive);
 };

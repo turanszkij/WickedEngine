@@ -120,7 +120,7 @@ struct ShaderEntityType
 
 // Tiled rendering params:
 #define TILED_CULLING_BLOCKSIZE	16
-#define MAX_SHADER_ENTITY_COUNT	1024
+#define MAX_SHADER_ENTITY_COUNT	4096
 #define MAX_SHADER_ENTITY_COUNT_PER_TILE 256
 
 

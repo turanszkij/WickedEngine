@@ -67,9 +67,10 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
+	uint		g_xFrame_EntityArrayOffset;
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
-	float		g_xFrame_DeltaTime;				float xPadding0_FrameCB;
+	float		g_xFrame_DeltaTime;
 	float3		g_xFrame_WindDirection;			float xPadding1_FrameCB;
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;

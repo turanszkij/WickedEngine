@@ -111,9 +111,10 @@ public:
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
+		UINT mEntityArrayOffset;
 		float mTime;
 		float mTimePrev;
-		float mDeltaTime;				float pad0;
+		float mDeltaTime;
 		XMFLOAT3 mWindDirection;		float pad1;
 		float mWindWaveSize;
 		float mWindRandomness;
@@ -249,6 +250,8 @@ protected:
 	} static voxelSceneData;
 
 	static wiGraphicsTypes::GPUQuery occlusionQueries[256];
+
+	static UINT entityArrayOffset;
 
 public:
 	static std::string SHADERPATH;
