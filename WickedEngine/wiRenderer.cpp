@@ -1931,9 +1931,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				// Upload CPU skinned vertex buffer (Soft body VB)
 				if (mesh->softBody)
 				{
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertices_Transformed_POS.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size()));
-					GetDevice()->UpdateBuffer(&mesh->vertexBuffer_NOR, mesh->vertices_Transformed_NOR.data(), threadID, (int)(sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size()));
-					GetDevice()->UpdateBuffer(&mesh->streamoutBuffer_PRE, mesh->vertices_Transformed_PRE.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size()));
+					//GetDevice()->UpdateBuffer(&mesh->vertexBuffer_POS, mesh->vertices_Transformed_POS.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size()));
+					//GetDevice()->UpdateBuffer(&mesh->vertexBuffer_NOR, mesh->vertices_Transformed_NOR.data(), threadID, (int)(sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size()));
+					//GetDevice()->UpdateBuffer(&mesh->streamoutBuffer_PRE, mesh->vertices_Transformed_PRE.data(), threadID, (int)(sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size()));
+					mesh->bufferOffset_POS = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_POS.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size(), threadID);
+					mesh->bufferOffset_NOR = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_NOR.data(), sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size(), threadID);
+					mesh->bufferOffset_PRE = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_PRE.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size(), threadID);
 				}
 			}
 		}
@@ -4305,7 +4308,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::POSITION:
 						{
 							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 								dynamicVertexBufferPool
 							};
 							UINT strides[] = {
@@ -4313,7 +4316,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Instance)
 							};
 							UINT offsets[] = {
-								0,
+								mesh->softBody ? mesh->bufferOffset_POS : 0,
 								instanceOffset
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
@@ -4322,7 +4325,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 						{
 							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 								&mesh->vertexBuffer_TEX,
 								dynamicVertexBufferPool
 							};
@@ -4332,7 +4335,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Instance)
 							};
 							UINT offsets[] = {
-								0,
+								mesh->softBody ? mesh->bufferOffset_POS : 0,
 								0,
 								instanceOffset
 							};
@@ -4342,10 +4345,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 						{
 							GPUBuffer* vbs[] = {
-								(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-								(mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
+								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 								&mesh->vertexBuffer_TEX,
-								(mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
+								mesh->softBody ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
 								dynamicVertexBufferPool,
 								dynamicVertexBufferPool
 							};
@@ -4358,10 +4361,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(InstancePrev),
 							};
 							UINT offsets[] = {
+								mesh->softBody ? mesh->bufferOffset_POS : 0,
+								mesh->softBody ? mesh->bufferOffset_NOR : 0,
 								0,
-								0,
-								0,
-								0,
+								mesh->softBody ? mesh->bufferOffset_PRE : 0,
 								instanceOffset,
 								instancePrevOffset
 							};

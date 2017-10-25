@@ -413,6 +413,11 @@ public:
 	wiGraphicsTypes::GPUBuffer	streamoutBuffer_NOR;
 	wiGraphicsTypes::GPUBuffer	streamoutBuffer_PRE;
 
+	// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
+	UINT bufferOffset_POS;
+	UINT bufferOffset_NOR;
+	UINT bufferOffset_PRE;
+
 	bool renderable,doubleSided;
 
 	bool calculatedAO;
@@ -487,6 +492,9 @@ public:
 		impostorDistance = 100.0f;
 		tessellationFactor = 0.0f;
 		optimized = false;
+		bufferOffset_POS = 0;
+		bufferOffset_NOR = 0;
+		bufferOffset_PRE = 0;
 	}
 	
 	bool hasArmature()const { return armature != nullptr; }

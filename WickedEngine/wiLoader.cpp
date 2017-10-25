@@ -1997,13 +1997,18 @@ void Mesh::CreateBuffers(Object* object)
 		GPUBufferDesc bd;
 		SubresourceData InitData;
 
+		if (!softBody) // softbodies will write the global dynamic vertex buffer pool (except for texcoords)!
 		{
 			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = (softBody ? USAGE_DYNAMIC : USAGE_IMMUTABLE);
-			bd.CPUAccessFlags = (softBody ? CPU_ACCESS_WRITE : 0);
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			ZeroMemory(&InitData, sizeof(InitData));
+
+			InitData.pSysMem = vertices_TEX.data();
+			bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
 
 			InitData.pSysMem = vertices_POS.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
@@ -2012,10 +2017,6 @@ void Mesh::CreateBuffers(Object* object)
 			InitData.pSysMem = vertices_NOR.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_NOR) * vertices_NOR.size());
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_NOR);
-
-			InitData.pSysMem = vertices_TEX.data();
-			bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
 
 			InitData.pSysMem = vertices_BON.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
@@ -2037,19 +2038,17 @@ void Mesh::CreateBuffers(Object* object)
 				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
 			}
-
-			if (softBody)
-			{
-				ZeroMemory(&bd, sizeof(bd));
-				bd.Usage = USAGE_DYNAMIC;
-				bd.BindFlags = BIND_VERTEX_BUFFER;
-				bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-				bd.MiscFlags = 0;
-
-				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
-			}
 		}
+
+		ZeroMemory(&bd, sizeof(bd));
+		bd.Usage = USAGE_IMMUTABLE;
+		bd.CPUAccessFlags = 0;
+		bd.BindFlags = BIND_VERTEX_BUFFER;
+		bd.MiscFlags = 0;
+		InitData.pSysMem = vertices_TEX.data();
+		bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
+
 
 		//PHYSICALMAPPING
 		if (!physicsverts.empty() && physicalmapGP.empty())
