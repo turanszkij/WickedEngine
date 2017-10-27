@@ -5961,9 +5961,7 @@ Model* wiRenderer::LoadModel(const std::string& dir, const std::string& name, co
 }
 void wiRenderer::LoadWorldInfo(const std::string& dir, const std::string& name)
 {
-	LoadWiWorldInfo(/*dir*/"", name+".wiw", GetScene().worldInfo, GetScene().wind);
-
-	UpdateWorldCB(GRAPHICSTHREAD_IMMEDIATE);
+	LoadWiWorldInfo(dir, name+".wiw", GetScene().worldInfo, GetScene().wind);
 }
 void wiRenderer::LoadDefaultLighting()
 {
