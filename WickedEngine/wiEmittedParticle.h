@@ -22,8 +22,8 @@ private:
 	struct Point
 	{
 		XMFLOAT3 pos;
-		float rot;
 		XMFLOAT4 sizOpaMir;
+		float rot;
 		XMFLOAT3 vel;
 		float rotVel;
 		float life;
@@ -53,7 +53,6 @@ private:
 		float		mMotionBlurAmount;
 		UINT		mBufferOffset;
 	};
-	UINT particleBufferOffset;
 	static wiGraphicsTypes::GPURingBuffer *dynamicPool;
 	static wiGraphicsTypes::VertexShader  *vertexShader;
 	static wiGraphicsTypes::PixelShader   *pixelShader,*simplestPS;

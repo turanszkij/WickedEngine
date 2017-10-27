@@ -20,8 +20,8 @@ static const float3 BILLBOARD[] = {
 struct Particle
 {
 	float3 pos;
-	float rot;
 	float4 sizOpaMir;
+	float rot;
 	float3 vel;
 	float rotVel;
 	float life;
@@ -59,9 +59,6 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	float quadLength = particle.sizOpaMir.x;
 	quadPos *= quadLength;
 
-	// TODO: this will be removed when particle system editor is completed
-	quadPos *= 0.05f;
-
 	// scale the billboard along view space motion vector:
 	float3 velocity = mul(particle.vel, (float3x3)g_xCamera_View);
 	quadPos += dot(quadPos, velocity) * velocity * xMotionBlurAmount;
@@ -70,7 +67,7 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	// copy to output:
 	Out.pos = float4(particle.pos, 1);
 	Out.pos = mul(Out.pos, g_xCamera_View);
-	Out.pos.xyz += quadPos.xyz * particle.sizOpaMir.x;
+	Out.pos.xyz += quadPos.xyz;
 	Out.pos = mul(Out.pos, g_xCamera_Proj);
 
 	Out.tex = uv;

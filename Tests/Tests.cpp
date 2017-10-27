@@ -53,6 +53,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Model");
 	testSelector->AddItem("Lua Script");
 	testSelector->AddItem("Soft Body");
+	testSelector->AddItem("Emitter");
 	testSelector->OnSelect([=](wiEventArgs args) {
 
 		wiRenderer::ClearWorld();
@@ -79,6 +80,9 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 3:
 			wiRenderer::LoadModel("../models/SoftBody/", "flag")->Translate(XMFLOAT3(0, -1, 2));
+			break;
+		case 4:
+			wiRenderer::LoadModel("../models/Emitter/", "emitter")->Translate(XMFLOAT3(0, 2, 2));
 			break;
 		}
 

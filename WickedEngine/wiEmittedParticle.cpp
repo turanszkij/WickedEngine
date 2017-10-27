@@ -31,7 +31,6 @@ wiEmittedParticle::wiEmittedParticle()
 	materialName = "";
 	light = nullptr;
 	lightName = "";
-	particleBufferOffset = 0;
 }
 wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot)
@@ -73,7 +72,6 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 		);
 
 	motionBlurAmount = 0.0f;
-	particleBufferOffset = 0;
 
 	SetupLightInterpolators();
 }
@@ -245,7 +243,7 @@ void wiEmittedParticle::UpdateAttachedLight(float dt)
 		// smooth light position to eliminate jitter:
 
 		posSamples[currentSample] = bounding_box.getCenter();
-		radSamples[currentSample] = bounding_box.getRadius() * 2;
+		radSamples[currentSample] = bounding_box.getRadius() * 4;
 		energySamples[currentSample] = sqrt((float)points.size());
 
 		XMFLOAT3 pos = XMFLOAT3(0, 0, 0);
@@ -277,13 +275,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	if (!points.empty())
 	{
-		static std::vector<Point> renderPoints[GRAPHICSTHREAD_COUNT];
-		if (renderPoints[threadID].size() < points.size())
-		{
-			renderPoints[threadID].resize((points.size() + 1) * 2);
-		}
-		renderPoints[threadID].insert(renderPoints[threadID].begin(), points.begin(), points.end());
-		particleBufferOffset = wiRenderer::GetDevice()->AppendRingBuffer(dynamicPool, renderPoints[threadID].data(), sizeof(Point)* renderPoints[threadID].size(), threadID);
 	}
 }
 
@@ -300,6 +291,18 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 		device->BindVertexLayout(nullptr, threadID);
 		device->BindPS(wiRenderer::IsWireRender() ? simplestPS : pixelShader, threadID);
 		device->BindVS(vertexShader,threadID);
+
+
+		static std::vector<Point> renderPoints[GRAPHICSTHREAD_COUNT];
+		if (renderPoints[threadID].size() < points.size())
+		{
+			renderPoints[threadID].resize((points.size() + 1) * 2);
+		}
+		for (size_t i = 0; i < points.size(); ++i)
+		{
+			renderPoints[threadID][i] = points[i];
+		}
+		UINT particleBufferOffset = wiRenderer::GetDevice()->AppendRingBuffer(dynamicPool, renderPoints[threadID].data(), sizeof(Point)* points.size(), threadID);
 
 		ConstantBuffer cb;
 		cb.mAdd.x = additive ? 1.0f : 0.0f;

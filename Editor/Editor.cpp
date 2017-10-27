@@ -952,6 +952,8 @@ void EditorComponent::Update(float dt)
 			}
 		}
 
+		hovered = wiRenderer::Pick((long)currentMouse.x, (long)currentMouse.y, rendererWnd->GetPickType());
+
 		// Interact:
 		if (hovered.object != nullptr && selected.empty())
 		{
@@ -979,7 +981,6 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Select...
-		hovered = wiRenderer::Pick((long)currentMouse.x, (long)currentMouse.y, rendererWnd->GetPickType());
 		if (wiInputManager::GetInstance()->press(VK_RBUTTON))
 		{
 			wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
