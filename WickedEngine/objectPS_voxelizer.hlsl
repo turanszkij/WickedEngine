@@ -3,7 +3,7 @@
 
 RWSTRUCTUREDBUFFER(output, VoxelType, 0);
 
-void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D, float3 instanceColor : COLOR)
+void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D, nointerpolation float3 instanceColor : COLOR)
 {
 	N = normalize(N);
 

@@ -14,7 +14,7 @@ struct GSOutput
 	float3 N : NORMAL;
 	float2 tex : TEXCOORD;
 	float3 P : POSITION3D;
-	float3 instanceColor : COLOR;
+	nointerpolation float3 instanceColor : COLOR;
 };
 
 [maxvertexcount(3)]
@@ -25,7 +25,7 @@ void main(
 {
 	GSOutput output[3];
 
-	float3 facenormal = abs(normalize(input[0].nor + input[1].nor + input[2].nor));
+	float3 facenormal = abs(input[0].nor + input[1].nor + input[2].nor);
 	uint maxi = facenormal[1] > facenormal[0] ? 1 : 0;
 	maxi = facenormal[2] > facenormal[maxi] ? 2 : maxi;
 
