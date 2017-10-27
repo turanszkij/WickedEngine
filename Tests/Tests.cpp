@@ -17,6 +17,8 @@ void Tests::Initialize()
 	wiFont::FONTPATH = "../WickedEngine/fonts/"; // search for fonts elsewhere
 	MainComponent::Initialize();
 
+	wiRenderer::physicsEngine = new wiBULLET;
+
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
@@ -50,6 +52,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("HelloWorld");
 	testSelector->AddItem("Model");
 	testSelector->AddItem("Lua Script");
+	testSelector->AddItem("Soft Body");
 	testSelector->OnSelect([=](wiEventArgs args) {
 
 		wiRenderer::ClearWorld();
@@ -73,6 +76,9 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 2:
 			wiLua::GetGlobal()->RunFile("test_script.lua");
+			break;
+		case 3:
+			wiRenderer::LoadModel("../models/SoftBody/", "flag")->Translate(XMFLOAT3(0, -1, 2));
 			break;
 		}
 
