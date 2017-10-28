@@ -1512,7 +1512,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+		wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
 	}
 
 	// render hue circle
@@ -1530,7 +1530,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+		wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
 	}
 
 	// render hue picker
@@ -1548,7 +1548,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
 	}
 
 	// render saturation picker
@@ -1566,7 +1566,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
 	}
 
 	// render preview
@@ -1584,7 +1584,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			sizeof(Vertex),
 		};
 		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), threadID);
+		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
 	}
 
 	// RGB values:

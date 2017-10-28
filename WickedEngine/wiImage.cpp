@@ -303,7 +303,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	{
 		device->BindVS(screenVS, threadID);
 		device->BindPS(screenPS, threadID);
-		device->Draw(3, threadID);
+		device->Draw(3, 0, threadID);
 		device->EventEnd(threadID);
 		return;
 	}
@@ -547,7 +547,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 	}
 	
-	device->Draw((fullScreenEffect ? 3 : 4), threadID);
+	device->Draw((fullScreenEffect ? 3 : 4), 0, threadID);
 
 	device->EventEnd(threadID);
 }
@@ -574,7 +574,7 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 
 	device->BindBlendState(blendStateOpaque,threadID);
 
-	device->Draw(3,threadID);
+	device->Draw(3, 0, threadID);
 
 	device->EventEnd(threadID);
 }

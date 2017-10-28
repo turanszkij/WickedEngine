@@ -326,7 +326,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 			device->BindResourcePS(material->texture, TEXSLOT_ONDEMAND0, threadID);
 		}
 
-		device->Draw((int)points.size() * 6,threadID);
+		device->Draw((int)points.size() * 6, 0, threadID);
 
 
 		device->EventEnd(threadID);

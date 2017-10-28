@@ -68,7 +68,7 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		device->BindSamplerGS(samplercmp, SSLOT_ONDEMAND0, threadID);
 
 
-		device->Draw(i,threadID);
+		device->Draw(i, 0, threadID);
 
 		
 

@@ -333,7 +333,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 		cb.mColor = XMFLOAT4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
 		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 
-		device->DrawIndexed((int)text.length() * 6, threadID);
+		device->DrawIndexed((int)text.length() * 6, 0, 0, threadID);
 	}
 
 	// font base render:
@@ -344,7 +344,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 	cb.mColor = XMFLOAT4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
 	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 
-	device->DrawIndexed((int)text.length() * 6, threadID);
+	device->DrawIndexed((int)text.length() * 6, 0, 0, threadID);
 
 	device->EventEnd(threadID);
 }

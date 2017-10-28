@@ -3155,21 +3155,21 @@ void GraphicsDevice_DX11::BindCS(const ComputeShader* shader, GRAPHICSTHREAD thr
 	ID3D11ComputeShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
 	deviceContexts[threadID]->CSSetShader(res, nullptr, 0);
 }
-void GraphicsDevice_DX11::Draw(int vertexCount, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) 
 {
-	deviceContexts[threadID]->Draw(vertexCount, 0);
+	deviceContexts[threadID]->Draw(vertexCount, startVertexLocation);
 }
-void GraphicsDevice_DX11::DrawIndexed(int indexCount, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 {
-	deviceContexts[threadID]->DrawIndexed(indexCount, 0, 0);
+	deviceContexts[threadID]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
-void GraphicsDevice_DX11::DrawInstanced(int vertexCount, int instanceCount, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) 
 {
-	deviceContexts[threadID]->DrawInstanced(vertexCount, instanceCount, 0, 0);
+	deviceContexts[threadID]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
-void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 {
-	deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, 0, 0, 0);
+	deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {

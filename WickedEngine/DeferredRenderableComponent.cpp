@@ -14,8 +14,8 @@ DeferredRenderableComponent::DeferredRenderableComponent()
 {
 	Renderable3DComponent::setProperties();
 
-	setSSREnabled(true);
-	setSSAOEnabled(true);
+	setSSREnabled(false);
+	setSSAOEnabled(false);
 	setHairParticleAlphaCompositionEnabled(false);
 
 	setPreferredThreadingCount(0);
@@ -267,7 +267,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
 			fx.presentFullScreen = false;
-			wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
+			//wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
 			fx.process.setSSR(true);
 			fx.setMaskMap(nullptr);
 			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);

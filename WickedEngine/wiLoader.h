@@ -235,16 +235,12 @@ struct VertexGroup{
 struct MeshSubset
 {
 	Material* material;
-	wiGraphicsTypes::GPUBuffer	indexBuffer;
+	UINT indexBufferOffset;
 
-	std::vector<unsigned int>	subsetIndices;
-
-	wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat;
+	std::vector<uint32_t> subsetIndices;
 
 	MeshSubset();
 	~MeshSubset();
-
-	wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return indexFormat; }
 };
 struct Mesh
 {
@@ -398,13 +394,14 @@ public:
 	std::vector<Vertex_POS>		vertices_Transformed_POS; // for soft body simulation
 	std::vector<Vertex_NOR>		vertices_Transformed_NOR; // for soft body simulation
 	std::vector<Vertex_POS>		vertices_Transformed_PRE; // for soft body simulation
-	std::vector<unsigned int>   indices;
+	std::vector<uint32_t>		indices;
 	std::vector<XMFLOAT3>		physicsverts;
-	std::vector<unsigned int>	physicsindices;
+	std::vector<uint32_t>		physicsindices;
 	std::vector<int>			physicalmapGP;
 	std::vector<MeshSubset>		subsets;
 	std::vector<std::string>	materialNames;
 
+	wiGraphicsTypes::GPUBuffer	indexBuffer;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_POS;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_NOR;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_TEX;
@@ -417,6 +414,8 @@ public:
 	UINT bufferOffset_POS;
 	UINT bufferOffset_NOR;
 	UINT bufferOffset_PRE;
+
+	wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat;
 
 	bool renderable,doubleSided;
 
@@ -495,12 +494,14 @@ public:
 		bufferOffset_POS = 0;
 		bufferOffset_NOR = 0;
 		bufferOffset_PRE = 0;
+		indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
 	}
 	
 	bool hasArmature() const { return armature != nullptr; }
 	bool hasImpostor() const { return impostorTarget.IsInitialized(); }
 	bool hasDynamicVB() const { return softBody; }
 	float getTessellationFactor() { return tessellationFactor; }
+	wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return indexFormat; }
 	void Serialize(wiArchive& archive);
 };
 struct Cullable
