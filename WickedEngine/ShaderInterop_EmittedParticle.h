@@ -26,11 +26,12 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	uint		xMeshIndexStride;
 	uint		xMeshVertexPositionStride;
 	uint		xMeshVertexNormalStride;
-	uint2		xPadding_EmitterCB;
+	float		xRandomness;
+	uint		xPadding_EmitterCB;
 	float4x4	xEmitterWorld;
 };
 
-#define THREADCOUNT_EMIT 64
+#define THREADCOUNT_EMIT 256
 #define THREADCOUNT_SIMULATION 256
 
 

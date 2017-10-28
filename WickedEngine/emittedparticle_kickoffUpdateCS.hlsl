@@ -7,7 +7,6 @@ RWRAWBUFFER(indirectDispatchBuffer, 5);			// indirect kickoff args
 [numthreads(1, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint aliveCount_OLD = counterBuffer[0][0];
 	uint deadCount = counterBuffer[0][1];
 
 	// we can not emit more than there are free slots in the dead list:
@@ -15,6 +14,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// Fill dispatch argument buffer for simulation:
 	indirectDispatchBuffer.Store3(0, uint3(ceil((float)realEmitCount / (float)THREADCOUNT_EMIT), 1, 1));
+
+	// copy new alivelistcount to oldalivelistcount:
+	counterBuffer[0][0] = counterBuffer[0][2];
 
 	// also reset the new alive list count:
 	counterBuffer[0][2] = 0;

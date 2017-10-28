@@ -128,6 +128,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	data.pSysMem = nullptr;
 
 
+	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_DRAWINDIRECT_ARGS;
 	bd.ByteWidth = sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectDrawBuffer);
@@ -352,6 +353,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
 	cb.xMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
 	cb.xEmitterWorld = object->world;
+	cb.xRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
@@ -396,6 +398,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 
 	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	device->UnBindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
 	device->EventEnd(threadID);
 
