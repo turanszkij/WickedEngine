@@ -6,6 +6,8 @@ RWSTRUCTUREDBUFFER(aliveBuffer_OLD, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(counterBuffer, uint4, 4);
+// ...
+RWRAWBUFFER(aabbBuffer, 7);
 
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
@@ -31,6 +33,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			particle.opacity = lerp(1, 0, lifeLerp);
 
 			particle.life -= dt;
+
+#ifdef ENABLE_READBACK_AABB
+			// update particle system AABB:
+			int3 uPos = asint(particle.position);
+			aabbBuffer.InterlockedMin(0, uPos.x);
+			aabbBuffer.InterlockedMin(4, uPos.y);
+			aabbBuffer.InterlockedMin(8, uPos.z);
+			aabbBuffer.InterlockedMax(12, uPos.x);
+			aabbBuffer.InterlockedMax(16, uPos.y);
+			aabbBuffer.InterlockedMax(20, uPos.z);
+#endif // ENABLE_READBACK_AABB
 
 			// write back simulated particle:
 			particleBuffer[particleIndex] = particle;

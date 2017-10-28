@@ -21,8 +21,8 @@ DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
 
 #define MAX_PARTICLES 10000
 
-//static const int NUM_POS_SAMPLES = 30;
-//static const float INV_NUM_POS_SAMPLES = 1.0f / NUM_POS_SAMPLES;
+static const int NUM_POS_SAMPLES = 30;
+static const float INV_NUM_POS_SAMPLES = 1.0f / NUM_POS_SAMPLES;
 
 wiEmittedParticle::wiEmittedParticle()
 {
@@ -142,39 +142,63 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer);
+
+
+	
+	bd.Usage = USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(XMUINT3) * 2; // aabb minmax
+	bd.BindFlags = BIND_UNORDERED_ACCESS;
+	bd.CPUAccessFlags = 0;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	bd.StructureByteStride = 0;
+	for (int i = 0; i < ARRAYSIZE(aabbBuffer); ++i)
+	{
+		aabbBuffer[i] = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aabbBuffer[i]);
+	}
+	bd.Usage = USAGE_STAGING;
+	bd.ByteWidth = sizeof(XMUINT3) * 2; // aabb minmax
+	bd.BindFlags = 0;
+	bd.CPUAccessFlags = CPU_ACCESS_READ;
+	bd.MiscFlags = 0;
+	bd.StructureByteStride = 0;
+	readBackAABBBuffer = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, readBackAABBBuffer);
 }
 
 void wiEmittedParticle::SetupLightInterpolators()
 {
-	//// for smooth light interpolation
-	//currentSample = 0;
-	//posSamples = new XMFLOAT3[NUM_POS_SAMPLES];
-	//radSamples = new float[NUM_POS_SAMPLES];
-	//energySamples = new float[NUM_POS_SAMPLES];
-	//for (int i = 0; i < NUM_POS_SAMPLES; ++i)
-	//{
-	//	radSamples[i] = 0.0f;
-	//	energySamples[i] = 0.0f;
-	//	posSamples[i] = XMFLOAT3(0, 0, 0);
-	//}
+	// for smooth light interpolation
+	currentSample = 0;
+	posSamples = new XMFLOAT3[NUM_POS_SAMPLES];
+	radSamples = new float[NUM_POS_SAMPLES];
+	energySamples = new float[NUM_POS_SAMPLES];
+	for (int i = 0; i < NUM_POS_SAMPLES; ++i)
+	{
+		radSamples[i] = 0.0f;
+		energySamples[i] = 0.0f;
+		posSamples[i] = XMFLOAT3(0, 0, 0);
+	}
 }
 
 int wiEmittedParticle::getRandomPointOnEmitter(){ return wiRandom::getRandom((int)object->mesh->indices.size()-1); }
 
 void wiEmittedParticle::CreateLight()
 {
-	//if (light == nullptr && material->blendFlag == BLENDMODE_ADDITIVE)
-	//{
-	//	light = new Light();
-	//	light->color.x = material->baseColor.x;
-	//	light->color.y = material->baseColor.y;
-	//	light->color.z = material->baseColor.z;
-	//	light->SetType(Light::POINT);
-	//	light->name = name + "_pslight";
-	//	light->shadow = true;
-	//	light->enerDis = XMFLOAT4(0, 0, 0, 0); // will be filled on Update()
-	//	lightName = light->name;
-	//}
+#ifdef ENABLE_READBACK_AABB
+	if (light == nullptr && material->blendFlag == BLENDMODE_ADDITIVE)
+	{
+		light = new Light();
+		light->color.x = material->baseColor.x;
+		light->color.y = material->baseColor.y;
+		light->color.z = material->baseColor.z;
+		light->SetType(Light::POINT);
+		light->name = name + "_pslight";
+		light->shadow = true;
+		light->enerDis = XMFLOAT4(0, 0, 0, 0); // will be filled on Update()
+		lightName = light->name;
+	}
+#endif // ENABLE_READBACK_AABB
 }
 
 void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
@@ -236,108 +260,45 @@ void wiEmittedParticle::addPoint(const XMMATRIX& t4, const XMMATRIX& t3)
 }
 void wiEmittedParticle::Update(float dt)
 {
-	float gamespeed = wiRenderer::GetGameSpeed() * dt * 60; // it was created for 60 FPS in mind...
-
-	//XMFLOAT3 minP=XMFLOAT3(FLOAT32_MAX,FLOAT32_MAX,FLOAT32_MAX)
-	//	,maxP=XMFLOAT3(-FLOAT32_MAX,-FLOAT32_MAX,-FLOAT32_MAX);
-
-	//for (unsigned int i = 0; i<points.size(); ++i){
-	//	Point &point = points[i];
-
-	//	point.pos.x += point.vel.x*gamespeed;
-	//	point.pos.y += point.vel.y*gamespeed;
-	//	point.pos.z += point.vel.z*gamespeed;
-	//	point.rot += point.rotVel*gamespeed;
-
-	//	point.life -= gamespeed;
-	//	point.life=wiMath::Clamp(point.life,0,point.maxLife);
-
-	//	float lifeLerp = 1 - point.life/point.maxLife;
-	//	point.sizOpaMir.x=wiMath::Lerp(point.sizBeginEnd.x,point.sizBeginEnd.y,lifeLerp);
-	//	point.sizOpaMir.y=wiMath::Lerp(1,0,lifeLerp);
-
-	//	
-	//	minP=wiMath::Min(XMFLOAT3(point.pos.x-point.sizOpaMir.x,point.pos.y-point.sizOpaMir.x,point.pos.z-point.sizOpaMir.x),minP);
-	//	maxP=wiMath::Max(XMFLOAT3(point.pos.x+point.sizOpaMir.x,point.pos.y+point.sizOpaMir.x,point.pos.z+point.sizOpaMir.x),maxP);
-	//}
-	//bounding_box.create(minP,maxP);
-
-	//while(!points.empty() && points.front().life<=0)
-	//	points.pop_front();
-
-
-	//XMFLOAT4X4& transform = object->world;
-	//transform4 = transform;
-	//transform3 = XMFLOAT3X3(
-	//	transform._11,transform._12,transform._13
-	//	,transform._21,transform._22,transform._23
-	//	,transform._31,transform._32,transform._33
-	//	);
-	//XMMATRIX t4=XMLoadFloat4x4(&transform4), t3=XMLoadFloat3x3(&transform3);
-	//
-	emit += (float)count/60.0f*gamespeed;
-
-	//bool clearSpace=false;
-	//if(points.size()+emit>=MAX_PARTICLES)
-	//	clearSpace=true;
-
-	//for(int i=0;i<(int)emit;++i)
-	//{
-	//	if(clearSpace)
-	//		points.pop_front();
-
-	//	addPoint(t4,t3);
-	//}
-	//if((int)emit>0)
-	//	emit=0;
-	
+	float gamespeed = wiRenderer::GetGameSpeed() * dt;
+	emit += (float)count*gamespeed;
 }
 void wiEmittedParticle::Burst(float num)
 {
-	//XMMATRIX t4=XMLoadFloat4x4(&transform4), t3=XMLoadFloat3x3(&transform3);
-
-	//static float burst = 0;
-	//burst+=num;
-	//for(int i=0;i<(int)burst;++i)
-	//	addPoint(t4,t3);
-	//burst-=(int)burst;
-
 	emit += num;
 }
 
 void wiEmittedParticle::UpdateAttachedLight(float dt)
 {
-	//if (light != nullptr)
-	//{
-	//	// smooth light position to eliminate jitter:
+#ifdef ENABLE_READBACK_AABB
+	if (light != nullptr)
+	{
+		// smooth light position to eliminate jitter:
 
-	//	posSamples[currentSample] = bounding_box.getCenter();
-	//	radSamples[currentSample] = bounding_box.getRadius() * 4;
-	//	energySamples[currentSample] = sqrt((float)points.size());
+		posSamples[currentSample] = bounding_box.getCenter();
+		radSamples[currentSample] = bounding_box.getRadius() * 4;
 
-	//	XMFLOAT3 pos = XMFLOAT3(0, 0, 0);
-	//	float rad = 0.0f;
-	//	float energy = 0.0f;
-	//	for (int i = 0; i < NUM_POS_SAMPLES; ++i)
-	//	{
-	//		pos.x += posSamples[i].x;
-	//		pos.y += posSamples[i].y;
-	//		pos.z += posSamples[i].z;
-	//		rad += radSamples[i];
-	//		energy += energySamples[i];
-	//	}
-	//	pos.x *= INV_NUM_POS_SAMPLES;
-	//	pos.y *= INV_NUM_POS_SAMPLES;
-	//	pos.z *= INV_NUM_POS_SAMPLES;
-	//	rad *= INV_NUM_POS_SAMPLES;
-	//	energy *= INV_NUM_POS_SAMPLES;
-	//	currentSample = (currentSample + 1) % NUM_POS_SAMPLES;
+		XMFLOAT3 pos = XMFLOAT3(0, 0, 0);
+		float rad = 0.0f;
+		for (int i = 0; i < NUM_POS_SAMPLES; ++i)
+		{
+			pos.x += posSamples[i].x;
+			pos.y += posSamples[i].y;
+			pos.z += posSamples[i].z;
+			rad += radSamples[i];
+		}
+		pos.x *= INV_NUM_POS_SAMPLES;
+		pos.y *= INV_NUM_POS_SAMPLES;
+		pos.z *= INV_NUM_POS_SAMPLES;
+		rad *= INV_NUM_POS_SAMPLES;
+		currentSample = (currentSample + 1) % NUM_POS_SAMPLES;
 
-	//	light->translation_rest = pos;
+		light->translation_rest = pos;
 
-	//	light->enerDis = XMFLOAT4(energy, rad, 0, 0);
-	//	light->UpdateLight();
-	//}
+		light->enerDis = XMFLOAT4(1, rad, 0, 0);
+		light->UpdateLight();
+	}
+#endif // ENABLE_READBACK_AABB
 }
 
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
@@ -365,6 +326,9 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
+	int aabbToWrite = device->GetFrameCount() % ARRAYSIZE(aabbBuffer);
+	int aabbToReadBack = (device->GetFrameCount() + 1) % ARRAYSIZE(aabbBuffer);
+
 	const GPUUnorderedResource* uavs[] = {
 		static_cast<GPUUnorderedResource*>(particleBuffer),
 		static_cast<GPUUnorderedResource*>(aliveList[0]), // last alivelist
@@ -373,6 +337,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		static_cast<GPUUnorderedResource*>(counterBuffer),
 		static_cast<GPUUnorderedResource*>(indirectDispatchBuffer),
 		static_cast<GPUUnorderedResource*>(indirectDrawBuffer),
+		static_cast<GPUUnorderedResource*>(aabbBuffer[aabbToWrite]),
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 	
@@ -406,6 +371,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->Dispatch(1, 1, 1, threadID);
 
 
+	device->BindCS(nullptr, threadID);
 	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
@@ -414,6 +380,16 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	// Swap OLD alivelist with NEW alivelist
 	SwapPtr(aliveList[0], aliveList[1]);
 	emit -= (UINT)emit;
+
+#ifdef ENABLE_READBACK_AABB
+	// Try to readback AABB:
+	XMFLOAT3 minMax[2];
+	bool readbackSuccess = device->DownloadBuffer(aabbBuffer[aabbToReadBack], readBackAABBBuffer, minMax, threadID, false);
+	if (readbackSuccess)
+	{
+		bounding_box.create(minMax[0], minMax[1]);
+	}
+#endif // ENABLE_READBACK_AABB
 }
 
 void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
@@ -461,11 +437,17 @@ void wiEmittedParticle::CleanUp()
 	SAFE_DELETE(indirectDrawBuffer);
 	SAFE_DELETE(constantBuffer);
 
+	for (int i = 0; i < ARRAYSIZE(aabbBuffer); ++i)
+	{
+		SAFE_DELETE(aabbBuffer[i]);
+	}
+	SAFE_DELETE(readBackAABBBuffer);
+
 	//points.clear();
 
-	//SAFE_DELETE_ARRAY(posSamples);
-	//SAFE_DELETE_ARRAY(radSamples);
-	//SAFE_DELETE_ARRAY(energySamples);
+	SAFE_DELETE_ARRAY(posSamples);
+	SAFE_DELETE_ARRAY(radSamples);
+	SAFE_DELETE_ARRAY(energySamples);
 }
 
 

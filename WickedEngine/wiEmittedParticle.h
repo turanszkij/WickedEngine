@@ -62,6 +62,8 @@ private:
 	wiGraphicsTypes::GPUBuffer* indirectDispatchBuffer;
 	wiGraphicsTypes::GPUBuffer* indirectDrawBuffer;
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
+	wiGraphicsTypes::GPUBuffer* aabbBuffer[6];
+	wiGraphicsTypes::GPUBuffer* readBackAABBBuffer;
 	void CreateSelfBuffers();
 
 	static wiGraphicsTypes::ComputeShader *kickoffUpdateCS, *emitCS, *simulateargsCS, *drawargsCS, *simulateCS;
@@ -89,10 +91,10 @@ private:
 
 	float emit;
 
-	//XMFLOAT3* posSamples;
-	//float* radSamples;
-	//float* energySamples;
-	//int currentSample;
+	XMFLOAT3* posSamples;
+	float* radSamples;
+	float* energySamples;
+	int currentSample;
 	void SetupLightInterpolators();
 public:
 	wiEmittedParticle();

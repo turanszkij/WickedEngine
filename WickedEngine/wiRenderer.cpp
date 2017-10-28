@@ -2076,7 +2076,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 	// Update visible particlesystem vertices:
-	for (auto& x : mainCameraCulling.culledEmittedParticleSystems)
+	for (auto& x : emitterSystems)
 	{
 		x->UpdateRenderData(threadID);
 	}
