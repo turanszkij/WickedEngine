@@ -9,13 +9,13 @@ RWSTRUCTUREDBUFFER(counterBuffer, uint4, 4);
 
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint aliveCount = counterBuffer[0][0];
 
 	if (DTid.x < aliveCount)
 	{
-		uint dt = g_xFrame_DeltaTime * 60;
+		uint dt = g_xFrame_DeltaTime * 60.0f;
 
 		uint particleIndex = aliveBuffer_OLD[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
@@ -32,6 +32,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 			particle.life -= dt;
 
+			// write back simulated particle:
 			particleBuffer[particleIndex] = particle;
 
 			// add to new alive list:

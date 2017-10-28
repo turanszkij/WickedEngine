@@ -24,36 +24,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		const float3 randoms = randomTex.SampleLevel(sampler_linear_wrap, float2((float)DTid.x / (float)THREADCOUNT_EMIT, g_xFrame_Time + xEmitterRandomness), 0).rgb;
 		
-		// Random point on emitter surface:
-		uint gen[3];
-		gen[0] = (uint)((xEmitterMeshIndexCount - 1) * randoms.x);
-		switch (gen[0] % 3)
-		{
-		case 0:
-			gen[1] = gen[0] + 1;
-			gen[2] = gen[0] + 2;
-			break;
-		case 1:
-			gen[0] = gen[0] - 1;
-			gen[1] = gen[0] + 1;
-			gen[2] = gen[0] + 2;
-			break;
-		case 2:
-			gen[0] = gen[0] - 2;
-			gen[1] = gen[0] + 1;
-			gen[2] = gen[0] + 2;
-			break;
-		default:
-			break;
-		}
+		// random triangle on emitter surface:
+		uint gen0 = (uint)(((xEmitterMeshIndexCount - 1) / 3 * 3 + 0) * randoms.x);
+		uint gen1 = (uint)(((xEmitterMeshIndexCount - 1) / 3 * 3 + 1) * randoms.x);
+		uint gen2 = (uint)(((xEmitterMeshIndexCount - 1) / 3 * 3 + 2) * randoms.x);
 
-		uint i0 = meshIndexBuffer.Load(gen[0] * xEmitterMeshIndexStride);
+		// load indices of triangle from index buffer
+		uint i0 = meshIndexBuffer.Load(gen0 * xEmitterMeshIndexStride);
 		i0 = (xEmitterMeshIndexStride == 2 ? (i0 & 0x0000FFFF) : i0);
-		uint i1 = meshIndexBuffer.Load(gen[1] * xEmitterMeshIndexStride);
+		uint i1 = meshIndexBuffer.Load(gen1 * xEmitterMeshIndexStride);
 		i1 = (xEmitterMeshIndexStride == 2 ? (i1 & 0x0000FFFF) : i1);
-		uint i2 = meshIndexBuffer.Load(gen[2] * xEmitterMeshIndexStride);
+		uint i2 = meshIndexBuffer.Load(gen2 * xEmitterMeshIndexStride);
 		i2 = (xEmitterMeshIndexStride == 2 ? (i2 & 0x0000FFFF) : i2);
 
+		// load vertices of triangle from vertex buffer:
 		float3 pos0 = asfloat(meshVertexBuffer_POS.Load3(i0 * xEmitterMeshVertexPositionStride));
 		float3 pos1 = asfloat(meshVertexBuffer_POS.Load3(i1 * xEmitterMeshVertexPositionStride));
 		float3 pos2 = asfloat(meshVertexBuffer_POS.Load3(i2 * xEmitterMeshVertexPositionStride));
@@ -80,6 +64,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		}
 
+		// random barycentric coords:
 		float f = randoms.x;
 		float g = randoms.y;
 		[flatten]
@@ -89,6 +74,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			g = 1 - g;
 		}
 
+		// compute final surface position on triangle from barycentric coords:
 		float3 pos = pos0 + f * (pos1 - pos0) + g * (pos2 - pos0);
 		float3 nor = nor0 + f * (nor1 - nor0) + g * (nor2 - nor0);
 		pos = mul(xEmitterWorld, float4(pos, 1)).xyz;
@@ -99,7 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		Particle particle;
 		particle.position = pos;
 		particle.size = xParticleSize + xParticleSize * (randoms.y - 0.5f) * xParticleRandomFactor;
-		particle.rotation = xParticleRotation + xParticleRotation * (randoms.z - 0.5f) * xParticleRandomFactor;
+		particle.rotation = xParticleRotation * (randoms.z - 0.5f) * xParticleRandomFactor;
 		particle.velocity = (nor + nor * (randoms.y - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
 		particle.rotationalVelocity = particle.rotation;
 		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (randoms.x - 0.5f) * xParticleLifeSpanRandomness;
