@@ -20,11 +20,17 @@ struct Particle
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
-	float	xMotionBlurAmount;
-	uint	xEmitCount;
-	uint	xMeshIndexCount;
+	float		xMotionBlurAmount;
+	uint		xEmitCount;
+	uint		xMeshIndexCount;
+	uint		xMeshIndexStride;
+	uint		xMeshVertexPositionStride;
+	uint		xMeshVertexNormalStride;
+	uint2		xPadding_EmitterCB;
+	float4x4	xEmitterWorld;
 };
 
+#define THREADCOUNT_EMIT 64
 #define THREADCOUNT_SIMULATION 256
 
 

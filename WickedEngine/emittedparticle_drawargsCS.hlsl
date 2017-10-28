@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-RWSTRUCTUREDBUFFER(counterBuffer, uint3, 4);	// alive count, dead count, new alive count
+RWSTRUCTUREDBUFFER(counterBuffer, uint4, 4);	// alive count, dead count, new alive count
 RWRAWBUFFER(indirectDrawBuffer, 6);				// indirectdrawinstanced args
 
 [numthreads(1, 1, 1)]

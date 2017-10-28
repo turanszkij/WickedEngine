@@ -621,6 +621,9 @@
     <FxCompile Include="emittedparticle_simulateargsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="emittedparticle_kickoffUpdateCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

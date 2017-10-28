@@ -2114,8 +2114,8 @@ void Mesh::CreateBuffers(Object* object)
 		ZeroMemory(&bd, sizeof(bd));
 		bd.Usage = USAGE_IMMUTABLE;
 		bd.CPUAccessFlags = 0;
-		bd.BindFlags = BIND_INDEX_BUFFER;
-		bd.MiscFlags = 0;
+		bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		InitData.pSysMem = gpuIndexData;
 		bd.ByteWidth = (UINT)(stride * indices.size());
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);

@@ -59,12 +59,12 @@ private:
 	wiGraphicsTypes::GPUBuffer* aliveList[2];
 	wiGraphicsTypes::GPUBuffer* deadList;
 	wiGraphicsTypes::GPUBuffer* counterBuffer;
-	wiGraphicsTypes::GPUBuffer* indirectSimulateBuffer;
+	wiGraphicsTypes::GPUBuffer* indirectDispatchBuffer;
 	wiGraphicsTypes::GPUBuffer* indirectDrawBuffer;
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
 	void CreateSelfBuffers();
 
-	static wiGraphicsTypes::ComputeShader *emitCS, *simulateargsCS, *drawargsCS, *simulateCS;
+	static wiGraphicsTypes::ComputeShader *kickoffUpdateCS, *emitCS, *simulateargsCS, *drawargsCS, *simulateCS;
 	static wiGraphicsTypes::VertexShader  *vertexShader;
 	static wiGraphicsTypes::PixelShader   *pixelShader,*simplestPS;
 	static wiGraphicsTypes::BlendState		*blendStateAlpha,*blendStateAdd;

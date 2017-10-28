@@ -14,7 +14,7 @@ using namespace wiGraphicsTypes;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader = nullptr, *wiEmittedParticle::simplestPS = nullptr;
-ComputeShader   *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateargsCS = nullptr, *wiEmittedParticle::drawargsCS = nullptr, *wiEmittedParticle::simulateCS = nullptr;
+ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateargsCS = nullptr, *wiEmittedParticle::drawargsCS = nullptr, *wiEmittedParticle::simulateCS = nullptr;
 BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
 DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
@@ -88,7 +88,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	aliveList[1] = new GPUBuffer;
 	deadList = new GPUBuffer;
 	counterBuffer = new GPUBuffer;
-	indirectSimulateBuffer = new GPUBuffer;
+	indirectDispatchBuffer = new GPUBuffer;
 	indirectDrawBuffer = new GPUBuffer;
 	constantBuffer = new GPUBuffer;
 
@@ -120,7 +120,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	data.pSysMem = nullptr;
 
 
-	uint32_t counters[] = { 0, MAX_PARTICLES, 0 }; // aliveCount, deadCount, newAliveCount
+	uint32_t counters[] = { 0, MAX_PARTICLES, 0, 0 }; // aliveCount, deadCount, newAliveCount, realEmitCount
 	data.pSysMem = counters;
 	bd.ByteWidth = sizeof(counters);
 	bd.StructureByteStride = sizeof(counters);
@@ -132,7 +132,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.ByteWidth = sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectDrawBuffer);
 	bd.ByteWidth = sizeof(wiGraphicsTypes::IndirectDispatchArgs);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectSimulateBuffer);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectDispatchBuffer);
 
 
 	bd.Usage = USAGE_DYNAMIC;
@@ -348,6 +348,10 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xMotionBlurAmount = motionBlurAmount;
 	cb.xEmitCount = (UINT)emit;
 	cb.xMeshIndexCount = (UINT)object->mesh->indices.size();
+	cb.xMeshIndexStride = object->mesh->GetIndexFormat() == INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t);
+	cb.xMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
+	cb.xMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
+	cb.xEmitterWorld = object->world;
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
@@ -357,26 +361,36 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		static_cast<GPUUnorderedResource*>(aliveList[1]), // new alivelist
 		static_cast<GPUUnorderedResource*>(deadList),
 		static_cast<GPUUnorderedResource*>(counterBuffer),
-		static_cast<GPUUnorderedResource*>(indirectSimulateBuffer),
+		static_cast<GPUUnorderedResource*>(indirectDispatchBuffer),
 		static_cast<GPUUnorderedResource*>(indirectDrawBuffer),
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 	
 	const GPUResource* resources[] = {
 		wiTextureHelper::getInstance()->getRandom64x64(),
+		static_cast<GPUResource*>(&object->mesh->indexBuffer),
+		static_cast<GPUResource*>(&object->mesh->vertexBuffer_POS),
+		static_cast<GPUResource*>(&object->mesh->vertexBuffer_NOR),
 	};
 	device->BindResourcesCS(resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
+	// kick off updating
+	device->BindCS(kickoffUpdateCS, threadID);
+	device->Dispatch(1, 1, 1, threadID);
 
+	// emit the required amount if there are free slots in dead list
 	device->BindCS(emitCS, threadID);
-	device->Dispatch(1, 1, 1, threadID); // todo: parallellize!
+	device->DispatchIndirect(indirectDispatchBuffer, 0, threadID);
 
+	// kick off simulation based on OLD alivelist count
 	device->BindCS(simulateargsCS, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 
+	// update OLD alive list, write NEW alive list
 	device->BindCS(simulateCS, threadID);
-	device->DispatchIndirect(indirectSimulateBuffer, 0, threadID);
+	device->DispatchIndirect(indirectDispatchBuffer, 0, threadID);
 
+	// update the draw arguments
 	device->BindCS(drawargsCS, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 
@@ -385,6 +399,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	device->EventEnd(threadID);
 
+	// Swap OLD alivelist with NEW alivelist
 	SwapPtr(aliveList[0], aliveList[1]);
 	emit -= (UINT)emit;
 }
@@ -430,7 +445,7 @@ void wiEmittedParticle::CleanUp()
 	SAFE_DELETE(aliveList[1]);
 	SAFE_DELETE(deadList);
 	SAFE_DELETE(counterBuffer);
-	SAFE_DELETE(indirectSimulateBuffer);
+	SAFE_DELETE(indirectDispatchBuffer);
 	SAFE_DELETE(indirectDrawBuffer);
 	SAFE_DELETE(constantBuffer);
 
@@ -455,6 +470,7 @@ void wiEmittedParticle::LoadShaders()
 	simplestPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
 	
 	
+	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
 	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
 	simulateargsCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateargsCS.cso", wiResourceManager::COMPUTESHADER));
 	drawargsCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_drawargsCS.cso", wiResourceManager::COMPUTESHADER));

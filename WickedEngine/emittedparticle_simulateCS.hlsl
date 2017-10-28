@@ -5,7 +5,7 @@ RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 RWSTRUCTUREDBUFFER(aliveBuffer_OLD, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWSTRUCTUREDBUFFER(counterBuffer, uint3, 4);
+RWSTRUCTUREDBUFFER(counterBuffer, uint4, 4);
 
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
@@ -37,7 +37,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		{
 			// kill:
 			uint deadIndex;
-			InterlockedAdd(counterBuffer[0][0], 1, deadIndex);
+			InterlockedAdd(counterBuffer[0][1], 1, deadIndex);
 			deadBuffer[deadIndex] = particleIndex;
 		}
 	}
