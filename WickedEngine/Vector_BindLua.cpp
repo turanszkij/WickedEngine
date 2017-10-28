@@ -241,7 +241,7 @@ int Vector_BindLua::Multiply(lua_State* L)
 		}
 		else if (v2)
 		{
-			Luna<Vector_BindLua>::push(L, new Vector_BindLua(wiLua::SGetFloat(L, 1) * v1->vector));
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(wiLua::SGetFloat(L, 1) * v2->vector));
 			return 1;
 		}
 	}
