@@ -346,14 +346,22 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->EventBegin("UpdateEmittedParticles", threadID);
 
 	EmittedParticleCB cb;
-	cb.xMotionBlurAmount = motionBlurAmount;
-	cb.xEmitCount = (UINT)emit;
-	cb.xMeshIndexCount = (UINT)object->mesh->indices.size();
-	cb.xMeshIndexStride = object->mesh->GetIndexFormat() == INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t);
-	cb.xMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
-	cb.xMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
 	cb.xEmitterWorld = object->world;
-	cb.xRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
+	cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
+	cb.xEmitterMeshIndexStride = object->mesh->GetIndexFormat() == INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t);
+	cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
+	cb.xEmitterMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
+	cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
+	cb.xEmitCount = (UINT)emit;
+	cb.xParticleLifeSpan = life;
+	cb.xParticleLifeSpanRandomness = random_life;
+	cb.xParticleNormalFactor = normal_factor / 60.0f;
+	cb.xParticleRandomFactor = random_factor;
+	cb.xParticleScaling = scaleX;
+	cb.xParticleSize = size;
+	cb.xParticleMotionBlurAmount = motionBlurAmount;
+	cb.xParticleRotation = rotation;
+
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
@@ -376,7 +384,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	};
 	device->BindResourcesCS(resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
-	// kick off updating
+
+	// kick off updating, set up state
 	device->BindCS(kickoffUpdateCS, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 

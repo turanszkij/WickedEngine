@@ -20,15 +20,26 @@ struct Particle
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
-	float		xMotionBlurAmount;
-	uint		xEmitCount;
-	uint		xMeshIndexCount;
-	uint		xMeshIndexStride;
-	uint		xMeshVertexPositionStride;
-	uint		xMeshVertexNormalStride;
-	float		xRandomness;
-	uint		xPadding_EmitterCB;
 	float4x4	xEmitterWorld;
+
+	uint		xEmitterMeshIndexCount;
+	uint		xEmitterMeshIndexStride;
+	uint		xEmitterMeshVertexPositionStride;
+	uint		xEmitterMeshVertexNormalStride;
+
+	uint		xEmitCount;
+	float		xEmitterRandomness;
+	float		xParticleSize;
+	float		xParticleScaling;
+
+	float		xParticleRandomFactor;
+	float		xParticleNormalFactor;
+	float		xParticleLifeSpan;
+	float		xParticleLifeSpanRandomness;
+
+	float		xParticleMotionBlurAmount;
+	float		xParticleRotation;
+	float2		xPadding_EmitterCB;
 };
 
 #define THREADCOUNT_EMIT 256

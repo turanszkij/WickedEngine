@@ -24,6 +24,12 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		{
 			// simulate:
 			particle.position += particle.velocity * dt;
+			particle.rotation += particle.rotationalVelocity * dt;
+
+			float lifeLerp = 1 - particle.life / particle.maxLife;
+			particle.size = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
+			particle.opacity = lerp(1, 0, lifeLerp);
+
 			particle.life -= dt;
 
 			particleBuffer[particleIndex] = particle;
