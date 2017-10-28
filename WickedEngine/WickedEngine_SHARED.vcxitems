@@ -235,6 +235,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />

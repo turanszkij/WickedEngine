@@ -609,6 +609,18 @@
     <FxCompile Include="imagePS_separatenormalmap.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="emittedparticle_emitCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_simulateCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_drawargsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_simulateargsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

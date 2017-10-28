@@ -1405,7 +1405,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{

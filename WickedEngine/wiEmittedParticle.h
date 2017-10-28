@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 #include "ShaderInterop.h"
+#include "ShaderInterop_EmittedParticle.h"
 #include "wiIntersectables.h"
 
 #include <set>
@@ -19,44 +20,53 @@ class wiArchive;
 class wiEmittedParticle
 {
 private:
-	struct Point
-	{
-		XMFLOAT3 pos;
-		XMFLOAT4 sizOpaMir;
-		float rot;
-		XMFLOAT3 vel;
-		float rotVel;
-		float life;
-		float maxLife;
-		XMFLOAT2 sizBeginEnd;
+	//struct Point
+	//{
+	//	XMFLOAT3 pos;
+	//	XMFLOAT4 sizOpaMir;
+	//	float rot;
+	//	XMFLOAT3 vel;
+	//	float rotVel;
+	//	float life;
+	//	float maxLife;
+	//	XMFLOAT2 sizBeginEnd;
 
-		Point(){}
-		Point(const XMFLOAT3& newPos, const XMFLOAT4& newSizOpaMir, const XMFLOAT3& newVel/*, const XMFLOAT3& newCol*/, float newLife, float newRotVel
-			,float scaleX, float scaleY)
-		{
-			pos=newPos;
-			sizOpaMir=newSizOpaMir;
-			vel=newVel;
-			//col=newCol;
-			life=maxLife=newLife;
-			rot=newRotVel;
-			rotVel=newRotVel;
-			sizBeginEnd.x = sizOpaMir.x;
-			sizBeginEnd.y = sizOpaMir.x*scaleX;
-		}
-	};
-	std::deque<Point> points;
+	//	Point(){}
+	//	Point(const XMFLOAT3& newPos, const XMFLOAT4& newSizOpaMir, const XMFLOAT3& newVel/*, const XMFLOAT3& newCol*/, float newLife, float newRotVel
+	//		,float scaleX, float scaleY)
+	//	{
+	//		pos=newPos;
+	//		sizOpaMir=newSizOpaMir;
+	//		vel=newVel;
+	//		//col=newCol;
+	//		life=maxLife=newLife;
+	//		rot=newRotVel;
+	//		rotVel=newRotVel;
+	//		sizBeginEnd.x = sizOpaMir.x;
+	//		sizBeginEnd.y = sizOpaMir.x*scaleX;
+	//	}
+	//};
 
-	CBUFFER(ConstantBuffer, CBSLOT_OTHER_EMITTEDPARTICLE)
-	{
-		XMFLOAT2	mAdd;
-		float		mMotionBlurAmount;
-		UINT		mBufferOffset;
-	};
-	static wiGraphicsTypes::GPURingBuffer *dynamicPool;
+
+	//CBUFFER(ConstantBuffer, CBSLOT_OTHER_EMITTEDPARTICLE)
+	//{
+	//	float		mMotionBlurAmount;
+	//	UINT		mEmitterMeshIndexCount;
+	//	UINT		mEmitCount;
+	//};
+
+	wiGraphicsTypes::GPUBuffer* particleBuffer;
+	wiGraphicsTypes::GPUBuffer* aliveList[2];
+	wiGraphicsTypes::GPUBuffer* deadList;
+	wiGraphicsTypes::GPUBuffer* counterBuffer;
+	wiGraphicsTypes::GPUBuffer* indirectSimulateBuffer;
+	wiGraphicsTypes::GPUBuffer* indirectDrawBuffer;
+	wiGraphicsTypes::GPUBuffer* constantBuffer;
+	void CreateSelfBuffers();
+
+	static wiGraphicsTypes::ComputeShader *emitCS, *simulateargsCS, *drawargsCS, *simulateCS;
 	static wiGraphicsTypes::VertexShader  *vertexShader;
 	static wiGraphicsTypes::PixelShader   *pixelShader,*simplestPS;
-	static wiGraphicsTypes::GPUBuffer           *constantBuffer;
 	static wiGraphicsTypes::BlendState		*blendStateAlpha,*blendStateAdd;
 	static wiGraphicsTypes::RasterizerState		*rasterizerState,*wireFrameRS;
 	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
@@ -79,10 +89,10 @@ private:
 
 	float emit;
 
-	XMFLOAT3* posSamples;
-	float* radSamples;
-	float* energySamples;
-	int currentSample;
+	//XMFLOAT3* posSamples;
+	//float* radSamples;
+	//float* energySamples;
+	//int currentSample;
 	void SetupLightInterpolators();
 public:
 	wiEmittedParticle();
