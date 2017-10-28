@@ -1615,7 +1615,7 @@ void MaterialCB::Create(const Material& mat)
 MeshSubset::MeshSubset()
 {
 	material = nullptr;
-	indexFormat = INDEXFORMAT_16BIT;
+	indexBufferOffset = 0;
 }
 MeshSubset::~MeshSubset()
 {
@@ -2068,39 +2068,59 @@ void Mesh::CreateBuffers(Object* object)
 			}
 		}
 
+
+		// Remap index buffer to be continuous across subsets and create gpu buffer data:
+		uint32_t counter = 0;
+		uint8_t stride;
+		void* gpuIndexData;
+		if (GetIndexFormat() == INDEXFORMAT_16BIT)
+		{
+			gpuIndexData = new uint16_t[indices.size()];
+			stride = sizeof(uint16_t);
+		}
+		else
+		{
+			gpuIndexData = new uint32_t[indices.size()];
+			stride = sizeof(uint32_t);
+		}
+
 		for (MeshSubset& subset : subsets)
 		{
 			if (subset.subsetIndices.empty())
 			{
 				continue;
 			}
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.BindFlags = BIND_INDEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			ZeroMemory(&InitData, sizeof(InitData));
-			switch (subset.GetIndexFormat())
+			subset.indexBufferOffset = counter;
+
+			switch (GetIndexFormat())
 			{
 			case INDEXFORMAT_16BIT:
+				for (auto& x : subset.subsetIndices)
 				{
-					vector<uint16_t> tmp;
-					tmp.reserve(subset.subsetIndices.size());
-					for (auto& x : subset.subsetIndices)
-					{
-						tmp.push_back(static_cast<uint16_t>(x));
-					}
-					bd.ByteWidth = (UINT)(sizeof(uint16_t) * tmp.size());
-					InitData.pSysMem = tmp.data();
-					wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &subset.indexBuffer);
+					static_cast<uint16_t*>(gpuIndexData)[counter] = static_cast<uint16_t>(x);
+					counter++;
 				}
 				break;
 			default:
-				bd.ByteWidth = (UINT)(sizeof(unsigned int) * subset.subsetIndices.size());
-				InitData.pSysMem = subset.subsetIndices.data();
-				wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &subset.indexBuffer);
+				for (auto& x : subset.subsetIndices)
+				{
+					static_cast<uint32_t*>(gpuIndexData)[counter] = static_cast<uint32_t>(x);
+					counter++;
+				}
 				break;
 			}
 		}
+
+		ZeroMemory(&bd, sizeof(bd));
+		bd.Usage = USAGE_IMMUTABLE;
+		bd.CPUAccessFlags = 0;
+		bd.BindFlags = BIND_INDEX_BUFFER;
+		bd.MiscFlags = 0;
+		InitData.pSysMem = gpuIndexData;
+		bd.ByteWidth = (UINT)(stride * indices.size());
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);
+
+		SAFE_DELETE_ARRAY(gpuIndexData);
 
 
 		buffersComplete = true;
@@ -2353,7 +2373,7 @@ void Mesh::CreateVertexArrays()
 
 		if (index >= 65536)
 		{
-			subset.indexFormat = INDEXFORMAT_32BIT;
+			indexFormat = INDEXFORMAT_32BIT;
 		}
 	}
 

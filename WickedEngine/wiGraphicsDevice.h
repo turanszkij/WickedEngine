@@ -132,10 +132,10 @@ namespace wiGraphicsTypes
 		virtual void BindHS(const HullShader* shader, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID) = 0;
-		virtual void Draw(int vertexCount, GRAPHICSTHREAD threadID) = 0;
-		virtual void DrawIndexed(int indexCount, GRAPHICSTHREAD threadID) = 0;
-		virtual void DrawInstanced(int vertexCount, int instanceCount, GRAPHICSTHREAD threadID) = 0;
-		virtual void DrawIndexedInstanced(int indexCount, int instanceCount, GRAPHICSTHREAD threadID) = 0;
+		virtual void Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) = 0;
+		virtual void DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID) = 0;
+		virtual void DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) = 0;
+		virtual void DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) = 0;
 		virtual void DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID) = 0;
 		virtual void DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID) = 0;
 		virtual void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID) = 0;

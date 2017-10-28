@@ -561,7 +561,7 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 
 		device->BindResourceVS(particleBuffer, 0, threadID);
 
-		device->Draw((int)particleCount * 12, threadID);
+		device->Draw((int)particleCount * 12, 0, threadID);
 
 		//device->BindIndexBuffer(ib, INDEXBUFFER_FORMAT::INDEXFORMAT_32BIT, threadID);
 		//device->DrawIndexedInstancedIndirect(drawargs, 0, threadID);
