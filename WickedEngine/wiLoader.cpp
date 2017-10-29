@@ -2694,27 +2694,6 @@ void Model::FinishLoading()
 	}
 	for (Object* x : objects) {
 		transforms.push_back(x);
-		for (wiEmittedParticle* e : x->eParticleSystems)
-		{
-			// If the particle system has light, then register it to the light array (if not already registered!)
-			if (e->light != nullptr)
-			{
-				bool registeredLight = false;
-				for (Light* l : lights)
-				{
-					if (e->light == l)
-					{
-						registeredLight = true;
-					}
-				}
-				if (!registeredLight)
-				{
-					lights.push_back(e->light);
-				}
-
-				e->light->enerDis = XMFLOAT4(0, 0, 0, 0); // emitter light props will be filled on Update()
-			}
-		}
 	}
 	for (Light* x : lights)
 	{
@@ -2991,17 +2970,6 @@ void Model::Serialize(wiArchive& archive)
 				if (it != materials.end())
 				{
 					y->material = it->second;
-					if (!y->lightName.empty())
-					{
-						for (auto& l : lights)
-						{
-							if (!l->name.compare(y->lightName))
-							{
-								y->light = l;
-								break;
-							}
-						}
-					}
 				}
 			}
 			for (auto& y : x->hParticleSystems)

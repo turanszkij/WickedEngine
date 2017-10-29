@@ -62,8 +62,6 @@ private:
 	wiGraphicsTypes::GPUBuffer* indirectDispatchBuffer;
 	wiGraphicsTypes::GPUBuffer* indirectDrawBuffer;
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
-	wiGraphicsTypes::GPUBuffer* aabbBuffer[6];
-	wiGraphicsTypes::GPUBuffer* readBackAABBBuffer;
 	void CreateSelfBuffers();
 
 	static wiGraphicsTypes::ComputeShader *kickoffUpdateCS, *emitCS, *simulateargsCS, *drawargsCS, *simulateCS;
@@ -78,24 +76,11 @@ public:
 private:
 	static void LoadBuffers();
 	static void SetUpStates();
-	
-	float getNewVelocityModifier(){ return 1+((rand()%10001+1)*0.0001f)*random_factor;}
-	float getNewPositionModifier(){ return (rand()%((int)(random_factor*1000)+1))*0.001f - random_factor*0.5f; }
-	float getNewRotationModifier(){ return (rand()%((int)(random_factor*1000)+1))*0.001f - random_factor*0.5f; }
-	float getNewLifeSpan(){ return life + (rand()%((int)(random_life*1000)+1))*0.001f - random_life*0.5f; }
-	int getRandomPointOnEmitter();
-
-	XMFLOAT4X4 transform4;
-	XMFLOAT3X3 transform3;
-	void addPoint(const XMMATRIX& t4, const XMMATRIX& t3);
 
 	float emit;
 
-	XMFLOAT3* posSamples;
-	float* radSamples;
-	float* energySamples;
-	int currentSample;
-	void SetupLightInterpolators();
+	uint32_t MAX_PARTICLES;
+
 public:
 	wiEmittedParticle();
 	wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
@@ -103,12 +88,9 @@ public:
 	static void SetUpStatic();
 	static void CleanUpStatic();
 
-	int getCount();
-
 	void Update(float dt);
 	void Burst(float num);
 
-	void UpdateAttachedLight(float dt);
 	void UpdateRenderData(GRAPHICSTHREAD threadID);
 
 	void Draw(GRAPHICSTHREAD threadID);
@@ -118,17 +100,17 @@ public:
 	Object* object;
 	std::string materialName;
 	Material* material;
-	Light* light;
-	std::string lightName;
-	
-	AABB bounding_box;
 
 	float size,random_factor,normal_factor;
 	float count,life,random_life;
 	float scaleX,scaleY,rotation;
 	float motionBlurAmount;
 
-	void CreateLight();
+	void SetMaxParticleCount(uint32_t value);
+	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
+	uint32_t GetMemorySizeInBytes() const;
+
+	XMFLOAT3 GetPosition() const;
 
 	void Serialize(wiArchive& archive);
 };
