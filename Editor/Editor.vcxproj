@@ -171,6 +171,7 @@
     <ClInclude Include="Editor.h" />
     <ClInclude Include="EmitterWindow.h" />
     <ClInclude Include="EnvProbeWindow.h" />
+    <ClInclude Include="ForceFieldWindow.h" />
     <ClInclude Include="LightWindow.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="MaterialWindow.h" />
@@ -190,6 +191,7 @@
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EmitterWindow.cpp" />
     <ClCompile Include="EnvProbeWindow.cpp" />
+    <ClCompile Include="ForceFieldWindow.cpp" />
     <ClCompile Include="LightWindow.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MaterialWindow.cpp" />

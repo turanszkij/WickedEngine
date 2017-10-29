@@ -113,8 +113,10 @@ public:
 	{
 		float mTime;
 		float mTimePrev;
-		float mDeltaTime;				float pad0;
-		XMFLOAT3 mWindDirection;		float pad1;
+		float mDeltaTime;
+		UINT mForceFieldOffset;
+		UINT mForceFieldCount;
+		XMFLOAT3 mWindDirection;
 		float mWindWaveSize;
 		float mWindRandomness;
 		UINT mFrameCount;
@@ -249,6 +251,8 @@ protected:
 	} static voxelSceneData;
 
 	static wiGraphicsTypes::GPUQuery occlusionQueries[256];
+
+	static UINT entityArrayOffset_ForceFields, entityArrayCount_ForceFields;
 
 public:
 	static std::string SHADERPATH;
@@ -478,6 +482,7 @@ public:
 		Light* light;
 		Decal* decal;
 		EnvironmentProbe* envProbe;
+		ForceField* forceField;
 		XMFLOAT3 position,normal;
 		float distance;
 		int subsetIndex;
@@ -495,7 +500,8 @@ public:
 				object == other.object &&
 				light == other.light &&
 				decal == other.decal &&
-				envProbe == other.envProbe
+				envProbe == other.envProbe &&
+				forceField == other.forceField
 				;
 		}
 		void Clear()
@@ -507,6 +513,7 @@ public:
 			SAFE_INIT(light);
 			SAFE_INIT(decal);
 			SAFE_INIT(envProbe);
+			SAFE_INIT(forceField);
 		}
 	};
 
@@ -549,11 +556,15 @@ public:
 	// Add Light Instance
 	static void Add(Light* value);
 	static void Add(const std::list<Light*>& lights);
+	// Add Force Field Instance
+	static void Add(ForceField* value);
+	static void Add(const std::list<ForceField*>& forces);
 
 	// Remove from the scene
 	static void Remove(Object* value);
 	static void Remove(Light* value);
 	static void Remove(Decal* value);
 	static void Remove(EnvironmentProbe* value);
+	static void Remove(ForceField* value);
 };
 

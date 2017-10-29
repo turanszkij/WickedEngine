@@ -2643,6 +2643,10 @@ void Model::CleanUp()
 	{
 		SAFE_DELETE(x);
 	}
+	for (ForceField* x : forces)
+	{
+		SAFE_DELETE(x);
+	}
 }
 void Model::LoadFromDisk(const std::string& dir, const std::string& name, const std::string& identifier)
 {
@@ -2853,6 +2857,13 @@ void Model::Add(Decal* value)
 		decals.push_back(value);
 	}
 }
+void Model::Add(ForceField* value)
+{
+	if (value != nullptr)
+	{
+		forces.push_back(value);
+	}
+}
 void Model::Add(Model* value)
 {
 	if (value != nullptr)
@@ -2863,6 +2874,7 @@ void Model::Add(Model* value)
 		lights.insert(lights.begin(), value->lights.begin(), value->lights.end());
 		meshes.insert(value->meshes.begin(), value->meshes.end());
 		materials.insert(value->materials.begin(), value->materials.end());
+		forces.insert(forces.begin(), value->forces.begin(), value->forces.end());
 	}
 }
 void Model::Serialize(wiArchive& archive)
@@ -2871,7 +2883,7 @@ void Model::Serialize(wiArchive& archive)
 
 	if (archive.IsReadMode())
 	{
-		size_t objectsCount, meshCount, materialCount, armaturesCount, lightsCount, decalsCount;
+		size_t objectsCount, meshCount, materialCount, armaturesCount, lightsCount, decalsCount, forceCount;
 
 		archive >> objectsCount;
 		for (size_t i = 0; i < objectsCount; ++i)
@@ -2919,6 +2931,17 @@ void Model::Serialize(wiArchive& archive)
 			Decal* x = new Decal;
 			x->Serialize(archive);
 			decals.push_back(x);
+		}
+
+		if (archive.GetVersion() >= 10)
+		{
+			archive >> forceCount;
+			for (size_t i = 0; i < forceCount; ++i)
+			{
+				ForceField* x = new ForceField;
+				x->Serialize(archive);
+				forces.push_back(x);
+			}
 		}
 
 		// RESOLVE CONNECTIONS
@@ -3022,6 +3045,15 @@ void Model::Serialize(wiArchive& archive)
 		for (auto& x : decals)
 		{
 			x->Serialize(archive);
+		}
+
+		if (archive.GetVersion() >= 10)
+		{
+			archive << forces.size();
+			for (auto& x : forces)
+			{
+				x->Serialize(archive);
+			}
 		}
 	}
 }
@@ -4310,6 +4342,26 @@ void Light::Serialize(wiArchive& archive)
 			archive << width;
 			archive << height;
 		}
+	}
+}
+#pragma endregion
+
+#pragma region FORCEFIELD
+void ForceField::Serialize(wiArchive& archive)
+{
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> type;
+		archive >> gravity;
+		archive >> range;
+	}
+	else
+	{
+		archive << type;
+		archive << gravity;
+		archive << range;
 	}
 }
 #pragma endregion

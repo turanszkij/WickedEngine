@@ -1170,6 +1170,21 @@ struct EnvironmentProbe : public Transform
 
 	EnvironmentProbe() :realTime(false), isUpToDate(false) {}
 };
+struct ForceField : public Transform
+{
+	int type;
+	float gravity; // negative = deflector, positive = attractor
+	float range; // affection range
+
+	ForceField() : Transform()
+	{
+		type = ENTITY_TYPE_FORCEFIELD_POINT;
+		gravity = 0;
+		range = 0;
+	}
+
+	void Serialize(wiArchive& archive);
+};
 
 struct Model : public Transform
 {
@@ -1179,6 +1194,7 @@ struct Model : public Transform
 	std::list<Armature*> armatures;
 	std::list<Light*> lights;
 	std::list<Decal*> decals;
+	std::list<ForceField*> forces;
 
 	Model();
 	virtual ~Model();
@@ -1190,6 +1206,7 @@ struct Model : public Transform
 	void Add(Armature* value);
 	void Add(Light* value);
 	void Add(Decal* value);
+	void Add(ForceField* value);
 	// merge
 	void Add(Model* value);
 	void Serialize(wiArchive& archive);

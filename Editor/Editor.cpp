@@ -13,6 +13,7 @@
 #include "LightWindow.h"
 #include "AnimationWindow.h"
 #include "EmitterWindow.h"
+#include "ForceFieldWindow.h"
 
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -263,6 +264,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	lightWnd = new LightWindow(&GetGUI());
 	animWnd = new AnimationWindow(&GetGUI());
 	emitterWnd = new EmitterWindow(&GetGUI());
+	forceFieldWnd = new ForceFieldWindow(&GetGUI());
 }
 void EditorComponent::DeleteWindows()
 {
@@ -276,6 +278,7 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(lightWnd);
 	SAFE_DELETE(animWnd);
 	SAFE_DELETE(emitterWnd);
+	SAFE_DELETE(forceFieldWnd);
 }
 
 void EditorComponent::Initialize()
@@ -291,6 +294,7 @@ void EditorComponent::Initialize()
 	SAFE_INIT(lightWnd);
 	SAFE_INIT(animWnd);
 	SAFE_INIT(emitterWnd);
+	SAFE_INIT(forceFieldWnd);
 
 
 	SAFE_INIT(loader);
@@ -456,6 +460,15 @@ void EditorComponent::Load()
 	});
 	GetGUI().AddWidget(emitterWnd_Toggle);
 
+	wiButton* forceFieldWnd_Toggle = new wiButton("ForceField");
+	forceFieldWnd_Toggle->SetTooltip("Force Field properties");
+	forceFieldWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
+	forceFieldWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	forceFieldWnd_Toggle->OnClick([=](wiEventArgs args) {
+		forceFieldWnd->forceFieldWindow->SetVisible(!forceFieldWnd->forceFieldWindow->IsVisible());
+	});
+	GetGUI().AddWidget(forceFieldWnd_Toggle);
+
 
 	////////////////////////////////////////////////////////////////////////////////////
 
@@ -569,6 +582,7 @@ void EditorComponent::Load()
 				fullModel->meshes.clear();
 				fullModel->materials.clear();
 				fullModel->armatures.clear();
+				fullModel->forces.clear();
 				SAFE_DELETE(fullModel);
 
 				ResetHistory();
@@ -881,6 +895,7 @@ void EditorComponent::Load()
 	dirLightTex = *(Texture2D*)Content.add("images/directional_light.dds");
 	areaLightTex = *(Texture2D*)Content.add("images/arealight.dds");
 	decalTex = *(Texture2D*)Content.add("images/decal.dds");
+	forceFieldTex = *(Texture2D*)Content.add("images/forcefield.dds");
 }
 void EditorComponent::Start()
 {
@@ -1068,6 +1083,7 @@ void EditorComponent::Update(float dt)
 				{
 				}
 				envProbeWnd->SetProbe(picked->envProbe);
+				forceFieldWnd->SetForceField(picked->forceField);
 
 				BeginTranslate();
 			}
@@ -1144,6 +1160,20 @@ void EditorComponent::Update(float dt)
 					*history << false;
 				}
 
+				if (x->forceField != nullptr)
+				{
+					*history << true;
+					x->forceField->Serialize(*history);
+
+					wiRenderer::Remove(x->forceField);
+					SAFE_DELETE(x->forceField);
+					x->transform = nullptr;
+				}
+				else
+				{
+					*history << false;
+				}
+
 				if (x->transform != nullptr)
 				{
 					*history << true;
@@ -1179,6 +1209,7 @@ void EditorComponent::Update(float dt)
 					model->Add(x->object);
 					model->Add(x->light);
 					model->Add(x->decal);
+					model->Add(x->forceField);
 				}
 				model->Serialize(*clipboard_write);
 				SAFE_DELETE(clipboard_write);
@@ -1188,6 +1219,7 @@ void EditorComponent::Update(float dt)
 				model->decals.clear();
 				model->meshes.clear();
 				model->materials.clear();
+				model->forces.clear();
 				SAFE_DELETE(model);
 			}
 			// Paste
@@ -1238,6 +1270,14 @@ void EditorComponent::Update(float dt)
 						wiRenderer::Add(l);
 						x->transform = l;
 						x->light = l;
+					}
+					if (x->forceField != nullptr)
+					{
+						ForceField* l = new ForceField(*x->forceField);
+						l->detach();
+						wiRenderer::Add(l);
+						x->transform = l;
+						x->forceField = l;
 					}
 				}
 
@@ -1416,6 +1456,37 @@ void EditorComponent::Compose()
 
 				wiImage::Draw(&decalTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 
+			}
+		}
+
+		if (rendererWnd->GetPickType() & PICK_FORCEFIELD)
+		{
+			for (auto& y : x->forces)
+			{
+				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+
+				wiImageEffects fx;
+				fx.pos = y->translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+				if (hovered.forceField == y)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->forceField == y)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
+
+
+				wiImage::Draw(&forceFieldTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 			}
 		}
 

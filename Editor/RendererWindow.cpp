@@ -14,11 +14,11 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 950));
+	rendererWindow->SetSize(XMFLOAT2(400, 1000));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
-	float x = 250, y = 0, step = 30;
+	float x = 250, y = 20, step = 30;
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
@@ -246,6 +246,12 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	pickTypeDecalCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeDecalCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeDecalCheckBox);
+
+	pickTypeForceFieldCheckBox = new wiCheckBox("Pick Force Fields: ");
+	pickTypeForceFieldCheckBox->SetTooltip("Enable if you want to pick force fields with the pointer");
+	pickTypeForceFieldCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeForceFieldCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeForceFieldCheckBox);
 
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
@@ -481,6 +487,10 @@ int RendererWindow::GetPickType()
 	if (pickTypeDecalCheckBox->GetCheck())
 	{
 		pickType |= PICK_DECAL;
+	}
+	if (pickTypeForceFieldCheckBox->GetCheck())
+	{
+		pickType |= PICK_FORCEFIELD;
 	}
 
 	return pickType;

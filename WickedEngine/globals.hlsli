@@ -70,8 +70,10 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
-	float		g_xFrame_DeltaTime;				float xPadding0_FrameCB;
-	float3		g_xFrame_WindDirection;			float xPadding1_FrameCB;
+	float		g_xFrame_DeltaTime;
+	uint		g_xFrame_ForceFieldOffset;
+	uint		g_xFrame_ForceFieldCount;
+	float3		g_xFrame_WindDirection;
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
 	uint		g_xFrame_FrameCount;

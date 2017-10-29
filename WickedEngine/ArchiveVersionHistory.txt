@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+10:	serialize force fields
 9:	refactored emitter particle system
 8:	refactored vertex wind weight
 7:	serialized extended mesh properties

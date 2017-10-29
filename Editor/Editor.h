@@ -13,6 +13,7 @@ class DecalWindow;
 class LightWindow;
 class AnimationWindow;
 class EmitterWindow;
+class ForceFieldWindow;
 
 class EditorLoadingScreen : public LoadingScreenComponent
 {
@@ -29,7 +30,7 @@ class Editor;
 class EditorComponent : public Renderable2DComponent
 {
 private:
-	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex;
+	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex;
 public:
 	MaterialWindow*			materialWnd;
 	PostprocessWindow*		postprocessWnd;
@@ -43,6 +44,7 @@ public:
 	LightWindow*			lightWnd;
 	AnimationWindow*		animWnd;
 	EmitterWindow*			emitterWnd;
+	ForceFieldWindow*		forceFieldWnd;
 
 	Editor*					main;
 

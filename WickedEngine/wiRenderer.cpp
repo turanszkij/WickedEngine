@@ -63,6 +63,7 @@ float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::d
 XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
 float wiRenderer::RESOLUTIONSCALE = 1.0f;
 GPUQuery wiRenderer::occlusionQueries[];
+UINT wiRenderer::entityArrayOffset_ForceFields = 0, wiRenderer::entityArrayCount_ForceFields = 0;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -1977,15 +1978,18 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		const XMMATRIX viewMatrix = cam->GetView();
 
-		UINT lightCounter = 0;
+		UINT entityCounter = 0;
 		UINT matrixCounter = 0;
+
+		entityArrayOffset_ForceFields = 0;
+		entityArrayCount_ForceFields = 0;
 
 		for (Cullable* c : culledLights)
 		{
-			if (lightCounter == MAX_SHADER_ENTITY_COUNT)
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
 			{
-				assert(0); // too many lights!
-				lightCounter--;
+				assert(0); // too many entities!
+				entityCounter--;
 				break;
 			}
 
@@ -1997,24 +2001,21 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			const int shadowIndex = l->shadowMap_index;
 
-			entityArray[lightCounter].type = l->GetType();
-			entityArray[lightCounter].positionWS = l->translation;
-			XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[lightCounter].positionWS), viewMatrix));
-			entityArray[lightCounter].range = l->enerDis.y;
-			entityArray[lightCounter].color = wiMath::CompressColor(l->color);
-			entityArray[lightCounter].energy = l->enerDis.x;
-			entityArray[lightCounter].shadowBias = l->shadowBias;
-			entityArray[lightCounter].additionalData_index = shadowIndex;
+			entityArray[entityCounter].type = l->GetType();
+			entityArray[entityCounter].positionWS = l->translation;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
+			entityArray[entityCounter].range = l->enerDis.y;
+			entityArray[entityCounter].color = wiMath::CompressColor(l->color);
+			entityArray[entityCounter].energy = l->enerDis.x;
+			entityArray[entityCounter].shadowBias = l->shadowBias;
+			entityArray[entityCounter].additionalData_index = shadowIndex;
 			switch (l->GetType())
 			{
 			case Light::DIRECTIONAL:
 			{
-				entityArray[lightCounter].directionWS = l->GetDirection();
-				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+				entityArray[entityCounter].directionWS = l->GetDirection();
+				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				//for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(), ARRAYSIZE(entityArray[lightCounter].shadowMatrix)); ++shmap) {
-				//	entityArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
-				//}
 				if (shadowIndex >= 0)
 				{
 					matrixArray[shadowIndex + 0] = l->shadowCam_dirLight[0].getVP();
@@ -2026,15 +2027,11 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			break;
 			case Light::SPOT:
 			{
-				entityArray[lightCounter].coneAngleCos = cosf(l->enerDis.z * 0.5f);
-				entityArray[lightCounter].directionWS = l->GetDirection();
-				XMStoreFloat3(&entityArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[lightCounter].directionWS), viewMatrix));
-				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+				entityArray[entityCounter].coneAngleCos = cosf(l->enerDis.z * 0.5f);
+				entityArray[entityCounter].directionWS = l->GetDirection();
+				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
+				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				//if (l->shadow && l->shadowMap_index >= 0 && !l->shadowCam_spotLight.empty())
-				//{
-				//	entityArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
-				//}
 				if (l->shadow && shadowIndex >= 0 && !l->shadowCam_spotLight.empty())
 				{
 					matrixArray[shadowIndex + 0] = l->shadowCam_spotLight[0].getVP();
@@ -2044,7 +2041,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			break;
 			case Light::POINT:
 			{
-				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
+				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
 			}
 			break;
 			case Light::SPHERE:
@@ -2054,22 +2051,22 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			{
 				XMMATRIX lightMat = XMLoadFloat4x4(&l->world);
 				// Note: area lights are facing back by default
-				XMStoreFloat3(&entityArray[lightCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // right dir
-				XMStoreFloat3(&entityArray[lightCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
-				XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
-				entityArray[lightCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
+				XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // right dir
+				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
+				XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
+				entityArray[entityCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
 			}
 			break;
 			}
 
-			lightCounter++;
+			entityCounter++;
 		}
 		for (Decal* decal : mainCameraCulling.culledDecals)
 		{
-			if (lightCounter == MAX_SHADER_ENTITY_COUNT)
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
 			{
-				assert(0); // too many lights!
-				lightCounter--;
+				assert(0); // too many entities!
+				entityCounter--;
 				break;
 			}
 			if (matrixCounter >= MATRIXARRAY_COUNT)
@@ -2078,23 +2075,45 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				matrixCounter--;
 				break;
 			}
-			entityArray[lightCounter].type = ENTITY_TYPE_DECAL;
-			entityArray[lightCounter].positionWS = decal->translation;
-			XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
-			entityArray[lightCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
-			entityArray[lightCounter].texMulAdd = decal->atlasMulAdd;
-			entityArray[lightCounter].color = wiMath::CompressColor(XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity()));
-			entityArray[lightCounter].energy = decal->emissive;
+			entityArray[entityCounter].type = ENTITY_TYPE_DECAL;
+			entityArray[entityCounter].positionWS = decal->translation;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
+			entityArray[entityCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
+			entityArray[entityCounter].texMulAdd = decal->atlasMulAdd;
+			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity()));
+			entityArray[entityCounter].energy = decal->emissive;
 
-			//entityArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
-			entityArray[lightCounter].additionalData_index = matrixCounter;
+			entityArray[entityCounter].additionalData_index = matrixCounter;
 			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
 			matrixCounter++;
 
-			lightCounter++;
+			entityCounter++;
 		}
 
-		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*lightCounter);
+		entityArrayOffset_ForceFields = entityCounter;
+		for (auto& model : GetScene().models)
+		{
+			for (ForceField* force : model->forces)
+			{
+				if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+				{
+					assert(0); // too many entities!
+					entityCounter--;
+					break;
+				}
+
+				entityArray[entityCounter].type = force->type;
+				entityArray[entityCounter].positionWS = force->translation;
+				XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), XMLoadFloat4x4(&force->world)));
+				entityArray[entityCounter].energy = force->gravity;
+				entityArray[entityCounter].range = force->range;
+
+				entityCounter++;
+			}
+		}
+		entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
+
+		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
 
 		const GPUResource* resources[] = {
@@ -5468,6 +5487,8 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mTime = renderTime;
 	cb.mTimePrev = renderTime_Prev;
 	cb.mDeltaTime = deltaTime;
+	cb.mForceFieldOffset = entityArrayOffset_ForceFields;
+	cb.mForceFieldCount = entityArrayCount_ForceFields;
 	auto& wind = GetScene().wind;
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;
@@ -5731,6 +5752,22 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 					pick.transform = decal;
 					pick.decal = decal;
 					pick.distance = wiMath::Distance(decal->translation, ray.origin) * 0.95f;
+					pickPoints.push_back(pick);
+				}
+			}
+		}
+		if (pickType & PICK_DECAL)
+		{
+			for (auto& force : model->forces)
+			{
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&force->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(force->translation, cam->translation) * 0.05f)
+				{
+					Picked pick = Picked();
+					pick.transform = force;
+					pick.forceField = force;
+					pick.distance = wiMath::Distance(force->translation, ray.origin) * 0.95f;
 					pickPoints.push_back(pick);
 				}
 			}
@@ -6337,6 +6374,12 @@ void wiRenderer::Add(Light* value)
 	collection.push_back(value);
 	Add(collection);
 }
+void wiRenderer::Add(ForceField* value)
+{
+	list<ForceField*> collection(0);
+	collection.push_back(value);
+	Add(collection);
+}
 void wiRenderer::Add(const list<Object*>& objects)
 {
 	for (Object* x : objects)
@@ -6369,6 +6412,16 @@ void wiRenderer::Add(const list<Light*>& lights)
 	else
 	{
 		GenerateSPTree(spTree_lights, std::vector<Cullable*>(lights.begin(), lights.end()), SPTREE_GENERATE_OCTREE);
+	}
+}
+void wiRenderer::Add(const list<ForceField*>& forces)
+{
+	for (ForceField* x : forces)
+	{
+		if (x->parent == nullptr)
+		{
+			GetScene().GetWorldNode()->Add(x);
+		}
 	}
 }
 
@@ -6412,6 +6465,17 @@ void wiRenderer::Remove(EnvironmentProbe* value)
 	if (value != nullptr)
 	{
 		GetScene().environmentProbes.remove(value);
+		value->detach();
+	}
+}
+void wiRenderer::Remove(ForceField* value)
+{
+	if (value != nullptr)
+	{
+		for (auto& x : GetScene().models)
+		{
+			x->forces.remove(value);
+		}
 		value->detach();
 	}
 }
