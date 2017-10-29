@@ -40,24 +40,25 @@
 #define SBSLOT_TILEFRUSTUMS			15
 #define SBSLOT_ENTITYINDEXLIST		16
 #define SBSLOT_ENTITYARRAY			17
+#define SBSLOT_MATRIXARRAY			18
 
 
 // Ondemand textures are 2d textures and declared in shader globals, these can be used independently in any shader:
-#define TEXSLOT_ONDEMAND0			18
-#define TEXSLOT_ONDEMAND1			19
-#define TEXSLOT_ONDEMAND2			20
-#define TEXSLOT_ONDEMAND3			21
-#define TEXSLOT_ONDEMAND4			22
-#define TEXSLOT_ONDEMAND5			23
-#define TEXSLOT_ONDEMAND6			24
-#define TEXSLOT_ONDEMAND7			25
-#define TEXSLOT_ONDEMAND8			26
-#define TEXSLOT_ONDEMAND9			27
+#define TEXSLOT_ONDEMAND0			19
+#define TEXSLOT_ONDEMAND1			20
+#define TEXSLOT_ONDEMAND2			21
+#define TEXSLOT_ONDEMAND3			22
+#define TEXSLOT_ONDEMAND4			23
+#define TEXSLOT_ONDEMAND5			24
+#define TEXSLOT_ONDEMAND6			25
+#define TEXSLOT_ONDEMAND7			26
+#define TEXSLOT_ONDEMAND8			27
+#define TEXSLOT_ONDEMAND9			28
 #define TEXSLOT_ONDEMAND_COUNT	(TEXSLOT_ONDEMAND9 - TEXSLOT_ONDEMAND0 + 1)
 
 // These are reserved for demand of any type of textures in specific shaders:
-#define TEXSLOT_UNIQUE0				28
-#define TEXSLOT_UNIQUE1				29
+#define TEXSLOT_UNIQUE0				29
+#define TEXSLOT_UNIQUE1				30
 
 #define TEXSLOT_COUNT		TEXSLOT_UNIQUE1
 

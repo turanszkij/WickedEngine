@@ -353,7 +353,7 @@ void main(ComputeShaderInput IN)
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				b.transform(entity.GetProjection());
+				b.transform(MatrixArray[entity.additionalData_index]);
 
 				if (IntersectAABB(a, b))
 				{

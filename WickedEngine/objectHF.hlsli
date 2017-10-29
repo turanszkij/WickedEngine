@@ -190,7 +190,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	{
 		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator]];
 
-		float4x4 decalProjection = decal.GetProjection();
+		float4x4 decalProjection = MatrixArray[decal.additionalData_index];
 		float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
 		float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		[branch]

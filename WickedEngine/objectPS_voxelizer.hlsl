@@ -39,15 +39,15 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 				float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0);
 
 				[branch]
-				if (light.shadowMap_index >= 0)
+				if (light.additionalData_index >= 0)
 				{
-					float4 ShPos = mul(float4(P, 1), light.shadowMatrix[0]);
+					float4 ShPos = mul(float4(P, 1), MatrixArray[light.additionalData_index + 0]);
 					ShPos.xyz /= ShPos.w;
 					float3 ShTex = ShPos.xyz*float3(1, -1, 1) / 2.0f + 0.5f;
 
 					[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
 					{
-						lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index + 0);
+						lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.additionalData_index + 0);
 					}
 				}
 
@@ -70,8 +70,8 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 					float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0) * attenuation;
 
 					[branch]
-					if (light.shadowMap_index >= 0) {
-						lightColor *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.shadowMap_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
+					if (light.additionalData_index >= 0) {
+						lightColor *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 					}
 
 					result.diffuse = lightColor;
@@ -101,15 +101,15 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 						float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0) * attenuation;
 
 						[branch]
-						if (light.shadowMap_index >= 0)
+						if (light.additionalData_index >= 0)
 						{
-							float4 ShPos = mul(float4(P, 1), light.shadowMatrix[0]);
+							float4 ShPos = mul(float4(P, 1), MatrixArray[light.additionalData_index + 0]);
 							ShPos.xyz /= ShPos.w;
 							float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 							[branch]
 							if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 							{
-								lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.shadowMap_index);
+								lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.additionalData_index);
 							}
 						}
 

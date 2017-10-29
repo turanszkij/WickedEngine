@@ -86,9 +86,8 @@ struct ShaderEntityType
 	float coneAngleCos;
 	float shadowKernel;
 	float shadowBias;
-	int shadowMap_index;
+	int additionalData_index;
 	float4 texMulAdd;
-	matrix shadowMatrix[3];
 
 	// Load uncompressed color:
 	inline float4 GetColor()
@@ -112,7 +111,6 @@ struct ShaderEntityType
 	inline float GetHeight() { return texMulAdd.z; }
 
 	// Load decal props:
-	inline matrix GetProjection() { return shadowMatrix[0]; }
 	inline float GetEmissive() { return energy; }
 };
 
@@ -121,6 +119,8 @@ struct ShaderEntityType
 #define TILED_CULLING_BLOCKSIZE	16
 #define MAX_SHADER_ENTITY_COUNT	4096
 #define MAX_SHADER_ENTITY_COUNT_PER_TILE 256
+
+#define MATRIXARRAY_COUNT	128
 
 
 // MIP Generator params:

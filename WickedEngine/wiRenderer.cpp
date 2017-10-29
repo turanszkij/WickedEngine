@@ -634,9 +634,13 @@ void wiRenderer::LoadBuffers()
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntityType);
-	SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYARRAY]);
-	resourceBuffers[RBTYPE_ENTITYARRAY] = new GPURingBuffer;
 	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
+
+	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(XMMATRIX);
+	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_MATRIXARRAY]);
 
 	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
@@ -1969,10 +1973,13 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		const CulledList& culledLights = mainCameraCulling.culledLights;
 
 		static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
+		static XMMATRIX* matrixArray = (XMMATRIX*)_mm_malloc(sizeof(XMMATRIX)*MATRIXARRAY_COUNT, 16);
 
-		XMMATRIX viewMatrix = cam->GetView();
+		const XMMATRIX viewMatrix = cam->GetView();
 
 		UINT lightCounter = 0;
+		UINT matrixCounter = 0;
+
 		for (Cullable* c : culledLights)
 		{
 			if (lightCounter == MAX_SHADER_ENTITY_COUNT)
@@ -1988,6 +1995,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				continue;
 			}
 
+			const int shadowIndex = l->shadowMap_index;
+
 			entityArray[lightCounter].type = l->GetType();
 			entityArray[lightCounter].positionWS = l->translation;
 			XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[lightCounter].positionWS), viewMatrix));
@@ -1995,16 +2004,24 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[lightCounter].color = wiMath::CompressColor(l->color);
 			entityArray[lightCounter].energy = l->enerDis.x;
 			entityArray[lightCounter].shadowBias = l->shadowBias;
-			entityArray[lightCounter].shadowMap_index = l->shadowMap_index;
+			entityArray[lightCounter].additionalData_index = shadowIndex;
 			switch (l->GetType())
 			{
 			case Light::DIRECTIONAL:
 			{
 				entityArray[lightCounter].directionWS = l->GetDirection();
-				for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(), ARRAYSIZE(entityArray[lightCounter].shadowMatrix)); ++shmap) {
-					entityArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
-				}
 				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+
+				//for (unsigned int shmap = 0; shmap < min(l->shadowCam_dirLight.size(), ARRAYSIZE(entityArray[lightCounter].shadowMatrix)); ++shmap) {
+				//	entityArray[lightCounter].shadowMatrix[shmap] = l->shadowCam_dirLight[shmap].getVP();
+				//}
+				if (shadowIndex >= 0)
+				{
+					matrixArray[shadowIndex + 0] = l->shadowCam_dirLight[0].getVP();
+					matrixArray[shadowIndex + 1] = l->shadowCam_dirLight[1].getVP();
+					matrixArray[shadowIndex + 2] = l->shadowCam_dirLight[2].getVP();
+					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 2);
+				}
 			}
 			break;
 			case Light::SPOT:
@@ -2012,11 +2029,17 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				entityArray[lightCounter].coneAngleCos = cosf(l->enerDis.z * 0.5f);
 				entityArray[lightCounter].directionWS = l->GetDirection();
 				XMStoreFloat3(&entityArray[lightCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[lightCounter].directionWS), viewMatrix));
-				if (l->shadow && l->shadowMap_index >= 0 && !l->shadowCam_spotLight.empty())
-				{
-					entityArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
-				}
 				entityArray[lightCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+
+				//if (l->shadow && l->shadowMap_index >= 0 && !l->shadowCam_spotLight.empty())
+				//{
+				//	entityArray[lightCounter].shadowMatrix[0] = l->shadowCam_spotLight[0].getVP();
+				//}
+				if (l->shadow && shadowIndex >= 0 && !l->shadowCam_spotLight.empty())
+				{
+					matrixArray[shadowIndex + 0] = l->shadowCam_spotLight[0].getVP();
+					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 2);
+				}
 			}
 			break;
 			case Light::POINT:
@@ -2049,22 +2072,37 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				lightCounter--;
 				break;
 			}
+			if (matrixCounter >= MATRIXARRAY_COUNT)
+			{
+				assert(0); // too many decals, can't upload the rest to matrixarray!
+				matrixCounter--;
+				break;
+			}
 			entityArray[lightCounter].type = ENTITY_TYPE_DECAL;
 			entityArray[lightCounter].positionWS = decal->translation;
 			XMStoreFloat3(&entityArray[lightCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
 			entityArray[lightCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
-			entityArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
 			entityArray[lightCounter].texMulAdd = decal->atlasMulAdd;
 			entityArray[lightCounter].color = wiMath::CompressColor(XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity()));
 			entityArray[lightCounter].energy = decal->emissive;
+
+			//entityArray[lightCounter].shadowMatrix[0] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
+			entityArray[lightCounter].additionalData_index = matrixCounter;
+			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
+			matrixCounter++;
 
 			lightCounter++;
 		}
 
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*lightCounter);
+		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
 
-		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
-		GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, threadID);
+		const GPUResource* resources[] = {
+			resourceBuffers[RBTYPE_ENTITYARRAY],
+			resourceBuffers[RBTYPE_MATRIXARRAY],
+		};
+		GetDevice()->BindResourcesPS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		GetDevice()->BindResourcesCS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
 
 	// Update visible particlesystem vertices:
