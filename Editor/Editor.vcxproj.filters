@@ -61,6 +61,9 @@
     <ClInclude Include="main.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="EmitterWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -103,6 +106,9 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="EmitterWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

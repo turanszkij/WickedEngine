@@ -12,6 +12,7 @@
 #include "DecalWindow.h"
 #include "LightWindow.h"
 #include "AnimationWindow.h"
+#include "EmitterWindow.h"
 
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -261,6 +262,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	decalWnd = new DecalWindow(&GetGUI());
 	lightWnd = new LightWindow(&GetGUI());
 	animWnd = new AnimationWindow(&GetGUI());
+	emitterWnd = new EmitterWindow(&GetGUI());
 }
 void EditorComponent::DeleteWindows()
 {
@@ -273,6 +275,7 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(decalWnd);
 	SAFE_DELETE(lightWnd);
 	SAFE_DELETE(animWnd);
+	SAFE_DELETE(emitterWnd);
 }
 
 void EditorComponent::Initialize()
@@ -287,6 +290,7 @@ void EditorComponent::Initialize()
 	SAFE_INIT(decalWnd);
 	SAFE_INIT(lightWnd);
 	SAFE_INIT(animWnd);
+	SAFE_INIT(emitterWnd);
 
 
 	SAFE_INIT(loader);
@@ -442,6 +446,15 @@ void EditorComponent::Load()
 		animWnd->animWindow->SetVisible(!animWnd->animWindow->IsVisible());
 	});
 	GetGUI().AddWidget(animWnd_Toggle);
+
+	wiButton* emitterWnd_Toggle = new wiButton("Emitter");
+	emitterWnd_Toggle->SetTooltip("Emitter Particle System properties");
+	emitterWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
+	emitterWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	emitterWnd_Toggle->OnClick([=](wiEventArgs args) {
+		emitterWnd->emitterWindow->SetVisible(!emitterWnd->emitterWindow->IsVisible());
+	});
+	GetGUI().AddWidget(emitterWnd_Toggle);
 
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -1071,6 +1084,7 @@ void EditorComponent::Update(float dt)
 			}
 
 			objectWnd->SetObject(picked->object);
+			emitterWnd->SetObject(picked->object);
 		}
 
 		// Delete

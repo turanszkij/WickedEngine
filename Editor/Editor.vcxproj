@@ -169,6 +169,7 @@
     <ClInclude Include="CameraWindow.h" />
     <ClInclude Include="DecalWindow.h" />
     <ClInclude Include="Editor.h" />
+    <ClInclude Include="EmitterWindow.h" />
     <ClInclude Include="EnvProbeWindow.h" />
     <ClInclude Include="LightWindow.h" />
     <ClInclude Include="main.h" />
@@ -187,6 +188,7 @@
     <ClCompile Include="CameraWindow.cpp" />
     <ClCompile Include="DecalWindow.cpp" />
     <ClCompile Include="Editor.cpp" />
+    <ClCompile Include="EmitterWindow.cpp" />
     <ClCompile Include="EnvProbeWindow.cpp" />
     <ClCompile Include="LightWindow.cpp" />
     <ClCompile Include="main.cpp" />
