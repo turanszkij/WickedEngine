@@ -1810,22 +1810,14 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					i++;
 				}
 			}
-			for (auto& x : emitterSystems)
-			{
-				if (camera->frustum.CheckBox(x->bounding_box))
-				{
-					culling.culledEmittedParticleSystems.push_back(x);
-					x->Update(dt*GetGameSpeed());
-				}
-				// emitter attached light can be bigger than bounding box so update it anyway!
-				x->UpdateAttachedLight(dt*GetGameSpeed());
-			}
-			std::sort(culling.culledEmittedParticleSystems.begin(), culling.culledEmittedParticleSystems.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {
-				return wiMath::DistanceSquared(camera->translation, a->bounding_box.getCenter()) > wiMath::DistanceSquared(camera->translation,b->bounding_box.getCenter());
-			});
 		}
 	}
 	wiProfiler::GetInstance().EndRange(); // SPTree Culling
+
+	for (auto& x : emitterSystems)
+	{
+		x->Update(dt*GetGameSpeed());
+	}
 
 	if (GetTemporalAAEnabled())
 	{
@@ -2076,7 +2068,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 	// Update visible particlesystem vertices:
-	for (auto& x : mainCameraCulling.culledEmittedParticleSystems)
+	for (auto& x : emitterSystems)
 	{
 		x->UpdateRenderData(threadID);
 	}
@@ -2752,9 +2744,13 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	FrameCulling& culling = frameCullings[camera];
+	// todo: remove allocation of vector
+	vector<wiEmittedParticle*> sortedEmitters(emitterSystems.begin(), emitterSystems.end());
+	std::sort(sortedEmitters.begin(), sortedEmitters.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {
+		return wiMath::DistanceSquared(camera->translation, a->GetPosition()) > wiMath::DistanceSquared(camera->translation, b->GetPosition());
+	});
 
-	for (wiEmittedParticle* e : culling.culledEmittedParticleSystems)
+	for (wiEmittedParticle* e : sortedEmitters)
 	{
 		e->Draw(threadID);
 	}

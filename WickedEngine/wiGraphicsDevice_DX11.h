@@ -127,7 +127,7 @@ namespace wiGraphicsTypes
 		virtual void MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) override;
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) override;
 		virtual UINT AppendRingBuffer(GPURingBuffer* buffer, const void* data, size_t dataSize, GRAPHICSTHREAD threadID) override;
-		virtual GPUBuffer* DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) override;
+		virtual bool DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID, bool async = true) override;
 		virtual void SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) override;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) override;

@@ -4,9 +4,9 @@
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
-	float2 tex				: TEXCOORD0;
-	nointerpolation float4 opaAddDarkSiz	: TEXCOORD1;
-	float4 pos2D			: TEXCOORD2;
+	float4 pos2D			: TEXCOORD0;
+	float2 tex				: TEXCOORD1;
+	nointerpolation float2 opaSiz : TEXCOORD2;
 };
 
 #endif // _EMITTEDPARTICLE_HF_

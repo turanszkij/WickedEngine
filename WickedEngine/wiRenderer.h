@@ -352,7 +352,6 @@ public:
 		std::vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
 		UINT culledLight_count; // because forward_list doesn't have size()
-		std::vector<wiEmittedParticle*> culledEmittedParticleSystems;
 		std::list<Decal*> culledDecals;
 
 		void Clear()
@@ -363,7 +362,6 @@ public:
 			culledHairParticleSystems.clear();
 			culledLights.clear();
 			culledLight_count = 0;
-			culledEmittedParticleSystems.clear();
 			culledDecals.clear();
 		}
 	};

@@ -3208,6 +3208,7 @@ void GraphicsDevice_DX11::MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GR
 void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 {
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
+	assert(buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 
 	if (dataSize == 0)
 	{
@@ -3216,20 +3217,10 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 
 	dataSize = min((int)buffer->desc.ByteWidth, dataSize);
 
-	HRESULT hr;
-	if (dataSize > (int)buffer->desc.ByteWidth) 
-	{
-		// grow the buffer if new datasize exceeds buffer size (TODO: disallow, contention hazard!)
-		buffer->resource_DX11->Release();
-		buffer->desc.ByteWidth = dataSize * 2;
-		hr = CreateBuffer(&buffer->desc, nullptr, buffer);
-		assert(SUCCEEDED(hr) && "GPUBuffer growing failed!");
-	}
-
 	if (buffer->desc.Usage == USAGE_DYNAMIC)
 	{
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		HRESULT hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
 		memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
 		deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
@@ -3294,21 +3285,24 @@ UINT GraphicsDevice_DX11::AppendRingBuffer(GPURingBuffer* buffer, const void* da
 
 	return static_cast<UINT>(position);
 }
-GPUBuffer* GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* buffer, GRAPHICSTHREAD threadID) 
+bool GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID, bool async)
 {
-	GPUBuffer* debugbuf = new GPUBuffer;
+	assert(bufferToDownload->desc.ByteWidth <= bufferDest->desc.ByteWidth);
+	assert(bufferDest->desc.Usage & USAGE_STAGING);
+	assert(dataDest != nullptr);
 
-	GPUBufferDesc desc = buffer->GetDesc();
-	desc.CPUAccessFlags = CPU_ACCESS_READ;
-	desc.Usage = USAGE_STAGING;
-	desc.BindFlags = 0;
-	desc.MiscFlags = 0;
-	if (SUCCEEDED(CreateBuffer(&desc, nullptr, debugbuf)))
+	deviceContexts[threadID]->CopyResource(bufferDest->resource_DX11, bufferToDownload->resource_DX11);
+
+	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
+	HRESULT hr = deviceContexts[threadID]->Map(bufferDest->resource_DX11, 0, D3D11_MAP_READ, async ? D3D11_MAP_FLAG_DO_NOT_WAIT : 0, &mappedResource);
+	bool result = SUCCEEDED(hr);
+	if (result)
 	{
-		deviceContexts[threadID]->CopyResource(debugbuf->resource_DX11, buffer->resource_DX11);
+		memcpy(dataDest, mappedResource.pData, bufferToDownload->desc.ByteWidth);
+		deviceContexts[threadID]->Unmap(bufferDest->resource_DX11, 0);
 	}
 
-	return debugbuf;
+	return result;
 }
 void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
 {

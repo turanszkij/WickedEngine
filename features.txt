@@ -27,7 +27,7 @@ Depth of field
 Wind effect
 Multithreaded rendering on DX11-level hardware (Deferred device contexts)
 Tessellation: silhouette smoothing + displacement mapping
-Emitted particle systems using geometry shader
+Fully GPU-based particle emitters
 Soft offscreen particles
 Hair particle systems (grass)
 Hardware geometry instancing
