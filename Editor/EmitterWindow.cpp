@@ -214,6 +214,8 @@ void EmitterWindow::SetObject(Object* obj)
 {
 	object = obj;
 
+	emitterComboBox->ClearItems();
+
 	if (object != nullptr)
 	{
 		for (auto& x : object->eParticleSystems)
@@ -247,7 +249,6 @@ void EmitterWindow::SetObject(Object* obj)
 	}
 	else
 	{
-		emitterComboBox->ClearItems();
 		memoryBudgetLabel->SetText("Memory Budget: -");
 
 		emitterWindow->SetEnabled(false);
@@ -263,6 +264,11 @@ wiEmittedParticle* EmitterWindow::GetEmitter()
 	}
 
 	int sel = emitterComboBox->GetSelected();
+
+	if (sel < 0)
+	{
+		return nullptr;
+	}
 
 	if ((int)object->eParticleSystems.size() > sel)
 	{

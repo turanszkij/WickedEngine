@@ -70,7 +70,30 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 		Generate();
 	}
 }
+wiHairParticle::wiHairParticle(const wiHairParticle& other)
+{
+	cb = nullptr;
+	particleBuffer = nullptr;
+	ib = nullptr;
+	ib_transposed = nullptr;
+	drawargs = nullptr;
+	name = other.name + "0";
+	densityG = other.densityG;
+	lenG = other.lenG;
+	length = other.length;
+	count = other.count;
+	material = other.material;
+	object = other.object;
+	materialName = other.materialName;
+	particleCount = other.particleCount;
+	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, object->getMatrix()));
+	material = other.material;
 
+	if (material)
+	{
+		Generate();
+	}
+}
 
 void wiHairParticle::CleanUp()
 {
@@ -208,7 +231,7 @@ void wiHairParticle::Settings(int l0,int l1,int l2)
 
 void wiHairParticle::Generate()
 {
-	std::vector<Point> points;
+	std::vector<Patch> points;
 
 	Mesh* mesh = object->mesh;
 
@@ -331,7 +354,7 @@ void wiHairParticle::Generate()
 					int ti = wiRandom::getRandom(0, 2);
 					XMVECTOR tangent = XMVector3Normalize(XMVectorSubtract(pos[ti], pos[(ti + 1) % 3]));
 					
-					Point addP;
+					Patch addP;
 					::XMStoreFloat4(&addP.posLen,vbar);
 
 					XMFLOAT3 nor, tan;
@@ -361,7 +384,7 @@ void wiHairParticle::Generate()
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_IMMUTABLE;
-	bd.ByteWidth = (UINT)(sizeof(Point) * particleCount);
+	bd.ByteWidth = (UINT)(sizeof(Patch) * particleCount);
 	bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;

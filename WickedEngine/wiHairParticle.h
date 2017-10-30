@@ -16,7 +16,7 @@ class wiArchive;
 class wiHairParticle
 {
 public:
-	struct Point
+	struct Patch
 	{
 		XMFLOAT4 posLen;
 		UINT normalRand;
@@ -39,6 +39,13 @@ private:
 		UINT iWidth;
 		UINT iHeight;
 	};
+
+	wiGraphicsTypes::GPUBuffer *cb;
+	wiGraphicsTypes::GPUBuffer *particleBuffer;
+	wiGraphicsTypes::GPUBuffer *ib;
+	wiGraphicsTypes::GPUBuffer *ib_transposed;
+	wiGraphicsTypes::GPUBuffer *drawargs;
+
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
 	static wiGraphicsTypes::ComputeShader *cs_BITONICSORT;
@@ -55,6 +62,8 @@ public:
 	wiHairParticle();
 	wiHairParticle(const std::string& newName, float newLen, int newCount
 		, const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup);
+	wiHairParticle(const wiHairParticle& other);
+
 	void CleanUp();
 
 	void Generate();
@@ -72,12 +81,6 @@ public:
 	XMFLOAT4X4 OriginalMatrix_Inverse;
 	Object* object;
 	size_t particleCount;
-
-	wiGraphicsTypes::GPUBuffer *cb;
-	wiGraphicsTypes::GPUBuffer *particleBuffer;
-	wiGraphicsTypes::GPUBuffer *ib;
-	wiGraphicsTypes::GPUBuffer *ib_transposed;
-	wiGraphicsTypes::GPUBuffer *drawargs;
 
 	void Serialize(wiArchive& archive);
 };

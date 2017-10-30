@@ -5,9 +5,6 @@
 #include "ShaderInterop_EmittedParticle.h"
 #include "wiIntersectables.h"
 
-#include <set>
-#include <deque>
-
 struct SkinnedVertex;
 struct Mesh;
 struct Object;
@@ -20,40 +17,6 @@ class wiArchive;
 class wiEmittedParticle
 {
 private:
-	//struct Point
-	//{
-	//	XMFLOAT3 pos;
-	//	XMFLOAT4 sizOpaMir;
-	//	float rot;
-	//	XMFLOAT3 vel;
-	//	float rotVel;
-	//	float life;
-	//	float maxLife;
-	//	XMFLOAT2 sizBeginEnd;
-
-	//	Point(){}
-	//	Point(const XMFLOAT3& newPos, const XMFLOAT4& newSizOpaMir, const XMFLOAT3& newVel/*, const XMFLOAT3& newCol*/, float newLife, float newRotVel
-	//		,float scaleX, float scaleY)
-	//	{
-	//		pos=newPos;
-	//		sizOpaMir=newSizOpaMir;
-	//		vel=newVel;
-	//		//col=newCol;
-	//		life=maxLife=newLife;
-	//		rot=newRotVel;
-	//		rotVel=newRotVel;
-	//		sizBeginEnd.x = sizOpaMir.x;
-	//		sizBeginEnd.y = sizOpaMir.x*scaleX;
-	//	}
-	//};
-
-
-	//CBUFFER(ConstantBuffer, CBSLOT_OTHER_EMITTEDPARTICLE)
-	//{
-	//	float		mMotionBlurAmount;
-	//	UINT		mEmitterMeshIndexCount;
-	//	UINT		mEmitCount;
-	//};
 
 	wiGraphicsTypes::GPUBuffer* particleBuffer;
 	wiGraphicsTypes::GPUBuffer* aliveList[2];
@@ -85,6 +48,7 @@ public:
 	wiEmittedParticle();
 	wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot);
+	wiEmittedParticle(const wiEmittedParticle& other);
 	static void SetUpStatic();
 	static void CleanUpStatic();
 

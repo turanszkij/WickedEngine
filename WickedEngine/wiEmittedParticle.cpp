@@ -97,6 +97,36 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 
 	SetMaxParticleCount(10000);
 }
+wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
+{
+	name = other.name + "0";
+	object = other.object;
+	materialName = other.materialName;
+	material = other.material;
+	size = other.size;
+	random_factor = other.random_factor;
+	normal_factor = other.normal_factor;
+	count = other.count;
+	life = other.life;
+	random_life = other.random_life;
+	emit = 0;
+	scaleX = other.scaleX;
+	scaleY = other.scaleY;
+	rotation = other.rotation;
+	motionBlurAmount = other.motionBlurAmount;
+
+
+	SAFE_INIT(particleBuffer);
+	SAFE_INIT(aliveList[0]);
+	SAFE_INIT(aliveList[1]);
+	SAFE_INIT(deadList);
+	SAFE_INIT(counterBuffer);
+	SAFE_INIT(indirectDispatchBuffer);
+	SAFE_INIT(indirectDrawBuffer);
+	SAFE_INIT(constantBuffer);
+
+	SetMaxParticleCount(other.GetMaxParticleCount());
+}
 
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
 {

@@ -3849,8 +3849,28 @@ Object::Object(const Object& other):Streamable(other),Transform(other)
 	physicsType = other.physicsType;
 	transparency = other.transparency;
 	color = other.color;
+
+	for (auto&x : other.eParticleSystems)
+	{
+		eParticleSystems.push_back(new wiEmittedParticle(*x));
+		eParticleSystems.back()->object = this;
+	}
+	for (auto&x : other.hParticleSystems)
+	{
+		hParticleSystems.push_back(new wiHairParticle(*x));
+		hParticleSystems.back()->object = this;
+	}
 }
-Object::~Object() {
+Object::~Object() 
+{
+	for (auto&x : eParticleSystems)
+	{
+		SAFE_DELETE(x);
+	}
+	for (auto&x : hParticleSystems)
+	{
+		SAFE_DELETE(x);
+	}
 }
 void Object::init()
 {
