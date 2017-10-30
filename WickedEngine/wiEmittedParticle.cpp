@@ -221,9 +221,9 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xEmitterMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
 	cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
 	cb.xEmitCount = (UINT)emit;
-	cb.xParticleLifeSpan = life;
+	cb.xParticleLifeSpan = life / 60.0f;
 	cb.xParticleLifeSpanRandomness = random_life;
-	cb.xParticleNormalFactor = normal_factor / 60.0f;
+	cb.xParticleNormalFactor = normal_factor;
 	cb.xParticleRandomFactor = random_factor;
 	cb.xParticleScaling = scaleX;
 	cb.xParticleSize = size;

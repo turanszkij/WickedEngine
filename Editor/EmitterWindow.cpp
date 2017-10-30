@@ -83,7 +83,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitCountSlider->SetTooltip("Set the number of particles to emit per second.");
 	emitterWindow->AddWidget(emitCountSlider);
 
-	emitSizeSlider = new wiSlider(0.01f, 1000.0f, 1.0f, 100000, "Size: ");
+	emitSizeSlider = new wiSlider(0.01f, 10.0f, 1.0f, 100000, "Size: ");
 	emitSizeSlider->SetSize(XMFLOAT2(200, 30));
 	emitSizeSlider->SetPos(XMFLOAT2(x, y += step));
 	emitSizeSlider->OnSlide([&](wiEventArgs args) {

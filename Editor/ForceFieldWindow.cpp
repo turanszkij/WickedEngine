@@ -48,7 +48,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	forceFieldWindow->AddWidget(typeComboBox);
 
 
-	gravitySlider = new wiSlider(-0.01f, 0.01f, 0, 100000, "Gravity: ");
+	gravitySlider = new wiSlider(-10, 10, 0, 100000, "Gravity: ");
 	gravitySlider->SetSize(XMFLOAT2(200, 30));
 	gravitySlider->SetPos(XMFLOAT2(x, y += step));
 	gravitySlider->OnSlide([&](wiEventArgs args) {
@@ -62,7 +62,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	forceFieldWindow->AddWidget(gravitySlider);
 
 
-	rangeSlider = new wiSlider(0.0f, 1000.0f, 10, 100000, "Range: ");
+	rangeSlider = new wiSlider(0.0f, 100.0f, 10, 100000, "Range: ");
 	rangeSlider->SetSize(XMFLOAT2(200, 30));
 	rangeSlider->SetPos(XMFLOAT2(x, y += step));
 	rangeSlider->OnSlide([&](wiEventArgs args) {

@@ -2104,9 +2104,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 				entityArray[entityCounter].type = force->type;
 				entityArray[entityCounter].positionWS = force->translation;
-				XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), XMLoadFloat4x4(&force->world)));
 				entityArray[entityCounter].energy = force->gravity;
-				entityArray[entityCounter].range = force->range;
+				entityArray[entityCounter].range = 1.0f / max(0.0001f, force->range); // avoid division in shader
+				// The default planar force field is facing upwards, and thus the pull direction is downwards:
+				XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&force->world))));
 
 				entityCounter++;
 			}

@@ -13,15 +13,23 @@ struct LDS_ForceField
 	uint type;
 	float3 position;
 	float gravity;
-	float range;
+	float range_inverse;
+	float3 normal;
 };
 groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
+groupshared uint aliveParticleCount = 0;
 
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 {
-	// First, load the forcefields to LDS:
+	// Read alive particle count and store in LDS:
+	if (Gid == 0)
+	{
+		aliveParticleCount = counterBuffer[0][0];
+	}
+
+	// Load the forcefields into LDS:
 	uint numForceFields = min(g_xFrame_ForceFieldCount, NUM_LDS_FORCEFIELDS);
 	if (Gid < numForceFields)
 	{
@@ -31,17 +39,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		forceFields[Gid].type = (uint)forceField.type;
 		forceFields[Gid].position = forceField.positionWS;
 		forceFields[Gid].gravity = forceField.energy;
-		forceFields[Gid].range = max(0.001f, forceField.range);
+		forceFields[Gid].range_inverse = forceField.range;
+		forceFields[Gid].normal = forceField.directionWS;
 	}
 
 	GroupMemoryBarrierWithGroupSync();
 
-
-	uint aliveCount = counterBuffer[0][0];
-
-	if (DTid.x < aliveCount)
+	if (DTid.x < aliveParticleCount)
 	{
-		uint dt = g_xFrame_DeltaTime * 60.0f;
+		const float dt = g_xFrame_DeltaTime;
 
 		uint particleIndex = aliveBuffer_OLD[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
@@ -54,9 +60,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			{
 				LDS_ForceField forceField = forceFields[i];
 
-				float3 diff = forceField.position - particle.position;
-				float dist = length(diff);
-				float3 force = diff * forceField.gravity * (1 - saturate(dist / forceField.range));
+				float3 dir = forceField.position - particle.position;
+				float dist;
+				if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
+				{
+					dist = length(dir);
+				}
+				else // planar force field
+				{
+					dist = dot(forceField.normal, dir);
+					dir = forceField.normal;
+				}
+
+				float3 force = dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
 
 				particle.velocity += force * dt;
 			}

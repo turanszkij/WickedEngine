@@ -612,16 +612,16 @@
     <FxCompile Include="emittedparticle_emitCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="emittedparticle_simulateCS.hlsl">
+    <FxCompile Include="emittedparticle_drawargsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="emittedparticle_drawargsCS.hlsl">
+    <FxCompile Include="emittedparticle_kickoffUpdateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="emittedparticle_simulateargsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="emittedparticle_kickoffUpdateCS.hlsl">
+    <FxCompile Include="emittedparticle_simulateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
