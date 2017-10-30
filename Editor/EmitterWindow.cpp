@@ -181,7 +181,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitLifeRandomnessSlider->SetTooltip("Set the randomness of lifespans for the emitted particles.");
 	emitterWindow->AddWidget(emitLifeRandomnessSlider);
 
-	emitMotionBlurSlider = new wiSlider(0.0f, 1000.0f, 1.0f, 100000, "Motion blur: ");
+	emitMotionBlurSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Motion blur: ");
 	emitMotionBlurSlider->SetSize(XMFLOAT2(200, 30));
 	emitMotionBlurSlider->SetPos(XMFLOAT2(x, y += step));
 	emitMotionBlurSlider->OnSlide([&](wiEventArgs args) {
