@@ -58,7 +58,7 @@ namespace wiHelper
 		CreateDirectoryA("screenshots", 0);
 		stringstream ss("");
 		if (name.length() <= 0)
-			ss << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
+			ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
 		else
 			ss << name;
 		if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(ss.str(), &wiRenderer::GetDevice()->GetBackBuffer(), GRAPHICSTHREAD_IMMEDIATE)))

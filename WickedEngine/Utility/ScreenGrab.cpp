@@ -1044,7 +1044,7 @@ HRESULT DirectX::SaveWICTextureToFile( _In_ ID3D11DeviceContext* pContext,
             return hr;
         }
 
-        WICRect rect = { 0, 0, desc.Width, desc.Height };
+        WICRect rect = { 0, 0, (INT)desc.Width, (INT)desc.Height };
         hr = frame->WriteSource( FC.Get(), &rect );
         if ( FAILED(hr) )
         {
