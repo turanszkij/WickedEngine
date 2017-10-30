@@ -8,7 +8,7 @@ RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(counterBuffer, uint4, 4);
 
 TEXTURE2D(randomTex, float4, TEXSLOT_ONDEMAND0);
-RAWBUFFER(meshIndexBuffer, TEXSLOT_ONDEMAND1);
+TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
 RAWBUFFER(meshVertexBuffer_NOR, TEXSLOT_ONDEMAND3);
 
@@ -25,17 +25,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float3 randoms = randomTex.SampleLevel(sampler_linear_wrap, float2((float)DTid.x / (float)THREADCOUNT_EMIT, g_xFrame_Time + xEmitterRandomness), 0).rgb;
 		
 		// random triangle on emitter surface:
-		uint gen0 = (uint)(((xEmitterMeshIndexCount - 1) / 3 * 3 + 0) * randoms.x);
-		uint gen1 = (uint)(((xEmitterMeshIndexCount - 1) / 3 * 3 + 1) * randoms.x);
-		uint gen2 = (uint)(((xEmitterMeshIndexCount - 1) / 3 * 3 + 2) * randoms.x);
+		uint tri = (uint)(((xEmitterMeshIndexCount - 1) / 3) * randoms.x);
 
 		// load indices of triangle from index buffer
-		uint i0 = meshIndexBuffer.Load(gen0 * xEmitterMeshIndexStride);
-		i0 = (xEmitterMeshIndexStride == 2 ? (i0 & 0x0000FFFF) : i0);
-		uint i1 = meshIndexBuffer.Load(gen1 * xEmitterMeshIndexStride);
-		i1 = (xEmitterMeshIndexStride == 2 ? (i1 & 0x0000FFFF) : i1);
-		uint i2 = meshIndexBuffer.Load(gen2 * xEmitterMeshIndexStride);
-		i2 = (xEmitterMeshIndexStride == 2 ? (i2 & 0x0000FFFF) : i2);
+		uint i0 = meshIndexBuffer[tri * 3 + 0];
+		uint i1 = meshIndexBuffer[tri * 3 + 1];
+		uint i2 = meshIndexBuffer[tri * 3 + 2];
 
 		// load vertices of triangle from vertex buffer:
 		float3 pos0 = asfloat(meshVertexBuffer_POS.Load3(i0 * xEmitterMeshVertexPositionStride));
@@ -86,7 +81,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		particle.position = pos;
 		particle.size = xParticleSize + xParticleSize * (randoms.y - 0.5f) * xParticleRandomFactor;
 		particle.rotation = xParticleRotation * (randoms.z - 0.5f) * xParticleRandomFactor;
-		particle.velocity = (nor + nor * (randoms.y - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
+		particle.velocity = (nor + (randoms.xyz - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
 		particle.rotationalVelocity = particle.rotation;
 		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (randoms.x - 0.5f) * xParticleLifeSpanRandomness;
 		particle.life = particle.maxLife;

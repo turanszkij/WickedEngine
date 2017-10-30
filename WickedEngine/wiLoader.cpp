@@ -2115,7 +2115,9 @@ void Mesh::CreateBuffers(Object* object)
 		bd.Usage = USAGE_IMMUTABLE;
 		bd.CPUAccessFlags = 0;
 		bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		bd.MiscFlags = 0;
+		bd.StructureByteStride = stride;
+		bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
 		InitData.pSysMem = gpuIndexData;
 		bd.ByteWidth = (UINT)(stride * indices.size());
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);
@@ -2625,14 +2627,6 @@ void Model::CleanUp()
 	}
 	for (Object* x : objects)
 	{
-		for (wiEmittedParticle* y : x->eParticleSystems)
-		{
-			SAFE_DELETE(y);
-		}
-		for (wiHairParticle* y : x->hParticleSystems)
-		{
-			SAFE_DELETE(y);
-		}
 		SAFE_DELETE(x);
 	}
 	for (Light* x : lights)
