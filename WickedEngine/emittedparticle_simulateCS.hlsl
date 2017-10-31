@@ -5,7 +5,7 @@ RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 RWSTRUCTUREDBUFFER(aliveBuffer_OLD, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWSTRUCTUREDBUFFER(counterBuffer, uint4, 4);
+RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
 
 #define NUM_LDS_FORCEFIELDS 32
 struct LDS_ForceField
@@ -26,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	// Read alive particle count and store in LDS:
 	if (Gid == 0)
 	{
-		aliveParticleCount = counterBuffer[0][0];
+		aliveParticleCount = counterBuffer[0].aliveCount_CURRENT;
 	}
 
 	// Load the forcefields into LDS:
@@ -91,14 +91,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// add to new alive list:
 			uint newAliveIndex;
-			InterlockedAdd(counterBuffer[0][2], 1, newAliveIndex);
+			InterlockedAdd(counterBuffer[0].aliveCount_NEW, 1, newAliveIndex);
 			aliveBuffer_NEW[newAliveIndex] = particleIndex;
 		}
 		else
 		{
 			// kill:
 			uint deadIndex;
-			InterlockedAdd(counterBuffer[0][1], 1, deadIndex);
+			InterlockedAdd(counterBuffer[0].deadCount, 1, deadIndex);
 			deadBuffer[deadIndex] = particleIndex;
 		}
 	}

@@ -17,6 +17,13 @@ struct Particle
 	float2 mirror;
 };
 
+struct ParticleCounters
+{
+	uint aliveCount_CURRENT;
+	uint deadCount;
+	uint aliveCount_NEW;
+	uint realEmitCount;
+};
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {

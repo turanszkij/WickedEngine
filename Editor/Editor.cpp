@@ -1309,6 +1309,8 @@ void EditorComponent::Update(float dt)
 		SAFE_DELETE(history);
 	}
 
+	emitterWnd->UpdateData();
+
 	__super::Update(dt);
 
 	renderPath->Update(dt);

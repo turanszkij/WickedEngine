@@ -50,9 +50,9 @@ wiEmittedParticle::wiEmittedParticle()
 	SAFE_INIT(aliveList[1]);
 	SAFE_INIT(deadList);
 	SAFE_INIT(counterBuffer);
-	SAFE_INIT(indirectDispatchBuffer);
-	SAFE_INIT(indirectDrawBuffer);
+	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
+	SAFE_INIT(debugDataReadbackBuffer);
 
 	SetMaxParticleCount(10000);
 }
@@ -91,9 +91,9 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 	SAFE_INIT(aliveList[1]);
 	SAFE_INIT(deadList);
 	SAFE_INIT(counterBuffer);
-	SAFE_INIT(indirectDispatchBuffer);
-	SAFE_INIT(indirectDrawBuffer);
+	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
+	SAFE_INIT(debugDataReadbackBuffer);
 
 	SetMaxParticleCount(10000);
 }
@@ -121,38 +121,44 @@ wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
 	SAFE_INIT(aliveList[1]);
 	SAFE_INIT(deadList);
 	SAFE_INIT(counterBuffer);
-	SAFE_INIT(indirectDispatchBuffer);
-	SAFE_INIT(indirectDrawBuffer);
+	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
+	SAFE_INIT(debugDataReadbackBuffer);
 
 	SetMaxParticleCount(other.GetMaxParticleCount());
 }
 
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
 {
+	buffersUpToDate = false;
 	MAX_PARTICLES = value;
-	CreateSelfBuffers();
 }
 
 void wiEmittedParticle::CreateSelfBuffers()
 {
+	if (buffersUpToDate)
+	{
+		return;
+	}
+	buffersUpToDate = true;
+
 	SAFE_DELETE(particleBuffer);
 	SAFE_DELETE(aliveList[0]);
 	SAFE_DELETE(aliveList[1]);
 	SAFE_DELETE(deadList);
 	SAFE_DELETE(counterBuffer);
-	SAFE_DELETE(indirectDispatchBuffer);
-	SAFE_DELETE(indirectDrawBuffer);
+	SAFE_DELETE(indirectBuffers);
 	SAFE_DELETE(constantBuffer);
+	SAFE_DELETE(debugDataReadbackBuffer);
 
 	particleBuffer = new GPUBuffer;
 	aliveList[0] = new GPUBuffer;
 	aliveList[1] = new GPUBuffer;
 	deadList = new GPUBuffer;
 	counterBuffer = new GPUBuffer;
-	indirectDispatchBuffer = new GPUBuffer;
-	indirectDrawBuffer = new GPUBuffer;
+	indirectBuffers = new GPUBuffer;
 	constantBuffer = new GPUBuffer;
+	debugDataReadbackBuffer = new GPUBuffer;
 
 	GPUBufferDesc bd;
 	bd.Usage = USAGE_DEFAULT;
@@ -182,8 +188,13 @@ void wiEmittedParticle::CreateSelfBuffers()
 	data.pSysMem = nullptr;
 
 
-	uint32_t counters[] = { 0, MAX_PARTICLES, 0, 0 }; // aliveCount, deadCount, newAliveCount, realEmitCount
-	data.pSysMem = counters;
+	ParticleCounters counters;
+	counters.aliveCount_CURRENT = 0;
+	counters.deadCount = MAX_PARTICLES;
+	counters.aliveCount_NEW = 0;
+	counters.realEmitCount = 0;
+
+	data.pSysMem = &counters;
 	bd.ByteWidth = sizeof(counters);
 	bd.StructureByteStride = sizeof(counters);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, counterBuffer);
@@ -192,10 +203,8 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_DRAWINDIRECT_ARGS;
-	bd.ByteWidth = sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectDrawBuffer);
-	bd.ByteWidth = sizeof(wiGraphicsTypes::IndirectDispatchArgs);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectDispatchBuffer);
+	bd.ByteWidth = sizeof(wiGraphicsTypes::IndirectDispatchArgs) + sizeof(wiGraphicsTypes::IndirectDispatchArgs) + sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers);
 
 
 	bd.Usage = USAGE_DYNAMIC;
@@ -204,6 +213,14 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer);
+
+	{
+		GPUBufferDesc debugBufDesc = counterBuffer->GetDesc();
+		debugBufDesc.Usage = USAGE_STAGING;
+		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
+		debugBufDesc.BindFlags = 0;
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackBuffer);
+	}
 }
 
 uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
@@ -215,8 +232,7 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 	retVal += aliveList[1]->GetDesc().ByteWidth;
 	retVal += deadList->GetDesc().ByteWidth;
 	retVal += counterBuffer->GetDesc().ByteWidth;
-	retVal += indirectDispatchBuffer->GetDesc().ByteWidth;
-	retVal += indirectDrawBuffer->GetDesc().ByteWidth;
+	retVal += indirectBuffers->GetDesc().ByteWidth;
 	retVal += constantBuffer->GetDesc().ByteWidth;
 
 	return retVal;
@@ -240,6 +256,8 @@ void wiEmittedParticle::Burst(float num)
 
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
+	CreateSelfBuffers();
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("UpdateEmittedParticles", threadID);
 
@@ -265,12 +283,11 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	const GPUUnorderedResource* uavs[] = {
 		static_cast<GPUUnorderedResource*>(particleBuffer),
-		static_cast<GPUUnorderedResource*>(aliveList[0]), // last alivelist
-		static_cast<GPUUnorderedResource*>(aliveList[1]), // new alivelist
+		static_cast<GPUUnorderedResource*>(aliveList[0]), // CURRENT alivelist
+		static_cast<GPUUnorderedResource*>(aliveList[1]), // NEW alivelist
 		static_cast<GPUUnorderedResource*>(deadList),
 		static_cast<GPUUnorderedResource*>(counterBuffer),
-		static_cast<GPUUnorderedResource*>(indirectDispatchBuffer),
-		static_cast<GPUUnorderedResource*>(indirectDrawBuffer),
+		static_cast<GPUUnorderedResource*>(indirectBuffers),
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 	
@@ -289,15 +306,15 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	// emit the required amount if there are free slots in dead list
 	device->BindCS(emitCS, threadID);
-	device->DispatchIndirect(indirectDispatchBuffer, 0, threadID);
+	device->DispatchIndirect(indirectBuffers, 0, threadID);
 
-	// kick off simulation based on OLD alivelist count
+	// kick off simulation based on CURRENT alivelist count
 	device->BindCS(simulateargsCS, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 
-	// update OLD alive list, write NEW alive list
+	// update CURRENT alive list, write NEW alive list
 	device->BindCS(simulateCS, threadID);
-	device->DispatchIndirect(indirectDispatchBuffer, 0, threadID);
+	device->DispatchIndirect(indirectBuffers, sizeof(wiGraphicsTypes::IndirectDispatchArgs), threadID);
 
 	// update the draw arguments
 	device->BindCS(drawargsCS, threadID);
@@ -310,9 +327,14 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	device->EventEnd(threadID);
 
-	// Swap OLD alivelist with NEW alivelist
+	// Swap CURRENT alivelist with NEW alivelist
 	SwapPtr(aliveList[0], aliveList[1]);
 	emit -= (UINT)emit;
+
+	if (DEBUG)
+	{
+		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID, false);
+	}
 }
 
 void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
@@ -342,8 +364,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 		device->BindResourcePS(material->texture, TEXSLOT_ONDEMAND0, threadID);
 	}
 
-	//device->Draw((int)points.size() * 6, threadID);
-	device->DrawInstancedIndirect(indirectDrawBuffer, 0, threadID);
+	device->DrawInstancedIndirect(indirectBuffers, sizeof(wiGraphicsTypes::IndirectDispatchArgs) * 2, threadID);
 
 	device->EventEnd(threadID);
 }
@@ -356,9 +377,9 @@ void wiEmittedParticle::CleanUp()
 	SAFE_DELETE(aliveList[1]);
 	SAFE_DELETE(deadList);
 	SAFE_DELETE(counterBuffer);
-	SAFE_DELETE(indirectDispatchBuffer);
-	SAFE_DELETE(indirectDrawBuffer);
+	SAFE_DELETE(indirectBuffers);
 	SAFE_DELETE(constantBuffer);
+	SAFE_DELETE(debugDataReadbackBuffer);
 }
 
 
@@ -527,6 +548,11 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 			string lightName;
 			archive >> lightName;
 		}
+		if (archive.GetVersion() >= 11)
+		{
+			archive >> MAX_PARTICLES;
+			archive >> SORTING;
+		}
 
 	}
 	else
@@ -544,5 +570,10 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		archive << scaleY;
 		archive << rotation;
 		archive << motionBlurAmount;
+		if (archive.GetVersion() >= 11)
+		{
+			archive << MAX_PARTICLES;
+			archive << SORTING;
+		}
 	}
 }

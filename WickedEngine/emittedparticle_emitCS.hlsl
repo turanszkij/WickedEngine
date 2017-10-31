@@ -5,7 +5,7 @@ RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 RWSTRUCTUREDBUFFER(aliveBuffer_OLD, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWSTRUCTUREDBUFFER(counterBuffer, uint4, 4);
+RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
 
 TEXTURE2D(randomTex, float4, TEXSLOT_ONDEMAND0);
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
@@ -16,7 +16,7 @@ RAWBUFFER(meshVertexBuffer_NOR, TEXSLOT_ONDEMAND3);
 [numthreads(THREADCOUNT_EMIT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint emitCount = counterBuffer[0][3];
+	uint emitCount = counterBuffer[0].realEmitCount;
 
 	if(DTid.x < emitCount)
 	{
@@ -92,7 +92,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		// new particle index retrieved from dead list (pop):
 		uint deadCount;
-		InterlockedAdd(counterBuffer[0][1], -1, deadCount);
+		InterlockedAdd(counterBuffer[0].deadCount, -1, deadCount);
 		uint newParticleIndex = deadBuffer[deadCount - 1];
 
 		// write out the new particle:
@@ -100,7 +100,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		// and add index to the alive list (push):
 		uint aliveCount_OLD;
-		InterlockedAdd(counterBuffer[0][0], 1, aliveCount_OLD);
+		InterlockedAdd(counterBuffer[0].aliveCount_CURRENT, 1, aliveCount_OLD);
 		aliveBuffer_OLD[aliveCount_OLD] = newParticleIndex;
 	}
 }

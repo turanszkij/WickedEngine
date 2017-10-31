@@ -17,13 +17,14 @@ class wiArchive;
 class wiEmittedParticle
 {
 private:
+	ParticleCounters debugData = {};
+	wiGraphicsTypes::GPUBuffer* debugDataReadbackBuffer;
 
 	wiGraphicsTypes::GPUBuffer* particleBuffer;
 	wiGraphicsTypes::GPUBuffer* aliveList[2];
 	wiGraphicsTypes::GPUBuffer* deadList;
 	wiGraphicsTypes::GPUBuffer* counterBuffer;
-	wiGraphicsTypes::GPUBuffer* indirectDispatchBuffer;
-	wiGraphicsTypes::GPUBuffer* indirectDrawBuffer;
+	wiGraphicsTypes::GPUBuffer* indirectBuffers; // kickoff, simulation, draw
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
 	void CreateSelfBuffers();
 
@@ -42,6 +43,7 @@ private:
 
 	float emit;
 
+	bool buffersUpToDate = false;
 	uint32_t MAX_PARTICLES;
 
 public:
@@ -59,6 +61,11 @@ public:
 
 	void Draw(GRAPHICSTHREAD threadID);
 	void CleanUp();
+
+	bool DEBUG = false;
+	ParticleCounters GetDebugData() { return debugData; }
+
+	bool SORTING = false;
 
 	std::string name;
 	Object* object;

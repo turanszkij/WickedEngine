@@ -54,11 +54,6 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		if (emitter != nullptr)
 		{
 			emitter->SetMaxParticleCount((uint32_t)args.iValue);
-
-			stringstream ss("");
-			ss.precision(2);
-			ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB";
-			memoryBudgetLabel->SetText(ss.str());
 		}
 	});
 	maxParticlesSlider->SetEnabled(false);
@@ -195,6 +190,29 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitMotionBlurSlider->SetTooltip("Set the motion blur amount for the particle system.");
 	emitterWindow->AddWidget(emitMotionBlurSlider);
 
+	y += 30;
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+
+	debugCheckBox = new wiCheckBox("DEBUG: ");
+	debugCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->DEBUG = args.bValue;
+		}
+	});
+	debugCheckBox->SetCheck(false);
+	debugCheckBox->SetTooltip("Enable debug info for the emitter. This involves reading back GPU data, so rendering can slow down.");
+	emitterWindow->AddWidget(debugCheckBox);
+
+	debugDataLabel = new wiLabel("EmitterDebugDataLabel");
+	debugDataLabel->SetText("Enable DEBUG to view debugging data");
+	debugDataLabel->SetSize(XMFLOAT2(300, 100));
+	debugDataLabel->SetPos(XMFLOAT2(x + step, y));
+	emitterWindow->AddWidget(debugDataLabel);
+
 
 	emitterWindow->Translate(XMFLOAT3(200, 50, 0));
 	emitterWindow->SetVisible(false);
@@ -212,6 +230,12 @@ EmitterWindow::~EmitterWindow()
 
 void EmitterWindow::SetObject(Object* obj)
 {
+	// first try to turn off any debug readbacks for emitters:
+	if (GetEmitter() != nullptr)
+	{
+		GetEmitter()->DEBUG = false;
+	}
+
 	object = obj;
 
 	emitterComboBox->ClearItems();
@@ -228,11 +252,6 @@ void EmitterWindow::SetObject(Object* obj)
 		if (emitter != nullptr)
 		{
 			maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
-
-			stringstream ss("");
-			ss.precision(2);
-			ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB";
-			memoryBudgetLabel->SetText(ss.str());
 
 			emitCountSlider->SetValue(emitter->count);
 			emitSizeSlider->SetValue(emitter->size);
@@ -276,4 +295,34 @@ wiEmittedParticle* EmitterWindow::GetEmitter()
 	}
 
 	return nullptr;
+}
+
+void EmitterWindow::UpdateData()
+{
+	auto emitter = GetEmitter();
+	if (emitter == nullptr)
+	{
+		return;
+	}
+
+	if (emitter->DEBUG)
+	{
+		auto data = emitter->GetDebugData();
+
+		stringstream ss("");
+		ss << "Alive Particle Count [CURRENT] = " << data.aliveCount_CURRENT << endl;
+		ss << "Alive Particle Count [NEW] = " << data.aliveCount_NEW << endl;
+		ss << "Dead Particle Count = " << data.deadCount << endl;
+		ss << "GPU Emit count = " << data.realEmitCount << endl;
+		debugDataLabel->SetText(ss.str());
+	}
+	else
+	{
+		debugDataLabel->SetText("Enable DEBUG to view debugging data");
+	}
+
+	stringstream ss("");
+	ss.precision(2);
+	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB";
+	memoryBudgetLabel->SetText(ss.str());
 }

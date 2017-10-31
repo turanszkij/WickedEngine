@@ -18,6 +18,7 @@ public:
 	~EmitterWindow();
 
 	void SetObject(Object* obj);
+	void UpdateData();
 
 	Object* object;
 	wiEmittedParticle* GetEmitter();
@@ -38,5 +39,8 @@ public:
 	wiSlider* emitRandomnessSlider;
 	wiSlider* emitLifeRandomnessSlider;
 	wiSlider* emitMotionBlurSlider;
+
+	wiCheckBox* debugCheckBox;
+	wiLabel* debugDataLabel;
 };
 
