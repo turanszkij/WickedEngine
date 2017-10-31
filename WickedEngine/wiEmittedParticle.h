@@ -28,10 +28,10 @@ private:
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
 	void CreateSelfBuffers();
 
-	static wiGraphicsTypes::ComputeShader *kickoffUpdateCS, *emitCS, *simulateargsCS, *drawargsCS, *simulateCS;
-	static wiGraphicsTypes::VertexShader  *vertexShader;
-	static wiGraphicsTypes::PixelShader   *pixelShader,*simplestPS;
-	static wiGraphicsTypes::BlendState		*blendStateAlpha,*blendStateAdd;
+	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *emitCS, *simulateCS;
+	static wiGraphicsTypes::VertexShader		*vertexShader;
+	static wiGraphicsTypes::PixelShader			*pixelShader,*simplestPS;
+	static wiGraphicsTypes::BlendState			*blendStateAlpha,*blendStateAdd;
 	static wiGraphicsTypes::RasterizerState		*rasterizerState,*wireFrameRS;
 	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
 

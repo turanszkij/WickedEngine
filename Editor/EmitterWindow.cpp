@@ -235,6 +235,7 @@ void EmitterWindow::SetObject(Object* obj)
 	{
 		GetEmitter()->DEBUG = false;
 	}
+	debugCheckBox->SetCheck(false);
 
 	object = obj;
 
@@ -310,8 +311,7 @@ void EmitterWindow::UpdateData()
 		auto data = emitter->GetDebugData();
 
 		stringstream ss("");
-		ss << "Alive Particle Count [CURRENT] = " << data.aliveCount_CURRENT << endl;
-		ss << "Alive Particle Count [NEW] = " << data.aliveCount_NEW << endl;
+		ss << "Alive Particle Count = " << data.aliveCount << endl;
 		ss << "Dead Particle Count = " << data.deadCount << endl;
 		ss << "GPU Emit count = " << data.realEmitCount << endl;
 		debugDataLabel->SetText(ss.str());

@@ -2,10 +2,11 @@
 #include "ShaderInterop_EmittedParticle.h"
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(aliveBuffer_OLD, uint, 1);
+RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
+RWRAWBUFFER(indirectBuffers, 5);
 
 #define NUM_LDS_FORCEFIELDS 32
 struct LDS_ForceField
@@ -26,7 +27,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	// Read alive particle count and store in LDS:
 	if (Gid == 0)
 	{
-		aliveParticleCount = counterBuffer[0].aliveCount_CURRENT;
+		aliveParticleCount = counterBuffer[0].aliveCount;
 	}
 
 	// Load the forcefields into LDS:
@@ -49,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	{
 		const float dt = g_xFrame_DeltaTime;
 
-		uint particleIndex = aliveBuffer_OLD[DTid.x];
+		uint particleIndex = aliveBuffer_CURRENT[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
 
 		if (particle.life > 0)
@@ -91,8 +92,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// add to new alive list:
 			uint newAliveIndex;
-			InterlockedAdd(counterBuffer[0].aliveCount_NEW, 1, newAliveIndex);
-			aliveBuffer_NEW[newAliveIndex] = particleIndex;
+			indirectBuffers.InterlockedAdd(24, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
+			aliveBuffer_NEW[newAliveIndex / 6] = particleIndex; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
 		}
 		else
 		{

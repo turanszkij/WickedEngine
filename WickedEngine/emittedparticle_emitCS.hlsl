@@ -2,7 +2,7 @@
 #include "ShaderInterop_EmittedParticle.h"
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(aliveBuffer_OLD, uint, 1);
+RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
@@ -99,8 +99,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		particleBuffer[newParticleIndex] = particle;
 
 		// and add index to the alive list (push):
-		uint aliveCount_OLD;
-		InterlockedAdd(counterBuffer[0].aliveCount_CURRENT, 1, aliveCount_OLD);
-		aliveBuffer_OLD[aliveCount_OLD] = newParticleIndex;
+		uint aliveCount;
+		InterlockedAdd(counterBuffer[0].aliveCount, 1, aliveCount);
+		aliveBuffer_CURRENT[aliveCount] = newParticleIndex;
 	}
 }

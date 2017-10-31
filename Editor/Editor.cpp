@@ -824,6 +824,8 @@ void EditorComponent::Load()
 		decalWnd->SetDecal(nullptr);
 		envProbeWnd->SetProbe(nullptr);
 		materialWnd->SetMaterial(nullptr);
+		emitterWnd->SetObject(nullptr);
+		forceFieldWnd->SetForceField(nullptr);
 	});
 	GetGUI().AddWidget(clearButton);
 

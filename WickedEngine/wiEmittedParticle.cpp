@@ -14,7 +14,7 @@ using namespace wiGraphicsTypes;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader = nullptr, *wiEmittedParticle::simplestPS = nullptr;
-ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateargsCS = nullptr, *wiEmittedParticle::drawargsCS = nullptr, *wiEmittedParticle::simulateCS = nullptr;
+ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateCS = nullptr;
 BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
 DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
@@ -189,9 +189,8 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 
 	ParticleCounters counters;
-	counters.aliveCount_CURRENT = 0;
+	counters.aliveCount = 0;
 	counters.deadCount = MAX_PARTICLES;
-	counters.aliveCount_NEW = 0;
 	counters.realEmitCount = 0;
 
 	data.pSysMem = &counters;
@@ -308,17 +307,9 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->BindCS(emitCS, threadID);
 	device->DispatchIndirect(indirectBuffers, 0, threadID);
 
-	// kick off simulation based on CURRENT alivelist count
-	device->BindCS(simulateargsCS, threadID);
-	device->Dispatch(1, 1, 1, threadID);
-
 	// update CURRENT alive list, write NEW alive list
 	device->BindCS(simulateCS, threadID);
 	device->DispatchIndirect(indirectBuffers, sizeof(wiGraphicsTypes::IndirectDispatchArgs), threadID);
-
-	// update the draw arguments
-	device->BindCS(drawargsCS, threadID);
-	device->Dispatch(1, 1, 1, threadID);
 
 
 	device->BindCS(nullptr, threadID);
@@ -398,8 +389,6 @@ void wiEmittedParticle::LoadShaders()
 	
 	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
 	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
-	simulateargsCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateargsCS.cso", wiResourceManager::COMPUTESHADER));
-	drawargsCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_drawargsCS.cso", wiResourceManager::COMPUTESHADER));
 	simulateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
 
 
@@ -508,10 +497,7 @@ void wiEmittedParticle::CleanUpStatic()
 	SAFE_DELETE(pixelShader);
 	SAFE_DELETE(simplestPS);
 	SAFE_DELETE(emitCS);
-	SAFE_DELETE(simulateargsCS);
-	SAFE_DELETE(drawargsCS);
 	SAFE_DELETE(simulateCS);
-	//SAFE_DELETE(constantBuffer);
 	SAFE_DELETE(blendStateAlpha);
 	SAFE_DELETE(blendStateAdd);
 	SAFE_DELETE(rasterizerState);

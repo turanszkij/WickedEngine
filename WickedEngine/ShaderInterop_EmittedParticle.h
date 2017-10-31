@@ -19,9 +19,8 @@ struct Particle
 
 struct ParticleCounters
 {
-	uint aliveCount_CURRENT;
+	uint aliveCount;
 	uint deadCount;
-	uint aliveCount_NEW;
 	uint realEmitCount;
 };
 
