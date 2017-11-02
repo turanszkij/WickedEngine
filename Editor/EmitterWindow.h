@@ -30,6 +30,7 @@ public:
 	wiComboBox* emitterComboBox;
 	wiSlider* maxParticlesSlider;
 	wiLabel* memoryBudgetLabel;
+	wiCheckBox* sortCheckBox;
 	wiSlider* emitCountSlider;
 	wiSlider* emitSizeSlider;
 	wiSlider* emitRotationSlider;

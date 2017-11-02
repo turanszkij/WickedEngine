@@ -7,6 +7,7 @@ RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
 RWRAWBUFFER(indirectBuffers, 5);
+RWSTRUCTUREDBUFFER(distanceBuffer, float, 6);
 
 #define NUM_LDS_FORCEFIELDS 32
 struct LDS_ForceField
@@ -94,6 +95,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			uint newAliveIndex;
 			indirectBuffers.InterlockedAdd(24, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
 			aliveBuffer_NEW[newAliveIndex / 6] = particleIndex; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
+
+			if (xEmitterSortingEnabled)
+			{
+				// store squared distance to main camera:
+				float3 eyeVector = particle.position - g_xFrame_MainCamera_CamPos;
+				float distSQ = dot(eyeVector, eyeVector);
+				distanceBuffer[newAliveIndex / 6] = distSQ;
+			}
 		}
 		else
 		{

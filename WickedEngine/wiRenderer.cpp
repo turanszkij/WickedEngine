@@ -2016,17 +2016,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		GetDevice()->BindResourcesCS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
 
-	// Particle system simulation/sorting/culling:
-	for (auto& x : emitterSystems)
-	{
-		x->UpdateRenderData(threadID);
-	}
-	for (wiHairParticle* hair : mainCameraCulling.culledHairParticleSystems)
-	{
-		hair->ComputeCulling(getCamera(), threadID);
-	}
-
-
 	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
 	GetDevice()->EventBegin("Skinning", threadID);
 	{
@@ -2120,6 +2109,16 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 	GetDevice()->EventEnd(threadID);
 	wiProfiler::GetInstance().EndRange(threadID); // skinning
+
+	// Particle system simulation/sorting/culling:
+	for (auto& x : emitterSystems)
+	{
+		x->UpdateRenderData(threadID);
+	}
+	for (wiHairParticle* hair : mainCameraCulling.culledHairParticleSystems)
+	{
+		hair->ComputeCulling(getCamera(), threadID);
+	}
 
 	// Render out of date environment probes:
 	RefreshEnvProbes(threadID);

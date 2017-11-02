@@ -22,14 +22,15 @@ struct ParticleCounters
 	uint aliveCount;
 	uint deadCount;
 	uint realEmitCount;
+	uint aliveCount_afterSimulation;
 };
 
 CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
 	float4x4	xEmitterWorld;
 
+	uint		xEmitterSortingEnabled;
 	uint		xEmitterMeshIndexCount;
-	uint		xEmitterMeshIndexStride;
 	uint		xEmitterMeshVertexPositionStride;
 	uint		xEmitterMeshVertexNormalStride;
 
@@ -47,6 +48,12 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xParticleRotation;
 	float2		xPadding_EmitterCB;
 };
+
+CBUFFER(SortConstants, 0)
+{
+	int4 job_params;
+};
+#define SORT_SIZE 512
 
 #define THREADCOUNT_EMIT 256
 #define THREADCOUNT_SIMULATION 256

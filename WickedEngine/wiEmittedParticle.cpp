@@ -15,6 +15,8 @@ using namespace wiGraphicsTypes;
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader = nullptr, *wiEmittedParticle::simplestPS = nullptr;
 ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateCS = nullptr;
+ComputeShader		*wiEmittedParticle::kickoffSortCS = nullptr, *wiEmittedParticle::sortCS = nullptr, *wiEmittedParticle::sortInnerCS = nullptr, *wiEmittedParticle::sortStepCS = nullptr;
+GPUBuffer		*wiEmittedParticle::sortCB = nullptr;
 BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
 DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
@@ -49,6 +51,7 @@ wiEmittedParticle::wiEmittedParticle()
 	SAFE_INIT(aliveList[0]);
 	SAFE_INIT(aliveList[1]);
 	SAFE_INIT(deadList);
+	SAFE_INIT(distanceBuffer);
 	SAFE_INIT(counterBuffer);
 	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
@@ -90,6 +93,7 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 	SAFE_INIT(aliveList[0]);
 	SAFE_INIT(aliveList[1]);
 	SAFE_INIT(deadList);
+	SAFE_INIT(distanceBuffer);
 	SAFE_INIT(counterBuffer);
 	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
@@ -120,6 +124,7 @@ wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
 	SAFE_INIT(aliveList[0]);
 	SAFE_INIT(aliveList[1]);
 	SAFE_INIT(deadList);
+	SAFE_INIT(distanceBuffer);
 	SAFE_INIT(counterBuffer);
 	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
@@ -146,6 +151,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	SAFE_DELETE(aliveList[0]);
 	SAFE_DELETE(aliveList[1]);
 	SAFE_DELETE(deadList);
+	SAFE_DELETE(distanceBuffer);
 	SAFE_DELETE(counterBuffer);
 	SAFE_DELETE(indirectBuffers);
 	SAFE_DELETE(constantBuffer);
@@ -155,6 +161,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	aliveList[0] = new GPUBuffer;
 	aliveList[1] = new GPUBuffer;
 	deadList = new GPUBuffer;
+	distanceBuffer = new GPUBuffer;
 	counterBuffer = new GPUBuffer;
 	indirectBuffers = new GPUBuffer;
 	constantBuffer = new GPUBuffer;
@@ -187,6 +194,16 @@ void wiEmittedParticle::CreateSelfBuffers()
 	SAFE_DELETE_ARRAY(indices);
 	data.pSysMem = nullptr;
 
+	float* distances = new float[MAX_PARTICLES];
+	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
+	{
+		distances[i] = FLOAT32_MAX;
+	}
+	data.pSysMem = distances;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, distanceBuffer);
+	SAFE_DELETE_ARRAY(distances);
+	data.pSysMem = nullptr;
+
 
 	ParticleCounters counters;
 	counters.aliveCount = 0;
@@ -202,7 +219,11 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_DRAWINDIRECT_ARGS;
-	bd.ByteWidth = sizeof(wiGraphicsTypes::IndirectDispatchArgs) + sizeof(wiGraphicsTypes::IndirectDispatchArgs) + sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
+	bd.ByteWidth = 
+		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
+		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
+		sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced) + 
+		sizeof(wiGraphicsTypes::IndirectDispatchArgs);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers);
 
 
@@ -230,6 +251,7 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 	retVal += aliveList[0]->GetDesc().ByteWidth;
 	retVal += aliveList[1]->GetDesc().ByteWidth;
 	retVal += deadList->GetDesc().ByteWidth;
+	retVal += distanceBuffer->GetDesc().ByteWidth;
 	retVal += counterBuffer->GetDesc().ByteWidth;
 	retVal += indirectBuffers->GetDesc().ByteWidth;
 	retVal += constantBuffer->GetDesc().ByteWidth;
@@ -262,8 +284,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	EmittedParticleCB cb;
 	cb.xEmitterWorld = object->world;
+	cb.xEmitterSortingEnabled = SORTING;
 	cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
-	cb.xEmitterMeshIndexStride = object->mesh->indexBuffer.GetDesc().StructureByteStride;
 	cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
 	cb.xEmitterMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
 	cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
@@ -287,6 +309,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		static_cast<GPUUnorderedResource*>(deadList),
 		static_cast<GPUUnorderedResource*>(counterBuffer),
 		static_cast<GPUUnorderedResource*>(indirectBuffers),
+		static_cast<GPUUnorderedResource*>(distanceBuffer),
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 	
@@ -311,12 +334,89 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->BindCS(simulateCS, threadID);
 	device->DispatchIndirect(indirectBuffers, sizeof(wiGraphicsTypes::IndirectDispatchArgs), threadID);
 
+	device->EventEnd(threadID);
+
+	if (SORTING)
+	{
+		device->EventBegin("SortEmittedParticles", threadID);
+
+		// initialize sorting arguments:
+		device->BindCS(kickoffSortCS, threadID);
+		device->Dispatch(1, 1, 1, threadID);
+
+		// initial sorting:
+		bool bDone = true;
+
+		// calculate how many threads we'll require:
+		//   we'll sort 512 elements per CU (threadgroupsize 256)
+		//     maybe need to optimize this or make it changeable during init
+		//     TGS=256 is a good intermediate value
+
+		unsigned int numThreadGroups = ((MAX_PARTICLES - 1) >> 9) + 1;
+
+		if (numThreadGroups>1) bDone = false;
+
+		// sort all buffers of size 512 (and presort bigger ones)
+		device->BindCS(sortCS, threadID);
+		device->DispatchIndirect(indirectBuffers, 40, threadID);
+
+		int presorted = 512;
+		while (!bDone)
+		{
+			bDone = true;
+			device->BindCS(sortStepCS, threadID);
+
+			// prepare thread group description data
+			unsigned int numThreadGroups = 0;
+
+			if (MAX_PARTICLES > (uint32_t)presorted)
+			{
+				if (MAX_PARTICLES>(uint32_t)presorted * 2)
+					bDone = false;
+
+				unsigned int pow2 = presorted;
+				while (pow2<MAX_PARTICLES)
+					pow2 *= 2;
+				numThreadGroups = pow2 >> 9;
+			}
+
+			unsigned int nMergeSize = presorted * 2;
+			for (unsigned int nMergeSubSize = nMergeSize >> 1; nMergeSubSize>256; nMergeSubSize = nMergeSubSize >> 1)
+			//	for( int nMergeSubSize=nMergeSize>>1; nMergeSubSize>0; nMergeSubSize=nMergeSubSize>>1 ) 
+			{
+				SortConstants sc;
+				sc.job_params.x = nMergeSubSize;
+				if (nMergeSubSize == nMergeSize >> 1)
+				{
+					sc.job_params.y = (2 * nMergeSubSize - 1);
+					sc.job_params.z = -1;
+				}
+				else
+				{
+					sc.job_params.y = nMergeSubSize;
+					sc.job_params.z = 1;
+				}
+				sc.job_params.w = 0;
+
+				device->UpdateBuffer(sortCB, &sc, threadID);
+				
+				device->Dispatch(numThreadGroups, 1, 1, threadID);
+			}
+
+			device->BindCS(sortInnerCS, threadID);
+			device->Dispatch(numThreadGroups, 1, 1, threadID);
+
+
+			presorted *= 2;
+		}
+
+		device->EventEnd(threadID);
+	}
+
 
 	device->BindCS(nullptr, threadID);
 	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
-
-	device->EventEnd(threadID);
 
 	// Swap CURRENT alivelist with NEW alivelist
 	SwapPtr(aliveList[0], aliveList[1]);
@@ -367,6 +467,7 @@ void wiEmittedParticle::CleanUp()
 	SAFE_DELETE(aliveList[0]);
 	SAFE_DELETE(aliveList[1]);
 	SAFE_DELETE(deadList);
+	SAFE_DELETE(distanceBuffer);
 	SAFE_DELETE(counterBuffer);
 	SAFE_DELETE(indirectBuffers);
 	SAFE_DELETE(constantBuffer);
@@ -391,11 +492,26 @@ void wiEmittedParticle::LoadShaders()
 	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
 	simulateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
 
+	kickoffSortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffSortCS.cso", wiResourceManager::COMPUTESHADER));
+	sortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortCS.cso", wiResourceManager::COMPUTESHADER));
+	sortInnerCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortInnerCS.cso", wiResourceManager::COMPUTESHADER));
+	sortStepCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortStepCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 }
 void wiEmittedParticle::LoadBuffers()
 {
+	GPUBufferDesc bd;
+
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
+	bd.MiscFlags = 0;
+	bd.ByteWidth = sizeof(SortConstants);
+	sortCB = new GPUBuffer;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sortCB);
+
+
 }
 void wiEmittedParticle::SetUpStates()
 {
@@ -498,6 +614,10 @@ void wiEmittedParticle::CleanUpStatic()
 	SAFE_DELETE(simplestPS);
 	SAFE_DELETE(emitCS);
 	SAFE_DELETE(simulateCS);
+	SAFE_DELETE(sortCS);
+	SAFE_DELETE(sortInnerCS);
+	SAFE_DELETE(sortStepCS);
+	SAFE_DELETE(sortCB);
 	SAFE_DELETE(blendStateAlpha);
 	SAFE_DELETE(blendStateAdd);
 	SAFE_DELETE(rasterizerState);

@@ -10,15 +10,18 @@
 
 // Application-side types:
 
-#define matrix XMMATRIX
-#define float4x4 XMFLOAT4X4
-#define float2 XMFLOAT2
-#define float3 XMFLOAT3
-#define float4 XMFLOAT4
-#define uint uint32_t
-#define uint2 XMUINT2
-#define uint3 XMUINT3
-#define uint4 XMUINT4
+typedef XMMATRIX matrix;
+typedef XMFLOAT4X4 float4x4;
+typedef XMFLOAT2 float2;
+typedef XMFLOAT3 float3;
+typedef XMFLOAT4 float4;
+typedef uint32_t uint;
+typedef XMUINT2 uint2;
+typedef XMUINT3 uint3;
+typedef XMUINT4 uint4;
+typedef XMINT2 int2;
+typedef XMINT3 int3;
+typedef XMINT4 int4;
 
 #define CB_GETBINDSLOT(name) __CBUFFERBINDSLOT__##name##__
 #define CBUFFER(name, slot) static const int CB_GETBINDSLOT(name) = slot; struct alignas(16) name

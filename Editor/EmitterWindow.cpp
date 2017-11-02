@@ -39,6 +39,20 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitterComboBox);
 
 
+	sortCheckBox = new wiCheckBox("Sorting Enabled: ");
+	sortCheckBox->SetPos(XMFLOAT2(x, y += step));
+	sortCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SORTING = args.bValue;
+		}
+	});
+	sortCheckBox->SetCheck(false);
+	sortCheckBox->SetTooltip("Enable sorting of the particles. This might slow down performance.");
+	emitterWindow->AddWidget(sortCheckBox);
+
+
 
 	memoryBudgetLabel = new wiLabel("Memory budget: -");
 	memoryBudgetLabel->SetSize(XMFLOAT2(200, 25));
@@ -252,6 +266,7 @@ void EmitterWindow::SetObject(Object* obj)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
+			sortCheckBox->SetCheck(emitter->SORTING);
 			maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
 
 			emitCountSlider->SetValue(emitter->count);

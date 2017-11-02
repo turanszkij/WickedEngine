@@ -618,6 +618,18 @@
     <FxCompile Include="emittedparticle_simulateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="emittedparticle_sortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_sortInnerCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_sortStepCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_kickoffSortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

@@ -1,16 +1,11 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
-#include "ShaderInterop.h"
-#include "ShaderInterop_EmittedParticle.h"
 #include "wiIntersectables.h"
+#include "ShaderInterop_EmittedParticle.h"
 
-struct SkinnedVertex;
-struct Mesh;
 struct Object;
 struct Material;
-struct Light;
-struct Camera;
 
 class wiArchive;
 
@@ -23,12 +18,15 @@ private:
 	wiGraphicsTypes::GPUBuffer* particleBuffer;
 	wiGraphicsTypes::GPUBuffer* aliveList[2];
 	wiGraphicsTypes::GPUBuffer* deadList;
+	wiGraphicsTypes::GPUBuffer* distanceBuffer; // for sorting
 	wiGraphicsTypes::GPUBuffer* counterBuffer;
-	wiGraphicsTypes::GPUBuffer* indirectBuffers; // kickoff, simulation, draw
+	wiGraphicsTypes::GPUBuffer* indirectBuffers; // kickoffUpdate, simulation, draw, kickoffSort
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
 	void CreateSelfBuffers();
 
 	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *emitCS, *simulateCS;
+	static wiGraphicsTypes::ComputeShader		*kickoffSortCS, *sortCS, *sortInnerCS, *sortStepCS;
+	static wiGraphicsTypes::GPUBuffer			*sortCB;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
 	static wiGraphicsTypes::PixelShader			*pixelShader,*simplestPS;
 	static wiGraphicsTypes::BlendState			*blendStateAlpha,*blendStateAdd;
