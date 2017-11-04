@@ -243,6 +243,7 @@ void Renderable3DComponent::Compose()
 
 void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 {
+	wiRenderer::GetDevice()->BindResourceCS(dtDepthCopy.GetTexture(), TEXSLOT_DEPTH, threadID);
 	wiRenderer::UpdateRenderData(threadID);
 	
 	ViewPort viewPort;

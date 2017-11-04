@@ -29,15 +29,15 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 {
 	float4x4	xEmitterWorld;
 
-	uint		xEmitterSortingEnabled;
+	uint		xEmitCount;
 	uint		xEmitterMeshIndexCount;
 	uint		xEmitterMeshVertexPositionStride;
 	uint		xEmitterMeshVertexNormalStride;
 
-	uint		xEmitCount;
 	float		xEmitterRandomness;
 	float		xParticleSize;
 	float		xParticleScaling;
+	float		xParticleRotation;
 
 	float		xParticleRandomFactor;
 	float		xParticleNormalFactor;
@@ -45,8 +45,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xParticleLifeSpanRandomness;
 
 	float		xParticleMotionBlurAmount;
-	float		xParticleRotation;
-	float2		xPadding_EmitterCB;
+	float3		xPadding_EmitterCB;
 };
 
 CBUFFER(SortConstants, 0)

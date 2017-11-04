@@ -53,6 +53,20 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(sortCheckBox);
 
 
+	depthCollisionsCheckBox = new wiCheckBox("Depth Buffer Collisions Enabled: ");
+	depthCollisionsCheckBox->SetPos(XMFLOAT2(x + 300, y));
+	depthCollisionsCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->DEPTHCOLLISIONS = args.bValue;
+		}
+	});
+	depthCollisionsCheckBox->SetCheck(false);
+	depthCollisionsCheckBox->SetTooltip("Enable particle collisions with the depth buffer.");
+	emitterWindow->AddWidget(depthCollisionsCheckBox);
+
+
 
 	memoryBudgetLabel = new wiLabel("Memory budget: -");
 	memoryBudgetLabel->SetSize(XMFLOAT2(200, 25));
@@ -267,6 +281,7 @@ void EmitterWindow::SetObject(Object* obj)
 		if (emitter != nullptr)
 		{
 			sortCheckBox->SetCheck(emitter->SORTING);
+			depthCollisionsCheckBox->SetCheck(emitter->DEPTHCOLLISIONS);
 			maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
 
 			emitCountSlider->SetValue(emitter->count);

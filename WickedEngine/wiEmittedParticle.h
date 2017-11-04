@@ -24,7 +24,7 @@ private:
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
 	void CreateSelfBuffers();
 
-	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *emitCS, *simulateCS;
+	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *emitCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
 	static wiGraphicsTypes::ComputeShader		*kickoffSortCS, *sortCS, *sortInnerCS, *sortStepCS;
 	static wiGraphicsTypes::GPUBuffer			*sortCB;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
@@ -64,6 +64,7 @@ public:
 	ParticleCounters GetDebugData() { return debugData; }
 
 	bool SORTING = false;
+	bool DEPTHCOLLISIONS = false;
 
 	std::string name;
 	Object* object;

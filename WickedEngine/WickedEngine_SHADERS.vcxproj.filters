@@ -639,6 +639,15 @@
     <FxCompile Include="forceFieldVisualizerPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="emittedparticle_simulateCS_SORTING.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_simulateCS_DEPTHCOLLISIONS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

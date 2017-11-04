@@ -31,6 +31,7 @@ public:
 	wiSlider* maxParticlesSlider;
 	wiLabel* memoryBudgetLabel;
 	wiCheckBox* sortCheckBox;
+	wiCheckBox* depthCollisionsCheckBox;
 	wiSlider* emitCountSlider;
 	wiSlider* emitSizeSlider;
 	wiSlider* emitRotationSlider;

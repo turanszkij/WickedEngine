@@ -14,7 +14,8 @@ using namespace wiGraphicsTypes;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader = nullptr, *wiEmittedParticle::simplestPS = nullptr;
-ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateCS = nullptr;
+ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateCS = nullptr,
+				 *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
 ComputeShader		*wiEmittedParticle::kickoffSortCS = nullptr, *wiEmittedParticle::sortCS = nullptr, *wiEmittedParticle::sortInnerCS = nullptr, *wiEmittedParticle::sortStepCS = nullptr;
 GPUBuffer		*wiEmittedParticle::sortCB = nullptr;
 BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
@@ -284,12 +285,11 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	EmittedParticleCB cb;
 	cb.xEmitterWorld = object->world;
-	cb.xEmitterSortingEnabled = SORTING;
+	cb.xEmitCount = (UINT)emit;
 	cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
 	cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
 	cb.xEmitterMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
 	cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
-	cb.xEmitCount = (UINT)emit;
 	cb.xParticleLifeSpan = life / 60.0f;
 	cb.xParticleLifeSpanRandomness = random_life;
 	cb.xParticleNormalFactor = normal_factor;
@@ -331,7 +331,28 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->DispatchIndirect(indirectBuffers, 0, threadID);
 
 	// update CURRENT alive list, write NEW alive list
-	device->BindCS(simulateCS, threadID);
+	if (SORTING)
+	{
+		if (DEPTHCOLLISIONS)
+		{
+			device->BindCS(simulateCS_SORTING_DEPTHCOLLISIONS, threadID);
+		}
+		else
+		{
+			device->BindCS(simulateCS_SORTING, threadID);
+		}
+	}
+	else
+	{
+		if (DEPTHCOLLISIONS)
+		{
+			device->BindCS(simulateCS_DEPTHCOLLISIONS, threadID);
+		}
+		else
+		{
+			device->BindCS(simulateCS, threadID);
+		}
+	}
 	device->DispatchIndirect(indirectBuffers, sizeof(wiGraphicsTypes::IndirectDispatchArgs), threadID);
 
 	device->EventEnd(threadID);
@@ -491,6 +512,9 @@ void wiEmittedParticle::LoadShaders()
 	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
 	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
 	simulateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
+	simulateCS_SORTING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_SORTING.cso", wiResourceManager::COMPUTESHADER));
+	simulateCS_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
+	simulateCS_SORTING_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
 
 	kickoffSortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffSortCS.cso", wiResourceManager::COMPUTESHADER));
 	sortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortCS.cso", wiResourceManager::COMPUTESHADER));
@@ -614,6 +638,9 @@ void wiEmittedParticle::CleanUpStatic()
 	SAFE_DELETE(simplestPS);
 	SAFE_DELETE(emitCS);
 	SAFE_DELETE(simulateCS);
+	SAFE_DELETE(simulateCS_SORTING);
+	SAFE_DELETE(simulateCS_DEPTHCOLLISIONS);
+	SAFE_DELETE(simulateCS_SORTING_DEPTHCOLLISIONS);
 	SAFE_DELETE(sortCS);
 	SAFE_DELETE(sortInnerCS);
 	SAFE_DELETE(sortStepCS);
@@ -659,6 +686,10 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 			archive >> MAX_PARTICLES;
 			archive >> SORTING;
 		}
+		if (archive.GetVersion() >= 12)
+		{
+			archive >> DEPTHCOLLISIONS;
+		}
 
 	}
 	else
@@ -680,6 +711,10 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		{
 			archive << MAX_PARTICLES;
 			archive << SORTING;
+		}
+		if (archive.GetVersion() >= 12)
+		{
+			archive << DEPTHCOLLISIONS;
 		}
 	}
 }
