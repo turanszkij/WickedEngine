@@ -70,3 +70,4 @@ Temporal Antialiasing
 Tiled deferred rendering
 Huge draw distance support with reversed Z-buffer
 Force Fields GPU simulation
+Particle - Depth Buffer collisions
