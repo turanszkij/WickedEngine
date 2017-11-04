@@ -56,7 +56,7 @@ float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false
-, wiRenderer::debugEnvProbes = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
+, wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
 , wiRenderer::advancedRefractions = false;
 float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
@@ -809,6 +809,8 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_WATER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldPointVisualizerVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldPlaneVisualizerVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
 
 	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
@@ -873,6 +875,7 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
 
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -1997,6 +2000,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				entityArray[entityCounter].positionWS = force->translation;
 				entityArray[entityCounter].energy = force->gravity;
 				entityArray[entityCounter].range = 1.0f / max(0.0001f, force->range); // avoid division in shader
+				entityArray[entityCounter].coneAngleCos = force->range; // this will be the real range in the less common shaders...
 				// The default planar force field is facing upwards, and thus the pull direction is downwards:
 				XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&force->world))));
 
@@ -2012,6 +2016,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			resourceBuffers[RBTYPE_ENTITYARRAY],
 			resourceBuffers[RBTYPE_MATRIXARRAY],
 		};
+		GetDevice()->BindResourcesVS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 		GetDevice()->BindResourcesPS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 		GetDevice()->BindResourcesCS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
@@ -2788,6 +2793,52 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 				GetDevice()->BindIndexBuffer(&x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
 
 				GetDevice()->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
+			}
+		}
+
+		GetDevice()->EventEnd(threadID);
+	}
+}
+void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	if (debugForceFields) {
+		GetDevice()->EventBegin("DebugForceFields", threadID);
+
+		GetDevice()->BindVertexLayout(nullptr, threadID);
+
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+
+
+		GetDevice()->BindPS(pixelShaders[PSTYPE_FORCEFIELDVISUALIZER], threadID);
+
+		MiscCB sb;
+		uint32_t i = 0;
+		for (auto& model : GetScene().models)
+		{
+			for (ForceField* force : model->forces)
+			{
+				sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+				sb.mColor = XMFLOAT4(camera->translation.x, camera->translation.y, camera->translation.z, (float)i);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+				switch (force->type)
+				{
+				case ENTITY_TYPE_FORCEFIELD_POINT:
+					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+					GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+					GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT], threadID);
+					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+					break;
+				case ENTITY_TYPE_FORCEFIELD_PLANE:
+					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+					GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
+					GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE], threadID);
+					GetDevice()->Draw(14, 0, threadID); // box
+					break;
+				}
+
+				++i;
 			}
 		}
 

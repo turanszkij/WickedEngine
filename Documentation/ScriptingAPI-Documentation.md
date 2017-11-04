@@ -123,6 +123,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetShadowPropsCube(int resolution, int count)
 - SetDebugPartitionTreeEnabled(bool enabled)
 - SetDebugBonesEnabled(bool enabled)
+- SetDebugEittersEnabled(bool enabled)
+- SetDebugForceFieldsEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)

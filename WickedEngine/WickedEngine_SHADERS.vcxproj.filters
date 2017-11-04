@@ -630,6 +630,15 @@
     <FxCompile Include="emittedparticle_kickoffSortCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="forceFieldPlaneVisualizerVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="forceFieldPointVisualizerVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="forceFieldVisualizerPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

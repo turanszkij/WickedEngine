@@ -443,6 +443,24 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
+	int SetDebugEmittersEnabled(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::SetToDrawDebugEmitters(wiLua::SGetBool(L, 1));
+		}
+		return 0;
+	}
+	int SetDebugForceFieldsEnabled(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::SetToDrawDebugForceFields(wiLua::SGetBool(L, 1));
+		}
+		return 0;
+	}
 	int SetVSyncEnabled(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -700,6 +718,8 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
+			wiLua::GetGlobal()->RegisterFunc("SetDebugEmittersEnabled", SetDebugEmittersEnabled);
+			wiLua::GetGlobal()->RegisterFunc("SetDebugForceFieldsEnabled", SetDebugForceFieldsEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetPhysicsParams", SetPhysicsParams);
 			wiLua::GetGlobal()->RegisterFunc("SetResolution", SetResolution);

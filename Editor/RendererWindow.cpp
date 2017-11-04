@@ -14,11 +14,11 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(400, 1000));
+	rendererWindow->SetSize(XMFLOAT2(640, 860));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
-	float x = 250, y = 20, step = 30;
+	float x = 260, y = 20, step = 30;
 
 	vsyncCheckBox = new wiCheckBox("VSync: ");
 	vsyncCheckBox->SetTooltip("Toggle vertical sync");
@@ -127,36 +127,6 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	rendererWindow->AddWidget(specularAASlider);
 
-	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
-	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
-	partitionBoxesCheckBox->SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
-	partitionBoxesCheckBox->SetPos(XMFLOAT2(x, y += step));
-	partitionBoxesCheckBox->OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
-	});
-	partitionBoxesCheckBox->SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
-	rendererWindow->AddWidget(partitionBoxesCheckBox);
-
-	boneLinesCheckBox = new wiCheckBox("Bone line visualizer: ");
-	boneLinesCheckBox->SetTooltip("Visualize bones of armatures");
-	boneLinesCheckBox->SetScriptTip("SetDebugBonesEnabled(bool enabled)");
-	boneLinesCheckBox->SetPos(XMFLOAT2(x, y += step));
-	boneLinesCheckBox->OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugBoneLines(args.bValue);
-	});
-	boneLinesCheckBox->SetCheck(wiRenderer::GetToDrawDebugBoneLines());
-	rendererWindow->AddWidget(boneLinesCheckBox);
-
-	debugEmittersCheckBox = new wiCheckBox("Emitter visualizer: ");
-	debugEmittersCheckBox->SetTooltip("Visualize emitters");
-	debugEmittersCheckBox->SetScriptTip("SetDebugEmitters(bool enabled)");
-	debugEmittersCheckBox->SetPos(XMFLOAT2(x, y += step));
-	debugEmittersCheckBox->OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugEmitters(args.bValue);
-	});
-	debugEmittersCheckBox->SetCheck(wiRenderer::GetToDrawDebugEmitters());
-	rendererWindow->AddWidget(debugEmittersCheckBox);
-
 	wireFrameCheckBox = new wiCheckBox("Render Wireframe: ");
 	wireFrameCheckBox->SetTooltip("Visualize the scene as a wireframe");
 	wireFrameCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -203,24 +173,6 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	advancedRefractionsCheckBox->SetCheck(wiRenderer::GetAdvancedRefractionsEnabled());
 	rendererWindow->AddWidget(advancedRefractionsCheckBox);
 	advancedRefractionsCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT));
-
-	envProbesCheckBox = new wiCheckBox("Env probe visualizer: ");
-	envProbesCheckBox->SetTooltip("Toggle visualization of environment probes as reflective spheres");
-	envProbesCheckBox->SetPos(XMFLOAT2(x, y += step));
-	envProbesCheckBox->OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugEnvProbes(args.bValue);
-	});
-	envProbesCheckBox->SetCheck(wiRenderer::GetToDrawDebugEnvProbes());
-	rendererWindow->AddWidget(envProbesCheckBox);
-
-	gridHelperCheckBox = new wiCheckBox("Grid helper: ");
-	gridHelperCheckBox->SetTooltip("Toggle showing of unit visualizer grid in the world origin");
-	gridHelperCheckBox->SetPos(XMFLOAT2(x, y += step));
-	gridHelperCheckBox->OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawGridHelper(args.bValue);
-	});
-	gridHelperCheckBox->SetCheck(wiRenderer::GetToDrawGridHelper());
-	rendererWindow->AddWidget(gridHelperCheckBox);
 
 
 	pickTypeObjectCheckBox = new wiCheckBox("Pick Objects: ");
@@ -452,6 +404,69 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 		wiRenderer::GetDevice()->CreateSamplerState(&desc, wiRenderer::samplers[SSLOT_OBJECTSHADER]);
 	});
 	rendererWindow->AddWidget(mipLodBiasSlider);
+
+
+
+	// Visualizer toggles:
+	x = 600, y = 20;
+
+	partitionBoxesCheckBox = new wiCheckBox("SPTree visualizer: ");
+	partitionBoxesCheckBox->SetTooltip("Visualize the world space partitioning tree as boxes");
+	partitionBoxesCheckBox->SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
+	partitionBoxesCheckBox->SetPos(XMFLOAT2(x, y += step));
+	partitionBoxesCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
+	});
+	partitionBoxesCheckBox->SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
+	rendererWindow->AddWidget(partitionBoxesCheckBox);
+
+	boneLinesCheckBox = new wiCheckBox("Bone line visualizer: ");
+	boneLinesCheckBox->SetTooltip("Visualize bones of armatures");
+	boneLinesCheckBox->SetScriptTip("SetDebugBonesEnabled(bool enabled)");
+	boneLinesCheckBox->SetPos(XMFLOAT2(x, y += step));
+	boneLinesCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawDebugBoneLines(args.bValue);
+	});
+	boneLinesCheckBox->SetCheck(wiRenderer::GetToDrawDebugBoneLines());
+	rendererWindow->AddWidget(boneLinesCheckBox);
+
+	debugEmittersCheckBox = new wiCheckBox("Emitter visualizer: ");
+	debugEmittersCheckBox->SetTooltip("Visualize emitters");
+	debugEmittersCheckBox->SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
+	debugEmittersCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugEmittersCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawDebugEmitters(args.bValue);
+	});
+	debugEmittersCheckBox->SetCheck(wiRenderer::GetToDrawDebugEmitters());
+	rendererWindow->AddWidget(debugEmittersCheckBox);
+
+	debugForceFieldsCheckBox = new wiCheckBox("Force Field visualizer: ");
+	debugForceFieldsCheckBox->SetTooltip("Visualize force fields");
+	debugForceFieldsCheckBox->SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
+	debugForceFieldsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugForceFieldsCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawDebugForceFields(args.bValue);
+	});
+	debugForceFieldsCheckBox->SetCheck(wiRenderer::GetToDrawDebugForceFields());
+	rendererWindow->AddWidget(debugForceFieldsCheckBox);
+
+	envProbesCheckBox = new wiCheckBox("Env probe visualizer: ");
+	envProbesCheckBox->SetTooltip("Toggle visualization of environment probes as reflective spheres");
+	envProbesCheckBox->SetPos(XMFLOAT2(x, y += step));
+	envProbesCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawDebugEnvProbes(args.bValue);
+	});
+	envProbesCheckBox->SetCheck(wiRenderer::GetToDrawDebugEnvProbes());
+	rendererWindow->AddWidget(envProbesCheckBox);
+
+	gridHelperCheckBox = new wiCheckBox("Grid helper: ");
+	gridHelperCheckBox->SetTooltip("Toggle showing of unit visualizer grid in the world origin");
+	gridHelperCheckBox->SetPos(XMFLOAT2(x, y += step));
+	gridHelperCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawGridHelper(args.bValue);
+	});
+	gridHelperCheckBox->SetCheck(wiRenderer::GetToDrawGridHelper());
+	rendererWindow->AddWidget(gridHelperCheckBox);
 
 
 
