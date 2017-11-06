@@ -22,10 +22,6 @@ BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::bl
 RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
 DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
 
-
-static const int NUM_POS_SAMPLES = 30;
-static const float INV_NUM_POS_SAMPLES = 1.0f / NUM_POS_SAMPLES;
-
 wiEmittedParticle::wiEmittedParticle()
 {
 	name = "";

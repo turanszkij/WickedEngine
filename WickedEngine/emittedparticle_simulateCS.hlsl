@@ -21,18 +21,11 @@ struct LDS_ForceField
 	float3 normal;
 };
 groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
-groupshared uint aliveParticleCount = 0;
 
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 {
-	// Read alive particle count and store in LDS:
-	if (Gid == 0)
-	{
-		aliveParticleCount = counterBuffer[0].aliveCount;
-	}
-
 	// Load the forcefields into LDS:
 	uint numForceFields = min(g_xFrame_ForceFieldCount, NUM_LDS_FORCEFIELDS);
 	if (Gid < numForceFields)
@@ -49,7 +42,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 	GroupMemoryBarrierWithGroupSync();
 
-	if (DTid.x < aliveParticleCount)
+	if (DTid.x < counterBuffer[0].aliveCount)
 	{
 		const float dt = g_xFrame_DeltaTime;
 
@@ -80,6 +73,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 				particle.velocity += force * dt;
 			}
+
 
 #ifdef DEPTHCOLLISIONS
 
@@ -132,13 +126,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			// add to new alive list:
 			uint newAliveIndex;
 			indirectBuffers.InterlockedAdd(24, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
-			aliveBuffer_NEW[newAliveIndex / 6] = particleIndex; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
+			newAliveIndex /= 6; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
+			aliveBuffer_NEW[newAliveIndex] = particleIndex;
 
 #ifdef SORTING
 			// store squared distance to main camera:
 			float3 eyeVector = particle.position - g_xFrame_MainCamera_CamPos;
 			float distSQ = dot(eyeVector, eyeVector);
-			distanceBuffer[newAliveIndex / 6] = distSQ;
+			distanceBuffer[newAliveIndex] = distSQ;
 #endif // SORTING
 
 		}
