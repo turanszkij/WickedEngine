@@ -5803,7 +5803,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 				}
 			}
 		}
-		if (pickType & PICK_DECAL)
+		if (pickType & PICK_FORCEFIELD)
 		{
 			for (auto& force : model->forces)
 			{

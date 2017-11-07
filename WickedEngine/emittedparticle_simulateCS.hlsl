@@ -26,6 +26,8 @@ groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 {
+	uint aliveCount = counterBuffer[0].aliveCount;
+
 	// Load the forcefields into LDS:
 	uint numForceFields = min(g_xFrame_ForceFieldCount, NUM_LDS_FORCEFIELDS);
 	if (Gid < numForceFields)
@@ -42,7 +44,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 	GroupMemoryBarrierWithGroupSync();
 
-	if (DTid.x < counterBuffer[0].aliveCount)
+	if (DTid.x < aliveCount)
 	{
 		const float dt = g_xFrame_DeltaTime;
 
