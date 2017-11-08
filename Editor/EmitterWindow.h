@@ -28,10 +28,11 @@ public:
 	wiWindow*	emitterWindow;
 
 	wiComboBox* emitterComboBox;
+	wiLabel* infoLabel;
 	wiSlider* maxParticlesSlider;
-	wiLabel* memoryBudgetLabel;
 	wiCheckBox* sortCheckBox;
 	wiCheckBox* depthCollisionsCheckBox;
+	wiCheckBox* debugCheckBox;
 	wiSlider* emitCountSlider;
 	wiSlider* emitSizeSlider;
 	wiSlider* emitRotationSlider;
@@ -42,7 +43,5 @@ public:
 	wiSlider* emitLifeRandomnessSlider;
 	wiSlider* emitMotionBlurSlider;
 
-	wiCheckBox* debugCheckBox;
-	wiLabel* debugDataLabel;
 };
 

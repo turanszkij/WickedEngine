@@ -27,7 +27,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 
 	emitterComboBox = new wiComboBox("Emitter: ");
 	emitterComboBox->SetPos(XMFLOAT2(x, y += step));
-	emitterComboBox->SetSize(XMFLOAT2(300, 25));
+	emitterComboBox->SetSize(XMFLOAT2(360, 25));
 	emitterComboBox->OnSelect([&](wiEventArgs args) {
 		if (object != nullptr && args.iValue >= 0)
 		{
@@ -54,7 +54,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 
 
 	depthCollisionsCheckBox = new wiCheckBox("Depth Buffer Collisions Enabled: ");
-	depthCollisionsCheckBox->SetPos(XMFLOAT2(x + 300, y));
+	depthCollisionsCheckBox->SetPos(XMFLOAT2(x + 250, y));
 	depthCollisionsCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -67,16 +67,30 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(depthCollisionsCheckBox);
 
 
+	debugCheckBox = new wiCheckBox("DEBUG: ");
+	debugCheckBox->SetPos(XMFLOAT2(x + 350, y));
+	debugCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->DEBUG = args.bValue;
+		}
+	});
+	debugCheckBox->SetCheck(false);
+	debugCheckBox->SetTooltip("Enable debug info for the emitter. This involves reading back GPU data, so rendering can slow down.");
+	emitterWindow->AddWidget(debugCheckBox);
 
-	memoryBudgetLabel = new wiLabel("Memory budget: -");
-	memoryBudgetLabel->SetSize(XMFLOAT2(200, 25));
-	memoryBudgetLabel->SetPos(XMFLOAT2(x, y += step));
-	emitterWindow->AddWidget(memoryBudgetLabel);
+
+
+	infoLabel = new wiLabel("EmitterInfo");
+	infoLabel->SetSize(XMFLOAT2(380, 140));
+	infoLabel->SetPos(XMFLOAT2(x, y += step));
+	emitterWindow->AddWidget(infoLabel);
 
 
 	maxParticlesSlider = new wiSlider(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
-	maxParticlesSlider->SetSize(XMFLOAT2(200, 30));
-	maxParticlesSlider->SetPos(XMFLOAT2(x, y += step));
+	maxParticlesSlider->SetSize(XMFLOAT2(360, 30));
+	maxParticlesSlider->SetPos(XMFLOAT2(x, y += step + 140));
 	maxParticlesSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -92,8 +106,8 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////
 
-	emitCountSlider = new wiSlider(0.0f, 1000.0f, 1.0f, 100000, "Emit count per sec: ");
-	emitCountSlider->SetSize(XMFLOAT2(200, 30));
+	emitCountSlider = new wiSlider(0.0f, 10000.0f, 1.0f, 100000, "Emit count per sec: ");
+	emitCountSlider->SetSize(XMFLOAT2(360, 30));
 	emitCountSlider->SetPos(XMFLOAT2(x, y += step));
 	emitCountSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -107,7 +121,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitCountSlider);
 
 	emitSizeSlider = new wiSlider(0.01f, 10.0f, 1.0f, 100000, "Size: ");
-	emitSizeSlider->SetSize(XMFLOAT2(200, 30));
+	emitSizeSlider->SetSize(XMFLOAT2(360, 30));
 	emitSizeSlider->SetPos(XMFLOAT2(x, y += step));
 	emitSizeSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -121,7 +135,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitSizeSlider);
 
 	emitRotationSlider = new wiSlider(0.0f, 1.0f, 0.0f, 100000, "Rotation: ");
-	emitRotationSlider->SetSize(XMFLOAT2(200, 30));
+	emitRotationSlider->SetSize(XMFLOAT2(360, 30));
 	emitRotationSlider->SetPos(XMFLOAT2(x, y += step));
 	emitRotationSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -135,7 +149,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitRotationSlider);
 
 	emitNormalSlider = new wiSlider(0.0f, 100.0f, 1.0f, 100000, "Normal factor: ");
-	emitNormalSlider->SetSize(XMFLOAT2(200, 30));
+	emitNormalSlider->SetSize(XMFLOAT2(360, 30));
 	emitNormalSlider->SetPos(XMFLOAT2(x, y += step));
 	emitNormalSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -149,7 +163,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitNormalSlider);
 
 	emitScalingSlider = new wiSlider(0.0f, 100.0f, 1.0f, 100000, "Scaling: ");
-	emitScalingSlider->SetSize(XMFLOAT2(200, 30));
+	emitScalingSlider->SetSize(XMFLOAT2(360, 30));
 	emitScalingSlider->SetPos(XMFLOAT2(x, y += step));
 	emitScalingSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -163,7 +177,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitScalingSlider);
 
 	emitLifeSlider = new wiSlider(0.0f, 1000.0f, 1.0f, 100000, "Life span: ");
-	emitLifeSlider->SetSize(XMFLOAT2(200, 30));
+	emitLifeSlider->SetSize(XMFLOAT2(360, 30));
 	emitLifeSlider->SetPos(XMFLOAT2(x, y += step));
 	emitLifeSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -177,7 +191,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitLifeSlider);
 
 	emitRandomnessSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Randomness: ");
-	emitRandomnessSlider->SetSize(XMFLOAT2(200, 30));
+	emitRandomnessSlider->SetSize(XMFLOAT2(360, 30));
 	emitRandomnessSlider->SetPos(XMFLOAT2(x, y += step));
 	emitRandomnessSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -191,7 +205,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitRandomnessSlider);
 
 	emitLifeRandomnessSlider = new wiSlider(0.0f, 2.0f, 0.0f, 100000, "Life randomness: ");
-	emitLifeRandomnessSlider->SetSize(XMFLOAT2(200, 30));
+	emitLifeRandomnessSlider->SetSize(XMFLOAT2(360, 30));
 	emitLifeRandomnessSlider->SetPos(XMFLOAT2(x, y += step));
 	emitLifeRandomnessSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -205,7 +219,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitLifeRandomnessSlider);
 
 	emitMotionBlurSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Motion blur: ");
-	emitMotionBlurSlider->SetSize(XMFLOAT2(200, 30));
+	emitMotionBlurSlider->SetSize(XMFLOAT2(360, 30));
 	emitMotionBlurSlider->SetPos(XMFLOAT2(x, y += step));
 	emitMotionBlurSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
@@ -217,29 +231,6 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitMotionBlurSlider->SetEnabled(false);
 	emitMotionBlurSlider->SetTooltip("Set the motion blur amount for the particle system.");
 	emitterWindow->AddWidget(emitMotionBlurSlider);
-
-	y += 30;
-
-	//////////////////////////////////////////////////////////////////////////////////////////////////
-
-	debugCheckBox = new wiCheckBox("DEBUG: ");
-	debugCheckBox->SetPos(XMFLOAT2(x, y += step));
-	debugCheckBox->OnClick([&](wiEventArgs args) {
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
-		{
-			emitter->DEBUG = args.bValue;
-		}
-	});
-	debugCheckBox->SetCheck(false);
-	debugCheckBox->SetTooltip("Enable debug info for the emitter. This involves reading back GPU data, so rendering can slow down.");
-	emitterWindow->AddWidget(debugCheckBox);
-
-	debugDataLabel = new wiLabel("EmitterDebugDataLabel");
-	debugDataLabel->SetText("Enable DEBUG to view debugging data");
-	debugDataLabel->SetSize(XMFLOAT2(300, 100));
-	debugDataLabel->SetPos(XMFLOAT2(x + step, y));
-	emitterWindow->AddWidget(debugDataLabel);
 
 
 	emitterWindow->Translate(XMFLOAT3(200, 50, 0));
@@ -299,7 +290,7 @@ void EmitterWindow::SetObject(Object* obj)
 	}
 	else
 	{
-		memoryBudgetLabel->SetText("Memory Budget: -");
+		infoLabel->SetText("No emitter object selected.");
 
 		emitterWindow->SetEnabled(false);
 	}
@@ -336,23 +327,27 @@ void EmitterWindow::UpdateData()
 		return;
 	}
 
+
+	stringstream ss("");
+	ss.precision(2);
+	ss << "Emitter name: " << emitter->name << endl;
+	ss << "Emitter Object: " << (emitter->object != nullptr ? emitter->object->name : "ERROR: NO EMITTER OBJECT") << endl;
+	ss << "Emitter Material: " << (emitter->material != nullptr ? emitter->material->name : "ERROR: NO EMITTER MATERIAL") << endl;
+	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB" << endl;
+	ss << endl;
+
 	if (emitter->DEBUG)
 	{
 		auto data = emitter->GetDebugData();
 
-		stringstream ss("");
 		ss << "Alive Particle Count = " << data.aliveCount << endl;
 		ss << "Dead Particle Count = " << data.deadCount << endl;
 		ss << "GPU Emit count = " << data.realEmitCount << endl;
-		debugDataLabel->SetText(ss.str());
 	}
 	else
 	{
-		debugDataLabel->SetText("Enable DEBUG to view debugging data");
+		ss << "For additional data, enable [DEBUG]" << endl;
 	}
 
-	stringstream ss("");
-	ss.precision(2);
-	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB";
-	memoryBudgetLabel->SetText(ss.str());
+	infoLabel->SetText(ss.str());
 }

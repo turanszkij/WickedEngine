@@ -44,6 +44,7 @@ public:
 	wiCheckBox* pickTypeLightCheckBox;
 	wiCheckBox* pickTypeDecalCheckBox;
 	wiCheckBox* pickTypeForceFieldCheckBox;
+	wiCheckBox* pickTypeEmitterCheckBox;
 	wiSlider*	speedMultiplierSlider;
 	wiComboBox* shadowProps2DComboBox;
 	wiComboBox* shadowPropsCubeComboBox;

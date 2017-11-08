@@ -14,7 +14,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 860));
+	rendererWindow->SetSize(XMFLOAT2(640, 900));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -204,6 +204,12 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	pickTypeForceFieldCheckBox->SetPos(XMFLOAT2(x, y += step));
 	pickTypeForceFieldCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeForceFieldCheckBox);
+
+	pickTypeEmitterCheckBox = new wiCheckBox("Pick Emitters: ");
+	pickTypeEmitterCheckBox->SetTooltip("Enable if you want to pick emitters with the pointer");
+	pickTypeEmitterCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeEmitterCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
 
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
@@ -506,6 +512,10 @@ int RendererWindow::GetPickType()
 	if (pickTypeForceFieldCheckBox->GetCheck())
 	{
 		pickType |= PICK_FORCEFIELD;
+	}
+	if (pickTypeEmitterCheckBox->GetCheck())
+	{
+		pickType |= PICK_EMITTER;
 	}
 
 	return pickType;

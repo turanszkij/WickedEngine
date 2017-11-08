@@ -210,6 +210,24 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(colorPicker);
 
 
+	blendModeComboBox = new wiComboBox("Blend mode: ");
+	blendModeComboBox->SetPos(XMFLOAT2(x, y += step));
+	blendModeComboBox->SetSize(XMFLOAT2(100, 25));
+	blendModeComboBox->OnSelect([&](wiEventArgs args) {
+		if (material != nullptr && args.iValue >= 0)
+		{
+			material->blendFlag = static_cast<BLENDMODE>(args.iValue);
+		}
+	});
+	blendModeComboBox->AddItem("Opaque");
+	blendModeComboBox->AddItem("Alpha");
+	blendModeComboBox->AddItem("Premultiplied");
+	blendModeComboBox->AddItem("Additive");
+	blendModeComboBox->SetEnabled(false);
+	blendModeComboBox->SetTooltip("Set the blend mode of the material.");
+	materialWindow->AddWidget(blendModeComboBox);
+
+
 	// Textures:
 
 	x = 10;
@@ -412,6 +430,7 @@ void MaterialWindow::SetMaterial(Material* mat)
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
 		colorPicker->SetEnabled(true);
+		blendModeComboBox->SetSelected((int)material->blendFlag);
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->textureName));
 		texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));

@@ -8,6 +8,7 @@ class wiCheckBox;
 class wiSlider;
 class wiColorPicker;
 class wiButton;
+class wiComboBox;
 
 class MaterialWindow
 {
@@ -41,6 +42,7 @@ public:
 	wiSlider*	texMulSliderY;
 	wiColorPicker* colorPicker;
 	wiSlider*	alphaRefSlider;
+	wiComboBox* blendModeComboBox;
 
 	wiLabel*	texture_baseColor_Label;
 	wiLabel*	texture_normal_Label;

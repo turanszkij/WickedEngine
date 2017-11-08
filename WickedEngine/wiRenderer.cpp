@@ -5819,6 +5819,27 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 				}
 			}
 		}
+		if (pickType & PICK_EMITTER)
+		{
+			for (auto& object : model->objects)
+			{
+				if (object->eParticleSystems.empty())
+				{
+					continue;
+				}
+
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&object->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(object->translation, cam->translation) * 0.05f)
+				{
+					Picked pick = Picked();
+					pick.transform = object;
+					pick.object = object;
+					pick.distance = wiMath::Distance(object->translation, ray.origin) * 0.95f;
+					pickPoints.push_back(pick);
+				}
+			}
+		}
 	}
 	if (pickType & PICK_ENVPROBE)
 	{
@@ -5904,7 +5925,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		{
 			continue;
 		}
-		if (onlyVisible && object->IsOccluded())
+		if (onlyVisible && object->IsOccluded() && GetOcclusionCullingEnabled())
 		{
 			continue;
 		}
