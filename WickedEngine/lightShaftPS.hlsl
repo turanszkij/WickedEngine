@@ -5,10 +5,10 @@ static const int NUM_SAMPLES = 35;
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
-	float4 color = float4(0,0,0,0);
+	float3 color = float3(0,0,0);
 	float numSampling = 0.0f;
 
-	color += xTexture.Sample(Sampler,PSIn.tex);
+	color += xTexture.Sample(Sampler,PSIn.tex).rgb;
 	numSampling++;
 
 	[branch]if(xPPParams1[0] || xPPParams1[1]) //LIGHTSHAFTS
@@ -20,15 +20,15 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 		float illuminationDecay = 1.0f;
 		
 		for( int i=0; i<NUM_SAMPLES; i++){
-			PSIn.tex.xy-=deltaTexCoord;
-			float3 sample = xTexture.SampleLevel(Sampler,PSIn.tex.xy,0).rgb;
-			sample *= illuminationDecay*xPPParams0[1];
-			color.xyz+=sample;
+			PSIn.tex.xy -= deltaTexCoord;
+			float3 sam = xTexture.SampleLevel(Sampler, PSIn.tex.xy, 0).rgb;
+			sam *= illuminationDecay*xPPParams0[1];
+			color.rgb += sam;
 			illuminationDecay *= xPPParams0[2];
 		}
 
 		color*= xPPParams0[3];
 	}
 
-	return color/numSampling;
+	return float4(color / numSampling, 1);
 }

@@ -355,7 +355,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 		rtSun[1].Activate(threadID); {
 			wiImageEffects fxs = fx;
-			fxs.blendFlag = BLENDMODE_ADDITIVE;
+			fxs.blendFlag = BLENDMODE_OPAQUE;
 			XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, 
 				(float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 1.0f, 
 				wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
