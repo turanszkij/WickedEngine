@@ -13,6 +13,10 @@ uint64_t __archiveVersionBarrier = 1;
 
 // version history is logged in ArchiveVersionHistory.txt file!
 
+wiArchive::wiArchive()
+{
+	CreateEmpty();
+}
 wiArchive::wiArchive(const std::string& fileName, bool readMode):readMode(readMode),pos(0),DATA(nullptr),dataSize(0),fileName(fileName)
 {
 	if (!fileName.empty())
@@ -47,10 +51,7 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode):readMode(readMo
 		}
 		else
 		{
-			version = __archiveVersion;
-			dataSize = 128; // this will grow if necessary anyway...
-			DATA = new char[dataSize];
-			(*this) << version;
+			CreateEmpty();
 		}
 	}
 }
@@ -59,6 +60,32 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode):readMode(readMo
 wiArchive::~wiArchive()
 {
 	Close();
+}
+
+void wiArchive::CreateEmpty()
+{
+	readMode = false;
+	pos = 0;
+
+	version = __archiveVersion;
+	dataSize = 128; // this will grow if necessary anyway...
+	DATA = new char[dataSize];
+	(*this) << version;
+}
+
+void wiArchive::SetReadModeAndResetPos(bool isReadMode)
+{
+	readMode = isReadMode; 
+	pos = 0;
+
+	if (readMode)
+	{
+		(*this) >> version;
+	}
+	else
+	{
+		(*this) << version;
+	}
 }
 
 bool wiArchive::IsOpen()

@@ -18,9 +18,6 @@
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 
-// This should be written into any archive operation for future bacwards compatibility!
-int __editorVersion = 0;
-
 using namespace std;
 using namespace wiGraphicsTypes;
 using namespace wiRectPacker;
@@ -191,15 +188,14 @@ enum EDITORSTENCILREF
 };
 
 
-wiArchive *clipboard_write = nullptr, *clipboard_read = nullptr;
+wiArchive *clipboard = nullptr;
 enum ClipboardItemType
 {
 	CLIPBOARD_MODEL,
 	CLIPBOARD_EMPTY
 };
 
-wiArchive* history = nullptr;
-int historyCount = 0;
+vector<wiArchive*> history;
 int historyPos = -1;
 enum HistoryOperationType
 {
@@ -209,7 +205,7 @@ enum HistoryOperationType
 	HISTORYOP_NONE
 };
 void ResetHistory();
-string AdvanceHistory();
+wiArchive* AdvanceHistory();
 void ConsumeHistoryOperation(bool undo);
 
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
@@ -1109,21 +1105,20 @@ void EditorComponent::Update(float dt)
 		// Delete
 		if (wiInputManager::GetInstance()->press(VK_DELETE))
 		{
-			history = new wiArchive(AdvanceHistory(), false);
-			*history << __editorVersion;
-			*history << HISTORYOP_DELETE;
-			*history << selected.size();
+			wiArchive* archive = AdvanceHistory();
+			*archive << HISTORYOP_DELETE;
+			*archive << selected.size();
 			for (auto& x : selected)
 			{
 				if (x->object != nullptr)
 				{
-					*history << true;
-					x->object->Serialize(*history);
-					x->object->mesh->Serialize(*history);
-					*history << x->object->mesh->subsets.size();
+					*archive << true;
+					x->object->Serialize(*archive);
+					x->object->mesh->Serialize(*archive);
+					*archive << x->object->mesh->subsets.size();
 					for (auto& y : x->object->mesh->subsets)
 					{
-						y.material->Serialize(*history);
+						y.material->Serialize(*archive);
 					}
 
 					wiRenderer::Remove(x->object);
@@ -1132,13 +1127,13 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					*history << false;
+					*archive << false;
 				}
 
 				if (x->light != nullptr)
 				{
-					*history << true;
-					x->light->Serialize(*history);
+					*archive << true;
+					x->light->Serialize(*archive);
 
 					wiRenderer::Remove(x->light);
 					SAFE_DELETE(x->light);
@@ -1146,13 +1141,13 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					*history << false;
+					*archive << false;
 				}
 
 				if (x->decal != nullptr)
 				{
-					*history << true;
-					x->decal->Serialize(*history);
+					*archive << true;
+					x->decal->Serialize(*archive);
 
 					wiRenderer::Remove(x->decal);
 					SAFE_DELETE(x->decal);
@@ -1160,13 +1155,13 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					*history << false;
+					*archive << false;
 				}
 
 				if (x->forceField != nullptr)
 				{
-					*history << true;
-					x->forceField->Serialize(*history);
+					*archive << true;
+					x->forceField->Serialize(*archive);
 
 					wiRenderer::Remove(x->forceField);
 					SAFE_DELETE(x->forceField);
@@ -1174,13 +1169,13 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					*history << false;
+					*archive << false;
 				}
 
 				if (x->transform != nullptr)
 				{
-					*history << true;
-					*history << x->transform->GetID();
+					*archive << true;
+					*archive << x->transform->GetID();
 
 					EnvironmentProbe* envProbe = dynamic_cast<EnvironmentProbe*>(x->transform);
 					if (envProbe != nullptr)
@@ -1191,10 +1186,9 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					*history << false;
+					*archive << false;
 				}
 			}
-			SAFE_DELETE(history);
 			ClearSelected();
 		}
 		// Control operations...
@@ -1203,9 +1197,9 @@ void EditorComponent::Update(float dt)
 			// Copy
 			if (wiInputManager::GetInstance()->press('C'))
 			{
-				clipboard_write = new wiArchive("temp/clipboard", false);
-				*clipboard_write << __editorVersion;
-				*clipboard_write << CLIPBOARD_MODEL;
+				SAFE_DELETE(clipboard);
+				clipboard = new wiArchive();
+				*clipboard << CLIPBOARD_MODEL;
 				Model* model = new Model;
 				for (auto& x : selected)
 				{
@@ -1214,8 +1208,7 @@ void EditorComponent::Update(float dt)
 					model->Add(x->decal);
 					model->Add(x->forceField);
 				}
-				model->Serialize(*clipboard_write);
-				SAFE_DELETE(clipboard_write);
+				model->Serialize(*clipboard);
 
 				model->objects.clear();
 				model->lights.clear();
@@ -1223,24 +1216,22 @@ void EditorComponent::Update(float dt)
 				model->meshes.clear();
 				model->materials.clear();
 				model->forces.clear();
+				model->armatures.clear();
 				SAFE_DELETE(model);
 			}
 			// Paste
 			if (wiInputManager::GetInstance()->press('V'))
 			{
-				clipboard_read = new wiArchive("temp/clipboard", true);
-				int version;
-				// version check is maybe not yet used, but is here intentionally for future bacwards-compatibility!
-				*clipboard_read >> version;
+				clipboard->SetReadModeAndResetPos(true);
 				int tmp;
-				*clipboard_read >> tmp;
+				*clipboard >> tmp;
 				ClipboardItemType type = (ClipboardItemType)tmp;
 				switch (type)
 				{
 				case CLIPBOARD_MODEL:
 				{
 					Model* model = new Model;
-					model->Serialize(*clipboard_read);
+					model->Serialize(*clipboard);
 					wiRenderer::AddModel(model);
 				}
 				break;
@@ -1249,7 +1240,6 @@ void EditorComponent::Update(float dt)
 				default:
 					break;
 				}
-				SAFE_DELETE(clipboard_read);
 			}
 			// Duplicate Instances
 			if (wiInputManager::GetInstance()->press('D'))
@@ -1304,12 +1294,10 @@ void EditorComponent::Update(float dt)
 
 	if (translator->IsDragEnded())
 	{
-		history = new wiArchive(AdvanceHistory(), false);
-		*history << __editorVersion;
-		*history << HISTORYOP_TRANSLATOR;
-		*history << translator->GetDragStart();
-		*history << translator->GetDragEnd();
-		SAFE_DELETE(history);
+		wiArchive* archive = AdvanceHistory();
+		*archive << HISTORYOP_TRANSLATOR;
+		*archive << translator->GetDragStart();
+		*archive << translator->GetDragEnd();
 	}
 
 	emitterWnd->UpdateData();
@@ -1548,34 +1536,44 @@ void EditorComponent::Unload()
 
 void ResetHistory()
 {
-	historyCount = 0;
-	historyPos = -1; 
-	CreateDirectory(L"temp", NULL);
+	historyPos = -1;
+
+	for(auto& x : history)
+	{
+		SAFE_DELETE(x);
+	}
+	history.clear();
 }
-string AdvanceHistory()
+wiArchive* AdvanceHistory()
 {
 	historyPos++;
-	historyCount = historyPos + 1; 
-	stringstream ss("");
-	ss << "temp/history" << historyPos;
-	return ss.str();
+
+	while (history.size() > historyPos)
+	{
+		SAFE_DELETE(history.back());
+		history.pop_back();
+	}
+
+	wiArchive* archive = new wiArchive;
+	archive->SetReadModeAndResetPos(false);
+	history.push_back(archive);
+
+	return archive;
 }
 void ConsumeHistoryOperation(bool undo)
 {
-	if ((undo && historyPos >= 0) || (!undo && historyPos < historyCount - 1))
+	if ((undo && historyPos >= 0) || (!undo && historyPos < (int)history.size() - 1))
 	{
 		if (!undo)
 		{
 			historyPos++;
 		}
 
-		stringstream ss("");
-		ss << "temp/history" << historyPos;
-		history = new wiArchive(ss.str(), true);
-		int version;
-		*history >> version;
+		wiArchive* archive = history[historyPos];
+		archive->SetReadModeAndResetPos(true);
+
 		int temp;
-		*history >> temp;
+		*archive >> temp;
 		HistoryOperationType type = (HistoryOperationType)temp;
 
 		switch (type)
@@ -1583,7 +1581,7 @@ void ConsumeHistoryOperation(bool undo)
 		case HISTORYOP_TRANSLATOR:
 			{
 				XMFLOAT4X4 start, end;
-				*history >> start >> end;
+				*archive >> start >> end;
 				translator->enabled = true;
 				translator->Clear();
 				if (undo)
@@ -1605,27 +1603,27 @@ void ConsumeHistoryOperation(bool undo)
 				}
 
 				size_t count;
-				*history >> count;
+				*archive >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
 					bool tmp;
 
 					// object
-					*history >> tmp;
+					*archive >> tmp;
 					if (tmp)
 					{
 						if (undo)
 						{
 							Object* object = new Object;
-							object->Serialize(*history);
+							object->Serialize(*archive);
 							object->mesh = new Mesh;
-							object->mesh->Serialize(*history);
+							object->mesh->Serialize(*archive);
 							size_t subsetCount;
-							*history >> subsetCount;
+							*archive >> subsetCount;
 							for (size_t i = 0; i < subsetCount; ++i)
 							{
 								object->mesh->subsets[i].material = new Material;
-								object->mesh->subsets[i].material->Serialize(*history);
+								object->mesh->subsets[i].material->Serialize(*archive);
 							}
 							object->mesh->CreateVertexArrays();
 							object->mesh->CreateBuffers(object);
@@ -1634,27 +1632,27 @@ void ConsumeHistoryOperation(bool undo)
 					}
 
 					// light
-					*history >> tmp;
+					*archive >> tmp;
 					if (tmp)
 					{
 						Light* light = new Light;
-						light->Serialize(*history);
+						light->Serialize(*archive);
 						model->Add(light);
 					}
 
 					// decal
-					*history >> tmp;
+					*archive >> tmp;
 					if (tmp)
 					{
 						Decal* decal = new Decal;
-						decal->Serialize(*history);
+						decal->Serialize(*archive);
 						model->Add(decal);
 					}
 
 					// other
-					*history >> tmp;
+					*archive >> tmp;
 					unsigned long long id;
-					*history >> id;
+					*archive >> id;
 					if (tmp)
 					{
 
@@ -1679,7 +1677,5 @@ void ConsumeHistoryOperation(bool undo)
 		{
 			historyPos--;
 		}
-
-		SAFE_DELETE(history);
 	}
 }

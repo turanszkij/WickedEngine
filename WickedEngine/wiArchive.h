@@ -14,12 +14,19 @@ private:
 	size_t dataSize;
 
 	std::string fileName; // save to this file on closing if not empty
+
+	void CreateEmpty();
+
 public:
+	// Create empty arhive for writing
+	wiArchive();
+	// Create archive and link to file
 	wiArchive(const std::string& fileName, bool readMode = true);
 	~wiArchive();
 
 	uint64_t GetVersion() { return version; }
 	bool IsReadMode() { return readMode; }
+	void SetReadModeAndResetPos(bool isReadMode);
 	bool IsOpen();
 	void Close();
 	bool SaveFile(const std::string& fileName);
