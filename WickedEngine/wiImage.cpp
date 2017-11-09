@@ -454,8 +454,8 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			else if (effects.process.ssss.x + effects.process.ssss.y > 0) {
 				device->BindPS(ssssPS, threadID);
 
-				prcb.params0[3] = effects.process.ssss.x;
-				prcb.params1[3] = effects.process.ssss.y;
+				prcb.params0[0] = effects.process.ssss.x;
+				prcb.params0[1] = effects.process.ssss.y;
 				device->UpdateBuffer(processCb, &prcb, threadID);
 			}
 			else if (effects.bloom.separate) {

@@ -93,6 +93,12 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 };
 struct Material
 {
+private:
+	STENCILREF engineStencilRef;
+	uint8_t userStencilRef;
+
+public:
+
 	std::string name;
 	XMFLOAT3 diffuseColor;
 
@@ -119,7 +125,7 @@ struct Material
 	static void CreateImpostorMaterialCB();
 
 	bool toonshading;
-	bool water,shadeless;
+	bool water, shadeless;
 	float enviroReflection;
 
 	XMFLOAT4 specular;
@@ -147,9 +153,6 @@ struct Material
 
 	float alphaRef;
 
-	STENCILREF engineStencilRef;
-	uint8_t userStencilRef;
-
 
 	Material()
 	{
@@ -161,6 +164,8 @@ struct Material
 	}
 	~Material();
 	void init();
+
+	void Update();
 
 	bool IsTransparent() const { return alpha < 1.0f; }
 	bool IsWater() const { return water; }
@@ -180,7 +185,7 @@ struct Material
 	void SetUserStencilRef(uint8_t value)
 	{
 		assert(value < 128);
-		userStencilRef = value;
+		userStencilRef = value & 0x0F;
 	}
 	UINT GetStencilRef()
 	{

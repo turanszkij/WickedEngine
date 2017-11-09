@@ -4485,15 +4485,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
 					UINT realStencilRef = material->GetStencilRef();
-					// todo: better
-					if (material->shadeless)
-					{
-						realStencilRef = (material->userStencilRef << 4) | STENCILREF_SHADELESS;
-					}
-					else if (material->subsurfaceScattering > 0)
-					{
-						realStencilRef = (material->userStencilRef << 4) | STENCILREF_SKIN;
-					}
 					if (prevStencilRef != realStencilRef)
 					{
 						prevStencilRef = realStencilRef;

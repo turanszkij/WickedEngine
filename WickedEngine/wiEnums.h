@@ -53,7 +53,8 @@ enum SHADERTYPE
 };
 
 // engine stencil reference values. These can be in range of 0-127. 128-255 are for user stencil values.
-enum STENCILREF {
+enum STENCILREF 
+{
 	STENCILREF_EMPTY = 0x00,
 	STENCILREF_SKY = 0x01,
 	STENCILREF_DEFAULT = 0x02,

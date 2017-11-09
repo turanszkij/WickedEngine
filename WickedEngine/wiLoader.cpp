@@ -1411,6 +1411,26 @@ void Material::init()
 	bd.ByteWidth = sizeof(MaterialCB);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 }
+void Material::Update()
+{
+	framesToWaitForTexCoordOffset -= 1.0f;
+	if (framesToWaitForTexCoordOffset <= 0)
+	{
+		texMulAdd.z = fmodf(texMulAdd.z + movingTex.x*wiRenderer::GetGameSpeed(), 1);
+		texMulAdd.w = fmodf(texMulAdd.w + movingTex.y*wiRenderer::GetGameSpeed(), 1);
+		framesToWaitForTexCoordOffset = movingTex.z*wiRenderer::GetGameSpeed();
+	}
+
+	engineStencilRef = STENCILREF_DEFAULT;
+	if (subsurfaceScattering > 0)
+	{
+		engineStencilRef = STENCILREF_SKIN;
+	}
+	if (shadeless)
+	{
+		engineStencilRef = STENCILREF_SHADELESS;
+	}
+}
 void Material::ConvertToPhysicallyBasedMaterial()
 {
 	baseColor = diffuseColor;
@@ -2773,18 +2793,10 @@ void Model::FinishLoading()
 }
 void Model::UpdateModel()
 {
-	for (MaterialCollection::iterator iter = materials.begin(); iter != materials.end(); ++iter)
+	for (auto& x : materials)
 	{
-		Material* iMat = iter->second;
-		iMat->framesToWaitForTexCoordOffset -= 1.0f;
-		if (iMat->framesToWaitForTexCoordOffset <= 0) 
-		{
-			iMat->texMulAdd.z = fmodf(iMat->texMulAdd.z + iMat->movingTex.x*wiRenderer::GetGameSpeed(), 1);
-			iMat->texMulAdd.w = fmodf(iMat->texMulAdd.w + iMat->movingTex.y*wiRenderer::GetGameSpeed(), 1);
-			iMat->framesToWaitForTexCoordOffset = iMat->movingTex.z*wiRenderer::GetGameSpeed();
-		}
+		x.second->Update();
 	}
-
 	for (Armature* x : armatures)
 	{
 		x->UpdateArmature();

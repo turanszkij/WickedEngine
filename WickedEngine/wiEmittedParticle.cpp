@@ -263,8 +263,7 @@ XMFLOAT3 wiEmittedParticle::GetPosition() const
 
 void wiEmittedParticle::Update(float dt)
 {
-	float gamespeed = wiRenderer::GetGameSpeed() * dt;
-	emit += (float)count*gamespeed;
+	emit += (float)count*dt;
 }
 void wiEmittedParticle::Burst(float num)
 {
@@ -324,7 +323,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	// emit the required amount if there are free slots in dead list
 	device->BindCS(emitCS, threadID);
-	device->DispatchIndirect(indirectBuffers, 0, threadID);
+	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
 
 	// update CURRENT alive list, write NEW alive list
 	if (SORTING)
@@ -349,7 +348,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->BindCS(simulateCS, threadID);
 		}
 	}
-	device->DispatchIndirect(indirectBuffers, sizeof(wiGraphicsTypes::IndirectDispatchArgs), threadID);
+	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 
 	device->EventEnd(threadID);
 
@@ -375,7 +374,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		// sort all buffers of size 512 (and presort bigger ones)
 		device->BindCS(sortCS, threadID);
-		device->DispatchIndirect(indirectBuffers, 40, threadID);
+		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
 
 		int presorted = 512;
 		while (!bDone)
@@ -472,7 +471,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 		device->BindResourcePS(material->texture, TEXSLOT_ONDEMAND0, threadID);
 	}
 
-	device->DrawInstancedIndirect(indirectBuffers, sizeof(wiGraphicsTypes::IndirectDispatchArgs) * 2, threadID);
+	device->DrawInstancedIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, threadID);
 
 	device->EventEnd(threadID);
 }

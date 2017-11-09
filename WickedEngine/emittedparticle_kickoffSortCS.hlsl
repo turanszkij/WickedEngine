@@ -17,5 +17,5 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	uint threadCount = ((aliveCount_afterSimulation - 1) >> 9) + 1;
 
 	// and prepare to dispatch the sort for the alive simulated particles:
-	indirectBuffers.Store3(40, uint3(threadCount, 1, 1));
+	indirectBuffers.Store3(ARGUMENTBUFFER_OFFSET_DISPATCHSORT, uint3(threadCount, 1, 1));
 }

@@ -127,7 +127,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// add to new alive list:
 			uint newAliveIndex;
-			indirectBuffers.InterlockedAdd(24, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
+			indirectBuffers.InterlockedAdd(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
 			newAliveIndex /= 6; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
 			aliveBuffer_NEW[newAliveIndex] = particleIndex;
 
