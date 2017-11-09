@@ -48,14 +48,14 @@ groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 #define LDS_ENTITYCOUNT (MAX_SHADER_ENTITY_COUNT_PER_TILE * 2)
 
 // Opaque geometry entity lists.
-groupshared uint o_ArrayLength = 0;
+groupshared uint o_ArrayLength;
 groupshared uint o_Array[LDS_ENTITYCOUNT];
-groupshared uint o_decalCount = 0;
+groupshared uint o_decalCount;
 
 // Transparent geometry entity lists.
-groupshared uint t_ArrayLength = 0;
+groupshared uint t_ArrayLength;
 groupshared uint t_Array[LDS_ENTITYCOUNT];
-groupshared uint t_decalCount = 0;
+groupshared uint t_decalCount;
 
 // Add the entity to the visible entity list for opaque geometry.
 void o_AppendEntity(uint entityIndex)
@@ -185,6 +185,10 @@ void main(ComputeShaderInput IN)
 		uMaxDepth = 0;
 		o_ArrayLength = 0;
 		t_ArrayLength = 0;
+		o_decalCount = 0;
+		t_decalCount = 0;
+
+		uDepthMask = 0;
 
 		// Get frustum from frustum buffer:
 		GroupFrustum = in_Frustums[flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy)];
@@ -240,8 +244,6 @@ void main(ComputeShaderInput IN)
 		// We can perform coarse AABB intersection tests with this:
 		GroupAABB_WS = GroupAABB;
 		GroupAABB_WS.transform(g_xFrame_MainCamera_InvV);
-
-		uDepthMask = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
