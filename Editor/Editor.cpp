@@ -208,7 +208,6 @@ void ResetHistory();
 wiArchive* AdvanceHistory();
 void ConsumeHistoryOperation(bool undo);
 
-#include "wiOceanSimulator.h"
 OceanSimulator* ocean;
 
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
@@ -1322,7 +1321,8 @@ void EditorComponent::Update(float dt)
 }
 void EditorComponent::Render()
 {
-	ocean->updateDisplacementMap(1.0f);
+	static wiTimer timer;
+	ocean->updateDisplacementMap((float)timer.TotalTime() / 1000.0f);
 
 	// hover box
 	{
@@ -1537,9 +1537,11 @@ void EditorComponent::Compose()
 
 	}
 
-
-	wiImage::Draw(ocean->getD3D11DisplacementMap(), wiImageEffects(100, 100, 100, 100), GRAPHICSTHREAD_IMMEDIATE);
-	wiImage::Draw(ocean->getD3D11GradientMap(), wiImageEffects(200, 100, 100, 100), GRAPHICSTHREAD_IMMEDIATE);
+	wiImageEffects fx(500, 500, 500, 500);
+	fx.blendFlag = BLENDMODE_OPAQUE;
+	wiImage::Draw(ocean->getD3D11DisplacementMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	fx.pos.x = 1000;
+	wiImage::Draw(ocean->getD3D11GradientMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
 }
 void EditorComponent::Unload()
 {

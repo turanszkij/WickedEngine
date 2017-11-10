@@ -431,9 +431,6 @@ void OceanSimulator::updateDisplacementMap(float time)
 
 	device->EventBegin("OceanSimulator", threadID);
 
-	device->BindConstantBufferCS(m_pImmutableCB, 0, threadID);
-	device->BindConstantBufferCS(m_pImmutableCB, 0, threadID);
-
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 	// Compute shader
 	device->BindCS(m_pUpdateSpectrumCS, threadID);
@@ -471,7 +468,7 @@ void OceanSimulator::updateDisplacementMap(float time)
 	//ID3D11Buffer* cs_cbs[2] = { m_pImmutableCB, m_pPerFrameCB };
 	//m_pd3dImmediateContext->CSSetConstantBuffers(0, 2, cs_cbs);
 	device->BindConstantBufferCS(m_pImmutableCB, 0, threadID);
-	device->BindConstantBufferCS(m_pPerFrameCB, 0, threadID);
+	device->BindConstantBufferCS(m_pPerFrameCB, 1, threadID);
 
 	// Run the CS
 	UINT group_count_x = (m_param.dmap_dim + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X;
@@ -521,7 +518,7 @@ void OceanSimulator::updateDisplacementMap(float time)
 	//ID3D11Buffer* ps_cbs[2] = { m_pImmutableCB, m_pPerFrameCB };
 	//m_pd3dImmediateContext->PSSetConstantBuffers(0, 2, ps_cbs);
 	device->BindConstantBufferPS(m_pImmutableCB, 0, threadID);
-	device->BindConstantBufferPS(m_pPerFrameCB, 0, threadID);
+	device->BindConstantBufferPS(m_pPerFrameCB, 1, threadID);
 
 	// Buffer resources
 	GPUResource* ps_srvs[1] = { m_pBuffer_Float_Dxyz };
