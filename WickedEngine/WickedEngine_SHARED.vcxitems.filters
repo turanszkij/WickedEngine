@@ -1104,6 +1104,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiOceanSimulator.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1888,6 +1894,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiOceanSimulator.cpp">
+      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

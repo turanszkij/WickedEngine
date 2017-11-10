@@ -208,6 +208,9 @@ void ResetHistory();
 wiArchive* AdvanceHistory();
 void ConsumeHistoryOperation(bool undo);
 
+#include "wiOceanSimulator.h"
+OceanSimulator* ocean;
+
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
 {
 	SAFE_DELETE(renderPath);
@@ -302,6 +305,17 @@ void EditorComponent::Initialize()
 void EditorComponent::Load()
 {
 	__super::Load();
+
+	OceanParameter params;
+	params.choppy_scale = 1;
+	params.dmap_dim = 64;
+	params.patch_length = 1000;
+	params.time_scale = 1;
+	params.wave_amplitude = 1.0f;
+	params.wind_dependency = 0.5f;
+	params.wind_dir = XMFLOAT2(1, 1);
+	params.wind_speed = 100;
+	ocean = new OceanSimulator(params);
 
 	translator = new wiTranslator;
 	translator->enabled = false;
@@ -1308,6 +1322,8 @@ void EditorComponent::Update(float dt)
 }
 void EditorComponent::Render()
 {
+	ocean->updateDisplacementMap(1.0f);
+
 	// hover box
 	{
 		if (hovered.object != nullptr)
@@ -1521,6 +1537,9 @@ void EditorComponent::Compose()
 
 	}
 
+
+	wiImage::Draw(ocean->getD3D11DisplacementMap(), wiImageEffects(100, 100, 100, 100), GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(ocean->getD3D11GradientMap(), wiImageEffects(200, 100, 100, 100), GRAPHICSTHREAD_IMMEDIATE);
 }
 void EditorComponent::Unload()
 {

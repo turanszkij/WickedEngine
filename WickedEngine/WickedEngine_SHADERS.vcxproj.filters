@@ -115,6 +115,9 @@
     <None Include="hairparticleHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="oceanHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -647,6 +650,24 @@
     </FxCompile>
     <FxCompile Include="emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="fft_512x512_c2c_CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="fft_512x512_c2c_v2_CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanSimulatorCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanQuadVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanGradientFoldingPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanUpdateDisplacementPS.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

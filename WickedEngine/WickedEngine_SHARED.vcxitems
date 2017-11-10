@@ -240,6 +240,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersectables.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h" />
@@ -333,6 +334,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiOceanSimulator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h" />
@@ -511,6 +513,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp" />
@@ -671,6 +674,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiOceanSimulator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiProfiler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRandom.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp" />
