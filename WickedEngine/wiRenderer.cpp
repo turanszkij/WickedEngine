@@ -2130,7 +2130,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	// Compute water simulation:
 	if (ocean != nullptr)
 	{
-		ocean->updateDisplacementMap(renderTime);
+		ocean->UpdateDisplacementMap(renderTime, threadID);
 	}
 
 	// Render out of date environment probes:
@@ -4642,7 +4642,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (ocean != nullptr)
 	{
-		ocean->Render(camera, renderTime);
+		ocean->Render(camera, renderTime, threadID);
 	}
 
 	if (grass)

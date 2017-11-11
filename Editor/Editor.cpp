@@ -952,11 +952,11 @@ void EditorComponent::Update(float dt)
 		}
 		if (wiInputManager::GetInstance()->down(VK_UP))
 		{
-			yDif += buttonrotSpeed;
+			yDif -= buttonrotSpeed;
 		}
 		if (wiInputManager::GetInstance()->down(VK_DOWN))
 		{
-			yDif -= buttonrotSpeed;
+			yDif += buttonrotSpeed;
 		}
 
 		Camera* cam = wiRenderer::getCamera();

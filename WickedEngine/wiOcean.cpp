@@ -6,7 +6,15 @@
 using namespace wiGraphicsTypes;
 using namespace std;
 
-static const GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE; // todo: make dynamic
+ComputeShader*			wiOcean::m_pUpdateSpectrumCS = nullptr;
+VertexShader*			wiOcean::m_pQuadVS = nullptr;
+PixelShader*			wiOcean::m_pUpdateDisplacementPS = nullptr;
+PixelShader*			wiOcean::m_pGenGradientFoldingPS = nullptr;
+VertexShader*			wiOcean::g_pOceanSurfVS = nullptr;
+PixelShader*			wiOcean::g_pWireframePS = nullptr;
+PixelShader*			wiOcean::g_pOceanSurfPS = nullptr;
+VertexLayout*			wiOcean::m_pQuadLayout = nullptr;
+VertexLayout*			wiOcean::g_pMeshLayout = nullptr;
 
 // Disable warning "conditional expression is constant"
 #pragma warning(disable:4127)
@@ -207,68 +215,6 @@ wiOcean::wiOcean(const wiOceanParameter& params)
 	wiRenderer::GetDevice()->CreateSamplerState(&sam_desc, &m_pPointSamplerState);
 
 
-	m_pUpdateSpectrumCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSimulatorCS.cso", wiResourceManager::COMPUTESHADER));
-
-	{
-		VertexLayoutDesc layout[] =
-		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, 0, INPUT_PER_VERTEX_DATA, 0 },
-		};
-		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanQuadVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
-		if (vsinfo != nullptr) {
-			m_pQuadVS = vsinfo->vertexShader;
-			m_pQuadLayout = vsinfo->vertexLayout;
-		}
-	}
-
-	m_pUpdateDisplacementPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanUpdateDisplacementPS.cso", wiResourceManager::PIXELSHADER));
-	m_pGenGradientFoldingPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanGradientFoldingPS.cso", wiResourceManager::PIXELSHADER));
-
-
-
-	//// Compute shaders
-	//ID3DBlob* pBlobUpdateSpectrumCS = NULL;
-
-	//CompileShaderFromFile(L"ocean_simulator_cs.hlsl", "UpdateSpectrumCS", "cs_4_0", &pBlobUpdateSpectrumCS);
-	//assert(pBlobUpdateSpectrumCS);
-
-	//m_device->CreateComputeShader(pBlobUpdateSpectrumCS->GetBufferPointer(), pBlobUpdateSpectrumCS->GetBufferSize(), NULL, &m_pUpdateSpectrumCS);
-	//assert(m_pUpdateSpectrumCS);
-
-	//SAFE_DELETE(pBlobUpdateSpectrumCS);
-
-	//// Vertex & pixel shaders
-	//ID3DBlob* pBlobQuadVS = NULL;
-	//ID3DBlob* pBlobUpdateDisplacementPS = NULL;
-	//ID3DBlob* pBlobGenGradientFoldingPS = NULL;
-
-	//CompileShaderFromFile(L"ocean_simulator_vs_ps.hlsl", "QuadVS", "vs_4_0", &pBlobQuadVS);
-	//CompileShaderFromFile(L"ocean_simulator_vs_ps.hlsl", "UpdateDisplacementPS", "ps_4_0", &pBlobUpdateDisplacementPS);
-	//CompileShaderFromFile(L"ocean_simulator_vs_ps.hlsl", "GenGradientFoldingPS", "ps_4_0", &pBlobGenGradientFoldingPS);
-	//assert(pBlobQuadVS);
-	//assert(pBlobUpdateDisplacementPS);
-	//assert(pBlobGenGradientFoldingPS);
-
-	//m_device->CreateVertexShader(pBlobQuadVS->GetBufferPointer(), pBlobQuadVS->GetBufferSize(), NULL, &m_pQuadVS);
-	//m_device->CreatePixelShader(pBlobUpdateDisplacementPS->GetBufferPointer(), pBlobUpdateDisplacementPS->GetBufferSize(), NULL, &m_pUpdateDisplacementPS);
-	//m_device->CreatePixelShader(pBlobGenGradientFoldingPS->GetBufferPointer(), pBlobGenGradientFoldingPS->GetBufferSize(), NULL, &m_pGenGradientFoldingPS);
-	//assert(m_pQuadVS);
-	//assert(m_pUpdateDisplacementPS);
-	//assert(m_pGenGradientFoldingPS);
-	//SAFE_DELETE(pBlobUpdateDisplacementPS);
-	//SAFE_DELETE(pBlobGenGradientFoldingPS);
-
-	//// Input layout
-	//INPUT_ELEMENT_DESC quad_layout_desc[] =
-	//{
-	//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, INPUT_PER_VERTEX_DATA, 0 },
-	//};
-	//m_device->CreateInputLayout(quad_layout_desc, 1, pBlobQuadVS->GetBufferPointer(), pBlobQuadVS->GetBufferSize(), &m_pQuadLayout);
-	//assert(m_pQuadLayout);
-
-	//SAFE_DELETE(pBlobQuadVS);
-
 	// Quad vertex buffer
 	GPUBufferDesc vb_desc;
 	vb_desc.ByteWidth = 4 * sizeof(XMFLOAT4);
@@ -324,23 +270,7 @@ wiOcean::wiOcean(const wiOceanParameter& params)
 	// FFT
 	fft512x512_create_plan(&m_fft_plan, 3);
 
-#ifdef CS_DEBUG_BUFFER
-	GPUBufferDesc buf_desc;
-	buf_desc.ByteWidth = 3 * input_half_size * float2_stride;
-	buf_desc.Usage = USAGE_STAGING;
-	buf_desc.BindFlags = 0;
-	buf_desc.CPUAccessFlags = CPU_ACCESS_READ;
-	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	buf_desc.StructureByteStride = float2_stride;
-
-	m_pDebugBuffer = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&buf_desc, NULL, m_pDebugBuffer);
-#endif
-
 	initRenderResource();
-	createSurfaceMesh();
-	createFresnelMap();
-	loadTextures();
 }
 
 wiOcean::~wiOcean()
@@ -357,19 +287,10 @@ wiOcean::~wiOcean()
 	SAFE_DELETE(m_pDisplacementMap);
 	SAFE_DELETE(m_pGradientMap);
 
-	SAFE_DELETE(m_pUpdateSpectrumCS);
-	SAFE_DELETE(m_pQuadVS);
-	SAFE_DELETE(m_pUpdateDisplacementPS);
-	SAFE_DELETE(m_pGenGradientFoldingPS);
-
-	SAFE_DELETE(m_pQuadLayout);
 
 	SAFE_DELETE(m_pImmutableCB);
 	SAFE_DELETE(m_pPerFrameCB);
 
-#ifdef CS_DEBUG_BUFFER
-	SAFE_DELETE(m_pDebugBuffer);
-#endif
 
 	cleanupRenderResource();
 }
@@ -428,7 +349,7 @@ void wiOcean::initHeightMap(XMFLOAT2* out_h0, float* out_omega)
 	}
 }
 
-void wiOcean::updateDisplacementMap(float time)
+void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -474,7 +395,7 @@ void wiOcean::updateDisplacementMap(float time)
 
 
 	// ------------------------------------ Perform FFT -------------------------------------------
-	fft_512x512_c2c(&m_fft_plan, m_pBuffer_Float_Dxyz, m_pBuffer_Float_Dxyz, m_pBuffer_Float2_Ht);
+	fft_512x512_c2c(&m_fft_plan, m_pBuffer_Float_Dxyz, m_pBuffer_Float_Dxyz, m_pBuffer_Float2_Ht, threadID);
 
 	// --------------------------------- Wrap Dx, Dy and Dz ---------------------------------------
 	// Push RT
@@ -552,26 +473,6 @@ void wiOcean::updateDisplacementMap(float time)
 
 	device->GenerateMips(m_pGradientMap, threadID);
 
-	// Define CS_DEBUG_BUFFER to enable writing a buffer into a file.
-#ifdef CS_DEBUG_BUFFER
-	{
-		m_pd3dImmediateContext->CopyResource(m_pDebugBuffer, m_pBuffer_Float_Dxyz);
-		MAPPED_SUBRESOURCE mapped_res;
-		m_pd3dImmediateContext->Map(m_pDebugBuffer, 0, MAP_READ, 0, &mapped_res);
-
-		// set a break point below, and drag MappedResource.pData into in your Watch window
-		// and cast it as (float*)
-
-		// Write to disk
-		XMFLOAT2* v = (XMFLOAT2*)mapped_res.pData;
-
-		FILE* fp = fopen(".\\tmp\\Ht_raw.dat", "wb");
-		fwrite(v, 512 * 512 * sizeof(float) * 2 * 3, 1, fp);
-		fclose(fp);
-
-		m_pd3dImmediateContext->Unmap(m_pDebugBuffer, 0);
-	}
-#endif
 
 	device->EventEnd(threadID);
 }
@@ -613,22 +514,6 @@ void wiOcean::initRenderResource()
 	createSurfaceMesh();
 	createFresnelMap();
 	loadTextures();
-
-	{
-		VertexLayoutDesc layout[] =
-		{
-			{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, 0, INPUT_PER_VERTEX_DATA, 0 },
-		};
-		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
-		if (vsinfo != nullptr) {
-			g_pOceanSurfVS = vsinfo->vertexShader;
-			g_pMeshLayout = vsinfo->vertexLayout;
-		}
-	}
-
-	g_pOceanSurfPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfacePS.cso", wiResourceManager::PIXELSHADER));
-	g_pWireframePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceSimplePS.cso", wiResourceManager::PIXELSHADER));
 
 
 	// Constants
@@ -725,11 +610,6 @@ void wiOcean::cleanupRenderResource()
 {
 	SAFE_DELETE(g_pMeshIB);
 	SAFE_DELETE(g_pMeshVB);
-	SAFE_DELETE(g_pMeshLayout);
-
-	SAFE_DELETE(g_pOceanSurfVS);
-	SAFE_DELETE(g_pOceanSurfPS);
-	SAFE_DELETE(g_pWireframePS);
 
 	SAFE_DELETE(g_pFresnelMap);
 	SAFE_DELETE(g_pPerlinMap);
@@ -1108,7 +988,7 @@ void wiOcean::createFresnelMap()
 
 void wiOcean::loadTextures()
 {
-	wiRenderer::GetDevice()->CreateTextureFromFile("perlin.dds", &g_pPerlinMap, true, GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->CreateTextureFromFile("perlin_noise.dds", &g_pPerlinMap, true, GRAPHICSTHREAD_IMMEDIATE);
 }
 
 bool wiOcean::checkNodeVisibility(const QuadNode& quad_node, const Camera& camera)
@@ -1403,7 +1283,7 @@ int wiOcean::buildNodeList(QuadNode& quad_node, const Camera& camera)
 	return position;
 }
 
-void wiOcean::Render(const Camera* camera, float time)
+void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	bool wire = wiRenderer::IsWireRender();
@@ -1521,3 +1401,65 @@ void wiOcean::Render(const Camera* camera, float time)
 	//pd3dContext->PSSetShaderResources(1, 4, &ps_srvs[0]);
 }
 
+
+void wiOcean::LoadShaders()
+{
+
+	m_pUpdateSpectrumCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSimulatorCS.cso", wiResourceManager::COMPUTESHADER));
+
+	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, 0, INPUT_PER_VERTEX_DATA, 0 },
+		};
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanQuadVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr) {
+			m_pQuadVS = vsinfo->vertexShader;
+			m_pQuadLayout = vsinfo->vertexLayout;
+		}
+	}
+
+	m_pUpdateDisplacementPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanUpdateDisplacementPS.cso", wiResourceManager::PIXELSHADER));
+	m_pGenGradientFoldingPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanGradientFoldingPS.cso", wiResourceManager::PIXELSHADER));
+
+
+	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, 0, INPUT_PER_VERTEX_DATA, 0 },
+		};
+		UINT numElements = ARRAYSIZE(layout);
+		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+		if (vsinfo != nullptr) {
+			g_pOceanSurfVS = vsinfo->vertexShader;
+			g_pMeshLayout = vsinfo->vertexLayout;
+		}
+	}
+
+	g_pOceanSurfPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfacePS.cso", wiResourceManager::PIXELSHADER));
+	g_pWireframePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceSimplePS.cso", wiResourceManager::PIXELSHADER));
+
+}
+
+void wiOcean::SetUpStatic()
+{
+	LoadShaders();
+	CSFFT_512x512_Data_t::LoadShaders();
+}
+
+void wiOcean::CleanUpStatic()
+{
+	SAFE_DELETE(m_pUpdateSpectrumCS);
+	SAFE_DELETE(m_pQuadVS);
+	SAFE_DELETE(m_pUpdateDisplacementPS);
+	SAFE_DELETE(m_pGenGradientFoldingPS);
+
+	SAFE_DELETE(m_pQuadLayout);
+
+	SAFE_DELETE(g_pMeshLayout);
+
+	SAFE_DELETE(g_pOceanSurfVS);
+	SAFE_DELETE(g_pOceanSurfPS);
+	SAFE_DELETE(g_pWireframePS);
+}

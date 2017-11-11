@@ -1,17 +1,3 @@
-// Copyright (c) 2011 NVIDIA Corporation. All rights reserved.
-//
-// TO  THE MAXIMUM  EXTENT PERMITTED  BY APPLICABLE  LAW, THIS SOFTWARE  IS PROVIDED
-// *AS IS*  AND NVIDIA AND  ITS SUPPLIERS DISCLAIM  ALL WARRANTIES,  EITHER  EXPRESS
-// OR IMPLIED, INCLUDING, BUT NOT LIMITED  TO, NONINFRINGEMENT,IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  IN NO EVENT SHALL  NVIDIA 
-// OR ITS SUPPLIERS BE  LIABLE  FOR  ANY  DIRECT, SPECIAL,  INCIDENTAL,  INDIRECT,  OR  
-// CONSEQUENTIAL DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION,  DAMAGES FOR LOSS 
-// OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION, OR ANY 
-// OTHER PECUNIARY LOSS) ARISING OUT OF THE  USE OF OR INABILITY  TO USE THIS SOFTWARE, 
-// EVEN IF NVIDIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-//
-// Please direct any bugs or questions to SDKFeedback@nvidia.com
-
 #ifndef _OCEAN_SIMULATOR_H
 #define _OCEAN_SIMULATOR_H
 
@@ -21,7 +7,6 @@
 
 #include <vector>
 
-//#define CS_DEBUG_BUFFER
 
 struct Camera;
 
@@ -69,7 +54,8 @@ public:
 	// -------------------------- Initialization & simulation routines ------------------------
 
 	// Update ocean wave when tick arrives.
-	void updateDisplacementMap(float time);
+	void UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID);
+	void Render(const Camera* camera, float time, GRAPHICSTHREAD threadID);
 
 	// Texture access
 	wiGraphicsTypes::Texture2D* getDisplacementMap();
@@ -77,8 +63,9 @@ public:
 
 	const wiOceanParameter& getParameters();
 
-	void Render(const Camera* camera, float time);
-
+	static void LoadShaders();
+	static void SetUpStatic();
+	static void CleanUpStatic();
 
 protected:
 	wiOceanParameter m_param;
@@ -109,13 +96,12 @@ protected:
 	wiGraphicsTypes::GPUBuffer* m_pQuadVB;
 
 	// Shaders, layouts and constants
-	wiGraphicsTypes::ComputeShader* m_pUpdateSpectrumCS;
+	static wiGraphicsTypes::ComputeShader* m_pUpdateSpectrumCS;
+	static wiGraphicsTypes::VertexShader* m_pQuadVS;
+	static wiGraphicsTypes::PixelShader* m_pUpdateDisplacementPS;
+	static wiGraphicsTypes::PixelShader* m_pGenGradientFoldingPS;
 
-	wiGraphicsTypes::VertexShader* m_pQuadVS;
-	wiGraphicsTypes::PixelShader* m_pUpdateDisplacementPS;
-	wiGraphicsTypes::PixelShader* m_pGenGradientFoldingPS;
-
-	wiGraphicsTypes::VertexLayout* m_pQuadLayout;
+	static wiGraphicsTypes::VertexLayout* m_pQuadLayout;
 
 	wiGraphicsTypes::GPUBuffer* m_pImmutableCB;
 	wiGraphicsTypes::GPUBuffer* m_pPerFrameCB;
@@ -124,10 +110,6 @@ protected:
 
 	// FFT wrap-up
 	CSFFT512x512_Plan m_fft_plan;
-
-#ifdef CS_DEBUG_BUFFER
-	wiGraphicsTypes::GPUBuffer* m_pDebugBuffer;
-#endif
 
 
 
@@ -211,7 +193,7 @@ protected:
 	// D3D11 buffers and layout
 	wiGraphicsTypes::GPUBuffer* g_pMeshVB = nullptr;
 	wiGraphicsTypes::GPUBuffer* g_pMeshIB = nullptr;
-	wiGraphicsTypes::VertexLayout* g_pMeshLayout = nullptr;
+	static wiGraphicsTypes::VertexLayout* g_pMeshLayout;
 
 	// Color look up 1D texture
 	wiGraphicsTypes::Texture1D* g_pFresnelMap = nullptr;
@@ -220,9 +202,9 @@ protected:
 	wiGraphicsTypes::Texture2D* g_pPerlinMap = nullptr;
 
 	// HLSL shaders
-	wiGraphicsTypes::VertexShader* g_pOceanSurfVS = nullptr;
-	wiGraphicsTypes::PixelShader* g_pOceanSurfPS = nullptr;
-	wiGraphicsTypes::PixelShader* g_pWireframePS = nullptr;
+	static wiGraphicsTypes::VertexShader* g_pOceanSurfVS;
+	static wiGraphicsTypes::PixelShader* g_pOceanSurfPS;
+	static wiGraphicsTypes::PixelShader* g_pWireframePS;
 
 	wiGraphicsTypes::GPUBuffer* g_pPerCallCB = nullptr;
 	wiGraphicsTypes::GPUBuffer* g_pPerFrameCB = nullptr;
