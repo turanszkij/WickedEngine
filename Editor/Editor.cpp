@@ -14,6 +14,7 @@
 #include "AnimationWindow.h"
 #include "EmitterWindow.h"
 #include "ForceFieldWindow.h"
+#include "OceanWindow.h"
 
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -208,8 +209,6 @@ void ResetHistory();
 wiArchive* AdvanceHistory();
 void ConsumeHistoryOperation(bool undo);
 
-OceanSimulator* ocean;
-
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
 {
 	SAFE_DELETE(renderPath);
@@ -263,6 +262,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	animWnd = new AnimationWindow(&GetGUI());
 	emitterWnd = new EmitterWindow(&GetGUI());
 	forceFieldWnd = new ForceFieldWindow(&GetGUI());
+	oceanWnd = new OceanWindow(&GetGUI());
 }
 void EditorComponent::DeleteWindows()
 {
@@ -277,6 +277,7 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(animWnd);
 	SAFE_DELETE(emitterWnd);
 	SAFE_DELETE(forceFieldWnd);
+	SAFE_DELETE(oceanWnd);
 }
 
 void EditorComponent::Initialize()
@@ -293,6 +294,7 @@ void EditorComponent::Initialize()
 	SAFE_INIT(animWnd);
 	SAFE_INIT(emitterWnd);
 	SAFE_INIT(forceFieldWnd);
+	SAFE_INIT(oceanWnd);
 
 
 	SAFE_INIT(loader);
@@ -304,17 +306,6 @@ void EditorComponent::Initialize()
 void EditorComponent::Load()
 {
 	__super::Load();
-
-	OceanParameter params;
-	params.choppy_scale = 1;
-	params.dmap_dim = 64;
-	params.patch_length = 1000;
-	params.time_scale = 1;
-	params.wave_amplitude = 1.0f;
-	params.wind_dependency = 0.5f;
-	params.wind_dir = XMFLOAT2(1, 1);
-	params.wind_speed = 100;
-	ocean = new OceanSimulator(params);
 
 	translator = new wiTranslator;
 	translator->enabled = false;
@@ -477,6 +468,15 @@ void EditorComponent::Load()
 		forceFieldWnd->forceFieldWindow->SetVisible(!forceFieldWnd->forceFieldWindow->IsVisible());
 	});
 	GetGUI().AddWidget(forceFieldWnd_Toggle);
+
+	wiButton* oceanWnd_Toggle = new wiButton("Ocean");
+	oceanWnd_Toggle->SetTooltip("Ocean Simulator properties");
+	oceanWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
+	oceanWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	oceanWnd_Toggle->OnClick([=](wiEventArgs args) {
+		oceanWnd->oceanWindow->SetVisible(!oceanWnd->oceanWindow->IsVisible());
+	});
+	GetGUI().AddWidget(oceanWnd_Toggle);
 
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -941,6 +941,24 @@ void EditorComponent::Update(float dt)
 			originalMouse = wiInputManager::GetInstance()->getpointer();
 		}
 
+		const float buttonrotSpeed = 2.0f / 60.0f;
+		if (wiInputManager::GetInstance()->down(VK_LEFT))
+		{
+			xDif -= buttonrotSpeed;
+		}
+		if (wiInputManager::GetInstance()->down(VK_RIGHT))
+		{
+			xDif += buttonrotSpeed;
+		}
+		if (wiInputManager::GetInstance()->down(VK_UP))
+		{
+			yDif += buttonrotSpeed;
+		}
+		if (wiInputManager::GetInstance()->down(VK_DOWN))
+		{
+			yDif -= buttonrotSpeed;
+		}
+
 		Camera* cam = wiRenderer::getCamera();
 
 		if (cameraWnd->fpscamera)
@@ -1321,9 +1339,6 @@ void EditorComponent::Update(float dt)
 }
 void EditorComponent::Render()
 {
-	static wiTimer timer;
-	ocean->updateDisplacementMap((float)timer.TotalTime() / 1000.0f);
-
 	// hover box
 	{
 		if (hovered.object != nullptr)
@@ -1536,12 +1551,6 @@ void EditorComponent::Compose()
 		}
 
 	}
-
-	wiImageEffects fx(500, 500, 500, 500);
-	fx.blendFlag = BLENDMODE_OPAQUE;
-	wiImage::Draw(ocean->getD3D11DisplacementMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
-	fx.pos.x = 1000;
-	wiImage::Draw(ocean->getD3D11GradientMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
 }
 void EditorComponent::Unload()
 {

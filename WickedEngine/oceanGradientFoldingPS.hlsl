@@ -1,4 +1,4 @@
-#include "oceanHF.hlsli"
+#include "oceanWaveGenHF.hlsli"
 
 // Displacement -> Normal, Folding
 float4 main(VS_QUAD_OUTPUT In) : SV_Target

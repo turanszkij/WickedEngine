@@ -1,4 +1,4 @@
-#include "oceanHF.hlsli"
+#include "oceanWaveGenHF.hlsli"
 
 VS_QUAD_OUTPUT main(float4 vPos : POSITION)
 {

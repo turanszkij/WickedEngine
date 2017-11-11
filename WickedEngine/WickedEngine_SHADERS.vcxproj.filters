@@ -115,7 +115,10 @@
     <None Include="hairparticleHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="oceanHF.hlsli">
+    <None Include="oceanWaveGenHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
+    <None Include="oceanSurfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
   </ItemGroup>
@@ -667,6 +670,15 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="oceanUpdateDisplacementPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanSurfaceVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanSurfacePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanSurfaceSimplePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

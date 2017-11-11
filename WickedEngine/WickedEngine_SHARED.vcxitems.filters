@@ -1107,8 +1107,14 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiOceanSimulator.h">
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiOcean.h">
       <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FFTGenerator.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1898,7 +1904,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiOceanSimulator.cpp">
+    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiOcean.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
