@@ -73,7 +73,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 
 
-	cameraWindow->Translate(XMFLOAT3(30, 30, 0));
+	cameraWindow->Translate(XMFLOAT3(760, 500, 0));
 	cameraWindow->SetVisible(false);
 }
 

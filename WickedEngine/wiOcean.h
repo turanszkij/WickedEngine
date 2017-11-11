@@ -48,14 +48,14 @@ struct wiOceanParameter
 
 	wiOceanParameter()
 	{
-		choppy_scale = 1;
 		dmap_dim = 512;
-		patch_length = 1000;
-		time_scale = 1;
-		wave_amplitude = 1.0f;
-		wind_dependency = 0.5f;
-		wind_dir = XMFLOAT2(1, 1);
-		wind_speed = 100;
+		patch_length = 2000.0f;
+		time_scale = 0.8f;
+		wave_amplitude = 0.35f;
+		wind_dir = XMFLOAT2(0.8f, 0.6f);
+		wind_speed = 600.0f;
+		wind_dependency = 0.07f;
+		choppy_scale = 1.3f;
 	}
 };
 

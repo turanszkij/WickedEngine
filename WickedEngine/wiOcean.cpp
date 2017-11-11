@@ -679,14 +679,14 @@ void wiOcean::initRenderResource()
 	RasterizerStateDesc ras_desc;
 	ras_desc.FillMode = FILL_SOLID;
 	ras_desc.CullMode = CULL_NONE;
-	ras_desc.FrontCounterClockwise = FALSE;
+	ras_desc.FrontCounterClockwise = false;
 	ras_desc.DepthBias = 0;
 	ras_desc.SlopeScaledDepthBias = 0.0f;
 	ras_desc.DepthBiasClamp = 0.0f;
-	ras_desc.DepthClipEnable = TRUE;
-	ras_desc.ScissorEnable = FALSE;
-	ras_desc.MultisampleEnable = TRUE;
-	ras_desc.AntialiasedLineEnable = FALSE;
+	ras_desc.DepthClipEnable = true;
+	ras_desc.ScissorEnable = false;
+	ras_desc.MultisampleEnable = true;
+	ras_desc.AntialiasedLineEnable = false;
 
 	g_pRSState_Solid = new RasterizerState;
 	device->CreateRasterizerState(&ras_desc, g_pRSState_Solid);
@@ -698,16 +698,18 @@ void wiOcean::initRenderResource()
 
 	DepthStencilStateDesc depth_desc;
 	memset(&depth_desc, 0, sizeof(DepthStencilStateDesc));
-	depth_desc.DepthEnable = FALSE;
-	depth_desc.StencilEnable = FALSE;
+	depth_desc.DepthEnable = true;
+	depth_desc.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	depth_desc.DepthFunc = COMPARISON_GREATER;
+	depth_desc.StencilEnable = false;
 	g_pDSState_Disable = new DepthStencilState;
 	device->CreateDepthStencilState(&depth_desc, g_pDSState_Disable);
 
 	BlendStateDesc blend_desc;
 	memset(&blend_desc, 0, sizeof(BlendStateDesc));
-	blend_desc.AlphaToCoverageEnable = FALSE;
-	blend_desc.IndependentBlendEnable = FALSE;
-	blend_desc.RenderTarget[0].BlendEnable = TRUE;
+	blend_desc.AlphaToCoverageEnable = false;
+	blend_desc.IndependentBlendEnable = false;
+	blend_desc.RenderTarget[0].BlendEnable = true;
 	blend_desc.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	blend_desc.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	blend_desc.RenderTarget[0].BlendOp = BLEND_OP_ADD;
@@ -1439,6 +1441,7 @@ void wiOcean::Render(const Camera* camera, float time)
 
 	// State blocks
 	device->BindRasterizerState(wire ? g_pRSState_Wireframe : g_pRSState_Solid, threadID);
+	device->BindDepthStencilState(g_pDSState_Disable, 0, threadID);
 
 	// Constants
 	device->BindConstantBufferVS(g_pShadingCB, CB_GETBINDSLOT(Ocean_Rendering_ShadingCB), threadID);

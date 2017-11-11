@@ -27,7 +27,7 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 
 
 
-	oceanWindow->Translate(XMFLOAT3(30, 30, 0));
+	oceanWindow->Translate(XMFLOAT3(800, 50, 0));
 	oceanWindow->SetVisible(false);
 }
 
