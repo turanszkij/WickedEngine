@@ -937,6 +937,8 @@ void wiRenderer::ReloadShaders(const std::string& path)
 	wiFont::LoadShaders();
 	wiImage::LoadShaders();
 	wiLensFlare::LoadShaders();
+	wiOcean::LoadShaders();
+	CSFFT_512x512_Data_t::LoadShaders();
 
 	GetDevice()->UNLOCK();
 }

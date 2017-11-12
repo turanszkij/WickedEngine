@@ -12,7 +12,18 @@ ComputeShader*			wiOcean::m_pUpdateGradientFoldingCS = nullptr;
 VertexShader*			wiOcean::g_pOceanSurfVS = nullptr;
 PixelShader*			wiOcean::g_pWireframePS = nullptr;
 PixelShader*			wiOcean::g_pOceanSurfPS = nullptr;
+
 VertexLayout*			wiOcean::g_pMeshLayout = nullptr;
+Texture1D*				wiOcean::g_pFresnelMap = nullptr;
+Texture2D*				wiOcean::g_pPerlinMap = nullptr;
+GPUBuffer*				wiOcean::g_pPerCallCB = nullptr;
+GPUBuffer*				wiOcean::g_pShadingCB = nullptr;
+RasterizerState*		wiOcean::g_pRSState_Solid = nullptr;
+RasterizerState*		wiOcean::g_pRSState_Wireframe = nullptr;
+DepthStencilState*		wiOcean::g_pDSState_Disable = nullptr;
+BlendState*				wiOcean::g_pBState_Transparent = nullptr;
+
+CSFFT512x512_Plan		wiOcean::m_fft_plan;
 
 // Disable warning "conditional expression is constant"
 #pragma warning(disable:4127)
@@ -148,13 +159,14 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D** p
 
 wiOcean::wiOcean(const wiOceanParameter& params)
 {
+	m_param = params;
+
 	// Height map H(0)
 	int height_map_size = (params.dmap_dim + 4) * (params.dmap_dim + 1);
 	XMFLOAT2* h0_data = new XMFLOAT2[height_map_size * sizeof(XMFLOAT2)];
 	float* omega_data = new float[height_map_size * sizeof(float)];
 	initHeightMap(h0_data, omega_data);
 
-	m_param = params;
 	int hmap_dim = params.dmap_dim;
 	int input_full_size = (hmap_dim + 4) * (hmap_dim + 1);
 	// This value should be (hmap_dim / 2 + 1) * hmap_dim, but we use full sized buffer here for simplicity.
@@ -188,7 +200,7 @@ wiOcean::wiOcean(const wiOceanParameter& params)
 	SAFE_DELETE_ARRAY(h0_data);
 	SAFE_DELETE_ARRAY(omega_data);
 
-	// D3D11 Textures
+
 	createTextureAndViews(hmap_dim, hmap_dim, FORMAT_R32G32B32A32_FLOAT, &m_pDisplacementMap);
 	createTextureAndViews(hmap_dim, hmap_dim, FORMAT_R16G16B16A16_FLOAT, &m_pGradientMap);
 
@@ -222,15 +234,12 @@ wiOcean::wiOcean(const wiOceanParameter& params)
 	m_pPerFrameCB = new GPUBuffer;
 	wiRenderer::GetDevice()->CreateBuffer(&cb_desc, nullptr, m_pPerFrameCB);
 
-	// FFT
-	fft512x512_create_plan(&m_fft_plan, 3);
 
 	initRenderResource();
 }
 
 wiOcean::~wiOcean()
 {
-	fft512x512_destroy_plan(&m_fft_plan);
 
 	SAFE_DELETE(m_pBuffer_Float2_H0);
 	SAFE_DELETE(m_pBuffer_Float_Omega);
@@ -368,6 +377,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	// Unbind
 	device->UnBindUnorderedAccessResources(0, 1, threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	device->BindCS(nullptr, threadID);
 
 
 	device->GenerateMips(m_pGradientMap, threadID);
@@ -406,118 +416,13 @@ void wiOcean::initRenderResource()
 
 	g_WindDir = m_param.wind_dir;
 
-	// D3D buffers
 	createSurfaceMesh();
-	createFresnelMap();
-	loadTextures();
-
-
-	// Constants
-	GPUBufferDesc cb_desc;
-	cb_desc.Usage = USAGE_DYNAMIC;
-	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.CPUAccessFlags = CPU_ACCESS_WRITE;
-	cb_desc.MiscFlags = 0;
-	cb_desc.ByteWidth = sizeof(Ocean_Rendering_PatchCB);
-	cb_desc.StructureByteStride = 0;
-	g_pPerCallCB = new GPUBuffer;
-	device->CreateBuffer(&cb_desc, nullptr, g_pPerCallCB);
-
-	Ocean_Rendering_ShadingCB shading_data;
-	// Grid side length * 2
-	shading_data.g_TexelLength_x2 = m_param.patch_length / m_param.dmap_dim * 2;;
-	// Color
-	shading_data.g_SkyColor = g_SkyColor;
-	shading_data.g_WaterbodyColor = g_WaterbodyColor;
-	// Texcoord
-	shading_data.g_UVScale = 1.0f / m_param.patch_length;
-	shading_data.g_UVOffset = 0.5f / m_param.dmap_dim;
-	// Perlin
-	shading_data.g_PerlinSize = g_PerlinSize;
-	shading_data.g_PerlinAmplitude = g_PerlinAmplitude;
-	shading_data.g_PerlinGradient = g_PerlinGradient;
-	shading_data.g_PerlinOctave = g_PerlinOctave;
-	// Multiple reflection workaround
-	shading_data.g_BendParam = g_BendParam;
-	// Sun streaks
-	shading_data.g_SunColor = g_SunColor;
-	shading_data.g_SunDir = g_SunDir;
-	shading_data.g_Shineness = g_Shineness;
-
-	SubresourceData cb_init_data;
-	cb_init_data.pSysMem = &shading_data;
-	cb_init_data.SysMemPitch = 0;
-	cb_init_data.SysMemSlicePitch = 0;
-
-	cb_desc.Usage = USAGE_IMMUTABLE;
-	cb_desc.CPUAccessFlags = 0;
-	cb_desc.ByteWidth = sizeof(Ocean_Rendering_ShadingCB);
-	cb_desc.StructureByteStride = 0;
-	g_pShadingCB = new GPUBuffer;
-	device->CreateBuffer(&cb_desc, &cb_init_data, g_pShadingCB);
-
-	// State blocks
-	RasterizerStateDesc ras_desc;
-	ras_desc.FillMode = FILL_SOLID;
-	ras_desc.CullMode = CULL_NONE;
-	ras_desc.FrontCounterClockwise = false;
-	ras_desc.DepthBias = 0;
-	ras_desc.SlopeScaledDepthBias = 0.0f;
-	ras_desc.DepthBiasClamp = 0.0f;
-	ras_desc.DepthClipEnable = true;
-	ras_desc.ScissorEnable = false;
-	ras_desc.MultisampleEnable = true;
-	ras_desc.AntialiasedLineEnable = false;
-
-	g_pRSState_Solid = new RasterizerState;
-	device->CreateRasterizerState(&ras_desc, g_pRSState_Solid);
-
-	ras_desc.FillMode = FILL_WIREFRAME;
-
-	g_pRSState_Wireframe = new RasterizerState;
-	device->CreateRasterizerState(&ras_desc, g_pRSState_Wireframe);
-
-	DepthStencilStateDesc depth_desc;
-	memset(&depth_desc, 0, sizeof(DepthStencilStateDesc));
-	depth_desc.DepthEnable = true;
-	depth_desc.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	depth_desc.DepthFunc = COMPARISON_GREATER;
-	depth_desc.StencilEnable = false;
-	g_pDSState_Disable = new DepthStencilState;
-	device->CreateDepthStencilState(&depth_desc, g_pDSState_Disable);
-
-	BlendStateDesc blend_desc;
-	memset(&blend_desc, 0, sizeof(BlendStateDesc));
-	blend_desc.AlphaToCoverageEnable = false;
-	blend_desc.IndependentBlendEnable = false;
-	blend_desc.RenderTarget[0].BlendEnable = true;
-	blend_desc.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-	blend_desc.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-	blend_desc.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	blend_desc.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	blend_desc.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
-	blend_desc.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	blend_desc.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	g_pBState_Transparent = new BlendState;
-	device->CreateBlendState(&blend_desc, g_pBState_Transparent);
 }
 
 void wiOcean::cleanupRenderResource()
 {
 	SAFE_DELETE(g_pMeshIB);
 	SAFE_DELETE(g_pMeshVB);
-
-	SAFE_DELETE(g_pFresnelMap);
-	SAFE_DELETE(g_pPerlinMap);
-
-	SAFE_DELETE(g_pPerCallCB);
-	SAFE_DELETE(g_pPerFrameCB);
-	SAFE_DELETE(g_pShadingCB);
-
-	SAFE_DELETE(g_pRSState_Solid);
-	SAFE_DELETE(g_pRSState_Wireframe);
-	SAFE_DELETE(g_pDSState_Disable);
-	SAFE_DELETE(g_pBState_Transparent);
 
 	g_render_list.clear();
 }
@@ -840,51 +745,6 @@ void wiOcean::createSurfaceMesh()
 	device->CreateBuffer(&ib_desc, &init_data, g_pMeshIB);
 
 	SAFE_DELETE_ARRAY(index_array);
-}
-
-void wiOcean::createFresnelMap()
-{
-	static const int FRESNEL_TEX_SIZE = 256;
-	static const float g_SkyBlending = 16.0f;
-
-	uint32_t* buffer = new uint32_t[FRESNEL_TEX_SIZE];
-	for (int i = 0; i < FRESNEL_TEX_SIZE; i++)
-	{
-		float cos_a = i / (FLOAT)FRESNEL_TEX_SIZE;
-		// Using water's refraction index 1.33
-		uint32_t fresnel = (uint32_t)(XMVectorGetX(XMFresnelTerm(XMVectorSet(cos_a, cos_a, cos_a, cos_a), XMVectorSet(1.33f, 1.33f, 1.33f, 1.33f))) * 255);
-
-		uint32_t sky_blend = (uint32_t)(powf(1 / (1 + cos_a), g_SkyBlending) * 255);
-
-		buffer[i] = (sky_blend << 8) | fresnel;
-	}
-
-
-
-	Texture1DDesc tex_desc;
-	tex_desc.Width = FRESNEL_TEX_SIZE;
-	tex_desc.MipLevels = 1;
-	tex_desc.ArraySize = 1;
-	tex_desc.Format = FORMAT_R8G8B8A8_UNORM;
-	tex_desc.Usage = USAGE_IMMUTABLE;
-	tex_desc.BindFlags = BIND_SHADER_RESOURCE;
-	tex_desc.CPUAccessFlags = 0;
-	tex_desc.MiscFlags = 0;
-
-	SubresourceData init_data;
-	init_data.pSysMem = buffer;
-	init_data.SysMemPitch = 0;
-	init_data.SysMemSlicePitch = 0;
-
-	HRESULT hr = wiRenderer::GetDevice()->CreateTexture1D(&tex_desc, &init_data, &g_pFresnelMap);
-	assert(SUCCEEDED(hr));
-
-	delete[] buffer;
-}
-
-void wiOcean::loadTextures()
-{
-	wiRenderer::GetDevice()->CreateTextureFromFile("perlin_noise.dds", &g_pPerlinMap, true, GRAPHICSTHREAD_IMMEDIATE);
 }
 
 bool wiOcean::checkNodeVisibility(const QuadNode& quad_node, const Camera& camera)
@@ -1220,6 +1080,30 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 	device->BindDepthStencilState(g_pDSState_Disable, 0, threadID);
 
 	// Constants
+
+	Ocean_Rendering_ShadingCB shading_data;
+	// Grid side length * 2
+	shading_data.g_TexelLength_x2 = m_param.patch_length / m_param.dmap_dim * 2;;
+	// Color
+	shading_data.g_SkyColor = g_SkyColor;
+	shading_data.g_WaterbodyColor = g_WaterbodyColor;
+	// Texcoord
+	shading_data.g_UVScale = 1.0f / m_param.patch_length;
+	shading_data.g_UVOffset = 0.5f / m_param.dmap_dim;
+	// Perlin
+	shading_data.g_PerlinSize = g_PerlinSize;
+	shading_data.g_PerlinAmplitude = g_PerlinAmplitude;
+	shading_data.g_PerlinGradient = g_PerlinGradient;
+	shading_data.g_PerlinOctave = g_PerlinOctave;
+	// Multiple reflection workaround
+	shading_data.g_BendParam = g_BendParam;
+	// Sun streaks
+	shading_data.g_SunColor = g_SunColor;
+	shading_data.g_SunDir = g_SunDir;
+	shading_data.g_Shineness = g_Shineness;
+
+	device->UpdateBuffer(g_pShadingCB, &shading_data, threadID);
+
 	device->BindConstantBufferVS(g_pShadingCB, CB_GETBINDSLOT(Ocean_Rendering_ShadingCB), threadID);
 	device->BindConstantBufferPS(g_pShadingCB, CB_GETBINDSLOT(Ocean_Rendering_ShadingCB), threadID);
 
@@ -1284,17 +1168,6 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 			device->DrawIndexed(render_param.num_boundary_faces * 3, render_param.boundary_start_index, 0, threadID);
 		}
 	}
-
-	//// Unbind
-	//vs_srvs[0] = NULL;
-	//vs_srvs[1] = NULL;
-	//pd3dContext->VSSetShaderResources(0, 2, &vs_srvs[0]);
-
-	//ps_srvs[0] = NULL;
-	//ps_srvs[1] = NULL;
-	//ps_srvs[2] = NULL;
-	//ps_srvs[3] = NULL;
-	//pd3dContext->PSSetShaderResources(1, 4, &ps_srvs[0]);
 }
 
 
@@ -1328,17 +1201,138 @@ void wiOcean::SetUpStatic()
 {
 	LoadShaders();
 	CSFFT_512x512_Data_t::LoadShaders();
+	fft512x512_create_plan(&m_fft_plan, 3);
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	static const int FRESNEL_TEX_SIZE = 256;
+	static const float g_SkyBlending = 16.0f;
+
+	uint32_t* buffer = new uint32_t[FRESNEL_TEX_SIZE];
+	for (int i = 0; i < FRESNEL_TEX_SIZE; i++)
+	{
+		float cos_a = i / (FLOAT)FRESNEL_TEX_SIZE;
+		// Using water's refraction index 1.33
+		uint32_t fresnel = (uint32_t)(XMVectorGetX(XMFresnelTerm(XMVectorSet(cos_a, cos_a, cos_a, cos_a), XMVectorSet(1.33f, 1.33f, 1.33f, 1.33f))) * 255);
+
+		uint32_t sky_blend = (uint32_t)(powf(1 / (1 + cos_a), g_SkyBlending) * 255);
+
+		buffer[i] = (sky_blend << 8) | fresnel;
+	}
+
+
+
+	Texture1DDesc tex_desc;
+	tex_desc.Width = FRESNEL_TEX_SIZE;
+	tex_desc.MipLevels = 1;
+	tex_desc.ArraySize = 1;
+	tex_desc.Format = FORMAT_R8G8B8A8_UNORM;
+	tex_desc.Usage = USAGE_IMMUTABLE;
+	tex_desc.BindFlags = BIND_SHADER_RESOURCE;
+	tex_desc.CPUAccessFlags = 0;
+	tex_desc.MiscFlags = 0;
+
+	SubresourceData init_data;
+	init_data.pSysMem = buffer;
+	init_data.SysMemPitch = 0;
+	init_data.SysMemSlicePitch = 0;
+
+	HRESULT hr = wiRenderer::GetDevice()->CreateTexture1D(&tex_desc, &init_data, &g_pFresnelMap);
+	assert(SUCCEEDED(hr));
+
+	delete[] buffer;
+
+
+	wiRenderer::GetDevice()->CreateTextureFromFile("perlin_noise.dds", &g_pPerlinMap, true, GRAPHICSTHREAD_IMMEDIATE);
+
+
+	// Constants
+	GPUBufferDesc cb_desc;
+	cb_desc.Usage = USAGE_DYNAMIC;
+	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
+	cb_desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+	cb_desc.MiscFlags = 0;
+	cb_desc.ByteWidth = sizeof(Ocean_Rendering_PatchCB);
+	cb_desc.StructureByteStride = 0;
+	g_pPerCallCB = new GPUBuffer;
+	device->CreateBuffer(&cb_desc, nullptr, g_pPerCallCB);
+
+
+	cb_desc.Usage = USAGE_DYNAMIC;
+	cb_desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+	cb_desc.ByteWidth = sizeof(Ocean_Rendering_ShadingCB);
+	cb_desc.StructureByteStride = 0;
+	g_pShadingCB = new GPUBuffer;
+	device->CreateBuffer(&cb_desc, nullptr, g_pShadingCB);
+
+	// State blocks
+	RasterizerStateDesc ras_desc;
+	ras_desc.FillMode = FILL_SOLID;
+	ras_desc.CullMode = CULL_NONE;
+	ras_desc.FrontCounterClockwise = false;
+	ras_desc.DepthBias = 0;
+	ras_desc.SlopeScaledDepthBias = 0.0f;
+	ras_desc.DepthBiasClamp = 0.0f;
+	ras_desc.DepthClipEnable = true;
+	ras_desc.ScissorEnable = false;
+	ras_desc.MultisampleEnable = true;
+	ras_desc.AntialiasedLineEnable = false;
+
+	g_pRSState_Solid = new RasterizerState;
+	device->CreateRasterizerState(&ras_desc, g_pRSState_Solid);
+
+	ras_desc.FillMode = FILL_WIREFRAME;
+
+	g_pRSState_Wireframe = new RasterizerState;
+	device->CreateRasterizerState(&ras_desc, g_pRSState_Wireframe);
+
+	DepthStencilStateDesc depth_desc;
+	memset(&depth_desc, 0, sizeof(DepthStencilStateDesc));
+	depth_desc.DepthEnable = true;
+	depth_desc.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	depth_desc.DepthFunc = COMPARISON_GREATER;
+	depth_desc.StencilEnable = false;
+	g_pDSState_Disable = new DepthStencilState;
+	device->CreateDepthStencilState(&depth_desc, g_pDSState_Disable);
+
+	BlendStateDesc blend_desc;
+	memset(&blend_desc, 0, sizeof(BlendStateDesc));
+	blend_desc.AlphaToCoverageEnable = false;
+	blend_desc.IndependentBlendEnable = false;
+	blend_desc.RenderTarget[0].BlendEnable = true;
+	blend_desc.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	blend_desc.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	blend_desc.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	blend_desc.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	blend_desc.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	blend_desc.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	blend_desc.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	g_pBState_Transparent = new BlendState;
+	device->CreateBlendState(&blend_desc, g_pBState_Transparent);
 }
 
 void wiOcean::CleanUpStatic()
 {
+	fft512x512_destroy_plan(&m_fft_plan);
+
 	SAFE_DELETE(m_pUpdateSpectrumCS);
 	SAFE_DELETE(m_pUpdateDisplacementMapCS);
 	SAFE_DELETE(m_pUpdateGradientFoldingCS);
 
-	SAFE_DELETE(g_pMeshLayout);
-
 	SAFE_DELETE(g_pOceanSurfVS);
 	SAFE_DELETE(g_pOceanSurfPS);
 	SAFE_DELETE(g_pWireframePS);
+
+	SAFE_DELETE(g_pMeshLayout);
+
+	SAFE_DELETE(g_pFresnelMap);
+	SAFE_DELETE(g_pPerlinMap);
+
+	SAFE_DELETE(g_pPerCallCB);
+	SAFE_DELETE(g_pShadingCB);
+
+	SAFE_DELETE(g_pRSState_Solid);
+	SAFE_DELETE(g_pRSState_Wireframe);
+	SAFE_DELETE(g_pDSState_Disable);
+	SAFE_DELETE(g_pBState_Transparent);
 }

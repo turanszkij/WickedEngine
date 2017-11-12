@@ -1402,12 +1402,12 @@ void EditorComponent::Compose()
 {
 	renderPath->Compose();
 
-	if (wiRenderer::GetOcean())
-	{
-		wiImageEffects fx(500, 500, 500, 500);
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		wiImage::Draw(wiRenderer::GetOcean()->getDisplacementMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
-	}
+	//if (wiRenderer::GetOcean())
+	//{
+	//	wiImageEffects fx(500, 500, 500, 500);
+	//	fx.blendFlag = BLENDMODE_OPAQUE;
+	//	wiImage::Draw(wiRenderer::GetOcean()->getDisplacementMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	//}
 
 	//__super::Compose();
 

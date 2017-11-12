@@ -33,10 +33,21 @@ struct wiOceanParameter
 
 	wiOceanParameter()
 	{
+		// Original version:
+		//dmap_dim = 512;
+		//patch_length = 2000.0f;
+		//time_scale = 0.8f;
+		//wave_amplitude = 0.35f;
+		//wind_dir = XMFLOAT2(0.8f, 0.6f);
+		//wind_speed = 600.0f;
+		//wind_dependency = 0.07f;
+		//choppy_scale = 1.3f;
+
+		// Scaled version:
 		dmap_dim = 512;
-		patch_length = 2000.0f;
+		patch_length = 200.0f;
 		time_scale = 0.8f;
-		wave_amplitude = 0.35f;
+		wave_amplitude = 80.0f;
 		wind_dir = XMFLOAT2(0.8f, 0.6f);
 		wind_speed = 600.0f;
 		wind_dependency = 0.07f;
@@ -102,7 +113,7 @@ protected:
 	wiGraphicsTypes::GPUBuffer* m_pPerFrameCB;
 
 	// FFT wrap-up
-	CSFFT512x512_Plan m_fft_plan;
+	static CSFFT512x512_Plan m_fft_plan;
 
 
 
@@ -185,25 +196,24 @@ protected:
 	static wiGraphicsTypes::VertexLayout* g_pMeshLayout;
 
 	// Color look up 1D texture
-	wiGraphicsTypes::Texture1D* g_pFresnelMap = nullptr;
+	static wiGraphicsTypes::Texture1D* g_pFresnelMap;
 
 	// Distant perlin wave
-	wiGraphicsTypes::Texture2D* g_pPerlinMap = nullptr;
+	static wiGraphicsTypes::Texture2D* g_pPerlinMap;
 
 	// HLSL shaders
 	static wiGraphicsTypes::VertexShader* g_pOceanSurfVS;
 	static wiGraphicsTypes::PixelShader* g_pOceanSurfPS;
 	static wiGraphicsTypes::PixelShader* g_pWireframePS;
 
-	wiGraphicsTypes::GPUBuffer* g_pPerCallCB = nullptr;
-	wiGraphicsTypes::GPUBuffer* g_pPerFrameCB = nullptr;
-	wiGraphicsTypes::GPUBuffer* g_pShadingCB = nullptr;
+	static wiGraphicsTypes::GPUBuffer* g_pPerCallCB;
+	static wiGraphicsTypes::GPUBuffer* g_pShadingCB;
 
 	// State blocks
-	wiGraphicsTypes::RasterizerState* g_pRSState_Solid = nullptr;
-	wiGraphicsTypes::RasterizerState* g_pRSState_Wireframe = nullptr;
-	wiGraphicsTypes::DepthStencilState* g_pDSState_Disable = nullptr;
-	wiGraphicsTypes::BlendState* g_pBState_Transparent = nullptr;
+	static wiGraphicsTypes::RasterizerState* g_pRSState_Solid;
+	static wiGraphicsTypes::RasterizerState* g_pRSState_Wireframe;
+	static wiGraphicsTypes::DepthStencilState* g_pDSState_Disable;
+	static wiGraphicsTypes::BlendState* g_pBState_Transparent;
 
 
 	// init & cleanup

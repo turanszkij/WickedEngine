@@ -9,8 +9,6 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	//params.patch_length = 200.0f;
-	//params.wave_amplitude = 0.0f;
 
 	oceanWindow = new wiWindow(GUI, "Ocean Window");
 	oceanWindow->SetSize(XMFLOAT2(600, 300));
@@ -39,7 +37,7 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	});
 	oceanWindow->AddWidget(patchSizeSlider);
 
-	waveAmplitudeSlider = new wiSlider(0, 10, 1000, 100000, "Wave amplitude: ");
+	waveAmplitudeSlider = new wiSlider(0, 100, 1000, 100000, "Wave amplitude: ");
 	waveAmplitudeSlider->SetSize(XMFLOAT2(100, 30));
 	waveAmplitudeSlider->SetPos(XMFLOAT2(x, y += inc));
 	waveAmplitudeSlider->SetValue(params.wave_amplitude);
