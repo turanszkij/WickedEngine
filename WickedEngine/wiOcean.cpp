@@ -21,9 +21,6 @@ VertexLayout*			wiOcean::g_pMeshLayout = nullptr;
 #define HALF_SQRT_2	0.7071068f
 #define GRAV_ACCEL	981.0f	// The acceleration of gravity, cm/s^2
 
-#define BLOCK_SIZE_X 16
-#define BLOCK_SIZE_Y 16
-
 // Generating gaussian random number with mean 0 and standard deviation 1.
 float Gauss()
 {
@@ -334,8 +331,8 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->BindConstantBufferCS(m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
 
 	// Run the CS
-	UINT group_count_x = (m_param.dmap_dim + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X;
-	UINT group_count_y = (m_param.dmap_dim + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;
+	UINT group_count_x = (m_param.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
+	UINT group_count_y = (m_param.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	device->Dispatch(group_count_x, group_count_y, 1, threadID);
 
 	device->UnBindUnorderedAccessResources(0, 1, threadID);
@@ -357,7 +354,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 	GPUResource* cs_srvs[1] = { m_pBuffer_Float_Dxyz };
 	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
-	device->Dispatch(m_param.dmap_dim / 32, m_param.dmap_dim / 32, 1, threadID);
+	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 
 
 	// Update gradient map:
@@ -366,7 +363,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 	cs_srvs[0] = m_pDisplacementMap;
 	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
-	device->Dispatch(m_param.dmap_dim / 32, m_param.dmap_dim / 32, 1, threadID);
+	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 
 	// Unbind
 	device->UnBindUnorderedAccessResources(0, 1, threadID);

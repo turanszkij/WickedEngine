@@ -2,6 +2,8 @@
 #define _SHADERINTEROP_OCEAN_H_
 #include "ShaderInterop.h"
 
+#define OCEAN_COMPUTE_TILESIZE 16
+
 // Simulation constants:
 
 CBUFFER(Ocean_Simulation_ImmutableCB, CBSLOT_OTHER_OCEAN_SIMULATION_IMMUTABLE)

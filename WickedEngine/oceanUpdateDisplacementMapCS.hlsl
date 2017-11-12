@@ -1,9 +1,9 @@
-#include "oceanWaveGenHF.hlsli"
+#include "ShaderInterop_Ocean.h"
 
 STRUCTUREDBUFFER(g_InputDxyz, float2, TEXSLOT_ONDEMAND0);
 RWTEXTURE2D(output, float4, 0);
 
-[numthreads(32, 32, 1)]
+[numthreads(OCEAN_COMPUTE_TILESIZE, OCEAN_COMPUTE_TILESIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint addr = g_OutWidth * DTid.y + DTid.x;

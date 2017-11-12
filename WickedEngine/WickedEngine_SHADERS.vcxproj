@@ -33,7 +33,6 @@
     <None Include="objectHF.hlsli" />
     <None Include="objectInputLayoutHF.hlsli" />
     <None Include="oceanSurfaceHF.hlsli" />
-    <None Include="oceanWaveGenHF.hlsli" />
     <None Include="packHF.hlsli" />
     <None Include="postProcessHF.hlsli" />
     <None Include="quad.hlsli" />
@@ -450,9 +449,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="objectVS_voxelizer.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-    </FxCompile>
-    <FxCompile Include="oceanQuadVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="oceanSimulatorCS.hlsl">

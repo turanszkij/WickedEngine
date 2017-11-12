@@ -115,9 +115,6 @@
     <None Include="hairparticleHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="oceanWaveGenHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="oceanSurfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -662,9 +659,6 @@
     </FxCompile>
     <FxCompile Include="oceanSimulatorCS.hlsl">
       <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="oceanQuadVS.hlsl">
-      <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="oceanSurfaceVS.hlsl">
       <Filter>VS</Filter>

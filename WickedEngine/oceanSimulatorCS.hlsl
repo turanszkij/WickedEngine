@@ -1,25 +1,13 @@
-#include "oceanWaveGenHF.hlsli"
+#include "ShaderInterop_Ocean.h"
 
 #define PI 3.1415926536f
-#define BLOCK_SIZE_X 16
-#define BLOCK_SIZE_Y 16
 
 STRUCTUREDBUFFER(g_InputH0, float2, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(g_InputOmega, float, TEXSLOT_ONDEMAND1);
 RWSTRUCTUREDBUFFER(g_OutputHt, float2, 0);
 
-
-//---------------------------------------- Compute Shaders -----------------------------------------
-
-// Pre-FFT data preparation:
-
-// Notice: In CS5.0, we can output up to 8 RWBuffers but in CS4.x only one output buffer is allowed,
-// that way we have to allocate one big buffer and manage the offsets manually. The restriction is
-// not caused by NVIDIA GPUs and does not present on NVIDIA GPUs when using other computing APIs like
-// CUDA and OpenCL.
-
 // H(0) -> H(t)
-[numthreads(BLOCK_SIZE_X, BLOCK_SIZE_Y, 1)]
+[numthreads(OCEAN_COMPUTE_TILESIZE, OCEAN_COMPUTE_TILESIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	int in_index = DTid.y * g_InWidth + DTid.x;

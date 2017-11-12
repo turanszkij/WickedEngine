@@ -1,9 +1,10 @@
-#include "oceanWaveGenHF.hlsli"
+#include "globals.hlsli"
+#include "ShaderInterop_Ocean.h"
 
 #define xDisplacementMap texture_0
 RWTEXTURE2D(output, float4, 0);
 
-[numthreads(32, 32, 1)]
+[numthreads(OCEAN_COMPUTE_TILESIZE, OCEAN_COMPUTE_TILESIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// Sample neighbour texels
