@@ -93,20 +93,13 @@ protected:
 	// Height & choppy buffer in the space domain, corresponding to H(t), Dx(t) and Dy(t)
 	wiGraphicsTypes::GPUBuffer* m_pBuffer_Float_Dxyz;
 
-	wiGraphicsTypes::GPUBuffer* m_pQuadVB;
-
 	// Shaders, layouts and constants
 	static wiGraphicsTypes::ComputeShader* m_pUpdateSpectrumCS;
-	static wiGraphicsTypes::VertexShader* m_pQuadVS;
-	static wiGraphicsTypes::PixelShader* m_pUpdateDisplacementPS;
-	static wiGraphicsTypes::PixelShader* m_pGenGradientFoldingPS;
-
-	static wiGraphicsTypes::VertexLayout* m_pQuadLayout;
+	static wiGraphicsTypes::ComputeShader* m_pUpdateDisplacementMapCS;
+	static wiGraphicsTypes::ComputeShader* m_pUpdateGradientFoldingCS;
 
 	wiGraphicsTypes::GPUBuffer* m_pImmutableCB;
 	wiGraphicsTypes::GPUBuffer* m_pPerFrameCB;
-
-	wiGraphicsTypes::Sampler m_pPointSamplerState;
 
 	// FFT wrap-up
 	CSFFT512x512_Plan m_fft_plan;

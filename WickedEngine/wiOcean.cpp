@@ -7,13 +7,11 @@ using namespace wiGraphicsTypes;
 using namespace std;
 
 ComputeShader*			wiOcean::m_pUpdateSpectrumCS = nullptr;
-VertexShader*			wiOcean::m_pQuadVS = nullptr;
-PixelShader*			wiOcean::m_pUpdateDisplacementPS = nullptr;
-PixelShader*			wiOcean::m_pGenGradientFoldingPS = nullptr;
+ComputeShader*			wiOcean::m_pUpdateDisplacementMapCS = nullptr;
+ComputeShader*			wiOcean::m_pUpdateGradientFoldingCS = nullptr;
 VertexShader*			wiOcean::g_pOceanSurfVS = nullptr;
 PixelShader*			wiOcean::g_pWireframePS = nullptr;
 PixelShader*			wiOcean::g_pOceanSurfPS = nullptr;
-VertexLayout*			wiOcean::m_pQuadLayout = nullptr;
 VertexLayout*			wiOcean::g_pMeshLayout = nullptr;
 
 // Disable warning "conditional expression is constant"
@@ -112,7 +110,7 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D** p
 	tex_desc.SampleDesc.Count = 1;
 	tex_desc.SampleDesc.Quality = 0;
 	tex_desc.Usage = USAGE_DEFAULT;
-	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
+	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
 	tex_desc.CPUAccessFlags = 0;
 	tex_desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
 
@@ -197,46 +195,6 @@ wiOcean::wiOcean(const wiOceanParameter& params)
 	createTextureAndViews(hmap_dim, hmap_dim, FORMAT_R32G32B32A32_FLOAT, &m_pDisplacementMap);
 	createTextureAndViews(hmap_dim, hmap_dim, FORMAT_R16G16B16A16_FLOAT, &m_pGradientMap);
 
-	// Samplers
-	SamplerDesc sam_desc;
-	sam_desc.Filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	sam_desc.AddressU = TEXTURE_ADDRESS_WRAP;
-	sam_desc.AddressV = TEXTURE_ADDRESS_WRAP;
-	sam_desc.AddressW = TEXTURE_ADDRESS_WRAP;
-	sam_desc.MipLODBias = 0;
-	sam_desc.MaxAnisotropy = 1;
-	sam_desc.ComparisonFunc = COMPARISON_NEVER;
-	sam_desc.BorderColor[0] = 1.0f;
-	sam_desc.BorderColor[1] = 1.0f;
-	sam_desc.BorderColor[2] = 1.0f;
-	sam_desc.BorderColor[3] = 1.0f;
-	sam_desc.MinLOD = -FLT_MAX;
-	sam_desc.MaxLOD = FLT_MAX;
-	wiRenderer::GetDevice()->CreateSamplerState(&sam_desc, &m_pPointSamplerState);
-
-
-	// Quad vertex buffer
-	GPUBufferDesc vb_desc;
-	vb_desc.ByteWidth = 4 * sizeof(XMFLOAT4);
-	vb_desc.Usage = USAGE_IMMUTABLE;
-	vb_desc.BindFlags = BIND_VERTEX_BUFFER;
-	vb_desc.CPUAccessFlags = 0;
-	vb_desc.MiscFlags = 0;
-
-	float quad_verts[] =
-	{
-		-1, -1, 0, 1,
-		-1,  1, 0, 1,
-		1, -1, 0, 1,
-		1,  1, 0, 1,
-	};
-	SubresourceData init_data;
-	init_data.pSysMem = &quad_verts[0];
-	init_data.SysMemPitch = 0;
-	init_data.SysMemSlicePitch = 0;
-
-	m_pQuadVB = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&vb_desc, &init_data, m_pQuadVB);
 
 	// Constant buffers
 	UINT actual_dim = m_param.dmap_dim;
@@ -281,8 +239,6 @@ wiOcean::~wiOcean()
 	SAFE_DELETE(m_pBuffer_Float_Omega);
 	SAFE_DELETE(m_pBuffer_Float2_Ht);
 	SAFE_DELETE(m_pBuffer_Float_Dxyz);
-
-	SAFE_DELETE(m_pQuadVB);
 
 	SAFE_DELETE(m_pDisplacementMap);
 	SAFE_DELETE(m_pGradientMap);
@@ -356,7 +312,6 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->EventBegin("OceanSimulator", threadID);
 
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
-	// Compute shader
 	device->BindCS(m_pUpdateSpectrumCS, threadID);
 
 	// Buffers
@@ -383,13 +338,6 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	UINT group_count_y = (m_param.dmap_dim + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;
 	device->Dispatch(group_count_x, group_count_y, 1, threadID);
 
-	//// Unbind resources for CS
-	//cs0_uavs[0] = NULL;
-	//m_pd3dImmediateContext->CSSetUnorderedAccessViews(0, 1, cs0_uavs, (UINT*)(&cs0_uavs[0]));
-	//cs0_srvs[0] = NULL;
-	//cs0_srvs[1] = NULL;
-	//m_pd3dImmediateContext->CSSetShaderResources(0, 2, cs0_srvs);
-
 	device->UnBindUnorderedAccessResources(0, 1, threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, 2, threadID);
 
@@ -397,79 +345,33 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	// ------------------------------------ Perform FFT -------------------------------------------
 	fft_512x512_c2c(&m_fft_plan, m_pBuffer_Float_Dxyz, m_pBuffer_Float_Dxyz, m_pBuffer_Float2_Ht, threadID);
 
-	// --------------------------------- Wrap Dx, Dy and Dz ---------------------------------------
-	// Push RT
-	//ID3D11RenderTargetView* old_target;
-	//ID3D11DepthStencilView* old_depth;
-	//m_pd3dImmediateContext->OMGetRenderTargets(1, &old_target, &old_depth);
-	//VIEWPORT old_viewport;
-	//UINT num_viewport = 1;
-	//m_pd3dImmediateContext->RSGetViewports(&num_viewport, &old_viewport);
 
-	ViewPort new_vp;
-	new_vp.TopLeftX = 0;
-	new_vp.TopLeftX = 0;
-	new_vp.Width = (float)m_param.dmap_dim;
-	new_vp.Height = (float)m_param.dmap_dim;
-	new_vp.MinDepth = 0.0f;
-	new_vp.MaxDepth = 1.0f;
-	device->BindViewports(1, &new_vp, threadID);
 
-	// Set RT
-	device->BindRenderTargets(1, (Texture**)&m_pDisplacementMap, nullptr, threadID);
+	device->BindConstantBufferCS(m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
+	device->BindConstantBufferCS(m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
 
-	// VS & PS
-	device->BindVS(m_pQuadVS, threadID);
-	device->BindPS(m_pUpdateDisplacementPS, threadID);
 
-	device->BindConstantBufferPS(m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
-	device->BindConstantBufferPS(m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
+	// Update displacement map:
+	device->BindCS(m_pUpdateDisplacementMapCS, threadID);
+	GPUUnorderedResource* cs_uavs[] = { m_pDisplacementMap };
+	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
+	GPUResource* cs_srvs[1] = { m_pBuffer_Float_Dxyz };
+	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
+	device->Dispatch(m_param.dmap_dim / 32, m_param.dmap_dim / 32, 1, threadID);
 
-	// Buffer resources
-	GPUResource* ps_srvs[1] = { m_pBuffer_Float_Dxyz };
-	device->BindResourcesPS(ps_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 
-	// IA setup
-	GPUBuffer* vbs[1] = { m_pQuadVB };
-	UINT strides[1] = { sizeof(XMFLOAT4) };
-	UINT offsets[1] = { 0 };
-	device->BindVertexBuffers(&vbs[0], 0, 1, &strides[0], &offsets[0], threadID);
-
-	device->BindVertexLayout(m_pQuadLayout, threadID);
-	device->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
-
-	// Perform draw call
-	device->Draw(4, 0, threadID);
+	// Update gradient map:
+	device->BindCS(m_pUpdateGradientFoldingCS, threadID);
+	cs_uavs[0] = { m_pGradientMap };
+	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
+	cs_srvs[0] = m_pDisplacementMap;
+	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
+	device->Dispatch(m_param.dmap_dim / 32, m_param.dmap_dim / 32, 1, threadID);
 
 	// Unbind
+	device->UnBindUnorderedAccessResources(0, 1, threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
-
-	// ----------------------------------- Generate Normal ----------------------------------------
-	// Set RT
-	device->BindRenderTargets(1, (Texture**)&m_pGradientMap, nullptr, threadID);
-
-	// VS & PS
-	device->BindVS(m_pQuadVS, threadID);
-	device->BindPS(m_pGenGradientFoldingPS, threadID);
-
-	// Texture resource and sampler
-	ps_srvs[0] = m_pDisplacementMap;
-	device->BindResourcesPS(ps_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
-
-	device->BindSamplerPS(&m_pPointSamplerState, SSLOT_ONDEMAND0, threadID);
-
-	// Perform draw call
-	device->Draw(4, 0, threadID);
-
-	// Unbind
-	device->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-
-	//// Pop RT
-	//m_pd3dImmediateContext->RSSetViewports(1, &old_viewport);
-	//m_pd3dImmediateContext->OMSetRenderTargets(1, &old_target, old_depth);
-	//SAFE_DELETE(old_target);
-	//SAFE_DELETE(old_depth);
 
 	device->GenerateMips(m_pGradientMap, threadID);
 
@@ -1403,22 +1305,8 @@ void wiOcean::LoadShaders()
 {
 
 	m_pUpdateSpectrumCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSimulatorCS.cso", wiResourceManager::COMPUTESHADER));
-
-	{
-		VertexLayoutDesc layout[] =
-		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, 0, INPUT_PER_VERTEX_DATA, 0 },
-		};
-		UINT numElements = ARRAYSIZE(layout);
-		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanQuadVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
-		if (vsinfo != nullptr) {
-			m_pQuadVS = vsinfo->vertexShader;
-			m_pQuadLayout = vsinfo->vertexLayout;
-		}
-	}
-
-	m_pUpdateDisplacementPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanUpdateDisplacementPS.cso", wiResourceManager::PIXELSHADER));
-	m_pGenGradientFoldingPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanGradientFoldingPS.cso", wiResourceManager::PIXELSHADER));
+	m_pUpdateDisplacementMapCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanUpdateDisplacementMapCS.cso", wiResourceManager::COMPUTESHADER));
+	m_pUpdateGradientFoldingCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanUpdateGradientFoldingCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	{
@@ -1448,11 +1336,8 @@ void wiOcean::SetUpStatic()
 void wiOcean::CleanUpStatic()
 {
 	SAFE_DELETE(m_pUpdateSpectrumCS);
-	SAFE_DELETE(m_pQuadVS);
-	SAFE_DELETE(m_pUpdateDisplacementPS);
-	SAFE_DELETE(m_pGenGradientFoldingPS);
-
-	SAFE_DELETE(m_pQuadLayout);
+	SAFE_DELETE(m_pUpdateDisplacementMapCS);
+	SAFE_DELETE(m_pUpdateGradientFoldingCS);
 
 	SAFE_DELETE(g_pMeshLayout);
 

@@ -666,12 +666,6 @@
     <FxCompile Include="oceanQuadVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="oceanGradientFoldingPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="oceanUpdateDisplacementPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="oceanSurfaceVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -680,6 +674,12 @@
     </FxCompile>
     <FxCompile Include="oceanSurfaceSimplePS.hlsl">
       <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanUpdateDisplacementMapCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanUpdateGradientFoldingCS.hlsl">
+      <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

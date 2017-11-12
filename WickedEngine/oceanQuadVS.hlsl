@@ -1,12 +1,11 @@
 #include "oceanWaveGenHF.hlsli"
+#include "fullScreenTriangleHF.hlsli"
 
-VS_QUAD_OUTPUT main(float4 vPos : POSITION)
+VS_QUAD_OUTPUT main(uint vI : SV_VertexID)
 {
-	VS_QUAD_OUTPUT Output;
+	VS_QUAD_OUTPUT Out;
 
-	Output.Position = vPos;
-	Output.TexCoord.x = 0.5f + vPos.x * 0.5f;
-	Output.TexCoord.y = 0.5f - vPos.y * 0.5f;
+	FullScreenTriangle(vI, Out.Position, Out.TexCoord);
 
-	return Output;
+	return Out;
 }

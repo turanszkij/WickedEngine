@@ -12,12 +12,10 @@ struct VS_QUAD_OUTPUT
 
 //----------------------------------------- Pixel Shaders ------------------------------------------
 
-// Textures and sampling states
-#define g_samplerDisplacementMap texture_0
+//// Textures and sampling states
+//#define g_samplerDisplacementMap texture_0
+//
+//SAMPLERSTATE(LinearSampler, SSLOT_ONDEMAND0);
 
-SAMPLERSTATE(LinearSampler, SSLOT_ONDEMAND0);
-
-// The following three should contains only real numbers. But we have only C2C FFT now.
-STRUCTUREDBUFFER(g_InputDxyz, float2, TEXSLOT_ONDEMAND0);
 
 #endif // _OCEAN_SIMULATOR_HF_

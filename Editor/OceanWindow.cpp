@@ -9,6 +9,9 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
+	//params.patch_length = 200.0f;
+	//params.wave_amplitude = 0.0f;
+
 	oceanWindow = new wiWindow(GUI, "Ocean Window");
 	oceanWindow->SetSize(XMFLOAT2(600, 300));
 	GUI->AddWidget(oceanWindow);
