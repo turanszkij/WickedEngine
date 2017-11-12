@@ -20,5 +20,10 @@ public:
 
 	wiWindow* oceanWindow;
 	wiCheckBox* enabledCheckBox;
+	wiSlider*	patchSizeSlider;
+	wiSlider*	waveAmplitudeSlider;
+	wiSlider*	choppyScaleSlider;
+	wiSlider*	windDependencySlider;
+	wiSlider*	timeScaleSlider;
 };
 

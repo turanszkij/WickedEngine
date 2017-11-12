@@ -212,8 +212,6 @@ void fft512x512_create_plan(CSFFT512x512_Plan* plan, UINT slices)
 void fft512x512_destroy_plan(CSFFT512x512_Plan* plan)
 {
 	SAFE_DELETE(plan->pBuffer_Tmp);
-	SAFE_DELETE(plan->pRadix008A_CS);
-	SAFE_DELETE(plan->pRadix008A_CS2);
 
 	for (int i = 0; i < 6; i++)
 		SAFE_DELETE(plan->pRadix008A_CB[i]);

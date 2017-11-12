@@ -504,11 +504,8 @@ const wiOceanParameter& wiOcean::getParameters()
 void wiOcean::initRenderResource()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	wiOceanParameter ocean_param = m_param;
 
-	g_PatchLength = ocean_param.patch_length;
-	g_DisplaceMapDim = ocean_param.dmap_dim;
-	g_WindDir = ocean_param.wind_dir;
+	g_WindDir = m_param.wind_dir;
 
 	// D3D buffers
 	createSurfaceMesh();
@@ -529,13 +526,13 @@ void wiOcean::initRenderResource()
 
 	Ocean_Rendering_ShadingCB shading_data;
 	// Grid side length * 2
-	shading_data.g_TexelLength_x2 = g_PatchLength / g_DisplaceMapDim * 2;;
+	shading_data.g_TexelLength_x2 = m_param.patch_length / m_param.dmap_dim * 2;;
 	// Color
 	shading_data.g_SkyColor = g_SkyColor;
 	shading_data.g_WaterbodyColor = g_WaterbodyColor;
 	// Texcoord
-	shading_data.g_UVScale = 1.0f / g_PatchLength;
-	shading_data.g_UVOffset = 0.5f / g_DisplaceMapDim;
+	shading_data.g_UVScale = 1.0f / m_param.patch_length;
+	shading_data.g_UVOffset = 0.5f / m_param.dmap_dim;
 	// Perlin
 	shading_data.g_PerlinSize = g_PerlinSize;
 	shading_data.g_PerlinAmplitude = g_PerlinAmplitude;
@@ -1156,22 +1153,22 @@ wiOcean::QuadRenderParam& wiOcean::selectMeshPattern(const QuadNode& quad_node)
 	XMVECTOR tmp;
 
 	XMFLOAT2 point_left;
-	tmp = bottom_left + XMVectorSet(-g_PatchLength * 0.5f, quad_node.length * 0.5f, 0, 0);
+	tmp = bottom_left + XMVectorSet(-m_param.patch_length * 0.5f, quad_node.length * 0.5f, 0, 0);
 	XMStoreFloat2(&point_left, tmp);
 	int left_adj_index = searchLeaf(g_render_list, point_left);
 
 	XMFLOAT2 point_right;
-	tmp = bottom_left + XMVectorSet(quad_node.length + g_PatchLength * 0.5f, quad_node.length * 0.5f, 0, 0);
+	tmp = bottom_left + XMVectorSet(quad_node.length + m_param.patch_length * 0.5f, quad_node.length * 0.5f, 0, 0);
 	XMStoreFloat2(&point_right, tmp);
 	int right_adj_index = searchLeaf(g_render_list, point_right);
 
 	XMFLOAT2 point_bottom;
-	tmp = bottom_left + XMVectorSet(quad_node.length * 0.5f, -g_PatchLength * 0.5f, 0, 0);
+	tmp = bottom_left + XMVectorSet(quad_node.length * 0.5f, -m_param.patch_length * 0.5f, 0, 0);
 	XMStoreFloat2(&point_right, tmp);
 	int bottom_adj_index = searchLeaf(g_render_list, point_bottom);
 
 	XMFLOAT2 point_top;
-	tmp = bottom_left + XMVectorSet(quad_node.length * 0.5f, quad_node.length + g_PatchLength * 0.5f, 0, 0);
+	tmp = bottom_left + XMVectorSet(quad_node.length * 0.5f, quad_node.length + m_param.patch_length * 0.5f, 0, 0);
 	XMStoreFloat2(&point_right, tmp);
 	int top_adj_index = searchLeaf(g_render_list, point_top);
 
@@ -1238,7 +1235,7 @@ int wiOcean::buildNodeList(QuadNode& quad_node, const Camera& camera)
 	bool visible = true;
 	XMVECTOR bottom_left = XMLoadFloat2(&quad_node.bottom_left);
 	XMFLOAT2 tmp;
-	if (min_coverage > g_UpperGridCoverage && quad_node.length > g_PatchLength)
+	if (min_coverage > g_UpperGridCoverage && quad_node.length > m_param.patch_length)
 	{
 		// Recursive rendering for sub-quads.
 		QuadNode sub_node_0 = { quad_node.bottom_left, quad_node.length / 2, 0,{ -1, -1, -1, -1 } };
@@ -1290,7 +1287,7 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	// Build rendering list
 	g_render_list.clear();
-	float ocean_extent = g_PatchLength * (1 << g_FurthestCover);
+	float ocean_extent = m_param.patch_length * (1 << g_FurthestCover);
 	QuadNode root_node = { XMFLOAT2(-ocean_extent * 0.5f, -ocean_extent * 0.5f), ocean_extent, 0,{ -1,-1,-1,-1 } };
 	buildNodeList(root_node, *camera);
 
@@ -1356,7 +1353,7 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 		call_consts.g_matWorldViewProj = XMMatrixTranspose(matWVP);
 
 		// Texcoord for perlin noise
-		XMVECTOR uv_base = XMLoadFloat2(&node.bottom_left) / g_PatchLength * g_PerlinSize;
+		XMVECTOR uv_base = XMLoadFloat2(&node.bottom_left) / m_param.patch_length * g_PerlinSize;
 		XMStoreFloat2(&call_consts.g_UVBase, uv_base);
 
 		// Constant g_PerlinSpeed need to be adjusted mannually

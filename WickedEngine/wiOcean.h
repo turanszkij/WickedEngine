@@ -124,10 +124,6 @@ protected:
 
 	// Mesh grid dimension, must be 2^n. 4x4 ~ 256x256
 	int g_MeshDim = 128;
-	// Side length of square shaped mesh patch
-	float g_PatchLength;
-	// Dimension of displacement map
-	int g_DisplaceMapDim;
 	// Subdivision thredshold. Any quad covers more pixels than this value needs to be subdivided.
 	float g_UpperGridCoverage = 64.0f;
 	// Draw distance = g_PatchLength * 2^g_FurthestCover
