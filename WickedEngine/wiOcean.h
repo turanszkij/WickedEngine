@@ -78,6 +78,8 @@ public:
 	static void SetUpStatic();
 	static void CleanUpStatic();
 
+	XMFLOAT3 waterColor = XMFLOAT3(0.07f, 0.15f, 0.2f);
+
 protected:
 	wiOceanParameter m_param;
 
@@ -137,7 +139,6 @@ protected:
 	// Shading properties:
 	// Two colors for waterbody and sky color
 	XMFLOAT3 g_SkyColor = XMFLOAT3(0.38f, 0.45f, 0.56f);
-	XMFLOAT3 g_WaterbodyColor = XMFLOAT3(0.07f, 0.15f, 0.2f);
 	// Blending term for sky cubemap
 	float g_SkyBlending = 16.0f;
 

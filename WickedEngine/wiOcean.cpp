@@ -1086,7 +1086,7 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 	shading_data.g_TexelLength_x2 = m_param.patch_length / m_param.dmap_dim * 2;;
 	// Color
 	shading_data.g_SkyColor = g_SkyColor;
-	shading_data.g_WaterbodyColor = g_WaterbodyColor;
+	shading_data.g_WaterbodyColor = waterColor;
 	// Texcoord
 	shading_data.g_UVScale = 1.0f / m_param.patch_length;
 	shading_data.g_UVOffset = 0.5f / m_param.dmap_dim;

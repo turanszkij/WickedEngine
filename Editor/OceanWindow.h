@@ -7,6 +7,7 @@ class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
+class wiColorPicker;
 
 class OceanWindow
 {
@@ -25,5 +26,6 @@ public:
 	wiSlider*	choppyScaleSlider;
 	wiSlider*	windDependencySlider;
 	wiSlider*	timeScaleSlider;
+	wiColorPicker* colorPicker;
 };
 

@@ -11,7 +11,7 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 
 
 	oceanWindow = new wiWindow(GUI, "Ocean Window");
-	oceanWindow->SetSize(XMFLOAT2(600, 300));
+	oceanWindow->SetSize(XMFLOAT2(700, 300));
 	GUI->AddWidget(oceanWindow);
 
 	float x = 200;
@@ -76,6 +76,18 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 		wiRenderer::SetOceanEnabled(enabledCheckBox->GetCheck(), params);
 	});
 	oceanWindow->AddWidget(timeScaleSlider);
+
+
+	colorPicker = new wiColorPicker(GUI, "Water Color");
+	colorPicker->SetPos(XMFLOAT2(380, 30));
+	colorPicker->RemoveWidgets();
+	colorPicker->SetVisible(true);
+	colorPicker->SetEnabled(true);
+	colorPicker->OnColorChanged([&](wiEventArgs args) {
+		if (wiRenderer::GetOcean() != nullptr)
+			wiRenderer::GetOcean()->waterColor = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+	});
+	oceanWindow->AddWidget(colorPicker);
 
 
 	oceanWindow->Translate(XMFLOAT3(800, 50, 0));
