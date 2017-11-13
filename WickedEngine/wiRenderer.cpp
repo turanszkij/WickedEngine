@@ -2674,7 +2674,7 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 
 
 
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+		GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
 		GetDevice()->BindVertexLayout(nullptr, threadID);
 		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
@@ -2690,7 +2690,7 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		cb.mColor = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
-		GetDevice()->Draw(dim.x*dim.y*6, 0, threadID);
+		GetDevice()->Draw(dim.x*dim.y, 0, threadID);
 
 		GetDevice()->BindGS(nullptr, threadID);
 
