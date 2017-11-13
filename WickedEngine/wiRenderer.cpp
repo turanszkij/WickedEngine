@@ -813,7 +813,7 @@ void wiRenderer::LoadShaders()
 	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldPointVisualizerVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldPlaneVisualizerVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-	vertexShaders[VSTYPE_GRIDGENERATOR] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "gridGeneratorVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+	vertexShaders[VSTYPE_OCEANGRID] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "oceanGridVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
 
 	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
@@ -879,6 +879,7 @@ void wiRenderer::LoadShaders()
 	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OCEANGRID] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "oceanGridPS.cso", wiResourceManager::PIXELSHADER));
 
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -887,6 +888,7 @@ void wiRenderer::LoadShaders()
 	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS_alphatest.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_VOXELIZER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectGS_voxelizer.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_VOXEL] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_OCEANGRID] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "oceanGridGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
@@ -2674,12 +2676,13 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE], threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_GRIDGENERATOR], threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_OCEANGRID], threadID);
+		GetDevice()->BindGS(geometryShaders[GSTYPE_OCEANGRID], threadID);
+		GetDevice()->BindPS(pixelShaders[PSTYPE_OCEANGRID], threadID);
 
 		const uint2 dim = uint2(160, 90);
 
@@ -2687,10 +2690,9 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		cb.mColor = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
-		GetDevice()->Draw(dim.x*dim.y * 6, 0, threadID);
+		GetDevice()->Draw(dim.x*dim.y*6, 0, threadID);
 
-
-
+		GetDevice()->BindGS(nullptr, threadID);
 
 
 

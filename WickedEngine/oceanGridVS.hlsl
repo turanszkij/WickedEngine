@@ -9,16 +9,13 @@ static const float3 QUAD[] = {
 	float3(1, 1, 0),	// 5
 };
 
+
 struct VSOut
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR;
+	float a : TEXCOOD0;
 };
-
-float Trace_plane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
-{
-	return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
-}
 
 VSOut main(uint fakeIndex : SV_VERTEXID)
 {
@@ -45,11 +42,13 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	float3 planeOrigin = float3(0, 0, 0);
 	float3 planeNormal = float3(0, 1, 0);
 
-	float t = Trace_plane(o.xyz, d.xyz, planeOrigin, planeNormal);
+	float a = dot(planeNormal, d); 
+	float t = dot(planeNormal, (planeOrigin - o.xyz) / a);
 	float3 pos = o.xyz + d.xyz * t;
 
 	Out.pos = mul(float4(pos, 1), g_xFrame_MainCamera_VP);
 	Out.color = float4(pos, 1);
+	Out.a = a;
 
 	return Out;
 }

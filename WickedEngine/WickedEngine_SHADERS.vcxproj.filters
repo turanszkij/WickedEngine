@@ -651,9 +651,6 @@
     <FxCompile Include="emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="gridGeneratorVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="fft_512x512_c2c_CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -677,6 +674,15 @@
     </FxCompile>
     <FxCompile Include="oceanUpdateGradientFoldingCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanGridGS.hlsl">
+      <Filter>GS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanGridVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="oceanGridPS.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
