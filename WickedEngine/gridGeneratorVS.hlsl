@@ -15,10 +15,14 @@ struct VSOut
 	float4 color : COLOR;
 };
 
+float Trace_plane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
+{
+	return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
+}
+
 VSOut main(uint fakeIndex : SV_VERTEXID)
 {
 	VSOut Out;
-	Out.color = float4(1, 1, 1, 1);
 
 	uint vertexID = fakeIndex % 6;
 	uint instanceID = fakeIndex / 6;
@@ -31,6 +35,21 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	Out.pos.xy *= invdim;
 	Out.pos.xy += (float2)unflatten2D(instanceID, dim.xy) * invdim;
 	Out.pos.xy = Out.pos.xy * 2 - 1;
+
+	float4 o = mul(float4(Out.pos.xy, 0, 1), g_xFrame_MainCamera_InvVP);
+	o.xyz /= o.w;
+	float4 r = mul(float4(Out.pos.xy, 1, 1), g_xFrame_MainCamera_InvVP);
+	r.xyz /= r.w;
+	float3 d = normalize(r.xyz - o.xyz);
+	
+	float3 planeOrigin = float3(0, 0, 0);
+	float3 planeNormal = float3(0, 1, 0);
+
+	float t = Trace_plane(o.xyz, d.xyz, planeOrigin, planeNormal);
+	float3 pos = o.xyz + d.xyz * t;
+
+	Out.pos = mul(float4(pos, 1), g_xFrame_MainCamera_VP);
+	Out.color = float4(pos, 1);
 
 	return Out;
 }

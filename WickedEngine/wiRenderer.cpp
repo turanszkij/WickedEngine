@@ -2654,9 +2654,17 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 	if(gridHelper){
 		GetDevice()->EventBegin("GridHelper", threadID);
 
+
+
+
+
+
+
+
+
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED], threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
 		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 
@@ -2669,76 +2677,87 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		cb.mColor = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
-		GetDevice()->Draw(dim.x*dim.y*6, 0, threadID);
-
-		//GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
-		//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
-
-		//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-		//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
-		//GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+		GetDevice()->Draw(dim.x*dim.y * 6, 0, threadID);
 
 
-		//GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-		//GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 
-		//static float col = 0.7f;
-		//static int gridVertexCount = 0;
-		//static GPUBuffer* grid = nullptr;
-		//if (grid == nullptr)
-		//{
-		//	const float h = 0.01f; // avoid z-fight with zero plane
-		//	const int a = 20;
-		//	XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
 
-		//	int count = 0;
-		//	for (int i = 0; i <= a; ++i)
-		//	{
-		//		verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
-		//		verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 
-		//		verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
-		//		verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
-		//	}
-		//	for (int j = 0; j <= a; ++j)
-		//	{
-		//		verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
-		//		verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 
-		//		verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
-		//		verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
-		//	}
 
-		//	gridVertexCount = ARRAYSIZE(verts) / 2;
 
-		//	GPUBufferDesc bd;
-		//	ZeroMemory(&bd, sizeof(bd));
-		//	bd.Usage = USAGE_IMMUTABLE;
-		//	bd.ByteWidth = sizeof(verts);
-		//	bd.BindFlags = BIND_VERTEX_BUFFER;
-		//	bd.CPUAccessFlags = 0;
-		//	SubresourceData InitData;
-		//	ZeroMemory(&InitData, sizeof(InitData));
-		//	InitData.pSysMem = verts;
-		//	grid = new GPUBuffer;
-		//	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
-		//}
 
-		//MiscCB sb;
-		//sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
-		//sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
-		//GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		//const GPUBuffer* vbs[] = {
-		//	grid,
-		//};
-		//const UINT strides[] = {
-		//	sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		//};
-		//GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		//GetDevice()->Draw(gridVertexCount, 0, threadID);
 
+
+		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+
+
+		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+
+		static float col = 0.7f;
+		static int gridVertexCount = 0;
+		static GPUBuffer* grid = nullptr;
+		if (grid == nullptr)
+		{
+			const float h = 0.01f; // avoid z-fight with zero plane
+			const int a = 20;
+			XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
+
+			int count = 0;
+			for (int i = 0; i <= a; ++i)
+			{
+				verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+
+				verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+			}
+			for (int j = 0; j <= a; ++j)
+			{
+				verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+
+				verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+			}
+
+			gridVertexCount = ARRAYSIZE(verts) / 2;
+
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = verts;
+			grid = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
+		}
+
+		MiscCB sb;
+		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		const GPUBuffer* vbs[] = {
+			grid,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		GetDevice()->Draw(gridVertexCount, 0, threadID);
 
 		GetDevice()->EventEnd(threadID);
 	}
