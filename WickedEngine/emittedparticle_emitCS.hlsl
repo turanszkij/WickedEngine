@@ -75,19 +75,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		pos = mul(xEmitterWorld, float4(pos, 1)).xyz;
 		nor = normalize(mul((float3x3)xEmitterWorld, nor));
 
+		float particleStartingSize = xParticleSize + xParticleSize * (randoms.y - 0.5f) * xParticleRandomFactor;
 
 		// create new particle:
 		Particle particle;
 		particle.position = pos;
-		particle.size = xParticleSize + xParticleSize * (randoms.y - 0.5f) * xParticleRandomFactor;
-		particle.rotation = xParticleRotation * (randoms.z - 0.5f) * xParticleRandomFactor;
 		particle.velocity = (nor + (randoms.xyz - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
-		particle.rotationalVelocity = particle.rotation;
+		particle.rotationalVelocity = xParticleRotation * (randoms.z - 0.5f) * xParticleRandomFactor;
 		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (randoms.x - 0.5f) * xParticleLifeSpanRandomness;
 		particle.life = particle.maxLife;
-		particle.opacity = 1;
-		particle.sizeBeginEnd = float2(particle.size, particle.size * xParticleScaling);
-		particle.mirror = float2(randoms.x > 0.5f, randoms.y < 0.5f);
+		particle.sizeBeginEnd = float2(particleStartingSize, particleStartingSize * xParticleScaling);
+		particle.color_mirror = 0;
+		particle.color_mirror |= ((randoms.x > 0.5f) << 31) & 0x10000000;
+		particle.color_mirror |= ((randoms.y < 0.5f) << 30) & 0x20000000;
+		particle.color_mirror |= xParticleColor & 0x00FFFFFF;
 
 
 		// new particle index retrieved from dead list (pop):

@@ -93,8 +93,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				float surfaceLinearDepth = getLinearDepth(depth0);
 				float surfaceThickness = 1.5f;
 
+				float lifeLerp = 1 - particle.life / particle.maxLife;
+				float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
+
 				// check if particle is colliding with the depth buffer, but not completely behind it:
-				if ((pos2D.w + particle.size > surfaceLinearDepth) && (pos2D.w - particle.size < surfaceLinearDepth + surfaceThickness))
+				if ((pos2D.w + particleSize > surfaceLinearDepth) && (pos2D.w - particleSize < surfaceLinearDepth + surfaceThickness))
 				{
 					// Calculate surface normal and bounce off the particle:
 					float depth1 = texture_depth[pixel + uint2(1, 0)];
@@ -114,11 +117,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 #endif // DEPTHCOLLISIONS
 
 			particle.position += particle.velocity * dt;
-			particle.rotation += particle.rotationalVelocity * dt;
-
-			float lifeLerp = 1 - particle.life / particle.maxLife;
-			particle.size = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
-			particle.opacity = lerp(1, 0, lifeLerp);
 
 			particle.life -= dt;
 

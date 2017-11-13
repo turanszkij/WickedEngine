@@ -6,15 +6,12 @@
 struct Particle
 {
 	float3 position;
-	float size;
-	float rotation;
-	float3 velocity;
 	float rotationalVelocity;
+	float3 velocity;
 	float maxLife;
 	float life;
-	float opacity;
+	uint color_mirror;
 	float2 sizeBeginEnd;
-	float2 mirror;
 };
 
 struct ParticleCounters
@@ -45,7 +42,8 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xParticleLifeSpanRandomness;
 
 	float		xParticleMotionBlurAmount;
-	float3		xPadding_EmitterCB;
+	uint		xParticleColor;
+	float2		xPadding_EmitterCB;
 };
 
 CBUFFER(SortConstants, 0)

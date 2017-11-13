@@ -532,13 +532,9 @@ public:
 };
 struct Object : public Streamable, public Transform
 {
+	bool renderable;
+
 	//PARTICLE
-	enum EmitterType{
-		NO_EMITTER,
-		EMITTER_VISIBLE,
-		EMITTER_INVISIBLE,
-	};
-	EmitterType emitterType;
 	std::vector< wiEmittedParticle* > eParticleSystems;
 	std::vector< wiHairParticle* > hParticleSystems;
 

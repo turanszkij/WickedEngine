@@ -2077,14 +2077,14 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					// Do the skinning
 					const GPUResource* vbs[] = {
-						static_cast<const GPUResource*>(&mesh->vertexBuffer_POS),
-						static_cast<const GPUResource*>(&mesh->vertexBuffer_NOR),
-						static_cast<const GPUResource*>(&mesh->vertexBuffer_BON),
+						&mesh->vertexBuffer_POS,
+						&mesh->vertexBuffer_NOR,
+						&mesh->vertexBuffer_BON,
 					};
 					const GPUUnorderedResource* sos[] = {
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_POS),
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_NOR),
-						static_cast<const GPUUnorderedResource*>(&mesh->streamoutBuffer_PRE),
+						&mesh->streamoutBuffer_POS,
+						&mesh->streamoutBuffer_NOR,
+						&mesh->streamoutBuffer_PRE,
 					};
 
 					GetDevice()->BindResourcesCS(vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
@@ -4113,7 +4113,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				int k = 0;
 				for (const Object* instance : visibleInstances)
 				{
-					if (instance->emitterType == Object::EmitterType::EMITTER_INVISIBLE || (occlusionCulling && instance->IsOccluded()))
+					if (occlusionCulling && instance->IsOccluded())
 						continue;
 
 					const float impostorThreshold = instance->bounds.getRadius();
@@ -4295,7 +4295,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			int k = 0;
 			for (const Object* instance : visibleInstances) 
 			{
-				if (instance->emitterType == Object::EmitterType::EMITTER_INVISIBLE || (occlusionCulling && instance->IsOccluded()))
+				if (occlusionCulling && instance->IsOccluded())
 					continue;
 
 				float dither = instance->transparency;

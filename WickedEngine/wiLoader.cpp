@@ -413,8 +413,8 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 						file>>systemName>>visibleEmitter>>materialName>>size>>randfac>>norfac>>count>>life>>randlife;
 						file>>scaleX>>scaleY>>rot;
 						
-						if(visibleEmitter) objects.back()->emitterType=Object::EMITTER_VISIBLE;
-						else if(objects.back()->emitterType ==Object::NO_EMITTER) objects.back()->emitterType =Object::EMITTER_INVISIBLE;
+						//if(visibleEmitter) objects.back()->emitterType=Object::EMITTER_VISIBLE;
+						//else if(objects.back()->emitterType ==Object::NO_EMITTER) objects.back()->emitterType =Object::EMITTER_INVISIBLE;
 
 						if(wiRenderer::EMITTERSENABLED){
 							stringstream identified_materialName("");
@@ -3881,7 +3881,7 @@ Object::~Object()
 void Object::init()
 {
 	trail.resize(0);
-	emitterType = NO_EMITTER;
+	renderable = true;
 	eParticleSystems.resize(0);
 	hParticleSystems.resize(0);
 	rigidBody = kinematic = false;
@@ -4015,9 +4015,12 @@ bool Object::IsReflector() const
 int Object::GetRenderTypes() const
 {
 	int retVal = RENDERTYPE::RENDERTYPE_VOID;
-	for (auto& x : mesh->subsets)
+	if (renderable)
 	{
-		retVal |= x.material->GetRenderType();
+		for (auto& x : mesh->subsets)
+		{
+			retVal |= x.material->GetRenderType();
+		}
 	}
 	return retVal;
 }
@@ -4044,9 +4047,8 @@ void Object::Serialize(wiArchive& archive)
 
 	if (archive.IsReadMode())
 	{
-		int temp;
-		archive >> temp;
-		emitterType = (EmitterType)temp;
+		int unused;
+		archive >> unused;
 		archive >> transparency;
 		archive >> color;
 		archive >> rigidBody;
@@ -4074,10 +4076,16 @@ void Object::Serialize(wiArchive& archive)
 			h->Serialize(archive);
 			hParticleSystems.push_back(h);
 		}
+
+		if (archive.GetVersion() >= 13)
+		{
+			archive >> renderable;
+		}
+
 	}
 	else
 	{
-		archive << (int)emitterType;
+		archive << (int)0;
 		archive << transparency;
 		archive << color;
 		archive << rigidBody;
@@ -4099,6 +4107,12 @@ void Object::Serialize(wiArchive& archive)
 		{
 			x->Serialize(archive);
 		}
+
+		if (archive.GetVersion() >= 13)
+		{
+			archive << renderable;
+		}
+
 	}
 }
 #pragma endregion

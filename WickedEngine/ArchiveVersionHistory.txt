@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+13: serialize object property: renderable
 12: serialize emitter property: DEPTHCOLLISIONS
 11: serialize additional emitter properties
 10:	serialize force fields

@@ -293,26 +293,27 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xParticleSize = size;
 	cb.xParticleMotionBlurAmount = motionBlurAmount;
 	cb.xParticleRotation = rotation * XM_PI * 60;
+	cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
 
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
 	const GPUUnorderedResource* uavs[] = {
-		static_cast<GPUUnorderedResource*>(particleBuffer),
-		static_cast<GPUUnorderedResource*>(aliveList[0]), // CURRENT alivelist
-		static_cast<GPUUnorderedResource*>(aliveList[1]), // NEW alivelist
-		static_cast<GPUUnorderedResource*>(deadList),
-		static_cast<GPUUnorderedResource*>(counterBuffer),
-		static_cast<GPUUnorderedResource*>(indirectBuffers),
-		static_cast<GPUUnorderedResource*>(distanceBuffer),
+		particleBuffer,
+		aliveList[0], // CURRENT alivelist
+		aliveList[1], // NEW alivelist
+		deadList,
+		counterBuffer,
+		indirectBuffers,
+		distanceBuffer,
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 	
 	const GPUResource* resources[] = {
 		wiTextureHelper::getInstance()->getRandom64x64(),
-		static_cast<GPUResource*>(&object->mesh->indexBuffer),
-		static_cast<GPUResource*>(&object->mesh->vertexBuffer_POS),
-		static_cast<GPUResource*>(&object->mesh->vertexBuffer_NOR),
+		&object->mesh->indexBuffer,
+		&object->mesh->vertexBuffer_POS,
+		&object->mesh->vertexBuffer_NOR,
 	};
 	device->BindResourcesCS(resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 

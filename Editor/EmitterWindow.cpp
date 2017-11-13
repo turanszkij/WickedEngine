@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "EmitterWindow.h"
+#include "MaterialWindow.h"
 
 #include <sstream>
 
@@ -10,6 +11,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	assert(GUI && "Invalid GUI!");
 
 	object = nullptr;
+	materialWnd = nullptr;
 
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
@@ -233,6 +235,24 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitMotionBlurSlider);
 
 
+
+	materialSelectButton = new wiButton("Select Material");
+	materialSelectButton->SetPos(XMFLOAT2(x, y += step));
+	materialSelectButton->SetSize(XMFLOAT2(150, 30));
+	materialSelectButton->OnClick([&](wiEventArgs args) {
+		if (materialWnd != nullptr)
+		{
+			auto emitter = GetEmitter();
+			if (emitter != nullptr)
+			{
+				materialWnd->SetMaterial(emitter->material);
+			}
+		}
+	});
+	materialSelectButton->SetTooltip("Select corresponding material in the Material Window.");
+	emitterWindow->AddWidget(materialSelectButton);
+
+
 	emitterWindow->Translate(XMFLOAT3(200, 50, 0));
 	emitterWindow->SetVisible(false);
 
@@ -295,6 +315,11 @@ void EmitterWindow::SetObject(Object* obj)
 		emitterWindow->SetEnabled(false);
 	}
 
+}
+
+void EmitterWindow::SetMaterialWnd(MaterialWindow* wnd)
+{
+	materialWnd = wnd;
 }
 
 wiEmittedParticle* EmitterWindow::GetEmitter()

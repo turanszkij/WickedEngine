@@ -260,6 +260,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	lightWnd = new LightWindow(&GetGUI());
 	animWnd = new AnimationWindow(&GetGUI());
 	emitterWnd = new EmitterWindow(&GetGUI());
+	emitterWnd->SetMaterialWnd(materialWnd);
 	forceFieldWnd = new ForceFieldWindow(&GetGUI());
 }
 void EditorComponent::DeleteWindows()

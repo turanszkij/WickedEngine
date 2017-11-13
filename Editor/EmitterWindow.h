@@ -11,6 +11,8 @@ class wiSlider;
 class wiComboBox;
 class wiColorPicker;
 
+class MaterialWindow;
+
 class EmitterWindow
 {
 public:
@@ -18,12 +20,14 @@ public:
 	~EmitterWindow();
 
 	void SetObject(Object* obj);
+	void SetMaterialWnd(MaterialWindow* wnd);
 	void UpdateData();
 
 	Object* object;
 	wiEmittedParticle* GetEmitter();
 
 	wiGUI* GUI;
+	MaterialWindow* materialWnd;
 
 	wiWindow*	emitterWindow;
 
@@ -42,6 +46,7 @@ public:
 	wiSlider* emitRandomnessSlider;
 	wiSlider* emitLifeRandomnessSlider;
 	wiSlider* emitMotionBlurSlider;
+	wiButton* materialSelectButton;
 
 };
 

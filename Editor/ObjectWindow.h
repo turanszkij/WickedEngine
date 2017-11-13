@@ -24,6 +24,7 @@ public:
 
 	wiWindow*	objectWindow;
 
+	wiCheckBox* renderableCheckBox;
 	wiSlider*	ditherSlider;
 	wiColorPicker* colorPicker;
 

@@ -20,6 +20,18 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	float x = 450;
 	float y = 0;
 
+	renderableCheckBox = new wiCheckBox("Renderable: ");
+	renderableCheckBox->SetTooltip("Set object to be participating in rendering.");
+	renderableCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	renderableCheckBox->SetCheck(true);
+	renderableCheckBox->OnClick([&](wiEventArgs args) {
+		if (object != nullptr)
+		{
+			object->renderable = args.bValue;
+		}
+	});
+	objectWindow->AddWidget(renderableCheckBox);
+
 	ditherSlider = new wiSlider(0, 1, 0, 1000, "Dither: ");
 	ditherSlider->SetTooltip("Adjust dithered transparency of the object. This disables some optimizations so performance can be affected.");
 	ditherSlider->SetSize(XMFLOAT2(100, 30));
@@ -225,6 +237,7 @@ void ObjectWindow::SetObject(Object* obj)
 
 	if (object != nullptr)
 	{
+		renderableCheckBox->SetCheck(object->renderable);
 		ditherSlider->SetValue(object->transparency);
 
 		if (object->rigidBody)
