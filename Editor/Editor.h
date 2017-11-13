@@ -14,6 +14,7 @@ class LightWindow;
 class AnimationWindow;
 class EmitterWindow;
 class ForceFieldWindow;
+class OceanWindow;
 
 class EditorLoadingScreen : public LoadingScreenComponent
 {
@@ -45,6 +46,7 @@ public:
 	AnimationWindow*		animWnd;
 	EmitterWindow*			emitterWnd;
 	ForceFieldWindow*		forceFieldWnd;
+	OceanWindow*		oceanWnd;
 
 	Editor*					main;
 

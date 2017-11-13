@@ -24,6 +24,7 @@
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
+#include <wiOcean.h>
 
 #include <algorithm>
 
@@ -76,6 +77,7 @@ int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
 PHYSICS* wiRenderer::physicsEngine = nullptr;
+wiOcean* wiRenderer::ocean = nullptr;
 
 string wiRenderer::SHADERPATH = "shaders/";
 #pragma endregion
@@ -936,6 +938,8 @@ void wiRenderer::ReloadShaders(const std::string& path)
 	wiFont::LoadShaders();
 	wiImage::LoadShaders();
 	wiLensFlare::LoadShaders();
+	wiOcean::LoadShaders();
+	CSFFT_512x512_Data_t::LoadShaders();
 
 	GetDevice()->UNLOCK();
 }
@@ -2124,6 +2128,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	for (wiHairParticle* hair : mainCameraCulling.culledHairParticleSystems)
 	{
 		hair->ComputeCulling(getCamera(), threadID);
+	}
+
+	// Compute water simulation:
+	if (ocean != nullptr)
+	{
+		ocean->UpdateDisplacementMap(renderTime, threadID);
 	}
 
 	// Render out of date environment probes:
@@ -4669,6 +4679,11 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
+	if (ocean != nullptr)
+	{
+		ocean->Render(camera, renderTime, threadID);
+	}
+
 	if (grass)
 	{
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_HAIRALPHACOMPOSITION], STENCILREF_DEFAULT, threadID); // minimizes overdraw by depthcomp = less
@@ -6603,4 +6618,14 @@ void wiRenderer::SetOcclusionCullingEnabled(bool value)
 bool wiRenderer::GetAdvancedRefractionsEnabled()
 {
 	return advancedRefractions && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT);
+}
+
+void wiRenderer::SetOceanEnabled(bool enabled, const wiOceanParameter& params)
+{
+	SAFE_DELETE(ocean);
+
+	if (enabled)
+	{
+		ocean = new wiOcean(params);
+	}
 }

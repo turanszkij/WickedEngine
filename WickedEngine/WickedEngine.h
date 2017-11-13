@@ -56,6 +56,7 @@
 #include "wiSpinLock.h"
 #include "wiRectPacker.h"
 #include "wiProfiler.h"
+#include "wiOcean.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

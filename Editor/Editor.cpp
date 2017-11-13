@@ -14,6 +14,7 @@
 #include "AnimationWindow.h"
 #include "EmitterWindow.h"
 #include "ForceFieldWindow.h"
+#include "OceanWindow.h"
 
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -262,6 +263,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	emitterWnd = new EmitterWindow(&GetGUI());
 	emitterWnd->SetMaterialWnd(materialWnd);
 	forceFieldWnd = new ForceFieldWindow(&GetGUI());
+	oceanWnd = new OceanWindow(&GetGUI());
 }
 void EditorComponent::DeleteWindows()
 {
@@ -276,6 +278,7 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(animWnd);
 	SAFE_DELETE(emitterWnd);
 	SAFE_DELETE(forceFieldWnd);
+	SAFE_DELETE(oceanWnd);
 }
 
 void EditorComponent::Initialize()
@@ -292,6 +295,7 @@ void EditorComponent::Initialize()
 	SAFE_INIT(animWnd);
 	SAFE_INIT(emitterWnd);
 	SAFE_INIT(forceFieldWnd);
+	SAFE_INIT(oceanWnd);
 
 
 	SAFE_INIT(loader);
@@ -465,6 +469,15 @@ void EditorComponent::Load()
 		forceFieldWnd->forceFieldWindow->SetVisible(!forceFieldWnd->forceFieldWindow->IsVisible());
 	});
 	GetGUI().AddWidget(forceFieldWnd_Toggle);
+
+	wiButton* oceanWnd_Toggle = new wiButton("Ocean");
+	oceanWnd_Toggle->SetTooltip("Ocean Simulator properties");
+	oceanWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
+	oceanWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	oceanWnd_Toggle->OnClick([=](wiEventArgs args) {
+		oceanWnd->oceanWindow->SetVisible(!oceanWnd->oceanWindow->IsVisible());
+	});
+	GetGUI().AddWidget(oceanWnd_Toggle);
 
 
 	////////////////////////////////////////////////////////////////////////////////////
@@ -929,6 +942,24 @@ void EditorComponent::Update(float dt)
 			originalMouse = wiInputManager::GetInstance()->getpointer();
 		}
 
+		const float buttonrotSpeed = 2.0f / 60.0f;
+		if (wiInputManager::GetInstance()->down(VK_LEFT))
+		{
+			xDif -= buttonrotSpeed;
+		}
+		if (wiInputManager::GetInstance()->down(VK_RIGHT))
+		{
+			xDif += buttonrotSpeed;
+		}
+		if (wiInputManager::GetInstance()->down(VK_UP))
+		{
+			yDif -= buttonrotSpeed;
+		}
+		if (wiInputManager::GetInstance()->down(VK_DOWN))
+		{
+			yDif += buttonrotSpeed;
+		}
+
 		Camera* cam = wiRenderer::getCamera();
 
 		if (cameraWnd->fpscamera)
@@ -1372,6 +1403,13 @@ void EditorComponent::Compose()
 {
 	renderPath->Compose();
 
+	//if (wiRenderer::GetOcean())
+	//{
+	//	wiImageEffects fx(500, 500, 500, 500);
+	//	fx.blendFlag = BLENDMODE_OPAQUE;
+	//	wiImage::Draw(wiRenderer::GetOcean()->getDisplacementMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	//}
+
 	//__super::Compose();
 
 	for (auto& x : wiRenderer::GetScene().models)
@@ -1521,7 +1559,6 @@ void EditorComponent::Compose()
 		}
 
 	}
-
 }
 void EditorComponent::Unload()
 {
