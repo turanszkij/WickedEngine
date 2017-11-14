@@ -2666,43 +2666,6 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 	if(gridHelper){
 		GetDevice()->EventBegin("GridHelper", threadID);
 
-
-
-
-
-
-
-
-
-		GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
-		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED], threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-
-		GetDevice()->BindVS(vertexShaders[VSTYPE_OCEANGRID], threadID);
-		GetDevice()->BindGS(geometryShaders[GSTYPE_OCEANGRID], threadID);
-		GetDevice()->BindPS(pixelShaders[PSTYPE_OCEANGRID], threadID);
-
-		const uint2 dim = uint2(160, 90);
-
-		MiscCB cb;
-		cb.mColor = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
-
-		GetDevice()->Draw(dim.x*dim.y, 0, threadID);
-
-		GetDevice()->BindGS(nullptr, threadID);
-
-
-
-
-
-
-
-
-
-
 		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
@@ -4683,7 +4646,35 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (ocean != nullptr)
 	{
-		ocean->Render(camera, renderTime, threadID);
+		//ocean->Render(camera, renderTime, threadID);
+
+
+
+		GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
+		GetDevice()->BindVertexLayout(nullptr, threadID);
+		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED], threadID);
+		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
+		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+
+		GetDevice()->BindVS(vertexShaders[VSTYPE_OCEANGRID], threadID);
+		GetDevice()->BindGS(geometryShaders[GSTYPE_OCEANGRID], threadID);
+		GetDevice()->BindPS(pixelShaders[PSTYPE_OCEANGRID], threadID);
+
+		const uint resMul = 4;
+		const uint2 dim = uint2(160 * resMul, 90 * resMul);
+
+		MiscCB cb;
+		cb.mColor = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+		if (ocean != nullptr)
+		{
+			GetDevice()->BindResourceGS(ocean->getDisplacementMap(), TEXSLOT_ONDEMAND0, threadID);
+		}
+
+		GetDevice()->Draw(dim.x*dim.y, 0, threadID);
+
+		GetDevice()->BindGS(nullptr, threadID);
 	}
 
 	if (grass)
