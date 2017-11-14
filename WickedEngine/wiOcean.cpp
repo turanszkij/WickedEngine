@@ -336,14 +336,15 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 
 
-	const uint resMul = 4;
-	const uint2 dim = uint2(160 * resMul, 90 * resMul);
+	const uint2 dim = uint2(160 * surfaceDetail, 90 * surfaceDetail);
 
 	Ocean_RenderCB cb;
 	cb.xOceanWaterColor = waterColor;
 	cb.xOceanTexMulAdd = XMFLOAT4(1.0f / m_param.patch_length, 1.0f / m_param.patch_length, 0.5f / m_param.dmap_dim, 0.5f / m_param.dmap_dim);
 	cb.xOceanTexelLengthMul2 = m_param.patch_length / m_param.dmap_dim * 2;
 	cb.xOceanScreenSpaceParams = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
+	cb.xOceanWaterHeight = waterHeight;
+	cb.xOceanSurfaceDisplacementTolerance = max(1, surfaceDisplacementTolerance);
 
 	device->UpdateBuffer(g_pShadingCB, &cb, threadID);
 

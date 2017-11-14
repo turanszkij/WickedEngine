@@ -26,6 +26,9 @@ public:
 	wiSlider*	choppyScaleSlider;
 	wiSlider*	windDependencySlider;
 	wiSlider*	timeScaleSlider;
+	wiSlider*	heightSlider;
+	wiSlider*	detailSlider;
+	wiSlider*	toleranceSlider;
 	wiColorPicker* colorPicker;
 };
 

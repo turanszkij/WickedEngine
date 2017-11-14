@@ -11,7 +11,7 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 
 
 	oceanWindow = new wiWindow(GUI, "Ocean Window");
-	oceanWindow->SetSize(XMFLOAT2(700, 300));
+	oceanWindow->SetSize(XMFLOAT2(700, 380));
 	GUI->AddWidget(oceanWindow);
 
 	float x = 200;
@@ -76,6 +76,36 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 		wiRenderer::SetOceanEnabled(enabledCheckBox->GetCheck(), params);
 	});
 	oceanWindow->AddWidget(timeScaleSlider);
+
+	heightSlider = new wiSlider(-100, 100, 0, 100000, "Water level: ");
+	heightSlider->SetSize(XMFLOAT2(100, 30));
+	heightSlider->SetPos(XMFLOAT2(x, y += inc));
+	heightSlider->SetValue(0);
+	heightSlider->OnSlide([&](wiEventArgs args) {
+		if (wiRenderer::GetOcean() != nullptr)
+			wiRenderer::GetOcean()->waterHeight = args.fValue;
+	});
+	oceanWindow->AddWidget(heightSlider);
+
+	detailSlider = new wiSlider(1, 10, 0, 9, "Surface Detail: ");
+	detailSlider->SetSize(XMFLOAT2(100, 30));
+	detailSlider->SetPos(XMFLOAT2(x, y += inc));
+	detailSlider->SetValue(4);
+	detailSlider->OnSlide([&](wiEventArgs args) {
+		if (wiRenderer::GetOcean() != nullptr)
+			wiRenderer::GetOcean()->surfaceDetail = (uint32_t)args.iValue;
+	});
+	oceanWindow->AddWidget(detailSlider);
+
+	toleranceSlider = new wiSlider(1, 10, 0, 1000, "Displacement Tolerance: ");
+	toleranceSlider->SetSize(XMFLOAT2(100, 30));
+	toleranceSlider->SetPos(XMFLOAT2(x, y += inc));
+	toleranceSlider->SetValue(2);
+	toleranceSlider->OnSlide([&](wiEventArgs args) {
+		if (wiRenderer::GetOcean() != nullptr)
+			wiRenderer::GetOcean()->surfaceDisplacementTolerance = args.fValue;
+	});
+	oceanWindow->AddWidget(toleranceSlider);
 
 
 	colorPicker = new wiColorPicker(GUI, "Water Color");

@@ -75,6 +75,9 @@ public:
 	static void CleanUpStatic();
 
 	XMFLOAT3 waterColor = XMFLOAT3(powf(0.07f, 1.0f / 2.2f), powf(0.15f, 1.0f / 2.2f), powf(0.2f, 1.0f / 2.2f));
+	float waterHeight = 0.0f;
+	uint32_t surfaceDetail = 4;
+	float surfaceDisplacementTolerance = 2;
 
 protected:
 	wiOceanParameter m_param;

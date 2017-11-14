@@ -1,9 +1,7 @@
 #include "globals.hlsli"
 #include "oceanSurfaceHF.hlsli"
 
-#define EXTRUDE_SCREENSPACE 2
-
-#define g_texDisplacement	texture_0 // FFT wave displacement map
+#define xDisplacementMap	texture_0 
 
 static const float3 QUAD[] = {
 	float3(0, 0, 0),
@@ -15,49 +13,48 @@ static const float3 QUAD[] = {
 };
 
 #define infinite g_xFrame_MainCamera_ZFarP
-float3 intersectPlane(in float3 source, in float3 dir, in float3 normal, float height)
+float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, in float3 planeNormal, float planeHeight)
 {
-	// Compute the distance between the source and the surface, following a ray, then return the intersection
-	// http://www.cs.rpi.edu/~cutler/classes/advancedgraphics/S09/lectures/11_ray_tracing.pdf
-	float distance = (-height - dot(normal, source)) / dot(normal, dir);
-	if (distance < 0.0)
-		return source + dir * distance;
+	float dist = (planeHeight - dot(planeNormal, rayOrigin)) / dot(planeNormal, rayDirection);
+	if (dist < 0.0)
+		return rayOrigin + rayDirection * dist;
 	else
-		return -(float3(source.x, height, source.z) + float3(dir.x, height, dir.z) * infinite);
+		return float3(rayOrigin.x, planeHeight, rayOrigin.z) - float3(rayDirection.x, planeHeight, rayDirection.z) * infinite;
 }
 
 PSIn main(uint fakeIndex : SV_VERTEXID)
 {
 	PSIn Out;
 
+	// fake instancing of quads:
 	uint vertexID = fakeIndex % 6;
 	uint instanceID = fakeIndex / 6;
 
+	// Retrieve grid dimensions and 1/gridDimensions:
 	float2 dim = xOceanScreenSpaceParams.xy;
 	float2 invdim = xOceanScreenSpaceParams.zw;
 
+	// Assemble screen space grid:
 	Out.pos = float4(QUAD[vertexID], 1);
-
 	Out.pos.xy *= invdim;
 	Out.pos.xy += (float2)unflatten2D(instanceID, dim.xy) * invdim;
 	Out.pos.xy = Out.pos.xy * 2 - 1;
-	Out.pos.xy *= EXTRUDE_SCREENSPACE;
+	Out.pos.xy *= max(1, xOceanSurfaceDisplacementTolerance); // extrude screen space grid to tolerate displacement
 
+	// Perform ray tracing of screen grid and plane surface to unproject to world space:
 	float3 o = g_xFrame_MainCamera_CamPos;
 	float4 r = mul(float4(Out.pos.xy, 0, 1), g_xFrame_MainCamera_InvVP);
 	r.xyz /= r.w;
 	float3 d = normalize(o.xyz - r.xyz);
 
-	float3 planeOrigin = float3(0, 0, 0);
-	float3 planeNormal = float3(0, 1, 0);
+	float3 worldPos = intersectPlaneClampInfinite(o, d, float3(0, 1, 0), xOceanWaterHeight);
 
-	float3 worldPos = intersectPlane(o, d, planeNormal, planeOrigin.y);
-
+	// Displace surface:
 	float2 uv = worldPos.xz * xOceanTexMulAdd.xy + xOceanTexMulAdd.zw;
-
-	float3 displacement = g_texDisplacement.SampleLevel(sampler_point_wrap, uv, 0).xyz;
+	float3 displacement = xDisplacementMap.SampleLevel(sampler_point_wrap, uv, 0).xyz;
 	worldPos.xzy += displacement.xyz;
 
+	// Reproject displaced surface and output:
 	Out.pos = mul(float4(worldPos, 1), g_xFrame_MainCamera_VP);
 	Out.pos2D = Out.pos;
 	Out.pos3D = worldPos;

@@ -36,6 +36,9 @@ CBUFFER(Ocean_RenderCB, CBSLOT_OTHER_OCEAN_RENDER)
 	float		xOceanTexelLengthMul2;
 	float4		xOceanTexMulAdd;
 	float4		xOceanScreenSpaceParams;
+	float		xOceanWaterHeight;
+	float		xOceanSurfaceDisplacementTolerance;
+	float2		xOcean_padding;
 };
 
 #endif // _SHADERINTEROP_OCEAN_H_
