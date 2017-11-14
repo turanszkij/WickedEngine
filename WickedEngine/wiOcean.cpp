@@ -333,6 +333,7 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	device->BindRasterizerState(wire ? wireRS : rasterizerState, threadID);
 	device->BindDepthStencilState(depthStencilState, 0, threadID);
+	device->BindBlendState(blendState, threadID);
 
 
 
@@ -340,9 +341,10 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	Ocean_RenderCB cb;
 	cb.xOceanWaterColor = waterColor;
-	cb.xOceanTexMulAdd = XMFLOAT4(1.0f / m_param.patch_length, 1.0f / m_param.patch_length, 0.5f / m_param.dmap_dim, 0.5f / m_param.dmap_dim);
-	cb.xOceanTexelLengthMul2 = m_param.patch_length / m_param.dmap_dim * 2;
+	cb.xOceanTexelLength = m_param.patch_length / m_param.dmap_dim;
 	cb.xOceanScreenSpaceParams = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
+	cb.xOceanPatchSizeRecip = 1.0f / m_param.patch_length;
+	cb.xOceanMapHalfTexel = 0.5f / m_param.dmap_dim;
 	cb.xOceanWaterHeight = waterHeight;
 	cb.xOceanSurfaceDisplacementTolerance = max(1, surfaceDisplacementTolerance);
 

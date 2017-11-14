@@ -31,14 +31,13 @@ CBUFFER(Ocean_Simulation_PerFrameCB, CBSLOT_OTHER_OCEAN_SIMULATION_PERFRAME)
 
 CBUFFER(Ocean_RenderCB, CBSLOT_OTHER_OCEAN_RENDER)
 {
-
 	float3		xOceanWaterColor;
-	float		xOceanTexelLengthMul2;
-	float4		xOceanTexMulAdd;
+	float		xOceanTexelLength;
 	float4		xOceanScreenSpaceParams;
+	float		xOceanPatchSizeRecip;
+	float		xOceanMapHalfTexel;
 	float		xOceanWaterHeight;
 	float		xOceanSurfaceDisplacementTolerance;
-	float2		xOcean_padding;
 };
 
 #endif // _SHADERINTEROP_OCEAN_H_

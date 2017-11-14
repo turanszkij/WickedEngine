@@ -6,10 +6,10 @@
 #define xGradientMap		texture_0
 
 [earlydepthstencil]
-GBUFFEROutputType_Thin main(PSIn input)
+float4 main(PSIn input) : SV_TARGET
 {
 	float2 gradient = xGradientMap.Sample(sampler_aniso_wrap, input.uv).xy;
-	float3 N = normalize(float3(gradient.x, 1, gradient.y));
+	float3 N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 
 	float4 baseColor = float4(xOceanWaterColor, 1);
 	float opacity = 1; // keep edge diffuse shading
@@ -41,10 +41,10 @@ GBUFFEROutputType_Thin main(PSIn input)
 
 	//REFLECTION
 	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
-	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, RefTex + N.xz, 0);
+	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, RefTex + N.xz * 0.04f, 0);
 
 	//REFRACTION 
-	float2 perturbatedRefrTexCoords = ScreenCoord.xy + N.xz;
+	float2 perturbatedRefrTexCoords = ScreenCoord.xy + N.xz * 0.04f;
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float NdotV = abs(dot(N, V)) + 1e-5f;
@@ -69,7 +69,7 @@ GBUFFEROutputType_Thin main(PSIn input)
 
 	OBJECT_PS_FOG
 
-	OBJECT_PS_OUT_FORWARD
+	OBJECT_PS_OUT_FORWARD_SIMPLE
 }
 
 

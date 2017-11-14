@@ -50,8 +50,8 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 	float3 worldPos = intersectPlaneClampInfinite(o, d, float3(0, 1, 0), xOceanWaterHeight);
 
 	// Displace surface:
-	float2 uv = worldPos.xz * xOceanTexMulAdd.xy + xOceanTexMulAdd.zw;
-	float3 displacement = xDisplacementMap.SampleLevel(sampler_point_wrap, uv, 0).xyz;
+	float2 uv = worldPos.xz * xOceanPatchSizeRecip;
+	float3 displacement = xDisplacementMap.SampleLevel(sampler_point_wrap, uv + xOceanMapHalfTexel, 0).xyz;
 	worldPos.xzy += displacement.xyz;
 
 	// Reproject displaced surface and output:
