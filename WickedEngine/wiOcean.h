@@ -109,7 +109,6 @@ protected:
 	static wiGraphicsTypes::ComputeShader* m_pUpdateDisplacementMapCS;
 	static wiGraphicsTypes::ComputeShader* m_pUpdateGradientFoldingCS;
 	static wiGraphicsTypes::VertexShader* g_pOceanSurfVS;
-	static wiGraphicsTypes::GeometryShader* g_pOceanSurfGS;
 	static wiGraphicsTypes::PixelShader* g_pOceanSurfPS;
 	static wiGraphicsTypes::PixelShader* g_pWireframePS;
 

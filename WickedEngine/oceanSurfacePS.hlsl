@@ -6,7 +6,7 @@
 #define g_texGradient		texture_0 // Perlin wave displacement & gradient map in both
 
 [earlydepthstencil]
-GBUFFEROutputType_Thin main(GSOut input)
+GBUFFEROutputType_Thin main(PSIn input)
 {
 	float2 gradient = g_texGradient.Sample(sampler_aniso_wrap, input.uv).xy;
 	float3 N = normalize(float3(gradient.x, 1, gradient.y));

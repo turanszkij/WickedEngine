@@ -669,9 +669,6 @@
     <FxCompile Include="oceanUpdateGradientFoldingCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="oceanSurfaceGS.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
     <FxCompile Include="oceanSurfaceVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>

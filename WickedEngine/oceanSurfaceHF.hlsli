@@ -4,7 +4,7 @@
 #include "ShaderInterop_Ocean.h"
 
 
-struct GSOut
+struct PSIn
 {
 	float4 pos		: SV_POSITION;
 	float4 pos2D	: SCREENPOSITION;

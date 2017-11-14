@@ -10,7 +10,6 @@ ComputeShader*			wiOcean::m_pUpdateSpectrumCS = nullptr;
 ComputeShader*			wiOcean::m_pUpdateDisplacementMapCS = nullptr;
 ComputeShader*			wiOcean::m_pUpdateGradientFoldingCS = nullptr;
 VertexShader*			wiOcean::g_pOceanSurfVS = nullptr;
-GeometryShader*			wiOcean::g_pOceanSurfGS = nullptr;
 PixelShader*			wiOcean::g_pWireframePS = nullptr;
 PixelShader*			wiOcean::g_pOceanSurfPS = nullptr;
 
@@ -326,11 +325,10 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 	bool wire = wiRenderer::IsWireRender();
 
 	device->BindVS(g_pOceanSurfVS, threadID);
-	device->BindGS(g_pOceanSurfGS, threadID);
 	device->BindPS(wire ? g_pWireframePS : g_pOceanSurfPS, threadID);
 
 
-	device->BindPrimitiveTopology(POINTLIST, threadID);
+	device->BindPrimitiveTopology(TRIANGLELIST, threadID);
 	device->BindVertexLayout(nullptr, threadID);
 
 	device->BindRasterizerState(wire ? wireRS : rasterizerState, threadID);
@@ -349,15 +347,13 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	device->UpdateBuffer(g_pShadingCB, &cb, threadID);
 
-	device->BindConstantBufferGS(g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
+	device->BindConstantBufferVS(g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
 	device->BindConstantBufferPS(g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
 
-	device->BindResourceGS(m_pDisplacementMap, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResourceVS(m_pDisplacementMap, TEXSLOT_ONDEMAND0, threadID);
 	device->BindResourcePS(m_pGradientMap, TEXSLOT_ONDEMAND0, threadID);
 
-	device->Draw(dim.x*dim.y, 0, threadID);
-
-	device->BindGS(nullptr, threadID);
+	device->Draw(dim.x*dim.y*6, 0, threadID);
 
 	device->EventEnd(threadID);
 }
@@ -372,8 +368,6 @@ void wiOcean::LoadShaders()
 
 
 	g_pOceanSurfVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-
-	g_pOceanSurfGS = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 	g_pOceanSurfPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfacePS.cso", wiResourceManager::PIXELSHADER));
 	g_pWireframePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceSimplePS.cso", wiResourceManager::PIXELSHADER));
