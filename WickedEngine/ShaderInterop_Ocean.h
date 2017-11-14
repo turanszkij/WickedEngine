@@ -29,48 +29,13 @@ CBUFFER(Ocean_Simulation_PerFrameCB, CBSLOT_OTHER_OCEAN_SIMULATION_PERFRAME)
 
 // Rendering constants:
 
-CBUFFER(Ocean_Rendering_ShadingCB, CBSLOT_OTHER_OCEAN_RENDER_SHADING)
+CBUFFER(Ocean_RenderCB, CBSLOT_OTHER_OCEAN_RENDER)
 {
-	float3		g_SkyColor;
-	float		g_TexelLength_x2;
 
-	float3		g_WaterbodyColor;
-	float		g_UVScale;
-
-	float		g_Shineness;
-	float3		g_SunDir;
-
-	float		g_UVOffset;
-	float3		g_SunColor;
-
-	// The parameter is used for fixing an artifact
-	float3		g_BendParam;
-	float		Ocean_Rendering_ShadingCB_padding0;
-
-	// Perlin noise for distant wave crest
-	float		g_PerlinSize;
-	float3		g_PerlinAmplitude;
-
-	float3		g_PerlinOctave;
-	float		Ocean_Rendering_ShadingCB_padding1;
-
-	float3		g_PerlinGradient;
-	float		Ocean_Rendering_ShadingCB_padding2;
-};
-
-// Per draw call constants
-CBUFFER(Ocean_Rendering_PatchCB, CBSLOT_OTHER_OCEAN_RENDER_PATCH)
-{
-	// Transform matrices
-	matrix		g_matLocal;
-	matrix		g_matWorldViewProj;
-
-	// Misc per draw call constants
-	float2		g_UVBase;
-	float2		g_PerlinMovement;
-
-	float3		g_LocalEye;
-	float		Ocean_Rendering_PatchCB_padding;
+	float3		xOceanWaterColor;
+	float		xOceanTexelLengthMul2;
+	float4		xOceanTexMulAdd;
+	float4		xOceanScreenSpaceParams;
 };
 
 #endif // _SHADERINTEROP_OCEAN_H_

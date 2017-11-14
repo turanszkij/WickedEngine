@@ -1,5 +1,0 @@
-// Complete passthrough
-
-void main()
-{
-}

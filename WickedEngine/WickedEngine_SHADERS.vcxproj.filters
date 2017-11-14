@@ -660,12 +660,6 @@
     <FxCompile Include="oceanSimulatorCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="oceanSurfaceVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="oceanSurfacePS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="oceanSurfaceSimplePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -675,13 +669,13 @@
     <FxCompile Include="oceanUpdateGradientFoldingCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="oceanGridGS.hlsl">
+    <FxCompile Include="oceanSurfaceGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
-    <FxCompile Include="oceanGridVS.hlsl">
+    <FxCompile Include="oceanSurfaceVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="oceanGridPS.hlsl">
+    <FxCompile Include="oceanSurfacePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
