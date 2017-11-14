@@ -85,7 +85,7 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
 		if (wiRenderer::GetOcean() != nullptr)
-			wiRenderer::GetOcean()->waterColor = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+			wiRenderer::GetOcean()->waterColor = XMFLOAT3(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f));
 	});
 	oceanWindow->AddWidget(colorPicker);
 

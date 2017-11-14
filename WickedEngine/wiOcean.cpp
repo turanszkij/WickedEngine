@@ -245,7 +245,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin("OceanSimulator", threadID);
+	device->EventBegin("Ocean Simulation", threadID);
 
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 	device->BindCS(m_pUpdateSpectrumCS, threadID);
@@ -320,8 +320,10 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	bool wire = wiRenderer::IsWireRender();
 
+	device->EventBegin("Ocean Rendering", threadID);
+
+	bool wire = wiRenderer::IsWireRender();
 
 	device->BindVS(g_pOceanSurfVS, threadID);
 	device->BindGS(g_pOceanSurfGS, threadID);
@@ -355,10 +357,9 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	device->Draw(dim.x*dim.y, 0, threadID);
 
-
-
-
 	device->BindGS(nullptr, threadID);
+
+	device->EventEnd(threadID);
 }
 
 

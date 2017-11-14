@@ -1,15 +1,75 @@
+#define DISABLE_ALPHATEST
 #include "globals.hlsli"
 #include "oceanSurfaceHF.hlsli"
-
+#include "objectHF.hlsli"
 
 #define g_texGradient		texture_0 // Perlin wave displacement & gradient map in both
 
-
-float4 main(GSOut input) : SV_TARGET
+[earlydepthstencil]
+GBUFFEROutputType_Thin main(GSOut input)
 {
-	float3 gradient = g_texGradient.Sample(sampler_aniso_wrap, input.uv).xyz;
+	float2 gradient = g_texGradient.Sample(sampler_aniso_wrap, input.uv).xy;
+	float3 N = normalize(float3(gradient.x, 1, gradient.y));
 
-	return float4(gradient, 1);
+	float4 baseColor = float4(xOceanWaterColor, 1);
+	float opacity = 1; // keep edge diffuse shading
+	baseColor = DEGAMMA(baseColor);
+	baseColor.a = 1; // do not blend
+	float4 color = baseColor;
+	float3 P = input.pos3D;
+	float3 V = g_xCamera_CamPos - P;
+	float dist = length(V);
+	V /= dist;
+	float emissive = 0;
+	float roughness = 0.001;
+	float reflectance = 0.2;
+	float metalness = 0;
+	float ao = 1;
+	float sss = 0;
+	float2 pixel = input.pos.xy;
+	float depth = input.pos.z;
+	float3 diffuse = 0;
+	float3 specular = 0;
+	//float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+	float2 velocity = 0;
+
+	float lineardepth = input.pos2D.w;
+	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
+	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w * 0.5f + 0.5f;
+
+	OBJECT_PS_LIGHT_BEGIN
+
+	//REFLECTION
+	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
+	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, RefTex + N.xz, 0);
+
+	//REFRACTION 
+	float2 perturbatedRefrTexCoords = ScreenCoord.xy + N.xz;
+	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
+	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
+	float NdotV = abs(dot(N, V)) + 1e-5f;
+	float mod = saturate(0.05*(refDepth - lineardepth));
+	float3 dullColor = lerp(refractiveColor, xOceanWaterColor, saturate(NdotV));
+	refractiveColor = lerp(refractiveColor, dullColor, mod).rgb;
+
+	//FRESNEL TERM
+	float3 fresnelTerm = F_Fresnel(f0, NdotV);
+	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
+
+	//DULL COLOR
+	albedo.rgb = lerp(albedo.rgb, xOceanWaterColor, 0.16);
+
+	OBJECT_PS_LIGHT_TILED
+
+	OBJECT_PS_LIGHT_END
+
+	//SOFT EDGE
+	float fade = saturate(0.3* abs(refDepth - lineardepth));
+	color.a *= fade;
+
+	OBJECT_PS_FOG
+
+	OBJECT_PS_OUT_FORWARD
 }
 
 

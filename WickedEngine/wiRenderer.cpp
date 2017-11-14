@@ -1695,7 +1695,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	}
 
 	// Perform culling and obtain closest reflector:
-	requestReflectionRendering = false;
+	requestReflectionRendering = ocean != nullptr;
 	wiProfiler::GetInstance().BeginRange("SPTree Culling", wiProfiler::DOMAIN_CPU);
 	{
 		for (auto& x : frameCullings)
@@ -1854,7 +1854,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	UpdateCubes();
 
 	renderTime_Prev = renderTime;
-	renderTime = (float)((wiTimer::TotalTime()) / 1000.0 * GameSpeed);
+	renderTime += dt * GameSpeed;
 	deltaTime = dt;
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
@@ -4641,6 +4641,13 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
+	if (!wireRender)
+	{
+		GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6, threadID);
+		GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7, threadID);
+		GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
+	}
+
 	if (ocean != nullptr)
 	{
 		ocean->Render(camera, renderTime, threadID);
@@ -4658,14 +4665,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (!culledRenderer.empty())
 	{
-
-		if (!wireRender)
-		{
-			GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6, threadID);
-			GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7, threadID);
-			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
-		}
-
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 

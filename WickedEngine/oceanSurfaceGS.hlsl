@@ -68,7 +68,10 @@ void main(
 		worldPos.xyz += displacement.xyz;
 
 		Out[i].pos = mul(float4(worldPos, 1), g_xFrame_MainCamera_VP);
+		Out[i].pos2D = Out[i].pos;
+		Out[i].pos3D = worldPos;
 		Out[i].uv = uv;
+		Out[i].ReflectionMapSamplingPos = mul(float4(worldPos, 1), g_xFrame_MainCamera_ReflVP);
 	}
 
 	for (uint j = 0; j < 4; ++j)

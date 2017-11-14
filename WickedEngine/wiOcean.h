@@ -46,7 +46,7 @@ struct wiOceanParameter
 		// Scaled version:
 		dmap_dim = 512;
 		patch_length = 200.0f;
-		time_scale = 0.8f;
+		time_scale = 0.3f;
 		wave_amplitude = 80.0f;
 		wind_dir = XMFLOAT2(0.8f, 0.6f);
 		wind_speed = 600.0f;
@@ -74,7 +74,7 @@ public:
 	static void SetUpStatic();
 	static void CleanUpStatic();
 
-	XMFLOAT3 waterColor = XMFLOAT3(0.07f, 0.15f, 0.2f);
+	XMFLOAT3 waterColor = XMFLOAT3(powf(0.07f, 1.0f / 2.2f), powf(0.15f, 1.0f / 2.2f), powf(0.2f, 1.0f / 2.2f));
 
 protected:
 	wiOceanParameter m_param;
