@@ -17,6 +17,17 @@ static const float3 QUAD[] = {
 	float3(1, 1, 0),
 };
 
+#define infinite g_xFrame_MainCamera_ZFarP
+float3 intersectPlane(in float3 source, in float3 dir, in float3 normal, float height)
+{
+	// Compute the distance between the source and the surface, following a ray, then return the intersection
+	// http://www.cs.rpi.edu/~cutler/classes/advancedgraphics/S09/lectures/11_ray_tracing.pdf
+	float distance = (-height - dot(normal, source)) / dot(normal, dir);
+	if (distance < 0.0)
+		return source + dir * distance;
+	else
+		return -(float3(source.x, height, source.z) + float3(dir.x, height, dir.z) * infinite);
+}
 
 [maxvertexcount(4)]
 void main(
@@ -47,25 +58,17 @@ void main(
 
 		float4 r = mul(float4(Out[i].pos.xy, 0, 1), g_xFrame_MainCamera_InvVP);
 		r.xyz /= r.w;
-		float3 d = normalize(r.xyz - o.xyz);
+		float3 d = normalize(o.xyz, r.xyz);
 
 		float3 planeOrigin = float3(0, 0, 0);
 		float3 planeNormal = float3(0, 1, 0);
 
-		float planeDot = dot(planeNormal, d);
-
-		if (planeDot > 0)
-		{
-			return;
-		}
-
-		float t = dot(planeNormal, (planeOrigin - o.xyz) / planeDot);
-		float3 worldPos = o.xyz + d.xyz * t;
+		float3 worldPos = intersectPlane(o, d, planeNormal, planeOrigin.y);
 
 		float2 uv = worldPos.xz * xOceanTexMulAdd.xy + xOceanTexMulAdd.zw;
 
 		float3 displacement = g_texDisplacement.SampleLevel(sampler_point_wrap, uv, 0).xyz;
-		worldPos.xyz += displacement.xyz;
+		worldPos.xzy += displacement.xyz;
 
 		Out[i].pos = mul(float4(worldPos, 1), g_xFrame_MainCamera_VP);
 		Out[i].pos2D = Out[i].pos;
