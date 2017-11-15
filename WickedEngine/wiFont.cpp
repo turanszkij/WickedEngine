@@ -25,7 +25,6 @@ RasterizerState		*wiFont::rasterizerState = nullptr;
 RasterizerState		*wiFont::rasterizerState_Scissor = nullptr;
 DepthStencilState	*wiFont::depthStencilState = nullptr;
 std::vector<wiFont::wiFontStyle> wiFont::fontStyles;
-std::vector<wiFont::Vertex> wiFont::vertexList;
 
 wiFont::wiFont(const std::string& text, wiFontProps props, int style) : props(props), style(style)
 {
@@ -50,7 +49,7 @@ void wiFont::LoadVertexBuffer()
 	GPUBufferDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = 1024 * 1024; // just allocate 1MB to font renderer ring buffer..
+	bd.ByteWidth = 256 * 1024; // just allocate 256KB to font renderer ring buffer..
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
@@ -151,7 +150,7 @@ void wiFont::LoadShaders()
 	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	UINT numElements = ARRAYSIZE(layout);
 	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -180,8 +179,6 @@ void wiFont::CleanUpStatic()
 		fontStyles[i].CleanUp();
 	fontStyles.clear();
 
-	vertexList.clear();
-
 	SAFE_DELETE(vertexBuffer);
 	SAFE_DELETE(indexBuffer);
 	SAFE_DELETE(vertexLayout);
@@ -192,19 +189,12 @@ void wiFont::CleanUpStatic()
 	SAFE_DELETE(rasterizerState);
 	SAFE_DELETE(depthStencilState);
 	SAFE_DELETE(vertexBuffer);
-	SAFE_DELETE(vertexBuffer);
-	SAFE_DELETE(vertexBuffer);
-	SAFE_DELETE(vertexBuffer);
 }
 
 
-void wiFont::ModifyGeo(const std::wstring& text, wiFontProps props, int style)
+void wiFont::ModifyGeo(Vertex* vertexList, const std::wstring& text, wiFontProps props, int style)
 {
 	size_t vertexCount = text.length() * 4;
-	if (vertexList.size() < vertexCount)
-	{
-		vertexList.resize((vertexCount + 1) * 2);
-	}
 
 	const int lineHeight = (props.size < 0 ? fontStyles[style].lineHeight : props.size);
 	const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyles[style].lineHeight);
@@ -244,23 +234,23 @@ void wiFont::ModifyGeo(const std::wstring& text, wiFontProps props, int style)
 			vertexList[i + 2].Pos = XMFLOAT2((float)pos, (float)line + (float)lineHeight);
 			vertexList[i + 3].Pos = XMFLOAT2((float)pos + (float)characterWidth, (float)line + (float)lineHeight);
 
-			vertexList[i + 0].Tex = XMFLOAT2(lookup.left, 0);
-			vertexList[i + 1].Tex = XMFLOAT2(lookup.right, 0);
-			vertexList[i + 2].Tex = XMFLOAT2(lookup.left, 1);
-			vertexList[i + 3].Tex = XMFLOAT2(lookup.right, 1);
+			vertexList[i + 0].Tex = XMHALF2(lookup.left, 0);
+			vertexList[i + 1].Tex = XMHALF2(lookup.right, 0);
+			vertexList[i + 2].Tex = XMHALF2(lookup.left, 1);
+			vertexList[i + 3].Tex = XMHALF2(lookup.right, 1);
 
 			pos += characterWidth + props.spacingX;
 		}
 		else
 		{
 			vertexList[i + 0].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 0].Tex = XMFLOAT2(0, 0);
+			vertexList[i + 0].Tex = XMHALF2(0.0f, 0.0f);
 			vertexList[i + 1].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 1].Tex = XMFLOAT2(0, 0);
+			vertexList[i + 1].Tex = XMHALF2(0.0f, 0.0f);
 			vertexList[i + 2].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 2].Tex = XMFLOAT2(0, 0);
+			vertexList[i + 2].Tex = XMHALF2(0.0f, 0.0f);
 			vertexList[i + 3].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 3].Tex = XMFLOAT2(0, 0);
+			vertexList[i + 3].Tex = XMHALF2(0.0f, 0.0f);
 		}
 	}
 }
@@ -285,9 +275,6 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 		newProps.posY -= textHeight();
 
 
-	ModifyGeo(text, newProps, style);
-
-
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("Font", threadID);
@@ -303,7 +290,10 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 
 	device->BindBlendState(blendState, threadID);
 
-	UINT vboffset = device->AppendRingBuffer(vertexBuffer, vertexList.data(), sizeof(Vertex) * text.length() * 4, threadID);
+	UINT vboffset;
+	Vertex* textBuffer = (Vertex*)device->AllocateFromRingBuffer(vertexBuffer, sizeof(Vertex) * text.length() * 4, vboffset, threadID);
+	ModifyGeo(textBuffer, text, newProps, style);
+	device->InvalidateBufferAccess(vertexBuffer, threadID);
 
 	const GPUBuffer* vbs[] = {
 		vertexBuffer,
