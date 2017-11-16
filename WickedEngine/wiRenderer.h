@@ -359,7 +359,6 @@ public:
 		CulledCollection culledRenderer_transparent;
 		std::vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
-		UINT culledLight_count; // because forward_list doesn't have size()
 		std::list<Decal*> culledDecals;
 
 		void Clear()
@@ -369,7 +368,6 @@ public:
 			culledRenderer_transparent.clear();
 			culledHairParticleSystems.clear();
 			culledLights.clear();
-			culledLight_count = 0;
 			culledDecals.clear();
 		}
 	};

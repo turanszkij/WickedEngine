@@ -1777,7 +1777,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 				int shadowCounter_Cube = 0;
 				for (auto& c : culling.culledLights)
 				{
-					culling.culledLight_count++;
 					Light* l = (Light*)c;
 					l->entityArray_index = i;
 
@@ -2100,9 +2099,18 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				else if (mesh->hasDynamicVB())
 				{
 					// Upload CPU skinned vertex buffer (Soft body VB)
-					mesh->bufferOffset_POS = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_POS.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size(), threadID);
-					mesh->bufferOffset_NOR = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_NOR.data(), sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size(), threadID);
-					mesh->bufferOffset_PRE = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, mesh->vertices_Transformed_PRE.data(), sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size(), threadID);
+					size_t size_pos = sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size();
+					size_t size_nor = sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size();
+					size_t size_pre = sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size();
+					UINT offset;
+					void* vertexData = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, size_pos + size_nor + size_pre, offset, threadID);
+					mesh->bufferOffset_POS = offset;
+					mesh->bufferOffset_NOR = offset + (UINT)size_pos;
+					mesh->bufferOffset_PRE = offset + (UINT)size_pos + (UINT)size_nor;
+					memcpy(vertexData, mesh->vertices_Transformed_POS.data(), size_pos);
+					memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos), mesh->vertices_Transformed_NOR.data(), size_nor);
+					memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos + size_nor), mesh->vertices_Transformed_PRE.data(), size_pre);
+					GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 				}
 			}
 		}
@@ -2938,7 +2946,10 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 			}
 			if (!trails.empty())
 			{
-				UINT trailOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, trails.data(), sizeof(RibbonVertex)*trails.size(), threadID);
+				UINT trailOffset;
+				void* buffer = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(RibbonVertex)*trails.size(), trailOffset, threadID);
+				memcpy(buffer, trails.data(), sizeof(RibbonVertex)*trails.size());
+				GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
 				const GPUBuffer* vbs[] = {
 					dynamicVertexBufferPool
@@ -4034,8 +4045,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 		XMFLOAT4X4 tempMat;
 
-		Instance instances[1024];
-		InstancePrev instancesPrev[1024];
+		struct InstBuf
+		{
+			Instance instance;
+			InstancePrev instancePrev;
+		};
 
 		if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
 		{
@@ -4119,6 +4133,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				bool instancePrevUpdated = false;
 
+				UINT instancesOffset;
+				InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
+
 				int k = 0;
 				for (const Object* instance : visibleInstances)
 				{
@@ -4132,17 +4149,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (dither > 1.0f - FLT_EPSILON)
 						continue;
 
-					assert(k < ARRAYSIZE(instances) && "Instance buffer full!");
-
 					XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
 
 					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
-					instances[k].Create(tempMat, dither, instance->color);
+					instances[k].instance.Create(tempMat, dither, instance->color);
 
 					if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 					{
 						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
-						instancesPrev[k].Create(tempMat);
+						instances[k].instancePrev.Create(tempMat);
 						instancePrevUpdated = true;
 					}
 
@@ -4151,12 +4166,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (k < 1)
 					continue;
 
-				UINT instanceOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(Instance)*k, threadID);
-				UINT instancePrevOffset = 0;
-				if (instancePrevUpdated)
-				{
-					instancePrevOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(InstancePrev)*k, threadID);
-				}
+				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
 				if (realVL == VLTYPE_OBJECT_POS_TEX)
 				{
@@ -4168,12 +4178,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
 						sizeof(Mesh::Vertex_TEX),
-						sizeof(Instance)
+						sizeof(InstBuf)
 					};
 					UINT offsets[] = {
 						0,
 						0,
-						instanceOffset
+						instancesOffset
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 				}
@@ -4192,16 +4202,16 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						sizeof(Mesh::Vertex_NOR),
 						sizeof(Mesh::Vertex_TEX),
 						sizeof(Mesh::Vertex_POS),
-						sizeof(Instance),
-						sizeof(InstancePrev),
+						sizeof(InstBuf),
+						sizeof(InstBuf),
 					};
 					UINT offsets[] = {
 						0,
 						0,
 						0,
 						0,
-						instanceOffset,
-						instancePrevOffset
+						instancesOffset,
+						instancesOffset + sizeof(Instance)
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 				}
@@ -4301,6 +4311,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			bool forceAlphaTestForDithering = false;
 
+			UINT instancesOffset;
+			InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
+
 			int k = 0;
 			for (const Object* instance : visibleInstances) 
 			{
@@ -4319,15 +4332,13 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (dither > 1.0f - FLT_EPSILON)
 					continue;
 
-				assert(k < ARRAYSIZE(instances) && "Instance buffer full!");
-
 				forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
 
 				if (mesh->softBody)
 					tempMat = __identityMat;
 				else
 					tempMat = instance->world;
-				instances[k].Create(tempMat, dither, instance->color);
+				instances[k].instance.Create(tempMat, dither, instance->color);
 
 				if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
 				{
@@ -4335,7 +4346,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						tempMat = __identityMat;
 					else
 						tempMat = instance->worldPrev;
-					instancesPrev[k].Create(tempMat);
+					instances[k].instancePrev.Create(tempMat);
 					instancePrevUpdated = true;
 				}
 						
@@ -4344,13 +4355,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			if (k < 1)
 				continue;
 
-			UINT instanceOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(Instance)*k, threadID);
-			UINT instancePrevOffset = 0;
-			if (instancePrevUpdated)
-			{
-				instancePrevOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, instances, sizeof(InstancePrev)*k, threadID);
-			}
-
+			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
 			device->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
 
@@ -4426,11 +4431,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							};
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
-								sizeof(Instance)
+								sizeof(InstBuf)
 							};
 							UINT offsets[] = {
 								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
-								instanceOffset
+								instancesOffset
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 						}
@@ -4445,12 +4450,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
 								sizeof(Mesh::Vertex_TEX),
-								sizeof(Instance)
+								sizeof(InstBuf)
 							};
 							UINT offsets[] = {
 								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 								0,
-								instanceOffset
+								instancesOffset
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 						}
@@ -4470,16 +4475,16 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 								sizeof(Mesh::Vertex_NOR),
 								sizeof(Mesh::Vertex_TEX),
 								sizeof(Mesh::Vertex_POS),
-								sizeof(Instance),
-								sizeof(InstancePrev),
+								sizeof(InstBuf),
+								sizeof(InstBuf),
 							};
 							UINT offsets[] = {
 								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 								mesh->hasDynamicVB() ? mesh->bufferOffset_NOR : 0,
 								0,
 								mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
-								instanceOffset,
-								instancePrevOffset
+								instancesOffset,
+								instancesOffset + sizeof(Instance)
 							};
 							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 						}
@@ -4952,7 +4957,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		// Tell the voxelizer about the lights in the light array (exclude decals)
 		MiscCB cb;
 		cb.mColor.x = 0;
-		cb.mColor.y = (float)culling.culledLight_count;
+		cb.mColor.y = (float)culling.culledLights.size();
 		// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
 		// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
 		cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
@@ -5234,7 +5239,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		dispatchParams.numThreads[0] = dispatchParams.numThreadGroups[0] * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.numThreads[1] = dispatchParams.numThreadGroups[1] * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.numThreads[2] = 1;
-		dispatchParams.value0 = frameCullings[getCamera()].culledLight_count + (UINT)frameCullings[getCamera()].culledDecals.size(); // entity count (forward_list does not have size())
+		dispatchParams.value0 = (UINT)(frameCullings[getCamera()].culledLights.size() + frameCullings[getCamera()].culledDecals.size());
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
 		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
@@ -6256,10 +6261,16 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	BindPersistentState(threadID);
 
 	const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-	const Instance instance(__identity);
-	const InstancePrev instancePrev(__identity);
-	const UINT instanceOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, &instance, sizeof(instance), threadID);
-	const UINT instancePrevOffset = GetDevice()->AppendRingBuffer(dynamicVertexBufferPool, &instancePrev, sizeof(instancePrev), threadID);
+	struct InstBuf
+	{
+		Instance instance;
+		InstancePrev instancePrev;
+	};
+	UINT instancesOffset; 
+	InstBuf* buff = (InstBuf*)GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
+	buff->instance.Create(__identity);
+	buff->instancePrev.Create(__identity);
+	GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
 	GPUBuffer* vbs[] = {
 		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
@@ -6274,16 +6285,16 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		sizeof(Mesh::Vertex_NOR),
 		sizeof(Mesh::Vertex_TEX),
 		sizeof(Mesh::Vertex_POS),
-		sizeof(Instance),
-		sizeof(InstancePrev)
+		sizeof(InstBuf),
+		sizeof(InstBuf)
 	};
 	UINT offsets[] = {
 		mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 		mesh->hasDynamicVB() ? mesh->bufferOffset_NOR : 0,
 		0,
 		mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
-		instanceOffset,
-		instancePrevOffset
+		instancesOffset,
+		instancesOffset + sizeof(InstancePrev)
 	};
 	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 

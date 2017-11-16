@@ -42,8 +42,7 @@ void wiSPTree::AddObjects(Node* node, const std::vector<Cullable*>& newObjects)
 {
 	for(Cullable* object : newObjects)
 	{
-		
-		node->objects.push_front(object);
+		node->objects.push_back(object);
 	}
 
 	if(newObjects.size()>SP_TREE_OBJECT_PER_NODE && node->depth<SP_TREE_MAX_DEPTH){
@@ -69,9 +68,8 @@ void wiSPTree::AddObjects(Node* node, const std::vector<Cullable*>& newObjects)
 			boxes[2] = AABB(min,XMFLOAT3((min.x+max.x)*0.5f,max.y,(min.z+max.z)*0.5f));
 			boxes[3] = AABB(XMFLOAT3((min.x+max.x)*0.5f,min.y,min.z),XMFLOAT3(max.x,max.y,(min.z+max.z)*0.5f));
 		}
-		for(int i=0;i<node->count;++i){
-			//children[i] = new Node(this,boxes[i],depth+1);
-
+		for(int i=0;i<node->count;++i)
+		{
 			std::vector<Cullable*> o(0);
 			o.reserve(newObjects.size());
 			for(Cullable* object : newObjects)
@@ -275,7 +273,7 @@ void wiSPTree::getAll(CulledList& objects, Node* node)
 		node = root;
 	}
 
-	objects.insert_after(objects.end(), node->objects.begin(),node->objects.end());
+	objects.insert(objects.end(), node->objects.begin(),node->objects.end());
 	if(node->count)
 	{
 		for (unsigned int i = 0; i < node->children.size(); ++i)

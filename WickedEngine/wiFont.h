@@ -40,14 +40,11 @@ class wiFont
 public:
 	static std::string FONTPATH;
 protected:
-	GFX_STRUCT Vertex
+	struct Vertex
 	{
 		XMFLOAT2 Pos;
-		XMFLOAT2 Tex;
-
-		ALIGN_16
+		XMHALF2 Tex;
 	};
-	static std::vector<Vertex> vertexList;
 	static wiGraphicsTypes::GPURingBuffer       *vertexBuffer;
 	static wiGraphicsTypes::GPUBuffer           *indexBuffer;
 
@@ -90,7 +87,7 @@ private:
 	static std::vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(const std::wstring& text, wiFontProps props, int style);
+	static void ModifyGeo(Vertex* vertexList, const std::wstring& text, wiFontProps props, int style);
 
 public:
 	static void Initialize();
