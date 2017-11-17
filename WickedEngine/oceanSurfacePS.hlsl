@@ -47,24 +47,20 @@ float4 main(PSIn input) : SV_TARGET
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + N.xz * 0.04f;
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
-	float NdotV = abs(dot(N, V)) + 1e-5f;
 	float mod = saturate(0.05*(refDepth - lineardepth));
-	float3 dullColor = lerp(refractiveColor, xOceanWaterColor, saturate(NdotV));
-	refractiveColor = lerp(refractiveColor, dullColor, mod).rgb;
+	refractiveColor = lerp(refractiveColor, xOceanWaterColor, mod).rgb;
 
 	//FRESNEL TERM
+	float NdotV = abs(dot(N, V)) + 1e-5f;
 	float3 fresnelTerm = F_Fresnel(f0, NdotV);
 	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
-
-	//DULL COLOR
-	albedo.rgb = lerp(albedo.rgb, xOceanWaterColor, 0.16);
 
 	OBJECT_PS_LIGHT_TILED
 
 	OBJECT_PS_LIGHT_END
 
 	//SOFT EDGE
-	float fade = saturate(0.3* abs(refDepth - lineardepth));
+	float fade = saturate(0.3 * abs(refDepth - lineardepth));
 	color.a *= fade;
 
 	OBJECT_PS_FOG

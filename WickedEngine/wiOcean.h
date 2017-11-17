@@ -45,9 +45,9 @@ struct wiOceanParameter
 
 		// Scaled version:
 		dmap_dim = 512;
-		patch_length = 200.0f;
+		patch_length = 50.0f;
 		time_scale = 0.3f;
-		wave_amplitude = 80.0f;
+		wave_amplitude = 1000.0f;
 		wind_dir = XMFLOAT2(0.8f, 0.6f);
 		wind_speed = 600.0f;
 		wind_dependency = 0.07f;

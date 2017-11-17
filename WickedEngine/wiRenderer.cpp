@@ -1695,7 +1695,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	}
 
 	// Perform culling and obtain closest reflector:
-	requestReflectionRendering = ocean != nullptr;
+	requestReflectionRendering = false;
 	wiProfiler::GetInstance().BeginRange("SPTree Culling", wiProfiler::DOMAIN_CPU);
 	{
 		for (auto& x : frameCullings)
@@ -1824,6 +1824,16 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		}
 	}
 	wiProfiler::GetInstance().EndRange(); // SPTree Culling
+
+	// Ocean will override any current reflectors
+	if (ocean != nullptr)
+	{
+		requestReflectionRendering = true; 
+		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, ocean->waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+		XMFLOAT4 plane;
+		XMStoreFloat4(&plane, _refPlane);
+		waterPlane = wiWaterPlane(plane.x, plane.y, plane.z, plane.w);
+	}
 
 	for (auto& x : emitterSystems)
 	{
