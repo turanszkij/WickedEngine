@@ -42,6 +42,8 @@ struct Cullable;
 class  PHYSICS;
 class  wiRenderTarget;
 class  wiWaterPlane;
+class  wiOcean;
+struct wiOceanParameter;
 
 typedef std::map<std::string, Mesh*> MeshCollection;
 typedef std::map<std::string, Material*> MaterialCollection;
@@ -531,6 +533,10 @@ public:
 
 	static PHYSICS* physicsEngine;
 	static void SynchronizeWithPhysicsEngine(float dt = 1.0f / 60.0f);
+
+	static wiOcean* ocean;
+	static void SetOceanEnabled(bool enabled, const wiOceanParameter& params);
+	static wiOcean* GetOcean() { return ocean; }
 
 	static Model* LoadModel(const std::string& dir, const std::string& name, const XMMATRIX& transform = XMMatrixIdentity(), const std::string& ident = "common");
 	static void LoadWorldInfo(const std::string& dir, const std::string& name);

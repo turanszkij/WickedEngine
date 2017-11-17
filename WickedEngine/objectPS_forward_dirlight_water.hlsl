@@ -36,17 +36,13 @@ float4 main(PixelInputType input) : SV_TARGET
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + bumpColor.rg;
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
-	float NdotV = abs(dot(N, V)) + 1e-5f;
-	float mod = saturate(0.05*(refDepth- lineardepth));
-	float3 dullColor = lerp(refractiveColor, g_xMat_baseColor.rgb, saturate(NdotV));
-	refractiveColor = lerp(refractiveColor, dullColor, mod).rgb;
+	float mod = saturate(0.05*(refDepth - lineardepth));
+	refractiveColor = lerp(refractiveColor, g_xMat_baseColor.rgb * input.instanceColor, mod).rgb;
 		
 	//FRESNEL TERM
+	float NdotV = abs(dot(N, V)) + 1e-5f;
 	float3 fresnelTerm = F_Fresnel(f0, NdotV);
 	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
-
-	//DULL COLOR
-	albedo.rgb = lerp(albedo.rgb, g_xMat_baseColor.rgb, 0.16);
 
 	OBJECT_PS_LIGHT_DIRECTIONAL
 
@@ -55,7 +51,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	OBJECT_PS_EMISSIVE
 
 	//SOFT EDGE
-	float fade = saturate(0.3* abs(refDepth - lineardepth));
+	float fade = saturate(0.3 * abs(refDepth - lineardepth));
 	color.a *= fade;
 
 	OBJECT_PS_FOG

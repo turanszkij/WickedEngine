@@ -7,6 +7,7 @@
 #include "wiBackLog.h"
 #include "wiCpuInfo.h"
 #include "wiSound.h"
+#include "wiOcean.h"
 #include "wiHelper.h"
 
 using namespace std;
@@ -27,6 +28,8 @@ namespace wiInitializer
 
 		wiFont::Initialize();
 		wiFont::SetUpStaticComponents();
+
+		wiOcean::SetUpStatic();
 
 		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
 		{

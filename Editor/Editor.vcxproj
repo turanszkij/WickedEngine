@@ -177,6 +177,7 @@
     <ClInclude Include="MaterialWindow.h" />
     <ClInclude Include="MeshWindow.h" />
     <ClInclude Include="ObjectWindow.h" />
+    <ClInclude Include="OceanWindow.h" />
     <ClInclude Include="PostprocessWindow.h" />
     <ClInclude Include="RendererWindow.h" />
     <ClInclude Include="Resource.h" />
@@ -197,6 +198,7 @@
     <ClCompile Include="MaterialWindow.cpp" />
     <ClCompile Include="MeshWindow.cpp" />
     <ClCompile Include="ObjectWindow.cpp" />
+    <ClCompile Include="OceanWindow.cpp" />
     <ClCompile Include="PostprocessWindow.cpp" />
     <ClCompile Include="RendererWindow.cpp" />
     <ClCompile Include="stdafx.cpp">

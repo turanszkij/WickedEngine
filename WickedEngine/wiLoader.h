@@ -1078,49 +1078,49 @@ struct Camera:public Transform{
 		XMStoreFloat4x4(&this->InvProjection, InvP);
 	}
 
-	XMVECTOR GetEye()
+	XMVECTOR GetEye() const
 	{
 		return XMLoadFloat3(&translation);
 	}
-	XMVECTOR GetAt()
+	XMVECTOR GetAt() const
 	{
 		return XMLoadFloat3(&At);
 	}
-	XMVECTOR GetUp()
+	XMVECTOR GetUp() const
 	{
 		return XMLoadFloat3(&Up);
 	}
-	XMVECTOR GetRight()
+	XMVECTOR GetRight() const
 	{
 		return XMVector3Cross(GetAt(), GetUp());
 	}
-	XMMATRIX GetView()
+	XMMATRIX GetView() const
 	{
 		return XMLoadFloat4x4(&View);
 	}
-	XMMATRIX GetInvView()
+	XMMATRIX GetInvView() const
 	{
 		return XMLoadFloat4x4(&InvView);
 	}
-	XMMATRIX GetProjection()
+	XMMATRIX GetProjection() const
 	{
 		return XMLoadFloat4x4(&Projection);
 	}
-	XMMATRIX GetInvProjection()
+	XMMATRIX GetInvProjection() const
 	{
 		return XMLoadFloat4x4(&InvProjection);
 	}
-	XMMATRIX GetViewProjection()
+	XMMATRIX GetViewProjection() const
 	{
 		return XMLoadFloat4x4(&VP);
 	}
-	XMMATRIX GetInvViewProjection()
+	XMMATRIX GetInvViewProjection() const
 	{
 		return XMLoadFloat4x4(&InvVP);
 	}
 
 	// when the projection matrix is modified for reverse zbuffering, this returns the normal projection
-	XMMATRIX GetRealProjection()
+	XMMATRIX GetRealProjection() const
 	{
 		return XMLoadFloat4x4(&realProjection);
 	}

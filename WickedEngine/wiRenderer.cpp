@@ -24,6 +24,7 @@
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
+#include <wiOcean.h>
 
 #include <algorithm>
 
@@ -76,6 +77,7 @@ int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
 PHYSICS* wiRenderer::physicsEngine = nullptr;
+wiOcean* wiRenderer::ocean = nullptr;
 
 string wiRenderer::SHADERPATH = "shaders/";
 #pragma endregion
@@ -935,6 +937,8 @@ void wiRenderer::ReloadShaders(const std::string& path)
 	wiFont::LoadShaders();
 	wiImage::LoadShaders();
 	wiLensFlare::LoadShaders();
+	wiOcean::LoadShaders();
+	CSFFT_512x512_Data_t::LoadShaders();
 
 	GetDevice()->UNLOCK();
 }
@@ -1821,6 +1825,16 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	}
 	wiProfiler::GetInstance().EndRange(); // SPTree Culling
 
+	// Ocean will override any current reflectors
+	if (ocean != nullptr)
+	{
+		requestReflectionRendering = true; 
+		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, ocean->waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+		XMFLOAT4 plane;
+		XMStoreFloat4(&plane, _refPlane);
+		waterPlane = wiWaterPlane(plane.x, plane.y, plane.z, plane.w);
+	}
+
 	for (auto& x : emitterSystems)
 	{
 		x->Update(dt*GetGameSpeed());
@@ -1849,7 +1863,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	UpdateCubes();
 
 	renderTime_Prev = renderTime;
-	renderTime = (float)((wiTimer::TotalTime()) / 1000.0 * GameSpeed);
+	renderTime += dt * GameSpeed;
 	deltaTime = dt;
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
@@ -2131,6 +2145,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	for (wiHairParticle* hair : mainCameraCulling.culledHairParticleSystems)
 	{
 		hair->ComputeCulling(getCamera(), threadID);
+	}
+
+	// Compute water simulation:
+	if (ocean != nullptr)
+	{
+		ocean->UpdateDisplacementMap(renderTime, threadID);
 	}
 
 	// Render out of date environment probes:
@@ -2728,7 +2748,6 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		};
 		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		GetDevice()->Draw(gridVertexCount, 0, threadID);
-
 
 		GetDevice()->EventEnd(threadID);
 	}
@@ -4637,6 +4656,18 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
+	if (!wireRender)
+	{
+		GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6, threadID);
+		GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7, threadID);
+		GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
+	}
+
+	if (ocean != nullptr)
+	{
+		ocean->Render(camera, renderTime, threadID);
+	}
+
 	if (grass)
 	{
 		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_HAIRALPHACOMPOSITION], STENCILREF_DEFAULT, threadID); // minimizes overdraw by depthcomp = less
@@ -4649,14 +4680,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (!culledRenderer.empty())
 	{
-
-		if (!wireRender)
-		{
-			GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6, threadID);
-			GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7, threadID);
-			GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
-		}
-
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
@@ -6577,4 +6600,14 @@ void wiRenderer::SetOcclusionCullingEnabled(bool value)
 bool wiRenderer::GetAdvancedRefractionsEnabled()
 {
 	return advancedRefractions && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT);
+}
+
+void wiRenderer::SetOceanEnabled(bool enabled, const wiOceanParameter& params)
+{
+	SAFE_DELETE(ocean);
+
+	if (enabled)
+	{
+		ocean = new wiOcean(params);
+	}
 }
