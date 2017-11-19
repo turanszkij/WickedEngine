@@ -69,6 +69,8 @@ public:
 	void setpointer(const XMFLOAT4& props);
 	//hide pointer
 	void hidepointer(bool value);
+	//find out which character is pressed on keyboard (if any)
+	char getCharPressed();
 
 	struct Touch
 	{

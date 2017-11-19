@@ -218,6 +218,27 @@ public:
 	void OnSelect(std::function<void(wiEventArgs args)> func);
 };
 
+// Text input box
+class wiTextInputField : public wiWidget
+{
+protected:
+	std::function<void(wiEventArgs args)> onInputAccepted;
+	Hitbox2D hitBox;
+
+	std::string value_old, value_new;
+public:
+	wiTextInputField(const std::string& name = "");
+	virtual ~wiTextInputField();
+
+	void SetValue(const std::string& newValue);
+	const std::string& GetValue();
+
+	virtual void Update(wiGUI* gui, float dt) override;
+	virtual void Render(wiGUI* gui) override;
+
+	void OnInputAccepted(std::function<void(wiEventArgs args)> func);
+};
+
 // Widget container
 class wiWindow :public wiWidget
 {

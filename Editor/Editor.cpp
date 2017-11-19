@@ -281,6 +281,7 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(oceanWnd);
 }
 
+
 void EditorComponent::Initialize()
 {
 	SAFE_INIT(materialWnd);
@@ -316,7 +317,6 @@ void EditorComponent::Load()
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	float step = 105, x = -step;
-
 
 
 	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");

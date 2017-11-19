@@ -214,6 +214,18 @@ void wiInputManager::hidepointer(bool value)
 	ShowCursor(!value);
 #endif
 }
+char wiInputManager::getCharPressed()
+{
+	for (DWORD i = 1; i < 256; ++i)
+	{
+		if (press(i, KEYBOARD))
+		{
+			return static_cast<char>(i);
+		}
+	}
+
+	return 0;
+}
 
 
 void AddTouch(const wiInputManager::Touch& touch)
