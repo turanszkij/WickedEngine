@@ -261,15 +261,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case VK_BACK:
 			if (wiBackLog::isActive())
 				wiBackLog::deletefromInput();
+			wiTextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
 			if (wiBackLog::isActive())
 				wiBackLog::acceptInput();
 			break;
 		default:
-			if (wiBackLog::isActive()) {
+			{
 				const char c = (const char)(TCHAR)wParam;
-				wiBackLog::input(c);
+				if (wiBackLog::isActive())
+				{
+					wiBackLog::input(c);
+				}
+				wiTextInputField::AddInput(c);
 			}
 			break;
 		}

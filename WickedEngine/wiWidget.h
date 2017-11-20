@@ -127,6 +127,34 @@ public:
 	virtual void Render(wiGUI* gui) override;
 };
 
+// Text input box
+class wiTextInputField : public wiWidget
+{
+protected:
+	std::function<void(wiEventArgs args)> onInputAccepted;
+	Hitbox2D hitBox;
+
+	std::string value;
+	static std::string value_new;
+public:
+	wiTextInputField(const std::string& name = "");
+	virtual ~wiTextInputField();
+
+	void SetValue(const std::string& newValue);
+	void SetValue(int newValue);
+	void SetValue(float newValue);
+	const std::string& GetValue();
+
+	// There can only be ONE active text input field, so these methods modify the active one
+	static void AddInput(const char inputChar);
+	static void DeleteFromInput();
+
+	virtual void Update(wiGUI* gui, float dt) override;
+	virtual void Render(wiGUI* gui) override;
+
+	void OnInputAccepted(std::function<void(wiEventArgs args)> func);
+};
+
 // Define an interval and slide the control along it
 class wiSlider : public wiWidget
 {
@@ -136,6 +164,8 @@ protected:
 	float start, end;
 	float step;
 	float value;
+
+	wiTextInputField* valueInputField;
 public:
 	// start : slider minimum value
 	// end : slider maximum value
@@ -216,27 +246,6 @@ public:
 	virtual void Render(wiGUI* gui) override;
 
 	void OnSelect(std::function<void(wiEventArgs args)> func);
-};
-
-// Text input box
-class wiTextInputField : public wiWidget
-{
-protected:
-	std::function<void(wiEventArgs args)> onInputAccepted;
-	Hitbox2D hitBox;
-
-	std::string value_old, value_new;
-public:
-	wiTextInputField(const std::string& name = "");
-	virtual ~wiTextInputField();
-
-	void SetValue(const std::string& newValue);
-	const std::string& GetValue();
-
-	virtual void Update(wiGUI* gui, float dt) override;
-	virtual void Render(wiGUI* gui) override;
-
-	void OnInputAccepted(std::function<void(wiEventArgs args)> func);
 };
 
 // Widget container

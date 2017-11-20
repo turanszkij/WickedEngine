@@ -18,7 +18,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(600, 800));
+	emitterWindow->SetSize(XMFLOAT2(760, 800));
 	emitterWindow->SetEnabled(false);
 	GUI->AddWidget(emitterWindow);
 

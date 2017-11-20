@@ -407,6 +407,187 @@ void wiLabel::Render(wiGUI* gui)
 
 
 
+string wiTextInputField::value_new = "";
+wiTextInputField::wiTextInputField(const std::string& name) :wiWidget()
+{
+	SetName(name);
+	SetText(fastName.GetString());
+	OnInputAccepted([](wiEventArgs args) {});
+	SetSize(XMFLOAT2(100, 30));
+}
+wiTextInputField::~wiTextInputField()
+{
+
+}
+void wiTextInputField::SetValue(const std::string& newValue)
+{
+	value = newValue;
+}
+void wiTextInputField::SetValue(int newValue)
+{
+	stringstream ss("");
+	ss << newValue;
+	value = ss.str();
+}
+void wiTextInputField::SetValue(float newValue)
+{
+	stringstream ss("");
+	ss << newValue;
+	value = ss.str();
+}
+const std::string& wiTextInputField::GetValue()
+{
+	return value;
+}
+void wiTextInputField::Update(wiGUI* gui, float dt)
+{
+	wiWidget::Update(gui, dt);
+
+	if (!IsEnabled())
+	{
+		return;
+	}
+
+	if (gui->IsWidgetDisabled(this))
+	{
+		return;
+	}
+
+	hitBox.pos.x = Transform::translation.x;
+	hitBox.pos.y = Transform::translation.y;
+	hitBox.siz.x = Transform::scale.x;
+	hitBox.siz.y = Transform::scale.y;
+
+	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+	bool intersectsPointer = pointerHitbox.intersects(hitBox);
+
+	if (state == FOCUS)
+	{
+		state = IDLE;
+	}
+	if (state == DEACTIVATING)
+	{
+		state = IDLE;
+	}
+
+	bool clicked = false;
+	// hover the button
+	if (intersectsPointer)
+	{
+		if (state == IDLE)
+		{
+			state = FOCUS;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == FOCUS)
+		{
+			// activate
+			clicked = true;
+		}
+	}
+
+	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	{
+		if (state == DEACTIVATING)
+		{
+			// Keep pressed until mouse is released
+			gui->ActivateWidget(this);
+		}
+	}
+
+	if (clicked)
+	{
+		gui->ActivateWidget(this);
+
+		value_new = value;
+	}
+
+	if (state == ACTIVE)
+	{
+		if (wiInputManager::GetInstance()->press(VK_RETURN, wiInputManager::KEYBOARD))
+		{
+			// accept input...
+
+			value = value_new;
+			value_new.clear();
+
+			wiEventArgs args;
+			args.sValue = value;
+			args.iValue = atoi(value.c_str());
+			args.fValue = (float)atof(value.c_str());
+			onInputAccepted(args);
+
+			gui->DeactivateWidget(this);
+		}
+		else if ((wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD) && !intersectsPointer) ||
+			wiInputManager::GetInstance()->press(VK_ESCAPE, wiInputManager::KEYBOARD))
+		{
+			// cancel input 
+			value_new.clear();
+			gui->DeactivateWidget(this);
+		}
+
+	}
+
+}
+void wiTextInputField::Render(wiGUI* gui)
+{
+	assert(gui != nullptr && "Ivalid GUI!");
+
+	if (!IsVisible())
+	{
+		return;
+	}
+
+	wiColor color = GetColor();
+
+	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+
+
+
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
+	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+
+	string activeText = text;
+	if (state == ACTIVE)
+	{
+		activeText = value_new;
+	}
+	else if (!value.empty())
+	{
+		activeText = value;
+	}
+	wiFont(activeText, wiFontProps((int)(translation.x + 2), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
+		textColor, textShadowColor)).Draw(gui->GetGraphicsThread(), true);
+
+}
+void wiTextInputField::OnInputAccepted(function<void(wiEventArgs args)> func)
+{
+	onInputAccepted = move(func);
+}
+void wiTextInputField::AddInput(const char inputChar)
+{
+	value_new.push_back(inputChar);
+}
+void wiTextInputField::DeleteFromInput()
+{
+	if (!value_new.empty())
+	{
+		value_new.pop_back();
+	}
+}
+
+
+
+
+
 wiSlider::wiSlider(float start, float end, float defaultValue, float step, const std::string& name) :wiWidget()
 	,start(start), end(end), value(defaultValue), step(max(step, 1))
 {
@@ -414,9 +595,21 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 	SetText(fastName.GetString());
 	OnSlide([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(200, 40));
+
+	valueInputField = new wiTextInputField(name + "_endInputField");
+	valueInputField->SetSize(XMFLOAT2(scale.y * 2, scale.y));
+	valueInputField->SetPos(XMFLOAT2(scale.x + 20, 0));
+	valueInputField->SetValue(end);
+	valueInputField->OnInputAccepted([&](wiEventArgs args) {
+		this->value = args.fValue;
+		this->start = min(this->start, args.fValue);
+		this->end = max(this->end, args.fValue);
+	});
+	valueInputField->attachTo(this);
 }
 wiSlider::~wiSlider()
 {
+	SAFE_DELETE(valueInputField);
 }
 void wiSlider::SetValue(float value)
 {
@@ -429,6 +622,9 @@ float wiSlider::GetValue()
 void wiSlider::Update(wiGUI* gui, float dt )
 {
 	wiWidget::Update(gui, dt);
+
+	valueInputField->SetEnabled(IsEnabled());
+	valueInputField->Update(gui, dt);
 
 	if (!IsEnabled())
 	{
@@ -511,6 +707,7 @@ void wiSlider::Update(wiGUI* gui, float dt )
 		gui->ActivateWidget(this);
 	}
 
+	valueInputField->SetValue(value);
 }
 void wiSlider::Render(wiGUI* gui)
 {
@@ -540,13 +737,16 @@ void wiSlider::Render(wiGUI* gui)
 	// text
 	wiFont(text, wiFontProps((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
 		textColor, textShadowColor )).Draw(gui->GetGraphicsThread(), parent != nullptr);
-	// value
-	stringstream ss("");
-	ss << value;
-	wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
-		textColor, textShadowColor )).Draw(gui->GetGraphicsThread(), parent != nullptr);
+
+	//// value
+	//stringstream ss("");
+	//ss << value;
+	//wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
+	//	textColor, textShadowColor )).Draw(gui->GetGraphicsThread(), parent != nullptr);
 
 
+
+	valueInputField->Render(gui);
 }
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
@@ -961,175 +1161,6 @@ int wiComboBox::GetSelected()
 {
 	return selected;
 }
-
-
-
-
-
-
-
-
-wiTextInputField::wiTextInputField(const std::string& name) :wiWidget()
-{
-	SetName(name);
-	SetText(fastName.GetString());
-	OnInputAccepted([](wiEventArgs args) {});
-	SetSize(XMFLOAT2(100, 30));
-}
-wiTextInputField::~wiTextInputField()
-{
-
-}
-void wiTextInputField::SetValue(const std::string& newValue)
-{
-	value_old = newValue;
-}
-const std::string& wiTextInputField::GetValue()
-{
-	return value_old;
-}
-void wiTextInputField::Update(wiGUI* gui, float dt)
-{
-	wiWidget::Update(gui, dt);
-
-	if (!IsEnabled())
-	{
-		return;
-	}
-
-	if (gui->IsWidgetDisabled(this))
-	{
-		return;
-	}
-
-	hitBox.pos.x = Transform::translation.x;
-	hitBox.pos.y = Transform::translation.y;
-	hitBox.siz.x = Transform::scale.x;
-	hitBox.siz.y = Transform::scale.y;
-
-	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
-	bool intersectsPointer = pointerHitbox.intersects(hitBox);
-
-	if (state == FOCUS)
-	{
-		state = IDLE;
-	}
-	if (state == DEACTIVATING)
-	{
-		state = IDLE;
-	}
-
-	bool clicked = false;
-	// hover the button
-	if (intersectsPointer)
-	{
-		if (state == IDLE)
-		{
-			state = FOCUS;
-		}
-	}
-
-	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
-	{
-		if (state == FOCUS)
-		{
-			// activate
-			clicked = true;
-		}
-	}
-
-	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
-	{
-		if (state == DEACTIVATING)
-		{
-			// Keep pressed until mouse is released
-			gui->ActivateWidget(this);
-		}
-	}
-
-	if (clicked)
-	{
-		gui->ActivateWidget(this);
-
-		value_new = value_old;
-	}
-
-	if (state == ACTIVE)
-	{
-		if (wiInputManager::GetInstance()->press(VK_RETURN, wiInputManager::KEYBOARD))
-		{
-			// accept input...
-
-			value_old = value_new;
-			value_new.clear();
-
-			wiEventArgs args;
-			args.sValue = value_old;
-			args.iValue = atoi(value_old.c_str());
-			args.fValue = (float)atof(value_old.c_str());
-			onInputAccepted(args);
-
-			gui->DeactivateWidget(this);
-		}
-		else if ((wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD) && !intersectsPointer) ||
-			wiInputManager::GetInstance()->press(VK_ESCAPE, wiInputManager::KEYBOARD))
-		{
-			// cancel input 
-			value_new.clear();
-			gui->DeactivateWidget(this);
-		}
-		else if (wiInputManager::GetInstance()->press(VK_BACK, wiInputManager::KEYBOARD))
-		{
-			// remove character...
-			if (!value_new.empty())
-			{
-				value_new.pop_back();
-			}
-		}
-		else
-		{
-			// append character...
-			char inputChar = wiInputManager::GetInstance()->getCharPressed();
-			if (inputChar > 0)
-			{
-				value_new.push_back(inputChar);
-			}
-		}
-
-	}
-
-}
-void wiTextInputField::Render(wiGUI* gui)
-{
-	assert(gui != nullptr && "Ivalid GUI!");
-
-	if (!IsVisible())
-	{
-		return;
-	}
-
-	wiColor color = GetColor();
-
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
-
-
-
-	scissorRect.bottom = (LONG)(translation.y + scale.y);
-	scissorRect.left = (LONG)(translation.x);
-	scissorRect.right = (LONG)(translation.x + scale.x);
-	scissorRect.top = (LONG)(translation.y);
-	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont((value_new.empty() ? (value_old.empty() ? text : value_old) : value_new), 
-		wiFontProps((int)(translation.x + 2), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
-		textColor, textShadowColor)).Draw(gui->GetGraphicsThread(), true);
-
-}
-void wiTextInputField::OnInputAccepted(function<void(wiEventArgs args)> func)
-{
-	onInputAccepted = move(func);
-}
-
 
 
 

@@ -9,6 +9,7 @@ class wiSlider;
 class wiColorPicker;
 class wiButton;
 class wiComboBox;
+class wiTextInputField;
 
 class MaterialWindow
 {
@@ -23,7 +24,7 @@ public:
 	Material* material;
 
 	wiWindow*	materialWindow;
-	wiLabel*	materialLabel;
+	wiTextInputField*	materialNameField;
 	wiCheckBox* waterCheckBox;
 	wiCheckBox* planarReflCheckBox;
 	wiCheckBox* shadowCasterCheckBox;

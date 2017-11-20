@@ -21,11 +21,14 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
-	materialLabel = new wiLabel("MaterialName");
-	materialLabel->SetPos(XMFLOAT2(10, 30));
-	materialLabel->SetSize(XMFLOAT2(300, 20));
-	materialLabel->SetText("");
-	materialWindow->AddWidget(materialLabel);
+	materialNameField = new wiTextInputField("MaterialName");
+	materialNameField->SetPos(XMFLOAT2(10, 30));
+	materialNameField->SetSize(XMFLOAT2(300, 20));
+	materialNameField->OnInputAccepted([&](wiEventArgs args) {
+		if (material != nullptr)
+			material->name = args.sValue;
+	});
+	materialWindow->AddWidget(materialNameField);
 
 	float x = 540, y = 0;
 	float step = 35;
@@ -410,7 +413,7 @@ void MaterialWindow::SetMaterial(Material* mat)
 	material = mat;
 	if (material != nullptr)
 	{
-		materialLabel->SetText(material->name);
+		materialNameField->SetValue(material->name);
 		waterCheckBox->SetCheck(material->water);
 		planarReflCheckBox->SetCheck(material->planar_reflections);
 		shadowCasterCheckBox->SetCheck(material->cast_shadow);
@@ -438,7 +441,7 @@ void MaterialWindow::SetMaterial(Material* mat)
 	}
 	else
 	{
-		materialLabel->SetText("No material selected");
+		materialNameField->SetValue("No material selected");
 		materialWindow->SetEnabled(false);
 		colorPicker->SetEnabled(false);
 
