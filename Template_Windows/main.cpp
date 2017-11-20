@@ -153,6 +153,56 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case VK_HOME:
+			wiBackLog::Toggle();
+			break;
+		case VK_UP:
+			if (wiBackLog::isActive())
+				wiBackLog::historyPrev();
+			break;
+		case VK_DOWN:
+			if (wiBackLog::isActive())
+				wiBackLog::historyNext();
+			break;
+		case VK_NEXT:
+			if (wiBackLog::isActive())
+				wiBackLog::Scroll(10);
+			break;
+		case VK_PRIOR:
+			if (wiBackLog::isActive())
+				wiBackLog::Scroll(-10);
+			break;
+		default:
+			break;
+		}
+		break;
+	case WM_CHAR:
+		switch (wParam)
+		{
+		case VK_BACK:
+			if (wiBackLog::isActive())
+				wiBackLog::deletefromInput();
+			wiTextInputField::DeleteFromInput();
+			break;
+		case VK_RETURN:
+			if (wiBackLog::isActive())
+				wiBackLog::acceptInput();
+			break;
+		default:
+		{
+			const char c = (const char)(TCHAR)wParam;
+			if (wiBackLog::isActive())
+			{
+				wiBackLog::input(c);
+			}
+			wiTextInputField::AddInput(c);
+		}
+		break;
+		}
+		break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;

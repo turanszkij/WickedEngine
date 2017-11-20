@@ -623,6 +623,12 @@ void wiSlider::Update(wiGUI* gui, float dt )
 {
 	wiWidget::Update(gui, dt);
 
+	for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
+	{
+		valueInputField->SetColor(this->colors[i], (WIDGETSTATE)i);
+	}
+	valueInputField->SetTextColor(this->textColor);
+	valueInputField->SetTextShadowColor(this->textShadowColor);
 	valueInputField->SetEnabled(IsEnabled());
 	valueInputField->Update(gui, dt);
 
