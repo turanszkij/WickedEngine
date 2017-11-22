@@ -109,6 +109,30 @@ void EditorLoadingScreen::Unload()
 
 }
 
+
+wiArchive *clipboard = nullptr;
+enum ClipboardItemType
+{
+	CLIPBOARD_MODEL,
+	CLIPBOARD_EMPTY
+};
+
+vector<wiArchive*> history;
+int historyPos = -1;
+enum HistoryOperationType
+{
+	HISTORYOP_TRANSLATOR,
+	HISTORYOP_DELETE,
+	HISTORYOP_PASTE,
+	HISTORYOP_SELECTION,
+	HISTORYOP_NONE
+};
+void ResetHistory();
+wiArchive* AdvanceHistory();
+void ConsumeHistoryOperation(bool undo);
+
+
+
 wiTranslator* translator = nullptr;
 bool translator_active = false;
 list<wiRenderer::Picked*> selected;
@@ -188,27 +212,6 @@ enum EDITORSTENCILREF
 	EDITORSTENCILREF_LAST = 0x0F,
 };
 
-
-wiArchive *clipboard = nullptr;
-enum ClipboardItemType
-{
-	CLIPBOARD_MODEL,
-	CLIPBOARD_EMPTY
-};
-
-vector<wiArchive*> history;
-int historyPos = -1;
-enum HistoryOperationType
-{
-	HISTORYOP_TRANSLATOR,
-	HISTORYOP_DELETE,
-	HISTORYOP_PASTE,
-	HISTORYOP_NONE
-};
-void ResetHistory();
-wiArchive* AdvanceHistory();
-void ConsumeHistoryOperation(bool undo);
-
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
 {
 	SAFE_DELETE(renderPath);
@@ -280,7 +283,10 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(forceFieldWnd);
 	SAFE_DELETE(oceanWnd);
 }
+void EditorComponent::UpdateFromPrimarySelection(const wiRenderer::Picked& sel)
+{
 
+}
 
 void EditorComponent::Initialize()
 {
@@ -1044,6 +1050,15 @@ void EditorComponent::Update(float dt)
 		{
 			wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
 
+			wiArchive* archive = AdvanceHistory();
+			*archive << HISTORYOP_SELECTION;
+			// record PREVIOUS selection state...
+			*archive << selected.size();
+			for (auto& x : selected)
+			{
+				*archive << x->transform->GetID();
+			}
+
 			if (picked->transform != nullptr)
 			{
 				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
@@ -1130,6 +1145,13 @@ void EditorComponent::Update(float dt)
 				ClearSelected();
 			}
 
+			// record NEW selection state...
+			*archive << selected.size();
+			for (auto& x : selected)
+			{
+				*archive << x->transform->GetID();
+			}
+
 			objectWnd->SetObject(picked->object);
 			emitterWnd->SetObject(picked->object);
 		}
@@ -1142,6 +1164,8 @@ void EditorComponent::Update(float dt)
 			*archive << selected.size();
 			for (auto& x : selected)
 			{
+				*archive << x->transform->GetID();
+
 				if (x->object != nullptr)
 				{
 					*archive << true;
@@ -1204,21 +1228,11 @@ void EditorComponent::Update(float dt)
 					*archive << false;
 				}
 
-				if (x->transform != nullptr)
+				EnvironmentProbe* envProbe = dynamic_cast<EnvironmentProbe*>(x->transform);
+				if (envProbe != nullptr)
 				{
-					*archive << true;
-					*archive << x->transform->GetID();
-
-					EnvironmentProbe* envProbe = dynamic_cast<EnvironmentProbe*>(x->transform);
-					if (envProbe != nullptr)
-					{
-						wiRenderer::Remove(envProbe);
-						SAFE_DELETE(envProbe);
-					}
-				}
-				else
-				{
-					*archive << false;
+					wiRenderer::Remove(envProbe);
+					SAFE_DELETE(envProbe);
 				}
 			}
 			ClearSelected();
@@ -1644,6 +1658,11 @@ void ConsumeHistoryOperation(bool undo)
 				*archive >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
+					// Entity ID
+					uint64_t id;
+					*archive >> id;
+
+
 					bool tmp;
 
 					// object
@@ -1654,6 +1673,7 @@ void ConsumeHistoryOperation(bool undo)
 						{
 							Object* object = new Object;
 							object->Serialize(*archive);
+							object->SetID(id);
 							object->mesh = new Mesh;
 							object->mesh->Serialize(*archive);
 							size_t subsetCount;
@@ -1675,6 +1695,7 @@ void ConsumeHistoryOperation(bool undo)
 					{
 						Light* light = new Light;
 						light->Serialize(*archive);
+						light->SetID(id);
 						model->Add(light);
 					}
 
@@ -1684,16 +1705,8 @@ void ConsumeHistoryOperation(bool undo)
 					{
 						Decal* decal = new Decal;
 						decal->Serialize(*archive);
+						decal->SetID(id);
 						model->Add(decal);
-					}
-
-					// other
-					*archive >> tmp;
-					unsigned long long id;
-					*archive >> id;
-					if (tmp)
-					{
-
 					}
 				}
 
@@ -1704,6 +1717,64 @@ void ConsumeHistoryOperation(bool undo)
 			}
 			break;
 		case HISTORYOP_PASTE:
+			break;
+		case HISTORYOP_SELECTION:
+			{
+				EndTranslate();
+				ClearSelected();
+
+				list<wiRenderer::Picked*> selectedBEFORE;
+				size_t selectionCountBEFORE;
+				*archive >> selectionCountBEFORE;
+				for (size_t i = 0; i < selectionCountBEFORE; ++i)
+				{
+					uint64_t id;
+					*archive >> id;
+
+					wiRenderer::Picked* sel = new wiRenderer::Picked;
+					sel->transform = wiRenderer::getTransformByID(id);
+					//assert(sel->transform != nullptr);
+
+					selectedBEFORE.push_back(sel);
+				}
+
+				list<wiRenderer::Picked*> selectedAFTER;
+				size_t selectionCountAFTER;
+				*archive >> selectionCountAFTER;
+				for (size_t i = 0; i < selectionCountAFTER; ++i)
+				{
+					uint64_t id;
+					*archive >> id;
+
+					wiRenderer::Picked* sel = new wiRenderer::Picked;
+					sel->transform = wiRenderer::getTransformByID(id);
+					//assert(sel->transform != nullptr);
+
+					selectedAFTER.push_back(sel);
+				}
+
+				list<wiRenderer::Picked*>* selectedCURRENT = nullptr;
+				if (undo)
+				{
+					selectedCURRENT = &selectedBEFORE;
+				}
+				else
+				{
+					selectedCURRENT = &selectedAFTER;
+				}
+
+				selected.insert(selected.end(), selectedCURRENT->begin(), selectedCURRENT->end());
+
+				for (auto& x : selected)
+				{
+					x->object = dynamic_cast<Object*>(x->transform);
+					x->light = dynamic_cast<Light*>(x->transform);
+					x->decal = dynamic_cast<Decal*>(x->transform);
+					x->envProbe = dynamic_cast<EnvironmentProbe*>(x->transform);
+					x->forceField = dynamic_cast<ForceField*>(x->transform);
+				}
+
+			}
 			break;
 		case HISTORYOP_NONE:
 			break;

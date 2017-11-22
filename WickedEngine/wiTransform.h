@@ -6,12 +6,12 @@
 
 class wiArchive;
 
-static unsigned long long __Unique_ID_Counter = 0;
+static uint64_t __Unique_ID_Counter = 0;
 
 struct Node
 {
 private:
-	unsigned long long ID;
+	uint64_t ID;
 public:
 	std::string name;
 
@@ -31,7 +31,8 @@ public:
 		}
 		return "";
 	}
-	unsigned long long GetID() { return ID; }
+	uint64_t GetID() { return ID; }
+	void SetID(uint64_t newID) { ID = newID; }
 
 	void Serialize(wiArchive& archive);
 };
@@ -68,7 +69,7 @@ struct Transform : public Node
 	void attachTo(Transform* newParent, int copyTranslation = 1, int copyRotation = 1, int copyScale = 1);
 	//find transform in tree
 	Transform* find(const std::string& name);
-	Transform* find(unsigned long long ID);
+	Transform* find(uint64_t ID);
 	//detach child - detach all if no parameters
 	void detachChild(Transform* child = nullptr);
 	//detach from parent

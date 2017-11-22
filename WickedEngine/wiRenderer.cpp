@@ -1483,7 +1483,7 @@ Transform* wiRenderer::getTransformByName(const std::string& get)
 	//}
 	return GetScene().GetWorldNode()->find(get);
 }
-Transform* wiRenderer::getTransformByID(unsigned long long id)
+Transform* wiRenderer::getTransformByID(uint64_t id)
 {
 	return GetScene().GetWorldNode()->find(id);
 }

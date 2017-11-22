@@ -102,7 +102,7 @@ Transform* Transform::find(const std::string& findname)
 	}
 	return nullptr;
 }
-Transform* Transform::find(unsigned long long id)
+Transform* Transform::find(uint64_t id)
 {
 	if (GetID()==id)
 	{

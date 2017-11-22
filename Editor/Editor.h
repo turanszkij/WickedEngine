@@ -46,7 +46,7 @@ public:
 	AnimationWindow*		animWnd;
 	EmitterWindow*			emitterWnd;
 	ForceFieldWindow*		forceFieldWnd;
-	OceanWindow*		oceanWnd;
+	OceanWindow*			oceanWnd;
 
 	Editor*					main;
 
@@ -61,6 +61,7 @@ public:
 	};
 	void ChangeRenderPath(RENDERPATH path);
 	void DeleteWindows();
+	void UpdateFromPrimarySelection(const wiRenderer::Picked& sel);
 
 	void Initialize() override;
 	void Load() override;

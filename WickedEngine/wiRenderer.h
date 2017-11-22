@@ -338,7 +338,7 @@ public:
 	static wiWaterPlane GetWaterPlane();
 
 	static Transform* getTransformByName(const std::string& name);
-	static Transform* getTransformByID(unsigned long long id);
+	static Transform* getTransformByID(uint64_t id);
 	static Armature* getArmatureByName(const std::string& get);
 	static int getActionByName(Armature* armature, const std::string& get);
 	static int getBoneByName(Armature* armature, const std::string& get);
