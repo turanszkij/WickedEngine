@@ -233,6 +233,9 @@ ObjectWindow::~ObjectWindow()
 
 void ObjectWindow::SetObject(Object* obj)
 {
+	if (this->object == obj)
+		return;
+
 	object = obj;
 
 	if (object != nullptr)

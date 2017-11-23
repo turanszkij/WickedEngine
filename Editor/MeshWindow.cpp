@@ -108,6 +108,9 @@ MeshWindow::~MeshWindow()
 
 void MeshWindow::SetMesh(Mesh* mesh)
 {
+	if (this->mesh == mesh)
+		return;
+
 	this->mesh = mesh;
 	if (mesh != nullptr)
 	{

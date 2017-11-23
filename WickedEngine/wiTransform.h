@@ -6,31 +6,18 @@
 
 class wiArchive;
 
-static uint64_t __Unique_ID_Counter = 0;
-
 struct Node
 {
 private:
+	static uint64_t __Unique_ID_Counter;
 	uint64_t ID;
 public:
 	std::string name;
 
-	Node() {
-		name = "";
-		ID = __Unique_ID_Counter;
-		__Unique_ID_Counter++;
-	}
+	Node();
 
-
-	std::string GetLayerID()
-	{
-		auto x = name.find_last_of('_');
-		if (x != std::string::npos)
-		{
-			return name.substr(x + 1);
-		}
-		return "";
-	}
+	
+	std::string GetLayerID();
 	uint64_t GetID() { return ID; }
 	void SetID(uint64_t newID) { ID = newID; }
 

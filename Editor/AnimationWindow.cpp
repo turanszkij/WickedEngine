@@ -216,6 +216,9 @@ AnimationWindow::~AnimationWindow()
 
 void AnimationWindow::SetArmature(Armature* armature)
 {
+	if (this->armature == armature)
+		return;
+
 	this->armature = armature;
 
 	if (armature != nullptr)

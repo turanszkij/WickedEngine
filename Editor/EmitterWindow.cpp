@@ -269,6 +269,9 @@ EmitterWindow::~EmitterWindow()
 
 void EmitterWindow::SetObject(Object* obj)
 {
+	if (this->object == obj)
+		return;
+
 	// first try to turn off any debug readbacks for emitters:
 	if (GetEmitter() != nullptr)
 	{

@@ -101,6 +101,9 @@ ForceFieldWindow::~ForceFieldWindow()
 
 void ForceFieldWindow::SetForceField(ForceField* force)
 {
+	if (this->force == force)
+		return;
+
 	this->force = force;
 
 	if (force != nullptr)

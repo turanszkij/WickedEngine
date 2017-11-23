@@ -197,6 +197,9 @@ LightWindow::~LightWindow()
 
 void LightWindow::SetLight(Light* light)
 {
+	if (this->light == light)
+		return;
+
 	this->light = light;
 	if (light != nullptr)
 	{

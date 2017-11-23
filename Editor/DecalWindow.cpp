@@ -56,6 +56,9 @@ DecalWindow::~DecalWindow()
 
 void DecalWindow::SetDecal(Decal* decal)
 {
+	if (this->decal == decal)
+		return;
+
 	this->decal = decal;
 	if (decal != nullptr)
 	{

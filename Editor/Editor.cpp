@@ -123,7 +123,6 @@ enum HistoryOperationType
 {
 	HISTORYOP_TRANSLATOR,
 	HISTORYOP_DELETE,
-	HISTORYOP_PASTE,
 	HISTORYOP_SELECTION,
 	HISTORYOP_NONE
 };
@@ -1057,6 +1056,16 @@ void EditorComponent::Update(float dt)
 			for (auto& x : selected)
 			{
 				*archive << x->transform->GetID();
+				*archive << x->position;
+				*archive << x->normal;
+				*archive << x->subsetIndex;
+				*archive << x->distance;
+			}
+			*archive << savedParents.size();
+			for (auto& x : savedParents)
+			{
+				*archive << x.first->GetID();
+				*archive << x.second->GetID();
 			}
 
 			if (picked->transform != nullptr)
@@ -1071,7 +1080,7 @@ void EditorComponent::Update(float dt)
 							break;
 						}
 					}
-					if (it == selected.end() && picked->transform != nullptr)
+					if (it == selected.end())
 					{
 						selected.push_back(picked);
 						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
@@ -1082,65 +1091,14 @@ void EditorComponent::Update(float dt)
 					EndTranslate();
 					ClearSelected();
 					selected.push_back(picked);
-					if (picked->transform != nullptr)
-					{
-						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
-					}
+					savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
 				}
-
 
 				EndTranslate();
-
-				if (picked->object != nullptr)
-				{
-					meshWnd->SetMesh(picked->object->mesh);
-					if (picked->subsetIndex >= 0 && picked->subsetIndex < (int)picked->object->mesh->subsets.size())
-					{
-						Material* material = picked->object->mesh->subsets[picked->subsetIndex].material;
-
-						materialWnd->SetMaterial(material);
-
-						material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
-					}
-					if (picked->object->isArmatureDeformed())
-					{
-						savedParents.erase(picked->object);
-						picked->transform = picked->object->mesh->armature;
-						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
-						animWnd->SetArmature(picked->object->mesh->armature);
-					}
-				}
-				else
-				{
-					meshWnd->SetMesh(nullptr);
-					materialWnd->SetMaterial(nullptr);
-					animWnd->SetArmature(nullptr);
-				}
-
-				if (picked->light != nullptr)
-				{
-				}
-				lightWnd->SetLight(picked->light);
-				if (picked->decal != nullptr)
-				{
-				}
-				decalWnd->SetDecal(picked->decal);
-				if (picked->envProbe != nullptr)
-				{
-				}
-				envProbeWnd->SetProbe(picked->envProbe);
-				forceFieldWnd->SetForceField(picked->forceField);
-
 				BeginTranslate();
 			}
 			else
 			{
-				meshWnd->SetMesh(nullptr);
-				materialWnd->SetMaterial(nullptr);
-				lightWnd->SetLight(nullptr);
-				decalWnd->SetDecal(nullptr);
-				envProbeWnd->SetProbe(nullptr);
-
 				EndTranslate();
 				ClearSelected();
 			}
@@ -1150,7 +1108,73 @@ void EditorComponent::Update(float dt)
 			for (auto& x : selected)
 			{
 				*archive << x->transform->GetID();
+				*archive << x->position;
+				*archive << x->normal;
+				*archive << x->subsetIndex;
+				*archive << x->distance;
 			}
+			*archive << savedParents.size();
+			for (auto& x : savedParents)
+			{
+				*archive << x.first->GetID();
+				*archive << x.second->GetID();
+			}
+		}
+
+		// Update window data bindings...
+		if (selected.empty())
+		{
+			objectWnd->SetObject(nullptr);
+			emitterWnd->SetObject(nullptr);
+			meshWnd->SetMesh(nullptr);
+			materialWnd->SetMaterial(nullptr);
+			lightWnd->SetLight(nullptr);
+			decalWnd->SetDecal(nullptr);
+			envProbeWnd->SetProbe(nullptr);
+			animWnd->SetArmature(nullptr);
+		}
+		else
+		{
+			wiRenderer::Picked* picked = selected.back();
+
+			assert(picked->transform != nullptr);
+
+			if (picked->object != nullptr)
+			{
+				meshWnd->SetMesh(picked->object->mesh);
+				if (picked->subsetIndex >= 0 && picked->subsetIndex < (int)picked->object->mesh->subsets.size())
+				{
+					Material* material = picked->object->mesh->subsets[picked->subsetIndex].material;
+
+					materialWnd->SetMaterial(material);
+
+					material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
+				}
+				if (picked->object->isArmatureDeformed())
+				{
+					animWnd->SetArmature(picked->object->mesh->armature);
+				}
+			}
+			else
+			{
+				meshWnd->SetMesh(nullptr);
+				materialWnd->SetMaterial(nullptr);
+				animWnd->SetArmature(nullptr);
+			}
+
+			if (picked->light != nullptr)
+			{
+			}
+			lightWnd->SetLight(picked->light);
+			if (picked->decal != nullptr)
+			{
+			}
+			decalWnd->SetDecal(picked->decal);
+			if (picked->envProbe != nullptr)
+			{
+			}
+			envProbeWnd->SetProbe(picked->envProbe);
+			forceFieldWnd->SetForceField(picked->forceField);
 
 			objectWnd->SetObject(picked->object);
 			emitterWnd->SetObject(picked->object);
@@ -1716,12 +1740,12 @@ void ConsumeHistoryOperation(bool undo)
 				}
 			}
 			break;
-		case HISTORYOP_PASTE:
-			break;
 		case HISTORYOP_SELECTION:
 			{
 				EndTranslate();
 				ClearSelected();
+
+				// Read selections states from archive:
 
 				list<wiRenderer::Picked*> selectedBEFORE;
 				size_t selectionCountBEFORE;
@@ -1733,9 +1757,26 @@ void ConsumeHistoryOperation(bool undo)
 
 					wiRenderer::Picked* sel = new wiRenderer::Picked;
 					sel->transform = wiRenderer::getTransformByID(id);
-					//assert(sel->transform != nullptr);
+					assert(sel->transform != nullptr);
+					*archive >> sel->position;
+					*archive >> sel->normal;
+					*archive >> sel->subsetIndex;
+					*archive >> sel->distance;
 
 					selectedBEFORE.push_back(sel);
+				}
+				std::map<Transform*, Transform*> savedParentsBEFORE;
+				size_t savedParentsCountBEFORE;
+				*archive >> savedParentsCountBEFORE;
+				for (size_t i = 0; i < savedParentsCountBEFORE; ++i)
+				{
+					uint64_t id1, id2;
+					*archive >> id1;
+					*archive >> id2;
+
+					Transform* t1 = wiRenderer::getTransformByID(id1);
+					Transform* t2 = wiRenderer::getTransformByID(id2);
+					savedParentsBEFORE.insert(pair<Transform*, Transform*>(t1, t2));
 				}
 
 				list<wiRenderer::Picked*> selectedAFTER;
@@ -1748,19 +1789,41 @@ void ConsumeHistoryOperation(bool undo)
 
 					wiRenderer::Picked* sel = new wiRenderer::Picked;
 					sel->transform = wiRenderer::getTransformByID(id);
-					//assert(sel->transform != nullptr);
+					assert(sel->transform != nullptr);
+					*archive >> sel->position;
+					*archive >> sel->normal;
+					*archive >> sel->subsetIndex;
+					*archive >> sel->distance;
 
 					selectedAFTER.push_back(sel);
 				}
+				std::map<Transform*, Transform*> savedParentsAFTER;
+				size_t savedParentsCountAFTER;
+				*archive >> savedParentsCountAFTER;
+				for (size_t i = 0; i < savedParentsCountAFTER; ++i)
+				{
+					uint64_t id1, id2;
+					*archive >> id1;
+					*archive >> id2;
+
+					Transform* t1 = wiRenderer::getTransformByID(id1);
+					Transform* t2 = wiRenderer::getTransformByID(id2);
+					savedParentsAFTER.insert(pair<Transform*, Transform*>(t1, t2));
+				}
+
+
+				// Restore proper selection state:
 
 				list<wiRenderer::Picked*>* selectedCURRENT = nullptr;
 				if (undo)
 				{
 					selectedCURRENT = &selectedBEFORE;
+					savedParents = savedParentsBEFORE;
 				}
 				else
 				{
 					selectedCURRENT = &selectedAFTER;
+					savedParents = savedParentsAFTER;
 				}
 
 				selected.insert(selected.end(), selectedCURRENT->begin(), selectedCURRENT->end());
@@ -1774,9 +1837,11 @@ void ConsumeHistoryOperation(bool undo)
 					x->forceField = dynamic_cast<ForceField*>(x->transform);
 				}
 
+				BeginTranslate();
 			}
 			break;
 		case HISTORYOP_NONE:
+			assert(0);
 			break;
 		default:
 			break;

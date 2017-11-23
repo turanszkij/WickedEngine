@@ -3,6 +3,25 @@
 
 #include <vector>
 
+uint64_t Node::__Unique_ID_Counter = 0;
+
+Node::Node() {
+	name = "";
+	ID = __Unique_ID_Counter;
+	__Unique_ID_Counter++;
+}
+
+
+std::string Node::GetLayerID()
+{
+	auto x = name.find_last_of('_');
+	if (x != std::string::npos)
+	{
+		return name.substr(x + 1);
+	}
+	return "";
+}
+
 void Node::Serialize(wiArchive& archive)
 {
 	if (archive.IsReadMode())
