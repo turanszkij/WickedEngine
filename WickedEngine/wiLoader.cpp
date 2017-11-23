@@ -1236,16 +1236,6 @@ void LoadWiDecals(const std::string&directory, const std::string& name, const st
 }
 
 
-
-void GenerateSPTree(wiSPTree*& tree, std::vector<Cullable*>& objects, int type){
-	if(type==SPTREE_GENERATE_QUADTREE)
-		tree = new QuadTree();
-	else if(type==SPTREE_GENERATE_OCTREE)
-		tree = new Octree();
-	tree->initialize(objects);
-}
-
-
 #pragma region SCENE
 Model* _CreateWorldNode()
 {

@@ -474,6 +474,15 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	gridHelperCheckBox->SetCheck(wiRenderer::GetToDrawGridHelper());
 	rendererWindow->AddWidget(gridHelperCheckBox);
 
+	freezeCullingCameraCheckBox = new wiCheckBox("Freeze culling camera: ");
+	freezeCullingCameraCheckBox->SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
+	freezeCullingCameraCheckBox->SetPos(XMFLOAT2(x, y += step * 2));
+	freezeCullingCameraCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetFreezeCullingCameraEnabled(args.bValue);
+	});
+	freezeCullingCameraCheckBox->SetCheck(wiRenderer::GetToDrawDebugForceFields());
+	rendererWindow->AddWidget(freezeCullingCameraCheckBox);
+
 
 
 	rendererWindow->Translate(XMFLOAT3(130, 20, 0));

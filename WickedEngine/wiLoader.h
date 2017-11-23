@@ -1249,9 +1249,3 @@ void LoadWiCameras(const std::string&directory, const std::string& name, const s
 				   ,const std::list<Armature*>& armatures);
 void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, std::list<Decal*>& decals);
 
-
-#include "wiSPTree.h"
-class wiSPTree;
-#define SPTREE_GENERATE_QUADTREE 0
-#define SPTREE_GENERATE_OCTREE 1
-void GenerateSPTree(wiSPTree*& tree, std::vector<Cullable*>& objects, int type = SPTREE_GENERATE_QUADTREE);

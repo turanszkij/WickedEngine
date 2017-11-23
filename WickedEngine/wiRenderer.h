@@ -232,6 +232,7 @@ protected:
 	static bool debugLightCulling;
 	static bool occlusionCulling;
 	static bool temporalAA, temporalAADEBUG;
+	static bool freezeCullingCamera;
 
 	static EnvironmentProbe* globalEnvProbes[2];
 
@@ -313,6 +314,8 @@ public:
 	static bool GetTemporalAAEnabled() { return temporalAA; }
 	static void SetTemporalAADebugEnabled(bool enabled) { temporalAADEBUG = enabled; }
 	static bool GetTemporalAADebugEnabled() { return temporalAADEBUG; }
+	static void SetFreezeCullingCameraEnabled(bool enabled) { freezeCullingCamera = enabled; }
+	static bool GetFreezeCullingCameraEnabled() { return freezeCullingCamera; }
 	static void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }
 	static bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
 	static void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
@@ -354,6 +357,7 @@ public:
 
 	struct FrameCulling
 	{
+		Frustum frustum;
 		CulledCollection culledRenderer;
 		CulledCollection culledRenderer_opaque;
 		CulledCollection culledRenderer_transparent;

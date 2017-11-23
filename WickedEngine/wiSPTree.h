@@ -12,7 +12,6 @@ typedef std::list<Cullable*> CulledList;
 typedef std::list<Object*> CulledObjectList;
 typedef std::unordered_map<Mesh*,CulledObjectList> CulledCollection;
 
-
 class wiSPTree
 {
 protected:
@@ -20,10 +19,10 @@ protected:
 	wiSPTree();
 public:
 	~wiSPTree();
-	void initialize(const std::vector<Cullable*>& objects);
-	void initialize(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin, const XMFLOAT3& newMax);
+	void initialize(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
 
-	struct Node{
+	struct Node
+	{
 		int depth;
 		AABB box;
 		std::vector<Node*> children;
@@ -31,20 +30,16 @@ public:
 		int count;
 		CulledList objects;
 
-		Node(Node* newParent, const AABB& newBox = AABB(), int newDepth = 0):parent(newParent),box(newBox),depth(newDepth){
-			count=0;
+		Node(Node* newParent, const AABB& newBox = AABB(), int newDepth = 0) :parent(newParent), box(newBox), depth(newDepth)
+		{
+			count = 0;
 		}
 		~Node()
 		{
-			for (size_t i = 0; i < children.size(); ++i)
+			for (Node* x : children)
 			{
-				SAFE_DELETE(children[i]);
+				SAFE_DELETE(x);
 			}
-		}
-		static void swap(Node*& a, Node*& b){
-			Node* c = a;
-			a=b;
-			b=c;
 		}
 	};
 	Node* root;
@@ -82,10 +77,18 @@ public:
 class Octree : public wiSPTree
 {
 public:
-	Octree(){childCount=8;}
+	Octree(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX))
+	{
+		childCount=8;
+		initialize(objects, newMin, newMax);
+	}
 };
 class QuadTree : public wiSPTree
 {
 public:
-	QuadTree(){childCount=4;}
+	QuadTree(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX))
+	{
+		childCount = 4;
+		initialize(objects, newMin, newMax);
+	}
 };

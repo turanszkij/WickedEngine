@@ -54,6 +54,8 @@ public:
 	wiComboBox* textureQualityComboBox;
 	wiSlider*	mipLodBiasSlider;
 
+	wiCheckBox* freezeCullingCameraCheckBox;
+
 	int GetPickType();
 };
 

@@ -56,7 +56,7 @@ GPURingBuffer		*wiRenderer::dynamicVertexBufferPool;
 float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
-bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false
+bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
 , wiRenderer::advancedRefractions = false;
 float wiRenderer::SPECULARAA = 0.0f;
@@ -1704,10 +1704,15 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			FrameCulling& culling = x.second;
 			culling.Clear();
 
+			if (!freezeCullingCamera)
+			{
+				culling.frustum = camera->frustum;
+			}
+
 			if (spTree != nullptr)
 			{
 				CulledList culledObjects;
-				spTree->getVisible(camera->frustum, culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
+				spTree->getVisible(culling.frustum, culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
 				for (Cullable* x : culledObjects)
 				{
 					Object* object = (Object*)x;
@@ -1742,9 +1747,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			}
 			if (camera==getCamera() && spTree_lights != nullptr) // only the main camera can render lights and write light array properties (yet)!
 			{
-				Frustum frustum;
-				frustum.ConstructFrustum(min(camera->zFarP, GetScene().worldInfo.fogSEH.y), camera->realProjection, camera->View);
-
 				for (Model* model : GetScene().models)
 				{
 					if (model->decals.empty())
@@ -1752,14 +1754,14 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 					for (Decal* decal : model->decals)
 					{
-						if ((decal->texture || decal->normal) && frustum.CheckBox(decal->bounds))
+						if ((decal->texture || decal->normal) && culling.frustum.CheckBox(decal->bounds))
 						{
 							x.second.culledDecals.push_back(decal);
 						}
 					}
 				}
 
-				spTree_lights->getVisible(frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
+				spTree_lights->getVisible(culling.frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
 
 				if (GetVoxelRadianceEnabled())
 				{
@@ -6147,7 +6149,7 @@ void wiRenderer::LoadDefaultLighting()
 	}
 	else
 	{
-		GenerateSPTree(spTree_lights, std::vector<Cullable*>(model->lights.begin(), model->lights.end()), SPTREE_GENERATE_OCTREE);
+		spTree_lights = new Octree(std::vector<Cullable*>(model->lights.begin(), model->lights.end()));
 	}
 }
 Scene& wiRenderer::GetScene()
@@ -6487,7 +6489,7 @@ void wiRenderer::Add(const list<Object*>& objects)
 	}
 	else
 	{
-		GenerateSPTree(spTree, std::vector<Cullable*>(objects.begin(), objects.end()), SPTREE_GENERATE_OCTREE);
+		spTree = new Octree(std::vector<Cullable*>(objects.begin(), objects.end()));
 	}
 }
 void wiRenderer::Add(const list<Light*>& lights)
@@ -6504,7 +6506,7 @@ void wiRenderer::Add(const list<Light*>& lights)
 	}
 	else
 	{
-		GenerateSPTree(spTree_lights, std::vector<Cullable*>(lights.begin(), lights.end()), SPTREE_GENERATE_OCTREE);
+		spTree_lights = new Octree(std::vector<Cullable*>(lights.begin(), lights.end()));
 	}
 }
 void wiRenderer::Add(const list<ForceField*>& forces)
