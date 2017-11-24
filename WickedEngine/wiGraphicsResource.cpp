@@ -1,5 +1,6 @@
 #include "wiGraphicsResource.h"
 #include "Include_DX11.h"
+#include "Include_DX12.h"
 
 namespace wiGraphicsTypes
 {
@@ -182,20 +183,24 @@ namespace wiGraphicsTypes
 	Texture1D::Texture1D() :Texture()
 	{
 		SAFE_INIT(texture1D_DX11);
+		SAFE_INIT(texture1D_DX12);
 	}
 	Texture1D::~Texture1D()
 	{
 		SAFE_RELEASE(texture1D_DX11);
+		SAFE_RELEASE(texture1D_DX12);
 	}
 
 	Texture2D::Texture2D() :Texture()
 	{
 		SAFE_INIT(texture2D_DX11);
+		SAFE_INIT(texture2D_DX12);
 		SAFE_INIT(DSV_DX11);
 	}
 	Texture2D::~Texture2D()
 	{
 		SAFE_RELEASE(texture2D_DX11);
+		SAFE_RELEASE(texture2D_DX12);
 		SAFE_RELEASE(DSV_DX11);
 		for (auto& x : additionalDSVs_DX11)
 		{
@@ -206,10 +211,12 @@ namespace wiGraphicsTypes
 	Texture3D::Texture3D() :Texture()
 	{
 		SAFE_INIT(texture3D_DX11);
+		SAFE_INIT(texture3D_DX12);
 	}
 	Texture3D::~Texture3D()
 	{
 		SAFE_RELEASE(texture3D_DX11);
+		SAFE_RELEASE(texture3D_DX12);
 	}
 
 	GPUQuery::GPUQuery()

@@ -29,6 +29,10 @@ struct ID3D11Texture3D;
 struct ID3D11Query;
 struct ID3D11Predicate;
 
+struct ID3D12Resource;
+
+
+
 namespace wiGraphicsTypes
 {
 	class GraphicsDevice_DX11;
@@ -36,6 +40,7 @@ namespace wiGraphicsTypes
 	class VertexShader
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11VertexShader*		resource_DX11;
 	public:
@@ -48,6 +53,7 @@ namespace wiGraphicsTypes
 	class PixelShader
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11PixelShader*		resource_DX11;
 	public:
@@ -60,6 +66,7 @@ namespace wiGraphicsTypes
 	class GeometryShader
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11GeometryShader*	resource_DX11;
 	public:
@@ -72,6 +79,7 @@ namespace wiGraphicsTypes
 	class HullShader
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11HullShader*		resource_DX11;
 	public:
@@ -84,6 +92,7 @@ namespace wiGraphicsTypes
 	class DomainShader
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11DomainShader*		resource_DX11;
 	public:
@@ -96,6 +105,7 @@ namespace wiGraphicsTypes
 	class ComputeShader
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11ComputeShader*	resource_DX11;
 	public:
@@ -108,6 +118,7 @@ namespace wiGraphicsTypes
 	class Sampler
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11SamplerState*	resource_DX11;
 		SamplerDesc desc;
@@ -122,6 +133,7 @@ namespace wiGraphicsTypes
 	class GPUResource
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11ShaderResourceView*			SRV_DX11;					// main resource SRV
 		std::vector<ID3D11ShaderResourceView*>	additionalSRVs_DX11;		// can be used for sub-resources if requested
@@ -134,6 +146,7 @@ namespace wiGraphicsTypes
 	class GPUUnorderedResource
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11UnorderedAccessView*			UAV_DX11;					// main resource UAV
 		std::vector<ID3D11UnorderedAccessView*>	additionalUAVs_DX11;		// can be used for sub-resources if requested
@@ -146,6 +159,7 @@ namespace wiGraphicsTypes
 	class GPUBuffer : public GPUResource, public GPUUnorderedResource
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11Buffer*		resource_DX11;
 		GPUBufferDesc desc;
@@ -160,6 +174,7 @@ namespace wiGraphicsTypes
 	class GPURingBuffer : public GPUBuffer
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		size_t byteOffset;
 		uint64_t residentFrame;
@@ -174,6 +189,7 @@ namespace wiGraphicsTypes
 	class VertexLayout
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11InputLayout*	resource_DX11;
 	public:
@@ -186,6 +202,7 @@ namespace wiGraphicsTypes
 	class BlendState
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11BlendState*	resource_DX11;
 		BlendStateDesc desc;
@@ -200,6 +217,7 @@ namespace wiGraphicsTypes
 	class DepthStencilState
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11DepthStencilState*	resource_DX11;
 		DepthStencilStateDesc desc;
@@ -214,6 +232,7 @@ namespace wiGraphicsTypes
 	class RasterizerState
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11RasterizerState*	resource_DX11;
 		RasterizerStateDesc desc;
@@ -236,6 +255,7 @@ namespace wiGraphicsTypes
 	class Texture : public GPUResource, public GPUUnorderedResource
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11RenderTargetView*				RTV_DX11;
 		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
@@ -261,8 +281,11 @@ namespace wiGraphicsTypes
 	class Texture1D : public Texture
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11Texture1D*			texture1D_DX11;
+		ID3D12Resource*				texture1D_DX12;
+
 		Texture1DDesc				desc;
 	public:
 		Texture1D();
@@ -274,11 +297,14 @@ namespace wiGraphicsTypes
 	class Texture2D : public Texture
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
-		ID3D11DepthStencilView*				DSV_DX11;
-		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
-		ID3D11Texture2D*					texture2D_DX11;
-		Texture2DDesc						desc;
+		ID3D11DepthStencilView*					DSV_DX11;
+		std::vector<ID3D11DepthStencilView*>	additionalDSVs_DX11;
+		ID3D11Texture2D*						texture2D_DX11;
+		ID3D12Resource*							texture2D_DX12;
+
+		Texture2DDesc							desc;
 	public:
 		Texture2D();
 		virtual ~Texture2D();
@@ -289,8 +315,11 @@ namespace wiGraphicsTypes
 	class Texture3D : public Texture
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11Texture3D*			texture3D_DX11;
+		ID3D12Resource*				texture3D_DX12;
+
 		Texture3DDesc				desc;
 	public:
 		Texture3D();
@@ -305,6 +334,7 @@ namespace wiGraphicsTypes
 	class GPUQuery
 	{
 		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
 	private:
 		std::vector<ID3D11Query*>		resource_DX11;
 		std::vector<int>					active;

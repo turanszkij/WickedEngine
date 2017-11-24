@@ -234,6 +234,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FFTGenerator.h" />
@@ -243,6 +244,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersectables.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h" />
@@ -517,6 +519,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp" />

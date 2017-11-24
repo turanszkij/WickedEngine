@@ -1116,6 +1116,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiOcean.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1906,6 +1912,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiOcean.cpp">
       <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp">
+      <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

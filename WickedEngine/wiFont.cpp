@@ -292,6 +292,10 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 
 	UINT vboffset;
 	Vertex* textBuffer = (Vertex*)device->AllocateFromRingBuffer(vertexBuffer, sizeof(Vertex) * text.length() * 4, vboffset, threadID);
+	if (textBuffer == nullptr)
+	{
+		return;
+	}
 	ModifyGeo(textBuffer, text, newProps, style);
 	device->InvalidateBufferAccess(vertexBuffer, threadID);
 
@@ -419,17 +423,12 @@ wiFont::wiFontStyle::wiFontStyle(const std::string& newName)
 	if(file.is_open())
 	{
 		texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss1.str());
+		if (texture == nullptr)
+		{
+			return;
+		}
 		texWidth = texture->GetDesc().Width;
 		texHeight = texture->GetDesc().Height;
-		//file>>recSize>>charSize;
-		//int i=0;
-		//while(!file.eof()){
-		//	i++;
-		//	int code=0;
-		//	file>>code;
-		//	lookup[code].code=code;
-		//	file>>lookup[code].offX>>lookup[code].offY>>lookup[code].width;
-		//}
 
 		string voidStr;
 		file >> voidStr >> lineHeight;

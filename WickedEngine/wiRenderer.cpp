@@ -20,6 +20,7 @@
 #include "wiRandom.h"
 #include "wiFont.h"
 #include "wiGraphicsDevice_DX11.h"
+#include "wiGraphicsDevice_DX12.h"
 #include "wiTranslator.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
@@ -117,7 +118,7 @@ wiRenderer::wiRenderer()
 void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fullscreen)
 {
 	SAFE_DELETE(graphicsDevice);
-	graphicsDevice = new GraphicsDevice_DX11(window, fullscreen);
+	graphicsDevice = new GraphicsDevice_DX12(window, fullscreen);
 }
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
