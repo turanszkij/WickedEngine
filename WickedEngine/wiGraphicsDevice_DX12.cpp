@@ -1193,70 +1193,43 @@ namespace wiGraphicsTypes
 		hr = device->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&commandQueue);
 
 
+
 		// Create swapchain
 
-		IDXGIFactory4* factory;
-		IDXGIAdapter* adapter;
-		IDXGIOutput* adapterOutput;
-		unsigned int numModes, i, numerator, denominator, renderTargetViewDescriptorSize;
-		DXGI_MODE_DESC* displayModeList;
-		DXGI_SWAP_CHAIN_DESC swapChainDesc;
-		DXGI_FORMAT backBufferFormat = _ConvertFormat(GetBackBufferFormat());
-		
-		hr = CreateDXGIFactory1(__uuidof(IDXGIFactory4), (void**)&factory);
-		hr = factory->EnumAdapters(0, &adapter);
-		hr = adapter->EnumOutputs(0, &adapterOutput);
-		hr = adapterOutput->GetDisplayModeList(backBufferFormat, DXGI_ENUM_MODES_INTERLACED, &numModes, nullptr);
+		IDXGIFactory4 * pIDXGIFactory;
+		hr = CreateDXGIFactory1(IID_PPV_ARGS(&pIDXGIFactory));
 
-		displayModeList = new DXGI_MODE_DESC[numModes];
-		hr = adapterOutput->GetDisplayModeList(backBufferFormat, DXGI_ENUM_MODES_INTERLACED, &numModes, displayModeList);
+		IDXGISwapChain1* _swapChain;
 
-		for (i = 0; i<numModes; i++)
-		{
-			if (displayModeList[i].Height == (unsigned int)SCREENHEIGHT)
-			{
-				if (displayModeList[i].Width == (unsigned int)SCREENWIDTH)
-				{
-					numerator = displayModeList[i].RefreshRate.Numerator;
-					denominator = displayModeList[i].RefreshRate.Denominator;
-				}
-			}
-		}
+		DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
+		sd.Width = SCREENWIDTH;
+		sd.Height = SCREENHEIGHT;
+		sd.Format = _ConvertFormat(GetBackBufferFormat());
+		sd.Stereo = false;
+		sd.SampleDesc.Count = 1; // Don't use multi-sampling.
+		sd.SampleDesc.Quality = 0;
+		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		sd.BufferCount = 2; // Use double-buffering to minimize latency.
+		sd.Flags = 0;
+		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
-		delete[] displayModeList;
-		displayModeList = 0;
-		adapterOutput->Release();
-		adapterOutput = 0;
-		adapter->Release();
-		adapter = 0;
+#ifndef WINSTORE_SUPPORT
+		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+		sd.Scaling = DXGI_SCALING_STRETCH;
 
-		ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
-		swapChainDesc.BufferCount = 2;
-		swapChainDesc.BufferDesc.Height = SCREENHEIGHT;
-		swapChainDesc.BufferDesc.Width = SCREENWIDTH;
-		swapChainDesc.BufferDesc.Format = backBufferFormat;
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		swapChainDesc.OutputWindow = window;
-		swapChainDesc.Windowed = !FULLSCREEN;
-		if (VSYNC)
-		{
-			swapChainDesc.BufferDesc.RefreshRate.Numerator = numerator;
-			swapChainDesc.BufferDesc.RefreshRate.Denominator = denominator;
-		}
-		else
-		{
-			swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
-			swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-		}
-		swapChainDesc.SampleDesc.Count = 1;
-		swapChainDesc.SampleDesc.Quality = 0;
-		swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-		swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-		swapChainDesc.Flags = 0;
+		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+		fullscreenDesc.RefreshRate.Numerator = 60;
+		fullscreenDesc.RefreshRate.Denominator = 1;
+		fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
+		fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+		fullscreenDesc.Windowed = !fullscreen;
+		hr = pIDXGIFactory->CreateSwapChainForHwnd(commandQueue, window, &sd, &fullscreenDesc, nullptr, &_swapChain);
+#else
+		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
+		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		IDXGISwapChain* _swapChain;
-		hr = factory->CreateSwapChain(commandQueue, &swapChainDesc, &_swapChain);
+		hr = pIDXGIFactory->CreateSwapChainForCoreWindow(commandQueue, reinterpret_cast<IUnknown*>(window), &sd, nullptr, &_swapChain);
+#endif
 
 		if (FAILED(hr))
 		{
@@ -1266,9 +1239,7 @@ namespace wiGraphicsTypes
 
 		hr = _swapChain->QueryInterface(__uuidof(IDXGISwapChain3), (void**)&swapChain);
 
-		// Release the factory now that the swap chain has been created.
-		factory->Release();
-		factory = 0;
+		SAFE_RELEASE(pIDXGIFactory);
 
 
 
@@ -1284,7 +1255,7 @@ namespace wiGraphicsTypes
 		hr = device->CreateDescriptorHeap(&renderTargetViewHeapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&renderTargetHeap);
 		renderTargetViewHandle = renderTargetHeap->GetCPUDescriptorHandleForHeapStart();
 
-		renderTargetViewDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		UINT renderTargetViewDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 		hr = swapChain->GetBuffer(0, __uuidof(ID3D12Resource), (void**)&backBuffer[0]);
 		device->CreateRenderTargetView(backBuffer[0], nullptr, renderTargetViewHandle);
