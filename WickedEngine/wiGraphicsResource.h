@@ -30,7 +30,8 @@ struct ID3D11Query;
 struct ID3D11Predicate;
 
 struct ID3D12Resource;
-
+struct D3D12_CPU_DESCRIPTOR_HANDLE;
+typedef uint32_t PSOResourceID;
 
 
 namespace wiGraphicsTypes
@@ -43,6 +44,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11VertexShader*		resource_DX11;
+		PSOResourceID			resource_DX12;
+		DataBlob				code;
 	public:
 		VertexShader();
 		~VertexShader();
@@ -56,6 +59,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11PixelShader*		resource_DX11;
+		PSOResourceID			resource_DX12;
+		DataBlob				code;
 	public:
 		PixelShader();
 		~PixelShader();
@@ -69,6 +74,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11GeometryShader*	resource_DX11;
+		PSOResourceID			resource_DX12;
+		DataBlob				code;
 	public:
 		GeometryShader();
 		~GeometryShader();
@@ -82,6 +89,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11HullShader*		resource_DX11;
+		PSOResourceID			resource_DX12;
+		DataBlob				code;
 	public:
 		HullShader();
 		~HullShader();
@@ -95,6 +104,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11DomainShader*		resource_DX11;
+		PSOResourceID			resource_DX12;
+		DataBlob				code;
 	public:
 		DomainShader();
 		~DomainShader();
@@ -108,6 +119,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11ComputeShader*	resource_DX11;
+		PSOResourceID			resource_DX12;
+		DataBlob				code;
 	public:
 		ComputeShader();
 		~ComputeShader();
@@ -120,7 +133,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
 	private:
-		ID3D11SamplerState*	resource_DX11;
+		ID3D11SamplerState*				resource_DX11;
+		D3D12_CPU_DESCRIPTOR_HANDLE*	resource_DX12;
 		SamplerDesc desc;
 	public:
 		Sampler();
@@ -135,8 +149,10 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
 	private:
-		ID3D11ShaderResourceView*			SRV_DX11;					// main resource SRV
-		std::vector<ID3D11ShaderResourceView*>	additionalSRVs_DX11;		// can be used for sub-resources if requested
+		ID3D11ShaderResourceView*					SRV_DX11;					// main resource SRV
+		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
+		D3D12_CPU_DESCRIPTOR_HANDLE*				SRV_DX12;					// main resource SRV
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalSRVs_DX12;		// can be used for sub-resources if requested
 
 	protected:
 		GPUResource();
@@ -148,8 +164,10 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
 	private:
-		ID3D11UnorderedAccessView*			UAV_DX11;					// main resource UAV
-		std::vector<ID3D11UnorderedAccessView*>	additionalUAVs_DX11;		// can be used for sub-resources if requested
+		ID3D11UnorderedAccessView*					UAV_DX11;					// main resource UAV
+		std::vector<ID3D11UnorderedAccessView*>		additionalUAVs_DX11;		// can be used for sub-resources if requested
+		D3D12_CPU_DESCRIPTOR_HANDLE*				UAV_DX12;					// main resource UAV
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalUAVs_DX12;		// can be used for sub-resources if requested
 
 	protected:
 		GPUUnorderedResource();
@@ -161,7 +179,8 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
 	private:
-		ID3D11Buffer*		resource_DX11;
+		ID3D11Buffer*								resource_DX11;
+		ID3D12Resource*								resource_DX12;
 		GPUBufferDesc desc;
 	public:
 		GPUBuffer();
@@ -192,6 +211,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11InputLayout*	resource_DX11;
+		PSOResourceID		resource_DX12;
 	public:
 		VertexLayout();
 		~VertexLayout();
@@ -205,6 +225,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11BlendState*	resource_DX11;
+		PSOResourceID		resource_DX12;
 		BlendStateDesc desc;
 	public:
 		BlendState();
@@ -220,6 +241,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11DepthStencilState*	resource_DX11;
+		PSOResourceID				resource_DX12;
 		DepthStencilStateDesc desc;
 	public:
 		DepthStencilState();
@@ -235,6 +257,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11RasterizerState*	resource_DX11;
+		PSOResourceID			resource_DX12;
 		RasterizerStateDesc desc;
 	public:
 		RasterizerState();
@@ -257,12 +280,14 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
 	private:
-		ID3D11RenderTargetView*				RTV_DX11;
+		ID3D11RenderTargetView*						RTV_DX11;
 		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
-		bool								independentRTVArraySlices;
-		bool								independentRTVCubemapFaces;
-		bool								independentSRVMIPs;
-		bool								independentUAVMIPs;
+		D3D12_CPU_DESCRIPTOR_HANDLE*				RTV_DX12;
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalRTVs_DX12;
+		bool										independentRTVArraySlices;
+		bool										independentRTVCubemapFaces;
+		bool										independentSRVMIPs;
+		bool										independentUAVMIPs;
 	public:
 
 		Texture();
@@ -337,7 +362,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		std::vector<ID3D11Query*>		resource_DX11;
-		std::vector<int>					active;
+		std::vector<int>			active;
 		GPUQueryDesc				desc;
 		int							async_frameshift;
 	public:

@@ -8,4 +8,8 @@
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
 
+#ifdef _DEBUG
+#include <d3d12sdklayers.h>
+#endif // _DEBUG
+
 #endif // _INCLUDE_DX12_H_

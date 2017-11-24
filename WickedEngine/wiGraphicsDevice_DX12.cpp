@@ -1143,38 +1143,25 @@ namespace wiGraphicsTypes
 
 		HRESULT hr = E_FAIL;
 
-		for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
+#if defined(_DEBUG) && !defined(WINSTORE_SUPPORT)
+		// Enable the debug layer.
+		HMODULE dx12 = LoadLibraryEx(L"d3d12.dll",
+			nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		auto pD3D12GetDebugInterface =
+			reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(
+				GetProcAddress(dx12, "D3D12GetDebugInterface"));
+		if (pD3D12GetDebugInterface)
 		{
-			SAFE_INIT(commandLists[i]);
+			ID3D12Debug* debugController;
+			if (SUCCEEDED(pD3D12GetDebugInterface(
+				IID_PPV_ARGS(&debugController))))
+			{
+				debugController->EnableDebugLayer();
+			}
 		}
+#endif
 
-		UINT createDeviceFlags = 0;
-		//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-
-		D3D_DRIVER_TYPE driverTypes[] =
-		{
-			D3D_DRIVER_TYPE_HARDWARE,
-			D3D_DRIVER_TYPE_WARP,
-			D3D_DRIVER_TYPE_REFERENCE,
-		};
-		UINT numDriverTypes = ARRAYSIZE(driverTypes);
-
-		D3D_FEATURE_LEVEL featureLevels[] =
-		{
-			D3D_FEATURE_LEVEL_12_1,
-			D3D_FEATURE_LEVEL_12_0,
-			D3D_FEATURE_LEVEL_11_1,
-			D3D_FEATURE_LEVEL_11_0,
-		};
-		UINT numFeatureLevels = ARRAYSIZE(featureLevels);
-
-		for (UINT driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
-		{
-			hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void**)&device);
-
-			if (SUCCEEDED(hr))
-				break;
-		}
+		hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void**)&device);
 		if (FAILED(hr))
 		{
 			stringstream ss("");
@@ -1182,7 +1169,6 @@ namespace wiGraphicsTypes
 			wiHelper::messageBox(ss.str(), "Error!");
 			exit(1);
 		}
-
 
 		// Create command queue
 		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = {};
@@ -1268,7 +1254,6 @@ namespace wiGraphicsTypes
 
 
 		//Create command lists
-
 		for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 		{
 			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&commandAllocators[i]);
@@ -1450,39 +1435,45 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 	{
-		HRESULT hr = E_FAIL;
-
-		return hr;
+		pVertexShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
+		pVertexShader->code.size = BytecodeLength;
+		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 	{
-		HRESULT hr = E_FAIL;
-
-		return hr;
+		pPixelShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
+		pPixelShader->code.size = BytecodeLength;
+		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 	{
-		HRESULT hr = E_FAIL;
-
-		return hr;
+		pGeometryShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
+		pGeometryShader->code.size = BytecodeLength;
+		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 	{
-		HRESULT hr = E_FAIL;
-
-		return hr;
+		pHullShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
+		pHullShader->code.size = BytecodeLength;
+		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 	{
-		HRESULT hr = E_FAIL;
-
-		return hr;
+		pDomainShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
+		pDomainShader->code.size = BytecodeLength;
+		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 	{
-		HRESULT hr = E_FAIL;
-
-		return hr;
+		pComputeShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
+		pComputeShader->code.size = BytecodeLength;
+		return (pComputeShader->code.data != nullptr && pComputeShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{

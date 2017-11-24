@@ -2442,26 +2442,44 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 }
 HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 {
+	pVertexShader->code.data = new BYTE[BytecodeLength];
+	memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
+	pVertexShader->code.size = BytecodeLength;
 	return device->CreateVertexShader(pShaderBytecode, BytecodeLength, nullptr, &pVertexShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 {
+	pPixelShader->code.data = new BYTE[BytecodeLength];
+	memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
+	pPixelShader->code.size = BytecodeLength;
 	return device->CreatePixelShader(pShaderBytecode, BytecodeLength, nullptr, &pPixelShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 {
+	pGeometryShader->code.data = new BYTE[BytecodeLength];
+	memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
+	pGeometryShader->code.size = BytecodeLength;
 	return device->CreateGeometryShader(pShaderBytecode, BytecodeLength, nullptr, &pGeometryShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 {
+	pHullShader->code.data = new BYTE[BytecodeLength];
+	memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
+	pHullShader->code.size = BytecodeLength;
 	return device->CreateHullShader(pShaderBytecode, BytecodeLength, nullptr, &pHullShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 {
+	pDomainShader->code.data = new BYTE[BytecodeLength];
+	memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
+	pDomainShader->code.size = BytecodeLength;
 	return device->CreateDomainShader(pShaderBytecode, BytecodeLength, nullptr, &pDomainShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 {
+	pComputeShader->code.data = new BYTE[BytecodeLength];
+	memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
+	pComputeShader->code.size = BytecodeLength;
 	return device->CreateComputeShader(pShaderBytecode, BytecodeLength, nullptr, &pComputeShader->resource_DX11);
 }
 HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
