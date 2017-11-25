@@ -212,6 +212,8 @@ namespace wiGraphicsTypes
 	private:
 		ID3D11InputLayout*	resource_DX11;
 		PSOResourceID		resource_DX12;
+
+		std::vector<VertexLayoutDesc> desc;
 	public:
 		VertexLayout();
 		~VertexLayout();

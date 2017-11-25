@@ -50,6 +50,8 @@ namespace wiGraphicsTypes
 		DescriptorAllocator*		ResourceAllocator;
 		DescriptorAllocator*		SamplerAllocator;
 
+		std::atomic<PSOResourceID>	subPipelineStateID;
+
 		IDXGISwapChain3*			swapChain;
 		ViewPort					viewPort;
 

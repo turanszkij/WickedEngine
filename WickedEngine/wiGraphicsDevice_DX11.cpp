@@ -1905,7 +1905,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture1D* pTexture)
 	}
 
 	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
 	{
 		UINT arraySize = pTexture->desc.ArraySize;
 
@@ -1943,7 +1943,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 	}
 
 	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
 	{
 		UINT arraySize = pTexture->desc.ArraySize;
 		UINT sampleCount = pTexture->desc.SampleDesc.Count;
@@ -1973,7 +1973,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 
 		if (arraySize > 1)
 		{
-			if (pTexture->desc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE)
+			if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 			{
 				if (arraySize > 6)
 				{
@@ -2058,7 +2058,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture3D* pTexture)
 	}
 
 	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
 	{
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
@@ -2102,7 +2102,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
 	}
 
 	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
 	{
 		UINT arraySize = pTexture->desc.ArraySize;
 		UINT sampleCount = pTexture->desc.SampleDesc.Count;
@@ -2232,7 +2232,7 @@ HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
 	}
 
 	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
 	{
 
 		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
@@ -2278,7 +2278,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 	}
 
 	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
+	if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
 	{
 		UINT arraySize = pTexture->desc.ArraySize;
 		UINT sampleCount = pTexture->desc.SampleDesc.Count;
@@ -2420,6 +2420,8 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
 	const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
 {
+	pInputLayout->desc.reserve((size_t)NumElements);
+
 	D3D11_INPUT_ELEMENT_DESC* desc = new D3D11_INPUT_ELEMENT_DESC[NumElements];
 	for (UINT i = 0; i < NumElements; ++i)
 	{
@@ -2432,6 +2434,8 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 			desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 		desc[i].InputSlotClass = _ConvertInputClassification(pInputElementDescs[i].InputSlotClass);
 		desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
+
+		pInputLayout->desc.push_back(pInputElementDescs[i]);
 	}
 
 	HRESULT hr = device->CreateInputLayout(desc, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, &pInputLayout->resource_DX11);

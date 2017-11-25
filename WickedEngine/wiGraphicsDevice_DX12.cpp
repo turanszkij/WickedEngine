@@ -1157,6 +1157,8 @@ namespace wiGraphicsTypes
 	{
 		FULLSCREEN = fullscreen;
 
+		subPipelineStateID.store(0);
+
 #ifndef WINSTORE_SUPPORT
 		RECT rect = RECT();
 		GetClientRect(window, &rect);
@@ -2000,30 +2002,42 @@ namespace wiGraphicsTypes
 	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
 		const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
 	{
-		D3D12_INPUT_ELEMENT_DESC* desc = new D3D12_INPUT_ELEMENT_DESC[NumElements];
+		pInputLayout->desc.reserve((size_t)NumElements);
 		for (UINT i = 0; i < NumElements; ++i)
 		{
-			desc[i].SemanticName = pInputElementDescs[i].SemanticName;
-			desc[i].SemanticIndex = pInputElementDescs[i].SemanticIndex;
-			desc[i].Format = _ConvertFormat(pInputElementDescs[i].Format);
-			desc[i].InputSlot = pInputElementDescs[i].InputSlot;
-			desc[i].AlignedByteOffset = pInputElementDescs[i].AlignedByteOffset;
-			if (desc[i].AlignedByteOffset == APPEND_ALIGNED_ELEMENT)
-				desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-			desc[i].InputSlotClass = _ConvertInputClassification(pInputElementDescs[i].InputSlotClass);
-			desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
+			pInputLayout->desc.push_back(pInputElementDescs[i]);
 		}
 
 
-		HRESULT hr = E_FAIL;
+		//D3D12_INPUT_ELEMENT_DESC* desc = new D3D12_INPUT_ELEMENT_DESC[NumElements];
+		//for (UINT i = 0; i < NumElements; ++i)
+		//{
+		//	desc[i].SemanticName = pInputElementDescs[i].SemanticName;
+		//	desc[i].SemanticIndex = pInputElementDescs[i].SemanticIndex;
+		//	desc[i].Format = _ConvertFormat(pInputElementDescs[i].Format);
+		//	desc[i].InputSlot = pInputElementDescs[i].InputSlot;
+		//	desc[i].AlignedByteOffset = pInputElementDescs[i].AlignedByteOffset;
+		//	if (desc[i].AlignedByteOffset == APPEND_ALIGNED_ELEMENT)
+		//		desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+		//	desc[i].InputSlotClass = _ConvertInputClassification(pInputElementDescs[i].InputSlotClass);
+		//	desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
 
-		return hr;
+		//	pInputLayout->desc.push_back(pInputElementDescs[i]);
+		//}
+		//SAFE_DELETE_ARRAY(desc);
+
+		pInputLayout->resource_DX12 = subPipelineStateID.fetch_add(1);
+
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 	{
 		pVertexShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
 		pVertexShader->code.size = BytecodeLength;
+
+		pVertexShader->resource_DX12 = subPipelineStateID.fetch_add(1);
+
 		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
@@ -2031,6 +2045,9 @@ namespace wiGraphicsTypes
 		pPixelShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
 		pPixelShader->code.size = BytecodeLength;
+
+		pPixelShader->resource_DX12 = subPipelineStateID.fetch_add(1);
+
 		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
@@ -2038,6 +2055,9 @@ namespace wiGraphicsTypes
 		pGeometryShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
 		pGeometryShader->code.size = BytecodeLength;
+
+		pGeometryShader->resource_DX12 = subPipelineStateID.fetch_add(1);
+
 		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
@@ -2045,6 +2065,9 @@ namespace wiGraphicsTypes
 		pHullShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
 		pHullShader->code.size = BytecodeLength;
+
+		pHullShader->resource_DX12 = subPipelineStateID.fetch_add(1);
+
 		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
@@ -2052,6 +2075,9 @@ namespace wiGraphicsTypes
 		pDomainShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
 		pDomainShader->code.size = BytecodeLength;
+
+		pDomainShader->resource_DX12 = subPipelineStateID.fetch_add(1);
+
 		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
@@ -2059,76 +2085,80 @@ namespace wiGraphicsTypes
 		pComputeShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
 		pComputeShader->code.size = BytecodeLength;
+
+		pComputeShader->resource_DX12 = subPipelineStateID.fetch_add(1);
+
 		return (pComputeShader->code.data != nullptr && pComputeShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
-		D3D12_BLEND_DESC desc;
-		desc.AlphaToCoverageEnable = pBlendStateDesc->AlphaToCoverageEnable;
-		desc.IndependentBlendEnable = pBlendStateDesc->IndependentBlendEnable;
-		for (int i = 0; i < 8; ++i)
-		{
-			desc.RenderTarget[i].BlendEnable = pBlendStateDesc->RenderTarget[i].BlendEnable;
-			desc.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc->RenderTarget[i].SrcBlend);
-			desc.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc->RenderTarget[i].DestBlend);
-			desc.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc->RenderTarget[i].BlendOp);
-			desc.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].SrcBlendAlpha);
-			desc.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].DestBlendAlpha);
-			desc.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc->RenderTarget[i].BlendOpAlpha);
-			desc.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc->RenderTarget[i].RenderTargetWriteMask);
-		}
+		//D3D12_BLEND_DESC desc;
+		//desc.AlphaToCoverageEnable = pBlendStateDesc->AlphaToCoverageEnable;
+		//desc.IndependentBlendEnable = pBlendStateDesc->IndependentBlendEnable;
+		//for (int i = 0; i < 8; ++i)
+		//{
+		//	desc.RenderTarget[i].BlendEnable = pBlendStateDesc->RenderTarget[i].BlendEnable;
+		//	desc.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc->RenderTarget[i].SrcBlend);
+		//	desc.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc->RenderTarget[i].DestBlend);
+		//	desc.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc->RenderTarget[i].BlendOp);
+		//	desc.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].SrcBlendAlpha);
+		//	desc.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].DestBlendAlpha);
+		//	desc.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc->RenderTarget[i].BlendOpAlpha);
+		//	desc.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc->RenderTarget[i].RenderTargetWriteMask);
+		//}
 
 		pBlendState->desc = *pBlendStateDesc;
 
-		HRESULT hr = E_FAIL;
+		pBlendState->resource_DX12 = subPipelineStateID.fetch_add(1);
 
-		return hr;
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 	{
-		D3D12_DEPTH_STENCIL_DESC desc;
-		desc.DepthEnable = pDepthStencilStateDesc->DepthEnable;
-		desc.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc->DepthWriteMask);
-		desc.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->DepthFunc);
-		desc.StencilEnable = pDepthStencilStateDesc->StencilEnable;
-		desc.StencilReadMask = pDepthStencilStateDesc->StencilReadMask;
-		desc.StencilWriteMask = pDepthStencilStateDesc->StencilWriteMask;
-		desc.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilDepthFailOp);
-		desc.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilFailOp);
-		desc.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->FrontFace.StencilFunc);
-		desc.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilPassOp);
-		desc.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilDepthFailOp);
-		desc.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilFailOp);
-		desc.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->BackFace.StencilFunc);
-		desc.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilPassOp);
+		//D3D12_DEPTH_STENCIL_DESC desc;
+		//desc.DepthEnable = pDepthStencilStateDesc->DepthEnable;
+		//desc.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc->DepthWriteMask);
+		//desc.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->DepthFunc);
+		//desc.StencilEnable = pDepthStencilStateDesc->StencilEnable;
+		//desc.StencilReadMask = pDepthStencilStateDesc->StencilReadMask;
+		//desc.StencilWriteMask = pDepthStencilStateDesc->StencilWriteMask;
+		//desc.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilDepthFailOp);
+		//desc.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilFailOp);
+		//desc.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->FrontFace.StencilFunc);
+		//desc.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilPassOp);
+		//desc.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilDepthFailOp);
+		//desc.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilFailOp);
+		//desc.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->BackFace.StencilFunc);
+		//desc.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilPassOp);
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 
-		HRESULT hr = E_FAIL;
+		pDepthStencilState->resource_DX12 = subPipelineStateID.fetch_add(1);
 
-		return hr;
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 	{
 		pRasterizerState->desc = *pRasterizerStateDesc;
 
-		D3D12_RASTERIZER_DESC desc;
-		desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
-		desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
-		desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
-		desc.DepthBias = pRasterizerStateDesc->DepthBias;
-		desc.DepthBiasClamp = pRasterizerStateDesc->DepthBiasClamp;
-		desc.SlopeScaledDepthBias = pRasterizerStateDesc->SlopeScaledDepthBias;
-		desc.DepthClipEnable = pRasterizerStateDesc->DepthClipEnable;
-		//desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
-		desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
-		desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
-		desc.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc->ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-		desc.ForcedSampleCount = pRasterizerStateDesc->ForcedSampleCount;
+		//D3D12_RASTERIZER_DESC desc;
+		//desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
+		//desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
+		//desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
+		//desc.DepthBias = pRasterizerStateDesc->DepthBias;
+		//desc.DepthBiasClamp = pRasterizerStateDesc->DepthBiasClamp;
+		//desc.SlopeScaledDepthBias = pRasterizerStateDesc->SlopeScaledDepthBias;
+		//desc.DepthClipEnable = pRasterizerStateDesc->DepthClipEnable;
+		////desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
+		//desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
+		//desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
+		//desc.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc->ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		//desc.ForcedSampleCount = pRasterizerStateDesc->ForcedSampleCount;
 
-		HRESULT hr = E_FAIL;
 
-		return hr;
+		pRasterizerState->resource_DX12 = subPipelineStateID.fetch_add(1);
+
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
@@ -2149,9 +2179,11 @@ namespace wiGraphicsTypes
 
 		pSamplerState->desc = *pSamplerDesc;
 
-		HRESULT hr = E_FAIL;
+		pSamplerState->resource_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
+		pSamplerState->resource_DX12->ptr = SamplerAllocator->allocate();
+		device->CreateSampler(&desc, *pSamplerState->resource_DX12);
 
-		return hr;
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
