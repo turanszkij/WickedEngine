@@ -8,6 +8,7 @@
 struct IDXGISwapChain3;
 enum D3D_DRIVER_TYPE;
 enum D3D_FEATURE_LEVEL;
+enum D3D12_DESCRIPTOR_HEAP_TYPE;
 
 struct ID3D12Device;
 struct ID3D12CommandAllocator;
@@ -29,9 +30,25 @@ namespace wiGraphicsTypes
 		ID3D12Fence*				commandFences[GRAPHICSTHREAD_COUNT];
 		HANDLE						commandFenceEvents[GRAPHICSTHREAD_COUNT];
 		UINT64						commandFenceValues[GRAPHICSTHREAD_COUNT];
-		ID3D12DescriptorHeap*		renderTargetHeap;
 		ID3D12Resource*				backBuffer[2];
 		UINT						backBufferIndex;
+
+		struct DescriptorAllocator : wiThreadSafeManager
+		{
+			ID3D12DescriptorHeap*	heap;
+			UINT					count;
+			UINT					maxCount;
+			UINT					itemSize;
+
+			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible, UINT maxCount);
+			~DescriptorAllocator();
+
+			size_t allocate();
+		};
+		DescriptorAllocator*		RTAllocator;
+		DescriptorAllocator*		DSAllocator;
+		DescriptorAllocator*		ResourceAllocator;
+		DescriptorAllocator*		SamplerAllocator;
 
 		IDXGISwapChain3*			swapChain;
 		ViewPort					viewPort;
@@ -148,13 +165,6 @@ namespace wiGraphicsTypes
 		virtual void EventEnd(GRAPHICSTHREAD threadID) override;
 		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID) override;
 
-	private:
-		HRESULT CreateShaderResourceView(Texture1D* pTexture);
-		HRESULT CreateShaderResourceView(Texture2D* pTexture);
-		HRESULT CreateShaderResourceView(Texture3D* pTexture);
-		HRESULT CreateRenderTargetView(Texture2D* pTexture);
-		HRESULT CreateRenderTargetView(Texture3D* pTexture);
-		HRESULT CreateDepthStencilView(Texture2D* pTexture);
 	};
 
 }
