@@ -1362,6 +1362,73 @@ namespace wiGraphicsTypes
 
 		HRESULT hr = E_FAIL;
 
+		D3D12_HEAP_PROPERTIES heapDesc = {};
+		heapDesc.Type = D3D12_HEAP_TYPE_DEFAULT;
+		heapDesc.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+		heapDesc.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+		heapDesc.CreationNodeMask = 0;
+		heapDesc.VisibleNodeMask = 0;
+
+		D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_NONE;
+
+		D3D12_RESOURCE_DESC desc;
+		desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		desc.Format = _ConvertFormat(pDesc->Format);
+		desc.Width = pDesc->Width;
+		desc.Height = pDesc->Height;
+		desc.MipLevels = pDesc->MipLevels;
+		desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		desc.DepthOrArraySize = (UINT16)pDesc->ArraySize;
+		desc.Alignment = 0;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		//desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
+		if (pDesc->BindFlags & BIND_RENDER_TARGET)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		}
+		if (pDesc->BindFlags & BIND_DEPTH_STENCIL)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		}
+		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		}
+		if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE))
+		{
+			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+		}
+		desc.SampleDesc.Count = pDesc->SampleDesc.Count;
+		desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
+
+		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
+
+		D3D12_CLEAR_VALUE optimizedClearValue = {};
+		optimizedClearValue.Color[0] = 0;
+		optimizedClearValue.Color[1] = 0;
+		optimizedClearValue.Color[2] = 0;
+		optimizedClearValue.Color[3] = 0;
+		optimizedClearValue.DepthStencil.Depth = 0.0f;
+		optimizedClearValue.DepthStencil.Stencil = 0;
+		optimizedClearValue.Format = desc.Format;
+		if (optimizedClearValue.Format == DXGI_FORMAT_R16_TYPELESS)
+		{
+			optimizedClearValue.Format = DXGI_FORMAT_D16_UNORM;
+		}
+		else if (optimizedClearValue.Format == DXGI_FORMAT_R32_TYPELESS)
+		{
+			optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+		}
+		else if (optimizedClearValue.Format == DXGI_FORMAT_R32G8X24_TYPELESS)
+		{
+			optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+		}
+		bool useClearValue = pDesc->BindFlags & BIND_RENDER_TARGET || pDesc->BindFlags & BIND_DEPTH_STENCIL;
+
+		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, resourceState, useClearValue ? &optimizedClearValue : nullptr, 
+			__uuidof(ID3D12Resource), (void**)&(*ppTexture2D)->texture2D_DX12);
+		assert(SUCCEEDED(hr));
+
 		return hr;
 	}
 	HRESULT GraphicsDevice_DX12::CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
