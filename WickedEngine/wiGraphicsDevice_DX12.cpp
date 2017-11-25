@@ -1259,6 +1259,8 @@ namespace wiGraphicsTypes
 			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&commandAllocators[i]);
 			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[i], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&commandLists[i]);
 			hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[i])->Close();
+			hr = commandAllocators[i]->Reset();
+			hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[i])->Reset(commandAllocators[i], nullptr);
 
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&commandFences[i]);
 			commandFenceEvents[i] = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
@@ -1584,85 +1586,89 @@ namespace wiGraphicsTypes
 
 		BindViewports(1, &viewPort, GRAPHICSTHREAD_IMMEDIATE);
 
-		HRESULT result;
-		D3D12_RESOURCE_BARRIER barrier;
-		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle;
-		unsigned int renderTargetViewDescriptorSize;
-		float color[4];
-
-
-		// Reset (re-use) the memory associated command allocator.
-		result = commandAllocators[0]->Reset();
-
-		// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-		result = static_cast<ID3D12GraphicsCommandList*>(commandLists[0])->Reset(commandAllocators[0], nullptr);
-
 
 		// Record commands in the command list now.
 		// Start by setting the resource barrier.
+		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		barrier.Transition.pResource = backBuffer[backBufferIndex];
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[0])->ResourceBarrier(1, &barrier);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
 
 
 
 		// Get the render target view handle for the current back buffer.
-		renderTargetViewHandle = renderTargetHeap->GetCPUDescriptorHandleForHeapStart();
-		renderTargetViewDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle = renderTargetHeap->GetCPUDescriptorHandleForHeapStart();
+		UINT renderTargetViewDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		if (backBufferIndex == 1)
 		{
 			renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
 		}
 
 		// Set the back buffer as the render target.
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[0])->OMSetRenderTargets(1, &renderTargetViewHandle, FALSE, NULL);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->OMSetRenderTargets(1, &renderTargetViewHandle, FALSE, NULL);
 
 
 		// Then set the color to clear the window to.
+		float color[4];
 		color[0] = 0.5;
 		color[1] = 0.5;
 		color[2] = 0.5;
 		color[3] = 1.0;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[0])->ClearRenderTargetView(renderTargetViewHandle, color, 0, NULL);
-
-		// Indicate that the back buffer will now be used to present.
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[0])->ResourceBarrier(1, &barrier);
-
-
-
-		// Close the list of commands.
-		result = static_cast<ID3D12GraphicsCommandList*>(commandLists[0])->Close();
-
-		// Execute the list of commands.
-		commandQueue->ExecuteCommandLists(1, commandLists);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ClearRenderTargetView(renderTargetViewHandle, color, 0, NULL);
 
 
 	}
 	void GraphicsDevice_DX12::PresentEnd()
 	{
+		HRESULT result;
+
+
+		// Indicate that the back buffer will now be used to present.
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		barrier.Transition.pResource = backBuffer[backBufferIndex];
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+
+		// Close the list of commands.
+		result = static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->Close();
+
+		// Execute the list of commands.
+		commandQueue->ExecuteCommandLists(1, commandLists);
+
+
 		swapChain->Present(VSYNC, 0);
 
 
 		// Signal and increment the fence value.
-		UINT64 fenceToWaitFor = commandFenceValues[0];
-		HRESULT result = commandQueue->Signal(commandFences[0], fenceToWaitFor);
-		commandFenceValues[0]++;
+		UINT64 fenceToWaitFor = commandFenceValues[GRAPHICSTHREAD_IMMEDIATE];
+		result = commandQueue->Signal(commandFences[GRAPHICSTHREAD_IMMEDIATE], fenceToWaitFor);
+		commandFenceValues[GRAPHICSTHREAD_IMMEDIATE]++;
 
 		// Wait until the GPU is done rendering.
-		if (commandFences[0]->GetCompletedValue() < fenceToWaitFor)
+		if (commandFences[GRAPHICSTHREAD_IMMEDIATE]->GetCompletedValue() < fenceToWaitFor)
 		{
-			result = commandFences[0]->SetEventOnCompletion(fenceToWaitFor, commandFenceEvents[0]);
-			WaitForSingleObject(commandFenceEvents[0], INFINITE);
+			result = commandFences[GRAPHICSTHREAD_IMMEDIATE]->SetEventOnCompletion(fenceToWaitFor, commandFenceEvents[GRAPHICSTHREAD_IMMEDIATE]);
+			WaitForSingleObject(commandFenceEvents[GRAPHICSTHREAD_IMMEDIATE], INFINITE);
 		}
 
 		// Alternate the back buffer index back and forth between 0 and 1 each frame.
 		backBufferIndex == 0 ? backBufferIndex = 1 : backBufferIndex = 0;
+
+
+
+		// Reset (re-use) the memory associated command allocator.
+		result = commandAllocators[GRAPHICSTHREAD_IMMEDIATE]->Reset();
+
+		// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
+		result = static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->Reset(commandAllocators[GRAPHICSTHREAD_IMMEDIATE], nullptr);
 
 
 
@@ -1675,13 +1681,21 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_DX12::ExecuteDeferredContexts()
 	{
-		commandQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT, commandLists);
+		commandQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &commandLists[1]);
+		for (int i = GRAPHICSTHREAD_IMMEDIATE + 1; i < GRAPHICSTHREAD_COUNT; ++i)
+		{
+			HRESULT hr = commandAllocators[i]->Reset();
+			assert(SUCCEEDED(hr));
+			hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[i])->Reset(commandAllocators[i], nullptr);
+			assert(SUCCEEDED(hr));
+		}
 	}
 	void GraphicsDevice_DX12::FinishCommandList(GRAPHICSTHREAD threadID)
 	{
 		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
 			return;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Close();
+		HRESULT hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Close();
+		assert(SUCCEEDED(hr));
 	}
 
 	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID)
