@@ -1137,7 +1137,7 @@ namespace wiGraphicsTypes
 		assert(SUCCEEDED(hr));
 
 		itemSize = device->GetDescriptorHandleIncrementSize(type);
-		count = 0;
+		itemCount.store(0);
 		this->maxCount = maxCount;
 	}
 	GraphicsDevice_DX12::DescriptorAllocator::~DescriptorAllocator()
@@ -1146,11 +1146,7 @@ namespace wiGraphicsTypes
 	}
 	size_t GraphicsDevice_DX12::DescriptorAllocator::allocate()
 	{
-		LOCK();
-		size_t address = heap->GetCPUDescriptorHandleForHeapStart().ptr + count * itemSize;
-		count++;
-		UNLOCK();
-		return address;
+		return heap->GetCPUDescriptorHandleForHeapStart().ptr + itemCount.fetch_add(1) * itemSize;
 	}
 
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()

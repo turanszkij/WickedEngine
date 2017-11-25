@@ -33,10 +33,10 @@ namespace wiGraphicsTypes
 		ID3D12Resource*				backBuffer[2];
 		UINT						backBufferIndex;
 
-		struct DescriptorAllocator : wiThreadSafeManager
+		struct DescriptorAllocator
 		{
 			ID3D12DescriptorHeap*	heap;
-			UINT					count;
+			std::atomic<uint32_t>	itemCount;
 			UINT					maxCount;
 			UINT					itemSize;
 
