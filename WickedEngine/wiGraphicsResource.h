@@ -324,12 +324,14 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
 	private:
-		ID3D11DepthStencilView*					DSV_DX11;
-		std::vector<ID3D11DepthStencilView*>	additionalDSVs_DX11;
-		ID3D11Texture2D*						texture2D_DX11;
-		ID3D12Resource*							texture2D_DX12;
+		ID3D11DepthStencilView*						DSV_DX11;
+		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
+		D3D12_CPU_DESCRIPTOR_HANDLE*				DSV_DX12;
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalDSVs_DX12;
+		ID3D11Texture2D*							texture2D_DX11;
+		ID3D12Resource*								texture2D_DX12;
 
-		Texture2DDesc							desc;
+		Texture2DDesc								desc;
 	public:
 		Texture2D();
 		virtual ~Texture2D();
