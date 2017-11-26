@@ -1471,15 +1471,24 @@ namespace wiGraphicsTypes
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 
-		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-		if (pInitialData != nullptr)
+		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
+		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER || pDesc->BindFlags & BIND_VERTEX_BUFFER)
 		{
-			resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+			resourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		}
+		else if (pDesc->BindFlags & BIND_INDEX_BUFFER)
+		{
+			resourceState = D3D12_RESOURCE_STATE_INDEX_BUFFER;
+		}
+		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
+		{
+			resourceState |= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			resourceState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		}
 	
 		// Issue main resource creation:
-		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, resourceState, nullptr,
-			__uuidof(ID3D12Resource), (void**)&ppBuffer->resource_DX12);
+		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, pInitialData == nullptr ? resourceState : D3D12_RESOURCE_STATE_COPY_DEST, 
+			nullptr, __uuidof(ID3D12Resource), (void**)&ppBuffer->resource_DX12);
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 			return hr;
@@ -1498,7 +1507,7 @@ namespace wiGraphicsTypes
 			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			barrier.Transition.pResource = ppBuffer->resource_DX12;
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+			barrier.Transition.StateAfter = resourceState;
 			barrier.Transition.Subresource = 0;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
@@ -1657,6 +1666,11 @@ namespace wiGraphicsTypes
 		desc.SampleDesc.Quality = pDesc->SampleDesc.Quality;
 
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
+		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
+		{
+			resourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			resourceState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		}
 
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
 		optimizedClearValue.Color[0] = 0;
@@ -1681,7 +1695,8 @@ namespace wiGraphicsTypes
 		bool useClearValue = pDesc->BindFlags & BIND_RENDER_TARGET || pDesc->BindFlags & BIND_DEPTH_STENCIL;
 
 		// Issue main resource creation:
-		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, resourceState, useClearValue ? &optimizedClearValue : nullptr, 
+		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, pInitialData == nullptr ? resourceState : D3D12_RESOURCE_STATE_COPY_DEST, 
+			useClearValue ? &optimizedClearValue : nullptr, 
 			__uuidof(ID3D12Resource), (void**)&(*ppTexture2D)->texture2D_DX12);
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
@@ -1690,6 +1705,77 @@ namespace wiGraphicsTypes
 		if ((*ppTexture2D)->desc.MipLevels == 0)
 		{
 			(*ppTexture2D)->desc.MipLevels = (UINT)log2(max((*ppTexture2D)->desc.Width, (*ppTexture2D)->desc.Height));
+		}
+
+
+		// Issue data copy on request:
+		if (pInitialData != nullptr)
+		{
+			(*ppTexture2D)->texture2D_DX12->SetName(L"Filled");
+			D3D12_SUBRESOURCE_DATA* data = new D3D12_SUBRESOURCE_DATA[pDesc->ArraySize];
+			for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+			{
+				data[slice] = _ConvertSubresourceData(pInitialData[slice]);
+			}
+
+			UINT NumSubresources = pDesc->ArraySize;
+			UINT FirstSubresource = 0;
+
+
+			// Determine size of resource:
+			UINT64 RequiredSize = 0;
+			UINT64 MemToAlloc = static_cast<UINT64>(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(UINT) + sizeof(UINT64)) * NumSubresources;
+			if (MemToAlloc > SIZE_MAX)
+			{
+				return 0;
+			}
+			void* pMem = HeapAlloc(GetProcessHeap(), 0, static_cast<SIZE_T>(MemToAlloc));
+			if (pMem == NULL)
+			{
+				return 0;
+			}
+			D3D12_PLACED_SUBRESOURCE_FOOTPRINT* pLayouts = reinterpret_cast<D3D12_PLACED_SUBRESOURCE_FOOTPRINT*>(pMem);
+			UINT64* pRowSizesInBytes = reinterpret_cast<UINT64*>(pLayouts + NumSubresources);
+			UINT* pNumRows = reinterpret_cast<UINT*>(pRowSizesInBytes + NumSubresources);
+
+			device->GetCopyableFootprints(&desc, FirstSubresource, NumSubresources, 0, pLayouts, pNumRows, pRowSizesInBytes, &RequiredSize);
+
+
+			// Issue CPU copy to staging resource:
+			uint8_t* dest = uploadBuffer->allocate(RequiredSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+			for (UINT i = 0; i < NumSubresources; ++i)
+			{
+				if (pRowSizesInBytes[i] >(SIZE_T)-1) return 0;
+				D3D12_MEMCPY_DEST DestData = { dest + pLayouts[i].Offset, pLayouts[i].Footprint.RowPitch, pLayouts[i].Footprint.RowPitch * pNumRows[i] };
+				MemcpySubresource(&DestData, &data[i], (SIZE_T)pRowSizesInBytes[i], pNumRows[i], pLayouts[i].Footprint.Depth);
+			}
+
+
+
+			// Issue GPU copy:
+			for (UINT i = 0; i < NumSubresources; ++i)
+			{
+				CD3DX12_TEXTURE_COPY_LOCATION Dst((*ppTexture2D)->texture2D_DX12, i + FirstSubresource);
+				CD3DX12_TEXTURE_COPY_LOCATION Src(uploadBuffer->resource, pLayouts[i]);
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+			}
+
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = (*ppTexture2D)->texture2D_DX12;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			barrier.Transition.StateAfter = resourceState;
+			barrier.Transition.Subresource = 0;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+
+
+
+
+
+			HeapFree(GetProcessHeap(), 0, pMem);
+
+			SAFE_DELETE_ARRAY(data);
 		}
 
 
