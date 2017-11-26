@@ -1122,6 +1122,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)d3dx12.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

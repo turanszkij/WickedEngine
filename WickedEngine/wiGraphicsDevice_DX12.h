@@ -13,6 +13,7 @@ enum D3D12_DESCRIPTOR_HEAP_TYPE;
 struct ID3D12Device;
 struct ID3D12CommandAllocator;
 struct ID3D12CommandList;
+struct ID3D12GraphicsCommandList;
 struct ID3D12Fence;
 struct ID3D12DescriptorHeap;
 struct ID3D12CommandQueue;
@@ -49,6 +50,22 @@ namespace wiGraphicsTypes
 		DescriptorAllocator*		DSAllocator;
 		DescriptorAllocator*		ResourceAllocator;
 		DescriptorAllocator*		SamplerAllocator;
+
+		struct UploadBuffer : wiThreadSafeManager
+		{
+			ID3D12Resource*			resource;
+			uint8_t*				dataBegin;
+			uint8_t*				dataCur;
+			uint8_t*				dataEnd;
+
+			UploadBuffer(ID3D12Device* device, size_t size);
+			~UploadBuffer();
+
+			uint8_t* allocate(size_t dataSize, size_t alignment);
+			void clear();
+			uint64_t calculateOffset(uint8_t* address);
+		};
+		UploadBuffer* uploadBuffer;
 
 		std::atomic<PSOResourceID>	subPipelineStateID;
 

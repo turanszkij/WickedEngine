@@ -753,7 +753,15 @@ namespace wiGraphicsTypes
 		}
 		return DXGI_FORMAT_UNKNOWN;
 	}
+	inline D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
+	{
+		D3D12_SUBRESOURCE_DATA data;
+		data.pData = pInitialData.pSysMem;
+		data.RowPitch = pInitialData.SysMemPitch;
+		data.SlicePitch = pInitialData.SysMemSlicePitch;
 
+		return data;
+	}
 
 	// Native -> Engine converters
 
@@ -1123,9 +1131,18 @@ namespace wiGraphicsTypes
 	// Local Helpers:
 	const void* const __nullBlob[1024] = { 0 }; // this is initialized to nullptrs!
 
+	size_t Align(size_t uLocation, size_t uAlign)
+	{
+		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
+		{
+			assert(0);
+		}
 
+		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
+	}
 
-	// Engine functions
+	// Allocator heaps:
+
 	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible, UINT maxCount)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -1148,6 +1165,60 @@ namespace wiGraphicsTypes
 	{
 		return heap->GetCPUDescriptorHandleForHeapStart().ptr + itemCount.fetch_add(1) * itemSize;
 	}
+
+
+
+	GraphicsDevice_DX12::UploadBuffer::UploadBuffer(ID3D12Device* device, size_t size)
+	{
+		HRESULT hr = device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+			__uuidof(ID3D12Resource), (void**)&resource);
+
+		assert(SUCCEEDED(hr));
+
+		void* pData;
+		//
+		// No CPU reads will be done from the resource.
+		//
+		CD3DX12_RANGE readRange(0, 0);
+		resource->Map(0, &readRange, &pData);
+		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		dataEnd = dataBegin + size;
+	}
+	GraphicsDevice_DX12::UploadBuffer::~UploadBuffer()
+	{
+		SAFE_RELEASE(resource);
+	}
+	uint8_t* GraphicsDevice_DX12::UploadBuffer::allocate(size_t dataSize, size_t alignment)
+	{
+		LOCK();
+
+		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
+		assert(dataCur + dataSize <= dataEnd);
+
+		uint8_t* retVal = dataCur;
+
+		dataCur += dataSize;
+
+		UNLOCK();
+
+		return retVal;
+	}
+	void GraphicsDevice_DX12::UploadBuffer::clear()
+	{
+		dataCur = dataBegin;
+	}
+	uint64_t GraphicsDevice_DX12::UploadBuffer::calculateOffset(uint8_t* address)
+	{
+		assert(address >= dataBegin && address < dataEnd);
+		return static_cast<uint64_t>(address - dataBegin);
+	}
+
+
+	// Engine functions
 
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
 	{
@@ -1259,6 +1330,9 @@ namespace wiGraphicsTypes
 		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false, 4096);
 		SamplerAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, false, 64);
 
+		// Create resource upload buffer
+		uploadBuffer = new UploadBuffer(device, 64 * 1024 * 1024);
+
 
 		// Create render target for backbuffer
 		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle = {};
@@ -1363,6 +1437,13 @@ namespace wiGraphicsTypes
 
 		ppBuffer->desc = *pDesc;
 
+		uint32_t alignment = 1;
+		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
+		{
+			alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+		}
+		UINT64 alignedSize = Align(pDesc->ByteWidth, alignment);
+
 		D3D12_HEAP_PROPERTIES heapDesc = {};
 		heapDesc.Type = D3D12_HEAP_TYPE_DEFAULT;
 		heapDesc.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -1375,7 +1456,7 @@ namespace wiGraphicsTypes
 		D3D12_RESOURCE_DESC desc;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Width = pDesc->ByteWidth;
+		desc.Width = alignedSize;
 		desc.Height = 1;
 		desc.MipLevels = 1;
 		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
@@ -1390,8 +1471,12 @@ namespace wiGraphicsTypes
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 
-		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
-
+		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		if (pInitialData != nullptr)
+		{
+			resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+		}
+	
 		// Issue main resource creation:
 		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, resourceState, nullptr,
 			__uuidof(ID3D12Resource), (void**)&ppBuffer->resource_DX12);
@@ -1399,8 +1484,39 @@ namespace wiGraphicsTypes
 		if (FAILED(hr))
 			return hr;
 
+		
+
+		// Issue data copy on request:
+		if (pInitialData != nullptr)
+		{
+			uint8_t* dest = uploadBuffer->allocate(pDesc->ByteWidth, alignment);
+			memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth);
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->CopyBufferRegion(
+				ppBuffer->resource_DX12, 0, uploadBuffer->resource, uploadBuffer->calculateOffset(dest), pDesc->ByteWidth);
+
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = ppBuffer->resource_DX12;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+			barrier.Transition.Subresource = 0;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+		}
+
 
 		// Create resource views if needed
+		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
+		{
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
+			cbv_desc.SizeInBytes = (UINT)alignedSize;
+			cbv_desc.BufferLocation = ppBuffer->resource_DX12->GetGPUVirtualAddress();
+
+			ppBuffer->CBV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
+			ppBuffer->CBV_DX12->ptr = ResourceAllocator->allocate();
+			device->CreateConstantBufferView(&cbv_desc, *ppBuffer->CBV_DX12);
+		}
+
 		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
 		{
 
@@ -2547,7 +2663,8 @@ namespace wiGraphicsTypes
 	{
 		if (rects != nullptr)
 		{
-			D3D12_RECT* pRects = new D3D12_RECT[numRects];
+			assert(numRects <= 8);
+			D3D12_RECT pRects[8];
 			for (UINT i = 0; i < numRects; ++i)
 			{
 				pRects[i].bottom = rects[i].bottom;
@@ -2556,7 +2673,6 @@ namespace wiGraphicsTypes
 				pRects[i].top = rects[i].top;
 			}
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->RSSetScissorRects(numRects, pRects);
-			SAFE_DELETE_ARRAY(pRects);
 		}
 		else
 		{

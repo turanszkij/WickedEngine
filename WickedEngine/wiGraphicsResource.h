@@ -181,6 +181,7 @@ namespace wiGraphicsTypes
 	private:
 		ID3D11Buffer*								resource_DX11;
 		ID3D12Resource*								resource_DX12;
+		D3D12_CPU_DESCRIPTOR_HANDLE*				CBV_DX12;
 		GPUBufferDesc desc;
 	public:
 		GPUBuffer();

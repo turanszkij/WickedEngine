@@ -3319,7 +3319,8 @@ void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAP
 {
 	if (rects != nullptr)
 	{
-		D3D11_RECT* pRects = new D3D11_RECT[numRects];
+		assert(numRects <= 8);
+		D3D11_RECT pRects[8];
 		for (UINT i = 0; i < numRects; ++i)
 		{
 			pRects[i].bottom = rects[i].bottom;
@@ -3328,7 +3329,6 @@ void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAP
 			pRects[i].top = rects[i].top;
 		}
 		deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
-		SAFE_DELETE_ARRAY(pRects);
 	}
 	else
 	{
