@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <map>
+#include <unordered_set>
 #include <list>
 #include <deque>
 #include <sstream>
@@ -444,7 +445,7 @@ public:
 	}
 	~Mesh() {}
 	void LoadFromFile(const std::string& newName, const std::string& fname
-		, const MaterialCollection& materialColl, const std::list<Armature*>& armatures, const std::string& identifier="");
+		, const MaterialCollection& materialColl, const std::unordered_set<Armature*>& armatures, const std::string& identifier="");
 	bool buffersComplete;
 	void Optimize();
 	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
@@ -1170,13 +1171,13 @@ struct ForceField : public Transform
 
 struct Model : public Transform
 {
-	std::list<Object*> objects;
+	std::unordered_set<Object*> objects;
 	MeshCollection meshes;
 	MaterialCollection materials;
-	std::list<Armature*> armatures;
-	std::list<Light*> lights;
-	std::list<Decal*> decals;
-	std::list<ForceField*> forces;
+	std::unordered_set<Armature*> armatures;
+	std::unordered_set<Light*> lights;
+	std::unordered_set<Decal*> decals;
+	std::unordered_set<ForceField*> forces;
 
 	Model();
 	virtual ~Model();

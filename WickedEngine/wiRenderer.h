@@ -560,16 +560,12 @@ public:
 
 	// Add model to the scene
 	static void AddModel(Model* value);
-
 	// Add Object Instance
 	static void Add(Object* value);
-	static void Add(const std::list<Object*>& objects);
 	// Add Light Instance
 	static void Add(Light* value);
-	static void Add(const std::list<Light*>& lights);
 	// Add Force Field Instance
 	static void Add(ForceField* value);
-	static void Add(const std::list<ForceField*>& forces);
 
 	// Remove from the scene
 	static void Remove(Object* value);

@@ -1484,7 +1484,15 @@ Transform* wiRenderer::getTransformByName(const std::string& get)
 }
 Transform* wiRenderer::getTransformByID(uint64_t id)
 {
-	return GetScene().GetWorldNode()->find(id);
+	for (Model* model : GetScene().models)
+	{
+		Transform* found = model->find(id);
+		if (found != nullptr)
+		{
+			return found;
+		}
+	}
+	return nullptr;
 }
 Armature* wiRenderer::getArmatureByName(const std::string& get)
 {
@@ -2317,7 +2325,7 @@ void wiRenderer::ManageImages()
 }
 void wiRenderer::PutDecal(Decal* decal)
 {
-	GetScene().GetWorldNode()->decals.push_back(decal);
+	GetScene().GetWorldNode()->decals.insert(decal);
 }
 void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
@@ -6126,7 +6134,7 @@ void wiRenderer::LoadDefaultLighting()
 
 	Model* model = new Model;
 	model->name = "_WickedEngine_DefaultLight_Holder_";
-	model->lights.push_back(defaultLight);
+	model->lights.insert(defaultLight);
 	GetScene().models.push_back(model);
 
 	if (spTree_lights) {
@@ -6422,83 +6430,84 @@ void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& c
 
 void wiRenderer::AddModel(Model* model)
 {
-	GetDevice()->LOCK();
-
 	GetScene().AddModel(model);
 
 	FixedUpdate();
 
-	Add(model->objects);
-	Add(model->lights);
+	// add object batch 
+	{
+		vector<Cullable*> collection(model->objects.begin(), model->objects.end());
+		if (spTree != nullptr)
+		{
+			spTree->AddObjects(spTree->root, collection);
+		}
+		else
+		{
+			spTree = new Octree(collection);
+		}
+	}
 
-	//UpdateRenderData(nullptr);
+	// add light batch
+	{
+		vector<Cullable*> collection(model->lights.begin(), model->lights.end());
+		if (spTree_lights != nullptr)
+		{
+			spTree_lights->AddObjects(spTree_lights->root, collection);
+		}
+		else
+		{
+			spTree_lights = new Octree(collection);
+		}
+	}
 
 	SetUpCubes();
 	SetUpBoneLines();
-
-	GetDevice()->UNLOCK();
 }
 
 void wiRenderer::Add(Object* value)
 {
-	list<Object*> collection(0);
+	GetScene().GetWorldNode()->Add(value);
+	if (value->parent == nullptr)
+	{
+		value->attachTo(GetScene().GetWorldNode());
+	}
+
+	vector<Cullable*> collection(0);
 	collection.push_back(value);
-	Add(collection);
+	if (spTree != nullptr) 
+	{
+		spTree->AddObjects(spTree->root, collection);
+	}
+	else
+	{
+		spTree = new Octree(collection);
+	}
 }
 void wiRenderer::Add(Light* value)
 {
-	list<Light*> collection(0);
+	GetScene().GetWorldNode()->Add(value);
+	if (value->parent == nullptr)
+	{
+		value->attachTo(GetScene().GetWorldNode());
+	}
+
+	vector<Cullable*> collection(0);
 	collection.push_back(value);
-	Add(collection);
+	if (spTree_lights != nullptr) 
+	{
+		spTree_lights->AddObjects(spTree_lights->root, collection);
+	}
+	else
+	{
+		spTree_lights = new Octree(collection);
+	}
 }
 void wiRenderer::Add(ForceField* value)
 {
-	list<ForceField*> collection(0);
-	collection.push_back(value);
-	Add(collection);
-}
-void wiRenderer::Add(const list<Object*>& objects)
-{
-	for (Object* x : objects)
+	GetScene().GetWorldNode()->Add(value);
+	if (value->parent == nullptr)
 	{
-		if (x->parent == nullptr)
-		{
-			GetScene().GetWorldNode()->Add(x);
-		}
-	}
-	if (spTree) {
-		spTree->AddObjects(spTree->root, std::vector<Cullable*>(objects.begin(), objects.end()));
-	}
-	else
-	{
-		spTree = new Octree(std::vector<Cullable*>(objects.begin(), objects.end()));
-	}
-}
-void wiRenderer::Add(const list<Light*>& lights)
-{
-	for (Light* x : lights)
-	{
-		if (x->parent == nullptr)
-		{
-			GetScene().GetWorldNode()->Add(x);
-		}
-	}
-	if (spTree_lights) {
-		spTree_lights->AddObjects(spTree_lights->root, std::vector<Cullable*>(lights.begin(), lights.end()));
-	}
-	else
-	{
-		spTree_lights = new Octree(std::vector<Cullable*>(lights.begin(), lights.end()));
-	}
-}
-void wiRenderer::Add(const list<ForceField*>& forces)
-{
-	for (ForceField* x : forces)
-	{
-		if (x->parent == nullptr)
-		{
-			GetScene().GetWorldNode()->Add(x);
-		}
+		value->attachTo(GetScene().GetWorldNode());
 	}
 }
 
@@ -6508,7 +6517,7 @@ void wiRenderer::Remove(Object* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->objects.remove(value);
+			x->objects.erase(value);
 		}
 		spTree->Remove(value);
 		value->detach();
@@ -6520,7 +6529,7 @@ void wiRenderer::Remove(Light* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->lights.remove(value);
+			x->lights.erase(value);
 		}
 		spTree_lights->Remove(value);
 		value->detach();
@@ -6532,7 +6541,7 @@ void wiRenderer::Remove(Decal* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->decals.remove(value);
+			x->decals.erase(value);
 		}
 		value->detach();
 	}
@@ -6551,7 +6560,7 @@ void wiRenderer::Remove(ForceField* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->forces.remove(value);
+			x->forces.erase(value);
 		}
 		value->detach();
 	}

@@ -2,6 +2,7 @@
 #define _TRANSFORM_H_
 #include "CommonInclude.h"
 
+#include <atomic>
 #include <set>
 
 class wiArchive;
@@ -9,7 +10,7 @@ class wiArchive;
 struct Node
 {
 private:
-	static uint64_t __Unique_ID_Counter;
+	static std::atomic<uint64_t> __Unique_ID_Counter;
 	uint64_t ID;
 public:
 	std::string name;
@@ -20,6 +21,7 @@ public:
 	std::string GetLayerID();
 	uint64_t GetID() { return ID; }
 	void SetID(uint64_t newID) { ID = newID; }
+	static const uint64_t INVALID_ID = UINT64_MAX;
 
 	void Serialize(wiArchive& archive);
 };

@@ -1065,7 +1065,14 @@ void EditorComponent::Update(float dt)
 			for (auto& x : savedParents)
 			{
 				*archive << x.first->GetID();
-				*archive << x.second->GetID();
+				if (x.second == nullptr)
+				{
+					*archive << Transform::INVALID_ID;
+				}
+				else
+				{
+					*archive << x.second->GetID();
+				}
 			}
 
 			if (picked->transform != nullptr)
@@ -1117,7 +1124,14 @@ void EditorComponent::Update(float dt)
 			for (auto& x : savedParents)
 			{
 				*archive << x.first->GetID();
-				*archive << x.second->GetID();
+				if (x.second == nullptr)
+				{
+					*archive << Transform::INVALID_ID;
+				}
+				else
+				{
+					*archive << x.second->GetID();
+				}
 			}
 		}
 
@@ -1731,6 +1745,16 @@ void ConsumeHistoryOperation(bool undo)
 						decal->Serialize(*archive);
 						decal->SetID(id);
 						model->Add(decal);
+					}
+
+					// force field
+					*archive >> tmp;
+					if (tmp)
+					{
+						ForceField* force = new ForceField;
+						force->Serialize(*archive);
+						force->SetID(id);
+						model->Add(force);
 					}
 				}
 

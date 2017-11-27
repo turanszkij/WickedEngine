@@ -3,12 +3,11 @@
 
 #include <vector>
 
-uint64_t Node::__Unique_ID_Counter = 0;
+std::atomic<uint64_t> Node::__Unique_ID_Counter = 0;
 
 Node::Node() {
 	name = "";
-	ID = __Unique_ID_Counter;
-	__Unique_ID_Counter++;
+	ID = __Unique_ID_Counter.fetch_add(1);
 }
 
 
