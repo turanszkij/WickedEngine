@@ -5,7 +5,7 @@ struct HullInputType
 {
 	float3 pos								: POSITION;
 	float3 posPrev							: POSITIONPREV;
-	float3 tex								: TEXCOORD0;
+	float2 tex								: TEXCOORD0;
 	float4 nor								: NORMAL;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	nointerpolation float dither			: DITHER;
@@ -14,29 +14,27 @@ struct HullInputType
 
 HullInputType main(Input_Object_ALL input)
 {
-	HullInputType Out = (HullInputType)0;
+	HullInputType Out;
 
 	
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instancePrev);
-
-	float4 pos = float4(input.pos.xyz, 1);
-	float4 posPrev = float4(input.pre.xyz, 1);
+	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 		
 
-	pos = mul(pos, WORLD);
-	posPrev = mul(posPrev, WORLDPREV);
+	surface.position = mul(surface.position, WORLD);
+	surface.prevPos = mul(surface.prevPos, WORLDPREV);
+	surface.normal = normalize(mul(surface.normal, (float3x3)WORLD));
 
 
-	float3 normal = mul(normalize(input.nor.xyz * 2 - 1), (float3x3)WORLD);
-	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
-	affectWind(posPrev.xyz,input.pos.w, g_xFrame_TimePrev);
+	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
+	affectWind(surface.prevPos.xyz, surface.wind, g_xFrame_TimePrev);
 
 
-	Out.pos=pos.xyz;
-	Out.posPrev = posPrev.xyz;
-	Out.tex=input.tex.xyz;
-	Out.nor = float4(normalize(normal), input.nor.w);
+	Out.pos = surface.position.xyz;
+	Out.posPrev = surface.prevPos.xyz;
+	Out.tex = surface.uv;
+	Out.nor = float4(surface.normal, 1);
 
 	Out.instanceColor = input.instance.color_dither.rgb;
 	Out.dither = input.instance.color_dither.a;

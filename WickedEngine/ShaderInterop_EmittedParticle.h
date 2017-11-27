@@ -29,7 +29,6 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	uint		xEmitCount;
 	uint		xEmitterMeshIndexCount;
 	uint		xEmitterMeshVertexPositionStride;
-	uint		xEmitterMeshVertexNormalStride;
 
 	float		xEmitterRandomness;
 	float		xParticleSize;

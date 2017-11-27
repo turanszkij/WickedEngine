@@ -595,7 +595,7 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 			mesh->vertices_Transformed_POS[i].pos.x = nodes[indexP].m_x.getX();
 			mesh->vertices_Transformed_POS[i].pos.y = nodes[indexP].m_x.getY();
 			mesh->vertices_Transformed_POS[i].pos.z = nodes[indexP].m_x.getZ();
-			mesh->vertices_Transformed_NOR[i].FromFLOAT(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ()));
+			mesh->vertices_Transformed_POS[i].NORWINDFromFloat(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ()), 0);
 		}
 	}
 }
@@ -707,7 +707,7 @@ void wiBULLET::registerObject(Object* object){
 				pos_stream[i].x = object->mesh->vertices_POS[i].pos.x;
 				pos_stream[i].y = object->mesh->vertices_POS[i].pos.y;
 				pos_stream[i].z = object->mesh->vertices_POS[i].pos.z;
-				pos_stream[i].w = object->mesh->vertices_POS[i].pos.w;
+				pos_stream[i].w = 1;
 			}
 
 			addConvexHull(
@@ -725,7 +725,7 @@ void wiBULLET::registerObject(Object* object){
 				pos_stream[i].x = object->mesh->vertices_POS[i].pos.x;
 				pos_stream[i].y = object->mesh->vertices_POS[i].pos.y;
 				pos_stream[i].z = object->mesh->vertices_POS[i].pos.z;
-				pos_stream[i].w = object->mesh->vertices_POS[i].pos.w;
+				pos_stream[i].w = 1;
 			}
 
 			addTriangleMesh(

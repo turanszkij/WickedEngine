@@ -7,11 +7,12 @@ VSOut main(Input_Object_ALL input)
 	VSOut Out = (VSOut)0;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
-	Out.pos = mul(float4(input.pos.xyz, 1), WORLD);
-	Out.nor = normalize(mul(normalize(input.nor.xyz * 2 - 1), (float3x3)WORLD));
-	Out.tex = input.tex.xy;
+	VertexSurface surface = MakeVertexSurfaceFromInput(input);
+
+	Out.pos = mul(surface.position, WORLD);
+	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
+	Out.tex = surface.uv;
 	Out.instanceColor = input.instance.color_dither.rgb;
-	Out.ao = input.nor.w;
 
 	return Out;
 }

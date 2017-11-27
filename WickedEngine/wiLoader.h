@@ -253,7 +253,7 @@ public:
 	struct Vertex_FULL
 	{
 		XMFLOAT4 pos; //pos, wind
-		XMFLOAT4 nor; //normal, vertex ao
+		XMFLOAT4 nor; //normal, unused
 		XMFLOAT4 tex; //tex, matIndex, unused
 		XMFLOAT4 ind; //bone indices
 		XMFLOAT4 wei; //bone weights
@@ -275,70 +275,58 @@ public:
 	};
 	struct Vertex_POS
 	{
-		XMFLOAT4 pos;
+		XMFLOAT3 pos;
+		uint32_t normal_wind;
 
-		Vertex_POS() :pos(XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)) {}
+		Vertex_POS() :pos(XMFLOAT3(0.0f, 0.0f, 0.0f)), normal_wind(0) {}
 		Vertex_POS(const Vertex_FULL& vert)
 		{
-			pos = vert.pos;
+			pos.x = vert.pos.x;
+			pos.y = vert.pos.y;
+			pos.z = vert.pos.z;
+			NORWINDFromFloat(XMFLOAT3(vert.nor.x, vert.nor.y, vert.nor.z), vert.pos.w);
 		}
-		inline XMVECTOR Load() const
+		inline XMVECTOR LoadPOS() const
 		{
-			return XMLoadFloat4(&pos);
+			return XMLoadFloat3(&pos);
 		}
-
-		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R32G32B32A32_FLOAT;
-	};
-	struct Vertex_NOR
-	{
-		uint32_t nor;
-
-		Vertex_NOR() :nor(0) {}
-		Vertex_NOR(const Vertex_FULL& vert)
+		inline XMVECTOR LoadNOR() const
 		{
-			nor = 0;
-
-			nor |= (uint8_t)((vert.nor.x * 0.5f + 0.5f) * 255.0f) << 0;
-			nor |= (uint8_t)((vert.nor.y * 0.5f + 0.5f) * 255.0f) << 8;
-			nor |= (uint8_t)((vert.nor.z * 0.5f + 0.5f) * 255.0f) << 16;
-			nor |= (uint8_t)(vert.nor.w * 255.0f) << 24; // ao (0-1)
+			return XMLoadFloat3(&GetNor_FULL());
 		}
-		inline void FromFLOAT(const XMFLOAT3& value)
+		inline void NORWINDFromFloat(const XMFLOAT3& normal, float wind)
 		{
-			uint8_t alpha = (nor >> 24) & 0x000000FF;
+			normal_wind = 0;
 
-			nor = 0;
-
-			nor |= (uint8_t)((value.x * 0.5f + 0.5f) * 255.0f) << 0;
-			nor |= (uint8_t)((value.y * 0.5f + 0.5f) * 255.0f) << 8;
-			nor |= (uint8_t)((value.z * 0.5f + 0.5f) * 255.0f) << 16;
-			nor |= alpha << 24;
+			normal_wind |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+			normal_wind |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+			normal_wind |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+			normal_wind |= (uint32_t)(wind * 255.0f) << 24;
 		}
-		inline XMFLOAT4 GetNor_FULL() const
+		inline XMFLOAT3 GetNor_FULL() const
 		{
-			XMFLOAT4 nor_FULL(0, 0, 0, 0);
+			XMFLOAT3 nor_FULL(0, 0, 0);
 
-			nor_FULL.x = (float)((nor >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-			nor_FULL.y = (float)((nor >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-			nor_FULL.z = (float)((nor >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-			nor_FULL.w = (float)((nor >> 24) & 0x000000FF) / 255.0f;
+			nor_FULL.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 
 			return nor_FULL;
 		}
 
-		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R8G8B8A8_UNORM;
+		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R32G32B32A32_FLOAT;
 	};
 	struct Vertex_TEX
 	{
-		XMHALF4 tex;
+		XMHALF2 tex;
 
-		Vertex_TEX() :tex(XMHALF4(0.0f, 0.0f, 0.0f, 0.0f)) {}
+		Vertex_TEX() :tex(XMHALF2(0.0f, 0.0f)) {}
 		Vertex_TEX(const Vertex_FULL& vert)
 		{
-			tex = XMHALF4(vert.tex.x, vert.tex.y, vert.tex.z, vert.tex.w);
+			tex = XMHALF2(vert.tex.x, vert.tex.y);
 		}
 
-		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16B16A16_FLOAT;
+		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16_FLOAT;
 	};
 	struct Vertex_BON
 	{
@@ -392,12 +380,10 @@ public:
 	std::string name;
 	std::string parent;
 	std::vector<Vertex_FULL>	vertices_FULL;
-	std::vector<Vertex_POS>		vertices_POS; // position(xyz), wind(w)
-	std::vector<Vertex_NOR>		vertices_NOR; // normal
+	std::vector<Vertex_POS>		vertices_POS; // position(xyz), normal+wind(w as uint)
 	std::vector<Vertex_TEX>		vertices_TEX; // texcoords
 	std::vector<Vertex_BON>		vertices_BON; // bone indices, bone weights
 	std::vector<Vertex_POS>		vertices_Transformed_POS; // for soft body simulation
-	std::vector<Vertex_NOR>		vertices_Transformed_NOR; // for soft body simulation
 	std::vector<Vertex_POS>		vertices_Transformed_PRE; // for soft body simulation
 	std::vector<uint32_t>		indices;
 	std::vector<XMFLOAT3>		physicsverts;
@@ -408,16 +394,13 @@ public:
 
 	wiGraphicsTypes::GPUBuffer	indexBuffer;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_POS;
-	wiGraphicsTypes::GPUBuffer	vertexBuffer_NOR;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_TEX;
 	wiGraphicsTypes::GPUBuffer	vertexBuffer_BON;
 	wiGraphicsTypes::GPUBuffer	streamoutBuffer_POS;
-	wiGraphicsTypes::GPUBuffer	streamoutBuffer_NOR;
 	wiGraphicsTypes::GPUBuffer	streamoutBuffer_PRE;
 
 	// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
 	UINT bufferOffset_POS;
-	UINT bufferOffset_NOR;
 	UINT bufferOffset_PRE;
 
 	wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat;
@@ -446,7 +429,6 @@ public:
 	wiRenderTarget	impostorTarget;
 	float impostorDistance;
 	static wiGraphicsTypes::GPUBuffer impostorVB_POS;
-	static wiGraphicsTypes::GPUBuffer impostorVB_NOR;
 	static wiGraphicsTypes::GPUBuffer impostorVB_TEX;
 
 	float tessellationFactor;
@@ -497,7 +479,6 @@ public:
 		tessellationFactor = 0.0f;
 		optimized = false;
 		bufferOffset_POS = 0;
-		bufferOffset_NOR = 0;
 		bufferOffset_PRE = 0;
 		indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
 	}

@@ -10,13 +10,14 @@ struct VSOut
 
 VSOut main(Input_Object_ALL input, uint instanceID : SV_INSTANCEID)
 {
-	VSOut Out = (VSOut)0;
+	VSOut Out;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
+	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	Out.pos = mul(float4(input.pos.xyz, 1), WORLD);
-	Out.nor = normalize(mul(input.nor.xyz * 2 - 1, (float3x3)WORLD));
-	Out.tex = input.tex.xy;
+	Out.pos = mul(surface.position, WORLD);
+	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
+	Out.tex = surface.uv;
 	Out.instanceColor = input.instance.color_dither.rgb;
 
 	return Out;

@@ -5,20 +5,20 @@
 
 struct VertexOut
 {
-	float4 pos				: SV_POSITION;
+	float4 pos	: SV_POSITION;
 };
 
-VertexOut main(Input_Shadow_POS input)
+VertexOut main(Input_Object_POS input)
 {
-	VertexOut Out = (VertexOut)0;
+	VertexOut Out;
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
+	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 		
-	Out.pos = mul(float4(input.pos.xyz, 1), WORLD);
-	affectWind(Out.pos.xyz, input.pos.w, g_xFrame_Time);
+	Out.pos = mul(surface.position, WORLD);
+	affectWind(Out.pos.xyz, surface.wind, g_xFrame_Time);
 
 	Out.pos = mul(Out.pos, g_xCamera_VP);
-
 
 	return Out;
 }

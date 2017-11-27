@@ -1665,9 +1665,7 @@ void VertexGroup::Serialize(wiArchive& archive)
 
 #pragma region MESH
 
-//GPUBuffer Mesh::impostorVBs[VPROP_COUNT];
 GPUBuffer Mesh::impostorVB_POS;
-GPUBuffer Mesh::impostorVB_NOR;
 GPUBuffer Mesh::impostorVB_TEX;
 
 void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
@@ -2024,10 +2022,6 @@ void Mesh::CreateBuffers(Object* object)
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
 
-			InitData.pSysMem = vertices_NOR.data();
-			bd.ByteWidth = (UINT)(sizeof(Vertex_NOR) * vertices_NOR.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_NOR);
-
 			InitData.pSysMem = vertices_BON.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
@@ -2041,9 +2035,6 @@ void Mesh::CreateBuffers(Object* object)
 
 				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
-
-				bd.ByteWidth = (UINT)(sizeof(Vertex_NOR) * vertices_NOR.size());
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_NOR);
 
 				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
@@ -2299,12 +2290,10 @@ void Mesh::CreateImpostorVB()
 
 
 		Vertex_POS impostorVertices_POS[ARRAYSIZE(impostorVertices)];
-		Vertex_NOR impostorVertices_NOR[ARRAYSIZE(impostorVertices)];
 		Vertex_TEX impostorVertices_TEX[ARRAYSIZE(impostorVertices)];
 		for (int i = 0; i < ARRAYSIZE(impostorVertices); ++i)
 		{
 			impostorVertices_POS[i] = Vertex_POS(impostorVertices[i]);
-			impostorVertices_NOR[i] = Vertex_NOR(impostorVertices[i]);
 			impostorVertices_TEX[i] = Vertex_TEX(impostorVertices[i]);
 		}
 
@@ -2319,9 +2308,6 @@ void Mesh::CreateImpostorVB()
 		InitData.pSysMem = impostorVertices_POS;
 		bd.ByteWidth = sizeof(impostorVertices_POS);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_POS);
-		InitData.pSysMem = impostorVertices_NOR;
-		bd.ByteWidth = sizeof(impostorVertices_NOR);
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_NOR);
 		InitData.pSysMem = impostorVertices_TEX;
 		bd.ByteWidth = sizeof(impostorVertices_TEX);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
@@ -2336,7 +2322,6 @@ void Mesh::CreateVertexArrays()
 
 	// De-interleave vertex arrays:
 	vertices_POS.resize(vertices_FULL.size());
-	vertices_NOR.resize(vertices_FULL.size());
 	vertices_TEX.resize(vertices_FULL.size());
 	vertices_BON.resize(vertices_FULL.size());
 	for (size_t i = 0; i < vertices_FULL.size(); ++i)
@@ -2361,14 +2346,12 @@ void Mesh::CreateVertexArrays()
 
 		// Split and type conversion:
 		vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
-		vertices_NOR[i] = Vertex_NOR(vertices_FULL[i]);
 		vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
 		vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
 	}
 
 	// Save original vertices. This will be input for CPU skinning / soft bodies
 	vertices_Transformed_POS = vertices_POS;
-	vertices_Transformed_NOR = vertices_NOR;
 	vertices_Transformed_PRE = vertices_POS; // pre <- pos!!
 
 	// Map subset indices:
