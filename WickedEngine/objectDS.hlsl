@@ -23,7 +23,7 @@ struct HullOutputType
 {
 	float3 pos								: POSITION;
 	float3 posPrev							: POSITIONPREV;
-	float3 tex								: TEXCOORD0;
+	float2 tex								: TEXCOORD0;
 	float4 nor								: NORMAL;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	nointerpolation float dither			: DITHER;
@@ -124,8 +124,6 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.bin=tanbin[1];*/
 
 	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xFrame_MainCamera_ReflVP);
-
-	Out.ao = vertexNormal.w;
 
 	Out.instanceColor = patch[0].instanceColor.rgb;
 	Out.dither = patch[0].dither;

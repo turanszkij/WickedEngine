@@ -10,7 +10,6 @@ RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
 TEXTURE2D(randomTex, float4, TEXSLOT_ONDEMAND0);
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
-RAWBUFFER(meshVertexBuffer_NOR, TEXSLOT_ONDEMAND3);
 
 
 [numthreads(THREADCOUNT_EMIT, 1, 1)]
@@ -33,25 +32,25 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uint i2 = meshIndexBuffer[tri * 3 + 2];
 
 		// load vertices of triangle from vertex buffer:
-		float3 pos0 = asfloat(meshVertexBuffer_POS.Load3(i0 * xEmitterMeshVertexPositionStride));
-		float3 pos1 = asfloat(meshVertexBuffer_POS.Load3(i1 * xEmitterMeshVertexPositionStride));
-		float3 pos2 = asfloat(meshVertexBuffer_POS.Load3(i2 * xEmitterMeshVertexPositionStride));
+		float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xEmitterMeshVertexPositionStride));
+		float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xEmitterMeshVertexPositionStride));
+		float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xEmitterMeshVertexPositionStride));
 
-		uint nor_u = meshVertexBuffer_NOR.Load(i0 * xEmitterMeshVertexNormalStride);
+		uint nor_u = asuint(pos_nor0.w);
 		float3 nor0;
 		{
 			nor0.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 			nor0.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 			nor0.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		}
-		nor_u = meshVertexBuffer_NOR.Load(i1 * xEmitterMeshVertexNormalStride);
+		nor_u = asuint(pos_nor1.w);
 		float3 nor1;
 		{
 			nor1.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 			nor1.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 			nor1.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		}
-		nor_u = meshVertexBuffer_NOR.Load(i2 * xEmitterMeshVertexNormalStride);
+		nor_u = asuint(pos_nor2.w);
 		float3 nor2;
 		{
 			nor2.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
@@ -70,7 +69,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 
 		// compute final surface position on triangle from barycentric coords:
-		float3 pos = pos0 + f * (pos1 - pos0) + g * (pos2 - pos0);
+		float3 pos = pos_nor0.xyz + f * (pos_nor1.xyz - pos_nor0.xyz) + g * (pos_nor2.xyz - pos_nor0.xyz);
 		float3 nor = nor0 + f * (nor1 - nor0) + g * (nor2 - nor0);
 		pos = mul(xEmitterWorld, float4(pos, 1)).xyz;
 		nor = normalize(mul((float3x3)xEmitterWorld, nor));

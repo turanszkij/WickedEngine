@@ -654,7 +654,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -666,18 +666,17 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL",			0, Mesh::Vertex_NOR::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, Mesh::Vertex_TEX::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		1, Mesh::Vertex_POS::FORMAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				1, Mesh::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 5, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 5, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 5, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -689,7 +688,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -706,8 +705,8 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -724,7 +723,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -741,8 +740,8 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION",		0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",		0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1486,7 +1485,15 @@ Transform* wiRenderer::getTransformByName(const std::string& get)
 }
 Transform* wiRenderer::getTransformByID(uint64_t id)
 {
-	return GetScene().GetWorldNode()->find(id);
+	for (Model* model : GetScene().models)
+	{
+		Transform* found = model->find(id);
+		if (found != nullptr)
+		{
+			return found;
+		}
+	}
+	return nullptr;
 }
 Armature* wiRenderer::getArmatureByName(const std::string& get)
 {
@@ -1566,8 +1573,8 @@ Light* wiRenderer::getLightByName(const std::string& name)
 Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
 {
 	XMMATRIX sump;
-	XMVECTOR pos = mesh->vertices_POS[vertexI].Load();
-	XMVECTOR nor = XMLoadFloat4(&mesh->vertices_NOR[vertexI].GetNor_FULL());
+	XMVECTOR pos = mesh->vertices_POS[vertexI].LoadPOS();
+	XMVECTOR nor = mesh->vertices_POS[vertexI].LoadNOR();
 
 	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
 	{
@@ -1613,12 +1620,7 @@ Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, con
 
 	Mesh::Vertex_FULL retV(transformedP);
 	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
-	retV.tex = XMFLOAT4(
-		mesh->vertices_TEX[vertexI].tex.x,
-		mesh->vertices_TEX[vertexI].tex.y,
-		mesh->vertices_TEX[vertexI].tex.z,
-		mesh->vertices_TEX[vertexI].tex.w
-	);
+	retV.tex = mesh->vertices_FULL[vertexI].tex;
 
 	return retV;
 }
@@ -2094,12 +2096,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					// Do the skinning
 					const GPUResource* vbs[] = {
 						&mesh->vertexBuffer_POS,
-						&mesh->vertexBuffer_NOR,
 						&mesh->vertexBuffer_BON,
 					};
 					const GPUUnorderedResource* sos[] = {
 						&mesh->streamoutBuffer_POS,
-						&mesh->streamoutBuffer_NOR,
 						&mesh->streamoutBuffer_PRE,
 					};
 
@@ -2113,16 +2113,13 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				{
 					// Upload CPU skinned vertex buffer (Soft body VB)
 					size_t size_pos = sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_POS.size();
-					size_t size_nor = sizeof(Mesh::Vertex_NOR)*mesh->vertices_Transformed_NOR.size();
 					size_t size_pre = sizeof(Mesh::Vertex_POS)*mesh->vertices_Transformed_PRE.size();
 					UINT offset;
-					void* vertexData = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, size_pos + size_nor + size_pre, offset, threadID);
+					void* vertexData = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, size_pos + size_pre, offset, threadID);
 					mesh->bufferOffset_POS = offset;
-					mesh->bufferOffset_NOR = offset + (UINT)size_pos;
-					mesh->bufferOffset_PRE = offset + (UINT)size_pos + (UINT)size_nor;
+					mesh->bufferOffset_PRE = offset + (UINT)size_pos;
 					memcpy(vertexData, mesh->vertices_Transformed_POS.data(), size_pos);
-					memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos), mesh->vertices_Transformed_NOR.data(), size_nor);
-					memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos + size_nor), mesh->vertices_Transformed_PRE.data(), size_pre);
+					memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos), mesh->vertices_Transformed_PRE.data(), size_pre);
 					GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 				}
 			}
@@ -2171,7 +2168,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {
-	if (!GetOcclusionCullingEnabled() || spTree == nullptr)
+	if (!GetOcclusionCullingEnabled() || spTree == nullptr || GetFreezeCullingCameraEnabled())
 	{
 		return;
 	}
@@ -2252,7 +2249,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::OcclusionCulling_Read()
 {
-	if (!GetOcclusionCullingEnabled() || spTree == nullptr)
+	if (!GetOcclusionCullingEnabled() || spTree == nullptr || GetFreezeCullingCameraEnabled())
 	{
 		return;
 	}
@@ -2329,7 +2326,7 @@ void wiRenderer::ManageImages()
 }
 void wiRenderer::PutDecal(Decal* decal)
 {
-	GetScene().GetWorldNode()->decals.push_back(decal);
+	GetScene().GetWorldNode()->decals.insert(decal);
 }
 void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
@@ -4176,10 +4173,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					++k;
 				}
-				if (k < 1)
-					continue;
 
 				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+				if (k < 1)
+					continue;
 
 				if (realVL == VLTYPE_OBJECT_POS_TEX)
 				{
@@ -4204,7 +4202,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				{
 					GPUBuffer* vbs[] = {
 						&Mesh::impostorVB_POS,
-						&Mesh::impostorVB_NOR,
 						&Mesh::impostorVB_TEX,
 						&Mesh::impostorVB_POS,
 						dynamicVertexBufferPool,
@@ -4212,7 +4209,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					};
 					UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
-						sizeof(Mesh::Vertex_NOR),
 						sizeof(Mesh::Vertex_TEX),
 						sizeof(Mesh::Vertex_POS),
 						sizeof(InstBuf),
@@ -4365,10 +4361,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						
 				++k;
 			}
-			if (k < 1)
-				continue;
 
 			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+			if (k < 1)
+				continue;
 
 			device->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
 
@@ -4477,7 +4474,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						{
 							GPUBuffer* vbs[] = {
 								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 								&mesh->vertexBuffer_TEX,
 								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
 								dynamicVertexBufferPool,
@@ -4485,7 +4481,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							};
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
-								sizeof(Mesh::Vertex_NOR),
 								sizeof(Mesh::Vertex_TEX),
 								sizeof(Mesh::Vertex_POS),
 								sizeof(InstBuf),
@@ -4493,7 +4488,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							};
 							UINT offsets[] = {
 								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
-								mesh->hasDynamicVB() ? mesh->bufferOffset_NOR : 0,
 								0,
 								mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
 								instancesOffset,
@@ -5996,14 +5990,14 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		{
 			for (size_t i = 0; i < mesh->vertices_Transformed_POS.size(); ++i)
 			{
-				_vertices[i] = mesh->vertices_Transformed_POS[i].Load();
+				_vertices[i] = mesh->vertices_Transformed_POS[i].LoadPOS();
 			}
 		}
 		else
 		{
 			for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
 			{
-				_vertices[i] = mesh->vertices_POS[i].Load();
+				_vertices[i] = mesh->vertices_POS[i].LoadPOS();
 			}
 		}
 
@@ -6024,8 +6018,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				XMStoreFloat3(&picked.position, pos);
 				XMStoreFloat3(&picked.normal, nor);
 				picked.distance = wiMath::Distance(pos, rayOrigin);
-				XMVECTOR& tmpTex = XMLoadHalf4(&mesh->vertices_TEX[i0].tex);
-				picked.subsetIndex = (int)XMVectorGetZ(tmpTex); // half has no normal conversion, so have to do load-store
+				picked.subsetIndex = (int)mesh->vertices_FULL[i0].tex.z;
 				points.push_back(picked);
 			}
 		}
@@ -6142,7 +6135,7 @@ void wiRenderer::LoadDefaultLighting()
 
 	Model* model = new Model;
 	model->name = "_WickedEngine_DefaultLight_Holder_";
-	model->lights.push_back(defaultLight);
+	model->lights.insert(defaultLight);
 	GetScene().models.push_back(model);
 
 	if (spTree_lights) {
@@ -6287,7 +6280,6 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	GPUBuffer* vbs[] = {
 		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_NOR.IsValid() ? &mesh->streamoutBuffer_NOR : &mesh->vertexBuffer_NOR),
 		&mesh->vertexBuffer_TEX,
 		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
 		dynamicVertexBufferPool,
@@ -6295,7 +6287,6 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	};
 	UINT strides[] = {
 		sizeof(Mesh::Vertex_POS),
-		sizeof(Mesh::Vertex_NOR),
 		sizeof(Mesh::Vertex_TEX),
 		sizeof(Mesh::Vertex_POS),
 		sizeof(InstBuf),
@@ -6303,7 +6294,6 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	};
 	UINT offsets[] = {
 		mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
-		mesh->hasDynamicVB() ? mesh->bufferOffset_NOR : 0,
 		0,
 		mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
 		instancesOffset,
@@ -6441,83 +6431,84 @@ void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& c
 
 void wiRenderer::AddModel(Model* model)
 {
-	GetDevice()->LOCK();
-
 	GetScene().AddModel(model);
 
 	FixedUpdate();
 
-	Add(model->objects);
-	Add(model->lights);
+	// add object batch 
+	{
+		vector<Cullable*> collection(model->objects.begin(), model->objects.end());
+		if (spTree != nullptr)
+		{
+			spTree->AddObjects(spTree->root, collection);
+		}
+		else
+		{
+			spTree = new Octree(collection);
+		}
+	}
 
-	//UpdateRenderData(nullptr);
+	// add light batch
+	{
+		vector<Cullable*> collection(model->lights.begin(), model->lights.end());
+		if (spTree_lights != nullptr)
+		{
+			spTree_lights->AddObjects(spTree_lights->root, collection);
+		}
+		else
+		{
+			spTree_lights = new Octree(collection);
+		}
+	}
 
 	SetUpCubes();
 	SetUpBoneLines();
-
-	GetDevice()->UNLOCK();
 }
 
 void wiRenderer::Add(Object* value)
 {
-	list<Object*> collection(0);
+	GetScene().GetWorldNode()->Add(value);
+	if (value->parent == nullptr)
+	{
+		value->attachTo(GetScene().GetWorldNode());
+	}
+
+	vector<Cullable*> collection(0);
 	collection.push_back(value);
-	Add(collection);
+	if (spTree != nullptr) 
+	{
+		spTree->AddObjects(spTree->root, collection);
+	}
+	else
+	{
+		spTree = new Octree(collection);
+	}
 }
 void wiRenderer::Add(Light* value)
 {
-	list<Light*> collection(0);
+	GetScene().GetWorldNode()->Add(value);
+	if (value->parent == nullptr)
+	{
+		value->attachTo(GetScene().GetWorldNode());
+	}
+
+	vector<Cullable*> collection(0);
 	collection.push_back(value);
-	Add(collection);
+	if (spTree_lights != nullptr) 
+	{
+		spTree_lights->AddObjects(spTree_lights->root, collection);
+	}
+	else
+	{
+		spTree_lights = new Octree(collection);
+	}
 }
 void wiRenderer::Add(ForceField* value)
 {
-	list<ForceField*> collection(0);
-	collection.push_back(value);
-	Add(collection);
-}
-void wiRenderer::Add(const list<Object*>& objects)
-{
-	for (Object* x : objects)
+	GetScene().GetWorldNode()->Add(value);
+	if (value->parent == nullptr)
 	{
-		if (x->parent == nullptr)
-		{
-			GetScene().GetWorldNode()->Add(x);
-		}
-	}
-	if (spTree) {
-		spTree->AddObjects(spTree->root, std::vector<Cullable*>(objects.begin(), objects.end()));
-	}
-	else
-	{
-		spTree = new Octree(std::vector<Cullable*>(objects.begin(), objects.end()));
-	}
-}
-void wiRenderer::Add(const list<Light*>& lights)
-{
-	for (Light* x : lights)
-	{
-		if (x->parent == nullptr)
-		{
-			GetScene().GetWorldNode()->Add(x);
-		}
-	}
-	if (spTree_lights) {
-		spTree_lights->AddObjects(spTree_lights->root, std::vector<Cullable*>(lights.begin(), lights.end()));
-	}
-	else
-	{
-		spTree_lights = new Octree(std::vector<Cullable*>(lights.begin(), lights.end()));
-	}
-}
-void wiRenderer::Add(const list<ForceField*>& forces)
-{
-	for (ForceField* x : forces)
-	{
-		if (x->parent == nullptr)
-		{
-			GetScene().GetWorldNode()->Add(x);
-		}
+		value->attachTo(GetScene().GetWorldNode());
 	}
 }
 
@@ -6527,7 +6518,7 @@ void wiRenderer::Remove(Object* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->objects.remove(value);
+			x->objects.erase(value);
 		}
 		spTree->Remove(value);
 		value->detach();
@@ -6539,7 +6530,7 @@ void wiRenderer::Remove(Light* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->lights.remove(value);
+			x->lights.erase(value);
 		}
 		spTree_lights->Remove(value);
 		value->detach();
@@ -6551,7 +6542,7 @@ void wiRenderer::Remove(Decal* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->decals.remove(value);
+			x->decals.erase(value);
 		}
 		value->detach();
 	}
@@ -6570,7 +6561,7 @@ void wiRenderer::Remove(ForceField* value)
 	{
 		for (auto& x : GetScene().models)
 		{
-			x->forces.remove(value);
+			x->forces.erase(value);
 		}
 		value->detach();
 	}

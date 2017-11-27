@@ -1,19 +1,13 @@
 #include "objectHF.hlsli"
 
-
-
 float4 main(Input_Object_POS input) : SV_POSITION
 {
-	PixelInputType_Simple Out = (PixelInputType_Simple)0;
-
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
+	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	float4 pos = float4(input.pos.xyz, 1);
+	surface.position = mul(surface.position, WORLD);
 
-	pos = mul(pos, WORLD);
+	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
 
-	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
-
-
-	return mul(pos, g_xCamera_VP);
+	return mul(surface.position, g_xCamera_VP);
 }

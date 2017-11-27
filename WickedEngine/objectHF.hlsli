@@ -59,7 +59,6 @@ struct PixelInputType
 	float2 tex								: TEXCOORD0;
 	nointerpolation float  dither			: DITHER;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
-	float  ao								: AMBIENT_OCCLUSION;
 	float3 nor								: NORMAL;
 	float4 pos2D							: SCREENPOSITION;
 	float3 pos3D							: WORLDPOSITION;
@@ -300,7 +299,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	float sss = g_xMat_subsurfaceScattering;								\
 	float3 bumpColor = 0;													\
 	float depth = input.pos.z;												\
-	float ao = input.ao;
+	float ao = 1;
 
 #define OBJECT_PS_MAKE																								\
 	OBJECT_PS_MAKE_COMMON																							\

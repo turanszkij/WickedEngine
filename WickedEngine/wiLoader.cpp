@@ -20,51 +20,54 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-void LoadWiArmatures(const std::string& directory, const std::string& name, const std::string& identifier, list<Armature*>& armatures)
+void LoadWiArmatures(const std::string& directory, const std::string& name, const std::string& identifier, unordered_set<Armature*>& armatures)
 {
 	stringstream filename("");
 	filename<<directory<<name;
 
 	ifstream file(filename.str().c_str());
-	if(file){
-		while(!file.eof()){
+	if(file)
+	{
+		Armature* armature = nullptr;
+		while(!file.eof())
+		{
 			float trans[] = { 0,0,0,0 };
 			string line="";
 			file>>line;
-			if(line[0]=='/' && line.substr(2,8)=="ARMATURE") {
-				armatures.push_back(new Armature(line.substr(11,strlen(line.c_str())-11),identifier) );
+			if(line[0]=='/' && line.substr(2,8)=="ARMATURE") 
+			{
+				armature = new Armature(line.substr(11, strlen(line.c_str()) - 11), identifier);
+				armatures.insert(armature);
 			}
-			else{
-				switch(line[0]){
+			else
+			{
+				switch(line[0])
+				{
 				case 'r':
 					file>>trans[0]>>trans[1]>>trans[2]>>trans[3];
-					armatures.back()->rotation_rest = XMFLOAT4(trans[0],trans[1],trans[2],trans[3]);
+					armature->rotation_rest = XMFLOAT4(trans[0],trans[1],trans[2],trans[3]);
 					break;
 				case 's':
 					file>>trans[0]>>trans[1]>>trans[2];
-					armatures.back()->scale_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
+					armature->scale_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
 					break;
 				case 't':
 					file>>trans[0]>>trans[1]>>trans[2];
-					armatures.back()->translation_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
+					armature->translation_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
 					{
-						XMMATRIX world = XMMatrixScalingFromVector(XMLoadFloat3(&armatures.back()->scale))*XMMatrixRotationQuaternion(XMLoadFloat4(&armatures.back()->rotation))*XMMatrixTranslationFromVector(XMLoadFloat3(&armatures.back()->translation));
-						XMStoreFloat4x4( &armatures.back()->world_rest,world );
+						XMMATRIX world = XMMatrixScalingFromVector(XMLoadFloat3(&armature->scale))*XMMatrixRotationQuaternion(XMLoadFloat4(&armature->rotation))*XMMatrixTranslationFromVector(XMLoadFloat3(&armature->translation));
+						XMStoreFloat4x4( &armature->world_rest,world );
 					}
 					break;
 				case 'b':
 					{
 						string boneName;
 						file>>boneName;
-						armatures.back()->boneCollection.push_back(new Bone(boneName));
-						//stringstream ss("");
-						//ss<<armatures.back()->name<<"_"<<boneName;
-						//armatures.back()->boneCollection.push_back(new Bone(ss.str()));
-						//transforms.insert(pair<string,Transform*>(armatures.back()->boneCollection.back()->name,armatures.back()->boneCollection.back()));
+						armature->boneCollection.push_back(new Bone(boneName));
 					}
 					break;
 				case 'p':
-					file>>armatures.back()->boneCollection.back()->parentName;
+					file>>armature->boneCollection.back()->parentName;
 					break;
 				case 'l':
 					{
@@ -77,26 +80,18 @@ void LoadWiArmatures(const std::string& directory, const std::string& name, cons
 						XMMATRIX frame;
 						frame= XMMatrixRotationQuaternion(quaternion) * XMMatrixTranslationFromVector(translation) ;
 
-						XMStoreFloat3(&armatures.back()->boneCollection.back()->translation_rest,translation);
-						XMStoreFloat4(&armatures.back()->boneCollection.back()->rotation_rest,quaternion);
-						XMStoreFloat4x4(&armatures.back()->boneCollection.back()->world_rest,frame);
-						XMStoreFloat4x4(&armatures.back()->boneCollection.back()->restInv,XMMatrixInverse(0,frame));
-						
-						/*XMStoreFloat3( &armatures.back()->boneCollection.back().position,translationInverse );
-						XMStoreFloat4( &armatures.back()->boneCollection.back().rotation,quaternionInverse );*/
-
-						/*XMVECTOR sca,rot,tra;
-						XMMatrixDecompose(&sca,&rot,&tra,XMMatrixInverse(0,XMMatrixTranspose(frame))*XMLoadFloat4x4(&armatures.back()->world));
-						XMStoreFloat3( &armatures.back()->boneCollection.back().position,tra );
-						XMStoreFloat4( &armatures.back()->boneCollection.back().rotation,rot );*/
+						XMStoreFloat3(&armature->boneCollection.back()->translation_rest,translation);
+						XMStoreFloat4(&armature->boneCollection.back()->rotation_rest,quaternion);
+						XMStoreFloat4x4(&armature->boneCollection.back()->world_rest,frame);
+						XMStoreFloat4x4(&armature->boneCollection.back()->restInv,XMMatrixInverse(0,frame));
 						
 					}
 					break;
 				case 'c':
-					armatures.back()->boneCollection.back()->connected=true;
+					armature->boneCollection.back()->connected=true;
 					break;
 				case 'h':
-					file>>armatures.back()->boneCollection.back()->length;
+					file>>armature->boneCollection.back()->length;
 					break;
 				default: break;
 				}
@@ -108,7 +103,8 @@ void LoadWiArmatures(const std::string& directory, const std::string& name, cons
 
 
 	//CREATE FAMILY
-	for(Armature* armature : armatures){
+	for(Armature* armature : armatures)
+	{
 		armature->CreateFamily();
 	}
 
@@ -286,8 +282,8 @@ void LoadWiMaterialLibrary(const std::string& directory, const std::string& name
 	}
 
 }
-void LoadWiObjects(const std::string& directory, const std::string& name, const std::string& identifier, list<Object*>& objects
-					, list<Armature*>& armatures
+void LoadWiObjects(const std::string& directory, const std::string& name, const std::string& identifier, unordered_set<Object*>& objects
+					, unordered_set<Armature*>& armatures
 				   , MeshCollection& meshes, const MaterialCollection& materials)
 {
 	
@@ -295,45 +291,56 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 	filename<<directory<<name;
 
 	ifstream file(filename.str().c_str());
-	if(file){
-		while(!file.eof()){
+	if(file)
+	{
+		Object* object = nullptr;
+		while(!file.eof())
+		{
 			float trans[] = { 0,0,0,0 };
 			string line="";
 			file>>line;
-			if(line[0]=='/' && !strcmp(line.substr(2,6).c_str(),"OBJECT")) {
+			if(line[0]=='/' && !strcmp(line.substr(2,6).c_str(),"OBJECT")) 
+			{
 				stringstream identified_name("");
 				identified_name<<line.substr(9,strlen(line.c_str())-9)<<identifier;
-				objects.push_back(new Object(identified_name.str()));
+				object = new Object(identified_name.str());
+				objects.insert(object);
 			}
-			else{
-				switch(line[0]){
+			else
+			{
+				switch(line[0])
+				{
 				case 'm':
 					{
 						string meshName="";
 						file>>meshName;
 						stringstream identified_mesh("");
 						identified_mesh<<meshName<<identifier;
-						objects.back()->meshfile = identified_mesh.str();
+						object->meshfile = identified_mesh.str();
 						MeshCollection::iterator iter = meshes.find(identified_mesh.str());
 						
-						if(line[1]=='b'){ //binary load mesh in place if not present
-
-							if(iter==meshes.end()){
+						if(line[1]=='b')
+						{ 
+							//binary load mesh in place if not present
+							if(iter==meshes.end())
+							{
 								stringstream meshFileName("");
 								meshFileName<<directory<<meshName<<".wimesh";
 								Mesh* mesh = new Mesh();
 								mesh->LoadFromFile(identified_mesh.str(),meshFileName.str(),materials,armatures,identifier);
-								objects.back()->mesh=mesh;
+								object->mesh=mesh;
 								meshes.insert(pair<string,Mesh*>(identified_mesh.str(),mesh));
 							}
-							else{
-								objects.back()->mesh=iter->second;
+							else
+							{
+								object->mesh=iter->second;
 							}
 						}
-						else{
-							if(iter!=meshes.end()) {
-								objects.back()->mesh=iter->second;
-								//objects.back()->mesh->usedBy.push_back(objects.size()-1);
+						else
+						{
+							if (iter != meshes.end())
+							{
+								object->mesh = iter->second;
 							}
 						}
 					}
@@ -344,31 +351,14 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 						file>>parentName;
 						stringstream identified_parentName("");
 						identified_parentName<<parentName<<identifier;
-						objects.back()->parentName = identified_parentName.str();
-						//for(Armature* a : armatures){
-						//	if(!a->name.compare(identified_parentName.str())){
-						//		objects.back()->parentName=identified_parentName.str();
-						//		objects.back()->parent=a;
-						//		objects.back()->attachTo(a,1,1,1);
-						//		objects.back()->armatureDeform=true;
-						//	}
-						//}
+						object->parentName = identified_parentName.str();
 					}
 					break;
 				case 'b':
 					{
 						string bone="";
 						file>>bone;
-						objects.back()->boneParent = bone;
-						//if(objects.back()->parent!=nullptr){
-						//	for(Bone* b : ((Armature*)objects.back()->parent)->boneCollection){
-						//		if(!bone.compare(b->name)){
-						//			objects.back()->parent=b;
-						//			objects.back()->armatureDeform=false;
-						//			break;
-						//		}
-						//	}
-						//}
+						object->boneParent = bone;
 					}
 					break;
 				case 'I':
@@ -376,7 +366,7 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 						XMFLOAT3 s,t;
 						XMFLOAT4 r;
 						file>>t.x>>t.y>>t.z>>r.x>>r.y>>r.z>>r.w>>s.x>>s.y>>s.z;
-						XMStoreFloat4x4(&objects.back()->parent_inv_rest
+						XMStoreFloat4x4(&object->parent_inv_rest
 								, XMMatrixScalingFromVector(XMLoadFloat3(&s)) *
 									XMMatrixRotationQuaternion(XMLoadFloat4(&r)) *
 									XMMatrixTranslationFromVector(XMLoadFloat3(&t))
@@ -385,23 +375,15 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 					break;
 				case 'r':
 					file>>trans[0]>>trans[1]>>trans[2]>>trans[3];
-					objects.back()->Rotate(XMFLOAT4(trans[0], trans[1], trans[2],trans[3]));
-					//objects.back()->rotation_rest = XMFLOAT4(trans[0],trans[1],trans[2],trans[3]);
+					object->Rotate(XMFLOAT4(trans[0], trans[1], trans[2],trans[3]));
 					break;
 				case 's':
 					file>>trans[0]>>trans[1]>>trans[2];
-					objects.back()->Scale(XMFLOAT3(trans[0], trans[1], trans[2]));
-					//objects.back()->scale_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
+					object->Scale(XMFLOAT3(trans[0], trans[1], trans[2]));
 					break;
 				case 't':
 					file>>trans[0]>>trans[1]>>trans[2];
-					objects.back()->Translate(XMFLOAT3(trans[0], trans[1], trans[2]));
-					//objects.back()->translation_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
-					//XMStoreFloat4x4( &objects.back()->world_rest, XMMatrixScalingFromVector(XMLoadFloat3(&objects.back()->scale_rest))
-					//											*XMMatrixRotationQuaternion(XMLoadFloat4(&objects.back()->rotation_rest))
-					//											*XMMatrixTranslationFromVector(XMLoadFloat3(&objects.back()->translation_rest))
-					//										);
-					//objects.back()->world=objects.back()->world_rest;
+					object->Translate(XMFLOAT3(trans[0], trans[1], trans[2]));
 					break;
 				case 'E':
 					{
@@ -412,18 +394,16 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 						float scaleX,scaleY,rot;
 						file>>systemName>>visibleEmitter>>materialName>>size>>randfac>>norfac>>count>>life>>randlife;
 						file>>scaleX>>scaleY>>rot;
-						
-						//if(visibleEmitter) objects.back()->emitterType=Object::EMITTER_VISIBLE;
-						//else if(objects.back()->emitterType ==Object::NO_EMITTER) objects.back()->emitterType =Object::EMITTER_INVISIBLE;
 
 						if(wiRenderer::EMITTERSENABLED){
 							stringstream identified_materialName("");
 							identified_materialName<<materialName<<identifier;
 							stringstream identified_systemName("");
 							identified_systemName<<systemName<<identifier;
-							if(objects.back()->mesh){
-								objects.back()->eParticleSystems.push_back( 
-									new wiEmittedParticle(identified_systemName.str(),identified_materialName.str(),objects.back(),size,randfac,norfac,count,life,randlife,scaleX,scaleY,rot) 
+							if(object->mesh)
+							{
+								object->eParticleSystems.push_back( 
+									new wiEmittedParticle(identified_systemName.str(),identified_materialName.str(),object,size,randfac,norfac,count,life,randlife,scaleX,scaleY,rot) 
 									);
 							}
 						}
@@ -439,18 +419,18 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 						if(wiRenderer::HAIRPARTICLEENABLED){
 							stringstream identified_materialName("");
 							identified_materialName<<mat<<identifier;
-							objects.back()->hParticleSystems.push_back(new wiHairParticle(name,len,count,identified_materialName.str(),objects.back(),densityG,lenG) );
+							object->hParticleSystems.push_back(new wiHairParticle(name,len,count,identified_materialName.str(),object,densityG,lenG) );
 						}
 					}
 					break;
 				case 'P':
-					objects.back()->rigidBody = true;
-					file>>objects.back()->collisionShape>>objects.back()->mass>>
-						objects.back()->friction>>objects.back()->restitution>>objects.back()->damping>>objects.back()->physicsType>>
-						objects.back()->kinematic;
+					object->rigidBody = true;
+					file>>object->collisionShape>>object->mass>>
+						object->friction>>object->restitution>>object->damping>>object->physicsType>>
+						object->kinematic;
 					break;
 				case 'T':
-					file >> objects.back()->transparency;
+					file >> object->transparency;
 					break;
 				default: break;
 				}
@@ -459,34 +439,9 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 	}
 	file.close();
 
-	//for (unsigned int i = 0; i<objects.size(); i++){
-	//	if(objects[i]->mesh){
-	//		if(objects[i]->mesh->trailInfo.base>=0 && objects[i]->mesh->trailInfo.tip>=0){
-	//			//objects[i]->trail.resize(MAX_RIBBONTRAILS);
-	//			GPUBufferDesc bd;
-	//			ZeroMemory( &bd, sizeof(bd) );
-	//			bd.Usage = USAGE_DYNAMIC;
-	//			bd.ByteWidth = sizeof( RibbonVertex ) * 1000;
-	//			bd.BindFlags = BIND_VERTEX_BUFFER;
-	//			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	//			wiRenderer::GetDevice()->CreateBuffer( &bd, NULL, &objects[i]->trailBuff );
-	//			objects[i]->trailTex = wiTextureHelper::getInstance()->getTransparent();
-	//			objects[i]->trailDistortTex = wiTextureHelper::getInstance()->getNormalMapDefault();
-	//		}
-	//	}
-	//}
-
-	//for (MeshCollection::iterator iter = meshes.begin(); iter != meshes.end(); ++iter){
-	//	Mesh* iMesh = iter->second;
-
-	//	iMesh->CreateVertexArrays();
-	//	iMesh->Optimize();
-	//	iMesh->CreateBuffers();
-	//}
-
 }
 void LoadWiMeshes(const std::string& directory, const std::string& name, const std::string& identifier, MeshCollection& meshes, 
-	const list<Armature*>& armatures, const MaterialCollection& materials)
+	const unordered_set<Armature*>& armatures, const MaterialCollection& materials)
 {
 	int meshI=(int)(meshes.size()-1);
 	Mesh* currentMesh = NULL;
@@ -496,7 +451,8 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 
 	ifstream file(filename.str().c_str());
 	if(file){
-		while(!file.eof()){
+		while(!file.eof())
+		{
 			float trans[] = { 0,0,0,0 };
 			string line="";
 			file>>line;
@@ -507,8 +463,10 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 				meshes.insert( pair<string,Mesh*>(currentMesh->name,currentMesh) );
 				meshI++;
 			}
-			else{
-				switch(line[0]){
+			else
+			{
+				switch(line[0])
+				{
 				case 'p':
 					{
 						string parentArmature="";
@@ -517,10 +475,6 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 						stringstream identified_parentArmature("");
 						identified_parentArmature<<parentArmature<<identifier;
 						currentMesh->parent=identified_parentArmature.str();
-						//for (unsigned int i = 0; i<armatures.size(); ++i)
-						//	if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str())){
-						//		currentMesh->armature=armatures[i];
-						//	}
 						for (auto& a : armatures)
 						{
 							if (!a->name.compare(currentMesh->parent))
@@ -552,7 +506,6 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 				case 'u':
 					file >> currentMesh->vertices_FULL.back().tex.x;
 					file >> currentMesh->vertices_FULL.back().tex.y;
-					//texCoordFill++;
 					break;
 				case 'w':
 					{
@@ -560,23 +513,9 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 						float weight=0;
 						int BONEINDEX=0;
 						file>>nameB>>weight;
-						//bool gotArmature=false;
 						bool gotBone=false;
-						//int i=0;
-						//while(!gotArmature && i<(int)armatures.size()){  //SEARCH FOR PARENT ARMATURE
-						//	if(!strcmp(armatures[i]->name.c_str(),currentMesh->parent.c_str()))
-						//		gotArmature=true;
-						//	else i++;
-						//}
 						if(currentMesh->armature != nullptr){
 							int j=0;
-							//while(!gotBone && j<(int)currentMesh->armature->boneCollection.size()){
-							//	if(!armatures[i]->boneCollection[j]->name.compare(nameB)){
-							//		gotBone=true;
-							//		BONEINDEX=j; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
-							//	}
-							//	j++;
-							//}
 							for (auto& b : currentMesh->armature->boneCollection)
 							{
 								if (!b->name.compare(nameB))
@@ -587,7 +526,9 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 								j++;
 							}
 						}
-						if (gotBone) { //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
+						if (gotBone) 
+						{
+							//ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
 							if (!currentMesh->vertices_FULL.back().wei.x) {
 								currentMesh->vertices_FULL.back().wei.x = weight;
 								currentMesh->vertices_FULL.back().ind.x = (float)BONEINDEX;
@@ -725,7 +666,7 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, const s
 		meshes.insert( pair<string,Mesh*>(currentMesh->name,currentMesh) );
 
 }
-void LoadWiActions(const std::string& directory, const std::string& name, const std::string& identifier, list<Armature*>& armatures)
+void LoadWiActions(const std::string& directory, const std::string& name, const std::string& identifier, unordered_set<Armature*>& armatures)
 {
 	Armature* armatureI=nullptr;
 	Bone* boneI=nullptr;
@@ -816,44 +757,50 @@ void LoadWiActions(const std::string& directory, const std::string& name, const 
 	}
 	file.close();
 }
-void LoadWiLights(const std::string& directory, const std::string& name, const std::string& identifier, list<Light*>& lights)
+void LoadWiLights(const std::string& directory, const std::string& name, const std::string& identifier, unordered_set<Light*>& lights)
 {
 
 	stringstream filename("");
 	filename<<directory<<name;
 
 	ifstream file(filename.str().c_str());
-	if(file){
-		while(!file.eof()){
+	if(file)
+	{
+		Light* light = nullptr;
+		while(!file.eof())
+		{
 			string line="";
 			file>>line;
-			switch(line[0]){
+			switch(line[0])
+			{
 			case 'P':
 				{
-					lights.push_back(new Light());
-					lights.back()->SetType(Light::POINT);
+					light = new Light();
+					lights.insert(light);
+					light->SetType(Light::POINT);
 					string lname = "";
-					file>>lname>> lights.back()->shadow;
+					file>>lname>> light->shadow;
 					stringstream identified_name("");
 					identified_name<<lname<<identifier;
-					lights.back()->name=identified_name.str();
-					
+					light->name=identified_name.str();
 				}
 				break;
 			case 'D':
 				{
-					lights.push_back(new Light());
-					lights.back()->SetType(Light::DIRECTIONAL);
-					file>>lights.back()->name; 
-					lights.back()->shadow = true;
+					light = new Light();
+					lights.insert(light);
+					light->SetType(Light::DIRECTIONAL);
+					file>>light->name; 
+					light->shadow = true;
 				}
 				break;
 			case 'S':
 				{
-					lights.push_back(new Light());
-					lights.back()->SetType(Light::SPOT);
-					file>>lights.back()->name;
-					file>>lights.back()->shadow>>lights.back()->enerDis.z;
+					light = new Light();
+					lights.insert(light);
+					light->SetType(Light::SPOT);
+					file>>light->name;
+					file>>light->shadow>>light->enerDis.z;
 				}
 				break;
 			case 'p':
@@ -863,28 +810,14 @@ void LoadWiLights(const std::string& directory, const std::string& name, const s
 					
 					stringstream identified_parentName("");
 					identified_parentName<<parentName<<identifier;
-					lights.back()->parentName=identified_parentName.str();
-					//for(std::map<string,Transform*>::iterator it=transforms.begin();it!=transforms.end();++it){
-					//	if(!it->second->name.compare(lights.back()->parentName)){
-					//		lights.back()->parent=it->second;
-					//		lights.back()->attachTo(it->second,1,1,1);
-					//		break;
-					//	}
-					//}
+					light->parentName=identified_parentName.str();
 				}
 				break;
 			case 'b':
 				{
 					string parentBone="";
 					file>>parentBone;
-					lights.back()->boneParent = parentBone;
-
-					//for(Bone* b : ((Armature*)lights.back()->parent)->boneCollection){
-					//	if(!b->name.compare(parentBone)){
-					//		lights.back()->parent=b;
-					//		lights.back()->attachTo(b,1,1,1);
-					//	}
-					//}
+					light->boneParent = parentBone;
 				}
 				break;
 			case 'I':
@@ -892,7 +825,7 @@ void LoadWiLights(const std::string& directory, const std::string& name, const s
 					XMFLOAT3 s,t;
 					XMFLOAT4 r;
 					file>>t.x>>t.y>>t.z>>r.x>>r.y>>r.z>>r.w>>s.x>>s.y>>s.z;
-					XMStoreFloat4x4(&lights.back()->parent_inv_rest
+					XMStoreFloat4x4(&light->parent_inv_rest
 							, XMMatrixScalingFromVector(XMLoadFloat3(&s)) *
 								XMMatrixRotationQuaternion(XMLoadFloat4(&r)) *
 								XMMatrixTranslationFromVector(XMLoadFloat3(&t))
@@ -903,34 +836,31 @@ void LoadWiLights(const std::string& directory, const std::string& name, const s
 				{
 					float x,y,z;
 					file>>x>>y>>z;
-					lights.back()->Translate(XMFLOAT3(x, y, z));
-					//lights.back()->translation_rest=XMFLOAT3(x,y,z);
+					light->Translate(XMFLOAT3(x, y, z));
 					break;
 				}
 			case 'r':
 				{
 					float x,y,z,w;
 					file>>x>>y>>z>>w;
-					lights.back()->Rotate(XMFLOAT4(x, y, z, w));
-					//lights.back()->rotation_rest=XMFLOAT4(x,y,z,w);
+					light->Rotate(XMFLOAT4(x, y, z, w));
 					break;
 				}
 			case 'c':
 				{
 					float r,g,b;
 					file>>r>>g>>b;
-					lights.back()->color=XMFLOAT4(r,g,b,0);
+					light->color=XMFLOAT4(r,g,b,0);
 					break;
 				}
 			case 'e':
-				file>>lights.back()->enerDis.x;
+				file>>light->enerDis.x;
 				break;
 			case 'd':
-				file>>lights.back()->enerDis.y;
-				//lights.back()->enerDis.y *= XMVectorGetX( world.r[0] )*0.1f;
+				file>>light->enerDis.y;
 				break;
 			case 'n':
-				lights.back()->noHalo=true;
+				light->noHalo=true;
 				break;
 			case 'l':
 				{
@@ -940,8 +870,8 @@ void LoadWiLights(const std::string& directory, const std::string& name, const s
 					rim<<directory<<"rims/"<<t;
 					Texture2D* tex=nullptr;
 					if ((tex = (Texture2D*)wiResourceManager::GetGlobal()->add(rim.str())) != nullptr){
-						lights.back()->lensFlareRimTextures.push_back(tex);
-						lights.back()->lensFlareNames.push_back(rim.str());
+						light->lensFlareRimTextures.push_back(tex);
+						light->lensFlareNames.push_back(rim.str());
 					}
 				}
 				break;
@@ -949,21 +879,11 @@ void LoadWiLights(const std::string& directory, const std::string& name, const s
 			}
 		}
 
-		//for(MeshCollection::iterator iter=lightGwiRenderer.begin(); iter!=lightGwiRenderer.end(); ++iter){
-		//	Mesh* iMesh = iter->second;
-		//	GPUBufferDesc bd;
-		//	ZeroMemory( &bd, sizeof(bd) );
-		//	bd.Usage = USAGE_DYNAMIC;
-		//	bd.ByteWidth = sizeof( Instance )*iMesh->usedBy.size();
-		//	bd.BindFlags = BIND_VERTEX_BUFFER;
-		//	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		//	wiRenderer::GetDevice()->CreateBuffer( &bd, 0, &iMesh->meshInstanceBuffer );
-		//}
 	}
 	file.close();
 }
 void LoadWiHitSpheres(const std::string& directory, const std::string& name, const std::string& identifier, std::vector<HitSphere*>& spheres
-					  ,const list<Armature*>& armatures)
+					  ,const unordered_set<Armature*>& armatures)
 {
 	stringstream filename("");
 	filename<<directory<<name;
@@ -1116,7 +1036,8 @@ void LoadWiWorldInfo(const std::string&directory, const std::string& name, World
 	file.close();
 }
 void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::vector<Camera>& cameras
-				   ,const list<Armature*>& armatures){
+				   ,const unordered_set<Armature*>& armatures)
+{
 	stringstream filename("");
 	filename<<directory<<name;
 
@@ -1183,31 +1104,32 @@ void LoadWiCameras(const std::string&directory, const std::string& name, const s
 	}
 	file.close();
 }
-void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, list<Decal*>& decals){
+void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, unordered_set<Decal*>& decals)
+{
 	stringstream filename("");
 	filename<<directory<<name;
 
 	ifstream file(filename.str().c_str());
 	if(file)
 	{
+		Decal* decal = nullptr;
 		string voidStr="";
 		file>>voidStr;
-		while(!file.eof()){
+		while(!file.eof())
+		{
 			string line="";
 			file>>line;
-			switch(line[0]){
+			switch(line[0])
+			{
 			case 'd':
 				{
 					string name;
 					XMFLOAT3 loc,scale;
 					XMFLOAT4 rot;
 					file>>name>>scale.x>>scale.y>>scale.z>>loc.x>>loc.y>>loc.z>>rot.x>>rot.y>>rot.z>>rot.w;
-					Decal* decal = new Decal();
+					decal = new Decal(loc, scale, rot);
 					decal->name=name;
-					decal->translation_rest=loc;
-					decal->scale_rest=scale;
-					decal->rotation_rest=rot;
-					decals.push_back(new Decal(loc,scale,rot));
+					decals.insert(decal);
 				}
 				break;
 			case 't':
@@ -1216,7 +1138,7 @@ void LoadWiDecals(const std::string&directory, const std::string& name, const st
 					file>>tex;
 					stringstream ss("");
 					ss<<directory<<texturesDir<<tex;
-					decals.back()->addTexture(ss.str());
+					decal->addTexture(ss.str());
 				}
 				break;
 			case 'n':
@@ -1225,7 +1147,7 @@ void LoadWiDecals(const std::string&directory, const std::string& name, const st
 					file>>tex;
 					stringstream ss("");
 					ss<<directory<<texturesDir<<tex;
-					decals.back()->addNormal(ss.str());
+					decal->addNormal(ss.str());
 				}
 				break;
 			default:break;
@@ -1665,13 +1587,11 @@ void VertexGroup::Serialize(wiArchive& archive)
 
 #pragma region MESH
 
-//GPUBuffer Mesh::impostorVBs[VPROP_COUNT];
 GPUBuffer Mesh::impostorVB_POS;
-GPUBuffer Mesh::impostorVB_NOR;
 GPUBuffer Mesh::impostorVB_TEX;
 
 void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
-	, const MaterialCollection& materialColl, const list<Armature*>& armatures, const std::string& identifier) {
+	, const MaterialCollection& materialColl, const unordered_set<Armature*>& armatures, const std::string& identifier) {
 	name = newName;
 
 	BYTE* buffer;
@@ -2024,10 +1944,6 @@ void Mesh::CreateBuffers(Object* object)
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
 
-			InitData.pSysMem = vertices_NOR.data();
-			bd.ByteWidth = (UINT)(sizeof(Vertex_NOR) * vertices_NOR.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_NOR);
-
 			InitData.pSysMem = vertices_BON.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
@@ -2041,9 +1957,6 @@ void Mesh::CreateBuffers(Object* object)
 
 				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
-
-				bd.ByteWidth = (UINT)(sizeof(Vertex_NOR) * vertices_NOR.size());
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_NOR);
 
 				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
@@ -2299,12 +2212,10 @@ void Mesh::CreateImpostorVB()
 
 
 		Vertex_POS impostorVertices_POS[ARRAYSIZE(impostorVertices)];
-		Vertex_NOR impostorVertices_NOR[ARRAYSIZE(impostorVertices)];
 		Vertex_TEX impostorVertices_TEX[ARRAYSIZE(impostorVertices)];
 		for (int i = 0; i < ARRAYSIZE(impostorVertices); ++i)
 		{
 			impostorVertices_POS[i] = Vertex_POS(impostorVertices[i]);
-			impostorVertices_NOR[i] = Vertex_NOR(impostorVertices[i]);
 			impostorVertices_TEX[i] = Vertex_TEX(impostorVertices[i]);
 		}
 
@@ -2319,9 +2230,6 @@ void Mesh::CreateImpostorVB()
 		InitData.pSysMem = impostorVertices_POS;
 		bd.ByteWidth = sizeof(impostorVertices_POS);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_POS);
-		InitData.pSysMem = impostorVertices_NOR;
-		bd.ByteWidth = sizeof(impostorVertices_NOR);
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_NOR);
 		InitData.pSysMem = impostorVertices_TEX;
 		bd.ByteWidth = sizeof(impostorVertices_TEX);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
@@ -2336,7 +2244,6 @@ void Mesh::CreateVertexArrays()
 
 	// De-interleave vertex arrays:
 	vertices_POS.resize(vertices_FULL.size());
-	vertices_NOR.resize(vertices_FULL.size());
 	vertices_TEX.resize(vertices_FULL.size());
 	vertices_BON.resize(vertices_FULL.size());
 	for (size_t i = 0; i < vertices_FULL.size(); ++i)
@@ -2361,14 +2268,12 @@ void Mesh::CreateVertexArrays()
 
 		// Split and type conversion:
 		vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
-		vertices_NOR[i] = Vertex_NOR(vertices_FULL[i]);
 		vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
 		vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
 	}
 
 	// Save original vertices. This will be input for CPU skinning / soft bodies
 	vertices_Transformed_POS = vertices_POS;
-	vertices_Transformed_NOR = vertices_NOR;
 	vertices_Transformed_PRE = vertices_POS; // pre <- pos!!
 
 	// Map subset indices:
@@ -2800,7 +2705,7 @@ void Model::UpdateModel()
 		x->UpdateLight();
 	}
 	
-	list<Decal*>::iterator iter = decals.begin();
+	unordered_set<Decal*>::iterator iter = decals.begin();
 	while (iter != decals.end())
 	{
 		Decal* decal = *iter;
@@ -2820,7 +2725,7 @@ void Model::Add(Object* value)
 {
 	if (value != nullptr)
 	{
-		objects.push_back(value);
+		objects.insert(value);
 		if (value->mesh != nullptr)
 		{
 			meshes.insert(pair<string, Mesh*>(value->mesh->name, value->mesh));
@@ -2836,41 +2741,41 @@ void Model::Add(Armature* value)
 {
 	if (value != nullptr)
 	{
-		armatures.push_back(value);
+		armatures.insert(value);
 	}
 }
 void Model::Add(Light* value)
 {
 	if (value != nullptr)
 	{
-		lights.push_back(value);
+		lights.insert(value);
 	}
 }
 void Model::Add(Decal* value)
 {
 	if (value != nullptr)
 	{
-		decals.push_back(value);
+		decals.insert(value);
 	}
 }
 void Model::Add(ForceField* value)
 {
 	if (value != nullptr)
 	{
-		forces.push_back(value);
+		forces.insert(value);
 	}
 }
 void Model::Add(Model* value)
 {
 	if (value != nullptr)
 	{
-		objects.insert(objects.begin(), value->objects.begin(), value->objects.end());
-		armatures.insert(armatures.begin(), value->armatures.begin(), value->armatures.end());
-		decals.insert(decals.begin(), value->decals.begin(), value->decals.end());
-		lights.insert(lights.begin(), value->lights.begin(), value->lights.end());
+		objects.insert(value->objects.begin(), value->objects.end());
+		armatures.insert(value->armatures.begin(), value->armatures.end());
+		decals.insert(value->decals.begin(), value->decals.end());
+		lights.insert(value->lights.begin(), value->lights.end());
 		meshes.insert(value->meshes.begin(), value->meshes.end());
 		materials.insert(value->materials.begin(), value->materials.end());
-		forces.insert(forces.begin(), value->forces.begin(), value->forces.end());
+		forces.insert(value->forces.begin(), value->forces.end());
 	}
 }
 void Model::Serialize(wiArchive& archive)
@@ -2886,7 +2791,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Object* x = new Object;
 			x->Serialize(archive);
-			objects.push_back(x);
+			objects.insert(x);
 		}
 
 		archive >> meshCount;
@@ -2910,7 +2815,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Armature* x = new Armature;
 			x->Serialize(archive);
-			armatures.push_back(x);
+			armatures.insert(x);
 		}
 
 		archive >> lightsCount;
@@ -2918,7 +2823,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Light* x = new Light;
 			x->Serialize(archive);
-			lights.push_back(x);
+			lights.insert(x);
 		}
 
 		archive >> decalsCount;
@@ -2926,7 +2831,7 @@ void Model::Serialize(wiArchive& archive)
 		{
 			Decal* x = new Decal;
 			x->Serialize(archive);
-			decals.push_back(x);
+			decals.insert(x);
 		}
 
 		if (archive.GetVersion() >= 10)
@@ -2936,7 +2841,7 @@ void Model::Serialize(wiArchive& archive)
 			{
 				ForceField* x = new ForceField;
 				x->Serialize(archive);
-				forces.push_back(x);
+				forces.insert(x);
 			}
 		}
 

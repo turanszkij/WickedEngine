@@ -10,16 +10,14 @@ struct Bone
 STRUCTUREDBUFFER(boneBuffer, Bone, SKINNINGSLOT_IN_BONEBUFFER);
 
 RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
-RAWBUFFER(vertexBuffer_NOR, SKINNINGSLOT_IN_VERTEX_NOR);
 RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
 
 RWRAWBUFFER(streamoutBuffer_POS, SKINNINGSLOT_OUT_VERTEX_POS);
-RWRAWBUFFER(streamoutBuffer_NOR, SKINNINGSLOT_OUT_VERTEX_NOR);
 RWRAWBUFFER(streamoutBuffer_PRE, SKINNINGSLOT_OUT_VERTEX_PRE);
 
 
 
-inline void Skinning(inout float4 pos, inout float4 nor, in float4 inBon, in float4 inWei)
+inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in float4 inWei)
 {
 	float4 p = 0;
 	float3 n = 0;
@@ -52,28 +50,25 @@ inline void Skinning(inout float4 pos, inout float4 nor, in float4 inBon, in flo
 [numthreads(SKINNING_COMPUTE_THREADCOUNT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint stride_POS = 16;
-	const uint stride_NOR = 4;
+	const uint stride_POS_NOR = 16;
 	const uint stride_BON_IND = 8;
 	const uint stride_BON_WEI = 8;
 
-	const uint fetchAddress_POS = DTid.x * stride_POS;
-	const uint fetchAddress_NOR = DTid.x * stride_NOR;
+	const uint fetchAddress_POS_NOR = DTid.x * stride_POS_NOR;
 	const uint fetchAddress_BON = DTid.x * (stride_BON_IND + stride_BON_WEI);
 
 	// Manual type-conversion for pos:
-	uint4 pos_u = vertexBuffer_POS.Load4(fetchAddress_POS);
-	float4 pos = asfloat(pos_u);
+	uint4 pos_nor_u = vertexBuffer_POS.Load4(fetchAddress_POS_NOR);
+	float3 pos = asfloat(pos_nor_u.xyz);
 
 
 	// Manual type-conversion for normal:
-	uint nor_u = vertexBuffer_NOR.Load(fetchAddress_NOR);
 	float4 nor = 0;
 	{
-		nor.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor.w = (float)((nor_u >> 24) & 0x000000FF) / 255.0f; // occlusion
+		nor.x = (float)((pos_nor_u.w >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		nor.y = (float)((pos_nor_u.w >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		nor.z = (float)((pos_nor_u.w >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		nor.w = (float)((pos_nor_u.w >> 24) & 0x000000FF) / 255.0f; // wind
 	}
 
 
@@ -95,25 +90,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 	// Perform skinning:
-	Skinning(pos, nor, ind, wei);
+	Skinning(pos, nor.xyz, ind, wei);
 
 
 
 	// Manual type-conversion for pos:
-	pos_u = asuint(pos);
+	pos_nor_u.xyz = asuint(pos.xyz);
 
 
 	// Manual type-conversion for normal:
-	nor_u = 0;
+	pos_nor_u.w = 0;
 	{
-		nor_u |= (uint)((nor.x * 0.5f + 0.5f) * 255.0f) << 0;
-		nor_u |= (uint)((nor.y * 0.5f + 0.5f) * 255.0f) << 8;
-		nor_u |= (uint)((nor.z * 0.5f + 0.5f) * 255.0f) << 16;
-		nor_u |= (uint)(nor.w * 255.0f) << 24; // occlusion
+		pos_nor_u.w |= (uint)((nor.x * 0.5f + 0.5f) * 255.0f) << 0;
+		pos_nor_u.w |= (uint)((nor.y * 0.5f + 0.5f) * 255.0f) << 8;
+		pos_nor_u.w |= (uint)((nor.z * 0.5f + 0.5f) * 255.0f) << 16;
+		pos_nor_u.w |= (uint)(nor.w * 255.0f) << 24; // wind
 	}
 
 	// Store data:
-	streamoutBuffer_PRE.Store4(fetchAddress_POS, streamoutBuffer_POS.Load4(fetchAddress_POS)); // copy prev frame current pos to current frame prev pos
-	streamoutBuffer_POS.Store4(fetchAddress_POS, pos_u);
-	streamoutBuffer_NOR.Store(fetchAddress_NOR, nor_u);
+	streamoutBuffer_PRE.Store4(fetchAddress_POS_NOR, streamoutBuffer_POS.Load4(fetchAddress_POS_NOR)); // copy prev frame current pos to current frame prev pos
+	streamoutBuffer_POS.Store4(fetchAddress_POS_NOR, pos_nor_u);
 }

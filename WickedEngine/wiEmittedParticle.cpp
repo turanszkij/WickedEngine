@@ -283,7 +283,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xEmitCount = (UINT)emit;
 	cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
 	cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
-	cb.xEmitterMeshVertexNormalStride = sizeof(Mesh::Vertex_NOR);
 	cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
 	cb.xParticleLifeSpan = life / 60.0f;
 	cb.xParticleLifeSpanRandomness = random_life;
@@ -313,7 +312,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		wiTextureHelper::getInstance()->getRandom64x64(),
 		&object->mesh->indexBuffer,
 		&object->mesh->vertexBuffer_POS,
-		&object->mesh->vertexBuffer_NOR,
 	};
 	device->BindResourcesCS(resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 

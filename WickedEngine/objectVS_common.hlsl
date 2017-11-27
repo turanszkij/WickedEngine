@@ -4,49 +4,34 @@
 
 PixelInputType main(Input_Object_ALL input)
 {
-	PixelInputType Out = (PixelInputType)0;
+	PixelInputType Out;
 
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instancePrev);
+	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
 	Out.instanceColor = input.instance.color_dither.rgb;
 	Out.dither = input.instance.color_dither.a;
-	
-	float4 pos = float4(input.pos.xyz, 1);
-	float4 posPrev = float4(input.pre.xyz, 1);
 
-	pos = mul( pos,WORLD );
-	posPrev = mul(posPrev, WORLDPREV);
+	surface.position = mul(surface.position, WORLD);
+	surface.prevPos = mul(surface.prevPos, WORLDPREV);
+	surface.normal = normalize(mul(surface.normal, (float3x3)WORLD));
 
-
-	Out.clip = dot(pos, g_xClipPlane);
+	Out.clip = dot(surface.position, g_xClipPlane);
 		
-	float3 normal = mul(input.nor.xyz * 2 - 1, (float3x3)WORLD);
-	affectWind(pos.xyz, input.pos.w, g_xFrame_Time);
-	affectWind(posPrev.xyz, input.pos.w, g_xFrame_TimePrev);
+	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
+	affectWind(surface.prevPos.xyz, surface.wind, g_xFrame_TimePrev);
 
-
-	//VERTEX OFFSET MOTION BLUR
-	//if(xMotionBlur.x){
-		//float offsetMod = dot(input.nor,vel);
-		//pos = lerp(pos,posPrev,(offsetMod<0?((1-saturate(offsetMod))*(noiseTex.SampleLevel( sampler_linear_wrap,input.tex.xy,0 ).r)*0.6f):0));
-	//}
-
-	Out.pos = Out.pos2D = mul(pos, g_xCamera_VP);
-	Out.pos2DPrev = mul(posPrev, g_xFrame_MainCamera_PrevVP);
-	Out.pos3D = pos.xyz;
-	Out.tex = input.tex.xy;
-	Out.nor = normalize(normal);
+	Out.pos = Out.pos2D = mul(surface.position, g_xCamera_VP);
+	Out.pos2DPrev = mul(surface.prevPos, g_xFrame_MainCamera_PrevVP);
+	Out.pos3D = surface.position.xyz;
+	Out.tex = surface.uv;
+	Out.nor = surface.normal;
 	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP).xy;
 
 
-	Out.ReflectionMapSamplingPos = mul(pos, g_xFrame_MainCamera_ReflVP);
-
-
-	//Out.vel = mul( vel.xyz, g_xCamera_VP ).xyz;
-
-	Out.ao = input.nor.w;
+	Out.ReflectionMapSamplingPos = mul(surface.position, g_xFrame_MainCamera_ReflVP);
 
 
 	return Out;

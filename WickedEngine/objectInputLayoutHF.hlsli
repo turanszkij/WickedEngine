@@ -15,40 +15,21 @@ struct Input_InstancePrev
 	float4 wiPrev2 : MATIPREV2;
 };
 
-struct Input_Shadow_POS
-{
-	float4 pos : POSITION;
-	Input_Instance instance;
-};
-struct Input_Shadow_POS_TEX
-{
-	float4 pos : POSITION;
-	float4 tex : TEXCOORD0;
-	Input_Instance instance;
-};
-struct Input_Skinning
-{
-	float4 pos : POSITION;
-	float4 nor : NORMAL;
-	float4 bon : TEXCOORD0;
-	float4 wei : TEXCOORD1;
-};
 struct Input_Object_POS
 {
-	float4 pos : POSITION;
+	float4 pos : POSITION_NORMAL_WIND;
 	Input_Instance instance;
 };
 struct Input_Object_POS_TEX
 {
-	float4 pos : POSITION;
-	float4 tex : TEXCOORD0;
+	float4 pos : POSITION_NORMAL_WIND;
+	float2 tex : TEXCOORD0;
 	Input_Instance instance;
 };
 struct Input_Object_ALL
 {
-	float4 pos : POSITION;
-	float4 nor : NORMAL;
-	float4 tex : TEXCOORD0;
+	float4 pos : POSITION_NORMAL_WIND;
+	float2 tex : TEXCOORD0;
 	float4 pre : TEXCOORD1;
 	Input_Instance instance;
 	Input_InstancePrev instancePrev;
@@ -71,6 +52,63 @@ inline float4x4 MakeWorldMatrixFromInstance(in Input_InstancePrev input)
 		, float4(input.wiPrev0.z, input.wiPrev1.z, input.wiPrev2.z, 0)
 		, float4(input.wiPrev0.w, input.wiPrev1.w, input.wiPrev2.w, 1)
 		);
+}
+
+struct VertexSurface
+{
+	float4 position;
+	float3 normal;
+	float wind;
+	float2 uv;
+	float4 prevPos;
+};
+inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
+{
+	VertexSurface surface;
+
+	surface.position = float4(input.pos.xyz, 1);
+
+	uint normal_wind = asuint(input.pos.w);
+	surface.normal.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.wind = (float)((normal_wind >> 24) & 0x000000FF) / 255.0f;
+
+	return surface;
+}
+inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
+{
+	VertexSurface surface;
+
+	surface.position = float4(input.pos.xyz, 1);
+
+	uint normal_wind = asuint(input.pos.w);
+	surface.normal.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.wind = (float)((normal_wind >> 24) & 0x000000FF) / 255.0f;
+
+	surface.uv = input.tex.xy;
+
+	return surface;
+}
+inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
+{
+	VertexSurface surface;
+
+	surface.position = float4(input.pos.xyz, 1);
+
+	uint normal_wind = asuint(input.pos.w);
+	surface.normal.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.wind = (float)((normal_wind >> 24) & 0x000000FF) / 255.0f;
+
+	surface.uv = input.tex.xy;
+
+	surface.prevPos = float4(input.pre.xyz, 1);
+
+	return surface;
 }
 
 #endif // _MESH_INPUT_LAYOUT_HF_
