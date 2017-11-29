@@ -77,7 +77,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	if (getSSAOEnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
-		fx.stencilComp = COMPARISON_LESS;
+		fx.stencilComp = STENCILMODE_LESS;
 		rtSSAO[0].Activate(threadID); {
 			fx.process.setSSAO(true);
 			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
@@ -100,7 +100,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.blur = 0;
 		}
 		fx.stencilRef = 0;
-		fx.stencilComp = 0;
+		fx.stencilComp = STENCILMODE_DISABLED;
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
@@ -108,7 +108,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	{
 		wiRenderer::GetDevice()->EventBegin("SSS", threadID);
 		fx.stencilRef = STENCILREF_SKIN;
-		fx.stencilComp = COMPARISON_LESS;
+		fx.stencilComp = STENCILMODE_LESS;
 		fx.quality = QUALITY_BILINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		rtSSS[1].Activate(threadID, 0, 0, 0, 0);
@@ -146,16 +146,16 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.stencilRef = 0;
-			fx.stencilComp = 0;
+			fx.stencilComp = STENCILMODE_DISABLED;
 			fx.presentFullScreen = true;
 			wiImage::Draw(static_cast<Texture2D*>(wiRenderer::textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
-			fx.stencilComp = COMPARISON_LESS;
+			fx.stencilComp = STENCILMODE_LESS;
 			wiImage::Draw(rtSSS[1].GetTexture(), fx, threadID);
 		}
 
 		fx.stencilRef = 0;
-		fx.stencilComp = 0;
+		fx.stencilComp = STENCILMODE_DISABLED;
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 

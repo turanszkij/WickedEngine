@@ -10,20 +10,23 @@
 using namespace wiGraphicsTypes;
 
 #pragma region STATICS
-BlendState		*wiImage::blendStateAlpha = nullptr, *wiImage::blendStatePremul = nullptr, *wiImage::blendStateAdd = nullptr, *wiImage::blendStateOpaque = nullptr, *wiImage::blendStateDisable = nullptr;
-GPUBuffer       *wiImage::constantBuffer = nullptr, *wiImage::processCb = nullptr;
+GPUBuffer			wiImage::constantBuffer, wiImage::processCb;
 
-VertexShader     *wiImage::vertexShader = nullptr,*wiImage::screenVS = nullptr;
-PixelShader		 *wiImage::imagePS = nullptr, *wiImage::imagePS_separatenormalmap = nullptr, *wiImage::imagePS_distortion = nullptr, *wiImage::imagePS_distortion_masked = nullptr, *wiImage::imagePS_masked = nullptr;
-PixelShader      *wiImage::blurHPS = nullptr, *wiImage::blurVPS = nullptr, *wiImage::shaftPS = nullptr, *wiImage::outlinePS = nullptr
-	, *wiImage::dofPS = nullptr, *wiImage::motionBlurPS = nullptr, *wiImage::bloomSeparatePS = nullptr, *wiImage::fxaaPS = nullptr, *wiImage::ssaoPS = nullptr, *wiImage::deferredPS = nullptr
-	, *wiImage::ssssPS = nullptr, *wiImage::linDepthPS = nullptr, *wiImage::colorGradePS = nullptr, *wiImage::ssrPS = nullptr, *wiImage::screenPS = nullptr, *wiImage::stereogramPS = nullptr
-	, *wiImage::tonemapPS = nullptr, *wiImage::reprojectDepthBufferPS = nullptr, *wiImage::downsampleDepthBufferPS = nullptr, *wiImage::temporalAAResolvePS = nullptr, *wiImage::sharpenPS = nullptr;
-	
+VertexShader*		wiImage::vertexShader = nullptr;
+VertexShader*		wiImage::screenVS = nullptr;
 
-RasterizerState		*wiImage::rasterizerState = nullptr;
-DepthStencilState	*wiImage::depthStencilStateGreater = nullptr, *wiImage::depthStencilStateLess = nullptr, *wiImage::depthStencilStateEqual = nullptr
-	, *wiImage::depthNoStencilState = nullptr, *wiImage::depthStencilStateDepthWrite = nullptr;
+PixelShader*		wiImage::imagePS[IMAGE_SHADER_COUNT];
+PixelShader*		wiImage::postprocessPS[POSTPROCESS_COUNT];
+PixelShader*		wiImage::deferredPS = nullptr;
+
+BlendState			wiImage::blendStates[BLENDMODE_COUNT];
+RasterizerState		wiImage::rasterizerState;
+DepthStencilState	wiImage::depthStencilStates[STENCILMODE_COUNT];
+DepthStencilState	wiImage::depthStencilStateDepthWrite;
+
+GraphicsPSO			wiImage::imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT];
+GraphicsPSO			wiImage::postprocessPSO[POSTPROCESS_COUNT];
+GraphicsPSO			wiImage::deferredPSO;
 
 #pragma endregion
 
@@ -40,16 +43,14 @@ void wiImage::LoadBuffers()
 	bd.ByteWidth = sizeof(ImageCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	constantBuffer = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, constantBuffer);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(PostProcessCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	processCb = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, NULL, processCb);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &processCb);
 
 	BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 }
@@ -60,51 +61,106 @@ void wiImage::LoadShaders()
 	vertexShader = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imageVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 	screenVS = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 
-	imagePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS.cso", wiResourceManager::PIXELSHADER));
-	imagePS_separatenormalmap = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
-	imagePS_distortion = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_distortion.cso", wiResourceManager::PIXELSHADER));
-	imagePS_distortion_masked = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_distortion_masked.cso", wiResourceManager::PIXELSHADER));
-	imagePS_masked = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
+	imagePS[IMAGE_SHADER_STANDARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS.cso", wiResourceManager::PIXELSHADER));
+	imagePS[IMAGE_SHADER_SEPARATENORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
+	imagePS[IMAGE_SHADER_DISTORTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_distortion.cso", wiResourceManager::PIXELSHADER));
+	imagePS[IMAGE_SHADER_DISTORTION_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_distortion_masked.cso", wiResourceManager::PIXELSHADER));
+	imagePS[IMAGE_SHADER_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
+	imagePS[IMAGE_SHADER_FULLSCREEN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenPS.cso", wiResourceManager::PIXELSHADER));
 
-	blurHPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
-	blurVPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
-	shaftPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
-	outlinePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "outlinePS.cso", wiResourceManager::PIXELSHADER));
-	dofPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
-	motionBlurPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "motionBlurPS.cso", wiResourceManager::PIXELSHADER));
-	bloomSeparatePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
-	fxaaPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fxaa.cso", wiResourceManager::PIXELSHADER));
-	ssaoPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssao.cso", wiResourceManager::PIXELSHADER));
-	ssssPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssss.cso", wiResourceManager::PIXELSHADER));
-	linDepthPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "linDepthPS.cso", wiResourceManager::PIXELSHADER));
-	colorGradePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_BLUR_H] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_BLUR_V] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_LIGHTSHAFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_OUTLINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "outlinePS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_DEPTHOFFIELD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_MOTIONBLUR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "motionBlurPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_BLOOMSEPARATE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_FXAA] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fxaa.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_SSAO] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssao.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_SSSS] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssss.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_LINEARDEPTH] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "linDepthPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_COLORGRADE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_SSR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssr.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_STEREOGRAM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "stereogramPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_TONEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "toneMapPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_REPROJECTDEPTHBUFFER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "reprojectDepthBufferPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_DOWNSAMPLEDEPTHBUFFER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_TEMPORALAA] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "temporalAAResolvePS.cso", wiResourceManager::PIXELSHADER));
+	postprocessPS[POSTPROCESS_SHARPEN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "sharpenPS.cso", wiResourceManager::PIXELSHADER));
+
 	deferredPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
-	ssrPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "ssr.cso", wiResourceManager::PIXELSHADER));
-	screenPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "screenPS.cso", wiResourceManager::PIXELSHADER));
-	stereogramPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "stereogramPS.cso", wiResourceManager::PIXELSHADER));
-	tonemapPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "toneMapPS.cso", wiResourceManager::PIXELSHADER));
-	reprojectDepthBufferPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "reprojectDepthBufferPS.cso", wiResourceManager::PIXELSHADER));
-	downsampleDepthBufferPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
-	temporalAAResolvePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "temporalAAResolvePS.cso", wiResourceManager::PIXELSHADER));
-	sharpenPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "sharpenPS.cso", wiResourceManager::PIXELSHADER));
+
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShader;
+		if (i == IMAGE_SHADER_FULLSCREEN)
+		{
+			desc.vs = screenVS;
+		}
+		desc.ps = imagePS[i];
+		desc.rs = &rasterizerState;
+
+		for (int j = 0; j < BLENDMODE_COUNT; ++j)
+		{
+			desc.bs = &blendStates[j];
+			for (int k = 0; k < STENCILMODE_COUNT; ++k)
+			{
+				desc.dss = &depthStencilStates[k];
+
+				device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k]);
+			}
+		}
+	}
+
+	for (int i = 0; i < POSTPROCESS_COUNT; ++i)
+	{
+		GraphicsPSODesc desc;
+		desc.vs = screenVS;
+		desc.ps = postprocessPS[i];
+		desc.bs = &blendStates[BLENDMODE_OPAQUE];
+		desc.dss = &depthStencilStates[STENCILMODE_DISABLED];
+		desc.rs = &rasterizerState;
+
+		if (i == POSTPROCESS_DOWNSAMPLEDEPTHBUFFER || i == POSTPROCESS_REPROJECTDEPTHBUFFER)
+		{
+			desc.dss = &depthStencilStateDepthWrite;
+		}
+		else if (i == POSTPROCESS_SSSS)
+		{
+			desc.dss = &depthStencilStates[STENCILMODE_LESS];
+		}
+		
+		device->CreateGraphicsPSO(&desc, &postprocessPSO[i]);
+	}
+
+	GraphicsPSODesc desc;
+	desc.vs = screenVS;
+	desc.ps = deferredPS;
+	desc.bs = &blendStates[BLENDMODE_OPAQUE];
+	desc.dss = &depthStencilStates[STENCILMODE_DISABLED];
+	desc.rs = &rasterizerState;
+	device->CreateGraphicsPSO(&desc, &deferredPSO);
 
 }
 void wiImage::SetUpStates()
 {
 	
 	RasterizerStateDesc rs;
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_NONE;
-	rs.FrontCounterClockwise=false;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=FALSE;
-	rs.ScissorEnable=FALSE;
-	rs.MultisampleEnable=FALSE;
-	rs.AntialiasedLineEnable=FALSE;
-	rasterizerState = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,rasterizerState);
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_NONE;
+	rs.FrontCounterClockwise = false;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = false;
+	rs.ScissorEnable = false;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs, &rasterizerState);
 
 
 
@@ -126,13 +182,11 @@ void wiImage::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	depthStencilStateLess = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateLess);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESS]);
 
 	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
 	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
-	depthStencilStateEqual = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateEqual);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_EQUAL]);
 
 	
 	dsd.DepthEnable = false;
@@ -150,20 +204,17 @@ void wiImage::SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	depthStencilStateGreater = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateGreater);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATER]);
 	
 	dsd.StencilEnable = false;
-	depthNoStencilState = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthNoStencilState);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_DISABLED]);
 
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_ALWAYS;
 	dsd.StencilEnable = false;
-	depthStencilStateDepthWrite = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilStateDepthWrite);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilStateDepthWrite);
 
 	
 	BlendStateDesc bd;
@@ -177,8 +228,7 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
-	blendStateAlpha = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAlpha);
+	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendStates[BLENDMODE_ALPHA]);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
@@ -190,15 +240,13 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
-	blendStatePremul = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStatePremul);
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_PREMULTIPLIED]);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=false;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
-	blendStateOpaque = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateOpaque);
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
@@ -210,23 +258,21 @@ void wiImage::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
-	blendStateAdd = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAdd);
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
 
 	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 	bd.IndependentBlendEnable=false;
-	blendStateDisable = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd, blendStateDisable);
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStateDisableColor);
 }
 
 void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
-	wiRenderer::GetDevice()->BindConstantBufferPS(constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+	wiRenderer::GetDevice()->BindConstantBufferVS(&constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+	wiRenderer::GetDevice()->BindConstantBufferPS(&constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 
-	wiRenderer::GetDevice()->BindConstantBufferPS(processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
+	wiRenderer::GetDevice()->BindConstantBufferPS(&processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
 }
 
 void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
@@ -236,45 +282,48 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 	bool fullScreenEffect = false;
 
-	device->BindVertexLayout(nullptr, threadID);
+	//device->BindVertexLayout(nullptr, threadID);
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
-	device->BindRasterizerState(rasterizerState, threadID);
+	//device->BindRasterizerState(rasterizerState, threadID);
 
 	device->BindResourcePS(texture, TEXSLOT_ONDEMAND0, threadID);
 
-	if (effects.blendFlag == BLENDMODE_ALPHA)
-		device->BindBlendState(blendStateAlpha, threadID);
-	else if (effects.blendFlag == BLENDMODE_PREMULTIPLIED)
-		device->BindBlendState(blendStatePremul, threadID);
-	else if (effects.blendFlag == BLENDMODE_ADDITIVE)
-		device->BindBlendState(blendStateAdd, threadID);
-	else if (effects.blendFlag == BLENDMODE_OPAQUE)
-		device->BindBlendState(blendStateOpaque, threadID);
-	else
-		device->BindBlendState(blendStateAlpha, threadID);
+	//if (effects.blendFlag == BLENDMODE_ALPHA)
+	//	device->BindBlendState(blendStateAlpha, threadID);
+	//else if (effects.blendFlag == BLENDMODE_PREMULTIPLIED)
+	//	device->BindBlendState(blendStatePremul, threadID);
+	//else if (effects.blendFlag == BLENDMODE_ADDITIVE)
+	//	device->BindBlendState(blendStateAdd, threadID);
+	//else if (effects.blendFlag == BLENDMODE_OPAQUE)
+	//	device->BindBlendState(blendStateOpaque, threadID);
+	//else
+	//	device->BindBlendState(blendStateAlpha, threadID);
 
 
+	//{
+	//	switch (effects.stencilComp)
+	//	{
+	//	case COMPARISON_LESS:
+	//	case COMPARISON_LESS_EQUAL:
+	//		device->BindDepthStencilState(depthStencilStateLess, effects.stencilRef, threadID);
+	//		break;
+	//	case COMPARISON_GREATER:
+	//	case COMPARISON_GREATER_EQUAL:
+	//		device->BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, threadID);
+	//		break;
+	//	case COMPARISON_EQUAL:
+	//		device->BindDepthStencilState(depthStencilStateEqual, effects.stencilRef, threadID);
+	//		break;
+	//	default:
+	//		device->BindDepthStencilState(depthNoStencilState, effects.stencilRef, threadID);
+	//		break;
+	//	}
+	//}
+
+	device->BindStencilRef(effects.stencilRef, threadID);
+
+	if (effects.quality == QUALITY_NEAREST) 
 	{
-		switch (effects.stencilComp)
-		{
-		case COMPARISON_LESS:
-		case COMPARISON_LESS_EQUAL:
-			device->BindDepthStencilState(depthStencilStateLess, effects.stencilRef, threadID);
-			break;
-		case COMPARISON_GREATER:
-		case COMPARISON_GREATER_EQUAL:
-			device->BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, threadID);
-			break;
-		case COMPARISON_EQUAL:
-			device->BindDepthStencilState(depthStencilStateEqual, effects.stencilRef, threadID);
-			break;
-		default:
-			device->BindDepthStencilState(depthNoStencilState, effects.stencilRef, threadID);
-			break;
-		}
-	}
-
-	if (effects.quality == QUALITY_NEAREST) {
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
 			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
@@ -282,7 +331,8 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
 			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
-	else if (effects.quality == QUALITY_BILINEAR) {
+	else if (effects.quality == QUALITY_BILINEAR) 
+	{
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
 			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
@@ -290,7 +340,8 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
 			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
-	else if (effects.quality == QUALITY_ANISOTROPIC) {
+	else if (effects.quality == QUALITY_ANISOTROPIC) 
+	{
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
 			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
@@ -301,8 +352,9 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 	if (effects.presentFullScreen)
 	{
-		device->BindVS(screenVS, threadID);
-		device->BindPS(screenPS, threadID);
+		//device->BindVS(screenVS, threadID);
+		//device->BindPS(screenPS, threadID);
+		device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][effects.blendFlag][effects.stencilComp], threadID);
 		device->Draw(3, 0, threadID);
 		device->EventEnd(threadID);
 		return;
@@ -367,17 +419,19 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			cb.mPivot = effects.pivot;
 			cb.mMipLevel = effects.mipLevel;
 
-			device->UpdateBuffer(constantBuffer, &cb, threadID);
+			device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
-			device->BindVS(vertexShader, threadID);
+			//device->BindVS(vertexShader, threadID);
 
 			// Determine relevant image rendering pixel shader:
+			IMAGE_SHADER targetShader;
 			bool NormalmapSeparate = effects.extractNormalMap;
 			bool Mask = effects.maskMap != nullptr;
 			bool Distort = effects.distortionMap != nullptr;
 			if (NormalmapSeparate)
 			{
-				device->BindPS(imagePS_separatenormalmap, threadID);
+				//device->BindPS(imagePS_separatenormalmap, threadID);
+				targetShader = IMAGE_SHADER_SEPARATENORMALMAP;
 			}
 			else
 			{
@@ -385,23 +439,28 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				{
 					if (Distort)
 					{
-						device->BindPS(imagePS_distortion_masked, threadID);
+						//device->BindPS(imagePS_distortion_masked, threadID);
+						targetShader = IMAGE_SHADER_DISTORTION_MASKED;
 					}
 					else
 					{
-						device->BindPS(imagePS_masked, threadID);
+						//device->BindPS(imagePS_masked, threadID);
+						targetShader = IMAGE_SHADER_MASKED;
 					}
 				}
 				else if(Distort)
 				{
-					device->BindPS(imagePS_distortion, threadID);
+					//device->BindPS(imagePS_distortion, threadID);
+					targetShader = IMAGE_SHADER_DISTORTION;
 				}
 				else
 				{
-					device->BindPS(imagePS, threadID);
+					//device->BindPS(imagePS, threadID);
+					targetShader = IMAGE_SHADER_STANDARD;
 				}
 			}
 
+			device->BindGraphicsPSO(&imagePSO[targetShader][effects.blendFlag][effects.stencilComp], threadID);
 
 			fullScreenEffect = false;
 		}
@@ -409,94 +468,114 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		{
 			PostProcessCB prcb;
 
-			device->BindVS(screenVS, threadID);
+			//device->BindVS(screenVS, threadID);
 			fullScreenEffect = true;
 
+			POSTPROCESS targetShader;
+
 			if (effects.process.outline) {
-				device->BindPS(outlinePS, threadID);
+				//device->BindPS(outlinePS, threadID);
+				targetShader = POSTPROCESS_OUTLINE;
 
 				prcb.params0[1] = effects.process.outline ? 1.0f : 0.0f;
-				device->UpdateBuffer(processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.motionBlur) {
-				device->BindPS(motionBlurPS, threadID);
+				//device->BindPS(motionBlurPS, threadID);
+				targetShader = POSTPROCESS_MOTIONBLUR;
 
 				prcb.params0[0] = effects.process.motionBlur ? 1.0f : 0.0f;
-				device->UpdateBuffer(processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.dofStrength) {
-				device->BindPS(dofPS, threadID);
+				//device->BindPS(dofPS, threadID);
+				targetShader = POSTPROCESS_DEPTHOFFIELD;
 
 				prcb.params0[2] = effects.process.dofStrength;
-				device->UpdateBuffer(processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.fxaa) {
-				device->BindPS(fxaaPS, threadID);
+				//device->BindPS(fxaaPS, threadID);
+				targetShader = POSTPROCESS_FXAA;
 			}
 			else if (effects.process.ssao) {
-				device->BindPS(ssaoPS, threadID);
+				//device->BindPS(ssaoPS, threadID);
+				targetShader = POSTPROCESS_SSAO;
 			}
 			else if (effects.process.linDepth) {
-				device->BindPS(linDepthPS, threadID);
+				//device->BindPS(linDepthPS, threadID);
+				targetShader = POSTPROCESS_LINEARDEPTH;
 			}
 			else if (effects.process.colorGrade) {
-				device->BindPS(colorGradePS, threadID);
+				//device->BindPS(colorGradePS, threadID);
+				targetShader = POSTPROCESS_COLORGRADE;
 			}
 			else if (effects.process.ssr) {
-				device->BindPS(ssrPS, threadID);
+				//device->BindPS(ssrPS, threadID);
+				targetShader = POSTPROCESS_SSR;
 			}
 			else if (effects.process.stereogram) {
-				device->BindPS(stereogramPS, threadID);
+				//device->BindPS(stereogramPS, threadID);
+				targetShader = POSTPROCESS_STEREOGRAM;
 			}
 			else if (effects.process.tonemap) {
-				device->BindPS(tonemapPS, threadID);
+				//device->BindPS(tonemapPS, threadID);
+				targetShader = POSTPROCESS_TONEMAP;
 			}
 			else if (effects.process.ssss.x + effects.process.ssss.y > 0) {
-				device->BindPS(ssssPS, threadID);
+				//device->BindPS(ssssPS, threadID);
+				targetShader = POSTPROCESS_SSSS;
 
 				prcb.params0[0] = effects.process.ssss.x;
 				prcb.params0[1] = effects.process.ssss.y;
-				device->UpdateBuffer(processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.bloom.separate) {
-				device->BindPS(bloomSeparatePS, threadID);
+				//device->BindPS(bloomSeparatePS, threadID);
+				targetShader = POSTPROCESS_BLOOMSEPARATE;
 
 				prcb.params1[0] = effects.bloom.separate ? 1.0f : 0.0f;
 				prcb.params1[1] = effects.bloom.threshold;
 				prcb.params1[2] = effects.bloom.saturation;
-				device->UpdateBuffer(processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.reprojectDepthBuffer)
 			{
-				device->BindPS(reprojectDepthBufferPS, threadID);
-				device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
-				device->BindBlendState(blendStateDisable, threadID);
+				//device->BindPS(reprojectDepthBufferPS, threadID);
+				//device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
+				//device->BindBlendState(blendStateDisable, threadID);
+				targetShader = POSTPROCESS_REPROJECTDEPTHBUFFER;
 			}
 			else if (effects.process.downsampleDepthBuffer4x)
 			{
-				device->BindPS(downsampleDepthBufferPS, threadID);
-				device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
-				device->BindBlendState(blendStateDisable, threadID);
+				//device->BindPS(downsampleDepthBufferPS, threadID);
+				//device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
+				//device->BindBlendState(blendStateDisable, threadID);
+				targetShader = POSTPROCESS_DOWNSAMPLEDEPTHBUFFER;
 			}
 			else if (effects.process.temporalAAResolve) {
-				device->BindPS(temporalAAResolvePS, threadID);
+				//device->BindPS(temporalAAResolvePS, threadID);
+				targetShader = POSTPROCESS_TEMPORALAA;
 			}
 			else if (effects.process.sharpen > 0) {
-				device->BindPS(sharpenPS, threadID);
+				//device->BindPS(sharpenPS, threadID);
+				targetShader = POSTPROCESS_SHARPEN;
 
 				prcb.params0[0] = effects.process.sharpen;
-				device->UpdateBuffer(processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else {
 				assert(0); // not impl
 			}
+
+			device->BindGraphicsPSO(&postprocessPSO[targetShader], threadID);
 		}
 		else // LIGHTSHAFT
 		{
 			PostProcessCB prcb;
 
-			device->BindVS(screenVS,threadID);
-			device->BindPS(shaftPS,threadID);
+			//device->BindVS(screenVS,threadID);
+			//device->BindPS(shaftPS,threadID);
 			fullScreenEffect = true;
 
 			//Density|Weight|Decay|Exposure
@@ -507,7 +586,9 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			prcb.params1[0] = effects.sunPos.x;
 			prcb.params1[1] = effects.sunPos.y;
 
-			device->UpdateBuffer(processCb,&prcb,threadID);
+			device->UpdateBuffer(&processCb,&prcb,threadID);
+
+			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_LIGHTSHAFT], threadID);
 		}
 		device->BindResourcePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
 		device->BindResourcePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
@@ -517,15 +598,17 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	{
 		PostProcessCB prcb;
 
-		device->BindVS(screenVS,threadID);
+		//device->BindVS(screenVS,threadID);
 		fullScreenEffect = true;
 		
 		if(effects.blurDir==0){
-			device->BindPS(blurHPS,threadID);
+			//device->BindPS(blurHPS,threadID);
+			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_H], threadID);
 			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().x;
 		}
 		else{
-			device->BindPS(blurVPS,threadID);
+			//device->BindPS(blurVPS,threadID);
+			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_V], threadID);
 			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().y;
 		}
 
@@ -543,7 +626,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		prcb.params1[1] = effects.blur;
 		prcb.params1[2] = effects.mipLevel;
 
-		device->UpdateBuffer(processCb, &prcb, threadID);
+		device->UpdateBuffer(&processCb, &prcb, threadID);
 
 	}
 	
@@ -560,19 +643,21 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 	device->EventBegin("DeferredComposition", threadID);
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-	device->BindRasterizerState(rasterizerState,threadID);
-	device->BindDepthStencilState(depthStencilStateLess,stencilRef,threadID);
+	//device->BindRasterizerState(rasterizerState,threadID);
+	//device->BindDepthStencilState(depthStencilStateLess,stencilRef,threadID);
 
-	device->BindVertexLayout(nullptr, threadID);
+	//device->BindVertexLayout(nullptr, threadID);
 
-	device->BindVS(screenVS,threadID);
-	device->BindPS(deferredPS,threadID);
+	//device->BindVS(screenVS,threadID);
+	//device->BindPS(deferredPS,threadID);
 
 	device->BindResourcePS(lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
 	device->BindResourcePS(lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
 	device->BindResourcePS(ao,TEXSLOT_ONDEMAND2,threadID);
 
-	device->BindBlendState(blendStateOpaque,threadID);
+	//device->BindBlendState(blendStateOpaque,threadID);
+
+	device->BindGraphicsPSO(&deferredPSO, threadID);
 
 	device->Draw(3, 0, threadID);
 
@@ -587,48 +672,7 @@ void wiImage::Load(){
 }
 void wiImage::CleanUp()
 {
-	SAFE_DELETE(blendStateAlpha);
-	SAFE_DELETE(blendStatePremul);
-	SAFE_DELETE(blendStateAdd);
-	SAFE_DELETE(blendStateOpaque);
-	SAFE_DELETE(blendStateDisable);
-
-	SAFE_DELETE(constantBuffer);
-	SAFE_DELETE(processCb);
-
-	SAFE_DELETE(rasterizerState);
-	SAFE_DELETE(depthStencilStateGreater);
-	SAFE_DELETE(depthStencilStateLess);
-	SAFE_DELETE(depthStencilStateEqual);
-	SAFE_DELETE(depthNoStencilState);
-	SAFE_DELETE(depthStencilStateDepthWrite);
-
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(screenVS);
-	SAFE_DELETE(imagePS);
-	SAFE_DELETE(imagePS_separatenormalmap);
-	SAFE_DELETE(imagePS_distortion);
-	SAFE_DELETE(imagePS_distortion_masked);
-	SAFE_DELETE(imagePS_masked);
-	SAFE_DELETE(blurHPS);
-	SAFE_DELETE(blurVPS);
-	SAFE_DELETE(shaftPS);
-	SAFE_DELETE(outlinePS);
-	SAFE_DELETE(dofPS);
-	SAFE_DELETE(motionBlurPS);
-	SAFE_DELETE(bloomSeparatePS);
-	SAFE_DELETE(fxaaPS);
-	SAFE_DELETE(ssaoPS);
 	SAFE_DELETE(deferredPS);
-	SAFE_DELETE(ssssPS);
-	SAFE_DELETE(linDepthPS);
-	SAFE_DELETE(colorGradePS);
-	SAFE_DELETE(ssrPS);
-	SAFE_DELETE(screenPS);
-	SAFE_DELETE(stereogramPS);
-	SAFE_DELETE(tonemapPS);
-	SAFE_DELETE(reprojectDepthBufferPS);
-	SAFE_DELETE(downsampleDepthBufferPS);
-	SAFE_DELETE(temporalAAResolvePS);
-	SAFE_DELETE(sharpenPS);
 }

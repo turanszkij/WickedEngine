@@ -2669,10 +2669,14 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 }
 HRESULT GraphicsDevice_DX11::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 {
+	pso->desc = *pDesc;
+
 	return S_OK;
 }
 HRESULT GraphicsDevice_DX11::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
 {
+	pso->desc = *pDesc;
+
 	return S_OK;
 }
 

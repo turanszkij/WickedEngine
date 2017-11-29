@@ -55,6 +55,7 @@ protected:
 	static wiGraphicsTypes::RasterizerState		*rasterizerState;
 	static wiGraphicsTypes::RasterizerState		*rasterizerState_Scissor;
 	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
+	static wiGraphicsTypes::GraphicsPSO			*PSO;
 	
 	static void SetUpStates();
 public:

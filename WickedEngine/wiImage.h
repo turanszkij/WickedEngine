@@ -2,14 +2,12 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 #include "ShaderInterop.h"
+#include "wiImageEffects.h"
 
-class wiImageEffects;
 enum BLENDMODE;
 
 class wiImage
 {
-private:
-	//static mutex MUTEX;
 protected:
 	CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 	{
@@ -26,19 +24,60 @@ protected:
 		float params1[4];
 	};
 	
-	static wiGraphicsTypes::BlendState		*blendStateAlpha, *blendStatePremul, *blendStateAdd, *blendStateOpaque, *blendStateDisable;
-	static wiGraphicsTypes::GPUBuffer       *constantBuffer, *processCb;
+	static wiGraphicsTypes::GPUBuffer       constantBuffer, processCb;
 
-	static wiGraphicsTypes::VertexShader     *vertexShader,*screenVS;
-	static wiGraphicsTypes::PixelShader		 *imagePS, *imagePS_separatenormalmap, *imagePS_distortion, *imagePS_distortion_masked, *imagePS_masked;
-	static wiGraphicsTypes::PixelShader      *blurHPS,*blurVPS,*shaftPS,*outlinePS,*dofPS,*motionBlurPS,*bloomSeparatePS
-		,*fxaaPS,*ssaoPS,*ssssPS,*deferredPS,*linDepthPS,*colorGradePS,*ssrPS, *screenPS, *stereogramPS, *tonemapPS, *reprojectDepthBufferPS, *downsampleDepthBufferPS
-		,*temporalAAResolvePS, *sharpenPS;
-	
+	static wiGraphicsTypes::VertexShader*   vertexShader;
+	static wiGraphicsTypes::VertexShader*   screenVS;
 
-	
-	static wiGraphicsTypes::RasterizerState		*rasterizerState;
-	static wiGraphicsTypes::DepthStencilState	*depthStencilStateGreater, *depthStencilStateLess, *depthStencilStateEqual,*depthNoStencilState, *depthStencilStateDepthWrite;
+	enum IMAGE_SHADER
+	{
+		IMAGE_SHADER_STANDARD,
+		IMAGE_SHADER_SEPARATENORMALMAP,
+		IMAGE_SHADER_DISTORTION,
+		IMAGE_SHADER_DISTORTION_MASKED,
+		IMAGE_SHADER_MASKED,
+		IMAGE_SHADER_FULLSCREEN,
+		IMAGE_SHADER_COUNT
+	};
+	static wiGraphicsTypes::PixelShader* imagePS[IMAGE_SHADER_COUNT];
+
+	enum POSTPROCESS
+	{
+		POSTPROCESS_BLUR_H,
+		POSTPROCESS_BLUR_V,
+		POSTPROCESS_LIGHTSHAFT,
+		POSTPROCESS_OUTLINE,
+		POSTPROCESS_DEPTHOFFIELD,
+		POSTPROCESS_MOTIONBLUR,
+		POSTPROCESS_BLOOMSEPARATE,
+		POSTPROCESS_FXAA,
+		POSTPROCESS_SSAO,
+		POSTPROCESS_SSSS,
+		POSTPROCESS_SSR,
+		POSTPROCESS_COLORGRADE,
+		POSTPROCESS_STEREOGRAM,
+		POSTPROCESS_TONEMAP,
+		POSTPROCESS_REPROJECTDEPTHBUFFER,
+		POSTPROCESS_DOWNSAMPLEDEPTHBUFFER,
+		POSTPROCESS_TEMPORALAA,
+		POSTPROCESS_SHARPEN,
+		POSTPROCESS_LINEARDEPTH,
+		POSTPROCESS_COUNT
+	};
+	static wiGraphicsTypes::PixelShader* postprocessPS[POSTPROCESS_COUNT];
+	static wiGraphicsTypes::PixelShader* deferredPS;
+
+
+	static wiGraphicsTypes::BlendState			blendStates[BLENDMODE_COUNT];
+	static wiGraphicsTypes::BlendState			blendStateDisableColor;
+	static wiGraphicsTypes::RasterizerState		rasterizerState;
+	static wiGraphicsTypes::DepthStencilState	depthStencilStates[STENCILMODE_COUNT];
+	static wiGraphicsTypes::DepthStencilState	depthStencilStateDepthWrite;
+
+	static wiGraphicsTypes::GraphicsPSO imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT];
+	static wiGraphicsTypes::GraphicsPSO postprocessPSO[POSTPROCESS_COUNT];
+	static wiGraphicsTypes::GraphicsPSO deferredPSO;
+
 
 public:
 	static void LoadShaders();

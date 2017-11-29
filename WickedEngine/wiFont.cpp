@@ -22,8 +22,8 @@ VertexShader		*wiFont::vertexShader = nullptr;
 PixelShader			*wiFont::pixelShader = nullptr;
 BlendState			*wiFont::blendState = nullptr;
 RasterizerState		*wiFont::rasterizerState = nullptr;
-RasterizerState		*wiFont::rasterizerState_Scissor = nullptr;
 DepthStencilState	*wiFont::depthStencilState = nullptr;
+GraphicsPSO			*wiFont::PSO = nullptr;
 std::vector<wiFont::wiFontStyle> wiFont::fontStyles;
 
 wiFont::wiFont(const std::string& text, wiFontProps props, int style) : props(props), style(style)
@@ -84,20 +84,17 @@ void wiFont::LoadIndices()
 void wiFont::SetUpStates()
 {
 	RasterizerStateDesc rs;
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_BACK;
-	rs.FrontCounterClockwise=TRUE;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=FALSE;
-	rs.ScissorEnable=TRUE;
-	rs.MultisampleEnable=FALSE;
-	rs.AntialiasedLineEnable=FALSE;
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_BACK;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = false;
+	rs.ScissorEnable = true;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
 	rasterizerState = new RasterizerState;
-	rasterizerState_Scissor = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs, rasterizerState_Scissor);
-	rs.ScissorEnable = FALSE;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rs, rasterizerState);
 
 
@@ -106,41 +103,21 @@ void wiFont::SetUpStates()
 	
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_GREATER;
-
 	dsd.StencilEnable = false;
-	dsd.StencilReadMask = 0xFF;
-	dsd.StencilWriteMask = 0xFF;
-
-	// Stencil operations if pixel is front-facing.
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_INCR;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
-
-	// Stencil operations if pixel is back-facing.
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_DECR;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
-
-	// Create the depth stencil state.
 	depthStencilState = new DepthStencilState;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilState);
 
 
 	
 	BlendStateDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
-	bd.RenderTarget[0].BlendEnable = TRUE;
+	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	blendState = new BlendState;
 	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
 }
@@ -162,6 +139,19 @@ void wiFont::LoadShaders()
 
 	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
+
+	GraphicsPSODesc desc;
+	desc.vs = vertexShader;
+	desc.ps = pixelShader;
+	desc.il = vertexLayout;
+	desc.bs = blendState;
+	desc.rs = rasterizerState;
+	desc.dss = depthStencilState;
+	desc.numRTs = 1;
+	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
+	SAFE_DELETE(PSO);
+	PSO = new GraphicsPSO;
+	wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO);
 }
 void wiFont::SetUpStaticComponents()
 {
@@ -280,15 +270,17 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 	device->EventBegin("Font", threadID);
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
-	device->BindVertexLayout(vertexLayout, threadID);
-	device->BindVS(vertexShader, threadID);
-	device->BindPS(pixelShader, threadID);
+	//device->BindVertexLayout(vertexLayout, threadID);
+	//device->BindVS(vertexShader, threadID);
+	//device->BindPS(pixelShader, threadID);
 
 
-	device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
-	device->BindDepthStencilState(depthStencilState, 1, threadID);
+	//device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
+	//device->BindDepthStencilState(depthStencilState, 1, threadID);
 
-	device->BindBlendState(blendState, threadID);
+	//device->BindBlendState(blendState, threadID);
+
+	device->BindGraphicsPSO(PSO, threadID);
 
 	UINT vboffset;
 	Vertex* textBuffer = (Vertex*)device->AllocateFromRingBuffer(vertexBuffer, sizeof(Vertex) * text.length() * 4, vboffset, threadID);

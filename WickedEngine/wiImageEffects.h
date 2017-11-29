@@ -2,23 +2,38 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 
-enum BLENDMODE{
+enum BLENDMODE
+{
 	BLENDMODE_OPAQUE,
 	BLENDMODE_ALPHA,
 	BLENDMODE_PREMULTIPLIED,
 	BLENDMODE_ADDITIVE,
+	BLENDMODE_COUNT
 };
-enum SAMPLEMODE{
+enum STENCILMODE
+{
+	STENCILMODE_DISABLED,
+	STENCILMODE_GREATER,
+	STENCILMODE_LESS,
+	STENCILMODE_EQUAL,
+	STENCILMODE_COUNT
+};
+enum SAMPLEMODE
+{
 	SAMPLEMODE_CLAMP,
 	SAMPLEMODE_WRAP,
 	SAMPLEMODE_MIRROR,
+	SAMPLEMODE_COUNT
 };
-enum QUALITY{
+enum QUALITY
+{
 	QUALITY_NEAREST,
 	QUALITY_BILINEAR,
 	QUALITY_ANISOTROPIC,
+	QUALITY_COUNT
 };
-enum ImageType{
+enum ImageType
+{
 	SCREEN,
 	WORLD,
 };
@@ -44,8 +59,8 @@ public:
 	float rotation;
 	bool extractNormalMap;
 	float mipLevel;
-	unsigned int stencilRef;
-	int stencilComp;
+	UINT stencilRef;
+	STENCILMODE stencilComp;
 
 	// don't set anything, just fill the whole screen
 	bool presentFullScreen;
@@ -130,7 +145,7 @@ public:
 		extractNormalMap = false;
 		mipLevel = 0.f;
 		stencilRef = 0;
-		stencilComp = 0;
+		stencilComp = STENCILMODE_DISABLED;
 		presentFullScreen = false;
 		blendFlag = BLENDMODE_ALPHA;
 		typeFlag = SCREEN;

@@ -2356,7 +2356,6 @@ namespace wiGraphicsTypes
 	HRESULT GraphicsDevice_DX12::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 	{
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
-		desc.pRootSignature = nullptr;
 
 		HRESULT hr = device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->resource_DX12);
 		assert(SUCCEEDED(hr));
