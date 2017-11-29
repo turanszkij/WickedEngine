@@ -1582,6 +1582,7 @@ void wiColorPicker::Render(wiGUI* gui)
 	static wiGraphicsTypes::GPUBuffer vb_hue;
 	static wiGraphicsTypes::GPUBuffer vb_picker;
 	static wiGraphicsTypes::GPUBuffer vb_preview;
+	static wiGraphicsTypes::GraphicsPSO PSO;
 
 	static bool buffersComplete = false;
 	if (!buffersComplete)
@@ -1689,17 +1690,29 @@ void wiColorPicker::Render(wiGUI* gui)
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
 		}
 
+		{
+			GraphicsPSODesc desc;
+			desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
+			desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
+			desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
+			desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
+			desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
+			desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
+			hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO);
+		}
+
 	}
 
 	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
 	wiRenderer::GetDevice()->BindConstantBufferVS(wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
-	wiRenderer::GetDevice()->BindRasterizerState(wiRenderer::rasterizers[RSTYPE_DOUBLESIDED], threadID);
-	wiRenderer::GetDevice()->BindBlendState(wiRenderer::blendStates[BSTYPE_OPAQUE], threadID);
-	wiRenderer::GetDevice()->BindDepthStencilState(wiRenderer::depthStencils[DSSTYPE_XRAY], 0, threadID);
-	wiRenderer::GetDevice()->BindVertexLayout(wiRenderer::vertexLayouts[VLTYPE_LINE], threadID);
-	wiRenderer::GetDevice()->BindVS(wiRenderer::vertexShaders[VSTYPE_LINE], threadID);
-	wiRenderer::GetDevice()->BindPS(wiRenderer::pixelShaders[PSTYPE_LINE], threadID);
+	//wiRenderer::GetDevice()->BindRasterizerState(wiRenderer::rasterizers[RSTYPE_DOUBLESIDED], threadID);
+	//wiRenderer::GetDevice()->BindBlendState(wiRenderer::blendStates[BSTYPE_OPAQUE], threadID);
+	//wiRenderer::GetDevice()->BindDepthStencilState(wiRenderer::depthStencils[DSSTYPE_XRAY], 0, threadID);
+	//wiRenderer::GetDevice()->BindVertexLayout(wiRenderer::vertexLayouts[VLTYPE_LINE], threadID);
+	//wiRenderer::GetDevice()->BindVS(wiRenderer::vertexShaders[VSTYPE_LINE], threadID);
+	//wiRenderer::GetDevice()->BindPS(wiRenderer::pixelShaders[PSTYPE_LINE], threadID);
+	wiRenderer::GetDevice()->BindGraphicsPSO(&PSO, threadID);
 	wiRenderer::GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
 
 	wiRenderer::MiscCB cb;
