@@ -43,6 +43,8 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) = 0;
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) = 0;
 		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
+		virtual HRESULT CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso) = 0;
+		virtual HRESULT CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso) = 0;
 
 		virtual void PresentBegin() = 0;
 		virtual void PresentEnd() = 0;
@@ -121,17 +123,10 @@ namespace wiGraphicsTypes
 		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindHS(const HullShader* shader, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindStencilRef(UINT value, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID) = 0;
 		virtual void Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) = 0;
 		virtual void DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID) = 0;
 		virtual void DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) = 0;

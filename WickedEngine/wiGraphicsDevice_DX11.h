@@ -30,6 +30,9 @@ namespace wiGraphicsTypes
 		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
 		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT];
 
+		UINT		stencilRef[GRAPHICSTHREAD_COUNT];
+		XMFLOAT4	blendFactor[GRAPHICSTHREAD_COUNT];
+
 	public:
 		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false);
 
@@ -52,6 +55,8 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
+		virtual HRESULT CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso) override;
+		virtual HRESULT CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso) override;
 
 		virtual void PresentBegin() override;
 		virtual void PresentEnd() override;
@@ -102,17 +107,10 @@ namespace wiGraphicsTypes
 		virtual void BindVertexBuffers(const GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID) override;
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID) override;
 		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID) override;
-		virtual void BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID) override;
-		virtual void BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID) override;
-		virtual void BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID) override;
-		virtual void BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID) override;
-		virtual void BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) override;
-		virtual void BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) override;
-		virtual void BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID) override;
-		virtual void BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID) override;
-		virtual void BindHS(const HullShader* shader, GRAPHICSTHREAD threadID) override;
-		virtual void BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID) override;
-		virtual void BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID) override;
+		virtual void BindStencilRef(UINT value, GRAPHICSTHREAD threadID) override;
+		virtual void BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID) override;
+		virtual void BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID) override;
+		virtual void BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID) override;
 		virtual void Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) override;
 		virtual void DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID) override;
 		virtual void DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) override;

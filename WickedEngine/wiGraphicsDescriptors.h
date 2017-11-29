@@ -5,6 +5,17 @@
 
 namespace wiGraphicsTypes
 {
+	class VertexShader;
+	class PixelShader;
+	class HullShader;
+	class DomainShader;
+	class GeometryShader;
+	class ComputeShader;
+	class BlendState;
+	class RasterizerState;
+	class DepthStencilState;
+	class VertexLayout;
+
 	enum PRIMITIVETOPOLOGY
 	{
 		TRIANGLELIST,
@@ -12,6 +23,14 @@ namespace wiGraphicsTypes
 		POINTLIST,
 		LINELIST,
 		PATCHLIST,
+	}; 
+	enum PRIMITIVE_TOPOLOGY_TYPE
+	{
+		PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED,
+		PRIMITIVE_TOPOLOGY_TYPE_POINT,
+		PRIMITIVE_TOPOLOGY_TYPE_LINE,
+		PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		PRIMITIVE_TOPOLOGY_TYPE_PATCH
 	};
 	enum COMPARISON_FUNC
 	{
@@ -589,6 +608,56 @@ namespace wiGraphicsTypes
 			MiscFlags(0),
 			async_latency(0)
 		{}
+	};
+	struct GraphicsPSODesc
+	{
+		VertexShader*			vs;
+		PixelShader*			ps;
+		HullShader*				hs;
+		DomainShader*			ds;
+		GeometryShader*			gs;
+		BlendState*				bs;
+		RasterizerState*		rs;
+		DepthStencilState*		dss;
+		VertexLayout*			il;
+		PRIMITIVE_TOPOLOGY_TYPE	ptt;
+		UINT					numRTs;
+		FORMAT					RTFormats[8];
+		FORMAT					DSFormat;
+		SampleDesc				sampleDesc; 
+		UINT					sampleMask;
+
+		GraphicsPSODesc()
+		{
+			SAFE_INIT(vs);
+			SAFE_INIT(ps);
+			SAFE_INIT(hs);
+			SAFE_INIT(ds);
+			SAFE_INIT(gs);
+			SAFE_INIT(bs);
+			SAFE_INIT(rs);
+			SAFE_INIT(dss);
+			SAFE_INIT(il);
+			ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			numRTs = 0;
+			for (int i = 0; i < ARRAYSIZE(RTFormats); ++i)
+			{
+				RTFormats[i] = FORMAT_UNKNOWN;
+			}
+			DSFormat = FORMAT_UNKNOWN;
+			sampleDesc.Count = 1;
+			sampleDesc.Quality = 0;
+			sampleMask = 0xFFFFFFFF;
+		}
+	};
+	struct ComputePSODesc
+	{
+		ComputeShader*			cs;
+
+		ComputePSODesc()
+		{
+			SAFE_INIT(cs);
+		}
 	};
 	struct IndirectDrawArgsInstanced
 	{

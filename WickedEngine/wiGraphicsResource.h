@@ -30,13 +30,19 @@ struct ID3D11Query;
 struct ID3D11Predicate;
 
 struct ID3D12Resource;
+struct ID3D12PipelineState;
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
-typedef uint32_t PSOResourceID;
 
 
 namespace wiGraphicsTypes
 {
-	class GraphicsDevice_DX11;
+	struct ShaderByteCode
+	{
+		BYTE* data;
+		size_t size;
+		ShaderByteCode() :data(nullptr), size(0) {}
+		~ShaderByteCode() { SAFE_DELETE_ARRAY(data); }
+	};
 
 	class VertexShader
 	{
@@ -44,8 +50,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11VertexShader*		resource_DX11;
-		PSOResourceID			resource_DX12;
-		DataBlob				code;
+		ShaderByteCode			code;
 	public:
 		VertexShader();
 		~VertexShader();
@@ -59,8 +64,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11PixelShader*		resource_DX11;
-		PSOResourceID			resource_DX12;
-		DataBlob				code;
+		ShaderByteCode			code;
 	public:
 		PixelShader();
 		~PixelShader();
@@ -74,8 +78,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11GeometryShader*	resource_DX11;
-		PSOResourceID			resource_DX12;
-		DataBlob				code;
+		ShaderByteCode			code;
 	public:
 		GeometryShader();
 		~GeometryShader();
@@ -89,8 +92,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11HullShader*		resource_DX11;
-		PSOResourceID			resource_DX12;
-		DataBlob				code;
+		ShaderByteCode			code;
 	public:
 		HullShader();
 		~HullShader();
@@ -104,8 +106,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11DomainShader*		resource_DX11;
-		PSOResourceID			resource_DX12;
-		DataBlob				code;
+		ShaderByteCode			code;
 	public:
 		DomainShader();
 		~DomainShader();
@@ -119,8 +120,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11ComputeShader*	resource_DX11;
-		PSOResourceID			resource_DX12;
-		DataBlob				code;
+		ShaderByteCode			code;
 	public:
 		ComputeShader();
 		~ComputeShader();
@@ -212,7 +212,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11InputLayout*	resource_DX11;
-		PSOResourceID		resource_DX12;
 
 		std::vector<VertexLayoutDesc> desc;
 	public:
@@ -228,7 +227,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11BlendState*	resource_DX11;
-		PSOResourceID		resource_DX12;
 		BlendStateDesc desc;
 	public:
 		BlendState();
@@ -244,7 +242,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11DepthStencilState*	resource_DX11;
-		PSOResourceID				resource_DX12;
 		DepthStencilStateDesc desc;
 	public:
 		DepthStencilState();
@@ -260,7 +257,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11RasterizerState*	resource_DX11;
-		PSOResourceID			resource_DX12;
 		RasterizerStateDesc desc;
 	public:
 		RasterizerState();
@@ -270,7 +266,8 @@ namespace wiGraphicsTypes
 		RasterizerStateDesc GetDesc() { return desc; }
 	};
 
-	struct VertexShaderInfo {
+	struct VertexShaderInfo 
+	{
 		VertexShader* vertexShader;
 		VertexLayout* vertexLayout;
 
@@ -375,13 +372,43 @@ namespace wiGraphicsTypes
 		virtual ~GPUQuery();
 
 		bool IsValid() { return resource_DX11[0] != nullptr; }
-		GPUQueryDesc GetDesc() { return desc; }
+		GPUQueryDesc GetDesc() const { return desc; }
 
 		BOOL	result_passed;
 		UINT64	result_passed_sample_count;
 		UINT64	result_timestamp;
 		UINT64	result_timestamp_frequency;
 		BOOL	result_disjoint;
+	};
+
+
+	class GraphicsPSO
+	{
+		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
+	private:
+		ID3D12PipelineState*			resource_DX12;
+		GraphicsPSODesc desc;
+
+	public:
+		const GraphicsPSODesc& GetDesc() const { return desc; }
+
+		GraphicsPSO();
+		~GraphicsPSO();
+	};
+	class ComputePSO
+	{
+		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
+	private:
+		ID3D12PipelineState*			resource_DX12;
+		ComputePSODesc desc;
+
+	public:
+		const ComputePSODesc& GetDesc() const { return desc; }
+
+		ComputePSO();
+		~ComputePSO();
 	};
 }
 

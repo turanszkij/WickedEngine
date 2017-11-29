@@ -35,13 +35,5 @@ inline void SwapPtr(T*& a, T*& b)
 	b = swap;
 }
 
-struct DataBlob
-{
-	BYTE* data;
-	size_t size;
-	DataBlob() :data(nullptr), size(0) {}
-	~DataBlob() { SAFE_DELETE_ARRAY(data); }
-};
-
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

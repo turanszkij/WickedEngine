@@ -230,4 +230,23 @@ namespace wiGraphicsTypes
 			SAFE_RELEASE(x);
 		}
 	}
+
+
+	GraphicsPSO::GraphicsPSO()
+	{
+		SAFE_INIT(resource_DX12);
+	}
+	GraphicsPSO::~GraphicsPSO()
+	{
+		SAFE_DELETE(resource_DX12);
+	}
+
+	ComputePSO::ComputePSO()
+	{
+		SAFE_INIT(resource_DX12);
+	}
+	ComputePSO::~ComputePSO()
+	{
+		SAFE_DELETE(resource_DX12);
+	}
 }

@@ -10,6 +10,8 @@
 #include <sstream>
 #include <wincodec.h>
 
+#include <unordered_map>
+
 using namespace std;
 
 namespace wiGraphicsTypes
@@ -1224,8 +1226,6 @@ namespace wiGraphicsTypes
 	{
 		FULLSCREEN = fullscreen;
 
-		subPipelineStateID.store(0);
-
 #ifndef WINSTORE_SUPPORT
 		RECT rect = RECT();
 		GetClientRect(window, &rect);
@@ -1711,7 +1711,6 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			(*ppTexture2D)->texture2D_DX12->SetName(L"Filled");
 			D3D12_SUBRESOURCE_DATA* data = new D3D12_SUBRESOURCE_DATA[pDesc->ArraySize];
 			for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
 			{
@@ -1758,16 +1757,16 @@ namespace wiGraphicsTypes
 				CD3DX12_TEXTURE_COPY_LOCATION Dst((*ppTexture2D)->texture2D_DX12, i + FirstSubresource);
 				CD3DX12_TEXTURE_COPY_LOCATION Src(uploadBuffer->resource, pLayouts[i]);
 				static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
-			}
 
-			D3D12_RESOURCE_BARRIER barrier = {};
-			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barrier.Transition.pResource = (*ppTexture2D)->texture2D_DX12;
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			barrier.Transition.StateAfter = resourceState;
-			barrier.Transition.Subresource = 0;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = (*ppTexture2D)->texture2D_DX12;
+				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+				barrier.Transition.StateAfter = resourceState;
+				barrier.Transition.Subresource = i;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+			}
 
 
 
@@ -2206,26 +2205,6 @@ namespace wiGraphicsTypes
 			pInputLayout->desc.push_back(pInputElementDescs[i]);
 		}
 
-
-		//D3D12_INPUT_ELEMENT_DESC* desc = new D3D12_INPUT_ELEMENT_DESC[NumElements];
-		//for (UINT i = 0; i < NumElements; ++i)
-		//{
-		//	desc[i].SemanticName = pInputElementDescs[i].SemanticName;
-		//	desc[i].SemanticIndex = pInputElementDescs[i].SemanticIndex;
-		//	desc[i].Format = _ConvertFormat(pInputElementDescs[i].Format);
-		//	desc[i].InputSlot = pInputElementDescs[i].InputSlot;
-		//	desc[i].AlignedByteOffset = pInputElementDescs[i].AlignedByteOffset;
-		//	if (desc[i].AlignedByteOffset == APPEND_ALIGNED_ELEMENT)
-		//		desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		//	desc[i].InputSlotClass = _ConvertInputClassification(pInputElementDescs[i].InputSlotClass);
-		//	desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
-
-		//	pInputLayout->desc.push_back(pInputElementDescs[i]);
-		//}
-		//SAFE_DELETE_ARRAY(desc);
-
-		pInputLayout->resource_DX12 = subPipelineStateID.fetch_add(1);
-
 		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
@@ -2233,8 +2212,6 @@ namespace wiGraphicsTypes
 		pVertexShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
 		pVertexShader->code.size = BytecodeLength;
-
-		pVertexShader->resource_DX12 = subPipelineStateID.fetch_add(1);
 
 		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
 	}
@@ -2244,8 +2221,6 @@ namespace wiGraphicsTypes
 		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
 		pPixelShader->code.size = BytecodeLength;
 
-		pPixelShader->resource_DX12 = subPipelineStateID.fetch_add(1);
-
 		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
@@ -2253,8 +2228,6 @@ namespace wiGraphicsTypes
 		pGeometryShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
 		pGeometryShader->code.size = BytecodeLength;
-
-		pGeometryShader->resource_DX12 = subPipelineStateID.fetch_add(1);
 
 		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
 	}
@@ -2264,8 +2237,6 @@ namespace wiGraphicsTypes
 		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
 		pHullShader->code.size = BytecodeLength;
 
-		pHullShader->resource_DX12 = subPipelineStateID.fetch_add(1);
-
 		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
@@ -2274,8 +2245,6 @@ namespace wiGraphicsTypes
 		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
 		pDomainShader->code.size = BytecodeLength;
 
-		pDomainShader->resource_DX12 = subPipelineStateID.fetch_add(1);
-
 		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_DX12::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
@@ -2283,8 +2252,6 @@ namespace wiGraphicsTypes
 		pComputeShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
 		pComputeShader->code.size = BytecodeLength;
-
-		pComputeShader->resource_DX12 = subPipelineStateID.fetch_add(1);
 
 		return (pComputeShader->code.data != nullptr && pComputeShader->code.size > 0 ? S_OK : E_FAIL);
 	}
@@ -2306,8 +2273,6 @@ namespace wiGraphicsTypes
 		//}
 
 		pBlendState->desc = *pBlendStateDesc;
-
-		pBlendState->resource_DX12 = subPipelineStateID.fetch_add(1);
 
 		return S_OK;
 	}
@@ -2331,8 +2296,6 @@ namespace wiGraphicsTypes
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 
-		pDepthStencilState->resource_DX12 = subPipelineStateID.fetch_add(1);
-
 		return S_OK;
 	}
 	HRESULT GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
@@ -2353,8 +2316,6 @@ namespace wiGraphicsTypes
 		//desc.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc->ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 		//desc.ForcedSampleCount = pRasterizerStateDesc->ForcedSampleCount;
 
-
-		pRasterizerState->resource_DX12 = subPipelineStateID.fetch_add(1);
 
 		return S_OK;
 	}
@@ -2389,6 +2350,25 @@ namespace wiGraphicsTypes
 
 		pQuery->desc = *pDesc;
 		pQuery->async_frameshift = pQuery->desc.async_latency;
+
+		return hr;
+	}
+	HRESULT GraphicsDevice_DX12::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
+		desc.pRootSignature = nullptr;
+
+		HRESULT hr = device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->resource_DX12);
+		assert(SUCCEEDED(hr));
+
+		return hr;
+	}
+	HRESULT GraphicsDevice_DX12::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
+	{
+		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
+
+		HRESULT hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->resource_DX12);
+		assert(SUCCEEDED(hr));
 
 		return hr;
 	}
@@ -2512,6 +2492,7 @@ namespace wiGraphicsTypes
 		HRESULT hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Close();
 		assert(SUCCEEDED(hr));
 	}
+
 
 	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID)
 	{
@@ -2661,38 +2642,22 @@ namespace wiGraphicsTypes
 			break;
 		};
 	}
-	void GraphicsDevice_DX12::BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetStencilRef(value);
 	}
-	void GraphicsDevice_DX12::BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
 	{
+		const float blendFactor[4] = { value.x, value.y, value.z, value.w };
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetBlendFactor(blendFactor);
 	}
-	void GraphicsDevice_DX12::BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->SetPipelineState(pso->resource_DX12);
 	}
-	void GraphicsDevice_DX12::BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-	}
-	void GraphicsDevice_DX12::BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID)
-	{
-	}
-	void GraphicsDevice_DX12::BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID)
-	{
-	}
-	void GraphicsDevice_DX12::BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID)
-	{
-	}
-	void GraphicsDevice_DX12::BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID)
-	{
-	}
-	void GraphicsDevice_DX12::BindHS(const HullShader* shader, GRAPHICSTHREAD threadID)
-	{
-	}
-	void GraphicsDevice_DX12::BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID)
-	{
-	}
-	void GraphicsDevice_DX12::BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID)
-	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->SetPipelineState(pso->resource_DX12);
 	}
 	void GraphicsDevice_DX12::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{

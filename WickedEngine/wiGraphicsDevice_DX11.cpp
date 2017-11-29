@@ -1376,7 +1376,7 @@ inline Texture3DDesc _ConvertTexture3DDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc
 
 
 // Local Helpers:
-const void* const __nullBlob[1024] = { 0 }; // this is initialized to nullptrs!
+const void* const __nullBlob[1024] = {}; // this is initialized to nullptrs!
 
 
 
@@ -1402,6 +1402,8 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	{
 		SAFE_INIT(commandLists[i]);
 		SAFE_INIT(deviceContexts[i]);
+		stencilRef[i] = 0;
+		blendFactor[i] = XMFLOAT4(0, 0, 0, 0);
 	}
 
 	UINT createDeviceFlags = 0;
@@ -2665,6 +2667,14 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 
 	return hr;
 }
+HRESULT GraphicsDevice_DX11::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
+{
+	return S_OK;
+}
+HRESULT GraphicsDevice_DX11::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
+{
+	return S_OK;
+}
 
 
 void GraphicsDevice_DX11::PresentBegin()
@@ -3123,60 +3133,164 @@ void GraphicsDevice_DX11::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICS
 	};
 	deviceContexts[threadID]->IASetPrimitiveTopology(d3dType);
 }
-void GraphicsDevice_DX11::BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 {
-	ID3D11InputLayout* res = layout != nullptr ? layout->resource_DX11 : nullptr;
-	deviceContexts[threadID]->IASetInputLayout(res);
+	stencilRef[threadID] = value;
 }
-void GraphicsDevice_DX11::BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
 {
-	static const float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	static const UINT sampleMask = 0xffffffff;
-	deviceContexts[threadID]->OMSetBlendState(state->resource_DX11, blendFactor, sampleMask);
+	blendFactor[threadID] = value;
 }
-void GraphicsDevice_DX11::BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID) 
+//void GraphicsDevice_DX11::BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID)
+//{
+//	ID3D11InputLayout* res = layout != nullptr ? layout->resource_DX11 : nullptr;
+//	deviceContexts[threadID]->IASetInputLayout(res);
+//}
+void GraphicsDevice_DX11::BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 {
-	const float fblendFactor[4] = { blendFactor.x, blendFactor.y, blendFactor.z, blendFactor.w };
-	deviceContexts[threadID]->OMSetBlendState(state->resource_DX11, fblendFactor, sampleMask);
+	const GraphicsPSODesc& desc = pso->GetDesc();
+
+	static ID3D11VertexShader* prev_vs[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : desc.vs->resource_DX11;
+	if (vs != prev_vs[threadID])
+	{
+		deviceContexts[threadID]->VSSetShader(vs, nullptr, 0);
+		prev_vs[threadID] = vs;
+	}
+	static ID3D11PixelShader* prev_ps[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11PixelShader* ps = desc.ps == nullptr ? nullptr : desc.ps->resource_DX11;
+	if (ps != prev_ps[threadID])
+	{
+		deviceContexts[threadID]->PSSetShader(ps, nullptr, 0);
+		prev_ps[threadID] = ps;
+	}
+	static ID3D11HullShader* prev_hs[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11HullShader* hs = desc.hs == nullptr ? nullptr : desc.hs->resource_DX11;
+	if (hs != prev_hs[threadID])
+	{
+		deviceContexts[threadID]->HSSetShader(hs, nullptr, 0);
+		prev_hs[threadID] = hs;
+	}
+	static ID3D11DomainShader* prev_ds[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11DomainShader* ds = desc.ds == nullptr ? nullptr : desc.ds->resource_DX11;
+	if (ds != prev_ds[threadID])
+	{
+		deviceContexts[threadID]->DSSetShader(ds, nullptr, 0);
+		prev_ds[threadID] = ds;
+	}
+	static ID3D11GeometryShader* prev_gs[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11GeometryShader* gs = desc.gs == nullptr ? nullptr : desc.gs->resource_DX11;
+	if (gs != prev_gs[threadID])
+	{
+		deviceContexts[threadID]->GSSetShader(gs, nullptr, 0);
+		prev_gs[threadID] = gs;
+	}
+
+	static XMFLOAT4 prev_blendfactor[GRAPHICSTHREAD_COUNT] = {};
+	static UINT prev_samplemask[GRAPHICSTHREAD_COUNT] = {};
+	static ID3D11BlendState* prev_bs[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : desc.bs->resource_DX11;
+	if (bs != prev_bs[threadID] || desc.sampleMask != prev_samplemask[threadID] ||
+		blendFactor[threadID].x != prev_blendfactor[threadID].x ||
+		blendFactor[threadID].y != prev_blendfactor[threadID].y ||
+		blendFactor[threadID].z != prev_blendfactor[threadID].z ||
+		blendFactor[threadID].w != prev_blendfactor[threadID].w
+		)
+	{
+		const float fact[4] = { blendFactor[threadID].x, blendFactor[threadID].y, blendFactor[threadID].z, blendFactor[threadID].w };
+		deviceContexts[threadID]->OMSetBlendState(bs, fact, desc.sampleMask);
+		prev_bs[threadID] = bs;
+		prev_blendfactor[threadID] = blendFactor[threadID];
+		prev_samplemask[threadID] = desc.sampleMask;
+	}
+
+	static ID3D11RasterizerState* prev_rs[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11RasterizerState* rs = desc.rs == nullptr ? nullptr : desc.rs->resource_DX11;
+	if (rs != prev_rs[threadID])
+	{
+		deviceContexts[threadID]->RSSetState(rs);
+		prev_rs[threadID] = rs;
+	}
+
+	static UINT prev_stencilRef[GRAPHICSTHREAD_COUNT] = {};
+	static ID3D11DepthStencilState* prev_dss[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11DepthStencilState* dss = desc.dss == nullptr ? nullptr : desc.dss->resource_DX11;
+	if (dss != prev_dss[threadID] || stencilRef[threadID] != prev_stencilRef[threadID])
+	{
+		deviceContexts[threadID]->OMSetDepthStencilState(dss, stencilRef[threadID]);
+		prev_dss[threadID] = dss;
+		prev_stencilRef[threadID] = stencilRef[threadID];
+	}
+
+	static ID3D11InputLayout* prev_il[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11InputLayout* il = desc.il == nullptr ? nullptr : desc.il->resource_DX11;
+	if (il != prev_il[threadID])
+	{
+		deviceContexts[threadID]->IASetInputLayout(il);
+		prev_il[threadID] = il;
+	}
 }
-void GraphicsDevice_DX11::BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID)
 {
-	deviceContexts[threadID]->OMSetDepthStencilState(state != nullptr ? state->resource_DX11 : nullptr, stencilRef);
+	const ComputePSODesc& desc = pso->GetDesc();
+
+	static ID3D11ComputeShader* prev_cs[GRAPHICSTHREAD_COUNT] = {};
+	ID3D11ComputeShader* cs = desc.cs == nullptr ? nullptr : desc.cs->resource_DX11;
+	if (cs != prev_cs[threadID])
+	{
+		deviceContexts[threadID]->CSSetShader(cs, nullptr, 0);
+		prev_cs[threadID] = cs;
+	}
 }
-void GraphicsDevice_DX11::BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) 
-{
-	deviceContexts[threadID]->RSSetState(state != nullptr ? state->resource_DX11 : nullptr);
-}
-void GraphicsDevice_DX11::BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) 
-{
-	ID3D11PixelShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-	deviceContexts[threadID]->PSSetShader(res, nullptr, 0);
-}
-void GraphicsDevice_DX11::BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID) 
-{
-	ID3D11VertexShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-	deviceContexts[threadID]->VSSetShader(res, nullptr, 0);
-}
-void GraphicsDevice_DX11::BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID)
-{
-	ID3D11GeometryShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-	deviceContexts[threadID]->GSSetShader(res, nullptr, 0);
-}
-void GraphicsDevice_DX11::BindHS(const HullShader* shader, GRAPHICSTHREAD threadID)
-{
-	ID3D11HullShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-	deviceContexts[threadID]->HSSetShader(res, nullptr, 0);
-}
-void GraphicsDevice_DX11::BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID)
-{
-	ID3D11DomainShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-	deviceContexts[threadID]->DSSetShader(res, nullptr, 0);
-}
-void GraphicsDevice_DX11::BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID)
-{
-	ID3D11ComputeShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-	deviceContexts[threadID]->CSSetShader(res, nullptr, 0);
-}
+//void GraphicsDevice_DX11::BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID)
+//{
+//	static const float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+//	static const UINT sampleMask = 0xffffffff;
+//	deviceContexts[threadID]->OMSetBlendState(state->resource_DX11, blendFactor, sampleMask);
+//}
+//void GraphicsDevice_DX11::BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID) 
+//{
+//	const float fblendFactor[4] = { blendFactor.x, blendFactor.y, blendFactor.z, blendFactor.w };
+//	deviceContexts[threadID]->OMSetBlendState(state->resource_DX11, fblendFactor, sampleMask);
+//}
+//void GraphicsDevice_DX11::BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID) 
+//{
+//	deviceContexts[threadID]->OMSetDepthStencilState(state != nullptr ? state->resource_DX11 : nullptr, stencilRef);
+//}
+//void GraphicsDevice_DX11::BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) 
+//{
+//	deviceContexts[threadID]->RSSetState(state != nullptr ? state->resource_DX11 : nullptr);
+//}
+//void GraphicsDevice_DX11::BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) 
+//{
+//	ID3D11PixelShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
+//	deviceContexts[threadID]->PSSetShader(res, nullptr, 0);
+//}
+//void GraphicsDevice_DX11::BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID) 
+//{
+//	ID3D11VertexShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
+//	deviceContexts[threadID]->VSSetShader(res, nullptr, 0);
+//}
+//void GraphicsDevice_DX11::BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID)
+//{
+//	ID3D11GeometryShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
+//	deviceContexts[threadID]->GSSetShader(res, nullptr, 0);
+//}
+//void GraphicsDevice_DX11::BindHS(const HullShader* shader, GRAPHICSTHREAD threadID)
+//{
+//	ID3D11HullShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
+//	deviceContexts[threadID]->HSSetShader(res, nullptr, 0);
+//}
+//void GraphicsDevice_DX11::BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID)
+//{
+//	ID3D11DomainShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
+//	deviceContexts[threadID]->DSSetShader(res, nullptr, 0);
+//}
+//void GraphicsDevice_DX11::BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID)
+//{
+//	ID3D11ComputeShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
+//	deviceContexts[threadID]->CSSetShader(res, nullptr, 0);
+//}
 void GraphicsDevice_DX11::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) 
 {
 	deviceContexts[threadID]->Draw(vertexCount, startVertexLocation);
