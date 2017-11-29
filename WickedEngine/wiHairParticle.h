@@ -51,9 +51,10 @@ private:
 	static wiGraphicsTypes::ComputeShader *cs_BITONICSORT;
 	static wiGraphicsTypes::ComputeShader *cs_TRANSPOSE;
 	static wiGraphicsTypes::GPUBuffer* cb_BITONIC;
-	static wiGraphicsTypes::DepthStencilState *dss;
-	static wiGraphicsTypes::RasterizerState *rs,*ncrs;
-	static wiGraphicsTypes::BlendState *bs;
+	static wiGraphicsTypes::DepthStencilState dss;
+	static wiGraphicsTypes::RasterizerState rs, ncrs;
+	static wiGraphicsTypes::BlendState bs;
+	static wiGraphicsTypes::GraphicsPSO PSO[SHADERTYPE_COUNT];
 	static int LOD[3];
 public:
 	static void LoadShaders();

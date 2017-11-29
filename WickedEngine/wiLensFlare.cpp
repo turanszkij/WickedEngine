@@ -11,14 +11,15 @@ GeometryShader *wiLensFlare::geometryShader = nullptr;
 VertexShader *wiLensFlare::vertexShader = nullptr;
 VertexLayout *wiLensFlare::inputLayout = nullptr;
 Sampler *wiLensFlare::samplercmp = nullptr;
-RasterizerState *wiLensFlare::rasterizerState = nullptr;
-DepthStencilState *wiLensFlare::depthStencilState = nullptr;
-BlendState *wiLensFlare::blendState = nullptr;
+RasterizerState wiLensFlare::rasterizerState;
+DepthStencilState wiLensFlare::depthStencilState;
+BlendState wiLensFlare::blendState;
+GraphicsPSO	wiLensFlare::PSO;
 
 void wiLensFlare::Initialize(){
-	LoadShaders();
 	SetUpCB();
 	SetUpStates();
+	LoadShaders();
 }
 void wiLensFlare::CleanUp(){
 	SAFE_DELETE(constantBuffer);
@@ -26,9 +27,6 @@ void wiLensFlare::CleanUp(){
 	SAFE_DELETE(geometryShader);
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(inputLayout);
-	SAFE_DELETE(rasterizerState);
-	SAFE_DELETE(depthStencilState);
-	SAFE_DELETE(blendState);
 	SAFE_DELETE(samplercmp);
 }
 void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<Texture2D*>& rims){
@@ -39,10 +37,10 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		device->EventBegin("LensFlare", threadID);
 
 		device->BindPrimitiveTopology(POINTLIST,threadID);
-		device->BindVertexLayout(inputLayout,threadID);
-		device->BindPS(pixelShader,threadID);
-		device->BindVS(vertexShader,threadID);
-		device->BindGS(geometryShader,threadID);
+		//device->BindVertexLayout(inputLayout,threadID);
+		//device->BindPS(pixelShader,threadID);
+		//device->BindVS(vertexShader,threadID);
+		//device->BindGS(geometryShader,threadID);
 
 		ConstantBuffer cb;
 		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1);
@@ -52,9 +50,9 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 	
-		device->BindRasterizerState(rasterizerState,threadID);
-		device->BindDepthStencilState(depthStencilState,1,threadID);
-		device->BindBlendState(blendState,threadID);
+		//device->BindRasterizerState(rasterizerState,threadID);
+		//device->BindDepthStencilState(depthStencilState,1,threadID);
+		//device->BindBlendState(blendState,threadID);
 
 		int i=0;
 		for(Texture2D* x : rims){
@@ -73,7 +71,7 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		
 
 
-		device->BindGS(nullptr,threadID);
+		//device->BindGS(nullptr,threadID);
 
 		device->EventEnd(threadID);
 	}
@@ -97,6 +95,16 @@ void wiLensFlare::LoadShaders(){
 
 	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	GraphicsPSODesc desc;
+	desc.vs = vertexShader;
+	desc.ps = pixelShader;
+	desc.gs = geometryShader;
+	desc.bs = &blendState;
+	desc.rs = &rasterizerState;
+	desc.dss = &depthStencilState;
 }
 void wiLensFlare::SetUpCB()
 {
@@ -123,8 +131,7 @@ void wiLensFlare::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	rasterizerState = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,rasterizerState);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
 
 
 
@@ -152,8 +159,7 @@ void wiLensFlare::SetUpStates()
 	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	depthStencilState = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilState);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
 
 
 	
@@ -167,8 +173,7 @@ void wiLensFlare::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = 0x0f;
-	blendState = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendState);
+	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendState);
 
 
 	SamplerDesc samplerDesc;

@@ -18,9 +18,10 @@ PixelShader *wiHairParticle::ps[];
 ComputeShader *wiHairParticle::cs_BITONICSORT = nullptr;
 ComputeShader *wiHairParticle::cs_TRANSPOSE = nullptr;
 GPUBuffer *wiHairParticle::cb_BITONIC = nullptr;
-DepthStencilState *wiHairParticle::dss = nullptr;
-RasterizerState *wiHairParticle::rs = nullptr, *wiHairParticle::ncrs = nullptr;
-BlendState *wiHairParticle::bs = nullptr;
+DepthStencilState wiHairParticle::dss;
+RasterizerState wiHairParticle::rs, wiHairParticle::ncrs;
+BlendState wiHairParticle::bs; 
+GraphicsPSO wiHairParticle::PSO[SHADERTYPE_COUNT];
 int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
@@ -113,10 +114,6 @@ void wiHairParticle::CleanUpStatic()
 	SAFE_DELETE(cs_BITONICSORT);
 	SAFE_DELETE(cs_TRANSPOSE);
 	SAFE_DELETE(cb_BITONIC);
-	SAFE_DELETE(dss);
-	SAFE_DELETE(rs);
-	SAFE_DELETE(ncrs);
-	SAFE_DELETE(bs);
 }
 void wiHairParticle::LoadShaders()
 {
@@ -138,12 +135,28 @@ void wiHairParticle::LoadShaders()
 	cs_BITONICSORT = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bitonicSort_hairparticleCS.cso", wiResourceManager::COMPUTESHADER));
 	cs_TRANSPOSE = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "matrixTransposeCS.cso", wiResourceManager::COMPUTESHADER));
 
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
+	{
+		if (ps[i] == nullptr)
+		{
+			continue;
+		}
+
+		GraphicsPSODesc desc;
+		desc.vs = vs;
+		desc.ps = ps[i];
+		desc.bs = &bs;
+		desc.dss = &dss;
+		desc.rs = &ncrs;
+	}
+
 }
 void wiHairParticle::SetUpStatic()
 {
 	Settings(10,25,120);
-
-	LoadShaders();
 
 
 	RasterizerStateDesc rsd;
@@ -157,8 +170,7 @@ void wiHairParticle::SetUpStatic()
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	rs = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,rs);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &rs);
 
 	rsd.FillMode=FILL_SOLID;
 	rsd.CullMode=CULL_NONE;
@@ -170,8 +182,7 @@ void wiHairParticle::SetUpStatic()
 	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
-	ncrs = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rsd,ncrs);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &ncrs);
 
 	
 	DepthStencilStateDesc dsd;
@@ -190,9 +201,7 @@ void wiHairParticle::SetUpStatic()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	// Create the depth stencil state.
-	dss = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, dss);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss);
 
 	
 	BlendStateDesc bld;
@@ -206,8 +215,7 @@ void wiHairParticle::SetUpStatic()
 	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
 	bld.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bld.AlphaToCoverageEnable=false; // maybe for msaa
-	bs = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bld,bs);
+	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs);
 
 
 
@@ -220,6 +228,11 @@ void wiHairParticle::SetUpStatic()
 	bd.Usage = USAGE_DYNAMIC;
 	cb_BITONIC = new GPUBuffer;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb_BITONIC);
+
+
+
+
+	LoadShaders();
 }
 void wiHairParticle::Settings(int l0,int l1,int l2)
 {
@@ -554,9 +567,9 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 
 void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
-	PixelShader* _ps = ps[shaderType];
-	if (_ps == nullptr)
-		return;
+	//PixelShader* _ps = ps[shaderType];
+	//if (_ps == nullptr)
+	//	return;
 
 
 	Texture2D* texture = material->texture;
@@ -568,9 +581,11 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 
 
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-		device->BindVertexLayout(nullptr,threadID);
-		device->BindPS(_ps,threadID);
-		device->BindVS(vs,threadID);
+		//device->BindVertexLayout(nullptr,threadID);
+		//device->BindPS(_ps,threadID);
+		//device->BindVS(vs,threadID);
+
+		device->BindGraphicsPSO(&PSO[shaderType], threadID);
 
 		if(texture)
 		{
@@ -578,7 +593,7 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 			device->BindResourceVS(texture,TEXSLOT_ONDEMAND0,threadID);
 		}
 
-		device->BindRasterizerState(ncrs, threadID);
+		//device->BindRasterizerState(ncrs, threadID);
 
 		device->BindConstantBufferVS(cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 

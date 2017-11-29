@@ -18,9 +18,15 @@ ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS 
 				 *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
 ComputeShader		*wiEmittedParticle::kickoffSortCS = nullptr, *wiEmittedParticle::sortCS = nullptr, *wiEmittedParticle::sortInnerCS = nullptr, *wiEmittedParticle::sortStepCS = nullptr;
 GPUBuffer		*wiEmittedParticle::sortCB = nullptr;
-BlendState		*wiEmittedParticle::blendStateAlpha = nullptr,*wiEmittedParticle::blendStateAdd = nullptr;
-RasterizerState		*wiEmittedParticle::rasterizerState = nullptr,*wiEmittedParticle::wireFrameRS = nullptr;
-DepthStencilState	*wiEmittedParticle::depthStencilState = nullptr;
+BlendState		wiEmittedParticle::blendStates[BLENDMODE_COUNT];
+RasterizerState		wiEmittedParticle::rasterizerState, wiEmittedParticle::wireFrameRS;
+DepthStencilState	wiEmittedParticle::depthStencilState;
+GraphicsPSO wiEmittedParticle::PSO[BLENDMODE_COUNT];
+GraphicsPSO wiEmittedParticle::PSO_wire;
+ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_simulate, 
+	wiEmittedParticle::CPSO_simulate_SORTING, wiEmittedParticle::CPSO_simulate_DEPTHCOLLISIONS, wiEmittedParticle::CPSO_simulate_SORTING_DEPTHCOLLISIONS;
+ComputePSO wiEmittedParticle::CPSO_kickoffSort, wiEmittedParticle::CPSO_sort, wiEmittedParticle::CPSO_sortInner, 
+	wiEmittedParticle::CPSO_sortStep;
 
 wiEmittedParticle::wiEmittedParticle()
 {
@@ -317,11 +323,13 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 
 	// kick off updating, set up state
-	device->BindCS(kickoffUpdateCS, threadID);
+	//device->BindCS(kickoffUpdateCS, threadID);
+	device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 
 	// emit the required amount if there are free slots in dead list
-	device->BindCS(emitCS, threadID);
+	//device->BindCS(emitCS, threadID);
+	device->BindComputePSO(&CPSO_emit, threadID);
 	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
 
 	// update CURRENT alive list, write NEW alive list
@@ -329,22 +337,26 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		if (DEPTHCOLLISIONS)
 		{
-			device->BindCS(simulateCS_SORTING_DEPTHCOLLISIONS, threadID);
+			//device->BindCS(simulateCS_SORTING_DEPTHCOLLISIONS, threadID);
+			device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
 		}
 		else
 		{
-			device->BindCS(simulateCS_SORTING, threadID);
+			//device->BindCS(simulateCS_SORTING, threadID);
+			device->BindComputePSO(&CPSO_simulate_SORTING, threadID);
 		}
 	}
 	else
 	{
 		if (DEPTHCOLLISIONS)
 		{
-			device->BindCS(simulateCS_DEPTHCOLLISIONS, threadID);
+			//device->BindCS(simulateCS_DEPTHCOLLISIONS, threadID);
+			device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
 		}
 		else
 		{
-			device->BindCS(simulateCS, threadID);
+			//device->BindCS(simulateCS, threadID);
+			device->BindComputePSO(&CPSO_simulate, threadID);
 		}
 	}
 	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
@@ -356,7 +368,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->EventBegin("SortEmittedParticles", threadID);
 
 		// initialize sorting arguments:
-		device->BindCS(kickoffSortCS, threadID);
+		//device->BindCS(kickoffSortCS, threadID);
+		device->BindComputePSO(&CPSO_kickoffSort, threadID);
 		device->Dispatch(1, 1, 1, threadID);
 
 		// initial sorting:
@@ -372,14 +385,16 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		if (numThreadGroups>1) bDone = false;
 
 		// sort all buffers of size 512 (and presort bigger ones)
-		device->BindCS(sortCS, threadID);
+		//device->BindCS(sortCS, threadID);
+		device->BindComputePSO(&CPSO_sort, threadID);
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
 
 		int presorted = 512;
 		while (!bDone)
 		{
 			bDone = true;
-			device->BindCS(sortStepCS, threadID);
+			//device->BindCS(sortStepCS, threadID);
+			device->BindComputePSO(&CPSO_sortStep, threadID);
 
 			// prepare thread group description data
 			unsigned int numThreadGroups = 0;
@@ -418,7 +433,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				device->Dispatch(numThreadGroups, 1, 1, threadID);
 			}
 
-			device->BindCS(sortInnerCS, threadID);
+			//device->BindCS(sortInnerCS, threadID);
+			device->BindComputePSO(&CPSO_sortInner, threadID);
 			device->Dispatch(numThreadGroups, 1, 1, threadID);
 
 
@@ -429,7 +445,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 
-	device->BindCS(nullptr, threadID);
+	//device->BindCS(nullptr, threadID);
 	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
@@ -448,19 +464,28 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", threadID);
 
-	bool additive = (material->blendFlag == BLENDMODE_ADDITIVE || material->premultipliedTexture);
+	//bool additive = (material->blendFlag == BLENDMODE_ADDITIVE || material->premultipliedTexture);
+
+	if (wiRenderer::IsWireRender())
+	{
+		device->BindGraphicsPSO(&PSO_wire, threadID);
+	}
+	else
+	{
+		device->BindGraphicsPSO(&PSO[material->blendFlag], threadID);
+	}
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
-	device->BindVertexLayout(nullptr, threadID);
-	device->BindPS(wiRenderer::IsWireRender() ? simplestPS : pixelShader, threadID);
-	device->BindVS(vertexShader, threadID);
+	//device->BindVertexLayout(nullptr, threadID);
+	//device->BindPS(wiRenderer::IsWireRender() ? simplestPS : pixelShader, threadID);
+	//device->BindVS(vertexShader, threadID);
 
 	device->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
-	device->BindRasterizerState(wiRenderer::IsWireRender() ? wireFrameRS : rasterizerState, threadID);
-	device->BindDepthStencilState(depthStencilState, 1, threadID);
+	//device->BindRasterizerState(wiRenderer::IsWireRender() ? wireFrameRS : rasterizerState, threadID);
+	//device->BindDepthStencilState(depthStencilState, 1, threadID);
 
-	device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
+	//device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
 
 	device->BindResourceVS(particleBuffer, 0, threadID);
 	device->BindResourceVS(aliveList[0], 1, threadID);
@@ -516,6 +541,70 @@ void wiEmittedParticle::LoadShaders()
 	sortStepCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortStepCS.cso", wiResourceManager::COMPUTESHADER));
 
 
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	for (int i = 0; i < BLENDMODE_COUNT; ++i)
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShader;
+		desc.ps = pixelShader;
+		desc.bs = &blendStates[i];
+		desc.rs = &rasterizerState;
+		desc.dss = &depthStencilState;
+		desc.numRTs = 1;
+		
+		device->CreateGraphicsPSO(&desc, &PSO[i]);
+	}
+
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShader;
+		desc.ps = simplestPS;
+		desc.bs = &blendStates[BLENDMODE_OPAQUE];
+		desc.rs = &wireFrameRS;
+		desc.dss = &depthStencilState;
+		desc.numRTs = 1;
+
+		device->CreateGraphicsPSO(&desc, &PSO_wire);
+	}
+
+	{
+		//static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *emitCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
+		//static wiGraphicsTypes::ComputeShader		*kickoffSortCS, *sortCS, *sortInnerCS, *sortStepCS;
+
+		ComputePSODesc desc;
+
+		desc.cs = kickoffUpdateCS;
+		device->CreateComputePSO(&desc, &CPSO_kickoffUpdate);
+
+		desc.cs = emitCS;
+		device->CreateComputePSO(&desc, &CPSO_emit);
+
+		desc.cs = simulateCS;
+		device->CreateComputePSO(&desc, &CPSO_simulate);
+
+		desc.cs = simulateCS_SORTING;
+		device->CreateComputePSO(&desc, &CPSO_simulate_SORTING);
+
+		desc.cs = simulateCS_DEPTHCOLLISIONS;
+		device->CreateComputePSO(&desc, &CPSO_simulate_DEPTHCOLLISIONS);
+
+		desc.cs = simulateCS_SORTING_DEPTHCOLLISIONS;
+		device->CreateComputePSO(&desc, &CPSO_simulate_SORTING_DEPTHCOLLISIONS);
+
+		desc.cs = kickoffSortCS;
+		device->CreateComputePSO(&desc, &CPSO_kickoffSort);
+
+		desc.cs = sortCS;
+		device->CreateComputePSO(&desc, &CPSO_sort);
+
+		desc.cs = sortInnerCS;
+		device->CreateComputePSO(&desc, &CPSO_sortInner);
+
+		desc.cs = sortStepCS;
+		device->CreateComputePSO(&desc, &CPSO_sortStep);
+	}
+
 }
 void wiEmittedParticle::LoadBuffers()
 {
@@ -544,8 +633,7 @@ void wiEmittedParticle::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	rasterizerState = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,rasterizerState);
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
 
 	
 	rs.FillMode=FILL_WIREFRAME;
@@ -558,42 +646,16 @@ void wiEmittedParticle::SetUpStates()
 	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
-	wireFrameRS = new RasterizerState;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,wireFrameRS);
-
-
-
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&wireFrameRS);
 
 	
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_GREATER;
-
 	dsd.StencilEnable = false;
-	dsd.StencilReadMask = 0xFF;
-	dsd.StencilWriteMask = 0xFF;
-
-	// Stencil operations if pixel is front-facing.
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_INCR;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
-
-	// Stencil operations if pixel is back-facing.
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_DECR;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
-
-	// Create the depth stencil state.
-	depthStencilState = new DepthStencilState;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, depthStencilState);
-
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
 
 	
 	BlendStateDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -603,10 +665,8 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable=false;
-	blendStateAlpha = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAlpha);
+	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendStates[BLENDMODE_ALPHA]);
 
-	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable=true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
@@ -616,14 +676,27 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable=false;
-	blendStateAdd = new BlendState;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,blendStateAdd);
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
+
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.IndependentBlendEnable = false;
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_PREMULTIPLIED]);
+
+	bd.RenderTarget[0].BlendEnable = false;
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
 }
 void wiEmittedParticle::SetUpStatic()
 {
-	LoadShaders();
 	LoadBuffers();
 	SetUpStates();
+	LoadShaders();
 }
 void wiEmittedParticle::CleanUpStatic()
 {
@@ -639,11 +712,6 @@ void wiEmittedParticle::CleanUpStatic()
 	SAFE_DELETE(sortInnerCS);
 	SAFE_DELETE(sortStepCS);
 	SAFE_DELETE(sortCB);
-	SAFE_DELETE(blendStateAlpha);
-	SAFE_DELETE(blendStateAdd);
-	SAFE_DELETE(rasterizerState);
-	SAFE_DELETE(wireFrameRS);
-	SAFE_DELETE(depthStencilState);
 }
 
 void wiEmittedParticle::Serialize(wiArchive& archive)

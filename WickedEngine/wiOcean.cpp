@@ -14,10 +14,13 @@ PixelShader*			wiOcean::g_pWireframePS = nullptr;
 PixelShader*			wiOcean::g_pOceanSurfPS = nullptr;
 
 GPUBuffer*				wiOcean::g_pShadingCB = nullptr;
-RasterizerState*		wiOcean::rasterizerState = nullptr;
-RasterizerState*		wiOcean::wireRS = nullptr;
-DepthStencilState*		wiOcean::depthStencilState = nullptr;
-BlendState*				wiOcean::blendState = nullptr;
+RasterizerState			wiOcean::rasterizerState;
+RasterizerState			wiOcean::wireRS;
+DepthStencilState		wiOcean::depthStencilState;
+BlendState				wiOcean::blendState;
+
+GraphicsPSO wiOcean::PSO, wiOcean::PSO_wire;
+ComputePSO wiOcean::CPSO_updateSpectrum, wiOcean::CPSO_updateDisplacementMap, wiOcean::CPSO_updateGradientFolding;
 
 CSFFT512x512_Plan		wiOcean::m_fft_plan;
 
@@ -247,7 +250,9 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->EventBegin("Ocean Simulation", threadID);
 
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
-	device->BindCS(m_pUpdateSpectrumCS, threadID);
+
+	//device->BindCS(m_pUpdateSpectrumCS, threadID);
+	device->BindComputePSO(&CPSO_updateSpectrum, threadID);
 
 	// Buffers
 	GPUResource* cs0_srvs[2] = { 
@@ -287,7 +292,8 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 
 
 	// Update displacement map:
-	device->BindCS(m_pUpdateDisplacementMapCS, threadID);
+	//device->BindCS(m_pUpdateDisplacementMapCS, threadID);
+	device->BindComputePSO(&CPSO_updateDisplacementMap, threadID);
 	GPUUnorderedResource* cs_uavs[] = { m_pDisplacementMap };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 	GPUResource* cs_srvs[1] = { m_pBuffer_Float_Dxyz };
@@ -296,7 +302,8 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 
 
 	// Update gradient map:
-	device->BindCS(m_pUpdateGradientFoldingCS, threadID);
+	//device->BindCS(m_pUpdateGradientFoldingCS, threadID);
+	device->BindComputePSO(&CPSO_updateGradientFolding, threadID);
 	cs_uavs[0] = { m_pGradientMap };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 	cs_srvs[0] = m_pDisplacementMap;
@@ -306,7 +313,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	// Unbind
 	device->UnBindUnorderedAccessResources(0, 1, threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	device->BindCS(nullptr, threadID);
+	//device->BindCS(nullptr, threadID);
 
 
 	device->GenerateMips(m_pGradientMap, threadID);
@@ -324,16 +331,26 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	bool wire = wiRenderer::IsWireRender();
 
-	device->BindVS(g_pOceanSurfVS, threadID);
-	device->BindPS(wire ? g_pWireframePS : g_pOceanSurfPS, threadID);
+	//device->BindVS(g_pOceanSurfVS, threadID);
+	//device->BindPS(wire ? g_pWireframePS : g_pOceanSurfPS, threadID);
 
 
 	device->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	device->BindVertexLayout(nullptr, threadID);
 
-	device->BindRasterizerState(wire ? wireRS : rasterizerState, threadID);
-	device->BindDepthStencilState(depthStencilState, 0, threadID);
-	device->BindBlendState(blendState, threadID);
+	if (wire)
+	{
+		device->BindGraphicsPSO(&PSO_wire, threadID);
+	}
+	else
+	{
+		device->BindGraphicsPSO(&PSO, threadID);
+	}
+
+	//device->BindVertexLayout(nullptr, threadID);
+
+	//device->BindRasterizerState(wire ? wireRS : rasterizerState, threadID);
+	//device->BindDepthStencilState(depthStencilState, 0, threadID);
+	//device->BindBlendState(blendState, threadID);
 
 
 
@@ -375,14 +392,36 @@ void wiOcean::LoadShaders()
 	g_pOceanSurfPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfacePS.cso", wiResourceManager::PIXELSHADER));
 	g_pWireframePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceSimplePS.cso", wiResourceManager::PIXELSHADER));
 
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	{
+		GraphicsPSODesc desc;
+		desc.vs = g_pOceanSurfVS;
+		desc.ps = g_pOceanSurfPS;
+		desc.bs = &blendState;
+		desc.rs = &rasterizerState;
+		desc.dss = &depthStencilState;
+		device->CreateGraphicsPSO(&desc, &PSO);
+
+		desc.ps = g_pWireframePS;
+		desc.rs = &wireRS;
+		device->CreateGraphicsPSO(&desc, &PSO_wire);
+	}
+
+	{
+		ComputePSODesc desc;
+		desc.cs = m_pUpdateSpectrumCS;
+		device->CreateComputePSO(&desc, &CPSO_updateSpectrum);
+		desc.cs = m_pUpdateDisplacementMapCS;
+		device->CreateComputePSO(&desc, &CPSO_updateDisplacementMap);
+		desc.cs = m_pUpdateGradientFoldingCS;
+		device->CreateComputePSO(&desc, &CPSO_updateGradientFolding);
+	}
 }
 
 void wiOcean::SetUpStatic()
 {
-	LoadShaders();
-	CSFFT_512x512_Data_t::LoadShaders();
-	fft512x512_create_plan(&m_fft_plan, 3);
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 
@@ -408,13 +447,11 @@ void wiOcean::SetUpStatic()
 	ras_desc.MultisampleEnable = true;
 	ras_desc.AntialiasedLineEnable = false;
 
-	rasterizerState = new RasterizerState;
-	device->CreateRasterizerState(&ras_desc, rasterizerState);
+	device->CreateRasterizerState(&ras_desc, &rasterizerState);
 
 	ras_desc.FillMode = FILL_WIREFRAME;
 
-	wireRS = new RasterizerState;
-	device->CreateRasterizerState(&ras_desc, wireRS);
+	device->CreateRasterizerState(&ras_desc, &wireRS);
 
 	DepthStencilStateDesc depth_desc;
 	memset(&depth_desc, 0, sizeof(DepthStencilStateDesc));
@@ -422,8 +459,7 @@ void wiOcean::SetUpStatic()
 	depth_desc.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	depth_desc.DepthFunc = COMPARISON_GREATER;
 	depth_desc.StencilEnable = false;
-	depthStencilState = new DepthStencilState;
-	device->CreateDepthStencilState(&depth_desc, depthStencilState);
+	device->CreateDepthStencilState(&depth_desc, &depthStencilState);
 
 	BlendStateDesc blend_desc;
 	memset(&blend_desc, 0, sizeof(BlendStateDesc));
@@ -437,8 +473,12 @@ void wiOcean::SetUpStatic()
 	blend_desc.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	blend_desc.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	blend_desc.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	blendState = new BlendState;
-	device->CreateBlendState(&blend_desc, blendState);
+	device->CreateBlendState(&blend_desc, &blendState);
+
+
+	LoadShaders();
+	CSFFT_512x512_Data_t::LoadShaders();
+	fft512x512_create_plan(&m_fft_plan, 3);
 }
 
 void wiOcean::CleanUpStatic()
@@ -454,11 +494,6 @@ void wiOcean::CleanUpStatic()
 	SAFE_DELETE(g_pWireframePS);
 
 	SAFE_DELETE(g_pShadingCB);
-
-	SAFE_DELETE(rasterizerState);
-	SAFE_DELETE(wireRS);
-	SAFE_DELETE(depthStencilState);
-	SAFE_DELETE(blendState);
 }
 
 const wiOceanParameter& wiOcean::getParameters()

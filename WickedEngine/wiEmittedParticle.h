@@ -3,6 +3,7 @@
 #include "wiGraphicsAPI.h"
 #include "wiIntersectables.h"
 #include "ShaderInterop_EmittedParticle.h"
+#include "wiImageEffects.h"
 
 struct Object;
 struct Material;
@@ -28,10 +29,15 @@ private:
 	static wiGraphicsTypes::ComputeShader		*kickoffSortCS, *sortCS, *sortInnerCS, *sortStepCS;
 	static wiGraphicsTypes::GPUBuffer			*sortCB;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
-	static wiGraphicsTypes::PixelShader			*pixelShader,*simplestPS;
-	static wiGraphicsTypes::BlendState			*blendStateAlpha,*blendStateAdd;
-	static wiGraphicsTypes::RasterizerState		*rasterizerState,*wireFrameRS;
-	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
+	static wiGraphicsTypes::PixelShader			*pixelShader, *simplestPS;
+	static wiGraphicsTypes::BlendState			blendStates[BLENDMODE_COUNT];
+	static wiGraphicsTypes::RasterizerState		rasterizerState,wireFrameRS;
+	static wiGraphicsTypes::DepthStencilState	depthStencilState;
+
+	static wiGraphicsTypes::GraphicsPSO			PSO[BLENDMODE_COUNT];
+	static wiGraphicsTypes::GraphicsPSO			PSO_wire;
+	static wiGraphicsTypes::ComputePSO			CPSO_kickoffUpdate, CPSO_emit, CPSO_simulate, CPSO_simulate_SORTING, CPSO_simulate_DEPTHCOLLISIONS, CPSO_simulate_SORTING_DEPTHCOLLISIONS;
+	static wiGraphicsTypes::ComputePSO			CPSO_kickoffSort, CPSO_sort, CPSO_sortInner, CPSO_sortStep;
 
 public:
 	static void LoadShaders();

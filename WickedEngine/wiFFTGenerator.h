@@ -17,6 +17,7 @@ typedef struct CSFFT_512x512_Data_t
 {
 	static wiGraphicsTypes::ComputeShader* pRadix008A_CS;
 	static wiGraphicsTypes::ComputeShader* pRadix008A_CS2;
+	static wiGraphicsTypes::ComputePSO PSO1, PSO2;
 
 	// More than one array can be transformed at same time
 	UINT slices;

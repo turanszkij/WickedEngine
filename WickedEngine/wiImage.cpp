@@ -665,10 +665,11 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 }
 
 
-void wiImage::Load(){
-	LoadShaders();
+void wiImage::Load()
+{
 	LoadBuffers();
 	SetUpStates();
+	LoadShaders();
 }
 void wiImage::CleanUp()
 {

@@ -12,10 +12,11 @@ private:
 	static wiGraphicsTypes::GeometryShader		*geometryShader;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
 	static wiGraphicsTypes::VertexLayout		*inputLayout;
-	static wiGraphicsTypes::RasterizerState		*rasterizerState;
-	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
-	static wiGraphicsTypes::BlendState			*blendState;
+	static wiGraphicsTypes::RasterizerState		rasterizerState;
+	static wiGraphicsTypes::DepthStencilState	depthStencilState;
+	static wiGraphicsTypes::BlendState			blendState;
 	static wiGraphicsTypes::Sampler				*samplercmp;
+	static wiGraphicsTypes::GraphicsPSO			PSO;
 
 	CBUFFER(ConstantBuffer, CBSLOT_OTHER_LENSFLARE)
 	{
