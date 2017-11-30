@@ -22,6 +22,7 @@ PixelShader*		wiImage::deferredPS = nullptr;
 BlendState			wiImage::blendStates[BLENDMODE_COUNT];
 RasterizerState		wiImage::rasterizerState;
 DepthStencilState	wiImage::depthStencilStates[STENCILMODE_COUNT];
+BlendState			wiImage::blendStateDisableColor;
 DepthStencilState	wiImage::depthStencilStateDepthWrite;
 
 GraphicsPSO			wiImage::imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT];
@@ -157,7 +158,6 @@ void wiImage::SetUpStates()
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = 0;
 	rs.DepthClipEnable = false;
-	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rs, &rasterizerState);

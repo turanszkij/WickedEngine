@@ -560,7 +560,7 @@ void wiEmittedParticle::LoadShaders()
 		GraphicsPSODesc desc;
 		desc.vs = vertexShader;
 		desc.ps = simplestPS;
-		desc.bs = &blendStates[BLENDMODE_OPAQUE];
+		desc.bs = &blendStates[BLENDMODE_ALPHA];
 		desc.rs = &wireFrameRS;
 		desc.dss = &depthStencilState;
 		desc.numRTs = 1;
@@ -569,9 +569,6 @@ void wiEmittedParticle::LoadShaders()
 	}
 
 	{
-		//static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *emitCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
-		//static wiGraphicsTypes::ComputeShader		*kickoffSortCS, *sortCS, *sortInnerCS, *sortStepCS;
-
 		ComputePSODesc desc;
 
 		desc.cs = kickoffUpdateCS;
@@ -630,7 +627,6 @@ void wiEmittedParticle::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=false;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
@@ -643,7 +639,6 @@ void wiEmittedParticle::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=false;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&wireFrameRS);

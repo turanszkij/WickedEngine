@@ -128,7 +128,6 @@ void wiLensFlare::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=false;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);

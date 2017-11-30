@@ -1407,7 +1407,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -2541,15 +2541,15 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 	desc.DepthBiasClamp = pRasterizerStateDesc->DepthBiasClamp;
 	desc.SlopeScaledDepthBias = pRasterizerStateDesc->SlopeScaledDepthBias;
 	desc.DepthClipEnable = pRasterizerStateDesc->DepthClipEnable;
-	desc.ScissorEnable = pRasterizerStateDesc->ScissorEnable;
+	desc.ScissorEnable = true;
 	desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
 	desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
 
 
-	if( CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE )
+	if (CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE)
 	{
 		ID3D11Device3* device3 = nullptr;
-		if( SUCCEEDED( device->QueryInterface( __uuidof( ID3D11Device3 ), ( void** )&device3 ) ) )
+		if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D11Device3), (void**)&device3)))
 		{
 			D3D11_RASTERIZER_DESC2 desc2;
 			desc2.FillMode = desc.FillMode;
@@ -2563,21 +2563,21 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 			desc2.MultisampleEnable = desc.MultisampleEnable;
 			desc2.AntialiasedLineEnable = desc.AntialiasedLineEnable;
 			desc2.ConservativeRaster = D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON;
-			desc2.ForcedSampleCount = ( RASTERIZER_ORDERED_VIEWS ? pRasterizerStateDesc->ForcedSampleCount : 0 );
+			desc2.ForcedSampleCount = (RASTERIZER_ORDERED_VIEWS ? pRasterizerStateDesc->ForcedSampleCount : 0);
 
 			pRasterizerState->desc = *pRasterizerStateDesc;
 
 			ID3D11RasterizerState2* rasterizer2 = nullptr;
-			HRESULT hr = device3->CreateRasterizerState2( &desc2, &rasterizer2 );
-			pRasterizerState->resource_DX11 = ( ID3D11RasterizerState* )rasterizer2;
-			SAFE_RELEASE( device3 );
+			HRESULT hr = device3->CreateRasterizerState2(&desc2, &rasterizer2);
+			pRasterizerState->resource_DX11 = (ID3D11RasterizerState*)rasterizer2;
+			SAFE_RELEASE(device3);
 			return hr;
 		}
 	}
-	else if( RASTERIZER_ORDERED_VIEWS && pRasterizerStateDesc->ForcedSampleCount > 0 )
+	else if (RASTERIZER_ORDERED_VIEWS && pRasterizerStateDesc->ForcedSampleCount > 0)
 	{
 		ID3D11Device1* device1 = nullptr;
-		if( SUCCEEDED( device->QueryInterface( __uuidof( ID3D11Device1 ), ( void** )&device1 ) ) )
+		if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D11Device1), (void**)&device1)))
 		{
 			D3D11_RASTERIZER_DESC1 desc1;
 			desc1.FillMode = desc.FillMode;
@@ -2595,9 +2595,9 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 			pRasterizerState->desc = *pRasterizerStateDesc;
 
 			ID3D11RasterizerState1* rasterizer1 = nullptr;
-			HRESULT hr = device1->CreateRasterizerState1( &desc1, &rasterizer1 );
-			pRasterizerState->resource_DX11 = ( ID3D11RasterizerState* )rasterizer1;
-			SAFE_RELEASE( device1 );
+			HRESULT hr = device1->CreateRasterizerState1(&desc1, &rasterizer1);
+			pRasterizerState->resource_DX11 = (ID3D11RasterizerState*)rasterizer1;
+			SAFE_RELEASE(device1);
 			return hr;
 		}
 	}
@@ -2699,6 +2699,17 @@ void GraphicsDevice_DX11::PresentEnd()
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->OMSetRenderTargets(0, nullptr, nullptr);
 
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ClearState();
+	BindGraphicsPSO(nullptr, GRAPHICSTHREAD_IMMEDIATE);
+
+	D3D11_RECT pRects[8];
+	for (UINT i = 0; i < 8; ++i)
+	{
+		pRects[i].bottom = INT32_MAX;
+		pRects[i].left = INT32_MIN;
+		pRects[i].right = INT32_MAX;
+		pRects[i].top = INT32_MIN;
+	}
+	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->RSSetScissorRects(8, pRects);
 
 	FRAMECOUNT++;
 
@@ -2716,8 +2727,8 @@ void GraphicsDevice_DX11::ExecuteDeferredContexts()
 			deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ExecuteCommandList(commandLists[i], true);
 			commandLists[i]->Release();
 			commandLists[i] = nullptr;
-
-			UnBindResources(0, TEXSLOT_COUNT, (GRAPHICSTHREAD)i);
+			deviceContexts[i]->ClearState();
+			BindGraphicsPSO(nullptr, (GRAPHICSTHREAD)i);
 		}
 	}
 }
@@ -3145,14 +3156,9 @@ void GraphicsDevice_DX11::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadI
 {
 	blendFactor[threadID] = value;
 }
-//void GraphicsDevice_DX11::BindVertexLayout(const VertexLayout* layout, GRAPHICSTHREAD threadID)
-//{
-//	ID3D11InputLayout* res = layout != nullptr ? layout->resource_DX11 : nullptr;
-//	deviceContexts[threadID]->IASetInputLayout(res);
-//}
 void GraphicsDevice_DX11::BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 {
-	const GraphicsPSODesc& desc = pso->GetDesc();
+	const GraphicsPSODesc& desc = pso != nullptr ? pso->GetDesc() : GraphicsPSODesc();
 
 	static ID3D11VertexShader* prev_vs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : desc.vs->resource_DX11;
@@ -3236,7 +3242,7 @@ void GraphicsDevice_DX11::BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD
 }
 void GraphicsDevice_DX11::BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID)
 {
-	const ComputePSODesc& desc = pso->GetDesc();
+	const ComputePSODesc& desc = pso != nullptr ? pso->GetDesc() : ComputePSODesc();
 
 	static ID3D11ComputeShader* prev_cs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11ComputeShader* cs = desc.cs == nullptr ? nullptr : desc.cs->resource_DX11;
@@ -3246,55 +3252,6 @@ void GraphicsDevice_DX11::BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD t
 		prev_cs[threadID] = cs;
 	}
 }
-//void GraphicsDevice_DX11::BindBlendState(const BlendState* state, GRAPHICSTHREAD threadID)
-//{
-//	static const float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-//	static const UINT sampleMask = 0xffffffff;
-//	deviceContexts[threadID]->OMSetBlendState(state->resource_DX11, blendFactor, sampleMask);
-//}
-//void GraphicsDevice_DX11::BindBlendStateEx(const BlendState* state, const XMFLOAT4& blendFactor, UINT sampleMask, GRAPHICSTHREAD threadID) 
-//{
-//	const float fblendFactor[4] = { blendFactor.x, blendFactor.y, blendFactor.z, blendFactor.w };
-//	deviceContexts[threadID]->OMSetBlendState(state->resource_DX11, fblendFactor, sampleMask);
-//}
-//void GraphicsDevice_DX11::BindDepthStencilState(const DepthStencilState* state, UINT stencilRef, GRAPHICSTHREAD threadID) 
-//{
-//	deviceContexts[threadID]->OMSetDepthStencilState(state != nullptr ? state->resource_DX11 : nullptr, stencilRef);
-//}
-//void GraphicsDevice_DX11::BindRasterizerState(const RasterizerState* state, GRAPHICSTHREAD threadID) 
-//{
-//	deviceContexts[threadID]->RSSetState(state != nullptr ? state->resource_DX11 : nullptr);
-//}
-//void GraphicsDevice_DX11::BindPS(const PixelShader* shader, GRAPHICSTHREAD threadID) 
-//{
-//	ID3D11PixelShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-//	deviceContexts[threadID]->PSSetShader(res, nullptr, 0);
-//}
-//void GraphicsDevice_DX11::BindVS(const VertexShader* shader, GRAPHICSTHREAD threadID) 
-//{
-//	ID3D11VertexShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-//	deviceContexts[threadID]->VSSetShader(res, nullptr, 0);
-//}
-//void GraphicsDevice_DX11::BindGS(const GeometryShader* shader, GRAPHICSTHREAD threadID)
-//{
-//	ID3D11GeometryShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-//	deviceContexts[threadID]->GSSetShader(res, nullptr, 0);
-//}
-//void GraphicsDevice_DX11::BindHS(const HullShader* shader, GRAPHICSTHREAD threadID)
-//{
-//	ID3D11HullShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-//	deviceContexts[threadID]->HSSetShader(res, nullptr, 0);
-//}
-//void GraphicsDevice_DX11::BindDS(const DomainShader* shader, GRAPHICSTHREAD threadID)
-//{
-//	ID3D11DomainShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-//	deviceContexts[threadID]->DSSetShader(res, nullptr, 0);
-//}
-//void GraphicsDevice_DX11::BindCS(const ComputeShader* shader, GRAPHICSTHREAD threadID)
-//{
-//	ID3D11ComputeShader* res = shader != nullptr ? shader->resource_DX11 : nullptr;
-//	deviceContexts[threadID]->CSSetShader(res, nullptr, 0);
-//}
 void GraphicsDevice_DX11::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) 
 {
 	deviceContexts[threadID]->Draw(vertexCount, startVertexLocation);
@@ -3435,23 +3392,17 @@ bool GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer*
 }
 void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
 {
-	if (rects != nullptr)
+	assert(rects != nullptr);
+	assert(numRects <= 8);
+	D3D11_RECT pRects[8];
+	for (UINT i = 0; i < numRects; ++i)
 	{
-		assert(numRects <= 8);
-		D3D11_RECT pRects[8];
-		for (UINT i = 0; i < numRects; ++i)
-		{
-			pRects[i].bottom = rects[i].bottom;
-			pRects[i].left = rects[i].left;
-			pRects[i].right = rects[i].right;
-			pRects[i].top = rects[i].top;
-		}
-		deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
+		pRects[i].bottom = rects[i].bottom;
+		pRects[i].left = rects[i].left;
+		pRects[i].right = rects[i].right;
+		pRects[i].top = rects[i].top;
 	}
-	else
-	{
-		deviceContexts[threadID]->RSSetScissorRects(numRects, nullptr);
-	}
+	deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
 }
 
 void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)

@@ -2711,23 +2711,17 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
 	{
-		if (rects != nullptr)
+		assert(rects != nullptr);
+		assert(numRects <= 8);
+		D3D12_RECT pRects[8];
+		for (UINT i = 0; i < numRects; ++i)
 		{
-			assert(numRects <= 8);
-			D3D12_RECT pRects[8];
-			for (UINT i = 0; i < numRects; ++i)
-			{
-				pRects[i].bottom = rects[i].bottom;
-				pRects[i].left = rects[i].left;
-				pRects[i].right = rects[i].right;
-				pRects[i].top = rects[i].top;
-			}
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->RSSetScissorRects(numRects, pRects);
+			pRects[i].bottom = rects[i].bottom;
+			pRects[i].left = rects[i].left;
+			pRects[i].right = rects[i].right;
+			pRects[i].top = rects[i].top;
 		}
-		else
-		{
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->RSSetScissorRects(numRects, nullptr);
-		}
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->RSSetScissorRects(numRects, pRects);
 	}
 
 	void GraphicsDevice_DX12::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)

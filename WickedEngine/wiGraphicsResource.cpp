@@ -61,15 +61,18 @@ namespace wiGraphicsTypes
 	Sampler::Sampler()
 	{
 		SAFE_INIT(resource_DX11);
+		SAFE_INIT(resource_DX12);
 	}
 	Sampler::~Sampler()
 	{
 		SAFE_RELEASE(resource_DX11);
+		SAFE_DELETE(resource_DX12);
 	}
 
 	GPUResource::GPUResource()
 	{
 		SAFE_INIT(SRV_DX11);
+		SAFE_INIT(SRV_DX12);
 	}
 	GPUResource::~GPUResource()
 	{
@@ -78,11 +81,18 @@ namespace wiGraphicsTypes
 		{
 			SAFE_RELEASE(x);
 		}
+
+		SAFE_DELETE(SRV_DX12);
+		for (auto& x : additionalSRVs_DX12)
+		{
+			SAFE_DELETE(x);
+		}
 	}
 
 	GPUUnorderedResource::GPUUnorderedResource()
 	{
 		SAFE_INIT(UAV_DX11);
+		SAFE_INIT(UAV_DX12);
 	}
 	GPUUnorderedResource::~GPUUnorderedResource()
 	{
@@ -91,15 +101,23 @@ namespace wiGraphicsTypes
 		{
 			SAFE_RELEASE(x);
 		}
+
+		SAFE_DELETE(UAV_DX12);
+		for (auto& x : additionalUAVs_DX12)
+		{
+			SAFE_DELETE(x);
+		}
 	}
 
 	GPUBuffer::GPUBuffer() : GPUResource(), GPUUnorderedResource()
 	{
 		SAFE_INIT(resource_DX11);
+		SAFE_INIT(resource_DX12);
 	}
 	GPUBuffer::~GPUBuffer()
 	{
 		SAFE_RELEASE(resource_DX11);
+		SAFE_RELEASE(resource_DX12);
 	}
 
 	VertexLayout::VertexLayout()
@@ -154,6 +172,7 @@ namespace wiGraphicsTypes
 		, independentSRVMIPs(false), independentUAVMIPs(false)
 	{
 		SAFE_INIT(RTV_DX11);
+		SAFE_INIT(RTV_DX12);
 	}
 	Texture::~Texture()
 	{
@@ -161,6 +180,12 @@ namespace wiGraphicsTypes
 		for (auto& x : additionalRTVs_DX11)
 		{
 			SAFE_RELEASE(x);
+		}
+
+		SAFE_DELETE(RTV_DX12);
+		for (auto& x : additionalRTVs_DX12)
+		{
+			SAFE_DELETE(x);
 		}
 	}
 	void Texture::RequestIndepententRenderTargetArraySlices(bool value)
@@ -196,15 +221,22 @@ namespace wiGraphicsTypes
 		SAFE_INIT(texture2D_DX11);
 		SAFE_INIT(texture2D_DX12);
 		SAFE_INIT(DSV_DX11);
+		SAFE_INIT(DSV_DX12);
 	}
 	Texture2D::~Texture2D()
 	{
 		SAFE_RELEASE(texture2D_DX11);
-		SAFE_RELEASE(texture2D_DX12);
 		SAFE_RELEASE(DSV_DX11);
 		for (auto& x : additionalDSVs_DX11)
 		{
 			SAFE_RELEASE(x);
+		}
+
+		SAFE_RELEASE(texture2D_DX12);
+		SAFE_DELETE(DSV_DX12);
+		for (auto& x : additionalDSVs_DX12)
+		{
+			SAFE_DELETE(x);
 		}
 	}
 

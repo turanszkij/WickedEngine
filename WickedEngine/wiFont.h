@@ -53,7 +53,6 @@ protected:
 	static wiGraphicsTypes::PixelShader			*pixelShader;
 	static wiGraphicsTypes::BlendState			*blendState;
 	static wiGraphicsTypes::RasterizerState		*rasterizerState;
-	static wiGraphicsTypes::RasterizerState		*rasterizerState_Scissor;
 	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
 	static wiGraphicsTypes::GraphicsPSO			*PSO;
 	
@@ -104,7 +103,7 @@ public:
 	~wiFont();
 
 	
-	void Draw(GRAPHICSTHREAD threadID, bool scissorTest = false);
+	void Draw(GRAPHICSTHREAD threadID);
 
 
 	int textWidth();

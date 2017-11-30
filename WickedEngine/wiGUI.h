@@ -40,6 +40,8 @@ public:
 
 	GRAPHICSTHREAD GetGraphicsThread() { return threadID; }
 
+	void ResetScissor();
+
 
 	const XMFLOAT2& GetPointerPos() const
 	{

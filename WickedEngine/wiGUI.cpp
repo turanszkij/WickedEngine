@@ -69,13 +69,18 @@ void wiGUI::Render()
 		x->RenderTooltip(this);
 	}
 
+	ResetScissor();
+	wiRenderer::GetDevice()->EventEnd(GetGraphicsThread());
+}
+
+void wiGUI::ResetScissor()
+{
 	wiGraphicsTypes::Rect scissor[1];
 	scissor[0].bottom = (LONG)(wiRenderer::GetDevice()->GetScreenHeight());
 	scissor[0].left = (LONG)(0);
 	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());
 	scissor[0].top = (LONG)(0);
 	wiRenderer::GetDevice()->SetScissorRects(1, scissor, GetGraphicsThread());
-	wiRenderer::GetDevice()->EventEnd(GetGraphicsThread());
 }
 
 void wiGUI::AddWidget(wiWidget* widget)

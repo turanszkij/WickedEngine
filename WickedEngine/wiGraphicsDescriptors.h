@@ -488,7 +488,6 @@ namespace wiGraphicsTypes
 		float DepthBiasClamp;
 		float SlopeScaledDepthBias;
 		bool DepthClipEnable;
-		bool ScissorEnable;
 		bool MultisampleEnable;
 		bool AntialiasedLineEnable;
 		bool ConservativeRasterizationEnable;
@@ -502,7 +501,6 @@ namespace wiGraphicsTypes
 			DepthBiasClamp(0.0f),
 			SlopeScaledDepthBias(0.0f),
 			DepthClipEnable(false),
-			ScissorEnable(false),
 			MultisampleEnable(false),
 			AntialiasedLineEnable(false),
 			ConservativeRasterizationEnable(false),

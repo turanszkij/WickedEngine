@@ -167,7 +167,6 @@ void wiHairParticle::SetUpStatic()
 	rsd.DepthBiasClamp=0;
 	rsd.SlopeScaledDepthBias=0;
 	rsd.DepthClipEnable=true;
-	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &rs);
@@ -179,7 +178,6 @@ void wiHairParticle::SetUpStatic()
 	rsd.DepthBiasClamp=0;
 	rsd.SlopeScaledDepthBias=0;
 	rsd.DepthClipEnable=true;
-	rsd.ScissorEnable=false;
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &ncrs);

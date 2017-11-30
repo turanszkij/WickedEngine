@@ -91,7 +91,6 @@ void wiFont::SetUpStates()
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = 0;
 	rs.DepthClipEnable = false;
-	rs.ScissorEnable = true;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rasterizerState = new RasterizerState;
@@ -175,7 +174,6 @@ void wiFont::CleanUpStatic()
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(pixelShader);
 	SAFE_DELETE(blendState);
-	SAFE_DELETE(rasterizerState_Scissor);
 	SAFE_DELETE(rasterizerState);
 	SAFE_DELETE(depthStencilState);
 	SAFE_DELETE(vertexBuffer);
@@ -246,7 +244,7 @@ void wiFont::ModifyGeo(Vertex* vertexList, const std::wstring& text, wiFontProps
 }
 
 
-void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
+void wiFont::Draw(GRAPHICSTHREAD threadID)
 {
 	if (text.length() <= 0)
 	{
@@ -270,15 +268,6 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 	device->EventBegin("Font", threadID);
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
-	//device->BindVertexLayout(vertexLayout, threadID);
-	//device->BindVS(vertexShader, threadID);
-	//device->BindPS(pixelShader, threadID);
-
-
-	//device->BindRasterizerState(scissorTest ? rasterizerState_Scissor : rasterizerState, threadID);
-	//device->BindDepthStencilState(depthStencilState, 1, threadID);
-
-	//device->BindBlendState(blendState, threadID);
 
 	device->BindGraphicsPSO(PSO, threadID);
 

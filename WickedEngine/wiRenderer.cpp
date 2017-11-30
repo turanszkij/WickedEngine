@@ -118,7 +118,7 @@ wiRenderer::wiRenderer()
 void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fullscreen)
 {
 	SAFE_DELETE(graphicsDevice);
-	graphicsDevice = new GraphicsDevice_DX12(window, fullscreen);
+	graphicsDevice = new GraphicsDevice_DX11(window, fullscreen);
 }
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
@@ -209,8 +209,6 @@ void wiRenderer::SetUpStaticComponents()
 		SAFE_INIT(customsamplers[i]);
 	}
 
-	LoadShaders();
-
 	cam = new Camera();
 	cam->SetUp((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
 	refCam = new Camera();
@@ -221,8 +219,9 @@ void wiRenderer::SetUpStaticComponents()
 	wireRender=false;
 	debugSpheres=false;
 
-	wiRenderer::SetUpStates();
-	wiRenderer::LoadBuffers();
+	SetUpStates();
+	LoadBuffers();
+	LoadShaders();
 	
 	wiHairParticle::SetUpStatic();
 	wiEmittedParticle::SetUpStatic();
@@ -649,6 +648,481 @@ void wiRenderer::LoadBuffers()
 	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
 
+enum OBJECTRENDERING_TESSELLATION
+{
+	OBJECTRENDERING_TESSELLATION_DISABLED,
+	OBJECTRENDERING_TESSELLATION_ENABLED,
+	OBJECTRENDERING_TESSELLATION_COUNT
+};
+enum OBJECTRENDERING_ALPHATEST
+{
+	OBJECTRENDERING_ALPHATEST_DISABLED,
+	OBJECTRENDERING_ALPHATEST_ENABLED,
+	OBJECTRENDERING_ALPHATEST_COUNT
+};
+enum OBJECTRENDERING_TRANSPARENCY
+{
+	OBJECTRENDERING_TRANSPARENCY_DISABLED,
+	OBJECTRENDERING_TRANSPARENCY_ENABLED,
+	OBJECTRENDERING_TRANSPARENCY_COUNT
+};
+enum OBJECTRENDERING_NORMALMAP
+{
+	OBJECTRENDERING_NORMALMAP_DISABLED,
+	OBJECTRENDERING_NORMALMAP_ENABLED,
+	OBJECTRENDERING_NORMALMAP_COUNT
+};
+enum OBJECTRENDERING_PLANARREFLECTION
+{
+	OBJECTRENDERING_PLANARREFLECTION_DISABLED,
+	OBJECTRENDERING_PLANARREFLECTION_ENABLED,
+	OBJECTRENDERING_PLANARREFLECTION_COUNT
+};
+enum OBJECTRENDERING_POM
+{
+	OBJECTRENDERING_POM_DISABLED,
+	OBJECTRENDERING_POM_ENABLED,
+	OBJECTRENDERING_POM_COUNT
+};
+GraphicsPSO* PSO_object[SHADERTYPE_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
+GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool tessellation, Material* material, bool forceAlphaTestForDithering)
+{
+	bool alphatest = material->IsAlphaTestEnabled() || forceAlphaTestForDithering;
+	bool transparent = material->IsTransparent();
+	bool normalmap = material->GetNormalMap() != nullptr;
+	bool planarreflection = material->HasPlanarReflection();
+	bool pom = material->parallaxOcclusionMapping > 0;
+
+	return PSO_object[shaderType][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
+}
+
+VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
+{
+	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
+
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+		if (tessellation)
+		{
+			realVL = VLTYPE_OBJECT_ALL;
+		}
+		else
+		{
+			realVL = VLTYPE_OBJECT_POS_TEX;
+		}
+		break;
+	case SHADERTYPE_DEFERRED:
+	case SHADERTYPE_FORWARD:
+	case SHADERTYPE_TILEDFORWARD:
+	case SHADERTYPE_VOXELIZE:
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realVL = VLTYPE_OBJECT_ALL;
+		break;
+	case SHADERTYPE_DEPTHONLY:
+		if (tessellation)
+		{
+			realVL = VLTYPE_OBJECT_ALL;
+		}
+		else
+		{
+			if (alphatest)
+			{
+				realVL = VLTYPE_OBJECT_POS_TEX;
+			}
+			else
+			{
+				realVL = VLTYPE_OBJECT_POS;
+			}
+		}
+		break;
+	case SHADERTYPE_SHADOW:
+	case SHADERTYPE_SHADOWCUBE:
+		if (alphatest)
+		{
+			realVL = VLTYPE_OBJECT_POS_TEX;
+		}
+		else
+		{
+			realVL = VLTYPE_OBJECT_POS;
+		}
+		break;
+	}
+
+	return realVL;
+}
+VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool water)
+{
+	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
+
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+		if (tessellation)
+		{
+			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
+		}
+		else
+		{
+			realVS = VSTYPE_OBJECT_SIMPLE;
+		}
+		break;
+	case SHADERTYPE_DEFERRED:
+	case SHADERTYPE_FORWARD:
+	case SHADERTYPE_TILEDFORWARD:
+		if (tessellation)
+		{
+			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
+		}
+		else
+		{
+			if (water)
+			{
+				realVS = VSTYPE_WATER;
+			}
+			else
+			{
+				realVS = VSTYPE_OBJECT_COMMON;
+			}
+		}
+		break;
+	case SHADERTYPE_DEPTHONLY:
+		if (tessellation)
+		{
+			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
+		}
+		else
+		{
+			if (alphatest)
+			{
+				realVS = VSTYPE_OBJECT_SIMPLE;
+			}
+			else
+			{
+				realVS = VSTYPE_OBJECT_POSITIONSTREAM;
+			}
+		}
+		break;
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realVS = VSTYPE_ENVMAP;
+		break;
+	case SHADERTYPE_SHADOW:
+		if (alphatest)
+		{
+			realVS = VSTYPE_SHADOW_ALPHATEST;
+		}
+		else
+		{
+			realVS = VSTYPE_SHADOW;
+		}
+		break;
+	case SHADERTYPE_SHADOWCUBE:
+		if (alphatest)
+		{
+			realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+		}
+		else
+		{
+			realVS = VSTYPE_SHADOWCUBEMAPRENDER;
+		}
+		break;
+		break;
+	case SHADERTYPE_VOXELIZE:
+		realVS = VSTYPE_VOXELIZER;
+		break;
+	}
+
+	return realVS;
+}
+GSTYPES GetGSTYPE(SHADERTYPE shaderType, bool alphatest)
+{
+	GSTYPES realGS = GSTYPE_NULL;
+
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+		break;
+	case SHADERTYPE_DEFERRED:
+		break;
+	case SHADERTYPE_FORWARD:
+		break;
+	case SHADERTYPE_TILEDFORWARD:
+		break;
+	case SHADERTYPE_DEPTHONLY:
+		break;
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realGS = GSTYPE_ENVMAP;
+		break;
+	case SHADERTYPE_SHADOW:
+		break;
+	case SHADERTYPE_SHADOWCUBE:
+		if (alphatest)
+		{
+			realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+		}
+		else
+		{
+			realGS = GSTYPE_SHADOWCUBEMAPRENDER;
+		}
+		break;
+	case SHADERTYPE_VOXELIZE:
+		realGS = GSTYPE_VOXELIZER;
+		break;
+	}
+
+	return realGS;
+}
+HSTYPES GetHSTYPE(SHADERTYPE shaderType, bool tessellation)
+{
+	return tessellation ? HSTYPE_OBJECT : HSTYPE_NULL;
+}
+DSTYPES GetDSTYPE(SHADERTYPE shaderType, bool tessellation)
+{
+	return tessellation ? DSTYPE_OBJECT : DSTYPE_NULL;
+}
+PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom, bool water)
+{
+	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
+
+	switch (shaderType)
+	{
+	case SHADERTYPE_DEFERRED:
+		if (normalmap)
+		{
+			if (pom)
+			{
+				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM;
+			}
+			else
+			{
+				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+			}
+		}
+		else
+		{
+			if (pom)
+			{
+				realPS = PSTYPE_OBJECT_DEFERRED_POM;
+			}
+			else
+			{
+				realPS = PSTYPE_OBJECT_DEFERRED;
+			}
+		}
+		break;
+	case SHADERTYPE_FORWARD:
+		if (water)
+		{
+			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER;
+		}
+		else if (transparent)
+		{
+			if (normalmap)
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
+				}
+			}
+			else
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION;
+				}
+			}
+		}
+		else
+		{
+			if (normalmap)
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
+				}
+			}
+			else
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION;
+				}
+			}
+		}
+		break;
+	case SHADERTYPE_TILEDFORWARD:
+		if (water)
+		{
+			realPS = PSTYPE_OBJECT_TILEDFORWARD_WATER;
+		}
+		else if (transparent)
+		{
+			if (normalmap)
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
+				}
+			}
+			else
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION;
+				}
+			}
+		}
+		else
+		{
+			if (normalmap)
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
+				}
+			}
+			else
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION;
+				}
+			}
+		}
+		break;
+	case SHADERTYPE_SHADOW:
+		if (alphatest)
+		{
+			realPS = PSTYPE_SHADOW_ALPHATEST;
+		}
+		else
+		{
+			realPS = PSTYPE_NULL;
+		}
+		break;
+	case SHADERTYPE_SHADOWCUBE:
+		if (alphatest)
+		{
+			realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+		}
+		else
+		{
+			realPS = PSTYPE_SHADOWCUBEMAPRENDER;
+		}
+		break;
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realPS = PSTYPE_ENVMAP;
+		break;
+	case SHADERTYPE_DEPTHONLY:
+		if (alphatest)
+		{
+			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+		}
+		else
+		{
+			realPS = PSTYPE_NULL;
+		}
+		break;
+	case SHADERTYPE_VOXELIZE:
+		realPS = PSTYPE_VOXELIZER;
+		break;
+	case SHADERTYPE_TEXTURE:
+		realPS = PSTYPE_OBJECT_TEXTUREONLY;
+		break;
+	}
+
+	return realPS;
+}
+
+GraphicsPSO* PSO_occlusionquery = nullptr;
+
+enum TILEDLIGHTING_TYPE
+{
+	TILEDLIGHTING_TYPE_FORWARD,
+	TILEDLIGHTING_TYPE_DEFERRED,
+	TILEDLIGHTING_TYPE_COUNT
+};
+enum TILEDLIGHTING_CULLING
+{
+	TILEDLIGHTING_CULLING_BASIC,
+	TILEDLIGHTING_CULLING_ADVANCED,
+	TILEDLIGHTING_CULLING_COUNT
+};
+enum TILEDLIGHTING_DEBUG
+{
+	TILEDLIGHTING_DEBUG_DISABLED,
+	TILEDLIGHTING_DEBUG_ENABLED,
+	TILEDLIGHTING_DEBUG_COUNT
+};
+ComputePSO* CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT] = {};
+ComputePSO* CPSO_tilefrustums= nullptr;
+ComputePSO* CPSO_skinning = nullptr;
+ComputePSO* CPSO_resolvemsaadepth = nullptr;
+
 void wiRenderer::LoadShaders()
 {
 	{
@@ -917,6 +1391,152 @@ void wiRenderer::LoadShaders()
 	domainShaders[DSTYPE_OBJECT] = static_cast<DomainShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectDS.cso", wiResourceManager::DOMAINSHADER));
 
 
+	GraphicsDevice* device = GetDevice();
+
+	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
+	{
+		for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
+		{
+			for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
+			{
+				for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
+				{
+					for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
+					{
+						for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
+						{
+							for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
+							{
+								bool water = false;
+								VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, water);
+								VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest);
+								HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
+								DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
+								GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
+								PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom, water);
+
+								GraphicsPSODesc desc;
+								desc.vs = vertexShaders[realVS];
+								desc.il = vertexLayouts[realVL];
+								desc.hs = hullShaders[realHS];
+								desc.ds = domainShaders[realDS];
+								desc.gs = geometryShaders[realGS];
+								desc.ps = pixelShaders[realPS];
+
+								switch (shaderType)
+								{
+								case SHADERTYPE_DEPTHONLY:
+								case SHADERTYPE_SHADOW:
+								case SHADERTYPE_SHADOWCUBE:
+									desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
+									break;
+								default:
+									desc.bs = blendStates[BSTYPE_OPAQUE];
+									break;
+								}
+
+								switch (shaderType)
+								{
+								case SHADERTYPE_SHADOW:
+								case SHADERTYPE_SHADOWCUBE:
+									desc.dss = depthStencils[DSSTYPE_SHADOW];
+									break;
+								default:
+									desc.dss = depthStencils[DSSTYPE_DEFAULT];
+									break;
+								}
+
+								switch (shaderType)
+								{
+								case SHADERTYPE_SHADOW:
+								case SHADERTYPE_SHADOWCUBE:
+									desc.rs = rasterizers[RSTYPE_SHADOW];
+									break;
+								case SHADERTYPE_VOXELIZE:
+									desc.rs = rasterizers[RSTYPE_VOXELIZE];
+									break;
+								default:
+									desc.rs = rasterizers[RSTYPE_FRONT];
+									break;
+								}
+
+								if (tessellation)
+								{
+									desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+								}
+								else
+								{
+									desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+								}
+
+								PSO_object[shaderType][tessellation][alphatest][transparency][normalmap][planarreflection][pom] = new GraphicsPSO;
+								device->CreateGraphicsPSO(&desc, PSO_object[shaderType][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_CUBE];
+		desc.rs = rasterizers[RSTYPE_OCCLUDEE];
+		desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
+		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		
+		PSO_occlusionquery = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_occlusionquery);
+	}
+
+	for (int i = 0; i < TILEDLIGHTING_TYPE_COUNT; ++i)
+	{
+		for (int j = 0; j < TILEDLIGHTING_CULLING_COUNT; ++j)
+		{
+			for (int k = 0; k < TILEDLIGHTING_DEBUG_COUNT; ++k)
+			{
+				string name = "lightCullingCS";
+				if (i == TILEDLIGHTING_TYPE_DEFERRED)
+				{
+					name += "_DEFERRED";
+				}
+				if (j == TILEDLIGHTING_CULLING_ADVANCED)
+				{
+					name += "_ADVANCED";
+				}
+				if (k == TILEDLIGHTING_DEBUG_ENABLED)
+				{
+					name += "_DEBUG";
+				}
+				name += ".cso";
+
+				ComputePSODesc desc;
+				desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
+				CPSO_tiledlighting[i][j][k] = new ComputePSO;
+				device->CreateComputePSO(&desc, CPSO_tiledlighting[i][j][k]);
+			}
+		}
+	}
+
+	{
+		ComputePSODesc desc;
+		desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
+		CPSO_tilefrustums = new ComputePSO;
+		device->CreateComputePSO(&desc, CPSO_tilefrustums);
+	}
+	{
+		ComputePSODesc desc;
+		desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
+		CPSO_skinning = new ComputePSO;
+		device->CreateComputePSO(&desc, CPSO_skinning);
+	}
+	{
+		ComputePSODesc desc;
+		desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
+		CPSO_resolvemsaadepth = new ComputePSO;
+		device->CreateComputePSO(&desc, CPSO_resolvemsaadepth);
+	}
 
 }
 
@@ -1070,7 +1690,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=true;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1084,7 +1703,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias = -2.0f;
 	rs.DepthClipEnable=true;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1097,7 +1715,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias = -2.0f;
 	rs.DepthClipEnable=true;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1110,7 +1727,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=true;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1125,7 +1741,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=true;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1138,7 +1753,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=true;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1153,7 +1767,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp=0;
 	rs.SlopeScaledDepthBias=0;
 	rs.DepthClipEnable=true;
-	rs.ScissorEnable=false;
 	rs.MultisampleEnable=false;
 	rs.AntialiasedLineEnable=false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1166,7 +1779,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = 0;
 	rs.DepthClipEnable = true;
-	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1179,7 +1791,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = 0;
 	rs.DepthClipEnable = false;
-	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
@@ -1192,7 +1803,6 @@ void wiRenderer::SetUpStates()
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = 0;
 	rs.DepthClipEnable = true;
-	rs.ScissorEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false; // do it in the shader for now...
@@ -2074,7 +2684,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					{
 						// Set up skinning shader
 						streamOutSetUp = true;
-						GetDevice()->BindVertexLayout(nullptr, threadID);
 						GPUBuffer* vbs[] = {
 							nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
 						};
@@ -2082,7 +2691,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 							0,0,0,0,0,0,0,0
 						};
 						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-						GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
+						//GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
+						GetDevice()->BindComputePSO(CPSO_skinning, threadID);
 					}
 
 					// Upload bones for skinning to shader
@@ -2128,7 +2738,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		if (streamOutSetUp)
 		{
 			// Unload skinning shader
-			GetDevice()->BindCS(nullptr, threadID);
+			//GetDevice()->BindCS(nullptr, threadID);
 			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
 			GetDevice()->UnBindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, threadID);
 		}
@@ -2184,12 +2794,15 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 	{
 		GetDevice()->EventBegin("Occlusion Culling Render", threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_OCCLUDEE], threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_DEFAULT, threadID);
-		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_CUBE], threadID);
-		GetDevice()->BindPS(nullptr, threadID);
+		//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_OCCLUDEE], threadID);
+		//GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
+		//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_DEFAULT, threadID);
+		//GetDevice()->BindVertexLayout(nullptr, threadID);
+		//GetDevice()->BindVS(vertexShaders[VSTYPE_CUBE], threadID);
+		//GetDevice()->BindPS(nullptr, threadID);
+
+		GetDevice()->BindGraphicsPSO(PSO_occlusionquery, threadID);
+
 		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
 		int queryID = 0;
@@ -2404,473 +3017,473 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if(debugBoneLines){
-		GetDevice()->EventBegin("DebugBoneLines", threadID);
+	//if(debugBoneLines){
+	//	GetDevice()->EventBegin("DebugBoneLines", threadID);
 
-		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
-	
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+	//	GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+	//
+	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 
-		MiscCB sb;
-		for (unsigned int i = 0; i<boneLines.size(); i++){
-			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
-			sb.mColor = boneLines[i]->desc.color;
+	//	MiscCB sb;
+	//	for (unsigned int i = 0; i<boneLines.size(); i++){
+	//		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
+	//		sb.mColor = boneLines[i]->desc.color;
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			const GPUBuffer* vbs[] = {
-				&boneLines[i]->vertexBuffer,
-			};
-			const UINT strides[] = {
-				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-			};
-			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-			GetDevice()->Draw(2, 0, threadID);
-		}
+	//		const GPUBuffer* vbs[] = {
+	//			&boneLines[i]->vertexBuffer,
+	//		};
+	//		const UINT strides[] = {
+	//			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+	//		};
+	//		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//		GetDevice()->Draw(2, 0, threadID);
+	//	}
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if (linesTemp.empty())
-		return;
+	//if (linesTemp.empty())
+	//	return;
 
-	GetDevice()->EventBegin("DebugLines", threadID);
+	//GetDevice()->EventBegin("DebugLines", threadID);
 
-	GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
-	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
+	//GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
+	//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
 
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
-	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
-	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
+	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
+	//GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 
 
-	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE], threadID);
-	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE], threadID);
+	//GetDevice()->BindPS(pixelShaders[PSTYPE_LINE], threadID);
+	//GetDevice()->BindVS(vertexShaders[VSTYPE_LINE], threadID);
 
-	MiscCB sb;
-	for (unsigned int i = 0; i<linesTemp.size(); i++){
-		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
-		sb.mColor = linesTemp[i]->desc.color;
+	//MiscCB sb;
+	//for (unsigned int i = 0; i<linesTemp.size(); i++){
+	//	sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
+	//	sb.mColor = linesTemp[i]->desc.color;
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		const GPUBuffer* vbs[] = {
-			&linesTemp[i]->vertexBuffer,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->Draw(2, 0, threadID);
-	}
+	//	const GPUBuffer* vbs[] = {
+	//		&linesTemp[i]->vertexBuffer,
+	//	};
+	//	const UINT strides[] = {
+	//		sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+	//	};
+	//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//	GetDevice()->Draw(2, 0, threadID);
+	//}
 
-	for (Lines* x : linesTemp)
-		delete x;
-	linesTemp.clear();
+	//for (Lines* x : linesTemp)
+	//	delete x;
+	//linesTemp.clear();
 
-	GetDevice()->EventEnd(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if(debugPartitionTree || !renderableBoxes.empty()){
-		GetDevice()->EventBegin("DebugBoxes", threadID);
+	//if(debugPartitionTree || !renderableBoxes.empty()){
+	//	GetDevice()->EventBegin("DebugBoxes", threadID);
 
-		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+	//	GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 
-		const GPUBuffer* vbs[] = {
-			&Cube::vertexBuffer,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+	//	const GPUBuffer* vbs[] = {
+	//		&Cube::vertexBuffer,
+	//	};
+	//	const UINT strides[] = {
+	//		sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+	//	};
+	//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//	GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
-		MiscCB sb;
-		for (auto& x : cubes)
-		{
-			sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&x.desc.transform)*camera->GetViewProjection());
-			sb.mColor=x.desc.color;
+	//	MiscCB sb;
+	//	for (auto& x : cubes)
+	//	{
+	//		sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&x.desc.transform)*camera->GetViewProjection());
+	//		sb.mColor=x.desc.color;
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->DrawIndexed(24, 0, 0, threadID);
-		}
-		cubes.clear();
+	//		GetDevice()->DrawIndexed(24, 0, 0, threadID);
+	//	}
+	//	cubes.clear();
 
-		for (auto& x : renderableBoxes)
-		{
-			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera->GetViewProjection());
-			sb.mColor = x.second;
+	//	for (auto& x : renderableBoxes)
+	//	{
+	//		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera->GetViewProjection());
+	//		sb.mColor = x.second;
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->DrawIndexed(24, 0, 0, threadID);
-		}
-		renderableBoxes.clear();
+	//		GetDevice()->DrawIndexed(24, 0, 0, threadID);
+	//	}
+	//	renderableBoxes.clear();
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if(!renderableTranslators.empty()){
-		GetDevice()->EventBegin("Translators", threadID);
+	//if(!renderableTranslators.empty()){
+	//	GetDevice()->EventBegin("Translators", threadID);
 
 
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
 
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
-		
-		XMMATRIX VP = camera->GetViewProjection();
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+	//	
+	//	XMMATRIX VP = camera->GetViewProjection();
 
-		MiscCB sb;
-		for (auto& x : renderableTranslators)
-		{
-			if (!x->enabled)
-				continue;
+	//	MiscCB sb;
+	//	for (auto& x : renderableTranslators)
+	//	{
+	//		if (!x->enabled)
+	//			continue;
 
-			XMMATRIX mat = XMMatrixScaling(x->dist, x->dist, x->dist)*XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z)*VP;
-			XMMATRIX matX = XMMatrixTranspose(mat);
-			XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
-			XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
+	//		XMMATRIX mat = XMMatrixScaling(x->dist, x->dist, x->dist)*XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z)*VP;
+	//		XMMATRIX matX = XMMatrixTranspose(mat);
+	//		XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
+	//		XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
 
-			// Planes:
-			{
-				const GPUBuffer* vbs[] = {
-					wiTranslator::vertexBuffer_Plane,
-				};
-				const UINT strides[] = {
-					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
-				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-				GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
-			}
+	//		// Planes:
+	//		{
+	//			const GPUBuffer* vbs[] = {
+	//				wiTranslator::vertexBuffer_Plane,
+	//			};
+	//			const UINT strides[] = {
+	//				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+	//			};
+	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
+	//			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
+	//		}
 
-			// xy
-			sb.mTransform = matX;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+	//		// xy
+	//		sb.mTransform = matX;
+	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
-			// xz
-			sb.mTransform = matZ;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+	//		// xz
+	//		sb.mTransform = matZ;
+	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
-			// yz
-			sb.mTransform = matY;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+	//		// yz
+	//		sb.mTransform = matY;
+	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
-			// Lines:
-			{
-				const GPUBuffer* vbs[] = {
-					wiTranslator::vertexBuffer_Axis,
-				};
-				const UINT strides[] = {
-					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
-				GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
-				GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-			}
+	//		// Lines:
+	//		{
+	//			const GPUBuffer* vbs[] = {
+	//				wiTranslator::vertexBuffer_Axis,
+	//			};
+	//			const UINT strides[] = {
+	//				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+	//			};
+	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
+	//			GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+	//		}
 
-			// x
-			sb.mTransform = matX;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
+	//		// x
+	//		sb.mTransform = matX;
+	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
-			// y
-			sb.mTransform = matY;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
+	//		// y
+	//		sb.mTransform = matY;
+	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
-			// z
-			sb.mTransform = matZ;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
+	//		// z
+	//		sb.mTransform = matZ;
+	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//		GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
-			// Origin:
-			{
-				const GPUBuffer* vbs[] = {
-					wiTranslator::vertexBuffer_Origin,
-				};
-				const UINT strides[] = {
-					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				sb.mTransform = XMMatrixTranspose(mat);
-				sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-				GetDevice()->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
-			}
-		}
+	//		// Origin:
+	//		{
+	//			const GPUBuffer* vbs[] = {
+	//				wiTranslator::vertexBuffer_Origin,
+	//			};
+	//			const UINT strides[] = {
+	//				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+	//			};
+	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//			sb.mTransform = XMMatrixTranspose(mat);
+	//			sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
+	//			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//			GetDevice()->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
+	//		}
+	//	}
 
-		GetDevice()->EventEnd(threadID);
+	//	GetDevice()->EventEnd(threadID);
 
-		renderableTranslators.clear();
-	}
+	//	renderableTranslators.clear();
+	//}
 }
 void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if (debugEnvProbes && !GetScene().environmentProbes.empty()) {
-		GetDevice()->EventBegin("Debug EnvProbes", threadID);
+	//if (debugEnvProbes && !GetScene().environmentProbes.empty()) {
+	//	GetDevice()->EventBegin("Debug EnvProbes", threadID);
 
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
 
-		GetDevice()->BindVertexLayout(nullptr, threadID);
+	//	GetDevice()->BindVertexLayout(nullptr, threadID);
 
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_CUBEMAP], threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_SPHERE], threadID);
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_CUBEMAP], threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_SPHERE], threadID);
 
-		MiscCB sb;
-		for (auto& x : GetScene().environmentProbes)
-		{
-			sb.mTransform = XMMatrixTranspose(x->getMatrix());
-			sb.mColor = XMFLOAT4(1, 1, 1, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//	MiscCB sb;
+	//	for (auto& x : GetScene().environmentProbes)
+	//	{
+	//		sb.mTransform = XMMatrixTranspose(x->getMatrix());
+	//		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->BindResourcePS(x->cubeMap.GetTexture(), TEXSLOT_ENV0, threadID);
+	//		GetDevice()->BindResourcePS(x->cubeMap.GetTexture(), TEXSLOT_ENV0, threadID);
 
-			GetDevice()->Draw(2880, 0, threadID); // uv-sphere
-		}
+	//		GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+	//	}
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if(gridHelper){
-		GetDevice()->EventBegin("GridHelper", threadID);
+	//if(gridHelper){
+	//	GetDevice()->EventBegin("GridHelper", threadID);
 
-		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+	//	GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
 
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
 
-		static float col = 0.7f;
-		static int gridVertexCount = 0;
-		static GPUBuffer* grid = nullptr;
-		if (grid == nullptr)
-		{
-			const float h = 0.01f; // avoid z-fight with zero plane
-			const int a = 20;
-			XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
+	//	static float col = 0.7f;
+	//	static int gridVertexCount = 0;
+	//	static GPUBuffer* grid = nullptr;
+	//	if (grid == nullptr)
+	//	{
+	//		const float h = 0.01f; // avoid z-fight with zero plane
+	//		const int a = 20;
+	//		XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
 
-			int count = 0;
-			for (int i = 0; i <= a; ++i)
-			{
-				verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+	//		int count = 0;
+	//		for (int i = 0; i <= a; ++i)
+	//		{
+	//			verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
+	//			verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 
-				verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
-			}
-			for (int j = 0; j <= a; ++j)
-			{
-				verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+	//			verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
+	//			verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+	//		}
+	//		for (int j = 0; j <= a; ++j)
+	//		{
+	//			verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
+	//			verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 
-				verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
-			}
+	//			verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
+	//			verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+	//		}
 
-			gridVertexCount = ARRAYSIZE(verts) / 2;
+	//		gridVertexCount = ARRAYSIZE(verts) / 2;
 
-			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.ByteWidth = sizeof(verts);
-			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
-			InitData.pSysMem = verts;
-			grid = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
-		}
+	//		GPUBufferDesc bd;
+	//		ZeroMemory(&bd, sizeof(bd));
+	//		bd.Usage = USAGE_IMMUTABLE;
+	//		bd.ByteWidth = sizeof(verts);
+	//		bd.BindFlags = BIND_VERTEX_BUFFER;
+	//		bd.CPUAccessFlags = 0;
+	//		SubresourceData InitData;
+	//		ZeroMemory(&InitData, sizeof(InitData));
+	//		InitData.pSysMem = verts;
+	//		grid = new GPUBuffer;
+	//		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
+	//	}
 
-		MiscCB sb;
-		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
-		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+	//	MiscCB sb;
+	//	sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+	//	sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		const GPUBuffer* vbs[] = {
-			grid,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->Draw(gridVertexCount, 0, threadID);
+	//	const GPUBuffer* vbs[] = {
+	//		grid,
+	//	};
+	//	const UINT strides[] = {
+	//		sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+	//	};
+	//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//	GetDevice()->Draw(gridVertexCount, 0, threadID);
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr) {
-		GetDevice()->EventBegin("Debug Voxels", threadID);
+	//if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr) {
+	//	GetDevice()->EventBegin("Debug Voxels", threadID);
 
-		GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
+	//	GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_EMPTY, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-
-
-		GetDevice()->BindPS(pixelShaders[PSTYPE_VOXEL], threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_VOXEL], threadID);
-		GetDevice()->BindGS(geometryShaders[GSTYPE_VOXEL], threadID);
-
-		GetDevice()->BindVertexLayout(nullptr, threadID);
+	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_EMPTY, threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_VOXEL], threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_VOXEL], threadID);
+	//	GetDevice()->BindGS(geometryShaders[GSTYPE_VOXEL], threadID);
 
-		MiscCB sb;
-		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera->GetViewProjection());
-		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+	//	GetDevice()->BindVertexLayout(nullptr, threadID);
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		GetDevice()->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
 
-		GetDevice()->BindGS(nullptr, threadID);
+	//	MiscCB sb;
+	//	sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera->GetViewProjection());
+	//	sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+	//	GetDevice()->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
+
+	//	GetDevice()->BindGS(nullptr, threadID);
+
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if (debugEmitters || !renderableBoxes.empty()) {
-		GetDevice()->EventBegin("DebugEmitters", threadID);
+	//if (debugEmitters || !renderableBoxes.empty()) {
+	//	GetDevice()->EventBegin("DebugEmitters", threadID);
 
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-		GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_DEBUG], threadID);
+	//	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_DEBUG], threadID);
 
-		GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEBUG], threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_DEBUG], threadID);
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEBUG], threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_DEBUG], threadID);
 
-		MiscCB sb;
-		for (auto& x : emitterSystems)
-		{
-			if (x->object != nullptr && x->object->mesh != nullptr)
-			{
-				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->object->world)*camera->GetViewProjection());
-				sb.mColor = XMFLOAT4(0, 1, 0, 1);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//	MiscCB sb;
+	//	for (auto& x : emitterSystems)
+	//	{
+	//		if (x->object != nullptr && x->object->mesh != nullptr)
+	//		{
+	//			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->object->world)*camera->GetViewProjection());
+	//			sb.mColor = XMFLOAT4(0, 1, 0, 1);
+	//			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-				const GPUBuffer* vbs[] = {
-					&x->object->mesh->vertexBuffer_POS,
-				};
-				const UINT strides[] = {
-					sizeof(Mesh::Vertex_POS),
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindIndexBuffer(&x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
+	//			const GPUBuffer* vbs[] = {
+	//				&x->object->mesh->vertexBuffer_POS,
+	//			};
+	//			const UINT strides[] = {
+	//				sizeof(Mesh::Vertex_POS),
+	//			};
+	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	//			GetDevice()->BindIndexBuffer(&x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
 
-				GetDevice()->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
-			}
-		}
+	//			GetDevice()->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
+	//		}
+	//	}
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if (debugForceFields) {
-		GetDevice()->EventBegin("DebugForceFields", threadID);
+	//if (debugForceFields) {
+	//	GetDevice()->EventBegin("DebugForceFields", threadID);
 
-		GetDevice()->BindVertexLayout(nullptr, threadID);
+	//	GetDevice()->BindVertexLayout(nullptr, threadID);
 
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 
 
-		GetDevice()->BindPS(pixelShaders[PSTYPE_FORCEFIELDVISUALIZER], threadID);
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_FORCEFIELDVISUALIZER], threadID);
 
-		MiscCB sb;
-		uint32_t i = 0;
-		for (auto& model : GetScene().models)
-		{
-			for (ForceField* force : model->forces)
-			{
-				sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
-				sb.mColor = XMFLOAT4(camera->translation.x, camera->translation.y, camera->translation.z, (float)i);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	//	MiscCB sb;
+	//	uint32_t i = 0;
+	//	for (auto& model : GetScene().models)
+	//	{
+	//		for (ForceField* force : model->forces)
+	//		{
+	//			sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+	//			sb.mColor = XMFLOAT4(camera->translation.x, camera->translation.y, camera->translation.z, (float)i);
+	//			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-				switch (force->type)
-				{
-				case ENTITY_TYPE_FORCEFIELD_POINT:
-					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-					GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-					GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT], threadID);
-					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
-					break;
-				case ENTITY_TYPE_FORCEFIELD_PLANE:
-					GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-					GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
-					GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE], threadID);
-					GetDevice()->Draw(14, 0, threadID); // box
-					break;
-				}
+	//			switch (force->type)
+	//			{
+	//			case ENTITY_TYPE_FORCEFIELD_POINT:
+	//				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+	//				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	//				GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT], threadID);
+	//				GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+	//				break;
+	//			case ENTITY_TYPE_FORCEFIELD_PLANE:
+	//				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//				GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
+	//				GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE], threadID);
+	//				GetDevice()->Draw(14, 0, threadID); // box
+	//				break;
+	//			}
 
-				++i;
-			}
-		}
+	//			++i;
+	//		}
+	//	}
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 
 void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID)
@@ -2888,97 +3501,97 @@ void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 {
-	if (objectsWithTrails.empty())
-	{
-		return;
-	}
+	//if (objectsWithTrails.empty())
+	//{
+	//	return;
+	//}
 
-	GetDevice()->EventBegin("RibbonTrails", threadID);
+	//GetDevice()->EventBegin("RibbonTrails", threadID);
 
-	GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
-	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
+	//GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
+	//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
 
-	GetDevice()->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE_DOUBLESIDED]:rasterizers[RSTYPE_DOUBLESIDED],threadID);
-	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,threadID);
-	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+	//GetDevice()->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE_DOUBLESIDED]:rasterizers[RSTYPE_DOUBLESIDED],threadID);
+	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,threadID);
+	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
 
-	GetDevice()->BindPS(pixelShaders[PSTYPE_TRAIL],threadID);
-	GetDevice()->BindVS(vertexShaders[VSTYPE_TRAIL],threadID);
-	
-	GetDevice()->BindResourcePS(refracRes,TEXSLOT_ONDEMAND0,threadID);
+	//GetDevice()->BindPS(pixelShaders[PSTYPE_TRAIL],threadID);
+	//GetDevice()->BindVS(vertexShaders[VSTYPE_TRAIL],threadID);
+	//
+	//GetDevice()->BindResourcePS(refracRes,TEXSLOT_ONDEMAND0,threadID);
 
-	for (Object* o : objectsWithTrails)
-	{
-		if (o->trail.size() >= 4)
-		{
+	//for (Object* o : objectsWithTrails)
+	//{
+	//	if (o->trail.size() >= 4)
+	//	{
 
-			GetDevice()->BindResourcePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
-			GetDevice()->BindResourcePS(o->trailTex, TEXSLOT_ONDEMAND2, threadID);
+	//		GetDevice()->BindResourcePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
+	//		GetDevice()->BindResourcePS(o->trailTex, TEXSLOT_ONDEMAND2, threadID);
 
-			std::vector<RibbonVertex> trails;
+	//		std::vector<RibbonVertex> trails;
 
-			int bounds = (int)o->trail.size();
-			trails.reserve(bounds * 10);
-			int req = bounds - 3;
-			for (int k = 0; k < req; k += 2)
-			{
-				static const float trailres = 10.f;
-				for (float r = 0.0f; r <= 1.0f; r += 1.0f / trailres)
-				{
-					XMVECTOR point0 = XMVectorCatmullRom(
-						XMLoadFloat3(&o->trail[k ? (k - 2) : 0].pos)
-						, XMLoadFloat3(&o->trail[k].pos)
-						, XMLoadFloat3(&o->trail[k + 2].pos)
-						, XMLoadFloat3(&o->trail[k + 6 < bounds ? (k + 6) : (bounds - 2)].pos)
-						, r
-					),
-						point1 = XMVectorCatmullRom(
-							XMLoadFloat3(&o->trail[k ? (k - 1) : 1].pos)
-							, XMLoadFloat3(&o->trail[k + 1].pos)
-							, XMLoadFloat3(&o->trail[k + 3].pos)
-							, XMLoadFloat3(&o->trail[k + 5 < bounds ? (k + 5) : (bounds - 1)].pos)
-							, r
-						);
-					XMFLOAT3 xpoint0, xpoint1;
-					XMStoreFloat3(&xpoint0, point0);
-					XMStoreFloat3(&xpoint1, point1);
-					trails.push_back(RibbonVertex(xpoint0
-						, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 0), XMFLOAT2((float)(k + 1) / (float)bounds, 0), r)
-						, wiMath::Lerp(o->trail[k].col, o->trail[k + 2].col, r)
-						, 1
-					));
-					trails.push_back(RibbonVertex(xpoint1
-						, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 1), XMFLOAT2((float)(k + 1) / (float)bounds, 1), r)
-						, wiMath::Lerp(o->trail[k + 1].col, o->trail[k + 3].col, r)
-						, 1
-					));
-				}
-			}
-			if (!trails.empty())
-			{
-				UINT trailOffset;
-				void* buffer = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(RibbonVertex)*trails.size(), trailOffset, threadID);
-				memcpy(buffer, trails.data(), sizeof(RibbonVertex)*trails.size());
-				GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+	//		int bounds = (int)o->trail.size();
+	//		trails.reserve(bounds * 10);
+	//		int req = bounds - 3;
+	//		for (int k = 0; k < req; k += 2)
+	//		{
+	//			static const float trailres = 10.f;
+	//			for (float r = 0.0f; r <= 1.0f; r += 1.0f / trailres)
+	//			{
+	//				XMVECTOR point0 = XMVectorCatmullRom(
+	//					XMLoadFloat3(&o->trail[k ? (k - 2) : 0].pos)
+	//					, XMLoadFloat3(&o->trail[k].pos)
+	//					, XMLoadFloat3(&o->trail[k + 2].pos)
+	//					, XMLoadFloat3(&o->trail[k + 6 < bounds ? (k + 6) : (bounds - 2)].pos)
+	//					, r
+	//				),
+	//					point1 = XMVectorCatmullRom(
+	//						XMLoadFloat3(&o->trail[k ? (k - 1) : 1].pos)
+	//						, XMLoadFloat3(&o->trail[k + 1].pos)
+	//						, XMLoadFloat3(&o->trail[k + 3].pos)
+	//						, XMLoadFloat3(&o->trail[k + 5 < bounds ? (k + 5) : (bounds - 1)].pos)
+	//						, r
+	//					);
+	//				XMFLOAT3 xpoint0, xpoint1;
+	//				XMStoreFloat3(&xpoint0, point0);
+	//				XMStoreFloat3(&xpoint1, point1);
+	//				trails.push_back(RibbonVertex(xpoint0
+	//					, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 0), XMFLOAT2((float)(k + 1) / (float)bounds, 0), r)
+	//					, wiMath::Lerp(o->trail[k].col, o->trail[k + 2].col, r)
+	//					, 1
+	//				));
+	//				trails.push_back(RibbonVertex(xpoint1
+	//					, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 1), XMFLOAT2((float)(k + 1) / (float)bounds, 1), r)
+	//					, wiMath::Lerp(o->trail[k + 1].col, o->trail[k + 3].col, r)
+	//					, 1
+	//				));
+	//			}
+	//		}
+	//		if (!trails.empty())
+	//		{
+	//			UINT trailOffset;
+	//			void* buffer = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(RibbonVertex)*trails.size(), trailOffset, threadID);
+	//			memcpy(buffer, trails.data(), sizeof(RibbonVertex)*trails.size());
+	//			GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
-				const GPUBuffer* vbs[] = {
-					dynamicVertexBufferPool
-				};
-				const UINT strides[] = {
-					sizeof(RibbonVertex)
-				};
-				const UINT offsets[] = {
-					trailOffset
-				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-				GetDevice()->Draw((int)trails.size(), 0, threadID);
+	//			const GPUBuffer* vbs[] = {
+	//				dynamicVertexBufferPool
+	//			};
+	//			const UINT strides[] = {
+	//				sizeof(RibbonVertex)
+	//			};
+	//			const UINT offsets[] = {
+	//				trailOffset
+	//			};
+	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+	//			GetDevice()->Draw((int)trails.size(), 0, threadID);
 
-				trails.clear();
-			}
-		}
-	}
+	//			trails.clear();
+	//		}
+	//	}
+	//}
 
-	GetDevice()->EventEnd(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, Texture2D* refracRes){
 	imagesRTAdd.Activate(threadID,0,0,0,1);
@@ -3027,288 +3640,288 @@ void wiRenderer::DrawImagesNormals(GRAPHICSTHREAD threadID, Texture2D* refracRes
 }
 void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	const FrameCulling& culling = frameCullings[camera];
-	const CulledList& culledLights = culling.culledLights;
+	//const FrameCulling& culling = frameCullings[camera];
+	//const CulledList& culledLights = culling.culledLights;
 
-	GetDevice()->EventBegin("Light Render", threadID);
-	wiProfiler::GetInstance().BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
+	//GetDevice()->EventBegin("Light Render", threadID);
+	//wiProfiler::GetInstance().BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
+	//GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
-	
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
+	//
+	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK],threadID);
 
-	GetDevice()->BindVertexLayout(nullptr, threadID);
+	//GetDevice()->BindVertexLayout(nullptr, threadID);
 
-	// Environmental light (envmap + voxelGI) is always drawn
-	{
-		GetDevice()->BindBlendState(blendStates[BSTYPE_ENVIRONMENTALLIGHT], threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
-		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID); // just full screen triangle so we can use it
-		GetDevice()->BindPS(pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], threadID);
-		GetDevice()->Draw(3, 0, threadID); // full screen triangle
-	}
+	//// Environmental light (envmap + voxelGI) is always drawn
+	//{
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_ENVIRONMENTALLIGHT], threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+	//	GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID); // just full screen triangle so we can use it
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_ENVIRONMENTALLIGHT], threadID);
+	//	GetDevice()->Draw(3, 0, threadID); // full screen triangle
+	//}
 
-	GetDevice()->BindBlendState(blendStates[BSTYPE_DEFERREDLIGHT], threadID);
+	//GetDevice()->BindBlendState(blendStates[BSTYPE_DEFERREDLIGHT], threadID);
 
-	for (int type = 0; type < Light::LIGHTTYPE_COUNT; ++type)
-	{
+	//for (int type = 0; type < Light::LIGHTTYPE_COUNT; ++type)
+	//{
 
-		switch (type)
-		{
-		case Light::DIRECTIONAL:
-			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
-			if (SOFTSHADOWQUALITY_2D)
-			{
-				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
-			}
-			else
-			{
-				GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT], threadID);
-			}
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
-			break;
-		case Light::POINT:
-			GetDevice()->BindVS(vertexShaders[VSTYPE_POINTLIGHT], threadID);
-			GetDevice()->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
-			break;
-		case Light::SPOT:
-			GetDevice()->BindVS(vertexShaders[VSTYPE_SPOTLIGHT], threadID);
-			GetDevice()->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
-			break;
-		case Light::SPHERE:
-			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
-			GetDevice()->BindPS(pixelShaders[PSTYPE_SPHERELIGHT], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
-			break;
-		case Light::DISC:
-			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
-			GetDevice()->BindPS(pixelShaders[PSTYPE_DISCLIGHT], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
-			break;
-		case Light::RECTANGLE:
-			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
-			GetDevice()->BindPS(pixelShaders[PSTYPE_RECTANGLELIGHT], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
-			break;
-		case Light::TUBE:
-			GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
-			GetDevice()->BindPS(pixelShaders[PSTYPE_TUBELIGHT], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
-			break;
-		}
-
-
-		for (Cullable* c : culledLights)
-		{
-			Light* l = (Light*)c;
-			if (l->GetType() != type || !l->IsActive())
-				continue;
-
-			switch (type)
-			{
-			case Light::DIRECTIONAL:
-			case Light::SPHERE:
-			case Light::DISC:
-			case Light::RECTANGLE:
-			case Light::TUBE:
-				{
-					MiscCB miscCb;
-					miscCb.mColor.x = (float)l->entityArray_index;
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-
-					GetDevice()->Draw(3, 0, threadID); // full screen triangle
-				}
-				break;
-			case Light::POINT:
-				{
-					MiscCB miscCb;
-					miscCb.mColor.x = (float)l->entityArray_index;
-					float sca = l->enerDis.y + 1;
-					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z) * camera->GetViewProjection());
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-
-					GetDevice()->Draw(240, 0, threadID); // icosphere
-				}
-				break;
-			case Light::SPOT:
-				{
-					MiscCB miscCb;
-					miscCb.mColor.x = (float)l->entityArray_index;
-					const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
-					miscCb.mTransform = XMMatrixTranspose(
-						XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) *
-						camera->GetViewProjection()
-					);
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-
-					GetDevice()->Draw(192, 0, threadID); // cone
-				}
-				break;
-			}
-		}
+	//	switch (type)
+	//	{
+	//	case Light::DIRECTIONAL:
+	//		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+	//		if (SOFTSHADOWQUALITY_2D)
+	//		{
+	//			GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT_SOFT], threadID);
+	//		}
+	//		else
+	//		{
+	//			GetDevice()->BindPS(pixelShaders[PSTYPE_DIRLIGHT], threadID);
+	//		}
+	//		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+	//		break;
+	//	case Light::POINT:
+	//		GetDevice()->BindVS(vertexShaders[VSTYPE_POINTLIGHT], threadID);
+	//		GetDevice()->BindPS(pixelShaders[PSTYPE_POINTLIGHT], threadID);
+	//		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
+	//		break;
+	//	case Light::SPOT:
+	//		GetDevice()->BindVS(vertexShaders[VSTYPE_SPOTLIGHT], threadID);
+	//		GetDevice()->BindPS(pixelShaders[PSTYPE_SPOTLIGHT], threadID);
+	//		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_LIGHT], STENCILREF_DEFAULT, threadID);
+	//		break;
+	//	case Light::SPHERE:
+	//		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+	//		GetDevice()->BindPS(pixelShaders[PSTYPE_SPHERELIGHT], threadID);
+	//		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+	//		break;
+	//	case Light::DISC:
+	//		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+	//		GetDevice()->BindPS(pixelShaders[PSTYPE_DISCLIGHT], threadID);
+	//		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+	//		break;
+	//	case Light::RECTANGLE:
+	//		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+	//		GetDevice()->BindPS(pixelShaders[PSTYPE_RECTANGLELIGHT], threadID);
+	//		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+	//		break;
+	//	case Light::TUBE:
+	//		GetDevice()->BindVS(vertexShaders[VSTYPE_DIRLIGHT], threadID);
+	//		GetDevice()->BindPS(pixelShaders[PSTYPE_TUBELIGHT], threadID);
+	//		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DIRLIGHT], STENCILREF_DEFAULT, threadID);
+	//		break;
+	//	}
 
 
-	}
+	//	for (Cullable* c : culledLights)
+	//	{
+	//		Light* l = (Light*)c;
+	//		if (l->GetType() != type || !l->IsActive())
+	//			continue;
 
-	wiProfiler::GetInstance().EndRange(threadID);
-	GetDevice()->EventEnd(threadID);
+	//		switch (type)
+	//		{
+	//		case Light::DIRECTIONAL:
+	//		case Light::SPHERE:
+	//		case Light::DISC:
+	//		case Light::RECTANGLE:
+	//		case Light::TUBE:
+	//			{
+	//				MiscCB miscCb;
+	//				miscCb.mColor.x = (float)l->entityArray_index;
+	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+	//				GetDevice()->Draw(3, 0, threadID); // full screen triangle
+	//			}
+	//			break;
+	//		case Light::POINT:
+	//			{
+	//				MiscCB miscCb;
+	//				miscCb.mColor.x = (float)l->entityArray_index;
+	//				float sca = l->enerDis.y + 1;
+	//				miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z) * camera->GetViewProjection());
+	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+	//				GetDevice()->Draw(240, 0, threadID); // icosphere
+	//			}
+	//			break;
+	//		case Light::SPOT:
+	//			{
+	//				MiscCB miscCb;
+	//				miscCb.mColor.x = (float)l->entityArray_index;
+	//				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
+	//				miscCb.mTransform = XMMatrixTranspose(
+	//					XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
+	//					XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+	//					XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) *
+	//					camera->GetViewProjection()
+	//				);
+	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+	//				GetDevice()->Draw(192, 0, threadID); // cone
+	//			}
+	//			break;
+	//		}
+	//	}
+
+
+	//}
+
+	//wiProfiler::GetInstance().EndRange(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	const FrameCulling& culling = frameCullings[camera];
-	const CulledList& culledLights = culling.culledLights;
+	//const FrameCulling& culling = frameCullings[camera];
+	//const CulledList& culledLights = culling.culledLights;
 
-	if(!culledLights.empty())
-	{
-		GetDevice()->EventBegin("Light Volume Render", threadID);
+	//if(!culledLights.empty())
+	//{
+	//	GetDevice()->EventBegin("Light Volume Render", threadID);
 
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-		GetDevice()->BindVertexLayout(nullptr, threadID);
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,threadID);
+	//	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
+	//	GetDevice()->BindVertexLayout(nullptr, threadID);
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_DEFAULT,threadID);
 
-		
-		GetDevice()->BindPS(pixelShaders[PSTYPE_VOLUMELIGHT],threadID);
+	//	
+	//	GetDevice()->BindPS(pixelShaders[PSTYPE_VOLUMELIGHT],threadID);
 
-		GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-		GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+	//	GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+	//	GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
 
-		for (int type = Light::POINT; type < Light::LIGHTTYPE_COUNT; ++type)
-		{
-			switch (type)
-			{
-			case Light::POINT:
-				GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT], threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-				break;
-			case Light::SPOT:
-				GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT], threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
-				break;
-			case Light::SPHERE:
-				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPHERELIGHT], threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-				break;
-			case Light::DISC:
-				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEDISCLIGHT], threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-				break;
-			case Light::RECTANGLE:
-				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMERECTANGLELIGHT], threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-				break;
-			case Light::TUBE:
-				GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-				GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMETUBELIGHT], threadID);
-				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-				break;
-			}
+	//	for (int type = Light::POINT; type < Light::LIGHTTYPE_COUNT; ++type)
+	//	{
+	//		switch (type)
+	//		{
+	//		case Light::POINT:
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
+	//			GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEPOINTLIGHT], threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//			break;
+	//		case Light::SPOT:
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
+	//			GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPOTLIGHT], threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
+	//			break;
+	//		case Light::SPHERE:
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//			GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMESPHERELIGHT], threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//			break;
+	//		case Light::DISC:
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//			GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMEDISCLIGHT], threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//			break;
+	//		case Light::RECTANGLE:
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//			GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMERECTANGLELIGHT], threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
+	//			break;
+	//		case Light::TUBE:
+	//			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//			GetDevice()->BindVS(vertexShaders[VSTYPE_VOLUMETUBELIGHT], threadID);
+	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//			break;
+	//		}
 
-			for (Cullable* c : culledLights) 
-			{
-				Light* l = (Light*)c;
-				if (l->GetType() == type && l->noHalo == false) {
+	//		for (Cullable* c : culledLights) 
+	//		{
+	//			Light* l = (Light*)c;
+	//			if (l->GetType() == type && l->noHalo == false) {
 
-					VolumeLightCB lcb;
-					lcb.col = l->color;
-					lcb.enerdis = l->enerDis;
+	//				VolumeLightCB lcb;
+	//				lcb.col = l->color;
+	//				lcb.enerdis = l->enerDis;
 
-					if (type == Light::POINT) 
-					{
-						lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.01f; // scale
-						lcb.world = XMMatrixTranspose(
-							XMMatrixScaling(lcb.enerdis.w, lcb.enerdis.w, lcb.enerdis.w)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
-						);
+	//				if (type == Light::POINT) 
+	//				{
+	//					lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.01f; // scale
+	//					lcb.world = XMMatrixTranspose(
+	//						XMMatrixScaling(lcb.enerdis.w, lcb.enerdis.w, lcb.enerdis.w)*
+	//						XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
+	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+	//					);
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(108, 0, threadID); // circle
-					}
-					else if(type == Light::SPOT)
-					{
-						float coneS = (float)(l->enerDis.z / 0.7853981852531433);
-						lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.03f; // scale
-						lcb.world = XMMatrixTranspose(
-							XMMatrixScaling(coneS*lcb.enerdis.w, lcb.enerdis.w, coneS*lcb.enerdis.w)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
-						);
+	//					GetDevice()->Draw(108, 0, threadID); // circle
+	//				}
+	//				else if(type == Light::SPOT)
+	//				{
+	//					float coneS = (float)(l->enerDis.z / 0.7853981852531433);
+	//					lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.03f; // scale
+	//					lcb.world = XMMatrixTranspose(
+	//						XMMatrixScaling(coneS*lcb.enerdis.w, lcb.enerdis.w, coneS*lcb.enerdis.w)*
+	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
+	//					);
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(192, 0, threadID); // cone
-					}
-					else if (type == Light::SPHERE)
-					{
-						lcb.world = XMMatrixTranspose(
-							XMMatrixScaling(l->radius, l->radius, l->radius)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-							camera->GetViewProjection()
-						);
+	//					GetDevice()->Draw(192, 0, threadID); // cone
+	//				}
+	//				else if (type == Light::SPHERE)
+	//				{
+	//					lcb.world = XMMatrixTranspose(
+	//						XMMatrixScaling(l->radius, l->radius, l->radius)*
+	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+	//						camera->GetViewProjection()
+	//					);
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(2880, 0, threadID); // uv-sphere
-					}
-					else if (type == Light::DISC)
-					{
-						lcb.world = XMMatrixTranspose(
-							XMMatrixScaling(l->radius, l->radius, l->radius)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-							camera->GetViewProjection()
-						);
+	//					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+	//				}
+	//				else if (type == Light::DISC)
+	//				{
+	//					lcb.world = XMMatrixTranspose(
+	//						XMMatrixScaling(l->radius, l->radius, l->radius)*
+	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+	//						camera->GetViewProjection()
+	//					);
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(108, 0, threadID); // circle
-					}
-					else if (type == Light::RECTANGLE)
-					{
-						lcb.world = XMMatrixTranspose(
-							XMMatrixScaling(l->width * 0.5f, l->height * 0.5f, 0.5f)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-							camera->GetViewProjection()
-						);
+	//					GetDevice()->Draw(108, 0, threadID); // circle
+	//				}
+	//				else if (type == Light::RECTANGLE)
+	//				{
+	//					lcb.world = XMMatrixTranspose(
+	//						XMMatrixScaling(l->width * 0.5f, l->height * 0.5f, 0.5f)*
+	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+	//						camera->GetViewProjection()
+	//					);
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(6, 0, threadID); // quad
-					}
-					else if (type == Light::TUBE)
-					{
-						lcb.world = XMMatrixTranspose(
-							XMMatrixScaling(max(l->width * 0.5f, l->radius), l->radius, l->radius)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-							camera->GetViewProjection()
-						);
+	//					GetDevice()->Draw(6, 0, threadID); // quad
+	//				}
+	//				else if (type == Light::TUBE)
+	//				{
+	//					lcb.world = XMMatrixTranspose(
+	//						XMMatrixScaling(max(l->width * 0.5f, l->radius), l->radius, l->radius)*
+	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
+	//						camera->GetViewProjection()
+	//					);
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(384, 0, threadID); // cylinder
-					}
-				}
-			}
+	//					GetDevice()->Draw(384, 0, threadID); // cylinder
+	//				}
+	//			}
+	//		}
 
-		}
+	//	}
 
-		GetDevice()->EventEnd(threadID);
-	}
+	//	GetDevice()->EventEnd(threadID);
+	//}
 }
 void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 {
@@ -3419,7 +4032,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
-			GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
+			//GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
 
 			int shadowCounter_2D = 0;
 			int shadowCounter_Cube = 0;
@@ -3595,7 +4208,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 			}
 
-			GetDevice()->BindGS(nullptr, threadID);
+			//GetDevice()->BindGS(nullptr, threadID);
 			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		}
 
@@ -3608,430 +4221,430 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
-VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
-{
-	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
-
-	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
-
-	switch (shaderType)
-	{
-	case SHADERTYPE_TEXTURE:
-		if (tessellatorRequested)
-		{
-			realVL = VLTYPE_OBJECT_ALL;
-		}
-		else
-		{
-			realVL = VLTYPE_OBJECT_POS_TEX;
-		}
-		break;
-	case SHADERTYPE_DEFERRED:
-	case SHADERTYPE_FORWARD:
-	case SHADERTYPE_TILEDFORWARD:
-	case SHADERTYPE_VOXELIZE:
-	case SHADERTYPE_ENVMAPCAPTURE:
-		realVL = VLTYPE_OBJECT_ALL;
-		break;
-	case SHADERTYPE_DEPTHONLY:
-		if (tessellatorRequested)
-		{
-			realVL = VLTYPE_OBJECT_ALL;
-		}
-		else
-		{
-			if (alphatest)
-			{
-				realVL = VLTYPE_OBJECT_POS_TEX;
-			}
-			else
-			{
-				realVL = VLTYPE_OBJECT_POS;
-			}
-		}
-		break;
-	case SHADERTYPE_SHADOW:
-	case SHADERTYPE_SHADOWCUBE:
-		if (alphatest)
-		{
-			realVL = VLTYPE_OBJECT_POS_TEX;
-		}
-		else
-		{
-			realVL = VLTYPE_OBJECT_POS;
-		}
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	return realVL;
-}
-VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
-{
-	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
-
-	bool water = material->IsWater();
-	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
-
-	switch (shaderType)
-	{
-	case SHADERTYPE_TEXTURE:
-		if (tessellatorRequested)
-		{
-			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
-		}
-		else
-		{
-			realVS = VSTYPE_OBJECT_SIMPLE;
-		}
-		break;
-	case SHADERTYPE_DEFERRED:
-	case SHADERTYPE_FORWARD:
-	case SHADERTYPE_TILEDFORWARD:
-		if (tessellatorRequested)
-		{
-			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
-		}
-		else
-		{
-			if (water)
-			{
-				realVS = VSTYPE_WATER;
-			}
-			else
-			{
-				realVS = VSTYPE_OBJECT_COMMON;
-			}
-		}
-		break;
-	case SHADERTYPE_DEPTHONLY:
-		if (tessellatorRequested)
-		{
-			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
-		}
-		else
-		{
-			if (alphatest)
-			{
-				realVS = VSTYPE_OBJECT_SIMPLE;
-			}
-			else
-			{
-				realVS = VSTYPE_OBJECT_POSITIONSTREAM;
-			}
-		}
-		break;
-	case SHADERTYPE_ENVMAPCAPTURE:
-		realVS = VSTYPE_ENVMAP;
-		break;
-	case SHADERTYPE_SHADOW:
-		if (alphatest)
-		{
-			realVS = VSTYPE_SHADOW_ALPHATEST;
-		}
-		else
-		{
-			realVS = VSTYPE_SHADOW;
-		}
-		break;
-	case SHADERTYPE_SHADOWCUBE:
-		if (alphatest)
-		{
-			realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-		}
-		else
-		{
-			realVS = VSTYPE_SHADOWCUBEMAPRENDER;
-		}
-		break;
-		break;
-	case SHADERTYPE_VOXELIZE:
-		realVS = VSTYPE_VOXELIZER;
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	return realVS;
-}
-GSTYPES GetGSTYPE(SHADERTYPE shaderType, const Material* const material)
-{
-	GSTYPES realGS = GSTYPE_NULL;
-
-	bool alphatest = material->IsAlphaTestEnabled(); // do not mind the dithering alpha test!
-
-	switch (shaderType)
-	{
-	case SHADERTYPE_TEXTURE:
-		break;
-	case SHADERTYPE_DEFERRED:
-		break;
-	case SHADERTYPE_FORWARD:
-		break;
-	case SHADERTYPE_TILEDFORWARD:
-		break;
-	case SHADERTYPE_DEPTHONLY:
-		break;
-	case SHADERTYPE_ENVMAPCAPTURE:
-		realGS = GSTYPE_ENVMAP;
-		break;
-	case SHADERTYPE_SHADOW:
-		break;
-	case SHADERTYPE_SHADOWCUBE:
-		if (alphatest)
-		{
-			realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-		}
-		else
-		{
-			realGS = GSTYPE_SHADOWCUBEMAPRENDER;
-		}
-		break;
-	case SHADERTYPE_VOXELIZE:
-		realGS = GSTYPE_VOXELIZER;
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	return realGS;
-}
-HSTYPES GetHSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
-{
-	return tessellatorRequested ? HSTYPE_OBJECT : HSTYPE_NULL;
-}
-DSTYPES GetDSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
-{
-	return tessellatorRequested ? DSTYPE_OBJECT : DSTYPE_NULL;
-}
-PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material, bool ditheringAlphaTest)
-{
-	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
-
-	bool transparent = material->IsTransparent();
-	bool water = material->IsWater();
-	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
-
-	switch (shaderType)
-	{
-	case SHADERTYPE_DEFERRED:
-		if (material->GetNormalMap() == nullptr)
-		{
-			if (material->parallaxOcclusionMapping > 0)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_POM;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED;
-			}
-		}
-		else
-		{
-			if (material->parallaxOcclusionMapping > 0)
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
-			}
-		}
-		break;
-	case SHADERTYPE_FORWARD:
-		if (water)
-		{
-			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER;
-		}
-		else if (transparent)
-		{
-			if (material->GetNormalMap() == nullptr)
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-		}
-		else
-		{
-			if (material->GetNormalMap() == nullptr)
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-		}
-		break;
-	case SHADERTYPE_TILEDFORWARD:
-		if (water)
-		{
-			realPS = PSTYPE_OBJECT_TILEDFORWARD_WATER;
-		}
-		else if (transparent)
-		{
-			if (material->GetNormalMap() == nullptr)
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-		}
-		else
-		{
-			if (material->GetNormalMap() == nullptr)
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (material->parallaxOcclusionMapping > 0)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
-				}
-				if (material->HasPlanarReflection())
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION;
-				}
-			}
-		}
-		break;
-	case SHADERTYPE_SHADOW:
-		if (alphatest)
-		{
-			realPS = PSTYPE_SHADOW_ALPHATEST;
-		}
-		else
-		{
-			realPS = PSTYPE_NULL;
-		}
-		break;
-	case SHADERTYPE_SHADOWCUBE:
-		if (alphatest)
-		{
-			realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-		}
-		else
-		{
-			realPS = PSTYPE_SHADOWCUBEMAPRENDER;
-		}
-		break;
-	case SHADERTYPE_ENVMAPCAPTURE:
-		realPS = PSTYPE_ENVMAP;
-		break;
-	case SHADERTYPE_DEPTHONLY:
-		if (alphatest)
-		{
-			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
-		}
-		else
-		{
-			realPS = PSTYPE_NULL;
-		}
-		break;
-	case SHADERTYPE_VOXELIZE:
-		realPS = PSTYPE_VOXELIZER;
-		break;
-	case SHADERTYPE_TEXTURE:
-		realPS = PSTYPE_OBJECT_TEXTUREONLY;
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	return realPS;
-}
+//VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
+//{
+//	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
+//
+//	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
+//
+//	switch (shaderType)
+//	{
+//	case SHADERTYPE_TEXTURE:
+//		if (tessellatorRequested)
+//		{
+//			realVL = VLTYPE_OBJECT_ALL;
+//		}
+//		else
+//		{
+//			realVL = VLTYPE_OBJECT_POS_TEX;
+//		}
+//		break;
+//	case SHADERTYPE_DEFERRED:
+//	case SHADERTYPE_FORWARD:
+//	case SHADERTYPE_TILEDFORWARD:
+//	case SHADERTYPE_VOXELIZE:
+//	case SHADERTYPE_ENVMAPCAPTURE:
+//		realVL = VLTYPE_OBJECT_ALL;
+//		break;
+//	case SHADERTYPE_DEPTHONLY:
+//		if (tessellatorRequested)
+//		{
+//			realVL = VLTYPE_OBJECT_ALL;
+//		}
+//		else
+//		{
+//			if (alphatest)
+//			{
+//				realVL = VLTYPE_OBJECT_POS_TEX;
+//			}
+//			else
+//			{
+//				realVL = VLTYPE_OBJECT_POS;
+//			}
+//		}
+//		break;
+//	case SHADERTYPE_SHADOW:
+//	case SHADERTYPE_SHADOWCUBE:
+//		if (alphatest)
+//		{
+//			realVL = VLTYPE_OBJECT_POS_TEX;
+//		}
+//		else
+//		{
+//			realVL = VLTYPE_OBJECT_POS;
+//		}
+//		break;
+//	default:
+//		assert(0);
+//		break;
+//	}
+//
+//	return realVL;
+//}
+//VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
+//{
+//	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
+//
+//	bool water = material->IsWater();
+//	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
+//
+//	switch (shaderType)
+//	{
+//	case SHADERTYPE_TEXTURE:
+//		if (tessellatorRequested)
+//		{
+//			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
+//		}
+//		else
+//		{
+//			realVS = VSTYPE_OBJECT_SIMPLE;
+//		}
+//		break;
+//	case SHADERTYPE_DEFERRED:
+//	case SHADERTYPE_FORWARD:
+//	case SHADERTYPE_TILEDFORWARD:
+//		if (tessellatorRequested)
+//		{
+//			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
+//		}
+//		else
+//		{
+//			if (water)
+//			{
+//				realVS = VSTYPE_WATER;
+//			}
+//			else
+//			{
+//				realVS = VSTYPE_OBJECT_COMMON;
+//			}
+//		}
+//		break;
+//	case SHADERTYPE_DEPTHONLY:
+//		if (tessellatorRequested)
+//		{
+//			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
+//		}
+//		else
+//		{
+//			if (alphatest)
+//			{
+//				realVS = VSTYPE_OBJECT_SIMPLE;
+//			}
+//			else
+//			{
+//				realVS = VSTYPE_OBJECT_POSITIONSTREAM;
+//			}
+//		}
+//		break;
+//	case SHADERTYPE_ENVMAPCAPTURE:
+//		realVS = VSTYPE_ENVMAP;
+//		break;
+//	case SHADERTYPE_SHADOW:
+//		if (alphatest)
+//		{
+//			realVS = VSTYPE_SHADOW_ALPHATEST;
+//		}
+//		else
+//		{
+//			realVS = VSTYPE_SHADOW;
+//		}
+//		break;
+//	case SHADERTYPE_SHADOWCUBE:
+//		if (alphatest)
+//		{
+//			realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+//		}
+//		else
+//		{
+//			realVS = VSTYPE_SHADOWCUBEMAPRENDER;
+//		}
+//		break;
+//		break;
+//	case SHADERTYPE_VOXELIZE:
+//		realVS = VSTYPE_VOXELIZER;
+//		break;
+//	default:
+//		assert(0);
+//		break;
+//	}
+//
+//	return realVS;
+//}
+//GSTYPES GetGSTYPE(SHADERTYPE shaderType, const Material* const material)
+//{
+//	GSTYPES realGS = GSTYPE_NULL;
+//
+//	bool alphatest = material->IsAlphaTestEnabled(); // do not mind the dithering alpha test!
+//
+//	switch (shaderType)
+//	{
+//	case SHADERTYPE_TEXTURE:
+//		break;
+//	case SHADERTYPE_DEFERRED:
+//		break;
+//	case SHADERTYPE_FORWARD:
+//		break;
+//	case SHADERTYPE_TILEDFORWARD:
+//		break;
+//	case SHADERTYPE_DEPTHONLY:
+//		break;
+//	case SHADERTYPE_ENVMAPCAPTURE:
+//		realGS = GSTYPE_ENVMAP;
+//		break;
+//	case SHADERTYPE_SHADOW:
+//		break;
+//	case SHADERTYPE_SHADOWCUBE:
+//		if (alphatest)
+//		{
+//			realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+//		}
+//		else
+//		{
+//			realGS = GSTYPE_SHADOWCUBEMAPRENDER;
+//		}
+//		break;
+//	case SHADERTYPE_VOXELIZE:
+//		realGS = GSTYPE_VOXELIZER;
+//		break;
+//	default:
+//		assert(0);
+//		break;
+//	}
+//
+//	return realGS;
+//}
+//HSTYPES GetHSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
+//{
+//	return tessellatorRequested ? HSTYPE_OBJECT : HSTYPE_NULL;
+//}
+//DSTYPES GetDSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
+//{
+//	return tessellatorRequested ? DSTYPE_OBJECT : DSTYPE_NULL;
+//}
+//PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material, bool ditheringAlphaTest)
+//{
+//	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
+//
+//	bool transparent = material->IsTransparent();
+//	bool water = material->IsWater();
+//	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
+//
+//	switch (shaderType)
+//	{
+//	case SHADERTYPE_DEFERRED:
+//		if (material->GetNormalMap() == nullptr)
+//		{
+//			if (material->parallaxOcclusionMapping > 0)
+//			{
+//				realPS = PSTYPE_OBJECT_DEFERRED_POM;
+//			}
+//			else
+//			{
+//				realPS = PSTYPE_OBJECT_DEFERRED;
+//			}
+//		}
+//		else
+//		{
+//			if (material->parallaxOcclusionMapping > 0)
+//			{
+//				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM;
+//			}
+//			else
+//			{
+//				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+//			}
+//		}
+//		break;
+//	case SHADERTYPE_FORWARD:
+//		if (water)
+//		{
+//			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER;
+//		}
+//		else if (transparent)
+//		{
+//			if (material->GetNormalMap() == nullptr)
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION;
+//				}
+//			}
+//			else
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
+//				}
+//			}
+//		}
+//		else
+//		{
+//			if (material->GetNormalMap() == nullptr)
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION;
+//				}
+//			}
+//			else
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
+//				}
+//			}
+//		}
+//		break;
+//	case SHADERTYPE_TILEDFORWARD:
+//		if (water)
+//		{
+//			realPS = PSTYPE_OBJECT_TILEDFORWARD_WATER;
+//		}
+//		else if (transparent)
+//		{
+//			if (material->GetNormalMap() == nullptr)
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION;
+//				}
+//			}
+//			else
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
+//				}
+//			}
+//		}
+//		else
+//		{
+//			if (material->GetNormalMap() == nullptr)
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
+//				}
+//			}
+//			else
+//			{
+//				if (material->parallaxOcclusionMapping > 0)
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM;
+//				}
+//				else
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
+//				}
+//				if (material->HasPlanarReflection())
+//				{
+//					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION;
+//				}
+//			}
+//		}
+//		break;
+//	case SHADERTYPE_SHADOW:
+//		if (alphatest)
+//		{
+//			realPS = PSTYPE_SHADOW_ALPHATEST;
+//		}
+//		else
+//		{
+//			realPS = PSTYPE_NULL;
+//		}
+//		break;
+//	case SHADERTYPE_SHADOWCUBE:
+//		if (alphatest)
+//		{
+//			realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
+//		}
+//		else
+//		{
+//			realPS = PSTYPE_SHADOWCUBEMAPRENDER;
+//		}
+//		break;
+//	case SHADERTYPE_ENVMAPCAPTURE:
+//		realPS = PSTYPE_ENVMAP;
+//		break;
+//	case SHADERTYPE_DEPTHONLY:
+//		if (alphatest)
+//		{
+//			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+//		}
+//		else
+//		{
+//			realPS = PSTYPE_NULL;
+//		}
+//		break;
+//	case SHADERTYPE_VOXELIZE:
+//		realPS = PSTYPE_VOXELIZER;
+//		break;
+//	case SHADERTYPE_TEXTURE:
+//		realPS = PSTYPE_OBJECT_TEXTUREONLY;
+//		break;
+//	default:
+//		assert(0);
+//		break;
+//	}
+//
+//	return realPS;
+//}
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation, bool occlusionCulling)
 {
@@ -4043,14 +4656,16 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 		device->EventBegin("RenderMeshes", threadID);
 
+		device->BindPrimitiveTopology(TRIANGLELIST, threadID);
+
 		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
 		DSSTYPES targetDepthStencilState = (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE) ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT;
 		targetDepthStencilState = (shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_SHADOW) ? DSSTYPE_SHADOW : targetDepthStencilState;
 		targetDepthStencilState = shaderType == SHADERTYPE_ENVMAPCAPTURE ? DSSTYPE_ENVMAP : targetDepthStencilState;
 
-		UINT prevStencilRef = STENCILREF_DEFAULT;
-		device->BindDepthStencilState(depthStencils[targetDepthStencilState], prevStencilRef, threadID);
+		//UINT prevStencilRef = STENCILREF_DEFAULT;
+		//device->BindDepthStencilState(depthStencils[targetDepthStencilState], prevStencilRef, threadID);
 
 		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 		XMFLOAT4X4 tempMat;
@@ -4061,18 +4676,18 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			InstancePrev instancePrev;
 		};
 
-		if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-		{
-			device->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
-		}
-		else if(renderTypeFlags & RENDERTYPE_OPAQUE)
-		{
-			device->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-		}
-		else
-		{
-			device->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-		}
+		//if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+		//{
+		//	device->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
+		//}
+		//else if(renderTypeFlags & RENDERTYPE_OPAQUE)
+		//{
+		//	device->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+		//}
+		//else
+		//{
+		//	device->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+		//}
 
 		const bool easyTextureBind = 
 			shaderType == SHADERTYPE_TEXTURE || 
@@ -4087,173 +4702,175 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			shaderType != SHADERTYPE_SHADOWCUBE && 
 			shaderType != SHADERTYPE_ENVMAPCAPTURE;
 
-		// Render impostors:
-		if (impostorRequest)
-		{
-			bool impostorRenderSetup = false;
+		//// Render impostors:
+		//if (impostorRequest)
+		//{
+		//	bool impostorRenderSetup = false;
 
-			// Assess the render params:
-			VLTYPES realVL = (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE) ? VLTYPE_OBJECT_POS_TEX : VLTYPE_OBJECT_ALL;
-			VSTYPES realVS = realVL == VLTYPE_OBJECT_POS_TEX ? VSTYPE_OBJECT_SIMPLE : VSTYPE_OBJECT_COMMON;
-			PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
-			if (!wireRender)
-			{
-				switch (shaderType)
-				{
-				case SHADERTYPE_DEFERRED:
-					realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
-					break;
-				case SHADERTYPE_FORWARD:
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
-					break;
-				case SHADERTYPE_TILEDFORWARD:
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
-					break;
-				case SHADERTYPE_DEPTHONLY:
-					realPS = PSTYPE_OBJECT_ALPHATESTONLY;
-					break;
-				default:
-					realPS = PSTYPE_OBJECT_TEXTUREONLY;
-					break;
-				}
-			}
+		//	// Assess the render params:
+		//	VLTYPES realVL = (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE) ? VLTYPE_OBJECT_POS_TEX : VLTYPE_OBJECT_ALL;
+		//	VSTYPES realVS = realVL == VLTYPE_OBJECT_POS_TEX ? VSTYPE_OBJECT_SIMPLE : VSTYPE_OBJECT_COMMON;
+		//	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
+		//	if (!wireRender)
+		//	{
+		//		switch (shaderType)
+		//		{
+		//		case SHADERTYPE_DEFERRED:
+		//			realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+		//			break;
+		//		case SHADERTYPE_FORWARD:
+		//			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+		//			break;
+		//		case SHADERTYPE_TILEDFORWARD:
+		//			realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
+		//			break;
+		//		case SHADERTYPE_DEPTHONLY:
+		//			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+		//			break;
+		//		default:
+		//			realPS = PSTYPE_OBJECT_TEXTUREONLY;
+		//			break;
+		//		}
+		//	}
 
-			for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
-			{
-				Mesh* mesh = iter->first;
-				if (!mesh->renderable || !mesh->hasImpostor())
-				{
-					continue;
-				}
+		//	for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
+		//	{
+		//		Mesh* mesh = iter->first;
+		//		if (!mesh->renderable || !mesh->hasImpostor())
+		//		{
+		//			continue;
+		//		}
 
-				if (!impostorRenderSetup)
-				{
-					// Bind the static impostor params once:
-					impostorRenderSetup = true;
-					device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(MaterialCB), threadID);
-					device->BindPrimitiveTopology(TRIANGLELIST, threadID);
-					device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
-					device->BindVertexLayout(vertexLayouts[realVL], threadID);
-					device->BindVS(vertexShaders[realVS], threadID);
-					device->BindPS(pixelShaders[realPS], threadID);
-					SetAlphaRef(0.75f, threadID);
-				}
+		//		if (!impostorRenderSetup)
+		//		{
+		//			// Bind the static impostor params once:
+		//			impostorRenderSetup = true;
+		//			device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(MaterialCB), threadID);
+		//			device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
+		//			device->BindVertexLayout(vertexLayouts[realVL], threadID);
+		//			device->BindVS(vertexShaders[realVS], threadID);
+		//			device->BindPS(pixelShaders[realPS], threadID);
+		//			SetAlphaRef(0.75f, threadID);
+		//		}
 
-				const CulledObjectList& visibleInstances = iter->second;
+		//		const CulledObjectList& visibleInstances = iter->second;
 
-				bool instancePrevUpdated = false;
+		//		bool instancePrevUpdated = false;
 
-				UINT instancesOffset;
-				InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
+		//		UINT instancesOffset;
+		//		InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
 
-				int k = 0;
-				for (const Object* instance : visibleInstances)
-				{
-					if (occlusionCulling && instance->IsOccluded())
-						continue;
+		//		int k = 0;
+		//		for (const Object* instance : visibleInstances)
+		//		{
+		//			if (occlusionCulling && instance->IsOccluded())
+		//				continue;
 
-					const float impostorThreshold = instance->bounds.getRadius();
-					float dist = wiMath::Distance(eye, instance->bounds.getCenter());
-					float dither = instance->transparency;
-					dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
-					if (dither > 1.0f - FLT_EPSILON)
-						continue;
+		//			const float impostorThreshold = instance->bounds.getRadius();
+		//			float dist = wiMath::Distance(eye, instance->bounds.getCenter());
+		//			float dither = instance->transparency;
+		//			dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
+		//			if (dither > 1.0f - FLT_EPSILON)
+		//				continue;
 
-					XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
+		//			XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
 
-					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
-					instances[k].instance.Create(tempMat, dither, instance->color);
+		//			XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
+		//			instances[k].instance.Create(tempMat, dither, instance->color);
 
-					if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
-					{
-						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
-						instances[k].instancePrev.Create(tempMat);
-						instancePrevUpdated = true;
-					}
+		//			if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
+		//			{
+		//				XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
+		//				instances[k].instancePrev.Create(tempMat);
+		//				instancePrevUpdated = true;
+		//			}
 
-					++k;
-				}
+		//			++k;
+		//		}
 
-				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+		//		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
-				if (k < 1)
-					continue;
+		//		if (k < 1)
+		//			continue;
 
-				if (realVL == VLTYPE_OBJECT_POS_TEX)
-				{
-					GPUBuffer* vbs[] = {
-						&Mesh::impostorVB_POS,
-						&Mesh::impostorVB_TEX,
-						dynamicVertexBufferPool
-					};
-					UINT strides[] = {
-						sizeof(Mesh::Vertex_POS),
-						sizeof(Mesh::Vertex_TEX),
-						sizeof(InstBuf)
-					};
-					UINT offsets[] = {
-						0,
-						0,
-						instancesOffset
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-				}
-				else
-				{
-					GPUBuffer* vbs[] = {
-						&Mesh::impostorVB_POS,
-						&Mesh::impostorVB_TEX,
-						&Mesh::impostorVB_POS,
-						dynamicVertexBufferPool,
-						dynamicVertexBufferPool
-					};
-					UINT strides[] = {
-						sizeof(Mesh::Vertex_POS),
-						sizeof(Mesh::Vertex_TEX),
-						sizeof(Mesh::Vertex_POS),
-						sizeof(InstBuf),
-						sizeof(InstBuf),
-					};
-					UINT offsets[] = {
-						0,
-						0,
-						0,
-						0,
-						instancesOffset,
-						instancesOffset + sizeof(Instance)
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-				}
+		//		if (realVL == VLTYPE_OBJECT_POS_TEX)
+		//		{
+		//			GPUBuffer* vbs[] = {
+		//				&Mesh::impostorVB_POS,
+		//				&Mesh::impostorVB_TEX,
+		//				dynamicVertexBufferPool
+		//			};
+		//			UINT strides[] = {
+		//				sizeof(Mesh::Vertex_POS),
+		//				sizeof(Mesh::Vertex_TEX),
+		//				sizeof(InstBuf)
+		//			};
+		//			UINT offsets[] = {
+		//				0,
+		//				0,
+		//				instancesOffset
+		//			};
+		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		//		}
+		//		else
+		//		{
+		//			GPUBuffer* vbs[] = {
+		//				&Mesh::impostorVB_POS,
+		//				&Mesh::impostorVB_TEX,
+		//				&Mesh::impostorVB_POS,
+		//				dynamicVertexBufferPool,
+		//				dynamicVertexBufferPool
+		//			};
+		//			UINT strides[] = {
+		//				sizeof(Mesh::Vertex_POS),
+		//				sizeof(Mesh::Vertex_TEX),
+		//				sizeof(Mesh::Vertex_POS),
+		//				sizeof(InstBuf),
+		//				sizeof(InstBuf),
+		//			};
+		//			UINT offsets[] = {
+		//				0,
+		//				0,
+		//				0,
+		//				0,
+		//				instancesOffset,
+		//				instancesOffset + sizeof(Instance)
+		//			};
+		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		//		}
 
-				const GPUResource* res[] = {
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
-				};
-				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+		//		const GPUResource* res[] = {
+		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
+		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
+		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
+		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
+		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
+		//		};
+		//		device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
-				device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
+		//		device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
 
-			}
-		}
+		//	}
+		//}
 
-		VLTYPES prevVL = VLTYPE_NULL;
-		VSTYPES prevVS = VSTYPE_NULL;
-		GSTYPES prevGS = GSTYPE_NULL;
-		HSTYPES prevHS = HSTYPE_NULL;
-		DSTYPES prevDS = DSTYPE_NULL;
-		PSTYPES prevPS = PSTYPE_NULL;
+		//VLTYPES prevVL = VLTYPE_NULL;
+		//VSTYPES prevVS = VSTYPE_NULL;
+		//GSTYPES prevGS = GSTYPE_NULL;
+		//HSTYPES prevHS = HSTYPE_NULL;
+		//DSTYPES prevDS = DSTYPE_NULL;
+		//PSTYPES prevPS = PSTYPE_NULL;
+		//PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
+
+		//RSTYPES prevRS = RSTYPE_FRONT;
+		//device->BindVS(nullptr, threadID);
+		//device->BindGS(nullptr, threadID);
+		//device->BindHS(nullptr, threadID);
+		//device->BindDS(nullptr, threadID);
+		//device->BindPS(nullptr, threadID);
+		//device->BindPrimitiveTopology(prevTOPOLOGY, threadID);
+		//device->BindRasterizerState(rasterizers[prevRS], threadID);
+
 		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
-		RSTYPES prevRS = RSTYPE_FRONT;
-		device->BindVS(nullptr, threadID);
-		device->BindGS(nullptr, threadID);
-		device->BindHS(nullptr, threadID);
-		device->BindDS(nullptr, threadID);
-		device->BindPS(nullptr, threadID);
-		device->BindPrimitiveTopology(prevTOPOLOGY, threadID);
-		device->BindRasterizerState(rasterizers[prevRS], threadID);
 
 		// Render meshes:
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
@@ -4270,7 +4887,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			const bool tessellatorRequested = tessF > 0 && tessellation;
 
 			PRIMITIVETOPOLOGY realTOPOLOGY = TRIANGLELIST;
-			RSTYPES realRS = RSTYPE_FRONT;
+			//RSTYPES realRS = RSTYPE_FRONT;
 
 			if (tessellatorRequested)
 			{
@@ -4281,39 +4898,40 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				realTOPOLOGY = PATCHLIST;
 			}
 
-			if (shaderType == SHADERTYPE_VOXELIZE)
-			{
-				realRS = RSTYPE_VOXELIZE;
-			}
-			else
-			{
-				if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-				{
-					realRS = mesh->doubleSided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW;
-				}
-				else
-				{
-					if (!mesh->doubleSided)
-					{
-						realRS = wireRender ? RSTYPE_WIRE : RSTYPE_FRONT;
-					}
-					else
-					{
-						realRS = wireRender ? RSTYPE_WIRE : RSTYPE_DOUBLESIDED;
-					}
-				}
-			}
+			//if (shaderType == SHADERTYPE_VOXELIZE)
+			//{
+			//	realRS = RSTYPE_VOXELIZE;
+			//}
+			//else
+			//{
+			//	if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+			//	{
+			//		realRS = mesh->doubleSided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW;
+			//	}
+			//	else
+			//	{
+			//		if (!mesh->doubleSided)
+			//		{
+			//			realRS = wireRender ? RSTYPE_WIRE : RSTYPE_FRONT;
+			//		}
+			//		else
+			//		{
+			//			realRS = wireRender ? RSTYPE_WIRE : RSTYPE_DOUBLESIDED;
+			//		}
+			//	}
+			//}
 
 			if (prevTOPOLOGY != realTOPOLOGY)
 			{
 				prevTOPOLOGY = realTOPOLOGY;
 				device->BindPrimitiveTopology(realTOPOLOGY, threadID);
 			}
-			if (prevRS != realRS)
-			{
-				prevRS = realRS;
-				device->BindRasterizerState(rasterizers[realRS], threadID);
-			}
+
+			//if (prevRS != realRS)
+			//{
+			//	prevRS = realRS;
+			//	device->BindRasterizerState(rasterizers[realRS], threadID);
+			//}
 
 
 			bool instancePrevUpdated = false;
@@ -4385,6 +5003,14 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					continue;
 				}
 				Material* material = subset.material;
+
+				GraphicsPSO* pso = GetObjectPSO(shaderType, tessellatorRequested, material, forceAlphaTestForDithering);
+				if (pso == nullptr)
+				{
+					continue;
+				}
+
+				device->BindGraphicsPSO(pso, threadID);
 
 				bool subsetRenderable = false;
 
@@ -4505,66 +5131,68 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
-					UINT realStencilRef = material->GetStencilRef();
-					if (prevStencilRef != realStencilRef)
-					{
-						prevStencilRef = realStencilRef;
-						device->BindDepthStencilState(depthStencils[targetDepthStencilState], realStencilRef, threadID);
-					}
+					device->BindStencilRef(material->GetStencilRef(), threadID);
 
-					VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
-					if (prevVL != realVL)
-					{
-						prevVL = realVL;
-						device->BindVertexLayout(vertexLayouts[realVL], threadID);
-					}
+					//UINT realStencilRef = material->GetStencilRef();
+					//if (prevStencilRef != realStencilRef)
+					//{
+					//	prevStencilRef = realStencilRef;
+					//	device->BindDepthStencilState(depthStencils[targetDepthStencilState], realStencilRef, threadID);
+					//}
 
-					VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
-					if (prevVS != realVS)
-					{
-						prevVS = realVS;
-						device->BindVS(vertexShaders[realVS], threadID);
-					}
+					//VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
+					//if (prevVL != realVL)
+					//{
+					//	prevVL = realVL;
+					//	device->BindVertexLayout(vertexLayouts[realVL], threadID);
+					//}
 
-					GSTYPES realGS = GetGSTYPE(shaderType, material);
-					if (prevGS != realGS)
-					{
-						prevGS = realGS;
-						device->BindGS(geometryShaders[realGS], threadID);
-					}
+					//VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
+					//if (prevVS != realVS)
+					//{
+					//	prevVS = realVS;
+					//	device->BindVS(vertexShaders[realVS], threadID);
+					//}
 
-					HSTYPES realHS = GetHSTYPE(shaderType, material, tessellatorRequested);
-					if (prevHS = realHS)
-					{
-						prevHS = realHS;
-						device->BindHS(hullShaders[realHS], threadID);
-					}
+					//GSTYPES realGS = GetGSTYPE(shaderType, material);
+					//if (prevGS != realGS)
+					//{
+					//	prevGS = realGS;
+					//	device->BindGS(geometryShaders[realGS], threadID);
+					//}
 
-					DSTYPES realDS = GetDSTYPE(shaderType, material, tessellatorRequested);
-					if (prevDS != realDS)
-					{
-						prevDS = realDS;
-						device->BindDS(domainShaders[realDS], threadID);
-					}
-					if(realDS!=DSTYPE_NULL)
-					{
-						device->BindResourceDS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
-					}
+					//HSTYPES realHS = GetHSTYPE(shaderType, material, tessellatorRequested);
+					//if (prevHS = realHS)
+					//{
+					//	prevHS = realHS;
+					//	device->BindHS(hullShaders[realHS], threadID);
+					//}
 
-					if (wireRender)
+					//DSTYPES realDS = GetDSTYPE(shaderType, material, tessellatorRequested);
+					//if (prevDS != realDS)
+					//{
+					//	prevDS = realDS;
+					//	device->BindDS(domainShaders[realDS], threadID);
+					//}
+					//if(realDS!=DSTYPE_NULL)
+					//{
+					//	device->BindResourceDS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
+					//}
+
+					//if (wireRender)
+					//{
+					//	prevPS = PSTYPE_OBJECT_SIMPLEST;
+					//	device->BindPS(pixelShaders[prevPS], threadID);
+					//}
+					//else
 					{
-						prevPS = PSTYPE_OBJECT_SIMPLEST;
-						device->BindPS(pixelShaders[prevPS], threadID);
-					}
-					else
-					{
-						PSTYPES realPS = GetPSTYPE(shaderType, material, forceAlphaTestForDithering);
-						if (prevPS != realPS)
-						{
-							prevPS = realPS;
-							device->BindPS(pixelShaders[realPS], threadID);
-						}
-						if (realPS != PSTYPE_NULL)
+						//PSTYPES realPS = GetPSTYPE(shaderType, material, forceAlphaTestForDithering);
+						//if (prevPS != realPS)
+						//{
+						//	prevPS = realPS;
+						//	device->BindPS(pixelShaders[realPS], threadID);
+						//}
+						//if (realPS != PSTYPE_NULL)
 						{
 							const GPUResource* res[] = {
 								static_cast<const GPUResource*>(material->GetBaseColorMap()),
@@ -4587,11 +5215,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		}
 
 
-		device->BindVS(nullptr, threadID);
-		device->BindGS(nullptr, threadID);
-		device->BindHS(nullptr, threadID);
-		device->BindDS(nullptr, threadID);
-		device->BindPS(nullptr, threadID);
+		//device->BindVS(nullptr, threadID);
+		//device->BindGS(nullptr, threadID);
+		//device->BindHS(nullptr, threadID);
+		//device->BindDS(nullptr, threadID);
+		//device->BindPS(nullptr, threadID);
 
 		ResetAlphaRef(threadID);
 
@@ -4612,15 +5240,15 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
-	if (grass)
-	{
-		GetDevice()->BindDepthStencilState(depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-		for (wiHairParticle* hair : culling.culledHairParticleSystems)
-		{
-			hair->Draw(camera, shaderType, threadID);
-		}
-	}
+	//if (grass)
+	//{
+	//	GetDevice()->BindDepthStencilState(depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//	for (wiHairParticle* hair : culling.culledHairParticleSystems)
+	//	{
+	//		hair->Draw(camera, shaderType, threadID);
+	//	}
+	//}
 
 	if (!culledRenderer.empty() || (grass && culling.culledHairParticleSystems.empty()))
 	{
@@ -4665,15 +5293,15 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 		ocean->Render(camera, renderTime, threadID);
 	}
 
-	if (grass)
-	{
-		GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_HAIRALPHACOMPOSITION], STENCILREF_DEFAULT, threadID); // minimizes overdraw by depthcomp = less
-		GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-		for (wiHairParticle* hair : culling.culledHairParticleSystems)
-		{
-			hair->Draw(camera, shaderType, threadID);
-		}
-	}
+	//if (grass)
+	//{
+	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_HAIRALPHACOMPOSITION], STENCILREF_DEFAULT, threadID); // minimizes overdraw by depthcomp = less
+	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+	//	for (wiHairParticle* hair : culling.culledHairParticleSystems)
+	//	{
+	//		hair->Draw(camera, shaderType, threadID);
+	//	}
+	//}
 
 	if (!culledRenderer.empty())
 	{
@@ -4686,115 +5314,115 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 {
-	if (!GetTemporalAAEnabled()) // If temporal AA is enabled, we should render a velocity map anyway, so render a black sky as that is the default!
-	{
-		if (enviroMap == nullptr)
-			return;
-	}
+	//if (!GetTemporalAAEnabled()) // If temporal AA is enabled, we should render a velocity map anyway, so render a black sky as that is the default!
+	//{
+	//	if (enviroMap == nullptr)
+	//		return;
+	//}
 
-	GetDevice()->EventBegin("DrawSky", threadID);
+	//GetDevice()->EventBegin("DrawSky", threadID);
 
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY],threadID);
-	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,threadID);
-	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
-	
-	GetDevice()->BindVS(vertexShaders[VSTYPE_SKY], threadID);
-	GetDevice()->BindPS(pixelShaders[PSTYPE_SKY], threadID);
-	
-	if (enviroMap != nullptr)
-	{
-		GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
-	}
-	else
-	{
-		// If control gets here, it means we fill out only a velocity buffer on the background for temporal AA
-		GetDevice()->BindResourcePS(wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ENV_GLOBAL, threadID);
-	}
+	//GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
+	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY],threadID);
+	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_SKY,threadID);
+	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
+	//
+	//GetDevice()->BindVS(vertexShaders[VSTYPE_SKY], threadID);
+	//GetDevice()->BindPS(pixelShaders[PSTYPE_SKY], threadID);
+	//
+	//if (enviroMap != nullptr)
+	//{
+	//	GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+	//}
+	//else
+	//{
+	//	// If control gets here, it means we fill out only a velocity buffer on the background for temporal AA
+	//	GetDevice()->BindResourcePS(wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ENV_GLOBAL, threadID);
+	//}
 
-	GetDevice()->BindVertexLayout(nullptr, threadID);
-	GetDevice()->Draw(240, 0, threadID);
+	//GetDevice()->BindVertexLayout(nullptr, threadID);
+	//GetDevice()->Draw(240, 0, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("DrawSun", threadID);
+	//GetDevice()->EventBegin("DrawSun", threadID);
 
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
-	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
-	GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
+	//GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
+	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
+	//GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
 
-	GetDevice()->BindVS(vertexShaders[VSTYPE_SKY], threadID);
-	GetDevice()->BindPS(pixelShaders[PSTYPE_SUN], threadID);
+	//GetDevice()->BindVS(vertexShaders[VSTYPE_SKY], threadID);
+	//GetDevice()->BindPS(pixelShaders[PSTYPE_SUN], threadID);
 
-	GetDevice()->BindVertexLayout(nullptr, threadID);
-	GetDevice()->Draw(240, 0, threadID);
+	//GetDevice()->BindVertexLayout(nullptr, threadID);
+	//GetDevice()->Draw(240, 0, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	GraphicsDevice* device = GetDevice();
+	//GraphicsDevice* device = GetDevice();
 
-	bool boundCB = false;
-	for (Model* model : GetScene().models)
-	{
-		if (model->decals.empty())
-			continue;
+	//bool boundCB = false;
+	//for (Model* model : GetScene().models)
+	//{
+	//	if (model->decals.empty())
+	//		continue;
 
-		device->EventBegin("Decals", threadID);
+	//	device->EventBegin("Decals", threadID);
 
-		if (!boundCB)
-		{
-			boundCB = true;
-			device->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
-		}
+	//	if (!boundCB)
+	//	{
+	//		boundCB = true;
+	//		device->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
+	//	}
 
-		device->BindVS(vertexShaders[VSTYPE_DECAL], threadID);
-		device->BindPS(pixelShaders[PSTYPE_DECAL], threadID);
-		device->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-		device->BindBlendState(blendStates[BSTYPE_DECAL], threadID);
-		device->BindDepthStencilState(depthStencils[DSSTYPE_DECAL], STENCILREF::STENCILREF_DEFAULT, threadID);
-		device->BindVertexLayout(nullptr, threadID);
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
+	//	device->BindVS(vertexShaders[VSTYPE_DECAL], threadID);
+	//	device->BindPS(pixelShaders[PSTYPE_DECAL], threadID);
+	//	device->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+	//	device->BindBlendState(blendStates[BSTYPE_DECAL], threadID);
+	//	device->BindDepthStencilState(depthStencils[DSSTYPE_DECAL], STENCILREF::STENCILREF_DEFAULT, threadID);
+	//	device->BindVertexLayout(nullptr, threadID);
+	//	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
-		for (Decal* decal : model->decals) 
-		{
+	//	for (Decal* decal : model->decals) 
+	//	{
 
-			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
+	//		if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
 
-				device->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
-				device->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
+	//			device->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
+	//			device->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
 
-				XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
+	//			XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
 
-				MiscCB dcbvs;
-				dcbvs.mTransform =XMMatrixTranspose(decalWorld*camera->GetViewProjection());
-				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
+	//			MiscCB dcbvs;
+	//			dcbvs.mTransform =XMMatrixTranspose(decalWorld*camera->GetViewProjection());
+	//			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
-				DecalCB dcbps;
-				dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld));
-				dcbps.hasTexNor = 0;
-				if (decal->texture != nullptr)
-					dcbps.hasTexNor |= 0x0000001;
-				if (decal->normal != nullptr)
-					dcbps.hasTexNor |= 0x0000010;
-				XMStoreFloat3(&dcbps.eye, camera->GetEye());
-				dcbps.opacity = decal->GetOpacity();
-				dcbps.front = decal->front;
-				device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
+	//			DecalCB dcbps;
+	//			dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld));
+	//			dcbps.hasTexNor = 0;
+	//			if (decal->texture != nullptr)
+	//				dcbps.hasTexNor |= 0x0000001;
+	//			if (decal->normal != nullptr)
+	//				dcbps.hasTexNor |= 0x0000010;
+	//			XMStoreFloat3(&dcbps.eye, camera->GetEye());
+	//			dcbps.opacity = decal->GetOpacity();
+	//			dcbps.front = decal->front;
+	//			device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
 
-				device->Draw(14, 0, threadID);
+	//			device->Draw(14, 0, threadID);
 
-			}
+	//		}
 
-		}
+	//	}
 
-		device->EventEnd(threadID);
-	}
+	//	device->EventEnd(threadID);
+	//}
 }
 
 void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
@@ -4856,25 +5484,25 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			RenderMeshes(probe->translation, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
 		}
 
-		// sky
-		{
-			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
-			GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
-			GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+		//// sky
+		//{
+		//	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+		//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_SKY], threadID);
+		//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_SKY, threadID);
+		//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
 
-			GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], threadID);
-			GetDevice()->BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], threadID);
-			GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], threadID);
+		//	GetDevice()->BindVS(vertexShaders[VSTYPE_ENVMAP_SKY], threadID);
+		//	GetDevice()->BindPS(pixelShaders[PSTYPE_ENVMAP_SKY], threadID);
+		//	GetDevice()->BindGS(geometryShaders[GSTYPE_ENVMAP_SKY], threadID);
 
-			GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+		//	GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 
-			GetDevice()->BindVertexLayout(nullptr, threadID);
-			GetDevice()->Draw(240, 0, threadID);
-		}
+		//	GetDevice()->BindVertexLayout(nullptr, threadID);
+		//	GetDevice()->Draw(240, 0, threadID);
+		//}
 
 
-		GetDevice()->BindGS(nullptr, threadID);
+		//GetDevice()->BindGS(nullptr, threadID);
 
 
 		probe->cubeMap.Deactivate(threadID);
@@ -4888,169 +5516,169 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 {
-	if (!GetVoxelRadianceEnabled())
-	{
-		return;
-	}
+	//if (!GetVoxelRadianceEnabled())
+	//{
+	//	return;
+	//}
 
-	GetDevice()->EventBegin("Voxel Radiance", threadID);
-	wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
-
-
-	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
-	{
-		Texture3DDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = voxelSceneData.res;
-		desc.Height = voxelSceneData.res;
-		desc.Depth = voxelSceneData.res;
-		desc.MipLevels = 0;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.Usage = USAGE_DEFAULT;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
-
-		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
-		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententShaderResourcesForMIPs(true);
-		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
-		assert(SUCCEEDED(hr));
-	}
-	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
-	{
-		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententShaderResourcesForMIPs(true);
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
-		assert(SUCCEEDED(hr));
-	}
-	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
-	{
-		GPUBufferDesc desc;
-		desc.StructureByteStride = sizeof(UINT) * 2;
-		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-
-		resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
-		HRESULT hr = GetDevice()->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
-		assert(SUCCEEDED(hr));
-	}
-
-	Texture3D* result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE];
-
-	CulledList culledObjects;
-	CulledCollection culledRenderer;
-
-	AABB bbox;
-	XMFLOAT3 extents = voxelSceneData.extents;
-	XMFLOAT3 center = voxelSceneData.center;
-	bbox.createFromHalfWidth(center, extents);
-	if (spTree != nullptr && extents.x > 0 && extents.y > 0 && extents.z > 0)
-	{
-		spTree->getVisible(bbox, culledObjects);
-
-		for (Cullable* object : culledObjects)
-		{
-			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
-		}
-
-		const FrameCulling& culling = frameCullings[getCamera()];
-
-		// Tell the voxelizer about the lights in the light array (exclude decals)
-		MiscCB cb;
-		cb.mColor.x = 0;
-		cb.mColor.y = (float)culling.culledLights.size();
-		// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
-		// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
-		cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
-
-		ViewPort VP;
-		VP.TopLeftX = 0;
-		VP.TopLeftY = 0;
-		VP.Width = (float)voxelSceneData.res;
-		VP.Height = (float)voxelSceneData.res;
-		VP.MinDepth = 0.0f;
-		VP.MaxDepth = 1.0f;
-		GetDevice()->BindViewports(1, &VP, threadID);
-
-		GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-
-		GPUUnorderedResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
-		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
-
-		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+	//GetDevice()->EventBegin("Voxel Radiance", threadID);
+	//wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
 
-		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
-		GetDevice()->EventBegin("Voxel Scene Copy - Clear", threadID);
-		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+	//if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
+	//{
+	//	Texture3DDesc desc;
+	//	ZeroMemory(&desc, sizeof(desc));
+	//	desc.Width = voxelSceneData.res;
+	//	desc.Height = voxelSceneData.res;
+	//	desc.Depth = voxelSceneData.res;
+	//	desc.MipLevels = 0;
+	//	desc.Format = FORMAT_R16G16B16A16_FLOAT;
+	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+	//	desc.Usage = USAGE_DEFAULT;
+	//	desc.CPUAccessFlags = 0;
+	//	desc.MiscFlags = 0;
 
-		if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
-		{
-			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
-		}
-		else
-		{
-			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
-		}
-		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-		GetDevice()->EventEnd(threadID);
+	//	textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
+	//	textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententShaderResourcesForMIPs(true);
+	//	textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+	//	HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
+	//	assert(SUCCEEDED(hr));
+	//}
+	//if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
+	//{
+	//	Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
+	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
+	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententShaderResourcesForMIPs(true);
+	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+	//	HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+	//	assert(SUCCEEDED(hr));
+	//}
+	//if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
+	//{
+	//	GPUBufferDesc desc;
+	//	desc.StructureByteStride = sizeof(UINT) * 2;
+	//	desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+	//	desc.CPUAccessFlags = 0;
+	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	//	desc.Usage = USAGE_DEFAULT;
 
-		if (voxelSceneData.secondaryBounceEnabled)
-		{
-			GetDevice()->EventBegin("Voxel Radiance Secondary Bounce", threadID);
-			GetDevice()->UnBindUnorderedAccessResources(1, 1, threadID);
-			// Pre-integrate the voxel texture by creating blurred mip levels:
-			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
-			GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
-			GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-			GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
-			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
-			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-			GetDevice()->EventEnd(threadID);
+	//	resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
+	//	HRESULT hr = GetDevice()->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
+	//	assert(SUCCEEDED(hr));
+	//}
 
-			GetDevice()->EventBegin("Voxel Scene Clear Normals", threadID);
-			GetDevice()->UnBindResources(1, 1, threadID);
-			GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-			GetDevice()->BindCS(computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
-			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-			GetDevice()->EventEnd(threadID);
+	//Texture3D* result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE];
 
-			result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
-		}
+	//CulledList culledObjects;
+	//CulledCollection culledRenderer;
 
-		GetDevice()->BindCS(nullptr, threadID);
-		GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+	//AABB bbox;
+	//XMFLOAT3 extents = voxelSceneData.extents;
+	//XMFLOAT3 center = voxelSceneData.center;
+	//bbox.createFromHalfWidth(center, extents);
+	//if (spTree != nullptr && extents.x > 0 && extents.y > 0 && extents.z > 0)
+	//{
+	//	spTree->getVisible(bbox, culledObjects);
+
+	//	for (Cullable* object : culledObjects)
+	//	{
+	//		culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
+	//	}
+
+	//	const FrameCulling& culling = frameCullings[getCamera()];
+
+	//	// Tell the voxelizer about the lights in the light array (exclude decals)
+	//	MiscCB cb;
+	//	cb.mColor.x = 0;
+	//	cb.mColor.y = (float)culling.culledLights.size();
+	//	// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
+	//	// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
+	//	cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
+	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+	//	ViewPort VP;
+	//	VP.TopLeftX = 0;
+	//	VP.TopLeftY = 0;
+	//	VP.Width = (float)voxelSceneData.res;
+	//	VP.Height = (float)voxelSceneData.res;
+	//	VP.MinDepth = 0.0f;
+	//	VP.MaxDepth = 1.0f;
+	//	GetDevice()->BindViewports(1, &VP, threadID);
+
+	//	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+
+	//	GPUUnorderedResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
+	//	GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
+
+	//	RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 
-		// Pre-integrate the voxel texture by creating blurred mip levels:
-		//if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
-		//{
-		//	GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
-		//}
-		//else
-		{
-			GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
-		}
-	}
+	//	// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
+	//	GetDevice()->EventBegin("Voxel Scene Copy - Clear", threadID);
+	//	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	//	GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+	//	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
 
-	if (voxelHelper)
-	{
-		GetDevice()->BindResourceVS(result, TEXSLOT_VOXELRADIANCE, threadID);
-	}
-	GetDevice()->BindResourcePS(result, TEXSLOT_VOXELRADIANCE, threadID);
-	GetDevice()->BindResourceCS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	//	if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+	//	{
+	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
+	//	}
+	//	else
+	//	{
+	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+	//	}
+	//	GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+	//	GetDevice()->EventEnd(threadID);
 
-	wiProfiler::GetInstance().EndRange(threadID);
-	GetDevice()->EventEnd(threadID);
+	//	if (voxelSceneData.secondaryBounceEnabled)
+	//	{
+	//		GetDevice()->EventBegin("Voxel Radiance Secondary Bounce", threadID);
+	//		GetDevice()->UnBindUnorderedAccessResources(1, 1, threadID);
+	//		// Pre-integrate the voxel texture by creating blurred mip levels:
+	//		GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
+	//		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
+	//		GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
+	//		GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
+	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
+	//		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+	//		GetDevice()->EventEnd(threadID);
+
+	//		GetDevice()->EventBegin("Voxel Scene Clear Normals", threadID);
+	//		GetDevice()->UnBindResources(1, 1, threadID);
+	//		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
+	//		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+	//		GetDevice()->EventEnd(threadID);
+
+	//		result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
+	//	}
+
+	//	GetDevice()->BindCS(nullptr, threadID);
+	//	GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+
+
+	//	// Pre-integrate the voxel texture by creating blurred mip levels:
+	//	//if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+	//	//{
+	//	//	GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
+	//	//}
+	//	//else
+	//	{
+	//		GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
+	//	}
+	//}
+
+	//if (voxelHelper)
+	//{
+	//	GetDevice()->BindResourceVS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	//}
+	//GetDevice()->BindResourcePS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	//GetDevice()->BindResourceCS(result, TEXSLOT_VOXELRADIANCE, threadID);
+
+	//wiProfiler::GetInstance().EndRange(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 
 
@@ -5142,7 +5770,8 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	{
 		frustumsComplete = true;
 		device->BindUnorderedAccessResourceCS(frustumBuffer, UAVSLOT_TILEFRUSTUMS, threadID);
-		device->BindCS(computeShaders[CSTYPE_TILEFRUSTUMS], threadID);
+		//device->BindCS(computeShaders[CSTYPE_TILEFRUSTUMS], threadID);
+		device->BindComputePSO(CPSO_tilefrustums, threadID);
 
 		DispatchParamsCB dispatchParams;
 		dispatchParams.numThreads[0] = tileCount.x;
@@ -5187,56 +5816,63 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 		
+		//if (GetDebugLightCulling())
+		//{
+		//	device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
+		//	if (GetAdvancedLightCulling())
+		//	{
+		//		if (deferred)
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED_DEBUG], threadID);
+		//		}
+		//		else
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG], threadID);
+		//		}
+		//	}
+		//	else
+		//	{
+		//		if (deferred)
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_DEBUG], threadID);
+		//		}
+		//		else
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
+		//		}
+		//	}
+		//}
+		//else
+		//{
+		//	if (GetAdvancedLightCulling())
+		//	{
+		//		if (deferred)
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED], threadID);
+		//		}
+		//		else
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED], threadID);
+		//		}
+		//	}
+		//	else
+		//	{
+		//		if (deferred)
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED], threadID);
+		//		}
+		//		else
+		//		{
+		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
+		//		}
+		//	}
+		//}
+
+		device->BindComputePSO(CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
+
 		if (GetDebugLightCulling())
 		{
 			device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
-			if (GetAdvancedLightCulling())
-			{
-				if (deferred)
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED_DEBUG], threadID);
-				}
-				else
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG], threadID);
-				}
-			}
-			else
-			{
-				if (deferred)
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_DEBUG], threadID);
-				}
-				else
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
-				}
-			}
-		}
-		else
-		{
-			if (GetAdvancedLightCulling())
-			{
-				if (deferred)
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED], threadID);
-				}
-				else
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED], threadID);
-				}
-			}
-			else
-			{
-				if (deferred)
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED], threadID);
-				}
-				else
-				{
-					device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
-				}
-			}
 		}
 
 		DispatchParamsCB dispatchParams;
@@ -5273,7 +5909,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 
-		device->BindCS(nullptr, threadID);
+		//device->BindCS(nullptr, threadID);
 		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
 
 		device->EventEnd(threadID);
@@ -5290,9 +5926,10 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 
 	Texture2DDesc desc = src->GetDesc();
 
-	GetDevice()->BindCS(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
+	//GetDevice()->BindCS(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
+	GetDevice()->BindComputePSO(CPSO_resolvemsaadepth, threadID);
 	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
-	GetDevice()->BindCS(nullptr, threadID);
+	//GetDevice()->BindCS(nullptr, threadID);
 
 
 	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
@@ -5306,112 +5943,112 @@ void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	Texture2DDesc desc = texture->GetDesc();
+	//Texture2DDesc desc = texture->GetDesc();
 
-	if (desc.MipLevels < 2)
-	{
-		assert(0);
-		return;
-	}
+	//if (desc.MipLevels < 2)
+	//{
+	//	assert(0);
+	//	return;
+	//}
 
-	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	//GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-	switch (filter)
-	{
-	case wiRenderer::MIPGENFILTER_POINT:
-		GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
-		break;
-	case wiRenderer::MIPGENFILTER_LINEAR:
-		GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
-		break;
-	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
-		GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
-		break;
-	case wiRenderer::MIPGENFILTER_GAUSSIAN:
-		GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
-		break;
-	}
+	//switch (filter)
+	//{
+	//case wiRenderer::MIPGENFILTER_POINT:
+	//	GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+	//	GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+	//	break;
+	//case wiRenderer::MIPGENFILTER_LINEAR:
+	//	GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+	//	GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+	//	break;
+	//case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+	//	GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+	//	GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+	//	break;
+	//case wiRenderer::MIPGENFILTER_GAUSSIAN:
+	//	GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
+	//	break;
+	//}
 
-	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
-	{
-		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
-		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
-		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
-		GetDevice()->Dispatch(
-			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
-			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
-			1, 
-			threadID);
-	}
+	//for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+	//{
+	//	GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+	//	GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+	//	desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+	//	desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+	//	GetDevice()->Dispatch(
+	//		max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
+	//		max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
+	//		1, 
+	//		threadID);
+	//}
 
-	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
-	GetDevice()->BindCS(nullptr, threadID);
+	//GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	//GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	//GetDevice()->BindCS(nullptr, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	Texture3DDesc desc = texture->GetDesc();
+	//Texture3DDesc desc = texture->GetDesc();
 
-	if (desc.MipLevels < 2)
-	{
-		assert(0);
-		return;
-	}
+	//if (desc.MipLevels < 2)
+	//{
+	//	assert(0);
+	//	return;
+	//}
 
-	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	//GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-	switch (filter)
-	{
-	case wiRenderer::MIPGENFILTER_POINT:
-		GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
-		break;
-	case wiRenderer::MIPGENFILTER_LINEAR:
-		GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
-		break;
-	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
-		GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
-		break;
-	case wiRenderer::MIPGENFILTER_GAUSSIAN:
-		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
-		GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN], threadID);
-		break;
-	}
+	//switch (filter)
+	//{
+	//case wiRenderer::MIPGENFILTER_POINT:
+	//	GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+	//	GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+	//	break;
+	//case wiRenderer::MIPGENFILTER_LINEAR:
+	//	GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+	//	GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+	//	break;
+	//case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+	//	GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+	//	GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+	//	break;
+	//case wiRenderer::MIPGENFILTER_GAUSSIAN:
+	//	GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
+	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN], threadID);
+	//	break;
+	//}
 
-	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
-	{
-		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
-		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
-		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
-		desc.Depth = max(1, (UINT)ceilf(desc.Depth * 0.5f));
-		GetDevice()->Dispatch(
-			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			max(1, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			threadID);
-	}
+	//for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+	//{
+	//	GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+	//	GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+	//	desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+	//	desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+	//	desc.Depth = max(1, (UINT)ceilf(desc.Depth * 0.5f));
+	//	GetDevice()->Dispatch(
+	//		max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+	//		max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+	//		max(1, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+	//		threadID);
+	//}
 
-	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
-	GetDevice()->BindCS(nullptr, threadID);
+	//GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	//GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	//GetDevice()->BindCS(nullptr, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	//GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
@@ -5652,82 +6289,82 @@ void wiRenderer::FinishLoading()
 
 Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	//GraphicsDevice* device = wiRenderer::GetDevice();
 
-	static Texture2D* luminance_map = nullptr;
-	static std::vector<Texture2D*> luminance_avg(0);
-	if (luminance_map == nullptr)
-	{
-		SAFE_DELETE(luminance_map);
-		for (auto& x : luminance_avg)
-		{
-			SAFE_DELETE(x);
-		}
-		luminance_avg.clear();
+	//static Texture2D* luminance_map = nullptr;
+	//static std::vector<Texture2D*> luminance_avg(0);
+	//if (luminance_map == nullptr)
+	//{
+	//	SAFE_DELETE(luminance_map);
+	//	for (auto& x : luminance_avg)
+	//	{
+	//		SAFE_DELETE(x);
+	//	}
+	//	luminance_avg.clear();
 
-		// lower power of two
-		//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
+	//	// lower power of two
+	//	//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
 
-		Texture2DDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
-		desc.Width = 256;
-		desc.Height = desc.Width;
-		desc.MipLevels = 1;
-		desc.ArraySize = 1;
-		desc.Format = FORMAT_R32_FLOAT;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
-		desc.Usage = USAGE_DEFAULT;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
+	//	Texture2DDesc desc;
+	//	ZeroMemory(&desc, sizeof(desc));
+	//	desc.Width = 256;
+	//	desc.Height = desc.Width;
+	//	desc.MipLevels = 1;
+	//	desc.ArraySize = 1;
+	//	desc.Format = FORMAT_R32_FLOAT;
+	//	desc.SampleDesc.Count = 1;
+	//	desc.SampleDesc.Quality = 0;
+	//	desc.Usage = USAGE_DEFAULT;
+	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	//	desc.CPUAccessFlags = 0;
+	//	desc.MiscFlags = 0;
 
-		device->CreateTexture2D(&desc, nullptr, &luminance_map);
+	//	device->CreateTexture2D(&desc, nullptr, &luminance_map);
 
-		while (desc.Width > 1)
-		{
-			desc.Width = max(desc.Width / 16, 1);
-			desc.Height = desc.Width;
+	//	while (desc.Width > 1)
+	//	{
+	//		desc.Width = max(desc.Width / 16, 1);
+	//		desc.Height = desc.Width;
 
-			Texture2D* tex = nullptr;
-			device->CreateTexture2D(&desc, nullptr, &tex);
+	//		Texture2D* tex = nullptr;
+	//		device->CreateTexture2D(&desc, nullptr, &tex);
 
-			luminance_avg.push_back(tex);
-		}
-	}
-	if (luminance_map != nullptr)
-	{
-		// Pass 1 : Create luminance map from scene tex
-		Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
-		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS1], threadID);
-		device->BindResourceCS(sourceImage, TEXSLOT_ONDEMAND0, threadID);
-		device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
-		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
+	//		luminance_avg.push_back(tex);
+	//	}
+	//}
+	//if (luminance_map != nullptr)
+	//{
+	//	// Pass 1 : Create luminance map from scene tex
+	//	Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
+	//	device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS1], threadID);
+	//	device->BindResourceCS(sourceImage, TEXSLOT_ONDEMAND0, threadID);
+	//	device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
+	//	device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
-		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
-		Texture2DDesc luminance_avg_desc;
-		for (size_t i = 0; i < luminance_avg.size(); ++i)
-		{
-			luminance_avg_desc = luminance_avg[i]->GetDesc();
-			device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
-			device->BindUnorderedAccessResourceCS(luminance_avg[i], 0, threadID);
-			if (i > 0)
-			{
-				device->BindResourceCS(luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
-			}
-			else
-			{
-				device->BindResourceCS(luminance_map, TEXSLOT_ONDEMAND0, threadID);
-			}
-			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
-		}
+	//	// Pass 2 : Reduce for average luminance until we got an 1x1 texture
+	//	Texture2DDesc luminance_avg_desc;
+	//	for (size_t i = 0; i < luminance_avg.size(); ++i)
+	//	{
+	//		luminance_avg_desc = luminance_avg[i]->GetDesc();
+	//		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
+	//		device->BindUnorderedAccessResourceCS(luminance_avg[i], 0, threadID);
+	//		if (i > 0)
+	//		{
+	//			device->BindResourceCS(luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
+	//		}
+	//		else
+	//		{
+	//			device->BindResourceCS(luminance_map, TEXSLOT_ONDEMAND0, threadID);
+	//		}
+	//		device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
+	//	}
 
 
-		device->BindCS(nullptr, threadID);
-		device->UnBindUnorderedAccessResources(0, 1, threadID);
+	//	device->BindCS(nullptr, threadID);
+	//	device->UnBindUnorderedAccessResources(0, 1, threadID);
 
-		return luminance_avg.back();
-	}
+	//	return luminance_avg.back();
+	//}
 
 	return nullptr;
 }
@@ -6303,14 +6940,14 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	GetDevice()->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
 
-
-	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
-	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], 0, threadID);
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
-	GetDevice()->BindPS(pixelShaders[PSTYPE_CAPTUREIMPOSTOR], threadID);
+
+	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
+	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], 0, threadID);
+	//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
+	//GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
+	//GetDevice()->BindPS(pixelShaders[PSTYPE_CAPTUREIMPOSTOR], threadID);
 
 	ViewPort savedViewPort = mesh->impostorTarget.viewPort;
 	mesh->impostorTarget.Activate(threadID, 0, 0, 0, 0);

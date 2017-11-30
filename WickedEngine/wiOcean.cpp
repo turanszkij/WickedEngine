@@ -443,7 +443,6 @@ void wiOcean::SetUpStatic()
 	ras_desc.SlopeScaledDepthBias = 0.0f;
 	ras_desc.DepthBiasClamp = 0.0f;
 	ras_desc.DepthClipEnable = true;
-	ras_desc.ScissorEnable = false;
 	ras_desc.MultisampleEnable = true;
 	ras_desc.AntialiasedLineEnable = false;
 
