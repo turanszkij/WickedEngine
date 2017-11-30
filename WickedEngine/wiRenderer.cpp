@@ -1441,6 +1441,9 @@ void wiRenderer::LoadShaders()
 								case SHADERTYPE_SHADOWCUBE:
 									desc.dss = depthStencils[DSSTYPE_SHADOW];
 									break;
+								case SHADERTYPE_TILEDFORWARD:
+									desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+									break;
 								default:
 									desc.dss = depthStencils[DSSTYPE_DEFAULT];
 									break;
