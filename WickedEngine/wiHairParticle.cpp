@@ -599,9 +599,6 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, bool transparen
 
 
 		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-		//device->BindVertexLayout(nullptr,threadID);
-		//device->BindPS(_ps,threadID);
-		//device->BindVS(vs,threadID);
 
 		device->BindGraphicsPSO(&PSO[shaderType][transparent], threadID);
 
@@ -611,16 +608,11 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, bool transparen
 			device->BindResourceVS(texture,TEXSLOT_ONDEMAND0,threadID);
 		}
 
-		//device->BindRasterizerState(ncrs, threadID);
-
 		device->BindConstantBufferVS(cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 		device->BindResourceVS(particleBuffer, 0, threadID);
 
 		device->Draw((int)particleCount * 12, 0, threadID);
-
-		//device->BindIndexBuffer(ib, INDEXBUFFER_FORMAT::INDEXFORMAT_32BIT, threadID);
-		//device->DrawIndexedInstancedIndirect(drawargs, 0, threadID);
 
 		device->EventEnd(threadID);
 	}

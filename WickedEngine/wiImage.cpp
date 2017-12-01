@@ -142,7 +142,7 @@ void wiImage::LoadShaders()
 	desc.vs = screenVS;
 	desc.ps = deferredPS;
 	desc.bs = &blendStates[BLENDMODE_OPAQUE];
-	desc.dss = &depthStencilStates[STENCILMODE_DISABLED];
+	desc.dss = &depthStencilStates[STENCILMODE_LESS];
 	desc.rs = &rasterizerState;
 	device->CreateGraphicsPSO(&desc, &deferredPSO);
 
@@ -643,19 +643,12 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 	device->EventBegin("DeferredComposition", threadID);
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-	//device->BindRasterizerState(rasterizerState,threadID);
-	//device->BindDepthStencilState(depthStencilStateLess,stencilRef,threadID);
 
-	//device->BindVertexLayout(nullptr, threadID);
-
-	//device->BindVS(screenVS,threadID);
-	//device->BindPS(deferredPS,threadID);
+	device->BindStencilRef(stencilRef, threadID);
 
 	device->BindResourcePS(lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
 	device->BindResourcePS(lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
 	device->BindResourcePS(ao,TEXSLOT_ONDEMAND2,threadID);
-
-	//device->BindBlendState(blendStateOpaque,threadID);
 
 	device->BindGraphicsPSO(&deferredPSO, threadID);
 
