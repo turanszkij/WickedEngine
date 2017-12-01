@@ -18,10 +18,10 @@ PixelShader *wiHairParticle::ps[];
 ComputeShader *wiHairParticle::cs_BITONICSORT = nullptr;
 ComputeShader *wiHairParticle::cs_TRANSPOSE = nullptr;
 GPUBuffer *wiHairParticle::cb_BITONIC = nullptr;
-DepthStencilState wiHairParticle::dss;
+DepthStencilState wiHairParticle::dss_default, wiHairParticle::dss_equal, wiHairParticle::dss_rejectopaque_keeptransparent;
 RasterizerState wiHairParticle::rs, wiHairParticle::ncrs;
-BlendState wiHairParticle::bs; 
-GraphicsPSO wiHairParticle::PSO[SHADERTYPE_COUNT];
+BlendState wiHairParticle::bs[2]; 
+GraphicsPSO wiHairParticle::PSO[SHADERTYPE_COUNT][2];
 int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
@@ -145,12 +145,27 @@ void wiHairParticle::LoadShaders()
 			continue;
 		}
 
-		GraphicsPSODesc desc;
-		desc.vs = vs;
-		desc.ps = ps[i];
-		desc.bs = &bs;
-		desc.dss = &dss;
-		desc.rs = &ncrs;
+		for (int j = 0; j < 2; ++j)
+		{
+			GraphicsPSODesc desc;
+			desc.vs = vs;
+			desc.ps = ps[i];
+			desc.bs = &bs[j];
+			desc.rs = &ncrs;
+			desc.dss = &dss_default;
+
+			if (i == SHADERTYPE_TILEDFORWARD)
+			{
+				desc.dss = &dss_equal; // opaque
+			}
+
+			if(j == 1)
+			{
+				desc.dss = &dss_rejectopaque_keeptransparent; // transparent
+			}
+
+			device->CreateGraphicsPSO(&desc, &PSO[i][j]);
+		}
 	}
 
 }
@@ -199,21 +214,31 @@ void wiHairParticle::SetUpStatic()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss);
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss_default);
+
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_EQUAL;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss_equal);
+	dsd.DepthFunc = COMPARISON_GREATER;
+	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &dss_rejectopaque_keeptransparent);
 
 	
 	BlendStateDesc bld;
-	ZeroMemory(&bld, sizeof(bld));
 	bld.RenderTarget[0].BlendEnable=false;
+	bld.AlphaToCoverageEnable=false; // maybe for msaa
+	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[0]);
+
 	bld.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bld.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bld.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bld.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bld.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
-	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_MAX;
+	bld.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bld.RenderTarget[0].BlendEnable = true;
 	bld.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bld.AlphaToCoverageEnable=false; // maybe for msaa
-	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs);
+	bld.AlphaToCoverageEnable = false;
+	bld.IndependentBlendEnable = false;
+	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[1]);
 
 
 
@@ -563,13 +588,8 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 	device->EventEnd(threadID);
 }
 
-void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
+void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID)
 {
-	//PixelShader* _ps = ps[shaderType];
-	//if (_ps == nullptr)
-	//	return;
-
-
 	Texture2D* texture = material->texture;
 	texture = texture == nullptr ? wiTextureHelper::getInstance()->getWhite() : texture;
 
@@ -583,7 +603,7 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD 
 		//device->BindPS(_ps,threadID);
 		//device->BindVS(vs,threadID);
 
-		device->BindGraphicsPSO(&PSO[shaderType], threadID);
+		device->BindGraphicsPSO(&PSO[shaderType][transparent], threadID);
 
 		if(texture)
 		{

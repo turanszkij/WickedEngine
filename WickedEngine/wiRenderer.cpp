@@ -741,7 +741,6 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 	case SHADERTYPE_DEFERRED:
 	case SHADERTYPE_FORWARD:
 	case SHADERTYPE_TILEDFORWARD:
-	case SHADERTYPE_VOXELIZE:
 	case SHADERTYPE_ENVMAPCAPTURE:
 		realVL = VLTYPE_OBJECT_ALL;
 		break;
@@ -772,6 +771,9 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 		{
 			realVL = VLTYPE_OBJECT_POS;
 		}
+		break;
+	case SHADERTYPE_VOXELIZE:
+		realVL = VLTYPE_OBJECT_POS_TEX;
 		break;
 	}
 
@@ -1109,6 +1111,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 	return realPS;
 }
 
+GraphicsPSO* PSO_decal = nullptr;
 GraphicsPSO* PSO_occlusionquery = nullptr;
 GraphicsPSO* PSO_impostor[SHADERTYPE_COUNT] = {};
 GraphicsPSO* PSO_captureimpostor = nullptr;
@@ -1130,6 +1133,21 @@ GraphicsPSO* GetImpostorPSO(SHADERTYPE shaderType)
 	return PSO_impostor[shaderType];
 }
 
+enum DEBUGRENDERER
+{
+	DEBUGRENDERER_TRANSLATOR,
+	DEBUGRENDERER_ENVPROBE,
+	DEBUGRENDERER_GRID,
+	DEBUGRENDERER_CUBE,
+	DEBUGRENDERER_LINES,
+	DEBUGRENDERER_BONELINES,
+	DEBUGRENDERER_EMITTER,
+	DEBUGRENDERER_VOXEL,
+	DEBUGRENDERER_FORCEFIELD,
+	DEBUGRENDERER_COUNT
+};
+GraphicsPSO* PSO_debug[DEBUGRENDERER_COUNT] = {};
+
 enum TILEDLIGHTING_TYPE
 {
 	TILEDLIGHTING_TYPE_FORWARD,
@@ -1149,9 +1167,7 @@ enum TILEDLIGHTING_DEBUG
 	TILEDLIGHTING_DEBUG_COUNT
 };
 ComputePSO* CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT] = {};
-ComputePSO* CPSO_tilefrustums= nullptr;
-ComputePSO* CPSO_skinning = nullptr;
-ComputePSO* CPSO_resolvemsaadepth = nullptr;
+ComputePSO* CPSO[CSTYPE_LAST] = {};
 
 void wiRenderer::LoadShaders()
 {
@@ -1395,14 +1411,6 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_TILEFRUSTUMS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEBUG.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_ADVANCED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_ADVANCED.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED_DEBUG] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightCullingCS_DEFERRED_ADVANCED_DEBUG.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
@@ -1547,6 +1555,17 @@ void wiRenderer::LoadShaders()
 	}
 	{
 		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_DECAL];
+		desc.ps = pixelShaders[PSTYPE_DECAL];
+		desc.rs = rasterizers[RSTYPE_FRONT];
+		desc.bs = blendStates[BSTYPE_DECAL];
+		desc.dss = depthStencils[DSSTYPE_DECAL];
+
+		PSO_decal = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_decal);
+	}
+	{
+		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_CUBE];
 		desc.rs = rasterizers[RSTYPE_OCCLUDEE];
 		desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
@@ -1651,23 +1670,12 @@ void wiRenderer::LoadShaders()
 		}
 	}
 
+	for(int i = 0;i<CSTYPE_LAST;++i)
 	{
 		ComputePSODesc desc;
-		desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
-		CPSO_tilefrustums = new ComputePSO;
-		device->CreateComputePSO(&desc, CPSO_tilefrustums);
-	}
-	{
-		ComputePSODesc desc;
-		desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
-		CPSO_skinning = new ComputePSO;
-		device->CreateComputePSO(&desc, CPSO_skinning);
-	}
-	{
-		ComputePSODesc desc;
-		desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
-		CPSO_resolvemsaadepth = new ComputePSO;
-		device->CreateComputePSO(&desc, CPSO_resolvemsaadepth);
+		desc.cs = computeShaders[i];
+		CPSO[i] = new ComputePSO;
+		device->CreateComputePSO(&desc, CPSO[i]);
 	}
 
 }
@@ -2053,12 +2061,6 @@ void wiRenderer::SetUpStates()
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREADEQUAL]);
-
-
-	dsd.DepthEnable = true;
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_GREATER;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_HAIRALPHACOMPOSITION]);
 
 
 	dsd.DepthEnable = true;
@@ -2823,8 +2825,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 							0,0,0,0,0,0,0,0
 						};
 						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-						//GetDevice()->BindCS(computeShaders[CSTYPE_SKINNING], threadID);
-						GetDevice()->BindComputePSO(CPSO_skinning, threadID);
+						GetDevice()->BindComputePSO(CPSO[CSTYPE_SKINNING], threadID);
 					}
 
 					// Upload bones for skinning to shader
@@ -2869,8 +2870,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		if (streamOutSetUp)
 		{
-			// Unload skinning shader
-			//GetDevice()->BindCS(nullptr, threadID);
 			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
 			GetDevice()->UnBindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, threadID);
 		}
@@ -4795,15 +4794,13 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
-	//if (grass)
-	//{
-	//	GetDevice()->BindDepthStencilState(depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-	//	for (wiHairParticle* hair : culling.culledHairParticleSystems)
-	//	{
-	//		hair->Draw(camera, shaderType, threadID);
-	//	}
-	//}
+	if (grass)
+	{
+		for (wiHairParticle* hair : culling.culledHairParticleSystems)
+		{
+			hair->Draw(camera, shaderType, false, threadID);
+		}
+	}
 
 	if (!culledRenderer.empty() || (grass && culling.culledHairParticleSystems.empty()))
 	{
@@ -4848,15 +4845,13 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 		ocean->Render(camera, renderTime, threadID);
 	}
 
-	//if (grass)
-	//{
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_HAIRALPHACOMPOSITION], STENCILREF_DEFAULT, threadID); // minimizes overdraw by depthcomp = less
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-	//	for (wiHairParticle* hair : culling.culledHairParticleSystems)
-	//	{
-	//		hair->Draw(camera, shaderType, threadID);
-	//	}
-	//}
+	if (grass)
+	{
+		for (wiHairParticle* hair : culling.culledHairParticleSystems)
+		{
+			hair->Draw(camera, shaderType, true, threadID);
+		}
+	}
 
 	if (!culledRenderer.empty())
 	{
@@ -4920,64 +4915,61 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 
 void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//GraphicsDevice* device = GetDevice();
+	GraphicsDevice* device = GetDevice();
 
-	//bool boundCB = false;
-	//for (Model* model : GetScene().models)
-	//{
-	//	if (model->decals.empty())
-	//		continue;
+	bool boundCB = false;
+	for (Model* model : GetScene().models)
+	{
+		if (model->decals.empty())
+			continue;
 
-	//	device->EventBegin("Decals", threadID);
+		device->EventBegin("Decals", threadID);
 
-	//	if (!boundCB)
-	//	{
-	//		boundCB = true;
-	//		device->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
-	//	}
+		if (!boundCB)
+		{
+			boundCB = true;
+			device->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
+		}
 
-	//	device->BindVS(vertexShaders[VSTYPE_DECAL], threadID);
-	//	device->BindPS(pixelShaders[PSTYPE_DECAL], threadID);
-	//	device->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-	//	device->BindBlendState(blendStates[BSTYPE_DECAL], threadID);
-	//	device->BindDepthStencilState(depthStencils[DSSTYPE_DECAL], STENCILREF::STENCILREF_DEFAULT, threadID);
-	//	device->BindVertexLayout(nullptr, threadID);
-	//	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
-	//	for (Decal* decal : model->decals) 
-	//	{
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
-	//		if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
+		device->BindGraphicsPSO(PSO_decal, threadID);
 
-	//			device->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
-	//			device->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
+		for (Decal* decal : model->decals) 
+		{
 
-	//			XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
+			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
 
-	//			MiscCB dcbvs;
-	//			dcbvs.mTransform =XMMatrixTranspose(decalWorld*camera->GetViewProjection());
-	//			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
+				device->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
 
-	//			DecalCB dcbps;
-	//			dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld));
-	//			dcbps.hasTexNor = 0;
-	//			if (decal->texture != nullptr)
-	//				dcbps.hasTexNor |= 0x0000001;
-	//			if (decal->normal != nullptr)
-	//				dcbps.hasTexNor |= 0x0000010;
-	//			XMStoreFloat3(&dcbps.eye, camera->GetEye());
-	//			dcbps.opacity = decal->GetOpacity();
-	//			dcbps.front = decal->front;
-	//			device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
+				XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
 
-	//			device->Draw(14, 0, threadID);
+				MiscCB dcbvs;
+				dcbvs.mTransform =XMMatrixTranspose(decalWorld*camera->GetViewProjection());
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
-	//		}
+				DecalCB dcbps;
+				dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld));
+				dcbps.hasTexNor = 0;
+				if (decal->texture != nullptr)
+					dcbps.hasTexNor |= 0x0000001;
+				if (decal->normal != nullptr)
+					dcbps.hasTexNor |= 0x0000010;
+				XMStoreFloat3(&dcbps.eye, camera->GetEye());
+				dcbps.opacity = decal->GetOpacity();
+				dcbps.front = decal->front;
+				device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
 
-	//	}
+				device->Draw(14, 0, threadID);
 
-	//	device->EventEnd(threadID);
-	//}
+			}
+
+		}
+
+		device->EventEnd(threadID);
+	}
 }
 
 void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
@@ -5071,169 +5063,165 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 {
-	//if (!GetVoxelRadianceEnabled())
-	//{
-	//	return;
-	//}
+	if (!GetVoxelRadianceEnabled())
+	{
+		return;
+	}
 
-	//GetDevice()->EventBegin("Voxel Radiance", threadID);
-	//wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
-
-
-	//if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
-	//{
-	//	Texture3DDesc desc;
-	//	ZeroMemory(&desc, sizeof(desc));
-	//	desc.Width = voxelSceneData.res;
-	//	desc.Height = voxelSceneData.res;
-	//	desc.Depth = voxelSceneData.res;
-	//	desc.MipLevels = 0;
-	//	desc.Format = FORMAT_R16G16B16A16_FLOAT;
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.MiscFlags = 0;
-
-	//	textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
-	//	textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententShaderResourcesForMIPs(true);
-	//	textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
-	//	HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
-	//	assert(SUCCEEDED(hr));
-	//}
-	//if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
-	//{
-	//	Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
-	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
-	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententShaderResourcesForMIPs(true);
-	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
-	//	HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
-	//	assert(SUCCEEDED(hr));
-	//}
-	//if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
-	//{
-	//	GPUBufferDesc desc;
-	//	desc.StructureByteStride = sizeof(UINT) * 2;
-	//	desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-
-	//	resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
-	//	HRESULT hr = GetDevice()->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
-	//	assert(SUCCEEDED(hr));
-	//}
-
-	//Texture3D* result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE];
-
-	//CulledList culledObjects;
-	//CulledCollection culledRenderer;
-
-	//AABB bbox;
-	//XMFLOAT3 extents = voxelSceneData.extents;
-	//XMFLOAT3 center = voxelSceneData.center;
-	//bbox.createFromHalfWidth(center, extents);
-	//if (spTree != nullptr && extents.x > 0 && extents.y > 0 && extents.z > 0)
-	//{
-	//	spTree->getVisible(bbox, culledObjects);
-
-	//	for (Cullable* object : culledObjects)
-	//	{
-	//		culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
-	//	}
-
-	//	const FrameCulling& culling = frameCullings[getCamera()];
-
-	//	// Tell the voxelizer about the lights in the light array (exclude decals)
-	//	MiscCB cb;
-	//	cb.mColor.x = 0;
-	//	cb.mColor.y = (float)culling.culledLights.size();
-	//	// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
-	//	// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
-	//	cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
-	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
-
-	//	ViewPort VP;
-	//	VP.TopLeftX = 0;
-	//	VP.TopLeftY = 0;
-	//	VP.Width = (float)voxelSceneData.res;
-	//	VP.Height = (float)voxelSceneData.res;
-	//	VP.MinDepth = 0.0f;
-	//	VP.MaxDepth = 1.0f;
-	//	GetDevice()->BindViewports(1, &VP, threadID);
-
-	//	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-
-	//	GPUUnorderedResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
-	//	GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
-
-	//	RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+	GetDevice()->EventBegin("Voxel Radiance", threadID);
+	wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
 
-	//	// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
-	//	GetDevice()->EventBegin("Voxel Scene Copy - Clear", threadID);
-	//	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	//	GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-	//	GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
+	{
+		Texture3DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = voxelSceneData.res;
+		desc.Height = voxelSceneData.res;
+		desc.Depth = voxelSceneData.res;
+		desc.MipLevels = 0;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.Usage = USAGE_DEFAULT;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
 
-	//	if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
-	//	{
-	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
-	//	}
-	//	else
-	//	{
-	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
-	//	}
-	//	GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-	//	GetDevice()->EventEnd(threadID);
+		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
+		assert(SUCCEEDED(hr));
+	}
+	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
+	{
+		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+		assert(SUCCEEDED(hr));
+	}
+	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
+	{
+		GPUBufferDesc desc;
+		desc.StructureByteStride = sizeof(UINT) * 2;
+		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
 
-	//	if (voxelSceneData.secondaryBounceEnabled)
-	//	{
-	//		GetDevice()->EventBegin("Voxel Radiance Secondary Bounce", threadID);
-	//		GetDevice()->UnBindUnorderedAccessResources(1, 1, threadID);
-	//		// Pre-integrate the voxel texture by creating blurred mip levels:
-	//		GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
-	//		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
-	//		GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-	//		GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
-	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
-	//		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-	//		GetDevice()->EventEnd(threadID);
+		resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
+		HRESULT hr = GetDevice()->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
+		assert(SUCCEEDED(hr));
+	}
 
-	//		GetDevice()->EventBegin("Voxel Scene Clear Normals", threadID);
-	//		GetDevice()->UnBindResources(1, 1, threadID);
-	//		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-	//		GetDevice()->BindCS(computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
-	//		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
-	//		GetDevice()->EventEnd(threadID);
+	Texture3D* result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE];
 
-	//		result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
-	//	}
+	CulledList culledObjects;
+	CulledCollection culledRenderer;
 
-	//	GetDevice()->BindCS(nullptr, threadID);
-	//	GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+	AABB bbox;
+	XMFLOAT3 extents = voxelSceneData.extents;
+	XMFLOAT3 center = voxelSceneData.center;
+	bbox.createFromHalfWidth(center, extents);
+	if (spTree != nullptr && extents.x > 0 && extents.y > 0 && extents.z > 0)
+	{
+		spTree->getVisible(bbox, culledObjects);
+
+		for (Cullable* object : culledObjects)
+		{
+			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
+		}
+
+		const FrameCulling& culling = frameCullings[getCamera()];
+
+		// Tell the voxelizer about the lights in the light array (exclude decals)
+		MiscCB cb;
+		cb.mColor.x = 0;
+		cb.mColor.y = (float)culling.culledLights.size();
+		// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
+		// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
+		cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+		ViewPort VP;
+		VP.TopLeftX = 0;
+		VP.TopLeftY = 0;
+		VP.Width = (float)voxelSceneData.res;
+		VP.Height = (float)voxelSceneData.res;
+		VP.MinDepth = 0.0f;
+		VP.MaxDepth = 1.0f;
+		GetDevice()->BindViewports(1, &VP, threadID);
+
+		GPUUnorderedResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
+		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
+
+		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+
+		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
+		GetDevice()->EventBegin("Voxel Scene Copy - Clear", threadID);
+		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+
+		if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		{
+			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
+		}
+		else
+		{
+			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+		}
+		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+		GetDevice()->EventEnd(threadID);
+
+		if (voxelSceneData.secondaryBounceEnabled)
+		{
+			GetDevice()->EventBegin("Voxel Radiance Secondary Bounce", threadID);
+			GetDevice()->UnBindUnorderedAccessResources(1, 1, threadID);
+			// Pre-integrate the voxel texture by creating blurred mip levels:
+			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
+			GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
+			GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
+			GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
+			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
+			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+			GetDevice()->EventEnd(threadID);
+
+			GetDevice()->EventBegin("Voxel Scene Clear Normals", threadID);
+			GetDevice()->UnBindResources(1, 1, threadID);
+			GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
+			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
+			GetDevice()->EventEnd(threadID);
+
+			result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
+		}
+
+		GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
 
 
-	//	// Pre-integrate the voxel texture by creating blurred mip levels:
-	//	//if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
-	//	//{
-	//	//	GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
-	//	//}
-	//	//else
-	//	{
-	//		GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
-	//	}
-	//}
+		// Pre-integrate the voxel texture by creating blurred mip levels:
+		//if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		//{
+		//	GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
+		//}
+		//else
+		{
+			GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
+		}
+	}
 
-	//if (voxelHelper)
-	//{
-	//	GetDevice()->BindResourceVS(result, TEXSLOT_VOXELRADIANCE, threadID);
-	//}
-	//GetDevice()->BindResourcePS(result, TEXSLOT_VOXELRADIANCE, threadID);
-	//GetDevice()->BindResourceCS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	if (voxelHelper)
+	{
+		GetDevice()->BindResourceVS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	}
+	GetDevice()->BindResourcePS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	GetDevice()->BindResourceCS(result, TEXSLOT_VOXELRADIANCE, threadID);
 
-	//wiProfiler::GetInstance().EndRange(threadID);
-	//GetDevice()->EventEnd(threadID);
+	wiProfiler::GetInstance().EndRange(threadID);
+	GetDevice()->EventEnd(threadID);
 }
 
 
@@ -5325,8 +5313,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	{
 		frustumsComplete = true;
 		device->BindUnorderedAccessResourceCS(frustumBuffer, UAVSLOT_TILEFRUSTUMS, threadID);
-		//device->BindCS(computeShaders[CSTYPE_TILEFRUSTUMS], threadID);
-		device->BindComputePSO(CPSO_tilefrustums, threadID);
+		device->BindComputePSO(CPSO[CSTYPE_TILEFRUSTUMS], threadID);
 
 		DispatchParamsCB dispatchParams;
 		dispatchParams.numThreads[0] = tileCount.x;
@@ -5370,58 +5357,6 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		device->UnBindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
 
 		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
-		
-		//if (GetDebugLightCulling())
-		//{
-		//	device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
-		//	if (GetAdvancedLightCulling())
-		//	{
-		//		if (deferred)
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED_DEBUG], threadID);
-		//		}
-		//		else
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED_DEBUG], threadID);
-		//		}
-		//	}
-		//	else
-		//	{
-		//		if (deferred)
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_DEBUG], threadID);
-		//		}
-		//		else
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEBUG], threadID);
-		//		}
-		//	}
-		//}
-		//else
-		//{
-		//	if (GetAdvancedLightCulling())
-		//	{
-		//		if (deferred)
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED_ADVANCED], threadID);
-		//		}
-		//		else
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_ADVANCED], threadID);
-		//		}
-		//	}
-		//	else
-		//	{
-		//		if (deferred)
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING_DEFERRED], threadID);
-		//		}
-		//		else
-		//		{
-		//			device->BindCS(computeShaders[CSTYPE_TILEDLIGHTCULLING], threadID);
-		//		}
-		//	}
-		//}
 
 		device->BindComputePSO(CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
 
@@ -5464,7 +5399,6 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 
-		//device->BindCS(nullptr, threadID);
 		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
 
 		device->EventEnd(threadID);
@@ -5481,10 +5415,8 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 
 	Texture2DDesc desc = src->GetDesc();
 
-	//GetDevice()->BindCS(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
-	GetDevice()->BindComputePSO(CPSO_resolvemsaadepth, threadID);
+	GetDevice()->BindComputePSO(CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
 	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
-	//GetDevice()->BindCS(nullptr, threadID);
 
 
 	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
@@ -5498,112 +5430,110 @@ void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	//Texture2DDesc desc = texture->GetDesc();
+	Texture2DDesc desc = texture->GetDesc();
 
-	//if (desc.MipLevels < 2)
-	//{
-	//	assert(0);
-	//	return;
-	//}
+	if (desc.MipLevels < 2)
+	{
+		assert(0);
+		return;
+	}
 
-	//GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-	//switch (filter)
-	//{
-	//case wiRenderer::MIPGENFILTER_POINT:
-	//	GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-	//	GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
-	//	break;
-	//case wiRenderer::MIPGENFILTER_LINEAR:
-	//	GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-	//	GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
-	//	break;
-	//case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
-	//	GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-	//	GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
-	//	break;
-	//case wiRenderer::MIPGENFILTER_GAUSSIAN:
-	//	GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
-	//	break;
-	//}
+	switch (filter)
+	{
+	case wiRenderer::MIPGENFILTER_POINT:
+		GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_LINEAR:
+		GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+		GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_GAUSSIAN:
+		GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN], threadID);
+		break;
+	}
 
-	//for (UINT i = 0; i < desc.MipLevels - 1; ++i)
-	//{
-	//	GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
-	//	GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
-	//	desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-	//	desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
-	//	GetDevice()->Dispatch(
-	//		max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
-	//		max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
-	//		1, 
-	//		threadID);
-	//}
+	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+	{
+		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+		GetDevice()->Dispatch(
+			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
+			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)), 
+			1, 
+			threadID);
+	}
 
-	//GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	//GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
-	//GetDevice()->BindCS(nullptr, threadID);
+	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
-	//GetDevice()->EventEnd(threadID);
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	//Texture3DDesc desc = texture->GetDesc();
+	Texture3DDesc desc = texture->GetDesc();
 
-	//if (desc.MipLevels < 2)
-	//{
-	//	assert(0);
-	//	return;
-	//}
+	if (desc.MipLevels < 2)
+	{
+		assert(0);
+		return;
+	}
 
-	//GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-	//switch (filter)
-	//{
-	//case wiRenderer::MIPGENFILTER_POINT:
-	//	GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-	//	GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
-	//	break;
-	//case wiRenderer::MIPGENFILTER_LINEAR:
-	//	GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-	//	GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
-	//	break;
-	//case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
-	//	GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-	//	GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
-	//	break;
-	//case wiRenderer::MIPGENFILTER_GAUSSIAN:
-	//	GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
-	//	GetDevice()->BindCS(computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN], threadID);
-	//	break;
-	//}
+	switch (filter)
+	{
+	case wiRenderer::MIPGENFILTER_POINT:
+		GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_LINEAR:
+		GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+		GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
+		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		break;
+	case wiRenderer::MIPGENFILTER_GAUSSIAN:
+		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
+		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN], threadID);
+		break;
+	}
 
-	//for (UINT i = 0; i < desc.MipLevels - 1; ++i)
-	//{
-	//	GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
-	//	GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
-	//	desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-	//	desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
-	//	desc.Depth = max(1, (UINT)ceilf(desc.Depth * 0.5f));
-	//	GetDevice()->Dispatch(
-	//		max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-	//		max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-	//		max(1, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-	//		threadID);
-	//}
+	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+	{
+		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+		desc.Depth = max(1, (UINT)ceilf(desc.Depth * 0.5f));
+		GetDevice()->Dispatch(
+			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			max(1, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			threadID);
+	}
 
-	//GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	//GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
-	//GetDevice()->BindCS(nullptr, threadID);
+	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
-	//GetDevice()->EventEnd(threadID);
+	GetDevice()->EventEnd(threadID);
 }
 
 void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
@@ -5844,82 +5774,81 @@ void wiRenderer::FinishLoading()
 
 Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 {
-	//GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	//static Texture2D* luminance_map = nullptr;
-	//static std::vector<Texture2D*> luminance_avg(0);
-	//if (luminance_map == nullptr)
-	//{
-	//	SAFE_DELETE(luminance_map);
-	//	for (auto& x : luminance_avg)
-	//	{
-	//		SAFE_DELETE(x);
-	//	}
-	//	luminance_avg.clear();
+	static Texture2D* luminance_map = nullptr;
+	static std::vector<Texture2D*> luminance_avg(0);
+	if (luminance_map == nullptr)
+	{
+		SAFE_DELETE(luminance_map);
+		for (auto& x : luminance_avg)
+		{
+			SAFE_DELETE(x);
+		}
+		luminance_avg.clear();
 
-	//	// lower power of two
-	//	//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
+		// lower power of two
+		//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
 
-	//	Texture2DDesc desc;
-	//	ZeroMemory(&desc, sizeof(desc));
-	//	desc.Width = 256;
-	//	desc.Height = desc.Width;
-	//	desc.MipLevels = 1;
-	//	desc.ArraySize = 1;
-	//	desc.Format = FORMAT_R32_FLOAT;
-	//	desc.SampleDesc.Count = 1;
-	//	desc.SampleDesc.Quality = 0;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.MiscFlags = 0;
+		Texture2DDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = 256;
+		desc.Height = desc.Width;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = FORMAT_R32_FLOAT;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
 
-	//	device->CreateTexture2D(&desc, nullptr, &luminance_map);
+		device->CreateTexture2D(&desc, nullptr, &luminance_map);
 
-	//	while (desc.Width > 1)
-	//	{
-	//		desc.Width = max(desc.Width / 16, 1);
-	//		desc.Height = desc.Width;
+		while (desc.Width > 1)
+		{
+			desc.Width = max(desc.Width / 16, 1);
+			desc.Height = desc.Width;
 
-	//		Texture2D* tex = nullptr;
-	//		device->CreateTexture2D(&desc, nullptr, &tex);
+			Texture2D* tex = nullptr;
+			device->CreateTexture2D(&desc, nullptr, &tex);
 
-	//		luminance_avg.push_back(tex);
-	//	}
-	//}
-	//if (luminance_map != nullptr)
-	//{
-	//	// Pass 1 : Create luminance map from scene tex
-	//	Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
-	//	device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS1], threadID);
-	//	device->BindResourceCS(sourceImage, TEXSLOT_ONDEMAND0, threadID);
-	//	device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
-	//	device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
+			luminance_avg.push_back(tex);
+		}
+	}
+	if (luminance_map != nullptr)
+	{
+		// Pass 1 : Create luminance map from scene tex
+		Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
+		device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
+		device->BindResourceCS(sourceImage, TEXSLOT_ONDEMAND0, threadID);
+		device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
+		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
-	//	// Pass 2 : Reduce for average luminance until we got an 1x1 texture
-	//	Texture2DDesc luminance_avg_desc;
-	//	for (size_t i = 0; i < luminance_avg.size(); ++i)
-	//	{
-	//		luminance_avg_desc = luminance_avg[i]->GetDesc();
-	//		device->BindCS(computeShaders[CSTYPE_LUMINANCE_PASS2], threadID);
-	//		device->BindUnorderedAccessResourceCS(luminance_avg[i], 0, threadID);
-	//		if (i > 0)
-	//		{
-	//			device->BindResourceCS(luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
-	//		}
-	//		else
-	//		{
-	//			device->BindResourceCS(luminance_map, TEXSLOT_ONDEMAND0, threadID);
-	//		}
-	//		device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
-	//	}
+		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
+		Texture2DDesc luminance_avg_desc;
+		for (size_t i = 0; i < luminance_avg.size(); ++i)
+		{
+			luminance_avg_desc = luminance_avg[i]->GetDesc();
+			device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS2], threadID);
+			device->BindUnorderedAccessResourceCS(luminance_avg[i], 0, threadID);
+			if (i > 0)
+			{
+				device->BindResourceCS(luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
+			}
+			else
+			{
+				device->BindResourceCS(luminance_map, TEXSLOT_ONDEMAND0, threadID);
+			}
+			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
+		}
 
 
-	//	device->BindCS(nullptr, threadID);
-	//	device->UnBindUnorderedAccessResources(0, 1, threadID);
+		device->UnBindUnorderedAccessResources(0, 1, threadID);
 
-	//	return luminance_avg.back();
-	//}
+		return luminance_avg.back();
+	}
 
 	return nullptr;
 }

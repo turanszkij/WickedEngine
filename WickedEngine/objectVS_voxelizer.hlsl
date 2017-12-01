@@ -8,7 +8,7 @@ struct VSOut
 	float3 instanceColor : COLOR;
 };
 
-VSOut main(Input_Object_ALL input, uint instanceID : SV_INSTANCEID)
+VSOut main(Input_Object_POS_TEX input, uint instanceID : SV_INSTANCEID)
 {
 	VSOut Out;
 

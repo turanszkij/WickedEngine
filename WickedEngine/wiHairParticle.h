@@ -51,10 +51,10 @@ private:
 	static wiGraphicsTypes::ComputeShader *cs_BITONICSORT;
 	static wiGraphicsTypes::ComputeShader *cs_TRANSPOSE;
 	static wiGraphicsTypes::GPUBuffer* cb_BITONIC;
-	static wiGraphicsTypes::DepthStencilState dss;
+	static wiGraphicsTypes::DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
 	static wiGraphicsTypes::RasterizerState rs, ncrs;
-	static wiGraphicsTypes::BlendState bs;
-	static wiGraphicsTypes::GraphicsPSO PSO[SHADERTYPE_COUNT];
+	static wiGraphicsTypes::BlendState bs[2]; // opaque, transparent
+	static wiGraphicsTypes::GraphicsPSO PSO[SHADERTYPE_COUNT][2]; // shadertype * transparency
 	static int LOD[3];
 public:
 	static void LoadShaders();
@@ -69,7 +69,7 @@ public:
 
 	void Generate();
 	void ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID);
-	void Draw(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID);
+	void Draw(Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
