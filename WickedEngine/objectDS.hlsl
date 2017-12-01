@@ -23,7 +23,7 @@ struct HullOutputType
 {
 	float3 pos								: POSITION;
 	float3 posPrev							: POSITIONPREV;
-	float2 tex								: TEXCOORD0;
+	float4 tex								: TEXCOORD0;
 	float4 nor								: NORMAL;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	nointerpolation float dither			: DITHER;
@@ -83,7 +83,7 @@ float4 PhongNormal(float u, float v, float w, ConstantOutputType hsc)
 [domain("tri")]
 PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocation, const OutputPatch<HullOutputType, 3> patch)
 {
-    PixelInputType Out = (PixelInputType)0;
+    PixelInputType Out;
 
 
 	float4 vertexPosition;
@@ -103,25 +103,18 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
     
     // Compute position
 	vertexPosition = float4(PhongGeometry(fU, fV, fW, input), 1);
-	vertexPositionPrev = float4(PhongGeometryPrev(fU, fV, fW, input),1);
+	vertexPositionPrev = float4(PhongGeometryPrev(fU, fV, fW, input), 1);
     // Compute normal
-    vertexNormal   = PhongNormal(fU, fV, fW, input);
+	vertexNormal = PhongNormal(fU, fV, fW, input);
 	
 	Out.clip = dot(vertexPosition, g_xClipPlane);
-
-	////DISPLACEMENT
-	//if(xDisplace[(uint)patch[0].tex.z]) vertexPosition.xyz += vertexNormal * (-1+dispMap.SampleLevel( sampler_objectshader,vertexTex,0 ).r) *0.4;
-	//
-
 	
 	Out.pos = Out.pos2D = mul( vertexPosition, g_xCamera_VP );
 	Out.pos2DPrev = mul(vertexPositionPrev, g_xFrame_MainCamera_PrevVP);
 	Out.pos3D = vertexPosition.xyz;
 	Out.tex = vertexTex.xy;
 	Out.nor = normalize(vertexNormal.xyz);
-	/*float2x3 tanbin = tangentBinormal(Out.nor);
-	Out.tan=tanbin[0];
-	Out.bin=tanbin[1];*/
+	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP).xy;
 
 	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xFrame_MainCamera_ReflVP);
 

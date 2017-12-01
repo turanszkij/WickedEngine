@@ -5,7 +5,7 @@ struct HullInputType
 {
 	float3 pos								: POSITION;
 	float3 posPrev							: POSITIONPREV;
-	float2 tex								: TEXCOORD0;
+	float4 tex								: TEXCOORD0;
 	float4 nor								: NORMAL;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	nointerpolation float dither			: DITHER;
@@ -25,7 +25,7 @@ HullInputType main(Input_Object_ALL input)
 	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
 
 	Out.pos = surface.position.xyz;
-	Out.tex = surface.uv;
+	Out.tex = surface.uv.xyxy;
 
 	Out.nor = float4(surface.normal, 1);
 

@@ -11,7 +11,7 @@ struct HullInputType
 {
 	float3 f3Position						: POSITION;
 	float3 f3PositionPrev					: POSITIONPREV;
-	float2 tex								: TEXCOORD0;
+	float4 tex								: TEXCOORD0;
 	float4 f4Normal							: NORMAL;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	nointerpolation float dither			: DITHER;
@@ -41,7 +41,7 @@ struct HullOutputType
 {
 	float3 pos								: POSITION;
 	float3 posPrev							: POSITIONPREV;
-	float2 tex								: TEXCOORD0;
+	float4 tex								: TEXCOORD0;
 	float4 nor								: NORMAL;
 	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 	nointerpolation float dither			: DITHER;

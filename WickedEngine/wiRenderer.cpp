@@ -4145,8 +4145,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				const CulledObjectList& visibleInstances = iter->second;
 
-				bool instancePrevUpdated = false;
-
 				UINT instancesOffset;
 				size_t alloc_size = visibleInstances.size();
 				alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
@@ -4175,7 +4173,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
 						((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
-						instancePrevUpdated = true;
 					}
 					else
 					{
@@ -4326,9 +4323,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				device->BindRasterizerState(rasterizers[realRS], threadID);
 			}
 
-
-			bool instancePrevUpdated = false;
-
 			bool forceAlphaTestForDithering = false;
 
 			UINT instancesOffset;
@@ -4370,7 +4364,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					else
 						tempMat = instance->worldPrev;
 					((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
-					instancePrevUpdated = true;
 				}
 				else
 				{
@@ -4431,7 +4424,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					{
 						boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
 					}
-					else if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
+					else
 					{
 						// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
 						if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled() && !forceAlphaTestForDithering)
