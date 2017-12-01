@@ -648,6 +648,12 @@ void wiRenderer::LoadBuffers()
 	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
 
+enum OBJECTRENDERING_DOUBLESIDED
+{
+	OBJECTRENDERING_DOUBLESIDED_DISABLED,
+	OBJECTRENDERING_DOUBLESIDED_ENABLED,
+	OBJECTRENDERING_DOUBLESIDED_COUNT
+};
 enum OBJECTRENDERING_TESSELLATION
 {
 	OBJECTRENDERING_TESSELLATION_DISABLED,
@@ -684,16 +690,36 @@ enum OBJECTRENDERING_POM
 	OBJECTRENDERING_POM_ENABLED,
 	OBJECTRENDERING_POM_COUNT
 };
-GraphicsPSO* PSO_object[SHADERTYPE_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
-GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool tessellation, Material* material, bool forceAlphaTestForDithering)
+GraphicsPSO* PSO_object[SHADERTYPE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
+GraphicsPSO* PSO_object_water[SHADERTYPE_COUNT] = {};
+GraphicsPSO* PSO_object_wire = nullptr;
+GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessellation, Material* material, bool forceAlphaTestForDithering)
 {
+	if (wiRenderer::IsWireRender())
+	{
+		switch (shaderType)
+		{
+		case SHADERTYPE_TEXTURE:
+		case SHADERTYPE_DEFERRED:
+		case SHADERTYPE_FORWARD:
+		case SHADERTYPE_TILEDFORWARD:
+			return PSO_object_wire;
+		}
+		return nullptr;
+	}
+
+	if (material->IsWater())
+	{
+		return PSO_object_water[shaderType];
+	}
+
 	bool alphatest = material->IsAlphaTestEnabled() || forceAlphaTestForDithering;
 	bool transparent = material->IsTransparent();
 	bool normalmap = material->GetNormalMap() != nullptr;
 	bool planarreflection = material->HasPlanarReflection();
 	bool pom = material->parallaxOcclusionMapping > 0;
 
-	return PSO_object[shaderType][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
+	return PSO_object[shaderType][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
 }
 
 VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
@@ -751,7 +777,7 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 
 	return realVL;
 }
-VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool water)
+VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 {
 	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
 
@@ -776,14 +802,7 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 		}
 		else
 		{
-			if (water)
-			{
-				realVS = VSTYPE_WATER;
-			}
-			else
-			{
-				realVS = VSTYPE_OBJECT_COMMON;
-			}
+			realVS = VSTYPE_OBJECT_COMMON;
 		}
 		break;
 	case SHADERTYPE_DEPTHONLY:
@@ -880,7 +899,7 @@ DSTYPES GetDSTYPE(SHADERTYPE shaderType, bool tessellation)
 {
 	return tessellation ? DSTYPE_OBJECT : DSTYPE_NULL;
 }
-PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom, bool water)
+PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom)
 {
 	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
 
@@ -911,11 +930,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 		}
 		break;
 	case SHADERTYPE_FORWARD:
-		if (water)
-		{
-			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER;
-		}
-		else if (transparent)
+		if (transparent)
 		{
 			if (normalmap)
 			{
@@ -983,11 +998,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 		}
 		break;
 	case SHADERTYPE_TILEDFORWARD:
-		if (water)
-		{
-			realPS = PSTYPE_OBJECT_TILEDFORWARD_WATER;
-		}
-		else if (transparent)
+		if (transparent)
 		{
 			if (normalmap)
 			{
@@ -1099,6 +1110,25 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 }
 
 GraphicsPSO* PSO_occlusionquery = nullptr;
+GraphicsPSO* PSO_impostor[SHADERTYPE_COUNT] = {};
+GraphicsPSO* PSO_captureimpostor = nullptr;
+GraphicsPSO* GetImpostorPSO(SHADERTYPE shaderType)
+{
+	if (wiRenderer::IsWireRender())
+	{
+		switch (shaderType)
+		{
+		case SHADERTYPE_TEXTURE:
+		case SHADERTYPE_DEFERRED:
+		case SHADERTYPE_FORWARD:
+		case SHADERTYPE_TILEDFORWARD:
+			return PSO_object_wire;
+		}
+		return nullptr;
+	}
+
+	return PSO_impostor[shaderType];
+}
 
 enum TILEDLIGHTING_TYPE
 {
@@ -1395,85 +1425,90 @@ void wiRenderer::LoadShaders()
 
 	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
 	{
-		for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
+		for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
 		{
-			for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
+			for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
 			{
-				for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
+				for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
 				{
-					for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
+					for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
 					{
-						for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
+						for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
 						{
-							for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
+							for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
 							{
-								bool water = false;
-								VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, water);
-								VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest);
-								HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
-								DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
-								GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
-								PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom, water);
-
-								GraphicsPSODesc desc;
-								desc.vs = vertexShaders[realVS];
-								desc.il = vertexLayouts[realVL];
-								desc.hs = hullShaders[realHS];
-								desc.ds = domainShaders[realDS];
-								desc.gs = geometryShaders[realGS];
-								desc.ps = pixelShaders[realPS];
-
-								switch (shaderType)
+								for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
 								{
-								case SHADERTYPE_DEPTHONLY:
-								case SHADERTYPE_SHADOW:
-								case SHADERTYPE_SHADOWCUBE:
-									desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
-									break;
-								default:
-									desc.bs = blendStates[BSTYPE_OPAQUE];
-									break;
-								}
+									VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest);
+									VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest);
+									HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
+									DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
+									GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
+									PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom);
 
-								switch (shaderType)
-								{
-								case SHADERTYPE_SHADOW:
-								case SHADERTYPE_SHADOWCUBE:
-									desc.dss = depthStencils[DSSTYPE_SHADOW];
-									break;
-								case SHADERTYPE_TILEDFORWARD:
-									desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-									break;
-								default:
-									desc.dss = depthStencils[DSSTYPE_DEFAULT];
-									break;
-								}
+									GraphicsPSODesc desc;
+									desc.vs = vertexShaders[realVS];
+									desc.il = vertexLayouts[realVL];
+									desc.hs = hullShaders[realHS];
+									desc.ds = domainShaders[realDS];
+									desc.gs = geometryShaders[realGS];
+									desc.ps = pixelShaders[realPS];
 
-								switch (shaderType)
-								{
-								case SHADERTYPE_SHADOW:
-								case SHADERTYPE_SHADOWCUBE:
-									desc.rs = rasterizers[RSTYPE_SHADOW];
-									break;
-								case SHADERTYPE_VOXELIZE:
-									desc.rs = rasterizers[RSTYPE_VOXELIZE];
-									break;
-								default:
-									desc.rs = rasterizers[RSTYPE_FRONT];
-									break;
-								}
+									switch (shaderType)
+									{
+									case SHADERTYPE_DEPTHONLY:
+									case SHADERTYPE_SHADOW:
+									case SHADERTYPE_SHADOWCUBE:
+										desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
+										break;
+									default:
+										desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_OPAQUE];
+										break;
+									}
 
-								if (tessellation)
-								{
-									desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-								}
-								else
-								{
-									desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-								}
+									switch (shaderType)
+									{
+									case SHADERTYPE_SHADOW:
+									case SHADERTYPE_SHADOWCUBE:
+										desc.dss = depthStencils[DSSTYPE_SHADOW];
+										break;
+									case SHADERTYPE_TILEDFORWARD:
+										desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+										break;
+									case SHADERTYPE_ENVMAPCAPTURE:
+										desc.dss = depthStencils[DSSTYPE_ENVMAP];
+										break;
+									default:
+										desc.dss = depthStencils[DSSTYPE_DEFAULT];
+										break;
+									}
 
-								PSO_object[shaderType][tessellation][alphatest][transparency][normalmap][planarreflection][pom] = new GraphicsPSO;
-								device->CreateGraphicsPSO(&desc, PSO_object[shaderType][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+									switch (shaderType)
+									{
+									case SHADERTYPE_SHADOW:
+									case SHADERTYPE_SHADOWCUBE:
+										desc.rs = rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+										break;
+									case SHADERTYPE_VOXELIZE:
+										desc.rs = rasterizers[RSTYPE_VOXELIZE];
+										break;
+									default:
+										desc.rs = rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+										break;
+									}
+
+									if (tessellation)
+									{
+										desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+									}
+									else
+									{
+										desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+									}
+
+									PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom] = new GraphicsPSO;
+									device->CreateGraphicsPSO(&desc, PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+								}
 							}
 						}
 					}
@@ -1484,6 +1519,34 @@ void wiRenderer::LoadShaders()
 
 	{
 		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_WATER];
+		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = depthStencils[DSSTYPE_DEFAULT];
+		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
+
+		desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER];
+		PSO_object_water[SHADERTYPE_FORWARD] = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_FORWARD]);
+
+		desc.ps = pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
+		PSO_object_water[SHADERTYPE_TILEDFORWARD] = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_TILEDFORWARD]);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_OBJECT_SIMPLE];
+		desc.ps = pixelShaders[PSTYPE_OBJECT_SIMPLEST];
+		desc.rs = rasterizers[RSTYPE_WIRE];
+		desc.bs = blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
+
+		PSO_object_wire = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_object_wire);
+	}
+	{
+		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_CUBE];
 		desc.rs = rasterizers[RSTYPE_OCCLUDEE];
 		desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
@@ -1491,6 +1554,72 @@ void wiRenderer::LoadShaders()
 		
 		PSO_occlusionquery = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_occlusionquery);
+	}
+	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
+	{
+		const bool impostorRequest =
+			shaderType != SHADERTYPE_VOXELIZE &&
+			shaderType != SHADERTYPE_SHADOW &&
+			shaderType != SHADERTYPE_SHADOWCUBE &&
+			shaderType != SHADERTYPE_ENVMAPCAPTURE;
+		if (!impostorRequest)
+		{
+			continue;
+		}
+
+		GraphicsPSODesc desc;
+		desc.rs = rasterizers[RSTYPE_FRONT];
+		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.dss = depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
+
+		VLTYPES realVL = (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE) ? VLTYPE_OBJECT_POS_TEX : VLTYPE_OBJECT_ALL;
+		VSTYPES realVS = realVL == VLTYPE_OBJECT_POS_TEX ? VSTYPE_OBJECT_SIMPLE : VSTYPE_OBJECT_COMMON;
+		PSTYPES realPS;
+		switch (shaderType)
+		{
+		case SHADERTYPE_DEFERRED:
+			realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+			break;
+		case SHADERTYPE_FORWARD:
+			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+			break;
+		case SHADERTYPE_TILEDFORWARD:
+			realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
+			break;
+		case SHADERTYPE_DEPTHONLY:
+			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+			break;
+		default:
+			realPS = PSTYPE_OBJECT_TEXTUREONLY;
+			break;
+		}
+
+		desc.vs = vertexShaders[realVS];
+		desc.il = vertexLayouts[realVL];
+		desc.ps = pixelShaders[realPS];
+
+		PSO_impostor[shaderType] = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_impostor[shaderType]);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
+		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR];
+		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.dss = depthStencils[DSSTYPE_DEFAULT];
+		desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
+
+		desc.numRTs = 5;
+		desc.RTFormats[0] = FORMAT_R8G8B8A8_UNORM;
+		desc.RTFormats[1] = FORMAT_R8G8B8A8_UNORM;
+		desc.RTFormats[2] = FORMAT_R8_UNORM;
+		desc.RTFormats[3] = FORMAT_R8_UNORM;
+		desc.RTFormats[4] = FORMAT_R8_UNORM;
+		desc.DSFormat = FORMAT_D32_FLOAT_S8X24_UINT;
+		
+		PSO_captureimpostor = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_captureimpostor);
 	}
 
 	for (int i = 0; i < TILEDLIGHTING_TYPE_COUNT; ++i)
@@ -4224,430 +4353,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
-//VLTYPES GetVLTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
-//{
-//	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
-//
-//	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
-//
-//	switch (shaderType)
-//	{
-//	case SHADERTYPE_TEXTURE:
-//		if (tessellatorRequested)
-//		{
-//			realVL = VLTYPE_OBJECT_ALL;
-//		}
-//		else
-//		{
-//			realVL = VLTYPE_OBJECT_POS_TEX;
-//		}
-//		break;
-//	case SHADERTYPE_DEFERRED:
-//	case SHADERTYPE_FORWARD:
-//	case SHADERTYPE_TILEDFORWARD:
-//	case SHADERTYPE_VOXELIZE:
-//	case SHADERTYPE_ENVMAPCAPTURE:
-//		realVL = VLTYPE_OBJECT_ALL;
-//		break;
-//	case SHADERTYPE_DEPTHONLY:
-//		if (tessellatorRequested)
-//		{
-//			realVL = VLTYPE_OBJECT_ALL;
-//		}
-//		else
-//		{
-//			if (alphatest)
-//			{
-//				realVL = VLTYPE_OBJECT_POS_TEX;
-//			}
-//			else
-//			{
-//				realVL = VLTYPE_OBJECT_POS;
-//			}
-//		}
-//		break;
-//	case SHADERTYPE_SHADOW:
-//	case SHADERTYPE_SHADOWCUBE:
-//		if (alphatest)
-//		{
-//			realVL = VLTYPE_OBJECT_POS_TEX;
-//		}
-//		else
-//		{
-//			realVL = VLTYPE_OBJECT_POS;
-//		}
-//		break;
-//	default:
-//		assert(0);
-//		break;
-//	}
-//
-//	return realVL;
-//}
-//VSTYPES GetVSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested, bool ditheringAlphaTest)
-//{
-//	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
-//
-//	bool water = material->IsWater();
-//	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
-//
-//	switch (shaderType)
-//	{
-//	case SHADERTYPE_TEXTURE:
-//		if (tessellatorRequested)
-//		{
-//			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
-//		}
-//		else
-//		{
-//			realVS = VSTYPE_OBJECT_SIMPLE;
-//		}
-//		break;
-//	case SHADERTYPE_DEFERRED:
-//	case SHADERTYPE_FORWARD:
-//	case SHADERTYPE_TILEDFORWARD:
-//		if (tessellatorRequested)
-//		{
-//			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
-//		}
-//		else
-//		{
-//			if (water)
-//			{
-//				realVS = VSTYPE_WATER;
-//			}
-//			else
-//			{
-//				realVS = VSTYPE_OBJECT_COMMON;
-//			}
-//		}
-//		break;
-//	case SHADERTYPE_DEPTHONLY:
-//		if (tessellatorRequested)
-//		{
-//			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
-//		}
-//		else
-//		{
-//			if (alphatest)
-//			{
-//				realVS = VSTYPE_OBJECT_SIMPLE;
-//			}
-//			else
-//			{
-//				realVS = VSTYPE_OBJECT_POSITIONSTREAM;
-//			}
-//		}
-//		break;
-//	case SHADERTYPE_ENVMAPCAPTURE:
-//		realVS = VSTYPE_ENVMAP;
-//		break;
-//	case SHADERTYPE_SHADOW:
-//		if (alphatest)
-//		{
-//			realVS = VSTYPE_SHADOW_ALPHATEST;
-//		}
-//		else
-//		{
-//			realVS = VSTYPE_SHADOW;
-//		}
-//		break;
-//	case SHADERTYPE_SHADOWCUBE:
-//		if (alphatest)
-//		{
-//			realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-//		}
-//		else
-//		{
-//			realVS = VSTYPE_SHADOWCUBEMAPRENDER;
-//		}
-//		break;
-//		break;
-//	case SHADERTYPE_VOXELIZE:
-//		realVS = VSTYPE_VOXELIZER;
-//		break;
-//	default:
-//		assert(0);
-//		break;
-//	}
-//
-//	return realVS;
-//}
-//GSTYPES GetGSTYPE(SHADERTYPE shaderType, const Material* const material)
-//{
-//	GSTYPES realGS = GSTYPE_NULL;
-//
-//	bool alphatest = material->IsAlphaTestEnabled(); // do not mind the dithering alpha test!
-//
-//	switch (shaderType)
-//	{
-//	case SHADERTYPE_TEXTURE:
-//		break;
-//	case SHADERTYPE_DEFERRED:
-//		break;
-//	case SHADERTYPE_FORWARD:
-//		break;
-//	case SHADERTYPE_TILEDFORWARD:
-//		break;
-//	case SHADERTYPE_DEPTHONLY:
-//		break;
-//	case SHADERTYPE_ENVMAPCAPTURE:
-//		realGS = GSTYPE_ENVMAP;
-//		break;
-//	case SHADERTYPE_SHADOW:
-//		break;
-//	case SHADERTYPE_SHADOWCUBE:
-//		if (alphatest)
-//		{
-//			realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-//		}
-//		else
-//		{
-//			realGS = GSTYPE_SHADOWCUBEMAPRENDER;
-//		}
-//		break;
-//	case SHADERTYPE_VOXELIZE:
-//		realGS = GSTYPE_VOXELIZER;
-//		break;
-//	default:
-//		assert(0);
-//		break;
-//	}
-//
-//	return realGS;
-//}
-//HSTYPES GetHSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
-//{
-//	return tessellatorRequested ? HSTYPE_OBJECT : HSTYPE_NULL;
-//}
-//DSTYPES GetDSTYPE(SHADERTYPE shaderType, const Material* const material, bool tessellatorRequested)
-//{
-//	return tessellatorRequested ? DSTYPE_OBJECT : DSTYPE_NULL;
-//}
-//PSTYPES GetPSTYPE(SHADERTYPE shaderType, const Material* const material, bool ditheringAlphaTest)
-//{
-//	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
-//
-//	bool transparent = material->IsTransparent();
-//	bool water = material->IsWater();
-//	bool alphatest = material->IsAlphaTestEnabled() || ditheringAlphaTest;
-//
-//	switch (shaderType)
-//	{
-//	case SHADERTYPE_DEFERRED:
-//		if (material->GetNormalMap() == nullptr)
-//		{
-//			if (material->parallaxOcclusionMapping > 0)
-//			{
-//				realPS = PSTYPE_OBJECT_DEFERRED_POM;
-//			}
-//			else
-//			{
-//				realPS = PSTYPE_OBJECT_DEFERRED;
-//			}
-//		}
-//		else
-//		{
-//			if (material->parallaxOcclusionMapping > 0)
-//			{
-//				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM;
-//			}
-//			else
-//			{
-//				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
-//			}
-//		}
-//		break;
-//	case SHADERTYPE_FORWARD:
-//		if (water)
-//		{
-//			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER;
-//		}
-//		else if (transparent)
-//		{
-//			if (material->GetNormalMap() == nullptr)
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION;
-//				}
-//			}
-//			else
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-//				}
-//			}
-//		}
-//		else
-//		{
-//			if (material->GetNormalMap() == nullptr)
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION;
-//				}
-//			}
-//			else
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
-//				}
-//			}
-//		}
-//		break;
-//	case SHADERTYPE_TILEDFORWARD:
-//		if (water)
-//		{
-//			realPS = PSTYPE_OBJECT_TILEDFORWARD_WATER;
-//		}
-//		else if (transparent)
-//		{
-//			if (material->GetNormalMap() == nullptr)
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION;
-//				}
-//			}
-//			else
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
-//				}
-//			}
-//		}
-//		else
-//		{
-//			if (material->GetNormalMap() == nullptr)
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
-//				}
-//			}
-//			else
-//			{
-//				if (material->parallaxOcclusionMapping > 0)
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM;
-//				}
-//				else
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
-//				}
-//				if (material->HasPlanarReflection())
-//				{
-//					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION;
-//				}
-//			}
-//		}
-//		break;
-//	case SHADERTYPE_SHADOW:
-//		if (alphatest)
-//		{
-//			realPS = PSTYPE_SHADOW_ALPHATEST;
-//		}
-//		else
-//		{
-//			realPS = PSTYPE_NULL;
-//		}
-//		break;
-//	case SHADERTYPE_SHADOWCUBE:
-//		if (alphatest)
-//		{
-//			realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
-//		}
-//		else
-//		{
-//			realPS = PSTYPE_SHADOWCUBEMAPRENDER;
-//		}
-//		break;
-//	case SHADERTYPE_ENVMAPCAPTURE:
-//		realPS = PSTYPE_ENVMAP;
-//		break;
-//	case SHADERTYPE_DEPTHONLY:
-//		if (alphatest)
-//		{
-//			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
-//		}
-//		else
-//		{
-//			realPS = PSTYPE_NULL;
-//		}
-//		break;
-//	case SHADERTYPE_VOXELIZE:
-//		realPS = PSTYPE_VOXELIZER;
-//		break;
-//	case SHADERTYPE_TEXTURE:
-//		realPS = PSTYPE_OBJECT_TEXTUREONLY;
-//		break;
-//	default:
-//		assert(0);
-//		break;
-//	}
-//
-//	return realPS;
-//}
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation, bool occlusionCulling)
 {
@@ -4663,13 +4368,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
-		DSSTYPES targetDepthStencilState = (shaderType == SHADERTYPE_TILEDFORWARD && renderTypeFlags & RENDERTYPE_OPAQUE) ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT;
-		targetDepthStencilState = (shaderType == SHADERTYPE_SHADOWCUBE || shaderType == SHADERTYPE_SHADOW) ? DSSTYPE_SHADOW : targetDepthStencilState;
-		targetDepthStencilState = shaderType == SHADERTYPE_ENVMAPCAPTURE ? DSSTYPE_ENVMAP : targetDepthStencilState;
-
-		//UINT prevStencilRef = STENCILREF_DEFAULT;
-		//device->BindDepthStencilState(depthStencils[targetDepthStencilState], prevStencilRef, threadID);
-
 		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 		XMFLOAT4X4 tempMat;
 
@@ -4679,19 +4377,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			InstancePrev instancePrev;
 		};
 
-		//if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-		//{
-		//	device->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
-		//}
-		//else if(renderTypeFlags & RENDERTYPE_OPAQUE)
-		//{
-		//	device->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-		//}
-		//else
-		//{
-		//	device->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-		//}
-
 		const bool easyTextureBind = 
 			shaderType == SHADERTYPE_TEXTURE || 
 			shaderType == SHADERTYPE_SHADOW || 
@@ -4699,179 +4384,123 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			shaderType == SHADERTYPE_DEPTHONLY || 
 			shaderType == SHADERTYPE_VOXELIZE;
 
-		const bool impostorRequest = 
-			shaderType != SHADERTYPE_VOXELIZE && 
-			shaderType != SHADERTYPE_SHADOW && 
-			shaderType != SHADERTYPE_SHADOWCUBE && 
-			shaderType != SHADERTYPE_ENVMAPCAPTURE;
+		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
 
-		//// Render impostors:
-		//if (impostorRequest)
-		//{
-		//	bool impostorRenderSetup = false;
+		// Render impostors:
+		if (impostorRequest != nullptr)
+		{
+			device->BindGraphicsPSO(impostorRequest, threadID);
+			device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(MaterialCB), threadID);
+			SetAlphaRef(0.75f, threadID);
 
-		//	// Assess the render params:
-		//	VLTYPES realVL = (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE) ? VLTYPE_OBJECT_POS_TEX : VLTYPE_OBJECT_ALL;
-		//	VSTYPES realVS = realVL == VLTYPE_OBJECT_POS_TEX ? VSTYPE_OBJECT_SIMPLE : VSTYPE_OBJECT_COMMON;
-		//	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
-		//	if (!wireRender)
-		//	{
-		//		switch (shaderType)
-		//		{
-		//		case SHADERTYPE_DEFERRED:
-		//			realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
-		//			break;
-		//		case SHADERTYPE_FORWARD:
-		//			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
-		//			break;
-		//		case SHADERTYPE_TILEDFORWARD:
-		//			realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
-		//			break;
-		//		case SHADERTYPE_DEPTHONLY:
-		//			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
-		//			break;
-		//		default:
-		//			realPS = PSTYPE_OBJECT_TEXTUREONLY;
-		//			break;
-		//		}
-		//	}
+			for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
+			{
+				Mesh* mesh = iter->first;
+				if (!mesh->renderable || !mesh->hasImpostor())
+				{
+					continue;
+				}
 
-		//	for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
-		//	{
-		//		Mesh* mesh = iter->first;
-		//		if (!mesh->renderable || !mesh->hasImpostor())
-		//		{
-		//			continue;
-		//		}
+				const CulledObjectList& visibleInstances = iter->second;
 
-		//		if (!impostorRenderSetup)
-		//		{
-		//			// Bind the static impostor params once:
-		//			impostorRenderSetup = true;
-		//			device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(MaterialCB), threadID);
-		//			device->BindRasterizerState(wireRender ? rasterizers[RSTYPE_WIRE] : rasterizers[RSTYPE_FRONT], threadID);
-		//			device->BindVertexLayout(vertexLayouts[realVL], threadID);
-		//			device->BindVS(vertexShaders[realVS], threadID);
-		//			device->BindPS(pixelShaders[realPS], threadID);
-		//			SetAlphaRef(0.75f, threadID);
-		//		}
+				bool instancePrevUpdated = false;
 
-		//		const CulledObjectList& visibleInstances = iter->second;
+				UINT instancesOffset;
+				InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
 
-		//		bool instancePrevUpdated = false;
+				int k = 0;
+				for (const Object* instance : visibleInstances)
+				{
+					if (occlusionCulling && instance->IsOccluded())
+						continue;
 
-		//		UINT instancesOffset;
-		//		InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
+					const float impostorThreshold = instance->bounds.getRadius();
+					float dist = wiMath::Distance(eye, instance->bounds.getCenter());
+					float dither = instance->transparency;
+					dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
+					if (dither > 1.0f - FLT_EPSILON)
+						continue;
 
-		//		int k = 0;
-		//		for (const Object* instance : visibleInstances)
-		//		{
-		//			if (occlusionCulling && instance->IsOccluded())
-		//				continue;
+					XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
 
-		//			const float impostorThreshold = instance->bounds.getRadius();
-		//			float dist = wiMath::Distance(eye, instance->bounds.getCenter());
-		//			float dither = instance->transparency;
-		//			dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
-		//			if (dither > 1.0f - FLT_EPSILON)
-		//				continue;
+					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
+					instances[k].instance.Create(tempMat, dither, instance->color);
 
-		//			XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
+					if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
+					{
+						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
+						instances[k].instancePrev.Create(tempMat);
+						instancePrevUpdated = true;
+					}
 
-		//			XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
-		//			instances[k].instance.Create(tempMat, dither, instance->color);
+					++k;
+				}
 
-		//			if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
-		//			{
-		//				XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
-		//				instances[k].instancePrev.Create(tempMat);
-		//				instancePrevUpdated = true;
-		//			}
+				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
-		//			++k;
-		//		}
+				if (k < 1)
+					continue;
 
-		//		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+				if (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || IsWireRender())
+				{
+					GPUBuffer* vbs[] = {
+						&Mesh::impostorVB_POS,
+						&Mesh::impostorVB_TEX,
+						dynamicVertexBufferPool
+					};
+					UINT strides[] = {
+						sizeof(Mesh::Vertex_POS),
+						sizeof(Mesh::Vertex_TEX),
+						sizeof(InstBuf)
+					};
+					UINT offsets[] = {
+						0,
+						0,
+						instancesOffset
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+				}
+				else
+				{
+					GPUBuffer* vbs[] = {
+						&Mesh::impostorVB_POS,
+						&Mesh::impostorVB_TEX,
+						&Mesh::impostorVB_POS,
+						dynamicVertexBufferPool,
+						dynamicVertexBufferPool
+					};
+					UINT strides[] = {
+						sizeof(Mesh::Vertex_POS),
+						sizeof(Mesh::Vertex_TEX),
+						sizeof(Mesh::Vertex_POS),
+						sizeof(InstBuf),
+						sizeof(InstBuf),
+					};
+					UINT offsets[] = {
+						0,
+						0,
+						0,
+						0,
+						instancesOffset,
+						instancesOffset + sizeof(Instance)
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+				}
 
-		//		if (k < 1)
-		//			continue;
+				const GPUResource* res[] = {
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
+					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
+				};
+				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
-		//		if (realVL == VLTYPE_OBJECT_POS_TEX)
-		//		{
-		//			GPUBuffer* vbs[] = {
-		//				&Mesh::impostorVB_POS,
-		//				&Mesh::impostorVB_TEX,
-		//				dynamicVertexBufferPool
-		//			};
-		//			UINT strides[] = {
-		//				sizeof(Mesh::Vertex_POS),
-		//				sizeof(Mesh::Vertex_TEX),
-		//				sizeof(InstBuf)
-		//			};
-		//			UINT offsets[] = {
-		//				0,
-		//				0,
-		//				instancesOffset
-		//			};
-		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-		//		}
-		//		else
-		//		{
-		//			GPUBuffer* vbs[] = {
-		//				&Mesh::impostorVB_POS,
-		//				&Mesh::impostorVB_TEX,
-		//				&Mesh::impostorVB_POS,
-		//				dynamicVertexBufferPool,
-		//				dynamicVertexBufferPool
-		//			};
-		//			UINT strides[] = {
-		//				sizeof(Mesh::Vertex_POS),
-		//				sizeof(Mesh::Vertex_TEX),
-		//				sizeof(Mesh::Vertex_POS),
-		//				sizeof(InstBuf),
-		//				sizeof(InstBuf),
-		//			};
-		//			UINT offsets[] = {
-		//				0,
-		//				0,
-		//				0,
-		//				0,
-		//				instancesOffset,
-		//				instancesOffset + sizeof(Instance)
-		//			};
-		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-		//		}
+				device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
 
-		//		const GPUResource* res[] = {
-		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
-		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
-		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
-		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
-		//			static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
-		//		};
-		//		device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+			}
+		}
 
-		//		device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see Mesh::CreateImpostorVB function
-
-		//	}
-		//}
-
-		//VLTYPES prevVL = VLTYPE_NULL;
-		//VSTYPES prevVS = VSTYPE_NULL;
-		//GSTYPES prevGS = GSTYPE_NULL;
-		//HSTYPES prevHS = HSTYPE_NULL;
-		//DSTYPES prevDS = DSTYPE_NULL;
-		//PSTYPES prevPS = PSTYPE_NULL;
-		//PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
-
-		//RSTYPES prevRS = RSTYPE_FRONT;
-		//device->BindVS(nullptr, threadID);
-		//device->BindGS(nullptr, threadID);
-		//device->BindHS(nullptr, threadID);
-		//device->BindDS(nullptr, threadID);
-		//device->BindPS(nullptr, threadID);
-		//device->BindPrimitiveTopology(prevTOPOLOGY, threadID);
-		//device->BindRasterizerState(rasterizers[prevRS], threadID);
 
 		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
 
@@ -4890,7 +4519,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			const bool tessellatorRequested = tessF > 0 && tessellation;
 
 			PRIMITIVETOPOLOGY realTOPOLOGY = TRIANGLELIST;
-			//RSTYPES realRS = RSTYPE_FRONT;
 
 			if (tessellatorRequested)
 			{
@@ -4901,41 +4529,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				realTOPOLOGY = PATCHLIST;
 			}
 
-			//if (shaderType == SHADERTYPE_VOXELIZE)
-			//{
-			//	realRS = RSTYPE_VOXELIZE;
-			//}
-			//else
-			//{
-			//	if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-			//	{
-			//		realRS = mesh->doubleSided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW;
-			//	}
-			//	else
-			//	{
-			//		if (!mesh->doubleSided)
-			//		{
-			//			realRS = wireRender ? RSTYPE_WIRE : RSTYPE_FRONT;
-			//		}
-			//		else
-			//		{
-			//			realRS = wireRender ? RSTYPE_WIRE : RSTYPE_DOUBLESIDED;
-			//		}
-			//	}
-			//}
-
 			if (prevTOPOLOGY != realTOPOLOGY)
 			{
 				prevTOPOLOGY = realTOPOLOGY;
 				device->BindPrimitiveTopology(realTOPOLOGY, threadID);
 			}
-
-			//if (prevRS != realRS)
-			//{
-			//	prevRS = realRS;
-			//	device->BindRasterizerState(rasterizers[realRS], threadID);
-			//}
-
 
 			bool instancePrevUpdated = false;
 
@@ -4951,7 +4549,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					continue;
 
 				float dither = instance->transparency;
-				if (impostorRequest)
+				if (impostorRequest != nullptr)
 				{
 					// fade out to impostor...
 					const float impostorThreshold = instance->bounds.getRadius();
@@ -5007,13 +4605,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				Material* material = subset.material;
 
-				GraphicsPSO* pso = GetObjectPSO(shaderType, tessellatorRequested, material, forceAlphaTestForDithering);
+				GraphicsPSO* pso = GetObjectPSO(shaderType, mesh->doubleSided, tessellatorRequested, material, forceAlphaTestForDithering);
 				if (pso == nullptr)
 				{
 					continue;
 				}
-
-				device->BindGraphicsPSO(pso, threadID);
 
 				bool subsetRenderable = false;
 
@@ -5034,195 +4630,138 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					subsetRenderable = subsetRenderable && material->IsCastingShadow();
 				}
 
-				if (subsetRenderable)
+				if (!subsetRenderable)
 				{
+					continue;
+				}
 
-					BOUNDVERTEXBUFFERTYPE boundVBType;
-					if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
+				device->BindGraphicsPSO(pso, threadID);
+
+				BOUNDVERTEXBUFFERTYPE boundVBType;
+				if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
+				{
+					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
+					if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled() && !forceAlphaTestForDithering)
 					{
-						// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-						if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled() && !forceAlphaTestForDithering)
-						{
-							// bypass texcoord stream for non alphatested shadows and zprepass
-							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
-						}
-						else
-						{
-							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-						}
+						// bypass texcoord stream for non alphatested shadows and zprepass
+						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
 					}
 					else
 					{
-						boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
+						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
 					}
-
-					// Only bind vertex buffers when the layout changes
-					if (boundVBType != boundVBType_Prev)
-					{
-						// Assemble the required vertex buffer:
-						switch (boundVBType)
-						{
-						case BOUNDVERTEXBUFFERTYPE::POSITION:
-						{
-							GPUBuffer* vbs[] = {
-								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-								dynamicVertexBufferPool
-							};
-							UINT strides[] = {
-								sizeof(Mesh::Vertex_POS),
-								sizeof(InstBuf)
-							};
-							UINT offsets[] = {
-								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
-								instancesOffset
-							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-						}
-						break;
-						case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
-						{
-							GPUBuffer* vbs[] = {
-								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-								&mesh->vertexBuffer_TEX,
-								dynamicVertexBufferPool
-							};
-							UINT strides[] = {
-								sizeof(Mesh::Vertex_POS),
-								sizeof(Mesh::Vertex_TEX),
-								sizeof(InstBuf)
-							};
-							UINT offsets[] = {
-								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
-								0,
-								instancesOffset
-							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-						}
-						break;
-						case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
-						{
-							GPUBuffer* vbs[] = {
-								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-								&mesh->vertexBuffer_TEX,
-								mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
-								dynamicVertexBufferPool,
-								dynamicVertexBufferPool
-							};
-							UINT strides[] = {
-								sizeof(Mesh::Vertex_POS),
-								sizeof(Mesh::Vertex_TEX),
-								sizeof(Mesh::Vertex_POS),
-								sizeof(InstBuf),
-								sizeof(InstBuf),
-							};
-							UINT offsets[] = {
-								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
-								0,
-								mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
-								instancesOffset,
-								instancesOffset + sizeof(Instance)
-							};
-							device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-						}
-						break;
-						default:
-							assert(0);
-							break;
-						}
-					}
-					boundVBType_Prev = boundVBType;
-
-					device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
-
-					device->BindStencilRef(material->GetStencilRef(), threadID);
-
-					//UINT realStencilRef = material->GetStencilRef();
-					//if (prevStencilRef != realStencilRef)
-					//{
-					//	prevStencilRef = realStencilRef;
-					//	device->BindDepthStencilState(depthStencils[targetDepthStencilState], realStencilRef, threadID);
-					//}
-
-					//VLTYPES realVL = GetVLTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
-					//if (prevVL != realVL)
-					//{
-					//	prevVL = realVL;
-					//	device->BindVertexLayout(vertexLayouts[realVL], threadID);
-					//}
-
-					//VSTYPES realVS = GetVSTYPE(shaderType, material, tessellatorRequested, forceAlphaTestForDithering);
-					//if (prevVS != realVS)
-					//{
-					//	prevVS = realVS;
-					//	device->BindVS(vertexShaders[realVS], threadID);
-					//}
-
-					//GSTYPES realGS = GetGSTYPE(shaderType, material);
-					//if (prevGS != realGS)
-					//{
-					//	prevGS = realGS;
-					//	device->BindGS(geometryShaders[realGS], threadID);
-					//}
-
-					//HSTYPES realHS = GetHSTYPE(shaderType, material, tessellatorRequested);
-					//if (prevHS = realHS)
-					//{
-					//	prevHS = realHS;
-					//	device->BindHS(hullShaders[realHS], threadID);
-					//}
-
-					//DSTYPES realDS = GetDSTYPE(shaderType, material, tessellatorRequested);
-					//if (prevDS != realDS)
-					//{
-					//	prevDS = realDS;
-					//	device->BindDS(domainShaders[realDS], threadID);
-					//}
-					//if(realDS!=DSTYPE_NULL)
-					//{
-					//	device->BindResourceDS(material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
-					//}
-
-					//if (wireRender)
-					//{
-					//	prevPS = PSTYPE_OBJECT_SIMPLEST;
-					//	device->BindPS(pixelShaders[prevPS], threadID);
-					//}
-					//else
-					{
-						//PSTYPES realPS = GetPSTYPE(shaderType, material, forceAlphaTestForDithering);
-						//if (prevPS != realPS)
-						//{
-						//	prevPS = realPS;
-						//	device->BindPS(pixelShaders[realPS], threadID);
-						//}
-						//if (realPS != PSTYPE_NULL)
-						{
-							const GPUResource* res[] = {
-								static_cast<const GPUResource*>(material->GetBaseColorMap()),
-								static_cast<const GPUResource*>(material->GetNormalMap()),
-								static_cast<const GPUResource*>(material->GetRoughnessMap()),
-								static_cast<const GPUResource*>(material->GetReflectanceMap()),
-								static_cast<const GPUResource*>(material->GetMetalnessMap()),
-								static_cast<const GPUResource*>(material->GetDisplacementMap()),
-							};
-							device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-						}
-					}
-
-					SetAlphaRef(material->alphaRef, threadID);
-
-					device->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, subset.indexBufferOffset, 0, 0, threadID);
 				}
+				else
+				{
+					boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
+				}
+
+				if (material->IsWater())
+				{
+					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+				}
+
+				if (IsWireRender())
+				{
+					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+				}
+
+				// Only bind vertex buffers when the layout changes
+				if (boundVBType != boundVBType_Prev)
+				{
+					// Assemble the required vertex buffer:
+					switch (boundVBType)
+					{
+					case BOUNDVERTEXBUFFERTYPE::POSITION:
+					{
+						GPUBuffer* vbs[] = {
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+							dynamicVertexBufferPool
+						};
+						UINT strides[] = {
+							sizeof(Mesh::Vertex_POS),
+							sizeof(InstBuf)
+						};
+						UINT offsets[] = {
+							mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
+							instancesOffset
+						};
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+					}
+					break;
+					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
+					{
+						GPUBuffer* vbs[] = {
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+							&mesh->vertexBuffer_TEX,
+							dynamicVertexBufferPool
+						};
+						UINT strides[] = {
+							sizeof(Mesh::Vertex_POS),
+							sizeof(Mesh::Vertex_TEX),
+							sizeof(InstBuf)
+						};
+						UINT offsets[] = {
+							mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
+							0,
+							instancesOffset
+						};
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+					}
+					break;
+					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
+					{
+						GPUBuffer* vbs[] = {
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+							&mesh->vertexBuffer_TEX,
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
+							dynamicVertexBufferPool,
+							dynamicVertexBufferPool
+						};
+						UINT strides[] = {
+							sizeof(Mesh::Vertex_POS),
+							sizeof(Mesh::Vertex_TEX),
+							sizeof(Mesh::Vertex_POS),
+							sizeof(InstBuf),
+							sizeof(InstBuf),
+						};
+						UINT offsets[] = {
+							mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
+							0,
+							mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
+							instancesOffset,
+							instancesOffset + sizeof(Instance)
+						};
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+					}
+					break;
+					default:
+						assert(0);
+						break;
+					}
+				}
+				boundVBType_Prev = boundVBType;
+
+				device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
+
+				device->BindStencilRef(material->GetStencilRef(), threadID);
+
+				const GPUResource* res[] = {
+					static_cast<const GPUResource*>(material->GetBaseColorMap()),
+					static_cast<const GPUResource*>(material->GetNormalMap()),
+					static_cast<const GPUResource*>(material->GetRoughnessMap()),
+					static_cast<const GPUResource*>(material->GetReflectanceMap()),
+					static_cast<const GPUResource*>(material->GetMetalnessMap()),
+					static_cast<const GPUResource*>(material->GetDisplacementMap()),
+				};
+				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+
+				SetAlphaRef(material->alphaRef, threadID);
+
+				device->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, subset.indexBufferOffset, 0, 0, threadID);
 			}
 
 		}
-
-
-		//device->BindVS(nullptr, threadID);
-		//device->BindGS(nullptr, threadID);
-		//device->BindHS(nullptr, threadID);
-		//device->BindDS(nullptr, threadID);
-		//device->BindPS(nullptr, threadID);
 
 		ResetAlphaRef(threadID);
 
@@ -6945,12 +6484,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
-	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
-	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], 0, threadID);
-	//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_ALL], threadID);
-	//GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_COMMON], threadID);
-	//GetDevice()->BindPS(pixelShaders[PSTYPE_CAPTUREIMPOSTOR], threadID);
+	GetDevice()->BindGraphicsPSO(PSO_captureimpostor, threadID);
 
 	ViewPort savedViewPort = mesh->impostorTarget.viewPort;
 	mesh->impostorTarget.Activate(threadID, 0, 0, 0, 0);
