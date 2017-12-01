@@ -4073,6 +4073,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			device->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
 		}
 
+		const bool advancedVBRequest =
+			shaderType == SHADERTYPE_FORWARD ||
+			shaderType == SHADERTYPE_DEFERRED ||
+			shaderType == SHADERTYPE_TILEDFORWARD;
+
 		const bool easyTextureBind = 
 			shaderType == SHADERTYPE_TEXTURE || 
 			shaderType == SHADERTYPE_SHADOW || 
@@ -4092,7 +4097,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			bool impostorRenderSetup = false;
 
 			// Assess the render params:
-			VLTYPES realVL = (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE) ? VLTYPE_OBJECT_POS_TEX : VLTYPE_OBJECT_ALL;
+			VLTYPES realVL = advancedVBRequest ? VLTYPE_OBJECT_ALL : VLTYPE_OBJECT_POS_TEX;
 			VSTYPES realVS = realVL == VLTYPE_OBJECT_POS_TEX ? VSTYPE_OBJECT_SIMPLE : VSTYPE_OBJECT_COMMON;
 			PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
 			if (!wireRender)
@@ -4143,7 +4148,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				bool instancePrevUpdated = false;
 
 				UINT instancesOffset;
-				InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
+				size_t alloc_size = visibleInstances.size();
+				alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+				void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
 
 				int k = 0;
 				for (const Object* instance : visibleInstances)
@@ -4161,13 +4168,18 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
 
 					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
-					instances[k].instance.Create(tempMat, dither, instance->color);
 
-					if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
+					if (advancedVBRequest)
 					{
+						((volatile InstBuf*)instances)[k].instance.Create(tempMat, dither, instance->color);
+
 						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
-						instances[k].instancePrev.Create(tempMat);
+						((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
 						instancePrevUpdated = true;
+					}
+					else
+					{
+						((volatile Instance*)instances)[k].Create(tempMat, dither, instance->color);
 					}
 
 					++k;
@@ -4178,7 +4190,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (k < 1)
 					continue;
 
-				if (realVL == VLTYPE_OBJECT_POS_TEX)
+				if (!advancedVBRequest)
 				{
 					GPUBuffer* vbs[] = {
 						&Mesh::impostorVB_POS,
@@ -4188,7 +4200,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
 						sizeof(Mesh::Vertex_TEX),
-						sizeof(InstBuf)
+						sizeof(Instance)
 					};
 					UINT offsets[] = {
 						0,
@@ -4320,7 +4332,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			bool forceAlphaTestForDithering = false;
 
 			UINT instancesOffset;
-			InstBuf* instances = (InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf)*visibleInstances.size(), instancesOffset, threadID);
+			size_t alloc_size = visibleInstances.size();
+			alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+			void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
 
 			int k = 0;
 			for (const Object* instance : visibleInstances) 
@@ -4346,16 +4360,21 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					tempMat = __identityMat;
 				else
 					tempMat = instance->world;
-				instances[k].instance.Create(tempMat, dither, instance->color);
 
-				if (shaderType == SHADERTYPE_FORWARD || shaderType == SHADERTYPE_TILEDFORWARD || shaderType == SHADERTYPE_DEFERRED)
+				if (advancedVBRequest || tessellatorRequested)
 				{
+					((volatile InstBuf*)instances)[k].instance.Create(tempMat, dither, instance->color);
+
 					if (mesh->softBody)
 						tempMat = __identityMat;
 					else
 						tempMat = instance->worldPrev;
-					instances[k].instancePrev.Create(tempMat);
+					((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
 					instancePrevUpdated = true;
+				}
+				else
+				{
+					((volatile Instance*)instances)[k].Create(tempMat, dither, instance->color);
 				}
 						
 				++k;
@@ -4408,7 +4427,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				{
 
 					BOUNDVERTEXBUFFERTYPE boundVBType;
-					if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
+					if (advancedVBRequest || tessellatorRequested)
+					{
+						boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
+					}
+					else if (!tessellatorRequested && (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE))
 					{
 						// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
 						if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled() && !forceAlphaTestForDithering)
@@ -4420,10 +4443,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						{
 							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
 						}
-					}
-					else
-					{
-						boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
 					}
 
 					// Only bind vertex buffers when the layout changes
@@ -4440,7 +4459,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							};
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
-								sizeof(InstBuf)
+								sizeof(Instance)
 							};
 							UINT offsets[] = {
 								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
@@ -4459,7 +4478,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							UINT strides[] = {
 								sizeof(Mesh::Vertex_POS),
 								sizeof(Mesh::Vertex_TEX),
-								sizeof(InstBuf)
+								sizeof(Instance)
 							};
 							UINT offsets[] = {
 								mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
@@ -4533,7 +4552,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					}
 
 					HSTYPES realHS = GetHSTYPE(shaderType, material, tessellatorRequested);
-					if (prevHS = realHS)
+					if (prevHS != realHS)
 					{
 						prevHS = realHS;
 						device->BindHS(hullShaders[realHS], threadID);
@@ -6272,7 +6291,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		InstancePrev instancePrev;
 	};
 	UINT instancesOffset; 
-	InstBuf* buff = (InstBuf*)GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
+	volatile InstBuf* buff = (volatile InstBuf*)GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
 	buff->instance.Create(__identity);
 	buff->instancePrev.Create(__identity);
 	GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);

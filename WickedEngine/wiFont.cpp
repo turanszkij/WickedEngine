@@ -192,7 +192,7 @@ void wiFont::CleanUpStatic()
 }
 
 
-void wiFont::ModifyGeo(Vertex* vertexList, const std::wstring& text, wiFontProps props, int style)
+void wiFont::ModifyGeo(volatile Vertex* vertexList, const std::wstring& text, wiFontProps props, int style)
 {
 	size_t vertexCount = text.length() * 4;
 
@@ -225,32 +225,54 @@ void wiFont::ModifyGeo(Vertex* vertexList, const std::wstring& text, wiFontProps
 			compatible = true;
 		}
 
+		HALF h0 = XMConvertFloatToHalf(0.0f);
+
 		if (compatible) 
 		{
 			int characterWidth = (int)(lookup.pixelWidth * relativeSize);
 
-			vertexList[i + 0].Pos = XMFLOAT2((float)pos, (float)line);
-			vertexList[i + 1].Pos = XMFLOAT2((float)pos + (float)characterWidth, (float)line);
-			vertexList[i + 2].Pos = XMFLOAT2((float)pos, (float)line + (float)lineHeight);
-			vertexList[i + 3].Pos = XMFLOAT2((float)pos + (float)characterWidth, (float)line + (float)lineHeight);
+			HALF h1 = XMConvertFloatToHalf(1.0f);
+			HALF hl = XMConvertFloatToHalf(lookup.left);
+			HALF hr = XMConvertFloatToHalf(lookup.right);
 
-			vertexList[i + 0].Tex = XMHALF2(lookup.left, 0);
-			vertexList[i + 1].Tex = XMHALF2(lookup.right, 0);
-			vertexList[i + 2].Tex = XMHALF2(lookup.left, 1);
-			vertexList[i + 3].Tex = XMHALF2(lookup.right, 1);
+			vertexList[i + 0].Pos.x = (float)pos;
+			vertexList[i + 0].Pos.y = (float)line;
+			vertexList[i + 1].Pos.x = (float)pos + (float)characterWidth;
+			vertexList[i + 1].Pos.y = (float)line;
+			vertexList[i + 2].Pos.x = (float)pos;
+			vertexList[i + 2].Pos.y = (float)line + (float)lineHeight;
+			vertexList[i + 3].Pos.x = (float)pos + (float)characterWidth;
+			vertexList[i + 3].Pos.y = (float)line + (float)lineHeight;
+
+			vertexList[i + 0].Tex.x = hl;
+			vertexList[i + 0].Tex.y = h0;
+			vertexList[i + 1].Tex.x = hr;
+			vertexList[i + 1].Tex.y = h0;
+			vertexList[i + 2].Tex.x = hl;
+			vertexList[i + 2].Tex.y = h1;
+			vertexList[i + 3].Tex.x = hr;
+			vertexList[i + 3].Tex.y = h1;
 
 			pos += characterWidth + props.spacingX;
 		}
 		else
 		{
-			vertexList[i + 0].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 0].Tex = XMHALF2(0.0f, 0.0f);
-			vertexList[i + 1].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 1].Tex = XMHALF2(0.0f, 0.0f);
-			vertexList[i + 2].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 2].Tex = XMHALF2(0.0f, 0.0f);
-			vertexList[i + 3].Pos = XMFLOAT2(0, 0);
-			vertexList[i + 3].Tex = XMHALF2(0.0f, 0.0f);
+			vertexList[i + 0].Pos.x = 0;
+			vertexList[i + 0].Pos.y = 0;
+			vertexList[i + 0].Tex.x = h0;
+			vertexList[i + 0].Tex.y = h0;
+			vertexList[i + 1].Pos.x = 0;
+			vertexList[i + 1].Pos.y = 0;
+			vertexList[i + 1].Tex.x = h0;
+			vertexList[i + 1].Tex.y = h0;
+			vertexList[i + 2].Pos.x = 0;
+			vertexList[i + 2].Pos.y = 0;
+			vertexList[i + 2].Tex.x = h0;
+			vertexList[i + 2].Tex.y = h0;
+			vertexList[i + 3].Pos.x = 0;
+			vertexList[i + 3].Pos.y = 0;
+			vertexList[i + 3].Tex.x = h0;
+			vertexList[i + 3].Tex.y = h0;
 		}
 	}
 }
@@ -291,7 +313,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID, bool scissorTest)
 	device->BindBlendState(blendState, threadID);
 
 	UINT vboffset;
-	Vertex* textBuffer = (Vertex*)device->AllocateFromRingBuffer(vertexBuffer, sizeof(Vertex) * text.length() * 4, vboffset, threadID);
+	volatile Vertex* textBuffer = (volatile Vertex*)device->AllocateFromRingBuffer(vertexBuffer, sizeof(Vertex) * text.length() * 4, vboffset, threadID);
 	ModifyGeo(textBuffer, text, newProps, style);
 	device->InvalidateBufferAccess(vertexBuffer, threadID);
 

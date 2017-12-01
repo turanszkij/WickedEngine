@@ -87,7 +87,7 @@ private:
 	static std::vector<wiFontStyle> fontStyles;
 
 
-	static void ModifyGeo(Vertex* vertexList, const std::wstring& text, wiFontProps props, int style);
+	static void ModifyGeo(volatile Vertex* vertexList, const std::wstring& text, wiFontProps props, int style);
 
 public:
 	static void Initialize();
