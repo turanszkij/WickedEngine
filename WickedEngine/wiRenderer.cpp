@@ -741,8 +741,10 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 	case SHADERTYPE_DEFERRED:
 	case SHADERTYPE_FORWARD:
 	case SHADERTYPE_TILEDFORWARD:
-	case SHADERTYPE_ENVMAPCAPTURE:
 		realVL = VLTYPE_OBJECT_ALL;
+		break;
+	case SHADERTYPE_ENVMAPCAPTURE:
+		realVL = VLTYPE_OBJECT_POS_TEX;
 		break;
 	case SHADERTYPE_DEPTHONLY:
 		if (tessellation)
@@ -1148,7 +1150,8 @@ GraphicsPSO* PSO_sky[SKYRENDERING_COUNT] = {};
 
 enum DEBUGRENDERING
 {
-	DEBUGRENDERING_TRANSLATOR,
+	DEBUGRENDERING_TRANSLATOR_WIREPART,
+	DEBUGRENDERING_TRANSLATOR_SOLIDPART,
 	DEBUGRENDERING_ENVPROBE,
 	DEBUGRENDERING_GRID,
 	DEBUGRENDERING_CUBE,
@@ -1156,7 +1159,8 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_BONELINES,
 	DEBUGRENDERING_EMITTER,
 	DEBUGRENDERING_VOXEL,
-	DEBUGRENDERING_FORCEFIELD,
+	DEBUGRENDERING_FORCEFIELD_POINT,
+	DEBUGRENDERING_FORCEFIELD_PLANE,
 	DEBUGRENDERING_COUNT
 };
 GraphicsPSO* PSO_debug[DEBUGRENDERING_COUNT] = {};
@@ -1786,6 +1790,109 @@ void wiRenderer::LoadShaders()
 
 		PSO_sky[type] = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_sky[type]);
+	}
+	for (int debug = 0; debug < DEBUGRENDERING_COUNT; ++debug)
+	{
+		GraphicsPSODesc desc;
+
+		switch (debug)
+		{
+		case DEBUGRENDERING_TRANSLATOR_WIREPART:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+			break;
+		case DEBUGRENDERING_TRANSLATOR_SOLIDPART:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+			desc.bs = blendStates[BSTYPE_ADDITIVE];
+			break;
+		case DEBUGRENDERING_ENVPROBE:
+			desc.vs = vertexShaders[VSTYPE_SPHERE];
+			desc.ps = pixelShaders[PSTYPE_CUBEMAP];
+			desc.dss = depthStencils[DSSTYPE_DEFAULT];
+			desc.rs = rasterizers[RSTYPE_FRONT];
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			break;
+		case DEBUGRENDERING_GRID:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+			break;
+		case DEBUGRENDERING_CUBE:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+			break;
+		case DEBUGRENDERING_LINES:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+			break;
+		case DEBUGRENDERING_BONELINES:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+			break;
+		case DEBUGRENDERING_EMITTER:
+			desc.vs = vertexShaders[VSTYPE_OBJECT_DEBUG];
+			desc.ps = pixelShaders[PSTYPE_OBJECT_DEBUG];
+			desc.il = vertexLayouts[VLTYPE_OBJECT_DEBUG];
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			break;
+		case DEBUGRENDERING_VOXEL:
+			desc.vs = vertexShaders[VSTYPE_VOXEL];
+			desc.ps = pixelShaders[PSTYPE_VOXEL];
+			desc.gs = geometryShaders[GSTYPE_VOXEL];
+			desc.dss = depthStencils[DSSTYPE_DEFAULT];
+			desc.rs = rasterizers[RSTYPE_BACK];
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_POINT;
+			break;
+		case DEBUGRENDERING_FORCEFIELD_POINT:
+			desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT];
+			desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_BACK];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			break;
+		case DEBUGRENDERING_FORCEFIELD_PLANE:
+			desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE];
+			desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_FRONT];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			break;
+		}
+
+
+		PSO_debug[debug] = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
 	}
 
 
@@ -3296,473 +3403,405 @@ void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if(debugBoneLines){
-	//	GetDevice()->EventBegin("DebugBoneLines", threadID);
+	if(debugBoneLines)
+	{
+		GetDevice()->EventBegin("DebugBoneLines", threadID);
 
-	//	GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
-	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
-	//
-	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+		
+		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_BONELINES], threadID);
 
+		MiscCB sb;
+		for (unsigned int i = 0; i<boneLines.size(); i++){
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
+			sb.mColor = boneLines[i]->desc.color;
 
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//	MiscCB sb;
-	//	for (unsigned int i = 0; i<boneLines.size(); i++){
-	//		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
-	//		sb.mColor = boneLines[i]->desc.color;
+			const GPUBuffer* vbs[] = {
+				&boneLines[i]->vertexBuffer,
+			};
+			const UINT strides[] = {
+				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+			};
+			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+			GetDevice()->Draw(2, 0, threadID);
+		}
 
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-	//		const GPUBuffer* vbs[] = {
-	//			&boneLines[i]->vertexBuffer,
-	//		};
-	//		const UINT strides[] = {
-	//			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//		};
-	//		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//		GetDevice()->Draw(2, 0, threadID);
-	//	}
-
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		GetDevice()->EventEnd(threadID);
+	}
 }
 void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if (linesTemp.empty())
-	//	return;
+	if (linesTemp.empty())
+		return;
 
-	//GetDevice()->EventBegin("DebugLines", threadID);
+	GetDevice()->EventBegin("DebugLines", threadID);
 
-	//GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
-	//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE], threadID);
+	GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 
-	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
-	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
-	//GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+	GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
 
+	MiscCB sb;
+	for (unsigned int i = 0; i<linesTemp.size(); i++){
+		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
+		sb.mColor = linesTemp[i]->desc.color;
 
-	//GetDevice()->BindPS(pixelShaders[PSTYPE_LINE], threadID);
-	//GetDevice()->BindVS(vertexShaders[VSTYPE_LINE], threadID);
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//MiscCB sb;
-	//for (unsigned int i = 0; i<linesTemp.size(); i++){
-	//	sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
-	//	sb.mColor = linesTemp[i]->desc.color;
+		const GPUBuffer* vbs[] = {
+			&linesTemp[i]->vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		GetDevice()->Draw(2, 0, threadID);
+	}
 
-	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+	for (Lines* x : linesTemp)
+		delete x;
+	linesTemp.clear();
 
-	//	const GPUBuffer* vbs[] = {
-	//		&linesTemp[i]->vertexBuffer,
-	//	};
-	//	const UINT strides[] = {
-	//		sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//	};
-	//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//	GetDevice()->Draw(2, 0, threadID);
-	//}
-
-	//for (Lines* x : linesTemp)
-	//	delete x;
-	//linesTemp.clear();
-
-	//GetDevice()->EventEnd(threadID);
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if(debugPartitionTree || !renderableBoxes.empty()){
-	//	GetDevice()->EventBegin("DebugBoxes", threadID);
+	if(debugPartitionTree || !renderableBoxes.empty())
+	{
+		GetDevice()->EventBegin("DebugBoxes", threadID);
 
-	//	GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
-	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
+		
+		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
-	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+		const GPUBuffer* vbs[] = {
+			&Cube::vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
+		MiscCB sb;
+		for (auto& x : cubes)
+		{
+			sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&x.desc.transform)*camera->GetViewProjection());
+			sb.mColor=x.desc.color;
 
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//	const GPUBuffer* vbs[] = {
-	//		&Cube::vertexBuffer,
-	//	};
-	//	const UINT strides[] = {
-	//		sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//	};
-	//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//	GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+			GetDevice()->DrawIndexed(24, 0, 0, threadID);
+		}
+		cubes.clear();
 
-	//	MiscCB sb;
-	//	for (auto& x : cubes)
-	//	{
-	//		sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&x.desc.transform)*camera->GetViewProjection());
-	//		sb.mColor=x.desc.color;
+		for (auto& x : renderableBoxes)
+		{
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera->GetViewProjection());
+			sb.mColor = x.second;
 
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//		GetDevice()->DrawIndexed(24, 0, 0, threadID);
-	//	}
-	//	cubes.clear();
+			GetDevice()->DrawIndexed(24, 0, 0, threadID);
+		}
+		renderableBoxes.clear();
 
-	//	for (auto& x : renderableBoxes)
-	//	{
-	//		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera->GetViewProjection());
-	//		sb.mColor = x.second;
-
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-	//		GetDevice()->DrawIndexed(24, 0, 0, threadID);
-	//	}
-	//	renderableBoxes.clear();
-
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		GetDevice()->EventEnd(threadID);
+	}
 }
 void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if(!renderableTranslators.empty()){
-	//	GetDevice()->EventBegin("Translators", threadID);
+	if(!renderableTranslators.empty())
+	{
+		GetDevice()->EventBegin("Translators", threadID);
+		
+		XMMATRIX VP = camera->GetViewProjection();
 
+		MiscCB sb;
+		for (auto& x : renderableTranslators)
+		{
+			if (!x->enabled)
+				continue;
 
-	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+			XMMATRIX mat = XMMatrixScaling(x->dist, x->dist, x->dist)*XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z)*VP;
+			XMMATRIX matX = XMMatrixTranspose(mat);
+			XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
+			XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
 
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
+			// Planes:
+			{
+				const GPUBuffer* vbs[] = {
+					wiTranslator::vertexBuffer_Plane,
+				};
+				const UINT strides[] = {
+					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
+			}
 
+			// xy
+			sb.mTransform = matX;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
-	//	
-	//	XMMATRIX VP = camera->GetViewProjection();
+			// xz
+			sb.mTransform = matZ;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
-	//	MiscCB sb;
-	//	for (auto& x : renderableTranslators)
-	//	{
-	//		if (!x->enabled)
-	//			continue;
+			// yz
+			sb.mTransform = matY;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
-	//		XMMATRIX mat = XMMatrixScaling(x->dist, x->dist, x->dist)*XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z)*VP;
-	//		XMMATRIX matX = XMMatrixTranspose(mat);
-	//		XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
-	//		XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
+			// Lines:
+			{
+				const GPUBuffer* vbs[] = {
+					wiTranslator::vertexBuffer_Axis,
+				};
+				const UINT strides[] = {
+					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
+				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_WIREPART], threadID);
+			}
 
-	//		// Planes:
-	//		{
-	//			const GPUBuffer* vbs[] = {
-	//				wiTranslator::vertexBuffer_Plane,
-	//			};
-	//			const UINT strides[] = {
-	//				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//			};
-	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_DOUBLESIDED], threadID);
-	//			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	//			GetDevice()->BindBlendState(blendStates[BSTYPE_ADDITIVE], threadID);
-	//		}
+			// x
+			sb.mTransform = matX;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
-	//		// xy
-	//		sb.mTransform = matX;
-	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-	//		GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+			// y
+			sb.mTransform = matY;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
-	//		// xz
-	//		sb.mTransform = matZ;
-	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-	//		GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+			// z
+			sb.mTransform = matZ;
+			sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
-	//		// yz
-	//		sb.mTransform = matY;
-	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-	//		GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+			// Origin:
+			{
+				const GPUBuffer* vbs[] = {
+					wiTranslator::vertexBuffer_Origin,
+				};
+				const UINT strides[] = {
+					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				sb.mTransform = XMMatrixTranspose(mat);
+				sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
+				GetDevice()->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
+			}
+		}
 
-	//		// Lines:
-	//		{
-	//			const GPUBuffer* vbs[] = {
-	//				wiTranslator::vertexBuffer_Axis,
-	//			};
-	//			const UINT strides[] = {
-	//				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//			};
-	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
-	//			GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
-	//			GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
-	//		}
+		GetDevice()->EventEnd(threadID);
 
-	//		// x
-	//		sb.mTransform = matX;
-	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-	//		GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
-
-	//		// y
-	//		sb.mTransform = matY;
-	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-	//		GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
-
-	//		// z
-	//		sb.mTransform = matZ;
-	//		sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-	//		GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
-
-	//		// Origin:
-	//		{
-	//			const GPUBuffer* vbs[] = {
-	//				wiTranslator::vertexBuffer_Origin,
-	//			};
-	//			const UINT strides[] = {
-	//				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//			};
-	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//			sb.mTransform = XMMatrixTranspose(mat);
-	//			sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
-	//			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-	//			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	//			GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-	//			GetDevice()->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
-	//		}
-	//	}
-
-	//	GetDevice()->EventEnd(threadID);
-
-	//	renderableTranslators.clear();
-	//}
+		renderableTranslators.clear();
+	}
 }
 void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if (debugEnvProbes && !GetScene().environmentProbes.empty()) {
-	//	GetDevice()->EventBegin("Debug EnvProbes", threadID);
+	if (debugEnvProbes && !GetScene().environmentProbes.empty()) 
+	{
+		GetDevice()->EventBegin("Debug EnvProbes", threadID);
 
-	//	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
+		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
-	//	GetDevice()->BindVertexLayout(nullptr, threadID);
+		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
 
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_DEFAULT, threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+		MiscCB sb;
+		for (auto& x : GetScene().environmentProbes)
+		{
+			sb.mTransform = XMMatrixTranspose(x->getMatrix());
+			sb.mColor = XMFLOAT4(1, 1, 1, 1);
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
+			GetDevice()->BindResourcePS(x->cubeMap.GetTexture(), TEXSLOT_ENV0, threadID);
 
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_CUBEMAP], threadID);
-	//	GetDevice()->BindVS(vertexShaders[VSTYPE_SPHERE], threadID);
+			GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+		}
 
-	//	MiscCB sb;
-	//	for (auto& x : GetScene().environmentProbes)
-	//	{
-	//		sb.mTransform = XMMatrixTranspose(x->getMatrix());
-	//		sb.mColor = XMFLOAT4(1, 1, 1, 1);
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-	//		GetDevice()->BindResourcePS(x->cubeMap.GetTexture(), TEXSLOT_ENV0, threadID);
-
-	//		GetDevice()->Draw(2880, 0, threadID); // uv-sphere
-	//	}
-
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		GetDevice()->EventEnd(threadID);
+	}
 }
 void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if(gridHelper){
-	//	GetDevice()->EventBegin("GridHelper", threadID);
+	if(gridHelper)
+	{
+		GetDevice()->EventBegin("GridHelper", threadID);
 
-	//	GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
-	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_LINE],threadID);
+		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 
-	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH],threadID);
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD],STENCILREF_EMPTY,threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
 
+		static float col = 0.7f;
+		static int gridVertexCount = 0;
+		static GPUBuffer* grid = nullptr;
+		if (grid == nullptr)
+		{
+			const float h = 0.01f; // avoid z-fight with zero plane
+			const int a = 20;
+			XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
 
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_LINE],threadID);
-	//	GetDevice()->BindVS(vertexShaders[VSTYPE_LINE],threadID);
+			int count = 0;
+			for (int i = 0; i <= a; ++i)
+			{
+				verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 
-	//	static float col = 0.7f;
-	//	static int gridVertexCount = 0;
-	//	static GPUBuffer* grid = nullptr;
-	//	if (grid == nullptr)
-	//	{
-	//		const float h = 0.01f; // avoid z-fight with zero plane
-	//		const int a = 20;
-	//		XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
+				verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+			}
+			for (int j = 0; j <= a; ++j)
+			{
+				verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 
-	//		int count = 0;
-	//		for (int i = 0; i <= a; ++i)
-	//		{
-	//			verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
-	//			verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+				verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+			}
 
-	//			verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
-	//			verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
-	//		}
-	//		for (int j = 0; j <= a; ++j)
-	//		{
-	//			verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
-	//			verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+			gridVertexCount = ARRAYSIZE(verts) / 2;
 
-	//			verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
-	//			verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
-	//		}
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = verts;
+			grid = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
+		}
 
-	//		gridVertexCount = ARRAYSIZE(verts) / 2;
+		MiscCB sb;
+		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
-	//		GPUBufferDesc bd;
-	//		ZeroMemory(&bd, sizeof(bd));
-	//		bd.Usage = USAGE_IMMUTABLE;
-	//		bd.ByteWidth = sizeof(verts);
-	//		bd.BindFlags = BIND_VERTEX_BUFFER;
-	//		bd.CPUAccessFlags = 0;
-	//		SubresourceData InitData;
-	//		ZeroMemory(&InitData, sizeof(InitData));
-	//		InitData.pSysMem = verts;
-	//		grid = new GPUBuffer;
-	//		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
-	//	}
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//	MiscCB sb;
-	//	sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
-	//	sb.mColor = XMFLOAT4(1, 1, 1, 1);
+		const GPUBuffer* vbs[] = {
+			grid,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		GetDevice()->Draw(gridVertexCount, 0, threadID);
 
-	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-	//	const GPUBuffer* vbs[] = {
-	//		grid,
-	//	};
-	//	const UINT strides[] = {
-	//		sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//	};
-	//	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//	GetDevice()->Draw(gridVertexCount, 0, threadID);
-
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		GetDevice()->EventEnd(threadID);
+	}
 }
 void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr) {
-	//	GetDevice()->EventBegin("Debug Voxels", threadID);
+	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr) 
+	{
+		GetDevice()->EventBegin("Debug Voxels", threadID);
 
-	//	GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
+		GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
 
-	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT], STENCILREF_EMPTY, threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
-
-
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_VOXEL], threadID);
-	//	GetDevice()->BindVS(vertexShaders[VSTYPE_VOXEL], threadID);
-	//	GetDevice()->BindGS(geometryShaders[GSTYPE_VOXEL], threadID);
-
-	//	GetDevice()->BindVertexLayout(nullptr, threadID);
+		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_VOXEL], threadID);
 
 
+		MiscCB sb;
+		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera->GetViewProjection());
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
-	//	MiscCB sb;
-	//	sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera->GetViewProjection());
-	//	sb.mColor = XMFLOAT4(1, 1, 1, 1);
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		GetDevice()->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
 
-	//	GetDevice()->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
-
-	//	GetDevice()->BindGS(nullptr, threadID);
-
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		GetDevice()->EventEnd(threadID);
+	}
 }
 void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if (debugEmitters || !renderableBoxes.empty()) {
-	//	GetDevice()->EventBegin("DebugEmitters", threadID);
+	if (debugEmitters || !renderableBoxes.empty()) 
+	{
+		GetDevice()->EventBegin("DebugEmitters", threadID);
 
-	//	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	//	GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_OBJECT_DEBUG], threadID);
+		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+		
+		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
 
-	//	GetDevice()->BindRasterizerState(rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH], threadID);
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_EMPTY, threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE], threadID);
+		MiscCB sb;
+		for (auto& x : emitterSystems)
+		{
+			if (x->object != nullptr && x->object->mesh != nullptr)
+			{
+				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->object->world)*camera->GetViewProjection());
+				sb.mColor = XMFLOAT4(0, 1, 0, 1);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
+				const GPUBuffer* vbs[] = {
+					&x->object->mesh->vertexBuffer_POS,
+				};
+				const UINT strides[] = {
+					sizeof(Mesh::Vertex_POS),
+				};
+				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				GetDevice()->BindIndexBuffer(&x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
 
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_OBJECT_DEBUG], threadID);
-	//	GetDevice()->BindVS(vertexShaders[VSTYPE_OBJECT_DEBUG], threadID);
+				GetDevice()->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
+			}
+		}
 
-	//	MiscCB sb;
-	//	for (auto& x : emitterSystems)
-	//	{
-	//		if (x->object != nullptr && x->object->mesh != nullptr)
-	//		{
-	//			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->object->world)*camera->GetViewProjection());
-	//			sb.mColor = XMFLOAT4(0, 1, 0, 1);
-	//			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-	//			const GPUBuffer* vbs[] = {
-	//				&x->object->mesh->vertexBuffer_POS,
-	//			};
-	//			const UINT strides[] = {
-	//				sizeof(Mesh::Vertex_POS),
-	//			};
-	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//			GetDevice()->BindIndexBuffer(&x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
-
-	//			GetDevice()->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
-	//		}
-	//	}
-
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		GetDevice()->EventEnd(threadID);
+	}
 }
 void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if (debugForceFields) {
-	//	GetDevice()->EventBegin("DebugForceFields", threadID);
+	if (debugForceFields) 
+	{
+		GetDevice()->EventBegin("DebugForceFields", threadID);
 
-	//	GetDevice()->BindVertexLayout(nullptr, threadID);
+		MiscCB sb;
+		uint32_t i = 0;
+		for (auto& model : GetScene().models)
+		{
+			for (ForceField* force : model->forces)
+			{
+				sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+				sb.mColor = XMFLOAT4(camera->translation.x, camera->translation.y, camera->translation.z, (float)i);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//	GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_XRAY], STENCILREF_EMPTY, threadID);
-	//	GetDevice()->BindBlendState(blendStates[BSTYPE_TRANSPARENT], threadID);
+				switch (force->type)
+				{
+				case ENTITY_TYPE_FORCEFIELD_POINT:
+					GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+					GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
+					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+					break;
+				case ENTITY_TYPE_FORCEFIELD_PLANE:
+					GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
+					GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
+					GetDevice()->Draw(14, 0, threadID); // box
+					break;
+				}
 
+				++i;
+			}
+		}
 
-	//	GetDevice()->BindPS(pixelShaders[PSTYPE_FORCEFIELDVISUALIZER], threadID);
-
-	//	MiscCB sb;
-	//	uint32_t i = 0;
-	//	for (auto& model : GetScene().models)
-	//	{
-	//		for (ForceField* force : model->forces)
-	//		{
-	//			sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
-	//			sb.mColor = XMFLOAT4(camera->translation.x, camera->translation.y, camera->translation.z, (float)i);
-	//			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-	//			switch (force->type)
-	//			{
-	//			case ENTITY_TYPE_FORCEFIELD_POINT:
-	//				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_BACK], threadID);
-	//				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-	//				GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT], threadID);
-	//				GetDevice()->Draw(2880, 0, threadID); // uv-sphere
-	//				break;
-	//			case ENTITY_TYPE_FORCEFIELD_PLANE:
-	//				GetDevice()->BindRasterizerState(rasterizers[RSTYPE_FRONT], threadID);
-	//				GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
-	//				GetDevice()->BindVS(vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE], threadID);
-	//				GetDevice()->Draw(14, 0, threadID); // box
-	//				break;
-	//			}
-
-	//			++i;
-	//		}
-	//	}
-
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		GetDevice()->EventEnd(threadID);
+	}
 }
 
 void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID)
@@ -4546,11 +4585,11 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 
 				const GPUResource* res[] = {
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(0)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(1)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(2)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(3)),
-					static_cast<const GPUResource*>(mesh->impostorTarget.GetTexture(4)),
+					mesh->impostorTarget.GetTexture(0),
+					mesh->impostorTarget.GetTexture(1),
+					mesh->impostorTarget.GetTexture(2),
+					mesh->impostorTarget.GetTexture(3),
+					mesh->impostorTarget.GetTexture(4),
 				};
 				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
@@ -4817,12 +4856,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				device->BindGraphicsPSO(pso, threadID);
 
 				const GPUResource* res[] = {
-					static_cast<const GPUResource*>(material->GetBaseColorMap()),
-					static_cast<const GPUResource*>(material->GetNormalMap()),
-					static_cast<const GPUResource*>(material->GetRoughnessMap()),
-					static_cast<const GPUResource*>(material->GetReflectanceMap()),
-					static_cast<const GPUResource*>(material->GetMetalnessMap()),
-					static_cast<const GPUResource*>(material->GetDisplacementMap()),
+					material->GetBaseColorMap(),
+					material->GetNormalMap(),
+					material->GetRoughnessMap(),
+					material->GetReflectanceMap(),
+					material->GetMetalnessMap(),
+					material->GetDisplacementMap(),
 				};
 				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
