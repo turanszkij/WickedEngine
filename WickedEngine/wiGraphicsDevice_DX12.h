@@ -17,6 +17,7 @@ struct ID3D12GraphicsCommandList;
 struct ID3D12Fence;
 struct ID3D12DescriptorHeap;
 struct ID3D12CommandQueue;
+struct ID3D12RootSignature;
 
 namespace wiGraphicsTypes
 {
@@ -33,6 +34,8 @@ namespace wiGraphicsTypes
 		UINT64						commandFenceValues[GRAPHICSTHREAD_COUNT];
 		ID3D12Resource*				backBuffer[2];
 		UINT						backBufferIndex;
+
+		ID3D12RootSignature*		defaultRootSig;
 
 		struct DescriptorAllocator
 		{
