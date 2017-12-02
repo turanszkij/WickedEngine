@@ -16,6 +16,16 @@ namespace wiGraphicsTypes
 	class DepthStencilState;
 	class VertexLayout;
 
+	enum SHADERSTAGE
+	{
+		VS,
+		HS,
+		DS,
+		GS,
+		PS,
+		CS,
+		SHADERSTAGE_COUNT
+	};
 	enum PRIMITIVETOPOLOGY
 	{
 		TRIANGLELIST,

@@ -35,7 +35,8 @@ namespace wiGraphicsTypes
 		ID3D12Resource*				backBuffer[2];
 		UINT						backBufferIndex;
 
-		ID3D12RootSignature*		defaultRootSig;
+		ID3D12RootSignature*		graphicsRootSig;
+		ID3D12RootSignature*		computeRootSig;
 
 		struct DescriptorAllocator
 		{
@@ -53,6 +54,8 @@ namespace wiGraphicsTypes
 		DescriptorAllocator*		DSAllocator;
 		DescriptorAllocator*		ResourceAllocator;
 		DescriptorAllocator*		SamplerAllocator;
+		ID3D12DescriptorHeap*		ResourceDescriptorHeapGPU[GRAPHICSTHREAD_COUNT];
+		ID3D12DescriptorHeap*		SamplerDescriptorHeapGPU[GRAPHICSTHREAD_COUNT];
 
 		struct UploadBuffer : wiThreadSafeManager
 		{
