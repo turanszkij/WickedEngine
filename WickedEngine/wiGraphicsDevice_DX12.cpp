@@ -2451,20 +2451,23 @@ namespace wiGraphicsTypes
 			desc.BlendState.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
 		}
 
-
-		desc.InputLayout.NumElements = (UINT)pDesc->il->desc.size();
-		D3D12_INPUT_ELEMENT_DESC* elements = new D3D12_INPUT_ELEMENT_DESC[desc.InputLayout.NumElements];
-		for (UINT i = 0; i < desc.InputLayout.NumElements; ++i)
+		D3D12_INPUT_ELEMENT_DESC* elements = nullptr;
+		if (pDesc->il != nullptr)
 		{
-			elements[i].SemanticName = pDesc->il->desc[i].SemanticName;
-			elements[i].SemanticIndex = pDesc->il->desc[i].SemanticIndex;
-			elements[i].Format = _ConvertFormat(pDesc->il->desc[i].Format);
-			elements[i].InputSlot = pDesc->il->desc[i].InputSlot;
-			elements[i].AlignedByteOffset = pDesc->il->desc[i].AlignedByteOffset;
-			if (elements[i].AlignedByteOffset == APPEND_ALIGNED_ELEMENT)
-				elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-			elements[i].InputSlotClass = _ConvertInputClassification(pDesc->il->desc[i].InputSlotClass);
-			elements[i].InstanceDataStepRate = pDesc->il->desc[i].InstanceDataStepRate;
+			desc.InputLayout.NumElements = (UINT)pDesc->il->desc.size();
+			elements = new D3D12_INPUT_ELEMENT_DESC[desc.InputLayout.NumElements];
+			for (UINT i = 0; i < desc.InputLayout.NumElements; ++i)
+			{
+				elements[i].SemanticName = pDesc->il->desc[i].SemanticName;
+				elements[i].SemanticIndex = pDesc->il->desc[i].SemanticIndex;
+				elements[i].Format = _ConvertFormat(pDesc->il->desc[i].Format);
+				elements[i].InputSlot = pDesc->il->desc[i].InputSlot;
+				elements[i].AlignedByteOffset = pDesc->il->desc[i].AlignedByteOffset;
+				if (elements[i].AlignedByteOffset == APPEND_ALIGNED_ELEMENT)
+					elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+				elements[i].InputSlotClass = _ConvertInputClassification(pDesc->il->desc[i].InputSlotClass);
+				elements[i].InstanceDataStepRate = pDesc->il->desc[i].InstanceDataStepRate;
+			}
 		}
 		desc.InputLayout.pInputElementDescs = elements;
 

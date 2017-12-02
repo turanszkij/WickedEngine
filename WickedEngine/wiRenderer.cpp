@@ -897,11 +897,33 @@ GSTYPES GetGSTYPE(SHADERTYPE shaderType, bool alphatest)
 }
 HSTYPES GetHSTYPE(SHADERTYPE shaderType, bool tessellation)
 {
-	return tessellation ? HSTYPE_OBJECT : HSTYPE_NULL;
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+	case SHADERTYPE_DEPTHONLY:
+	case SHADERTYPE_DEFERRED:
+	case SHADERTYPE_FORWARD:
+	case SHADERTYPE_TILEDFORWARD:
+		return tessellation ? HSTYPE_OBJECT : HSTYPE_NULL;
+		break;
+	}
+
+	return HSTYPE_NULL;
 }
 DSTYPES GetDSTYPE(SHADERTYPE shaderType, bool tessellation)
 {
-	return tessellation ? DSTYPE_OBJECT : DSTYPE_NULL;
+	switch (shaderType)
+	{
+	case SHADERTYPE_TEXTURE:
+	case SHADERTYPE_DEPTHONLY:
+	case SHADERTYPE_DEFERRED:
+	case SHADERTYPE_FORWARD:
+	case SHADERTYPE_TILEDFORWARD:
+		return tessellation ? DSTYPE_OBJECT : DSTYPE_NULL;
+		break;
+	}
+
+	return DSTYPE_NULL;
 }
 PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom)
 {
@@ -1471,6 +1493,11 @@ void wiRenderer::LoadShaders()
 									GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
 									PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom);
 
+									if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
+									{
+										continue;
+									}
+
 									GraphicsPSODesc desc;
 									desc.vs = vertexShaders[realVS];
 									desc.il = vertexLayouts[realVL];
@@ -1710,10 +1737,16 @@ void wiRenderer::LoadShaders()
 		device->CreateGraphicsPSO(&desc, PSO_deferredlight[type]);
 
 
+
+		// volume lights:
+		if (type == Light::DIRECTIONAL)
+		{
+			continue;
+		}
+
 		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
 		desc.ps = pixelShaders[PSTYPE_VOLUMELIGHT];
 
-		// volume lights:
 		switch (type)
 		{
 		case Light::POINT:
