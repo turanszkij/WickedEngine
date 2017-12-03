@@ -183,6 +183,9 @@ namespace wiGraphicsTypes
 		virtual void EventEnd(GRAPHICSTHREAD threadID) override;
 		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID) override;
 
+	private:
+		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID);
+		void BindResource(SHADERSTAGE stage, const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1);
 	};
 
 }
