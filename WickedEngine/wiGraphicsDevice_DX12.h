@@ -57,6 +57,9 @@ namespace wiGraphicsTypes
 		ID3D12DescriptorHeap*		ResourceDescriptorHeapGPU[GRAPHICSTHREAD_COUNT];
 		ID3D12DescriptorHeap*		SamplerDescriptorHeapGPU[GRAPHICSTHREAD_COUNT];
 
+		D3D12_CPU_DESCRIPTOR_HANDLE* nullSRV;
+		D3D12_CPU_DESCRIPTOR_HANDLE* nullUAV;
+
 		struct UploadBuffer : wiThreadSafeManager
 		{
 			ID3D12Resource*			resource;
@@ -186,6 +189,8 @@ namespace wiGraphicsTypes
 	private:
 		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID);
 		void BindResource(SHADERSTAGE stage, const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1);
+		void BindSampler(SHADERSTAGE stage, const Sampler* sampler, int slot, GRAPHICSTHREAD threadID);
+		void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID);
 	};
 
 }
