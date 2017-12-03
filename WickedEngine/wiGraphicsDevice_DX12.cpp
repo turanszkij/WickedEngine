@@ -3091,9 +3091,33 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
 	{
+		assert(count <= 8);
+		D3D12_VERTEX_BUFFER_VIEW res[8] = { 0 };
+		for (int i = 0; i < count; ++i)
+		{
+			if (vertexBuffers[i] != nullptr)
+			{
+				res[i].BufferLocation = vertexBuffers[i]->resource_DX12->GetGPUVirtualAddress();
+				if (offsets != nullptr)
+				{
+					res[i].BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)offsets[i];
+				}
+				res[i].SizeInBytes = vertexBuffers[i]->desc.ByteWidth;
+				res[i].StrideInBytes = strides[i];
+			}
+		}
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res);
 	}
 	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{
+		D3D12_INDEX_BUFFER_VIEW res = {};
+		if (indexBuffer != nullptr)
+		{
+			res.BufferLocation = indexBuffer->resource_DX12->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
+			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
+			res.SizeInBytes = indexBuffer->desc.ByteWidth;
+		}
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->IASetIndexBuffer(&res);
 	}
 	void GraphicsDevice_DX12::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
 	{
