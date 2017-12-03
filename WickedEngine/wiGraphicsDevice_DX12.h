@@ -32,6 +32,9 @@ namespace wiGraphicsTypes
 		ID3D12Fence*				commandFences[GRAPHICSTHREAD_COUNT];
 		HANDLE						commandFenceEvents[GRAPHICSTHREAD_COUNT];
 		UINT64						commandFenceValues[GRAPHICSTHREAD_COUNT];
+		ID3D12CommandQueue*			copyQueue;
+		ID3D12CommandAllocator*		copyAllocator;
+		ID3D12CommandList*			copyCommandList;
 		ID3D12Resource*				backBuffer[2];
 		UINT						backBufferIndex;
 

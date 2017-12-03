@@ -1131,7 +1131,6 @@ namespace wiGraphicsTypes
 
 
 	// Local Helpers:
-	const void* const __nullBlob[1024] = { 0 }; // this is initialized to nullptrs!
 
 	size_t Align(size_t uLocation, size_t uAlign)
 	{
@@ -1405,6 +1404,17 @@ namespace wiGraphicsTypes
 		}
 
 
+		// Create copy queue:
+		{
+			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = {};
+			commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			commandQueueDesc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&copyQueue);
+			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, __uuidof(ID3D12CommandAllocator), (void**)&copyAllocator);
+			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, copyAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&copyCommandList);
+		}
 
 		// Query features:
 
@@ -1610,6 +1620,10 @@ namespace wiGraphicsTypes
 			SAFE_RELEASE(ResourceDescriptorHeapGPU[i]);
 			SAFE_RELEASE(SamplerDescriptorHeapGPU[i]);
 		}
+
+		SAFE_RELEASE(copyQueue);
+		SAFE_RELEASE(copyAllocator);
+		SAFE_RELEASE(copyCommandList);
 
 		SAFE_DELETE(nullSRV);
 		SAFE_DELETE(nullUAV);
@@ -2866,69 +2880,6 @@ namespace wiGraphicsTypes
 			_flags |= D3D12_CLEAR_FLAG_STENCIL;
 
 	}
-
-	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		if (resources != nullptr)
-		{
-			for (int i = 0; i < count; ++i)
-			{
-				if (resources[i] != nullptr && resources[i]->SRV_DX12 != nullptr)
-				{
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-					int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot + i;
-					dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
-					device->CopyDescriptorsSimple(1, dst, *resources[i]->SRV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				}
-			}
-		}
-	}
-	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		if (resource != nullptr)
-		{
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
-			if (arrayIndex < 0)
-			{
-				if (resource->SRV_DX12 != nullptr)
-				{
-					device->CopyDescriptorsSimple(1, dst, *resource->SRV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				}
-			}
-			else
-			{
-				assert(resource->additionalSRVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-				device->CopyDescriptorsSimple(1, dst, *resource->additionalSRVs_DX12[arrayIndex], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			}
-		}
-	}
-	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
-	{
-		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
-		{
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = SamplerDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = stage * GPU_SAMPLER_HEAP_COUNT + slot;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER));
-
-			device->CopyDescriptorsSimple(1, dst, *sampler->resource_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		}
-	}
-	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		if (buffer != nullptr && buffer->CBV_DX12 != nullptr)
-		{
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = stage * GPU_RESOURCE_HEAP_COUNT + slot;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
-			device->CopyDescriptorsSimple(1, dst, *buffer->CBV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		}
-	}
-
 	void GraphicsDevice_DX12::BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindResource(PS, resource, slot, threadID, arrayIndex);
@@ -3263,6 +3214,71 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::SetMarker(const std::string& name, GRAPHICSTHREAD threadID)
 	{
+	}
+
+
+
+
+	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	{
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				if (resources[i] != nullptr && resources[i]->SRV_DX12 != nullptr)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
+					int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot + i;
+					dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+
+					device->CopyDescriptorsSimple(1, dst, *resources[i]->SRV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
+			}
+		}
+	}
+	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	{
+		if (resource != nullptr)
+		{
+			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
+			int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot;
+			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+
+			if (arrayIndex < 0)
+			{
+				if (resource->SRV_DX12 != nullptr)
+				{
+					device->CopyDescriptorsSimple(1, dst, *resource->SRV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
+			}
+			else
+			{
+				assert(resource->additionalSRVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+				device->CopyDescriptorsSimple(1, dst, *resource->additionalSRVs_DX12[arrayIndex], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+		}
+	}
+	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	{
+		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
+		{
+			D3D12_CPU_DESCRIPTOR_HANDLE dst = SamplerDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
+			int offset = stage * GPU_SAMPLER_HEAP_COUNT + slot;
+			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER));
+
+			device->CopyDescriptorsSimple(1, dst, *sampler->resource_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		}
+	}
+	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	{
+		if (buffer != nullptr && buffer->CBV_DX12 != nullptr)
+		{
+			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
+			int offset = stage * GPU_RESOURCE_HEAP_COUNT + slot;
+			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+
+			device->CopyDescriptorsSimple(1, dst, *buffer->CBV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
 	}
 
 }
