@@ -27,7 +27,7 @@ typedef struct CSFFT_512x512_Data_t
 
 	// Temporary buffers
 	wiGraphicsTypes::GPUBuffer* pBuffer_Tmp;
-	wiGraphicsTypes::GPUUnorderedResource* pUAV_Tmp;
+	wiGraphicsTypes::GPUResource* pUAV_Tmp;
 	wiGraphicsTypes::GPUResource* pSRV_Tmp;
 
 	static void LoadShaders();
@@ -49,7 +49,7 @@ void fft512x512_create_plan(CSFFT512x512_Plan* plan, UINT slices);
 void fft512x512_destroy_plan(CSFFT512x512_Plan* plan);
 
 void fft_512x512_c2c(CSFFT512x512_Plan* fft_plan,
-	wiGraphicsTypes::GPUUnorderedResource* pUAV_Dst,
+	wiGraphicsTypes::GPUResource* pUAV_Dst,
 	wiGraphicsTypes::GPUResource* pSRV_Dst,
 	wiGraphicsTypes::GPUResource* pSRV_Src, 
 	GRAPHICSTHREAD threadID);

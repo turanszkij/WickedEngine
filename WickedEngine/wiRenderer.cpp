@@ -3237,7 +3237,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						&mesh->vertexBuffer_POS,
 						&mesh->vertexBuffer_BON,
 					};
-					const GPUUnorderedResource* sos[] = {
+					const GPUResource* sos[] = {
 						&mesh->streamoutBuffer_POS,
 						&mesh->streamoutBuffer_PRE,
 					};
@@ -5374,7 +5374,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		VP.MaxDepth = 1.0f;
 		GetDevice()->BindViewports(1, &VP, threadID);
 
-		GPUUnorderedResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
+		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
 		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
@@ -5598,10 +5598,10 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		if (deferred)
 		{
-			const GPUUnorderedResource* uavs[] = {
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]),
-				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
-				static_cast<const GPUUnorderedResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]),
+			const GPUResource* uavs[] = {
+				static_cast<const GPUResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]),
+				static_cast<const GPUResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
+				static_cast<const GPUResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]),
 			};
 			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
@@ -5610,9 +5610,9 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		}
 		else
 		{
-			const GPUUnorderedResource* uavs[] = {
-				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]),
-				static_cast<const GPUUnorderedResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
+			const GPUResource* uavs[] = {
+				static_cast<const GPUResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]),
+				static_cast<const GPUResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
 			};
 			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
 		}

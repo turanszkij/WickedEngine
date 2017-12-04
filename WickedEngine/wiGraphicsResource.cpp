@@ -73,6 +73,8 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(SRV_DX11);
 		SAFE_INIT(SRV_DX12);
+		SAFE_INIT(UAV_DX11);
+		SAFE_INIT(UAV_DX12);
 		SAFE_INIT(resource_DX12);
 
 		for (int i = 0; i < ARRAYSIZE(resourceState); ++i)
@@ -94,16 +96,7 @@ namespace wiGraphicsTypes
 			SAFE_DELETE(x);
 		}
 
-		SAFE_RELEASE(resource_DX12);
-	}
 
-	GPUUnorderedResource::GPUUnorderedResource()
-	{
-		SAFE_INIT(UAV_DX11);
-		SAFE_INIT(UAV_DX12);
-	}
-	GPUUnorderedResource::~GPUUnorderedResource()
-	{
 		SAFE_RELEASE(UAV_DX11);
 		for (auto& x : additionalUAVs_DX11)
 		{
@@ -115,9 +108,12 @@ namespace wiGraphicsTypes
 		{
 			SAFE_DELETE(x);
 		}
+
+
+		SAFE_RELEASE(resource_DX12);
 	}
 
-	GPUBuffer::GPUBuffer() : GPUResource(), GPUUnorderedResource()
+	GPUBuffer::GPUBuffer() : GPUResource()
 	{
 		SAFE_INIT(resource_DX11);
 	}
@@ -173,7 +169,7 @@ namespace wiGraphicsTypes
 		SAFE_DELETE(vertexLayout);
 	}
 
-	Texture::Texture() : GPUResource(), GPUUnorderedResource()
+	Texture::Texture() : GPUResource()
 		, independentRTVArraySlices(false), independentRTVCubemapFaces(false)
 		, independentSRVMIPs(false), independentUAVMIPs(false)
 	{

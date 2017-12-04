@@ -2898,7 +2898,7 @@ namespace wiGraphicsTypes
 		}
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->RSSetViewports(NumViewports, d3dViewPorts);
 	}
-	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUUnorderedResource* const *ppUAVs, int slotUAV, int countUAV,
+	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 	}
@@ -3085,10 +3085,26 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(const GPUUnorderedResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (resource != nullptr)
+		if (resource != nullptr && resource->resource_DX12 != nullptr)
 		{
+			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(resource->resourceState[threadID]);
+			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+			if (currentState != requiredState)
+			{
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = resource->resource_DX12;
+				barrier.Transition.StateBefore = currentState;
+				barrier.Transition.StateAfter = requiredState;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+
+				const_cast<GPUResource*>(resource)->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+			}
+
 			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
 			int offset = CS * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot;
 			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
@@ -3107,7 +3123,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourcesCS(const GPUUnorderedResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindUnorderedAccessResourcesCS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{

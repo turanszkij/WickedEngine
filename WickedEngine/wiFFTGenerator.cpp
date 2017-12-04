@@ -14,7 +14,7 @@ ComputeShader* CSFFT_512x512_Data_t::pRadix008A_CS2 = nullptr;
 ComputePSO CSFFT_512x512_Data_t::PSO1, CSFFT_512x512_Data_t::PSO2;
 
 void radix008A(CSFFT512x512_Plan* fft_plan,
-	GPUUnorderedResource* pUAV_Dst,
+	GPUResource* pUAV_Dst,
 	GPUResource* pSRV_Src,
 	UINT thread_count,
 	UINT istride, 
@@ -29,7 +29,7 @@ void radix008A(CSFFT512x512_Plan* fft_plan,
 	GPUResource* cs_srvs[1] = { pSRV_Src };
 	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 
-	GPUUnorderedResource* cs_uavs[1] = { pUAV_Dst };
+	GPUResource* cs_uavs[1] = { pUAV_Dst };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 
 	// Shader
@@ -53,13 +53,13 @@ void radix008A(CSFFT512x512_Plan* fft_plan,
 }
 
 void fft_512x512_c2c(CSFFT512x512_Plan* fft_plan,
-	GPUUnorderedResource* pUAV_Dst,
+	GPUResource* pUAV_Dst,
 	GPUResource* pSRV_Dst,
 	GPUResource* pSRV_Src, 
 	GRAPHICSTHREAD threadID)
 {
 	const UINT thread_count = fft_plan->slices * (512 * 512) / 8;
-	GPUUnorderedResource* pUAV_Tmp = fft_plan->pUAV_Tmp;
+	GPUResource* pUAV_Tmp = fft_plan->pUAV_Tmp;
 	GPUResource* pSRV_Tmp = fft_plan->pSRV_Tmp;
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	GPUBuffer* cs_cbs;
@@ -213,7 +213,7 @@ void fft512x512_create_plan(CSFFT512x512_Plan* plan, UINT slices)
 	device->CreateBuffer(&buf_desc, nullptr, plan->pBuffer_Tmp);
 
 	plan->pSRV_Tmp = (GPUResource*)plan->pBuffer_Tmp;
-	plan->pUAV_Tmp = (GPUUnorderedResource*)plan->pBuffer_Tmp;
+	plan->pUAV_Tmp = (GPUResource*)plan->pBuffer_Tmp;
 }
 
 void fft512x512_destroy_plan(CSFFT512x512_Plan* plan)

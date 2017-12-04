@@ -303,7 +303,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
-	const GPUUnorderedResource* uavs[] = {
+	const GPUResource* uavs[] = {
 		particleBuffer,
 		aliveList[0], // CURRENT alivelist
 		aliveList[1], // NEW alivelist

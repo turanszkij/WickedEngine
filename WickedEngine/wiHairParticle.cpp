@@ -531,9 +531,9 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 
 	device->BindResourceCS(vb, 0, threadID);
 
-	const GPUUnorderedResource* uavs[] = {
-		static_cast<const GPUUnorderedResource*>(drawargs),
-		static_cast<const GPUUnorderedResource*>(ib),
+	const GPUResource* uavs[] = {
+		static_cast<const GPUResource*>(drawargs),
+		static_cast<const GPUResource*>(ib),
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 

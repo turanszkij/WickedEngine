@@ -153,6 +153,12 @@ namespace wiGraphicsTypes
 		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
 		D3D12_CPU_DESCRIPTOR_HANDLE*				SRV_DX12;					// main resource SRV
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalSRVs_DX12;		// can be used for sub-resources if requested
+
+		ID3D11UnorderedAccessView*					UAV_DX11;					// main resource UAV
+		std::vector<ID3D11UnorderedAccessView*>		additionalUAVs_DX11;		// can be used for sub-resources if requested
+		D3D12_CPU_DESCRIPTOR_HANDLE*				UAV_DX12;					// main resource UAV
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalUAVs_DX12;		// can be used for sub-resources if requested
+
 		ID3D12Resource*								resource_DX12;
 
 		RESOURCE_STATES	resourceState[10];
@@ -162,22 +168,7 @@ namespace wiGraphicsTypes
 		virtual ~GPUResource();
 	};
 
-	class GPUUnorderedResource
-	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-	private:
-		ID3D11UnorderedAccessView*					UAV_DX11;					// main resource UAV
-		std::vector<ID3D11UnorderedAccessView*>		additionalUAVs_DX11;		// can be used for sub-resources if requested
-		D3D12_CPU_DESCRIPTOR_HANDLE*				UAV_DX12;					// main resource UAV
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalUAVs_DX12;		// can be used for sub-resources if requested
-
-	protected:
-		GPUUnorderedResource();
-		virtual ~GPUUnorderedResource();
-	};
-
-	class GPUBuffer : public GPUResource, public GPUUnorderedResource
+	class GPUBuffer : public GPUResource
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -277,7 +268,7 @@ namespace wiGraphicsTypes
 		~VertexShaderInfo();
 	};
 
-	class Texture : public GPUResource, public GPUUnorderedResource
+	class Texture : public GPUResource
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;

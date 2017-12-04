@@ -261,7 +261,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	};
 	device->BindResourcesCS(cs0_srvs, TEXSLOT_ONDEMAND0, 2, threadID);
 
-	GPUUnorderedResource* cs0_uavs[1] = { m_pBuffer_Float2_Ht };
+	GPUResource* cs0_uavs[1] = { m_pBuffer_Float2_Ht };
 	device->BindUnorderedAccessResourcesCS(cs0_uavs, 0, 1, threadID);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
@@ -294,7 +294,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	// Update displacement map:
 	//device->BindCS(m_pUpdateDisplacementMapCS, threadID);
 	device->BindComputePSO(&CPSO_updateDisplacementMap, threadID);
-	GPUUnorderedResource* cs_uavs[] = { m_pDisplacementMap };
+	GPUResource* cs_uavs[] = { m_pDisplacementMap };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 	GPUResource* cs_srvs[1] = { m_pBuffer_Float_Dxyz };
 	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);

@@ -2754,7 +2754,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	}
 	deviceContexts[threadID]->RSSetViewports(NumViewports, d3dViewPorts);
 }
-void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUUnorderedResource* const *ppUAVs, int slotUAV, int countUAV,
+void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 	GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	// RTVs:
@@ -3014,7 +3014,7 @@ void GraphicsDevice_DX11::BindResourcesCS(const GPUResource *const* resources, i
 	}
 	deviceContexts[threadID]->CSSetShaderResources(static_cast<UINT>(slot), static_cast<UINT>(count), srvs);
 }
-void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUUnorderedResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
 	{
@@ -3029,7 +3029,7 @@ void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(const GPUUnorderedResour
 		}
 	}
 }
-void GraphicsDevice_DX11::BindUnorderedAccessResourcesCS(const GPUUnorderedResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindUnorderedAccessResourcesCS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 {
 	assert(count <= 8);
 	ID3D11UnorderedAccessView* uavs[8];
