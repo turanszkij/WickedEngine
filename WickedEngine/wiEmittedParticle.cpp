@@ -303,7 +303,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
-	const GPUResource* uavs[] = {
+	GPUResource* uavs[] = {
 		particleBuffer,
 		aliveList[0], // CURRENT alivelist
 		aliveList[1], // NEW alivelist
@@ -314,7 +314,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 	
-	const GPUResource* resources[] = {
+	GPUResource* resources[] = {
 		wiTextureHelper::getInstance()->getRandom64x64(),
 		&object->mesh->indexBuffer,
 		&object->mesh->vertexBuffer_POS,

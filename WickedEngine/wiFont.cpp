@@ -302,7 +302,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	ModifyGeo(textBuffer, text, newProps, style);
 	device->InvalidateBufferAccess(vertexBuffer, threadID);
 
-	const GPUBuffer* vbs[] = {
+	GPUBuffer* vbs[] = {
 		vertexBuffer,
 	};
 	const UINT strides[] = {

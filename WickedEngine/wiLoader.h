@@ -227,12 +227,12 @@ public:
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
-	const wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
-	const wiGraphicsTypes::Texture2D* GetNormalMap() const;
-	const wiGraphicsTypes::Texture2D* GetRoughnessMap() const;
-	const wiGraphicsTypes::Texture2D* GetMetalnessMap() const;
-	const wiGraphicsTypes::Texture2D* GetReflectanceMap() const;
-	const wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
+	wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
+	wiGraphicsTypes::Texture2D* GetNormalMap() const;
+	wiGraphicsTypes::Texture2D* GetRoughnessMap() const;
+	wiGraphicsTypes::Texture2D* GetMetalnessMap() const;
+	wiGraphicsTypes::Texture2D* GetReflectanceMap() const;
+	wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 	void Serialize(wiArchive& archive);
 
 	ALIGN_16

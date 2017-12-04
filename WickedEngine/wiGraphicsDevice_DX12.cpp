@@ -3001,31 +3001,31 @@ namespace wiGraphicsTypes
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearDepthStencilView(*pTexture->DSV_DX12, (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResourcePS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindResource(PS, resource, slot, threadID, arrayIndex);
 	}
-	void GraphicsDevice_DX12::BindResourceVS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResourceVS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindResource(VS, resource, slot, threadID, arrayIndex);
 	}
-	void GraphicsDevice_DX12::BindResourceGS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResourceGS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindResource(GS, resource, slot, threadID, arrayIndex);
 	}
-	void GraphicsDevice_DX12::BindResourceDS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResourceDS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindResource(DS, resource, slot, threadID, arrayIndex);
 	}
-	void GraphicsDevice_DX12::BindResourceHS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResourceHS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindResource(HS, resource, slot, threadID, arrayIndex);
 	}
-	void GraphicsDevice_DX12::BindResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindResource(CS, resource, slot, threadID, arrayIndex);
 	}
-	void GraphicsDevice_DX12::BindResourcesPS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResourcesPS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
@@ -3035,7 +3035,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcesVS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResourcesVS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
@@ -3045,7 +3045,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcesGS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResourcesGS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
@@ -3055,7 +3055,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcesDS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResourcesDS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
@@ -3065,7 +3065,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcesHS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResourcesHS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
@@ -3075,7 +3075,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcesCS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
@@ -3085,7 +3085,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		if (resource != nullptr && resource->resource_DX12 != nullptr)
 		{
@@ -3102,7 +3102,7 @@ namespace wiGraphicsTypes
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
 
-				const_cast<GPUResource*>(resource)->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
 
 			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
@@ -3123,7 +3123,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourcesCS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
@@ -3158,55 +3158,55 @@ namespace wiGraphicsTypes
 			device->CopyDescriptorsSimple(1, dst, *nullUAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		}
 	}
-	void GraphicsDevice_DX12::BindSamplerPS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSamplerPS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindSampler(PS, sampler, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindSamplerVS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSamplerVS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindSampler(VS, sampler, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindSamplerGS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSamplerGS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindSampler(GS, sampler, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindSamplerHS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSamplerHS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindSampler(HS, sampler, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindSamplerDS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSamplerDS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindSampler(DS, sampler, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindSamplerCS(const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSamplerCS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindSampler(CS, sampler, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindConstantBufferPS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBufferPS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindConstantBuffer(PS, buffer, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindConstantBufferVS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBufferVS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindConstantBuffer(VS, buffer, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindConstantBufferGS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBufferGS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindConstantBuffer(GS, buffer, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindConstantBufferDS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBufferDS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindConstantBuffer(DS, buffer, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindConstantBufferHS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBufferHS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindConstantBuffer(HS, buffer, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindConstantBufferCS(const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBufferCS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		BindConstantBuffer(CS, buffer, slot, threadID);
 	}
-	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
 	{
 		assert(count <= 8);
 		D3D12_VERTEX_BUFFER_VIEW res[8] = { 0 };
@@ -3225,7 +3225,7 @@ namespace wiGraphicsTypes
 		}
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res);
 	}
-	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{
 		D3D12_INDEX_BUFFER_VIEW res = {};
 		if (indexBuffer != nullptr)
@@ -3270,11 +3270,11 @@ namespace wiGraphicsTypes
 		const float blendFactor[4] = { value.x, value.y, value.z, value.w };
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetBlendFactor(blendFactor);
 	}
-	void GraphicsDevice_DX12::BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->SetPipelineState(pso->resource_DX12);
 	}
-	void GraphicsDevice_DX12::BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->SetPipelineState(pso->resource_DX12);
 	}
@@ -3294,29 +3294,29 @@ namespace wiGraphicsTypes
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
 	}
-	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
 	}
 	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
-	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
 	}
 	void GraphicsDevice_DX12::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID)
 	{
 	}
-	void GraphicsDevice_DX12::CopyTexture2D(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 	{
 	}
-	void GraphicsDevice_DX12::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
 	{
 	}
-	void GraphicsDevice_DX12::MSAAResolve(Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::MSAAResolve(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 	{
 	}
 	void GraphicsDevice_DX12::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
@@ -3390,7 +3390,7 @@ namespace wiGraphicsTypes
 
 
 
-	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		if (resource != nullptr && resource->resource_DX12 != nullptr)
 		{
@@ -3407,7 +3407,7 @@ namespace wiGraphicsTypes
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
 
-				const_cast<GPUResource*>(resource)->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
 
 
@@ -3429,7 +3429,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
 		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
 		{
@@ -3440,7 +3440,7 @@ namespace wiGraphicsTypes
 			device->CopyDescriptorsSimple(1, dst, *sampler->resource_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		}
 	}
-	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		if (buffer != nullptr && buffer->CBV_DX12 != nullptr)
 		{

@@ -3170,7 +3170,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
 		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
 
-		const GPUResource* resources[] = {
+		GPUResource* resources[] = {
 			resourceBuffers[RBTYPE_ENTITYARRAY],
 			resourceBuffers[RBTYPE_MATRIXARRAY],
 		};
@@ -3233,11 +3233,11 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->BindResourceCS(&armature->boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, threadID);
 
 					// Do the skinning
-					const GPUResource* vbs[] = {
+					GPUResource* vbs[] = {
 						&mesh->vertexBuffer_POS,
 						&mesh->vertexBuffer_BON,
 					};
-					const GPUResource* sos[] = {
+					GPUResource* sos[] = {
 						&mesh->streamoutBuffer_POS,
 						&mesh->streamoutBuffer_PRE,
 					};
@@ -3295,7 +3295,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	// Bind environment probes:
 	{
-		const GPUResource* envMaps[] = {
+		GPUResource* envMaps[] = {
 			globalEnvProbes[0] == nullptr ? enviroMap : globalEnvProbes[0]->cubeMap.GetTexture(),
 			globalEnvProbes[1] == nullptr ? enviroMap : globalEnvProbes[1]->cubeMap.GetTexture(),
 		};
@@ -3559,7 +3559,7 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			const GPUBuffer* vbs[] = {
+			GPUBuffer* vbs[] = {
 				&boneLines[i]->vertexBuffer,
 			};
 			const UINT strides[] = {
@@ -3590,7 +3590,7 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			&linesTemp[i]->vertexBuffer,
 		};
 		const UINT strides[] = {
@@ -3616,7 +3616,7 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			&Cube::vertexBuffer,
 		};
 		const UINT strides[] = {
@@ -3672,7 +3672,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 
 			// Planes:
 			{
-				const GPUBuffer* vbs[] = {
+				GPUBuffer* vbs[] = {
 					wiTranslator::vertexBuffer_Plane,
 				};
 				const UINT strides[] = {
@@ -3703,7 +3703,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 
 			// Lines:
 			{
-				const GPUBuffer* vbs[] = {
+				GPUBuffer* vbs[] = {
 					wiTranslator::vertexBuffer_Axis,
 				};
 				const UINT strides[] = {
@@ -3734,7 +3734,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 
 			// Origin:
 			{
-				const GPUBuffer* vbs[] = {
+				GPUBuffer* vbs[] = {
 					wiTranslator::vertexBuffer_Origin,
 				};
 				const UINT strides[] = {
@@ -3838,7 +3838,7 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			grid,
 		};
 		const UINT strides[] = {
@@ -3891,7 +3891,7 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 				sb.mColor = XMFLOAT4(0, 1, 0, 1);
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-				const GPUBuffer* vbs[] = {
+				GPUBuffer* vbs[] = {
 					&x->object->mesh->vertexBuffer_POS,
 				};
 				const UINT strides[] = {
@@ -4725,7 +4725,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 				}
 
-				const GPUResource* res[] = {
+				GPUResource* res[] = {
 					mesh->impostorTarget.GetTexture(0),
 					mesh->impostorTarget.GetTexture(1),
 					mesh->impostorTarget.GetTexture(2),
@@ -4996,7 +4996,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				device->BindGraphicsPSO(pso, threadID);
 
-				const GPUResource* res[] = {
+				GPUResource* res[] = {
 					material->GetBaseColorMap(),
 					material->GetNormalMap(),
 					material->GetRoughnessMap(),
@@ -5598,10 +5598,10 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		if (deferred)
 		{
-			const GPUResource* uavs[] = {
-				static_cast<const GPUResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]),
-				static_cast<const GPUResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
-				static_cast<const GPUResource*>(textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]),
+			GPUResource* uavs[] = {
+				textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV],
+				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
+				textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV],
 			};
 			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
@@ -5610,9 +5610,9 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		}
 		else
 		{
-			const GPUResource* uavs[] = {
-				static_cast<const GPUResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]),
-				static_cast<const GPUResource*>(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]),
+			GPUResource* uavs[] = {
+				resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE],
+				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
 			};
 			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
 		}

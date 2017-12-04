@@ -1744,7 +1744,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		);
 		cb.mColor = XMFLOAT4(1, 1, 1, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			&vb_saturation,
 		};
 		const UINT strides[] = {
@@ -1762,7 +1762,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		);
 		cb.mColor = XMFLOAT4(1, 1, 1, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			&vb_hue,
 		};
 		const UINT strides[] = {
@@ -1780,7 +1780,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		);
 		cb.mColor = XMFLOAT4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
 		const UINT strides[] = {
@@ -1798,7 +1798,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		);
 		cb.mColor = XMFLOAT4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
 		const UINT strides[] = {
@@ -1816,7 +1816,7 @@ void wiColorPicker::Render(wiGUI* gui)
 		);
 		cb.mColor = GetPickColor();
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
-		const GPUBuffer* vbs[] = {
+		GPUBuffer* vbs[] = {
 			&vb_preview,
 		};
 		const UINT strides[] = {
