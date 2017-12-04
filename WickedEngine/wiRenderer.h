@@ -77,6 +77,33 @@ public:
 	static wiGraphicsTypes::Sampler				*customsamplers[SSTYPE_LAST];
 
 	static wiGraphicsTypes::GPURingBuffer		*dynamicVertexBufferPool;
+
+	static const wiGraphicsTypes::FORMAT RTFormat_forward = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_0 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_1 = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_2 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_3 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_temp_hdr = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
+	// NOTE: Light buffer precision seems OK when using FORMAT_R11G11B10_FLOAT format
+	// But the environmental light now also writes the AO to ALPHA so it has been changed to FORMAT_R16G16B16A16_FLOAT
+	static const wiGraphicsTypes::FORMAT RTFormat_deferred_lightbuffer = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_lineardepth = wiGraphicsTypes::FORMAT_R32_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_ssao = wiGraphicsTypes::FORMAT_R8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_waterripple = wiGraphicsTypes::FORMAT_R8G8B8A8_SNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_normalmaps = wiGraphicsTypes::FORMAT_R8G8B8A8_SNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_depthresolve = wiGraphicsTypes::FORMAT_R32_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_voxelradiance = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_envprobe = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_impostor_albedo = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_impostor_normal = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_impostor_roughness = wiGraphicsTypes::FORMAT_R8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_impostor_metalness = wiGraphicsTypes::FORMAT_R8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_impostor_reflectance = wiGraphicsTypes::FORMAT_R8_UNORM;
+
+	static const wiGraphicsTypes::FORMAT DSFormat_full = wiGraphicsTypes::FORMAT_D32_FLOAT_S8X24_UINT;
+	static const wiGraphicsTypes::FORMAT DSFormat_full_alias = wiGraphicsTypes::FORMAT_R32G8X24_TYPELESS;
+	static const wiGraphicsTypes::FORMAT DSFormat_small = wiGraphicsTypes::FORMAT_D16_UNORM;
+	static const wiGraphicsTypes::FORMAT DSFormat_small_alias = wiGraphicsTypes::FORMAT_R16_TYPELESS;
 	
 	static float GAMMA;
 	static int SHADOWRES_2D, SHADOWRES_CUBE, SHADOWCOUNT_2D, SHADOWCOUNT_CUBE, SOFTSHADOWQUALITY_2D;

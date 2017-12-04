@@ -112,6 +112,18 @@ void wiImage::LoadShaders()
 			{
 				desc.dss = &depthStencilStates[k];
 
+				if (k == STENCILMODE_DISABLED)
+				{
+					desc.DSFormat = FORMAT_UNKNOWN;
+				}
+				else
+				{
+					desc.DSFormat = wiRenderer::DSFormat_full;
+				}
+
+				desc.numRTs = 1;
+				desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+
 				device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k]);
 			}
 		}
@@ -129,10 +141,24 @@ void wiImage::LoadShaders()
 		if (i == POSTPROCESS_DOWNSAMPLEDEPTHBUFFER || i == POSTPROCESS_REPROJECTDEPTHBUFFER)
 		{
 			desc.dss = &depthStencilStateDepthWrite;
+			desc.DSFormat = wiRenderer::DSFormat_small;
+			desc.numRTs = 0;
 		}
 		else if (i == POSTPROCESS_SSSS)
 		{
 			desc.dss = &depthStencilStates[STENCILMODE_LESS];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = wiRenderer::RTFormat_deferred_lightbuffer;
+		}
+		else if (i == POSTPROCESS_SSAO)
+		{
+			desc.numRTs = 1;
+			desc.RTFormats[0] = wiRenderer::RTFormat_ssao;
+		}
+		else
+		{
+			desc.numRTs = 1;
+			desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
 		}
 		
 		device->CreateGraphicsPSO(&desc, &postprocessPSO[i]);
@@ -144,6 +170,9 @@ void wiImage::LoadShaders()
 	desc.bs = &blendStates[BLENDMODE_OPAQUE];
 	desc.dss = &depthStencilStates[STENCILMODE_LESS];
 	desc.rs = &rasterizerState;
+	desc.numRTs = 1;
+	desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
+	desc.DSFormat = wiRenderer::DSFormat_full;
 	device->CreateGraphicsPSO(&desc, &deferredPSO);
 
 }

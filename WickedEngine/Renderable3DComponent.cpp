@@ -62,26 +62,26 @@ void Renderable3DComponent::ResizeBuffers()
 
 	rtSSR.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 	rtMotionBlur.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 	rtLinearDepth.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R32_FLOAT);
+		, false, wiRenderer::RTFormat_lineardepth);
 	rtParticle.Initialize(
 		(UINT)(wiRenderer::GetInternalResolution().x*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getAlphaParticleDownSample())
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 	rtWaterRipple.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R8G8B8A8_SNORM);
+		, false, wiRenderer::RTFormat_waterripple);
 	rtSceneCopy.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT, 8);
+		, false, wiRenderer::RTFormat_temp_hdr, 8);
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetInternalResolution().x * getReflectionQuality())
 		, (UINT)(wiRenderer::GetInternalResolution().y * getReflectionQuality())
-		, true, FORMAT_R16G16B16A16_FLOAT);
+		, true, wiRenderer::RTFormat_temp_hdr);
 	rtFinal[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, defaultTextureFormat);
@@ -106,7 +106,7 @@ void Renderable3DComponent::ResizeBuffers()
 	for (unsigned int i = 0; i<rtSSAO.size(); i++)
 		rtSSAO[i].Initialize(
 		(UINT)(wiRenderer::GetInternalResolution().x*getSSAOQuality()), (UINT)(wiRenderer::GetInternalResolution().y*getSSAOQuality())
-			, false, FORMAT_R8_UNORM);
+			, false, wiRenderer::RTFormat_ssao);
 
 
 	rtSun.resize(2);
@@ -132,10 +132,10 @@ void Renderable3DComponent::ResizeBuffers()
 
 	rtTemporalAA[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 	rtTemporalAA[1].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 
 
 	SAFE_DELETE(smallDepth);
@@ -143,7 +143,7 @@ void Renderable3DComponent::ResizeBuffers()
 	desc.ArraySize = 1;
 	desc.BindFlags = BIND_DEPTH_STENCIL;
 	desc.CPUAccessFlags = 0;
-	desc.Format = FORMAT_D16_UNORM;
+	desc.Format = wiRenderer::DSFormat_small;
 	desc.Width = wiRenderer::GetInternalResolution().x / 4;
 	desc.Height = wiRenderer::GetInternalResolution().y / 4;
 	desc.MipLevels = 1;

@@ -46,8 +46,8 @@ void ForwardRenderableComponent::ResizeBuffers()
 		lastBufferFormat = defaultTextureFormat;
 	}
 
-	rtMain.Initialize(wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y, true, FORMAT_R16G16B16A16_FLOAT, 1, getMSAASampleCount(), false);
-	rtMain.Add(FORMAT_R16G16B16A16_FLOAT); // thin gbuffer
+	rtMain.Initialize(wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y, true, wiRenderer::RTFormat_forward, 1, getMSAASampleCount(), false);
+	rtMain.Add(wiRenderer::RTFormat_gbuffer_1); // thin gbuffer
 }
 
 void ForwardRenderableComponent::Initialize()

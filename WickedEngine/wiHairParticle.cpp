@@ -147,12 +147,41 @@ void wiHairParticle::LoadShaders()
 
 		for (int j = 0; j < 2; ++j)
 		{
+			if ((i == SHADERTYPE_DEPTHONLY || i == SHADERTYPE_DEFERRED) && j == 1)
+			{
+				continue;
+			}
+
 			GraphicsPSODesc desc;
 			desc.vs = vs;
 			desc.ps = ps[i];
 			desc.bs = &bs[j];
 			desc.rs = &ncrs;
 			desc.dss = &dss_default;
+
+			desc.DSFormat = wiRenderer::DSFormat_full;
+
+			switch (i)
+			{
+			case SHADERTYPE_TEXTURE:
+				desc.numRTs = 1;
+				desc.RTFormats[0] = wiRenderer::RTFormat_forward;
+				break;
+			case SHADERTYPE_FORWARD:
+			case SHADERTYPE_TILEDFORWARD:
+				desc.numRTs = 2;
+				desc.RTFormats[0] = wiRenderer::RTFormat_forward;
+				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
+				break;
+			case SHADERTYPE_DEFERRED:
+				desc.numRTs = 4;
+				desc.RTFormats[0] = wiRenderer::RTFormat_gbuffer_0;
+				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
+				desc.RTFormats[2] = wiRenderer::RTFormat_gbuffer_2;
+				desc.RTFormats[3] = wiRenderer::RTFormat_gbuffer_3;
+			default:
+				break;
+			}
 
 			if (i == SHADERTYPE_TILEDFORWARD)
 			{
@@ -162,6 +191,7 @@ void wiHairParticle::LoadShaders()
 			if(j == 1)
 			{
 				desc.dss = &dss_rejectopaque_keeptransparent; // transparent
+				desc.numRTs = 1;
 			}
 
 			device->CreateGraphicsPSO(&desc, &PSO[i][j]);

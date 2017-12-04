@@ -52,28 +52,25 @@ void DeferredRenderableComponent::ResizeBuffers()
 
 	rtGBuffer.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, true, FORMAT_R8G8B8A8_UNORM);
-	rtGBuffer.Add(FORMAT_R16G16B16A16_FLOAT);
-	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
-	rtGBuffer.Add(FORMAT_R8G8B8A8_UNORM);
-
-	// NOTE: Light buffer precision seems OK when using FORMAT_R11G11B10_FLOAT format
-	// But the environmental light now also writes the AO to ALPHA so it has been changed to FORMAT_R16G16B16A16_FLOAT
+		, true, wiRenderer::RTFormat_gbuffer_0);
+	rtGBuffer.Add(wiRenderer::RTFormat_gbuffer_1);
+	rtGBuffer.Add(wiRenderer::RTFormat_gbuffer_2);
+	rtGBuffer.Add(wiRenderer::RTFormat_gbuffer_3);
 
 	rtDeferred.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 	rtLight.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT); // diffuse
-	rtLight.Add(FORMAT_R16G16B16A16_FLOAT); // specular
+		, false, wiRenderer::RTFormat_deferred_lightbuffer); // diffuse
+	rtLight.Add(wiRenderer::RTFormat_deferred_lightbuffer); // specular
 
 	rtSSS[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 	rtSSS[1].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R16G16B16A16_FLOAT);
+		, false, wiRenderer::RTFormat_temp_hdr);
 }
 
 void DeferredRenderableComponent::Initialize()

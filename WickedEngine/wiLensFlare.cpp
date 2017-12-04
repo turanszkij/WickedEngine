@@ -37,10 +37,8 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		device->EventBegin("LensFlare", threadID);
 
 		device->BindPrimitiveTopology(POINTLIST,threadID);
-		//device->BindVertexLayout(inputLayout,threadID);
-		//device->BindPS(pixelShader,threadID);
-		//device->BindVS(vertexShader,threadID);
-		//device->BindGS(geometryShader,threadID);
+
+		device->BindGraphicsPSO(&PSO, threadID);
 
 		ConstantBuffer cb;
 		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1);
@@ -49,10 +47,6 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
 		device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-	
-		//device->BindRasterizerState(rasterizerState,threadID);
-		//device->BindDepthStencilState(depthStencilState,1,threadID);
-		//device->BindBlendState(blendState,threadID);
 
 		int i=0;
 		for(Texture2D* x : rims){
@@ -68,10 +62,6 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 
 		device->Draw(i, 0, threadID);
 
-		
-
-
-		//device->BindGS(nullptr,threadID);
 
 		device->EventEnd(threadID);
 	}
@@ -105,6 +95,10 @@ void wiLensFlare::LoadShaders(){
 	desc.bs = &blendState;
 	desc.rs = &rasterizerState;
 	desc.dss = &depthStencilState;
+	desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	desc.numRTs = 1;
+	desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
+	device->CreateGraphicsPSO(&desc, &PSO);
 }
 void wiLensFlare::SetUpCB()
 {

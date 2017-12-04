@@ -245,7 +245,7 @@ void wiRenderer::SetUpStaticComponents()
 	normalMapRT.Initialize(
 		GetInternalResolution().x
 		, GetInternalResolution().y
-		,false,FORMAT_R8G8B8A8_SNORM
+		,false, RTFormat_normalmaps
 		);
 	imagesRTAdd.Initialize(
 		GetInternalResolution().x
@@ -1530,6 +1530,9 @@ void wiRenderer::LoadShaders()
 									case SHADERTYPE_ENVMAPCAPTURE:
 										desc.dss = depthStencils[DSSTYPE_ENVMAP];
 										break;
+									case SHADERTYPE_VOXELIZE:
+										desc.dss = depthStencils[DSSTYPE_XRAY];
+										break;
 									default:
 										desc.dss = depthStencils[DSSTYPE_DEFAULT];
 										break;
@@ -1546,6 +1549,55 @@ void wiRenderer::LoadShaders()
 										break;
 									default:
 										desc.rs = rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+										break;
+									}
+
+									switch (shaderType)
+									{
+									case SHADERTYPE_TEXTURE:
+										desc.numRTs = 1;
+										desc.RTFormats[0] = RTFormat_forward;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_DEFERRED:
+										desc.numRTs = 4;
+										desc.RTFormats[0] = RTFormat_gbuffer_0;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.RTFormats[2] = RTFormat_gbuffer_2;
+										desc.RTFormats[3] = RTFormat_gbuffer_3;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_FORWARD:
+										desc.numRTs = 2;
+										desc.RTFormats[0] = RTFormat_forward;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_TILEDFORWARD:
+										desc.numRTs = 2;
+										desc.RTFormats[0] = RTFormat_forward;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_DEPTHONLY:
+										desc.numRTs = 0;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_ENVMAPCAPTURE:
+										desc.numRTs = 1;
+										desc.RTFormats[0] = RTFormat_envprobe;
+										desc.DSFormat = DSFormat_small;
+										break;
+									case SHADERTYPE_SHADOW:
+										desc.numRTs = 0;
+										desc.DSFormat = DSFormat_small;
+										break;
+									case SHADERTYPE_SHADOWCUBE:
+										desc.numRTs = 0;
+										desc.DSFormat = DSFormat_small;
+										break;
+									case SHADERTYPE_VOXELIZE:
+										desc.numRTs = 0;
 										break;
 									}
 
@@ -1577,6 +1629,11 @@ void wiRenderer::LoadShaders()
 		desc.dss = depthStencils[DSSTYPE_DEFAULT];
 		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
+		desc.numRTs = 2;
+		desc.RTFormats[0] = RTFormat_forward;
+		desc.RTFormats[1] = RTFormat_gbuffer_1;
+		desc.DSFormat = DSFormat_full;
+
 		desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER];
 		PSO_object_water[SHADERTYPE_FORWARD] = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_FORWARD]);
@@ -1594,6 +1651,10 @@ void wiRenderer::LoadShaders()
 		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
 		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_forward;
+		desc.DSFormat = DSFormat_full;
+
 		PSO_object_wire = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_object_wire);
 	}
@@ -1605,6 +1666,10 @@ void wiRenderer::LoadShaders()
 		desc.bs = blendStates[BSTYPE_DECAL];
 		desc.dss = depthStencils[DSSTYPE_DECAL];
 
+		desc.numRTs = 2;
+		desc.RTFormats[0] = RTFormat_gbuffer_0;
+		desc.RTFormats[1] = RTFormat_gbuffer_1;
+
 		PSO_decal = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_decal);
 	}
@@ -1614,6 +1679,8 @@ void wiRenderer::LoadShaders()
 		desc.rs = rasterizers[RSTYPE_OCCLUDEE];
 		desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
 		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+
+		desc.DSFormat = DSFormat_small;
 		
 		PSO_occlusionquery = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_occlusionquery);
@@ -1642,20 +1709,34 @@ void wiRenderer::LoadShaders()
 		{
 		case SHADERTYPE_DEFERRED:
 			realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+			desc.numRTs = 4;
+			desc.RTFormats[0] = RTFormat_gbuffer_0;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			desc.RTFormats[2] = RTFormat_gbuffer_2;
+			desc.RTFormats[3] = RTFormat_gbuffer_3;
 			break;
 		case SHADERTYPE_FORWARD:
 			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+			desc.numRTs = 2;
+			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
 		case SHADERTYPE_TILEDFORWARD:
 			realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
+			desc.numRTs = 2;
+			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
 		case SHADERTYPE_DEPTHONLY:
 			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
 			break;
 		default:
 			realPS = PSTYPE_OBJECT_TEXTUREONLY;
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_forward;
 			break;
 		}
+		desc.DSFormat = DSFormat_full;
 
 		desc.vs = vertexShaders[realVS];
 		desc.il = vertexLayouts[realVL];
@@ -1674,12 +1755,12 @@ void wiRenderer::LoadShaders()
 		desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
 
 		desc.numRTs = 5;
-		desc.RTFormats[0] = FORMAT_R8G8B8A8_UNORM;
-		desc.RTFormats[1] = FORMAT_R8G8B8A8_UNORM;
-		desc.RTFormats[2] = FORMAT_R8_UNORM;
-		desc.RTFormats[3] = FORMAT_R8_UNORM;
-		desc.RTFormats[4] = FORMAT_R8_UNORM;
-		desc.DSFormat = FORMAT_D32_FLOAT_S8X24_UINT;
+		desc.RTFormats[0] = RTFormat_impostor_albedo;
+		desc.RTFormats[1] = RTFormat_impostor_normal;
+		desc.RTFormats[2] = RTFormat_impostor_roughness;
+		desc.RTFormats[3] = RTFormat_impostor_metalness;
+		desc.RTFormats[4] = RTFormat_impostor_reflectance;
+		desc.DSFormat = DSFormat_full;
 		
 		PSO_captureimpostor = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_captureimpostor);
@@ -1733,6 +1814,11 @@ void wiRenderer::LoadShaders()
 			break;
 		}
 
+		desc.numRTs = 2;
+		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
+		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
+		desc.DSFormat = DSFormat_full;
+
 		PSO_deferredlight[type] = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_deferredlight[type]);
 
@@ -1781,6 +1867,10 @@ void wiRenderer::LoadShaders()
 			break;
 		}
 
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_temp_hdr;
+		desc.DSFormat = DSFormat_full;
+
 		PSO_volumelight[type] = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_volumelight[type]);
 	}
@@ -1791,6 +1881,11 @@ void wiRenderer::LoadShaders()
 		desc.rs = rasterizers[RSTYPE_BACK];
 		desc.bs = blendStates[BSTYPE_ENVIRONMENTALLIGHT];
 		desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+
+		desc.numRTs = 2;
+		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
+		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
+		desc.DSFormat = DSFormat_full;
 
 		PSO_enviromentallight = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_enviromentallight);
@@ -1807,17 +1902,27 @@ void wiRenderer::LoadShaders()
 			desc.bs = blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SKY];
+			desc.numRTs = 2;
+			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[0] = RTFormat_gbuffer_1;
+			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_SUN:
 			desc.bs = blendStates[BSTYPE_ADDITIVE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SUN];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_forward;
+			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE:
 			desc.bs = blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY];
 			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_forward;
+			desc.DSFormat = DSFormat_small;
 			break;
 		}
 
@@ -1923,6 +2028,9 @@ void wiRenderer::LoadShaders()
 			break;
 		}
 
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_temp_hdr;
+		desc.DSFormat = DSFormat_full;
 
 		PSO_debug[debug] = new GraphicsPSO;
 		device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
@@ -4231,7 +4339,7 @@ void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuali
 	desc.Height = SHADOWRES_2D;
 	desc.MipLevels = 1;
 	desc.ArraySize = SHADOWCOUNT_2D;
-	desc.Format = FORMAT_R16_TYPELESS;
+	desc.Format = DSFormat_small_alias;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = USAGE_DEFAULT;
@@ -4256,7 +4364,7 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 	desc.Height = SHADOWRES_CUBE;
 	desc.MipLevels = 1;
 	desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
-	desc.Format = FORMAT_R16_TYPELESS;
+	desc.Format = DSFormat_small_alias;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = USAGE_DEFAULT;
@@ -5192,7 +5300,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		desc.Height = voxelSceneData.res;
 		desc.Depth = voxelSceneData.res;
 		desc.MipLevels = 0;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Format = RTFormat_voxelradiance;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
@@ -5401,7 +5509,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		desc.ArraySize = 1;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Format = RTFormat_deferred_lightbuffer;
 		desc.Width = (UINT)_width;
 		desc.Height = (UINT)_height;
 		desc.MipLevels = 1;
@@ -6470,7 +6578,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position, int resolution)
 {
 	EnvironmentProbe* probe = new EnvironmentProbe;
 	probe->transform(position);
-	probe->cubeMap.InitializeCube(resolution, true, FORMAT_R16G16B16A16_FLOAT, 0);
+	probe->cubeMap.InitializeCube(resolution, true, RTFormat_envprobe, 0);
 
 	scene->environmentProbes.push_back(probe);
 }
@@ -6486,11 +6594,11 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	const XMFLOAT3 extents = bbox.getHalfWidth();
 	if (!mesh->impostorTarget.IsInitialized())
 	{
-		mesh->impostorTarget.Initialize(res * 6, res, true, FORMAT_R8G8B8A8_UNORM, 0);
-		mesh->impostorTarget.Add(FORMAT_R8G8B8A8_UNORM);	// normal
-		mesh->impostorTarget.Add(FORMAT_R8_UNORM);			// roughness
-		mesh->impostorTarget.Add(FORMAT_R8_UNORM);			// reflectance
-		mesh->impostorTarget.Add(FORMAT_R8_UNORM);			// metalness
+		mesh->impostorTarget.Initialize(res * 6, res, true, RTFormat_impostor_albedo, 0);
+		mesh->impostorTarget.Add(RTFormat_impostor_normal);			// normal
+		mesh->impostorTarget.Add(RTFormat_impostor_roughness);		// roughness
+		mesh->impostorTarget.Add(RTFormat_impostor_reflectance);	// reflectance
+		mesh->impostorTarget.Add(RTFormat_impostor_metalness);		// metalness
 	}
 
 	Camera savedCam = *cam;

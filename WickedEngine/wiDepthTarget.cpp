@@ -31,8 +31,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 	depthDesc.Height = height;
 	depthDesc.MipLevels = 1;
 	depthDesc.ArraySize = 1;
-	//depthDesc.Format = FORMAT_R24G8_TYPELESS;
-	depthDesc.Format = FORMAT_R32G8X24_TYPELESS; // better utilization of hardware
+	depthDesc.Format = wiRenderer::DSFormat_full_alias;
 	depthDesc.SampleDesc.Count = MSAAC;
 	// depthDesc.SampleDesc.Quality = 0; // auto-filll in device
 	depthDesc.Usage = USAGE_DEFAULT;
@@ -45,7 +44,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 	if (MSAAC > 1)
 	{
 		depthDesc.SampleDesc.Count = 1;
-		depthDesc.Format = FORMAT_R32_FLOAT;
+		depthDesc.Format = wiRenderer::RTFormat_depthresolve;
 		depthDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		wiRenderer::GetDevice()->CreateTexture2D(&depthDesc, nullptr, &texture_resolvedMSAA);
 	}
@@ -64,7 +63,7 @@ void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 	depthGPUBufferDesc.Height = size;
 	depthGPUBufferDesc.MipLevels = 1;
 	depthGPUBufferDesc.ArraySize = 6;
-	depthGPUBufferDesc.Format = FORMAT_R16_TYPELESS;
+	depthGPUBufferDesc.Format = wiRenderer::DSFormat_small_alias;
 	depthGPUBufferDesc.SampleDesc.Count = 1;
 	depthGPUBufferDesc.SampleDesc.Quality = 0;
 	depthGPUBufferDesc.Usage = USAGE_DEFAULT;

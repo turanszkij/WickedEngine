@@ -147,7 +147,7 @@ void wiFont::LoadShaders()
 	desc.rs = rasterizerState;
 	desc.dss = depthStencilState;
 	desc.numRTs = 1;
-	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
+	desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
 	SAFE_DELETE(PSO);
 	PSO = new GraphicsPSO;
 	wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO);

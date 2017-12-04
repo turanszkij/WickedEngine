@@ -402,6 +402,9 @@ void wiOcean::LoadShaders()
 		desc.bs = &blendState;
 		desc.rs = &rasterizerState;
 		desc.dss = &depthStencilState;
+		desc.numRTs = 1;
+		desc.RTFormats[0] = wiRenderer::RTFormat_forward;
+		desc.DSFormat = wiRenderer::DSFormat_full;
 		device->CreateGraphicsPSO(&desc, &PSO);
 
 		desc.ps = g_pWireframePS;
