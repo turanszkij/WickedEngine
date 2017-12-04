@@ -41,6 +41,10 @@ namespace wiGraphicsTypes
 		return _flag;
 	}
 
+	inline D3D12_RESOURCE_STATES _ConvertResourceStates(RESOURCE_STATES value)
+	{
+		return static_cast<D3D12_RESOURCE_STATES>(value);
+	}
 	inline D3D12_FILTER _ConvertFilter(FILTER value)
 	{
 		switch (value)
@@ -1127,6 +1131,10 @@ namespace wiGraphicsTypes
 		}
 		return FORMAT_UNKNOWN;
 	}
+	inline RESOURCE_STATES _ConvertResourceStates_Inv(D3D12_RESOURCE_STATES value)
+	{
+		return static_cast<RESOURCE_STATES>(value);
+	}
 	
 
 
@@ -1661,7 +1669,7 @@ namespace wiGraphicsTypes
 		uint64_t resourceIdx = FRAMECOUNT % ARRAYSIZE(backBuffer);
 
 		Texture2D result;
-		result.texture2D_DX12 = backBuffer[resourceIdx];
+		result.resource_DX12 = backBuffer[resourceIdx];
 		backBuffer[resourceIdx]->AddRef();
 		return result;
 	}
@@ -1727,6 +1735,11 @@ namespace wiGraphicsTypes
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 			return hr;
+
+		for (int i = 0; i < ARRAYSIZE(ppBuffer->resourceState); ++i)
+		{
+			ppBuffer->resourceState[i] = _ConvertResourceStates_Inv(resourceState);
+		}
 
 		
 
@@ -1932,10 +1945,15 @@ namespace wiGraphicsTypes
 		// Issue main resource creation:
 		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, pInitialData == nullptr ? resourceState : D3D12_RESOURCE_STATE_COPY_DEST, 
 			useClearValue ? &optimizedClearValue : nullptr, 
-			__uuidof(ID3D12Resource), (void**)&(*ppTexture2D)->texture2D_DX12);
+			__uuidof(ID3D12Resource), (void**)&(*ppTexture2D)->resource_DX12);
 		assert(SUCCEEDED(hr));
 		if (FAILED(hr))
 			return hr;
+
+		for (int i = 0; i < ARRAYSIZE((*ppTexture2D)->resourceState); ++i)
+		{
+			(*ppTexture2D)->resourceState[i] = _ConvertResourceStates_Inv(resourceState);
+		}
 
 		if ((*ppTexture2D)->desc.MipLevels == 0)
 		{
@@ -1989,20 +2007,28 @@ namespace wiGraphicsTypes
 			// Issue GPU copy:
 			for (UINT i = 0; i < NumSubresources; ++i)
 			{
-				CD3DX12_TEXTURE_COPY_LOCATION Dst((*ppTexture2D)->texture2D_DX12, i + FirstSubresource);
+				CD3DX12_TEXTURE_COPY_LOCATION Dst((*ppTexture2D)->resource_DX12, i + FirstSubresource);
 				CD3DX12_TEXTURE_COPY_LOCATION Src(uploadBuffer->resource, pLayouts[i]);
 				static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
 
-				D3D12_RESOURCE_BARRIER barrier = {};
-				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrier.Transition.pResource = (*ppTexture2D)->texture2D_DX12;
-				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-				barrier.Transition.StateAfter = resourceState;
-				barrier.Transition.Subresource = i;
-				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+				//D3D12_RESOURCE_BARRIER barrier = {};
+				//barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				//barrier.Transition.pResource = (*ppTexture2D)->resource_DX12;
+				//barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+				//barrier.Transition.StateAfter = resourceState;
+				//barrier.Transition.Subresource = i;
+				//barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				//static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
 			}
 
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = (*ppTexture2D)->resource_DX12;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			barrier.Transition.StateAfter = resourceState;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
 
 
 
@@ -2043,7 +2069,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->texture2D_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
 					}
 				}
 				else if ((*ppTexture2D)->independentRTVArraySlices)
@@ -2056,7 +2082,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->texture2D_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
 					}
 				}
 
@@ -2067,7 +2093,7 @@ namespace wiGraphicsTypes
 
 					(*ppTexture2D)->RTV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 					(*ppTexture2D)->RTV_DX12->ptr = RTAllocator->allocate();
-					device->CreateRenderTargetView((*ppTexture2D)->texture2D_DX12, &renderTargetViewDesc, *(*ppTexture2D)->RTV_DX12);
+					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->RTV_DX12);
 				}
 			}
 			else
@@ -2094,7 +2120,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->texture2D_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
 					}
 				}
 
@@ -2131,7 +2157,7 @@ namespace wiGraphicsTypes
 
 					(*ppTexture2D)->RTV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 					(*ppTexture2D)->RTV_DX12->ptr = RTAllocator->allocate();
-					device->CreateRenderTargetView((*ppTexture2D)->texture2D_DX12, &renderTargetViewDesc, *(*ppTexture2D)->RTV_DX12);
+					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->RTV_DX12);
 				}
 			}
 		}
@@ -2184,7 +2210,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalDSVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalDSVs_DX12.back()->ptr = DSAllocator->allocate();
-						device->CreateDepthStencilView((*ppTexture2D)->texture2D_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
+						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
 					}
 				}
 				else if ((*ppTexture2D)->independentRTVArraySlices)
@@ -2197,7 +2223,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalDSVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalDSVs_DX12.back()->ptr = DSAllocator->allocate();
-						device->CreateDepthStencilView((*ppTexture2D)->texture2D_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
+						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
 					}
 				}
 
@@ -2208,7 +2234,7 @@ namespace wiGraphicsTypes
 
 					(*ppTexture2D)->DSV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 					(*ppTexture2D)->DSV_DX12->ptr = DSAllocator->allocate();
-					device->CreateDepthStencilView((*ppTexture2D)->texture2D_DX12, &depthStencilViewDesc, *(*ppTexture2D)->DSV_DX12);
+					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->DSV_DX12);
 				}
 			}
 			else
@@ -2235,7 +2261,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalDSVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalDSVs_DX12.back()->ptr = DSAllocator->allocate();
-						device->CreateDepthStencilView((*ppTexture2D)->texture2D_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
+						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
 					}
 				}
 				else
@@ -2272,7 +2298,7 @@ namespace wiGraphicsTypes
 
 					(*ppTexture2D)->DSV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 					(*ppTexture2D)->DSV_DX12->ptr = DSAllocator->allocate();
-					device->CreateDepthStencilView((*ppTexture2D)->texture2D_DX12, &depthStencilViewDesc, *(*ppTexture2D)->DSV_DX12);
+					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->DSV_DX12);
 				}
 			}
 		}
@@ -2343,7 +2369,7 @@ namespace wiGraphicsTypes
 				}
 				(*ppTexture2D)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 				(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
-				device->CreateShaderResourceView((*ppTexture2D)->texture2D_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
+				device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
 			}
 			else
 			{
@@ -2352,7 +2378,7 @@ namespace wiGraphicsTypes
 					shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
 					(*ppTexture2D)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 					(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
-					device->CreateShaderResourceView((*ppTexture2D)->texture2D_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
+					device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
 				}
 				else
 				{
@@ -2369,7 +2395,7 @@ namespace wiGraphicsTypes
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->texture2D_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12[i]);
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12[i]);
 						}
 					}
 
@@ -2379,7 +2405,7 @@ namespace wiGraphicsTypes
 						shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 						(*ppTexture2D)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 						(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
-						device->CreateShaderResourceView((*ppTexture2D)->texture2D_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
+						device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
 					}
 				}
 			}
@@ -2403,7 +2429,7 @@ namespace wiGraphicsTypes
 
 					(*ppTexture2D)->additionalUAVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 					(*ppTexture2D)->additionalUAVs_DX12.back()->ptr = ResourceAllocator->allocate();
-					device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX12, nullptr, &uav_desc, *(*ppTexture2D)->additionalUAVs_DX12[i]);
+					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->additionalUAVs_DX12[i]);
 				}
 			}
 
@@ -2412,7 +2438,7 @@ namespace wiGraphicsTypes
 				uav_desc.Texture2D.MipSlice = 0;
 				(*ppTexture2D)->UAV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 				(*ppTexture2D)->UAV_DX12->ptr = ResourceAllocator->allocate();
-				device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX12, nullptr, &uav_desc, *(*ppTexture2D)->UAV_DX12);
+				device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->UAV_DX12);
 			}
 		}
 
@@ -2819,6 +2845,17 @@ namespace wiGraphicsTypes
 			sampler_table);
 
 
+		D3D12_RECT pRects[8];
+		for (UINT i = 0; i < 8; ++i)
+		{
+			pRects[i].bottom = INT32_MAX;
+			pRects[i].left = INT32_MIN;
+			pRects[i].right = INT32_MAX;
+			pRects[i].top = INT32_MIN;
+		}
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->RSSetScissorRects(8, pRects);
+
+
 		FRAMECOUNT++;
 
 		RESOLUTIONCHANGED = false;
@@ -2867,18 +2904,102 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		D3D12_CPU_DESCRIPTOR_HANDLE descriptors[8] = {};
+		for (UINT i = 0; i < NumViews; ++i)
+		{
+			if (ppRenderTargets[i] != nullptr)
+			{
+				D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(ppRenderTargets[i]->resourceState[threadID]);
+				D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+				if (currentState != requiredState)
+				{
+					D3D12_RESOURCE_BARRIER barrier = {};
+					barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+					barrier.Transition.pResource = ppRenderTargets[i]->resource_DX12;
+					barrier.Transition.StateBefore = currentState;
+					barrier.Transition.StateAfter = requiredState;
+					barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+					barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+
+					ppRenderTargets[i]->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+				}
+
+				descriptors[i] = *ppRenderTargets[i]->RTV_DX12;
+			}
+		}
+
+		if (depthStencilTexture != nullptr)
+		{
+			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(depthStencilTexture->resourceState[threadID]);
+			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+			if (currentState != requiredState)
+			{
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = depthStencilTexture->resource_DX12;
+				barrier.Transition.StateBefore = currentState;
+				barrier.Transition.StateAfter = requiredState;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+
+				depthStencilTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+			}
+		}
+
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetRenderTargets(NumViews, descriptors, FALSE, depthStencilTexture != nullptr ? depthStencilTexture->DSV_DX12 : nullptr);
 	}
 	void GraphicsDevice_DX12::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		if (pTexture != nullptr)
+		{
+			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(pTexture->resourceState[threadID]);
+			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			if (currentState != requiredState)
+			{
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = pTexture->resource_DX12;
+				barrier.Transition.StateBefore = currentState;
+				barrier.Transition.StateAfter = requiredState;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+
+				pTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+			}
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearRenderTargetView(*pTexture->RTV_DX12, ColorRGBA, 0, nullptr);
+		}
 	}
 	void GraphicsDevice_DX12::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		UINT _flags = 0;
-		if (ClearFlags & CLEAR_DEPTH)
-			_flags |= D3D12_CLEAR_FLAG_DEPTH;
-		if (ClearFlags & CLEAR_STENCIL)
-			_flags |= D3D12_CLEAR_FLAG_STENCIL;
+		if (pTexture != nullptr)
+		{
+			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(pTexture->resourceState[threadID]);
+			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+			if (currentState != requiredState)
+			{
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = pTexture->resource_DX12;
+				barrier.Transition.StateBefore = currentState;
+				barrier.Transition.StateAfter = requiredState;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
 
+				pTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+			}
+
+			UINT _flags = 0;
+			if (ClearFlags & CLEAR_DEPTH)
+				_flags |= D3D12_CLEAR_FLAG_DEPTH;
+			if (ClearFlags & CLEAR_STENCIL)
+				_flags |= D3D12_CLEAR_FLAG_STENCIL;
+
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearDepthStencilView(*pTexture->DSV_DX12, (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+		}
 	}
 	void GraphicsDevice_DX12::BindResourcePS(const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -2906,27 +3027,63 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::BindResourcesPS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
-		BindResources(PS, resources, slot, count, threadID);
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindResource(PS, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BindResourcesVS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
-		BindResources(VS, resources, slot, count, threadID);
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindResource(VS, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BindResourcesGS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
-		BindResources(GS, resources, slot, count, threadID);
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindResource(GS, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BindResourcesDS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
-		BindResources(DS, resources, slot, count, threadID);
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindResource(DS, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BindResourcesHS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
-		BindResources(HS, resources, slot, count, threadID);
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindResource(HS, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BindResourcesCS(const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
-		BindResources(CS, resources, slot, count, threadID);
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindResource(CS, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(const GPUUnorderedResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -2956,14 +3113,7 @@ namespace wiGraphicsTypes
 		{
 			for (int i = 0; i < count; ++i)
 			{
-				if (resources[i] != nullptr && resources[i]->UAV_DX12 != nullptr)
-				{
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-					int offset = CS * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i;
-					dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
-					device->CopyDescriptorsSimple(1, dst, *resources[i]->UAV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				}
+				BindUnorderedAccessResourceCS(resources[i], slot + i, threadID, -1);
 			}
 		}
 	}
@@ -3072,7 +3222,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
 	{
-		D3D_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		switch (type)
 		{
 		case TRIANGLELIST:
@@ -3093,6 +3243,7 @@ namespace wiGraphicsTypes
 		default:
 			break;
 		};
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->IASetPrimitiveTopology(d3dType);
 	}
 	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 	{
@@ -3113,15 +3264,19 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawInstanced((UINT)vertexCount, 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawInstanced((UINT)vertexCount, (UINT)instanceCount, startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3131,6 +3286,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3218,28 +3374,27 @@ namespace wiGraphicsTypes
 
 
 
-
-	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		if (resources != nullptr)
-		{
-			for (int i = 0; i < count; ++i)
-			{
-				if (resources[i] != nullptr && resources[i]->SRV_DX12 != nullptr)
-				{
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-					int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot + i;
-					dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
-					device->CopyDescriptorsSimple(1, dst, *resources[i]->SRV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				}
-			}
-		}
-	}
 	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (resource != nullptr)
+		if (resource != nullptr && resource->resource_DX12 != nullptr)
 		{
+			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(resource->resourceState[threadID]);
+			D3D12_RESOURCE_STATES requiredState = stage == PS ? D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+			if (currentState != requiredState)
+			{
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = resource->resource_DX12;
+				barrier.Transition.StateBefore = currentState;
+				barrier.Transition.StateAfter = requiredState;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+
+				const_cast<GPUResource*>(resource)->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+			}
+
+
 			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
 			int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot;
 			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));

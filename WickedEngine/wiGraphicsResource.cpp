@@ -73,6 +73,12 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(SRV_DX11);
 		SAFE_INIT(SRV_DX12);
+		SAFE_INIT(resource_DX12);
+
+		for (int i = 0; i < ARRAYSIZE(resourceState); ++i)
+		{
+			resourceState[i] = RESOURCE_STATE_COMMON;
+		}
 	}
 	GPUResource::~GPUResource()
 	{
@@ -87,6 +93,8 @@ namespace wiGraphicsTypes
 		{
 			SAFE_DELETE(x);
 		}
+
+		SAFE_RELEASE(resource_DX12);
 	}
 
 	GPUUnorderedResource::GPUUnorderedResource()
@@ -112,12 +120,10 @@ namespace wiGraphicsTypes
 	GPUBuffer::GPUBuffer() : GPUResource(), GPUUnorderedResource()
 	{
 		SAFE_INIT(resource_DX11);
-		SAFE_INIT(resource_DX12);
 	}
 	GPUBuffer::~GPUBuffer()
 	{
 		SAFE_RELEASE(resource_DX11);
-		SAFE_RELEASE(resource_DX12);
 	}
 
 	VertexLayout::VertexLayout()
@@ -208,18 +214,15 @@ namespace wiGraphicsTypes
 	Texture1D::Texture1D() :Texture()
 	{
 		SAFE_INIT(texture1D_DX11);
-		SAFE_INIT(texture1D_DX12);
 	}
 	Texture1D::~Texture1D()
 	{
 		SAFE_RELEASE(texture1D_DX11);
-		SAFE_RELEASE(texture1D_DX12);
 	}
 
 	Texture2D::Texture2D() :Texture()
 	{
 		SAFE_INIT(texture2D_DX11);
-		SAFE_INIT(texture2D_DX12);
 		SAFE_INIT(DSV_DX11);
 		SAFE_INIT(DSV_DX12);
 	}
@@ -232,7 +235,6 @@ namespace wiGraphicsTypes
 			SAFE_RELEASE(x);
 		}
 
-		SAFE_RELEASE(texture2D_DX12);
 		SAFE_DELETE(DSV_DX12);
 		for (auto& x : additionalDSVs_DX12)
 		{
@@ -243,12 +245,10 @@ namespace wiGraphicsTypes
 	Texture3D::Texture3D() :Texture()
 	{
 		SAFE_INIT(texture3D_DX11);
-		SAFE_INIT(texture3D_DX12);
 	}
 	Texture3D::~Texture3D()
 	{
 		SAFE_RELEASE(texture3D_DX11);
-		SAFE_RELEASE(texture3D_DX12);
 	}
 
 	GPUQuery::GPUQuery()

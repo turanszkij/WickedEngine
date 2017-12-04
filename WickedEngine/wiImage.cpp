@@ -155,6 +155,11 @@ void wiImage::LoadShaders()
 			desc.numRTs = 1;
 			desc.RTFormats[0] = wiRenderer::RTFormat_ssao;
 		}
+		else if (i == POSTPROCESS_LINEARDEPTH)
+		{
+			desc.numRTs = 1;
+			desc.RTFormats[0] = wiRenderer::RTFormat_lineardepth;
+		}
 		else
 		{
 			desc.numRTs = 1;
@@ -311,43 +316,9 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 	bool fullScreenEffect = false;
 
-	//device->BindVertexLayout(nullptr, threadID);
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
-	//device->BindRasterizerState(rasterizerState, threadID);
 
 	device->BindResourcePS(texture, TEXSLOT_ONDEMAND0, threadID);
-
-	//if (effects.blendFlag == BLENDMODE_ALPHA)
-	//	device->BindBlendState(blendStateAlpha, threadID);
-	//else if (effects.blendFlag == BLENDMODE_PREMULTIPLIED)
-	//	device->BindBlendState(blendStatePremul, threadID);
-	//else if (effects.blendFlag == BLENDMODE_ADDITIVE)
-	//	device->BindBlendState(blendStateAdd, threadID);
-	//else if (effects.blendFlag == BLENDMODE_OPAQUE)
-	//	device->BindBlendState(blendStateOpaque, threadID);
-	//else
-	//	device->BindBlendState(blendStateAlpha, threadID);
-
-
-	//{
-	//	switch (effects.stencilComp)
-	//	{
-	//	case COMPARISON_LESS:
-	//	case COMPARISON_LESS_EQUAL:
-	//		device->BindDepthStencilState(depthStencilStateLess, effects.stencilRef, threadID);
-	//		break;
-	//	case COMPARISON_GREATER:
-	//	case COMPARISON_GREATER_EQUAL:
-	//		device->BindDepthStencilState(depthStencilStateGreater, effects.stencilRef, threadID);
-	//		break;
-	//	case COMPARISON_EQUAL:
-	//		device->BindDepthStencilState(depthStencilStateEqual, effects.stencilRef, threadID);
-	//		break;
-	//	default:
-	//		device->BindDepthStencilState(depthNoStencilState, effects.stencilRef, threadID);
-	//		break;
-	//	}
-	//}
 
 	device->BindStencilRef(effects.stencilRef, threadID);
 
@@ -381,8 +352,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 	if (effects.presentFullScreen)
 	{
-		//device->BindVS(screenVS, threadID);
-		//device->BindPS(screenPS, threadID);
 		device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][effects.blendFlag][effects.stencilComp], threadID);
 		device->Draw(3, 0, threadID);
 		device->EventEnd(threadID);
@@ -450,8 +419,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 			device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
-			//device->BindVS(vertexShader, threadID);
-
 			// Determine relevant image rendering pixel shader:
 			IMAGE_SHADER targetShader;
 			bool NormalmapSeparate = effects.extractNormalMap;
@@ -459,7 +426,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			bool Distort = effects.distortionMap != nullptr;
 			if (NormalmapSeparate)
 			{
-				//device->BindPS(imagePS_separatenormalmap, threadID);
 				targetShader = IMAGE_SHADER_SEPARATENORMALMAP;
 			}
 			else
@@ -468,23 +434,19 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				{
 					if (Distort)
 					{
-						//device->BindPS(imagePS_distortion_masked, threadID);
 						targetShader = IMAGE_SHADER_DISTORTION_MASKED;
 					}
 					else
 					{
-						//device->BindPS(imagePS_masked, threadID);
 						targetShader = IMAGE_SHADER_MASKED;
 					}
 				}
 				else if(Distort)
 				{
-					//device->BindPS(imagePS_distortion, threadID);
 					targetShader = IMAGE_SHADER_DISTORTION;
 				}
 				else
 				{
-					//device->BindPS(imagePS, threadID);
 					targetShader = IMAGE_SHADER_STANDARD;
 				}
 			}
@@ -497,70 +459,69 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		{
 			PostProcessCB prcb;
 
-			//device->BindVS(screenVS, threadID);
 			fullScreenEffect = true;
 
 			POSTPROCESS targetShader;
 
-			if (effects.process.outline) {
-				//device->BindPS(outlinePS, threadID);
+			if (effects.process.outline) 
+			{
 				targetShader = POSTPROCESS_OUTLINE;
 
 				prcb.params0[1] = effects.process.outline ? 1.0f : 0.0f;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
-			else if (effects.process.motionBlur) {
-				//device->BindPS(motionBlurPS, threadID);
+			else if (effects.process.motionBlur) 
+			{
 				targetShader = POSTPROCESS_MOTIONBLUR;
 
 				prcb.params0[0] = effects.process.motionBlur ? 1.0f : 0.0f;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
-			else if (effects.process.dofStrength) {
-				//device->BindPS(dofPS, threadID);
+			else if (effects.process.dofStrength) 
+			{
 				targetShader = POSTPROCESS_DEPTHOFFIELD;
 
 				prcb.params0[2] = effects.process.dofStrength;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
-			else if (effects.process.fxaa) {
-				//device->BindPS(fxaaPS, threadID);
+			else if (effects.process.fxaa) 
+			{
 				targetShader = POSTPROCESS_FXAA;
 			}
-			else if (effects.process.ssao) {
-				//device->BindPS(ssaoPS, threadID);
+			else if (effects.process.ssao) 
+			{
 				targetShader = POSTPROCESS_SSAO;
 			}
-			else if (effects.process.linDepth) {
-				//device->BindPS(linDepthPS, threadID);
+			else if (effects.process.linDepth) 
+			{
 				targetShader = POSTPROCESS_LINEARDEPTH;
 			}
-			else if (effects.process.colorGrade) {
-				//device->BindPS(colorGradePS, threadID);
+			else if (effects.process.colorGrade)
+			{
 				targetShader = POSTPROCESS_COLORGRADE;
 			}
-			else if (effects.process.ssr) {
-				//device->BindPS(ssrPS, threadID);
+			else if (effects.process.ssr) 
+			{
 				targetShader = POSTPROCESS_SSR;
 			}
-			else if (effects.process.stereogram) {
-				//device->BindPS(stereogramPS, threadID);
+			else if (effects.process.stereogram) 
+			{
 				targetShader = POSTPROCESS_STEREOGRAM;
 			}
-			else if (effects.process.tonemap) {
-				//device->BindPS(tonemapPS, threadID);
+			else if (effects.process.tonemap) 
+			{
 				targetShader = POSTPROCESS_TONEMAP;
 			}
-			else if (effects.process.ssss.x + effects.process.ssss.y > 0) {
-				//device->BindPS(ssssPS, threadID);
+			else if (effects.process.ssss.x + effects.process.ssss.y > 0) 
+			{
 				targetShader = POSTPROCESS_SSSS;
 
 				prcb.params0[0] = effects.process.ssss.x;
 				prcb.params0[1] = effects.process.ssss.y;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
-			else if (effects.bloom.separate) {
-				//device->BindPS(bloomSeparatePS, threadID);
+			else if (effects.bloom.separate) 
+			{
 				targetShader = POSTPROCESS_BLOOMSEPARATE;
 
 				prcb.params1[0] = effects.bloom.separate ? 1.0f : 0.0f;
@@ -570,30 +531,25 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			}
 			else if (effects.process.reprojectDepthBuffer)
 			{
-				//device->BindPS(reprojectDepthBufferPS, threadID);
-				//device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
-				//device->BindBlendState(blendStateDisable, threadID);
 				targetShader = POSTPROCESS_REPROJECTDEPTHBUFFER;
 			}
 			else if (effects.process.downsampleDepthBuffer4x)
 			{
-				//device->BindPS(downsampleDepthBufferPS, threadID);
-				//device->BindDepthStencilState(depthStencilStateDepthWrite, 0, threadID);
-				//device->BindBlendState(blendStateDisable, threadID);
 				targetShader = POSTPROCESS_DOWNSAMPLEDEPTHBUFFER;
 			}
-			else if (effects.process.temporalAAResolve) {
-				//device->BindPS(temporalAAResolvePS, threadID);
+			else if (effects.process.temporalAAResolve) 
+			{
 				targetShader = POSTPROCESS_TEMPORALAA;
 			}
-			else if (effects.process.sharpen > 0) {
-				//device->BindPS(sharpenPS, threadID);
+			else if (effects.process.sharpen > 0) 
+			{
 				targetShader = POSTPROCESS_SHARPEN;
 
 				prcb.params0[0] = effects.process.sharpen;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
-			else {
+			else 
+			{
 				assert(0); // not impl
 			}
 
@@ -603,8 +559,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		{
 			PostProcessCB prcb;
 
-			//device->BindVS(screenVS,threadID);
-			//device->BindPS(shaftPS,threadID);
 			fullScreenEffect = true;
 
 			//Density|Weight|Decay|Exposure
@@ -627,16 +581,15 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	{
 		PostProcessCB prcb;
 
-		//device->BindVS(screenVS,threadID);
 		fullScreenEffect = true;
 		
-		if(effects.blurDir==0){
-			//device->BindPS(blurHPS,threadID);
+		if(effects.blurDir==0)
+		{
 			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_H], threadID);
 			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().x;
 		}
-		else{
-			//device->BindPS(blurVPS,threadID);
+		else
+		{
 			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_V], threadID);
 			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().y;
 		}

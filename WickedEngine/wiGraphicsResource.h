@@ -153,6 +153,9 @@ namespace wiGraphicsTypes
 		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
 		D3D12_CPU_DESCRIPTOR_HANDLE*				SRV_DX12;					// main resource SRV
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalSRVs_DX12;		// can be used for sub-resources if requested
+		ID3D12Resource*								resource_DX12;
+
+		RESOURCE_STATES	resourceState[10];
 
 	protected:
 		GPUResource();
@@ -180,7 +183,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11Buffer*								resource_DX11;
-		ID3D12Resource*								resource_DX12;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				CBV_DX12;
 		GPUBufferDesc desc;
 	public:
@@ -309,7 +311,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11Texture1D*			texture1D_DX11;
-		ID3D12Resource*				texture1D_DX12;
 
 		Texture1DDesc				desc;
 	public:
@@ -329,7 +330,6 @@ namespace wiGraphicsTypes
 		D3D12_CPU_DESCRIPTOR_HANDLE*				DSV_DX12;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalDSVs_DX12;
 		ID3D11Texture2D*							texture2D_DX11;
-		ID3D12Resource*								texture2D_DX12;
 
 		Texture2DDesc								desc;
 	public:
@@ -345,7 +345,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 	private:
 		ID3D11Texture3D*			texture3D_DX11;
-		ID3D12Resource*				texture3D_DX12;
 
 		Texture3DDesc				desc;
 	public:
@@ -363,7 +362,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
 	private:
-		std::vector<ID3D11Query*>		resource_DX11;
+		std::vector<ID3D11Query*>	resource_DX11;
 		std::vector<int>			active;
 		GPUQueryDesc				desc;
 		int							async_frameshift;
