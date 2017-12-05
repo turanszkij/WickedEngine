@@ -59,7 +59,7 @@ void DeferredRenderableComponent::ResizeBuffers()
 
 	rtDeferred.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 	rtLight.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, wiRenderer::RTFormat_deferred_lightbuffer); // diffuse
@@ -67,10 +67,10 @@ void DeferredRenderableComponent::ResizeBuffers()
 
 	rtSSS[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 	rtSSS[1].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 }
 
 void DeferredRenderableComponent::Initialize()

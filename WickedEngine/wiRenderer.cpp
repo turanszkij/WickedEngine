@@ -1556,7 +1556,7 @@ void wiRenderer::LoadShaders()
 									{
 									case SHADERTYPE_TEXTURE:
 										desc.numRTs = 1;
-										desc.RTFormats[0] = RTFormat_forward;
+										desc.RTFormats[0] = RTFormat_hdr;
 										desc.DSFormat = DSFormat_full;
 										break;
 									case SHADERTYPE_DEFERRED:
@@ -1569,13 +1569,13 @@ void wiRenderer::LoadShaders()
 										break;
 									case SHADERTYPE_FORWARD:
 										desc.numRTs = 2;
-										desc.RTFormats[0] = RTFormat_forward;
+										desc.RTFormats[0] = RTFormat_hdr;
 										desc.RTFormats[1] = RTFormat_gbuffer_1;
 										desc.DSFormat = DSFormat_full;
 										break;
 									case SHADERTYPE_TILEDFORWARD:
 										desc.numRTs = 2;
-										desc.RTFormats[0] = RTFormat_forward;
+										desc.RTFormats[0] = RTFormat_hdr;
 										desc.RTFormats[1] = RTFormat_gbuffer_1;
 										desc.DSFormat = DSFormat_full;
 										break;
@@ -1630,7 +1630,7 @@ void wiRenderer::LoadShaders()
 		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
 		desc.numRTs = 2;
-		desc.RTFormats[0] = RTFormat_forward;
+		desc.RTFormats[0] = RTFormat_hdr;
 		desc.RTFormats[1] = RTFormat_gbuffer_1;
 		desc.DSFormat = DSFormat_full;
 
@@ -1652,7 +1652,7 @@ void wiRenderer::LoadShaders()
 		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
 		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_forward;
+		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
 		PSO_object_wire = new GraphicsPSO;
@@ -1718,13 +1718,13 @@ void wiRenderer::LoadShaders()
 		case SHADERTYPE_FORWARD:
 			realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
 			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[0] = RTFormat_hdr;
 			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
 		case SHADERTYPE_TILEDFORWARD:
 			realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
 			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[0] = RTFormat_hdr;
 			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
 		case SHADERTYPE_DEPTHONLY:
@@ -1733,7 +1733,7 @@ void wiRenderer::LoadShaders()
 		default:
 			realPS = PSTYPE_OBJECT_TEXTUREONLY;
 			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[0] = RTFormat_hdr;
 			break;
 		}
 		desc.DSFormat = DSFormat_full;
@@ -1868,7 +1868,7 @@ void wiRenderer::LoadShaders()
 		}
 
 		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_temp_hdr;
+		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
 		PSO_volumelight[type] = new GraphicsPSO;
@@ -1903,7 +1903,7 @@ void wiRenderer::LoadShaders()
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SKY];
 			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[0] = RTFormat_hdr;
 			desc.RTFormats[0] = RTFormat_gbuffer_1;
 			desc.DSFormat = DSFormat_full;
 			break;
@@ -1912,7 +1912,7 @@ void wiRenderer::LoadShaders()
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SUN];
 			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE:
@@ -1921,7 +1921,7 @@ void wiRenderer::LoadShaders()
 			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY];
 			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
 			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_forward;
+			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = DSFormat_small;
 			break;
 		}
@@ -2029,7 +2029,7 @@ void wiRenderer::LoadShaders()
 		}
 
 		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_temp_hdr;
+		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
 		PSO_debug[debug] = new GraphicsPSO;

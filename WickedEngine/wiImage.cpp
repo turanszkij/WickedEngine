@@ -25,7 +25,7 @@ DepthStencilState	wiImage::depthStencilStates[STENCILMODE_COUNT];
 BlendState			wiImage::blendStateDisableColor;
 DepthStencilState	wiImage::depthStencilStateDepthWrite;
 
-GraphicsPSO			wiImage::imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT];
+GraphicsPSO			wiImage::imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT];
 GraphicsPSO			wiImage::postprocessPSO[POSTPROCESS_COUNT];
 GraphicsPSO			wiImage::deferredPSO;
 
@@ -122,9 +122,12 @@ void wiImage::LoadShaders()
 				}
 
 				desc.numRTs = 1;
-				desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
 
-				device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k]);
+				desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+				device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][0]);
+
+				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+				device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][1]);
 			}
 		}
 	}
@@ -160,10 +163,21 @@ void wiImage::LoadShaders()
 			desc.numRTs = 1;
 			desc.RTFormats[0] = wiRenderer::RTFormat_lineardepth;
 		}
+		else if (i == POSTPROCESS_TONEMAP)
+		{
+			desc.numRTs = 1;
+			desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+		}
+		else if (i == POSTPROCESS_BLOOMSEPARATE || i == POSTPROCESS_BLUR_H || POSTPROCESS_BLUR_V)
+		{
+			// todo: bloom and DoF blur should really be HDR lol...
+			desc.numRTs = 1;
+			desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+		}
 		else
 		{
 			desc.numRTs = 1;
-			desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
+			desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 		}
 		
 		device->CreateGraphicsPSO(&desc, &postprocessPSO[i]);
@@ -176,7 +190,7 @@ void wiImage::LoadShaders()
 	desc.dss = &depthStencilStates[STENCILMODE_LESS];
 	desc.rs = &rasterizerState;
 	desc.numRTs = 1;
-	desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
+	desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 	desc.DSFormat = wiRenderer::DSFormat_full;
 	device->CreateGraphicsPSO(&desc, &deferredPSO);
 
@@ -352,7 +366,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 	if (effects.presentFullScreen)
 	{
-		device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][effects.blendFlag][effects.stencilComp], threadID);
+		device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][effects.blendFlag][effects.stencilComp][effects.hdr], threadID);
 		device->Draw(3, 0, threadID);
 		device->EventEnd(threadID);
 		return;
@@ -451,7 +465,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				}
 			}
 
-			device->BindGraphicsPSO(&imagePSO[targetShader][effects.blendFlag][effects.stencilComp], threadID);
+			device->BindGraphicsPSO(&imagePSO[targetShader][effects.blendFlag][effects.stencilComp][effects.hdr], threadID);
 
 			fullScreenEffect = false;
 		}

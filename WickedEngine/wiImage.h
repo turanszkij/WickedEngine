@@ -74,7 +74,13 @@ protected:
 	static wiGraphicsTypes::DepthStencilState	depthStencilStates[STENCILMODE_COUNT];
 	static wiGraphicsTypes::DepthStencilState	depthStencilStateDepthWrite;
 
-	static wiGraphicsTypes::GraphicsPSO imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT];
+	enum IMAGE_HDR
+	{
+		IMAGE_HDR_DISABLED,
+		IMAGE_HDR_ENABLED,
+		IMAGE_HDR_COUNT
+	};
+	static wiGraphicsTypes::GraphicsPSO imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT];
 	static wiGraphicsTypes::GraphicsPSO postprocessPSO[POSTPROCESS_COUNT];
 	static wiGraphicsTypes::GraphicsPSO deferredPSO;
 

@@ -62,26 +62,26 @@ void Renderable3DComponent::ResizeBuffers()
 
 	rtSSR.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 	rtMotionBlur.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 	rtLinearDepth.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, wiRenderer::RTFormat_lineardepth);
 	rtParticle.Initialize(
 		(UINT)(wiRenderer::GetInternalResolution().x*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getAlphaParticleDownSample())
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 	rtWaterRipple.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, wiRenderer::RTFormat_waterripple);
 	rtSceneCopy.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr, 8);
+		, false, wiRenderer::RTFormat_hdr, 8);
 	rtReflection.Initialize(
 		(UINT)(wiRenderer::GetInternalResolution().x * getReflectionQuality())
 		, (UINT)(wiRenderer::GetInternalResolution().y * getReflectionQuality())
-		, true, wiRenderer::RTFormat_temp_hdr);
+		, true, wiRenderer::RTFormat_hdr);
 	rtFinal[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, defaultTextureFormat);
@@ -132,10 +132,10 @@ void Renderable3DComponent::ResizeBuffers()
 
 	rtTemporalAA[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 	rtTemporalAA[1].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, wiRenderer::RTFormat_temp_hdr);
+		, false, wiRenderer::RTFormat_hdr);
 
 
 	SAFE_DELETE(smallDepth);
@@ -315,6 +315,7 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {
 	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	fx.hdr = true;
 
 	wiRenderer::GetDevice()->EventBegin("Downsample Depth Buffer", threadID);
 	{
@@ -490,6 +491,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	wiProfiler::GetInstance().BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	fx.hdr = true;
 
 	if (getBloomEnabled())
 	{
@@ -547,6 +549,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
+	fx.hdr = false;
 
 	wiRenderer::GetDevice()->EventBegin("Tone Mapping", threadID);
 	fx.blendFlag = BLENDMODE_OPAQUE;

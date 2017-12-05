@@ -552,7 +552,7 @@ void wiEmittedParticle::LoadShaders()
 		desc.rs = &rasterizerState;
 		desc.dss = &depthStencilState;
 		desc.numRTs = 1;
-		desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
+		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 		
 		device->CreateGraphicsPSO(&desc, &PSO[i]);
 	}
@@ -565,7 +565,7 @@ void wiEmittedParticle::LoadShaders()
 		desc.rs = &wireFrameRS;
 		desc.dss = &depthStencilState;
 		desc.numRTs = 1;
-		desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
+		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 
 		device->CreateGraphicsPSO(&desc, &PSO_wire);
 	}

@@ -59,6 +59,7 @@ public:
 	float rotation;
 	bool extractNormalMap;
 	float mipLevel;
+	bool hdr;
 	UINT stencilRef;
 	STENCILMODE stencilComp;
 
@@ -143,6 +144,7 @@ public:
 		blur = blurDir = fade = rotation = 0.0f;
 		opacity = 1.0f;
 		extractNormalMap = false;
+		hdr = false;
 		mipLevel = 0.f;
 		stencilRef = 0;
 		stencilComp = STENCILMODE_DISABLED;

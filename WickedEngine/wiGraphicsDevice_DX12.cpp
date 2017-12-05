@@ -1613,6 +1613,19 @@ namespace wiGraphicsTypes
 		}
 
 
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootSignature(graphicsRootSig);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootSignature(computeRootSig);
+
+
+		D3D12_RECT pRects[8];
+		for (UINT i = 0; i < 8; ++i)
+		{
+			pRects[i].bottom = INT32_MAX;
+			pRects[i].left = INT32_MIN;
+			pRects[i].right = INT32_MAX;
+			pRects[i].top = INT32_MIN;
+		}
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->RSSetScissorRects(8, pRects);
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{

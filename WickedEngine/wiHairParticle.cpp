@@ -165,12 +165,12 @@ void wiHairParticle::LoadShaders()
 			{
 			case SHADERTYPE_TEXTURE:
 				desc.numRTs = 1;
-				desc.RTFormats[0] = wiRenderer::RTFormat_forward;
+				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 				break;
 			case SHADERTYPE_FORWARD:
 			case SHADERTYPE_TILEDFORWARD:
 				desc.numRTs = 2;
-				desc.RTFormats[0] = wiRenderer::RTFormat_forward;
+				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
 				break;
 			case SHADERTYPE_DEFERRED:

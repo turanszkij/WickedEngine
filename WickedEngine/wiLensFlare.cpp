@@ -97,7 +97,7 @@ void wiLensFlare::LoadShaders(){
 	desc.dss = &depthStencilState;
 	desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_POINT;
 	desc.numRTs = 1;
-	desc.RTFormats[0] = wiRenderer::RTFormat_temp_hdr;
+	desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 	device->CreateGraphicsPSO(&desc, &PSO);
 }
 void wiLensFlare::SetUpCB()

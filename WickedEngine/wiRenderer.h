@@ -78,12 +78,11 @@ public:
 
 	static wiGraphicsTypes::GPURingBuffer		*dynamicVertexBufferPool;
 
-	static const wiGraphicsTypes::FORMAT RTFormat_forward = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_hdr = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
 	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_0 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
 	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_1 = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
 	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_2 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
 	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_3 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_temp_hdr = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
 	// NOTE: Light buffer precision seems OK when using FORMAT_R11G11B10_FLOAT format
 	// But the environmental light now also writes the AO to ALPHA so it has been changed to FORMAT_R16G16B16A16_FLOAT
 	static const wiGraphicsTypes::FORMAT RTFormat_deferred_lightbuffer = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
