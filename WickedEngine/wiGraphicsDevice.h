@@ -19,6 +19,7 @@ namespace wiGraphicsTypes
 		bool FULLSCREEN;
 		bool RESOLUTIONCHANGED;
 		static FORMAT BACKBUFFER_FORMAT;
+		static const UINT BACKBUFFER_COUNT = 2;
 		bool TESSELLATION, MULTITHREADED_RENDERING, CONSERVATIVE_RASTERIZATION, RASTERIZER_ORDERED_VIEWS, UNORDEREDACCESSTEXTURE_LOAD_EXT;
 	public:
 		GraphicsDevice() 
@@ -82,6 +83,7 @@ namespace wiGraphicsTypes
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
 		}
 		static FORMAT GetBackBufferFormat();
+		static UINT GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 
 		///////////////Thread-sensitive////////////////////////

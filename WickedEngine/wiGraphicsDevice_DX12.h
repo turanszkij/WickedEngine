@@ -35,7 +35,7 @@ namespace wiGraphicsTypes
 		ID3D12CommandQueue*			copyQueue;
 		ID3D12CommandAllocator*		copyAllocator;
 		ID3D12CommandList*			copyCommandList;
-		ID3D12Resource*				backBuffer[2];
+		ID3D12Resource*				backBuffer[BACKBUFFER_COUNT];
 		UINT						backBufferIndex;
 
 		ID3D12RootSignature*		graphicsRootSig;
@@ -48,7 +48,7 @@ namespace wiGraphicsTypes
 			UINT					maxCount;
 			UINT					itemSize;
 
-			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible, UINT maxCount);
+			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount);
 			~DescriptorAllocator();
 
 			size_t allocate();
@@ -57,9 +57,33 @@ namespace wiGraphicsTypes
 		DescriptorAllocator*		DSAllocator;
 		DescriptorAllocator*		ResourceAllocator;
 		DescriptorAllocator*		SamplerAllocator;
-		ID3D12DescriptorHeap*		ResourceDescriptorHeapGPU[GRAPHICSTHREAD_COUNT];
-		ID3D12DescriptorHeap*		SamplerDescriptorHeapGPU[GRAPHICSTHREAD_COUNT];
 
+
+		struct FrameResources
+		{
+			struct DescriptorTableRingBuffer
+			{
+				ID3D12DescriptorHeap*	heap;
+				UINT itemSize;
+				UINT itemCount;
+				UINT offset[SHADERSTAGE_COUNT];
+
+				DescriptorTableRingBuffer(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount);
+				~DescriptorTableRingBuffer();
+
+				void reset();
+				UINT64 GetGPUAddress(SHADERSTAGE stage);
+				SIZE_T GetCPUAddress(SHADERSTAGE stage, UINT offset);
+			};
+			DescriptorTableRingBuffer*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT];
+			DescriptorTableRingBuffer*		SamplerDescriptorsGPU[GRAPHICSTHREAD_COUNT];
+		};
+		FrameResources frames[BACKBUFFER_COUNT];
+		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
+
+
+		D3D12_CPU_DESCRIPTOR_HANDLE* nullSampler;
+		D3D12_CPU_DESCRIPTOR_HANDLE* nullCBV;
 		D3D12_CPU_DESCRIPTOR_HANDLE* nullSRV;
 		D3D12_CPU_DESCRIPTOR_HANDLE* nullUAV;
 

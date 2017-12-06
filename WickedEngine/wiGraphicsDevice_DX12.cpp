@@ -1152,13 +1152,13 @@ namespace wiGraphicsTypes
 
 	// Allocator heaps:
 
-	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible, UINT maxCount)
+	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 		heapDesc.NodeMask = 0;
 		heapDesc.NumDescriptors = maxCount;
 		heapDesc.Type = type;
-		heapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 		HRESULT hr = device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&heap);
 		assert(SUCCEEDED(hr));
 
@@ -1173,6 +1173,62 @@ namespace wiGraphicsTypes
 	size_t GraphicsDevice_DX12::DescriptorAllocator::allocate()
 	{
 		return heap->GetCPUDescriptorHandleForHeapStart().ptr + itemCount.fetch_add(1) * itemSize;
+	}
+
+
+
+#define GPU_RESOURCE_HEAP_CBV_COUNT		15
+#define GPU_RESOURCE_HEAP_SRV_COUNT		64
+#define GPU_RESOURCE_HEAP_UAV_COUNT		8
+#define GPU_SAMPLER_HEAP_COUNT			16
+	GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::DescriptorTableRingBuffer(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount)
+	{
+		if (type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+		{
+			itemCount = GPU_SAMPLER_HEAP_COUNT;
+		}
+		else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+		{
+			itemCount = (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT);
+		}
+		else
+		{
+			assert(0);
+		}
+
+		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+		heapDesc.NodeMask = 0;
+		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		heapDesc.Type = type;
+		heapDesc.NumDescriptors = itemCount * SHADERSTAGE_COUNT * maxRenameCount;
+		HRESULT hr = device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&heap);
+		assert(SUCCEEDED(hr));
+
+		itemSize = device->GetDescriptorHandleIncrementSize(type);
+		reset();
+	}
+	GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::~DescriptorTableRingBuffer()
+	{
+		SAFE_RELEASE(heap);
+	}
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::reset()
+	{
+		for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
+		{
+			offset[i] = 0;
+		}
+	}
+	UINT64 GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::GetGPUAddress(SHADERSTAGE stage)
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE table = heap->GetGPUDescriptorHandleForHeapStart();
+		table.ptr += stage * itemCount * itemSize;
+		return table.ptr;
+	}
+	SIZE_T GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::GetCPUAddress(SHADERSTAGE stage, UINT offset)
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE table = heap->GetCPUDescriptorHandleForHeapStart();
+		table.ptr += (stage * itemCount + offset) * itemSize;
+		return table.ptr;
 	}
 
 
@@ -1225,13 +1281,6 @@ namespace wiGraphicsTypes
 		assert(address >= dataBegin && address < dataEnd);
 		return static_cast<uint64_t>(address - dataBegin);
 	}
-
-
-#define GPU_RESOURCE_HEAP_CBV_COUNT		15
-#define GPU_RESOURCE_HEAP_SRV_COUNT		64
-#define GPU_RESOURCE_HEAP_UAV_COUNT		8
-#define GPU_RESOURCE_HEAP_COUNT			(GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT)
-#define GPU_SAMPLER_HEAP_COUNT			16
 
 	// Engine functions
 
@@ -1303,7 +1352,7 @@ namespace wiGraphicsTypes
 		sd.SampleDesc.Count = 1; // Don't use multi-sampling.
 		sd.SampleDesc.Quality = 0;
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		sd.BufferCount = 2; // Use double-buffering to minimize latency.
+		sd.BufferCount = BACKBUFFER_COUNT;
 		sd.Flags = 0;
 		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
@@ -1338,29 +1387,39 @@ namespace wiGraphicsTypes
 
 
 		// Create common descriptor heaps
-		RTAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false, 128);
-		DSAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false, 128);
-		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false, 4096);
-		SamplerAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, false, 64);
-		for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+		RTAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
+		DSAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
+		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4096);
+		SamplerAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 64);
+
+		// Create frame-resident resources:
+		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
-			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-			heapDesc.NodeMask = 0;
-			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-
-			heapDesc.NumDescriptors = GPU_RESOURCE_HEAP_COUNT * SHADERSTAGE_COUNT;
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-			HRESULT hr = device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&ResourceDescriptorHeapGPU[i]);
-			assert(SUCCEEDED(hr));
-
-			heapDesc.NumDescriptors = GPU_SAMPLER_HEAP_COUNT * SHADERSTAGE_COUNT;
-			heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-			hr = device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&SamplerDescriptorHeapGPU[i]);
-			assert(SUCCEEDED(hr));
+			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+			{
+				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+			}
 		}
 
 		// Create null resources for unbinding:
 		{
+			D3D12_SAMPLER_DESC sampler_desc = {};
+			sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+			nullSampler = new D3D12_CPU_DESCRIPTOR_HANDLE;
+			nullSampler->ptr = SamplerAllocator->allocate();
+			device->CreateSampler(&sampler_desc, *nullSampler);
+
+
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
+			nullCBV = new D3D12_CPU_DESCRIPTOR_HANDLE;
+			nullCBV->ptr = ResourceAllocator->allocate();
+			device->CreateConstantBufferView(&cbv_desc, *nullCBV);
+
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -1387,12 +1446,15 @@ namespace wiGraphicsTypes
 		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle = {};
 		renderTargetViewHandle.ptr = RTAllocator->allocate();
 
-		hr = swapChain->GetBuffer(0, __uuidof(ID3D12Resource), (void**)&backBuffer[0]);
-		device->CreateRenderTargetView(backBuffer[0], nullptr, renderTargetViewHandle);
+		for (UINT buf = 0; buf < BACKBUFFER_COUNT; ++buf)
+		{
+			hr = swapChain->GetBuffer(buf, __uuidof(ID3D12Resource), (void**)&backBuffer[buf]);
+			device->CreateRenderTargetView(backBuffer[buf], nullptr, renderTargetViewHandle);
 
-		renderTargetViewHandle.ptr = RTAllocator->allocate();
-		hr = swapChain->GetBuffer(1, __uuidof(ID3D12Resource), (void**)&backBuffer[1]);
-		device->CreateRenderTargetView(backBuffer[1], nullptr, renderTargetViewHandle);
+			renderTargetViewHandle.ptr = RTAllocator->allocate();
+			hr = swapChain->GetBuffer(buf, __uuidof(ID3D12Resource), (void**)&backBuffer[buf]);
+			device->CreateRenderTargetView(backBuffer[buf], nullptr, renderTargetViewHandle);
+		}
 
 		backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
@@ -1479,7 +1541,8 @@ namespace wiGraphicsTypes
 
 
 
-			UINT paramCount = 2 * (SHADERSTAGE_COUNT - 1); // 2: resource,sampler;   5: vs,hs,ds,gs,ps
+
+			UINT paramCount = 2 * (SHADERSTAGE_COUNT - 1); // 2: resource,sampler;   5: vs,hs,ds,gs,ps;
 			D3D12_ROOT_PARAMETER* params = new D3D12_ROOT_PARAMETER[paramCount];
 			params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 			params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
@@ -1638,14 +1701,19 @@ namespace wiGraphicsTypes
 			SAFE_RELEASE(commandFences[i]);
 			CloseHandle(commandFenceEvents[i]);
 
-			SAFE_RELEASE(ResourceDescriptorHeapGPU[i]);
-			SAFE_RELEASE(SamplerDescriptorHeapGPU[i]);
+			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			{
+				SAFE_DELETE(frames[fr].ResourceDescriptorsGPU[i]);
+				SAFE_DELETE(frames[fr].SamplerDescriptorsGPU[i]);
+			}
 		}
 
 		SAFE_RELEASE(copyQueue);
 		SAFE_RELEASE(copyAllocator);
 		SAFE_RELEASE(copyCommandList);
 
+		SAFE_DELETE(nullSampler);
+		SAFE_DELETE(nullCBV);
 		SAFE_DELETE(nullSRV);
 		SAFE_DELETE(nullUAV);
 
@@ -2757,10 +2825,7 @@ namespace wiGraphicsTypes
 		// Get the render target view handle for the current back buffer.
 		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle = RTAllocator->heap->GetCPUDescriptorHandleForHeapStart();
 		UINT renderTargetViewDescriptorSize = RTAllocator->itemSize;
-		if (backBufferIndex == 1)
-		{
-			renderTargetViewHandle.ptr += renderTargetViewDescriptorSize;
-		}
+		renderTargetViewHandle.ptr += renderTargetViewDescriptorSize * backBufferIndex;
 
 
 		// Set the back buffer as the render target.
@@ -2827,33 +2892,35 @@ namespace wiGraphicsTypes
 
 
 		ID3D12DescriptorHeap* heaps[] = {
-			ResourceDescriptorHeapGPU[GRAPHICSTHREAD_IMMEDIATE], SamplerDescriptorHeapGPU[GRAPHICSTHREAD_IMMEDIATE]
+			GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap, GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap
 		};
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
 
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootSignature(graphicsRootSig);
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootSignature(computeRootSig);
 
+		// graphics descriptor heap:
 		for (UINT shader = VS; shader < SHADERSTAGE_COUNT - 1; ++shader)
 		{
-			D3D12_GPU_DESCRIPTOR_HANDLE resource_table = ResourceDescriptorHeapGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUDescriptorHandleForHeapStart();
-			resource_table.ptr += shader * GPU_RESOURCE_HEAP_COUNT * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			D3D12_GPU_DESCRIPTOR_HANDLE resource_table;
+			resource_table.ptr = GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress((SHADERSTAGE)shader);
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootDescriptorTable(shader * 2 + 0,
 				resource_table);
 
-			D3D12_GPU_DESCRIPTOR_HANDLE sampler_table = SamplerDescriptorHeapGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUDescriptorHandleForHeapStart();
-			sampler_table.ptr += shader * GPU_SAMPLER_HEAP_COUNT * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			D3D12_GPU_DESCRIPTOR_HANDLE sampler_table;
+			sampler_table.ptr = GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress((SHADERSTAGE)shader);
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootDescriptorTable(shader * 2 + 1,
 				sampler_table);
 		}
 
-		D3D12_GPU_DESCRIPTOR_HANDLE resource_table = ResourceDescriptorHeapGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUDescriptorHandleForHeapStart();
-		resource_table.ptr += CS * GPU_RESOURCE_HEAP_COUNT * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		// compute descriptor heap:
+		D3D12_GPU_DESCRIPTOR_HANDLE resource_table;
+		resource_table.ptr = GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress(CS);
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootDescriptorTable(0,
 			resource_table);
 
-		D3D12_GPU_DESCRIPTOR_HANDLE sampler_table = SamplerDescriptorHeapGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUDescriptorHandleForHeapStart();
-		sampler_table.ptr += CS * GPU_SAMPLER_HEAP_COUNT * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		D3D12_GPU_DESCRIPTOR_HANDLE sampler_table;
+		sampler_table.ptr = GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress(CS);
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootDescriptorTable(1,
 			sampler_table);
 
@@ -3118,9 +3185,7 @@ namespace wiGraphicsTypes
 				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
 
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = CS * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+			D3D12_CPU_DESCRIPTOR_HANDLE dst = { GetFrameResources().ResourceDescriptorsGPU[threadID]->GetCPUAddress(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot) };
 
 			if (arrayIndex < 0)
 			{
@@ -3152,9 +3217,7 @@ namespace wiGraphicsTypes
 		{
 			for (int i = 0; i < num; ++i)
 			{
-				D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-				int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot + i;
-				dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				D3D12_CPU_DESCRIPTOR_HANDLE dst = { GetFrameResources().ResourceDescriptorsGPU[threadID]->GetCPUAddress((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i) };
 
 				device->CopyDescriptorsSimple(1, dst, *nullSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			}
@@ -3162,13 +3225,14 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID)
 	{
-		for (int i = 0; i < num; ++i)
+		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = CS * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+			for (int i = 0; i < num; ++i)
+			{
+				D3D12_CPU_DESCRIPTOR_HANDLE dst = { GetFrameResources().ResourceDescriptorsGPU[threadID]->GetCPUAddress((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i) };
 
-			device->CopyDescriptorsSimple(1, dst, *nullUAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				device->CopyDescriptorsSimple(1, dst, *nullUAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
 		}
 	}
 	void GraphicsDevice_DX12::BindSamplerPS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
@@ -3334,6 +3398,89 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 	{
+		//assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
+		//assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
+
+		//if (dataSize == 0)
+		//{
+		//	return;
+		//}
+
+		//dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+
+		//if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		//{
+		//	{
+		//		D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(buffer->resourceState[threadID]);
+		//		D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_COPY_DEST;
+		//		if (currentState != requiredState)
+		//		{
+		//			D3D12_RESOURCE_BARRIER barrier = {};
+		//			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		//			barrier.Transition.pResource = buffer->resource_DX12;
+		//			barrier.Transition.StateBefore = currentState;
+		//			barrier.Transition.StateAfter = requiredState;
+		//			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		//			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		//			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+
+		//			buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+		//		}
+		//	}
+
+		//	UINT count = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth) / sizeof(uint32_t);
+		//	static D3D12_WRITEBUFFERIMMEDIATE_PARAMETER params[GRAPHICSTHREAD_COUNT][128] = {};
+		//	for (UINT i = 0; i < count; ++i)
+		//	{
+		//		params[threadID][i].Dest = buffer->resource_DX12->GetGPUVirtualAddress() + i * 4;
+		//		params[threadID][i].Value = *reinterpret_cast<UINT32*>((uint8_t*)data + i * 4);
+		//	}
+		//	//static_cast<ID3D12GraphicsCommandList2*>(commandLists[threadID])->WriteBufferImmediate(count, params[threadID], nullptr);
+		//	ID3D12GraphicsCommandList1* cmd;
+		//	HRESULT hr = commandLists[threadID]->QueryInterface(__uuidof(ID3D12GraphicsCommandList1), (void**)&cmd);
+
+		//	{
+		//		D3D12_RESOURCE_STATES currentState = D3D12_RESOURCE_STATE_COPY_DEST;
+		//		D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		//		if (currentState != requiredState)
+		//		{
+		//			D3D12_RESOURCE_BARRIER barrier = {};
+		//			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		//			barrier.Transition.pResource = buffer->resource_DX12;
+		//			barrier.Transition.StateBefore = currentState;
+		//			barrier.Transition.StateAfter = requiredState;
+		//			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		//			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		//			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+
+		//			buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+		//		}
+		//	}
+		//}
+
+		//if (buffer->desc.Usage == USAGE_DYNAMIC)
+		//{
+		//	D3D12_MAPPED_SUBRESOURCE mappedResource;
+		//	HRESULT hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		//	assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
+		//	memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
+		//	deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
+		//}
+		//else if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER || dataSize < 0)
+		//{
+		//	deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, nullptr, data, 0, 0);
+		//}
+		//else
+		//{
+		//	D3D11_BOX box = {};
+		//	box.left = 0;
+		//	box.right = static_cast<UINT>(dataSize);
+		//	box.top = 0;
+		//	box.bottom = 1;
+		//	box.front = 0;
+		//	box.back = 1;
+		//	deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, &box, data, 0, 0);
+		//}
 	}
 	void* GraphicsDevice_DX12::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
 	{
@@ -3423,10 +3570,7 @@ namespace wiGraphicsTypes
 				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
 
-
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = stage * GPU_RESOURCE_HEAP_COUNT + GPU_RESOURCE_HEAP_CBV_COUNT + slot;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+			D3D12_CPU_DESCRIPTOR_HANDLE dst = { GetFrameResources().ResourceDescriptorsGPU[threadID]->GetCPUAddress(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot) };
 
 			if (arrayIndex < 0)
 			{
@@ -3446,9 +3590,7 @@ namespace wiGraphicsTypes
 	{
 		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
 		{
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = SamplerDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = stage * GPU_SAMPLER_HEAP_COUNT + slot;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER));
+			D3D12_CPU_DESCRIPTOR_HANDLE dst = { GetFrameResources().SamplerDescriptorsGPU[threadID]->GetCPUAddress(stage, slot) };
 
 			device->CopyDescriptorsSimple(1, dst, *sampler->resource_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		}
@@ -3457,9 +3599,7 @@ namespace wiGraphicsTypes
 	{
 		if (buffer != nullptr && buffer->CBV_DX12 != nullptr)
 		{
-			D3D12_CPU_DESCRIPTOR_HANDLE dst = ResourceDescriptorHeapGPU[threadID]->GetCPUDescriptorHandleForHeapStart();
-			int offset = stage * GPU_RESOURCE_HEAP_COUNT + slot;
-			dst.ptr += (SIZE_T)(offset * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+			D3D12_CPU_DESCRIPTOR_HANDLE dst = { GetFrameResources().ResourceDescriptorsGPU[threadID]->GetCPUAddress(stage, slot) };
 
 			device->CopyDescriptorsSimple(1, dst, *buffer->CBV_DX12, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		}
