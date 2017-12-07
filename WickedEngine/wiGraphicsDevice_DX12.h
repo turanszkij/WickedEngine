@@ -35,8 +35,6 @@ namespace wiGraphicsTypes
 		ID3D12CommandQueue*			copyQueue;
 		ID3D12CommandAllocator*		copyAllocator;
 		ID3D12CommandList*			copyCommandList;
-		ID3D12Resource*				backBuffer[BACKBUFFER_COUNT];
-		UINT						backBufferIndex;
 
 		ID3D12RootSignature*		graphicsRootSig;
 		ID3D12RootSignature*		computeRootSig;
@@ -61,6 +59,9 @@ namespace wiGraphicsTypes
 
 		struct FrameResources
 		{
+			ID3D12Resource*					backBuffer;
+			D3D12_CPU_DESCRIPTOR_HANDLE*	backBufferRTV;
+
 			struct DescriptorTableRingBuffer
 			{
 				ID3D12DescriptorHeap*	heap;

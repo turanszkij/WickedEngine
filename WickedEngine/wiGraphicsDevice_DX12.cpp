@@ -1392,16 +1392,6 @@ namespace wiGraphicsTypes
 		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4096);
 		SamplerAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 64);
 
-		// Create frame-resident resources:
-		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
-		{
-			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
-			{
-				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
-				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
-			}
-		}
-
 		// Create null resources for unbinding:
 		{
 			D3D12_SAMPLER_DESC sampler_desc = {};
@@ -1442,21 +1432,20 @@ namespace wiGraphicsTypes
 		uploadBuffer = new UploadBuffer(device, 64 * 1024 * 1024);
 
 
-		// Create render target for backbuffer
-		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle = {};
-		renderTargetViewHandle.ptr = RTAllocator->allocate();
-
-		for (UINT buf = 0; buf < BACKBUFFER_COUNT; ++buf)
+		// Create frame-resident resources:
+		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
-			hr = swapChain->GetBuffer(buf, __uuidof(ID3D12Resource), (void**)&backBuffer[buf]);
-			device->CreateRenderTargetView(backBuffer[buf], nullptr, renderTargetViewHandle);
+			hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
+			frames[fr].backBufferRTV = new D3D12_CPU_DESCRIPTOR_HANDLE;
+			frames[fr].backBufferRTV->ptr = RTAllocator->allocate(); 
+			device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, *frames[fr].backBufferRTV);
 
-			renderTargetViewHandle.ptr = RTAllocator->allocate();
-			hr = swapChain->GetBuffer(buf, __uuidof(ID3D12Resource), (void**)&backBuffer[buf]);
-			device->CreateRenderTargetView(backBuffer[buf], nullptr, renderTargetViewHandle);
+			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+			{
+				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+			}
 		}
-
-		backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
 
 		//Create command lists
@@ -1694,18 +1683,24 @@ namespace wiGraphicsTypes
 	{
 		SAFE_RELEASE(swapChain);
 
+		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+		{
+			SAFE_RELEASE(frames[fr].backBuffer);
+			SAFE_DELETE(frames[fr].backBufferRTV);
+
+			for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
+			{
+				SAFE_DELETE(frames[fr].ResourceDescriptorsGPU[i]);
+				SAFE_DELETE(frames[fr].SamplerDescriptorsGPU[i]);
+			}
+		}
+
 		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
 		{
 			SAFE_RELEASE(commandLists[i]);
 			SAFE_RELEASE(commandAllocators[i]);
 			SAFE_RELEASE(commandFences[i]);
 			CloseHandle(commandFenceEvents[i]);
-
-			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
-			{
-				SAFE_DELETE(frames[fr].ResourceDescriptorsGPU[i]);
-				SAFE_DELETE(frames[fr].SamplerDescriptorsGPU[i]);
-			}
 		}
 
 		SAFE_RELEASE(copyQueue);
@@ -1716,11 +1711,6 @@ namespace wiGraphicsTypes
 		SAFE_DELETE(nullCBV);
 		SAFE_DELETE(nullSRV);
 		SAFE_DELETE(nullUAV);
-
-		for (int i = 0; i < ARRAYSIZE(backBuffer); ++i)
-		{
-			SAFE_RELEASE(backBuffer[i]);
-		}
 
 		SAFE_RELEASE(graphicsRootSig);
 		SAFE_RELEASE(computeRootSig);
@@ -1747,11 +1737,9 @@ namespace wiGraphicsTypes
 
 	Texture2D GraphicsDevice_DX12::GetBackBuffer()
 	{
-		uint64_t resourceIdx = FRAMECOUNT % ARRAYSIZE(backBuffer);
-
 		Texture2D result;
-		result.resource_DX12 = backBuffer[resourceIdx];
-		backBuffer[resourceIdx]->AddRef();
+		result.resource_DX12 = GetFrameResources().backBuffer;
+		GetFrameResources().backBuffer->AddRef();
 		return result;
 	}
 
@@ -2813,7 +2801,7 @@ namespace wiGraphicsTypes
 		// Start by setting the resource barrier.
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = backBuffer[backBufferIndex];
+		barrier.Transition.pResource = GetFrameResources().backBuffer;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -2821,15 +2809,8 @@ namespace wiGraphicsTypes
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
 
 
-
-		// Get the render target view handle for the current back buffer.
-		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetViewHandle = RTAllocator->heap->GetCPUDescriptorHandleForHeapStart();
-		UINT renderTargetViewDescriptorSize = RTAllocator->itemSize;
-		renderTargetViewHandle.ptr += renderTargetViewDescriptorSize * backBufferIndex;
-
-
 		// Set the back buffer as the render target.
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->OMSetRenderTargets(1, &renderTargetViewHandle, FALSE, NULL);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->OMSetRenderTargets(1, GetFrameResources().backBufferRTV, FALSE, NULL);
 
 
 		// Then set the color to clear the window to.
@@ -2838,7 +2819,7 @@ namespace wiGraphicsTypes
 		color[1] = 0.5;
 		color[2] = 0.5;
 		color[3] = 1.0;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ClearRenderTargetView(renderTargetViewHandle, color, 0, NULL);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ClearRenderTargetView(*GetFrameResources().backBufferRTV, color, 0, NULL);
 
 
 	}
@@ -2850,7 +2831,7 @@ namespace wiGraphicsTypes
 		// Indicate that the back buffer will now be used to present.
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = backBuffer[backBufferIndex];
+		barrier.Transition.pResource = GetFrameResources().backBuffer;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -2878,9 +2859,6 @@ namespace wiGraphicsTypes
 			result = commandFences[GRAPHICSTHREAD_IMMEDIATE]->SetEventOnCompletion(fenceToWaitFor, commandFenceEvents[GRAPHICSTHREAD_IMMEDIATE]);
 			WaitForSingleObject(commandFenceEvents[GRAPHICSTHREAD_IMMEDIATE], INFINITE);
 		}
-
-		// Alternate the back buffer index back and forth between 0 and 1 each frame.
-		backBufferIndex == 0 ? backBufferIndex = 1 : backBufferIndex = 0;
 
 
 
