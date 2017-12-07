@@ -64,17 +64,20 @@ namespace wiGraphicsTypes
 
 			struct DescriptorTableRingBuffer
 			{
-				ID3D12DescriptorHeap*	heap;
+				ID3D12DescriptorHeap*	heap_CPU;
+				ID3D12DescriptorHeap*	heap_GPU;
+				UINT descriptorType;
 				UINT itemSize;
 				UINT itemCount;
-				UINT offset[SHADERSTAGE_COUNT];
+				UINT ringOffset[SHADERSTAGE_COUNT];
+				bool dirty[SHADERSTAGE_COUNT];
 
 				DescriptorTableRingBuffer(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount);
 				~DescriptorTableRingBuffer();
 
 				void reset();
+				void update(SHADERSTAGE stage, UINT slot, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
 				UINT64 GetGPUAddress(SHADERSTAGE stage);
-				SIZE_T GetCPUAddress(SHADERSTAGE stage, UINT offset);
 			};
 			DescriptorTableRingBuffer*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT];
 			DescriptorTableRingBuffer*		SamplerDescriptorsGPU[GRAPHICSTHREAD_COUNT];
