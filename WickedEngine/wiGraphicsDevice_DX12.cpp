@@ -1181,7 +1181,7 @@ namespace wiGraphicsTypes
 #define GPU_RESOURCE_HEAP_SRV_COUNT		64
 #define GPU_RESOURCE_HEAP_UAV_COUNT		8
 #define GPU_SAMPLER_HEAP_COUNT			16
-	GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::DescriptorTableRingBuffer(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount)
+	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount)
 	{
 		if (type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
 		{
@@ -1212,12 +1212,12 @@ namespace wiGraphicsTypes
 		descriptorType = type;
 		itemSize = device->GetDescriptorHandleIncrementSize(type);
 	}
-	GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::~DescriptorTableRingBuffer()
+	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
 	{
 		SAFE_RELEASE(heap_CPU);
 		SAFE_RELEASE(heap_GPU);
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
@@ -1276,8 +1276,8 @@ namespace wiGraphicsTypes
 
 
 			// bind the starting descriptor tables to the root signature
-			D3D12_GPU_DESCRIPTOR_HANDLE table;
-			table.ptr = GetGPUAddress((SHADERSTAGE)stage);
+			D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
+			table.ptr += ringOffset[stage] + stage * itemCount * itemSize;
 
 			if (stage == CS)
 			{
@@ -1308,7 +1308,7 @@ namespace wiGraphicsTypes
 
 		}
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::update(SHADERSTAGE stage, UINT offset, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 	{
 		if (descriptor == nullptr)
 		{
@@ -1317,7 +1317,7 @@ namespace wiGraphicsTypes
 
 		if (dirty[stage])
 		{
-			// allocate from ringbuffer
+			// allocate from continuous buffer
 			ringOffset[stage] += itemCount*itemSize;
 
 			// copy prev table contents to new dest
@@ -1327,26 +1327,34 @@ namespace wiGraphicsTypes
 			device->CopyDescriptorsSimple(itemCount, dst, src, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 
 			// bind table to root sig
-			D3D12_GPU_DESCRIPTOR_HANDLE bind_table;
-			bind_table.ptr = GetGPUAddress(stage);
+			D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
+			table.ptr += ringOffset[stage] + stage * itemCount * itemSize;
 
 			if (stage == CS)
 			{
-				UINT rootOffset = 0;
-				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+				// compute descriptor heap:
+
+				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
 				{
-					rootOffset += 1;
+					commandList->SetComputeRootDescriptorTable(0, table);
 				}
-				commandList->SetComputeRootDescriptorTable(rootOffset, bind_table);
+				else
+				{
+					commandList->SetComputeRootDescriptorTable(1, table);
+				}
 			}
 			else
 			{
-				UINT rootOffset = stage * 2;
-				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
+				// graphics descriptor heap:
+
+				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
 				{
-					rootOffset += 1;
+					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 0, table);
 				}
-				commandList->SetGraphicsRootDescriptorTable(rootOffset, bind_table);
+				else
+				{
+					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 1, table);
+				}
 			}
 			
 			dirty[stage] = false;
@@ -1360,22 +1368,62 @@ namespace wiGraphicsTypes
 		device->CopyDescriptorsSimple(1, dst_staging, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 		device->CopyDescriptorsSimple(1, dst_gpu, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::invalidateForGraphics()
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::invalidateForGraphics()
 	{
 		for (int stage = VS; stage < SHADERSTAGE_COUNT - 1; ++stage)
 		{
 			dirty[stage] = true;
 		}
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::invalidateForCompute()
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::invalidateForCompute()
 	{
 		dirty[CS] = true;
 	}
-	UINT64 GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::GetGPUAddress(SHADERSTAGE stage)
+
+
+	GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::ResourceFrameAllocator(ID3D12Device* device, size_t size)
 	{
-		D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
-		table.ptr += ringOffset[stage] + stage * itemCount * itemSize;
-		return table.ptr;
+		HRESULT hr = device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(size),
+			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+			__uuidof(ID3D12Resource), (void**)&resource);
+
+		assert(SUCCEEDED(hr));
+
+		void* pData;
+		//
+		// No CPU reads will be done from the resource.
+		//
+		CD3DX12_RANGE readRange(0, 0);
+		resource->Map(0, &readRange, &pData);
+		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		dataEnd = dataBegin + size;
+	}
+	GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::~ResourceFrameAllocator()
+	{
+		SAFE_RELEASE(resource);
+	}
+	uint8_t* GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
+	{
+		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
+		assert(dataCur + dataSize <= dataEnd);
+
+		uint8_t* retVal = dataCur;
+
+		dataCur += dataSize;
+
+		return retVal;
+	}
+	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::clear()
+	{
+		dataCur = dataBegin;
+	}
+	uint64_t GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::calculateOffset(uint8_t* address)
+	{
+		assert(address >= dataBegin && address < dataEnd);
+		return static_cast<uint64_t>(address - dataBegin);
 	}
 
 
@@ -1589,8 +1637,9 @@ namespace wiGraphicsTypes
 
 			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 			{
-				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
-				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableRingBuffer(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
 			}
 		}
 
@@ -1849,6 +1898,7 @@ namespace wiGraphicsTypes
 			{
 				SAFE_DELETE(frames[fr].ResourceDescriptorsGPU[i]);
 				SAFE_DELETE(frames[fr].SamplerDescriptorsGPU[i]);
+				SAFE_DELETE(frames[fr].resourceBuffer[i]);
 			}
 		}
 
@@ -1906,7 +1956,7 @@ namespace wiGraphicsTypes
 
 		ppBuffer->desc = *pDesc;
 
-		uint32_t alignment = 1;
+		uint32_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
 		{
 			alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
@@ -2972,9 +3022,9 @@ namespace wiGraphicsTypes
 
 		// Then set the color to clear the window to.
 		float color[4];
-		color[0] = 0.5;
-		color[1] = 0.5;
-		color[2] = 0.5;
+		color[0] = 0.0;
+		color[1] = 0.0;
+		color[2] = 0.0;
 		color[3] = 1.0;
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ClearRenderTargetView(*GetFrameResources().backBufferRTV, color, 0, NULL);
 
@@ -3041,6 +3091,7 @@ namespace wiGraphicsTypes
 		};
 		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
 		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+		GetFrameResources().resourceBuffer[GRAPHICSTHREAD_IMMEDIATE]->clear();
 
 
 		D3D12_RECT pRects[8];
@@ -3353,7 +3404,7 @@ namespace wiGraphicsTypes
 
 				//device->CopyDescriptorsSimple(1, dst, *nullSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i,
+				GetFrameResources().ResourceDescriptorsGPU[threadID]->update((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i,
 					nullSRV, device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
 			}
 		}
@@ -3553,15 +3604,52 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 	{
-		//assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
-		//assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
+		assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
+		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 
-		//if (dataSize == 0)
-		//{
-		//	return;
-		//}
+		if (dataSize == 0)
+		{
+			return;
+		}
 
-		//dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+		dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
+
+		size_t alignment = buffer->desc.BindFlags & BIND_CONSTANT_BUFFER ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+
+		D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(buffer->resourceState[threadID]);
+		D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_COPY_DEST;
+		if (currentState != requiredState)
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = buffer->resource_DX12;
+			barrier.Transition.StateBefore = currentState;
+			barrier.Transition.StateAfter = requiredState;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+		}
+
+		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		memcpy(dest, data, dataSize);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->CopyBufferRegion(
+			buffer->resource_DX12, 0, 
+			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest), 
+			dataSize
+		);
+
+
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = buffer->resource_DX12;
+			barrier.Transition.StateBefore = requiredState;
+			barrier.Transition.StateAfter = currentState;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+		}
 
 		//if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		//{
