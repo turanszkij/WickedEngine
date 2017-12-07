@@ -75,8 +75,10 @@ namespace wiGraphicsTypes
 				DescriptorTableRingBuffer(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount);
 				~DescriptorTableRingBuffer();
 
-				void reset();
+				void reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV);
 				void update(SHADERSTAGE stage, UINT slot, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
+				void invalidateForGraphics();
+				void invalidateForCompute();
 				UINT64 GetGPUAddress(SHADERSTAGE stage);
 			};
 			DescriptorTableRingBuffer*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT];

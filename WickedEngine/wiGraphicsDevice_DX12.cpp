@@ -1211,19 +1211,101 @@ namespace wiGraphicsTypes
 
 		descriptorType = type;
 		itemSize = device->GetDescriptorHandleIncrementSize(type);
-		reset();
 	}
 	GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::~DescriptorTableRingBuffer()
 	{
 		SAFE_RELEASE(heap_CPU);
 		SAFE_RELEASE(heap_GPU);
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::reset()
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
 	{
-		for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
+		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
-			ringOffset[i] = 0;
-			dirty[i] = false;
+			ringOffset[stage] = 0;
+			dirty[stage] = false;
+
+			// Fill staging and starting gpu-visible tables with null descriptors (TODO make nicer and reduce copy ops):
+			if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+			{
+				for (int slot = 0; slot < GPU_RESOURCE_HEAP_CBV_COUNT; ++slot)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_staging = heap_CPU->GetCPUDescriptorHandleForHeapStart();
+					dst_staging.ptr += (stage * itemCount + slot) * itemSize;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_gpu = heap_GPU->GetCPUDescriptorHandleForHeapStart();
+					dst_gpu.ptr += ringOffset[stage] + (stage * itemCount + slot) * itemSize;
+
+					device->CopyDescriptorsSimple(1, dst_staging, nullDescriptorsSamplerCBVSRVUAV[1], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+					device->CopyDescriptorsSimple(1, dst_gpu, nullDescriptorsSamplerCBVSRVUAV[1], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+				}
+				for (int slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_staging = heap_CPU->GetCPUDescriptorHandleForHeapStart();
+					dst_staging.ptr += (stage * itemCount + GPU_RESOURCE_HEAP_CBV_COUNT + slot) * itemSize;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_gpu = heap_GPU->GetCPUDescriptorHandleForHeapStart();
+					dst_gpu.ptr += ringOffset[stage] + (stage * itemCount + GPU_RESOURCE_HEAP_CBV_COUNT + slot) * itemSize;
+
+					device->CopyDescriptorsSimple(1, dst_staging, nullDescriptorsSamplerCBVSRVUAV[2], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+					device->CopyDescriptorsSimple(1, dst_gpu, nullDescriptorsSamplerCBVSRVUAV[2], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+				}
+				for (int slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_staging = heap_CPU->GetCPUDescriptorHandleForHeapStart();
+					dst_staging.ptr += (stage * itemCount + GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot) * itemSize;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_gpu = heap_GPU->GetCPUDescriptorHandleForHeapStart();
+					dst_gpu.ptr += ringOffset[stage] + (stage * itemCount + GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot) * itemSize;
+
+					device->CopyDescriptorsSimple(1, dst_staging, nullDescriptorsSamplerCBVSRVUAV[3], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+					device->CopyDescriptorsSimple(1, dst_gpu, nullDescriptorsSamplerCBVSRVUAV[3], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+				}
+			}
+			else
+			{
+				for (int slot = 0; slot < GPU_SAMPLER_HEAP_COUNT; ++slot)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_staging = heap_CPU->GetCPUDescriptorHandleForHeapStart();
+					dst_staging.ptr += (stage * itemCount + slot) * itemSize;
+					D3D12_CPU_DESCRIPTOR_HANDLE dst_gpu = heap_GPU->GetCPUDescriptorHandleForHeapStart();
+					dst_gpu.ptr += ringOffset[stage] + (stage * itemCount + slot) * itemSize;
+
+					device->CopyDescriptorsSimple(1, dst_staging, nullDescriptorsSamplerCBVSRVUAV[0], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+					device->CopyDescriptorsSimple(1, dst_gpu, nullDescriptorsSamplerCBVSRVUAV[0], (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+				}
+			}
+
+
+
+
+			// bind the starting descriptor tables to the root signature
+			D3D12_GPU_DESCRIPTOR_HANDLE table;
+			table.ptr = GetGPUAddress((SHADERSTAGE)stage);
+
+			if (stage == CS)
+			{
+				// compute descriptor heap:
+
+				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+				{
+					commandList->SetComputeRootDescriptorTable(0, table);
+				}
+				else
+				{
+					commandList->SetComputeRootDescriptorTable(1, table);
+				}
+			}
+			else
+			{
+				// graphics descriptor heap:
+
+				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+				{
+					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 0, table);
+				}
+				else
+				{
+					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 1, table);
+				}
+			}
+
 		}
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::update(SHADERSTAGE stage, UINT offset, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
@@ -1277,6 +1359,17 @@ namespace wiGraphicsTypes
 
 		device->CopyDescriptorsSimple(1, dst_staging, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 		device->CopyDescriptorsSimple(1, dst_gpu, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+	}
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::invalidateForGraphics()
+	{
+		for (int stage = VS; stage < SHADERSTAGE_COUNT - 1; ++stage)
+		{
+			dirty[stage] = true;
+		}
+	}
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::invalidateForCompute()
+	{
+		dirty[CS] = true;
 	}
 	UINT64 GraphicsDevice_DX12::FrameResources::DescriptorTableRingBuffer::GetGPUAddress(SHADERSTAGE stage)
 	{
@@ -1726,6 +1819,12 @@ namespace wiGraphicsTypes
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootSignature(graphicsRootSig);
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootSignature(computeRootSig);
 
+		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
+			*nullSampler,*nullCBV,*nullSRV,*nullUAV
+		};
+		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+
 
 		D3D12_RECT pRects[8];
 		for (UINT i = 0; i < 8; ++i)
@@ -1911,7 +2010,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Raw Buffer
 
-				srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				srv_desc.Format = DXGI_FORMAT_R32_UINT;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = 0;
 				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
@@ -1921,7 +2020,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Structured Buffer
 
-				srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				srv_desc.Format = DXGI_FORMAT_R32_UINT;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = 0;
 				srv_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
@@ -1951,7 +2050,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Raw Buffer
 
-				uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				uav_desc.Format = DXGI_FORMAT_R32_UINT;
 				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / 4;
 			}
@@ -1959,7 +2058,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Structured Buffer
 
-				uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				uav_desc.Format = DXGI_FORMAT_R32_UINT;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
 			}
 			else
@@ -2937,33 +3036,11 @@ namespace wiGraphicsTypes
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootSignature(graphicsRootSig);
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootSignature(computeRootSig);
 
-		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset();
-		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset();
-
-		// graphics descriptor heap:
-		for (UINT shader = VS; shader < SHADERSTAGE_COUNT - 1; ++shader)
-		{
-			D3D12_GPU_DESCRIPTOR_HANDLE resource_table;
-			resource_table.ptr = GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress((SHADERSTAGE)shader);
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootDescriptorTable(shader * 2 + 0,
-				resource_table);
-
-			D3D12_GPU_DESCRIPTOR_HANDLE sampler_table;
-			sampler_table.ptr = GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress((SHADERSTAGE)shader);
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootDescriptorTable(shader * 2 + 1,
-				sampler_table);
-		}
-
-		// compute descriptor heap:
-		D3D12_GPU_DESCRIPTOR_HANDLE resource_table;
-		resource_table.ptr = GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress(CS);
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootDescriptorTable(0,
-			resource_table);
-
-		D3D12_GPU_DESCRIPTOR_HANDLE sampler_table;
-		sampler_table.ptr = GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->GetGPUAddress(CS);
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootDescriptorTable(1,
-			sampler_table);
+		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
+			*nullSampler,*nullCBV,*nullSRV,*nullUAV
+		};
+		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
 
 
 		D3D12_RECT pRects[8];
@@ -3431,20 +3508,22 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_DX12::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawInstanced((UINT)vertexCount, 1, startVertexLocation, 0);
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[VS] = true;
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[PS] = true;
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->invalidateForGraphics();
 	}
 	void GraphicsDevice_DX12::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, 0);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->invalidateForGraphics();
 	}
 	void GraphicsDevice_DX12::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawInstanced((UINT)vertexCount, (UINT)instanceCount, startVertexLocation, startInstanceLocation);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->invalidateForGraphics();
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, startInstanceLocation);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->invalidateForGraphics();
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3455,6 +3534,7 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->invalidateForCompute();
 	}
 	void GraphicsDevice_DX12::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
