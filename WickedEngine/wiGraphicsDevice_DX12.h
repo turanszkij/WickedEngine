@@ -77,6 +77,7 @@ namespace wiGraphicsTypes
 
 				void reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV);
 				void update(SHADERSTAGE stage, UINT slot, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
+				void bind(SHADERSTAGE stage, ID3D12GraphicsCommandList* commandList);
 				void invalidateForGraphics();
 				void invalidateForCompute();
 			};

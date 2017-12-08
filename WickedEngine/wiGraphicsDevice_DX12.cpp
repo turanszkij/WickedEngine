@@ -1272,39 +1272,7 @@ namespace wiGraphicsTypes
 				}
 			}
 
-
-
-
-			// bind the starting descriptor tables to the root signature
-			D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
-			table.ptr += ringOffset[stage] + stage * itemCount * itemSize;
-
-			if (stage == CS)
-			{
-				// compute descriptor heap:
-
-				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-				{
-					commandList->SetComputeRootDescriptorTable(0, table);
-				}
-				else
-				{
-					commandList->SetComputeRootDescriptorTable(1, table);
-				}
-			}
-			else
-			{
-				// graphics descriptor heap:
-
-				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-				{
-					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 0, table);
-				}
-				else
-				{
-					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 1, table);
-				}
-			}
+			bind((SHADERSTAGE)stage, commandList);
 
 		}
 	}
@@ -1326,36 +1294,7 @@ namespace wiGraphicsTypes
 			D3D12_CPU_DESCRIPTOR_HANDLE src = heap_CPU->GetCPUDescriptorHandleForHeapStart();
 			device->CopyDescriptorsSimple(itemCount, dst, src, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 
-			// bind table to root sig
-			D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
-			table.ptr += ringOffset[stage] + stage * itemCount * itemSize;
-
-			if (stage == CS)
-			{
-				// compute descriptor heap:
-
-				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-				{
-					commandList->SetComputeRootDescriptorTable(0, table);
-				}
-				else
-				{
-					commandList->SetComputeRootDescriptorTable(1, table);
-				}
-			}
-			else
-			{
-				// graphics descriptor heap:
-
-				if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-				{
-					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 0, table);
-				}
-				else
-				{
-					commandList->SetGraphicsRootDescriptorTable(stage * 2 + 1, table);
-				}
-			}
+			bind(stage, commandList);
 			
 			dirty[stage] = false;
 		}
@@ -1367,6 +1306,39 @@ namespace wiGraphicsTypes
 
 		device->CopyDescriptorsSimple(1, dst_staging, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 		device->CopyDescriptorsSimple(1, dst_gpu, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+	}
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::bind(SHADERSTAGE stage, ID3D12GraphicsCommandList* commandList)
+	{
+		// bind table to root sig
+		D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
+		table.ptr += ringOffset[stage] + stage * itemCount * itemSize;
+
+		if (stage == CS)
+		{
+			// compute descriptor heap:
+
+			if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+			{
+				commandList->SetComputeRootDescriptorTable(0, table);
+			}
+			else
+			{
+				commandList->SetComputeRootDescriptorTable(1, table);
+			}
+		}
+		else
+		{
+			// graphics descriptor heap:
+
+			if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+			{
+				commandList->SetGraphicsRootDescriptorTable(stage * 2 + 0, table);
+			}
+			else
+			{
+				commandList->SetGraphicsRootDescriptorTable(stage * 2 + 1, table);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::invalidateForGraphics()
 	{
@@ -1843,7 +1815,7 @@ namespace wiGraphicsTypes
 			rootSigDesc.NumStaticSamplers = 0;
 			rootSigDesc.NumParameters = paramCount;
 			rootSigDesc.pParameters = params;
-			rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+			rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
 			ID3DBlob* rootSigBlob;
 			ID3DBlob* rootSigError;
@@ -3493,11 +3465,12 @@ namespace wiGraphicsTypes
 			if (vertexBuffers[i] != nullptr)
 			{
 				res[i].BufferLocation = vertexBuffers[i]->resource_DX12->GetGPUVirtualAddress();
+				res[i].SizeInBytes = vertexBuffers[i]->desc.ByteWidth;
 				if (offsets != nullptr)
 				{
 					res[i].BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)offsets[i];
+					res[i].SizeInBytes -= offsets[i];
 				}
-				res[i].SizeInBytes = vertexBuffers[i]->desc.ByteWidth;
 				res[i].StrideInBytes = strides[i];
 			}
 		}
@@ -3631,11 +3604,74 @@ namespace wiGraphicsTypes
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
 		}
 
-		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
 		memcpy(dest, data, dataSize);
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->CopyBufferRegion(
 			buffer->resource_DX12, 0, 
 			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest), 
+			dataSize
+		);
+
+
+		//	UINT count = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth) / sizeof(uint32_t);
+		//	static D3D12_WRITEBUFFERIMMEDIATE_PARAMETER params[GRAPHICSTHREAD_COUNT][128] = {};
+		//	for (UINT i = 0; i < count; ++i)
+		//	{
+		//		params[threadID][i].Dest = buffer->resource_DX12->GetGPUVirtualAddress() + i * 4;
+		//		params[threadID][i].Value = *reinterpret_cast<UINT32*>((uint8_t*)data + i * 4);
+		//	}
+		//	//static_cast<ID3D12GraphicsCommandList2*>(commandLists[threadID])->WriteBufferImmediate(count, params[threadID], nullptr);
+
+
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = buffer->resource_DX12;
+			barrier.Transition.StateBefore = requiredState;
+			barrier.Transition.StateAfter = currentState;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+		}
+	}
+	void* GraphicsDevice_DX12::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
+	{
+		assert(buffer->desc.Usage == USAGE_DYNAMIC && (buffer->desc.CPUAccessFlags & CPU_ACCESS_WRITE) && "Ringbuffer must be writable by the CPU!");
+		assert(buffer->desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
+
+		if (dataSize == 0)
+		{
+			return nullptr;
+		}
+
+		dataSize = min(buffer->desc.ByteWidth, dataSize);
+
+		size_t position = buffer->byteOffset;
+		bool wrap = position + dataSize > buffer->desc.ByteWidth || buffer->residentFrame != FRAMECOUNT;
+		position = wrap ? 0 : position;
+
+		// TODO: realloc on wrap or something
+
+		size_t alignment = buffer->desc.BindFlags & BIND_CONSTANT_BUFFER ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+
+		D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(buffer->resourceState[threadID]);
+		D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_COPY_DEST;
+		if (currentState != requiredState)
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = buffer->resource_DX12;
+			barrier.Transition.StateBefore = currentState;
+			barrier.Transition.StateAfter = requiredState;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+		}
+
+		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->CopyBufferRegion(
+			buffer->resource_DX12, (UINT64)position,
+			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest),
 			dataSize
 		);
 
@@ -3651,84 +3687,12 @@ namespace wiGraphicsTypes
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
 		}
 
-		//if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
-		//{
-		//	{
-		//		D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(buffer->resourceState[threadID]);
-		//		D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_COPY_DEST;
-		//		if (currentState != requiredState)
-		//		{
-		//			D3D12_RESOURCE_BARRIER barrier = {};
-		//			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		//			barrier.Transition.pResource = buffer->resource_DX12;
-		//			barrier.Transition.StateBefore = currentState;
-		//			barrier.Transition.StateAfter = requiredState;
-		//			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		//			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		//			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+		// Thread safety is compromised!
+		buffer->byteOffset = position + dataSize;
+		buffer->residentFrame = FRAMECOUNT;
 
-		//			buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
-		//		}
-		//	}
-
-		//	UINT count = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth) / sizeof(uint32_t);
-		//	static D3D12_WRITEBUFFERIMMEDIATE_PARAMETER params[GRAPHICSTHREAD_COUNT][128] = {};
-		//	for (UINT i = 0; i < count; ++i)
-		//	{
-		//		params[threadID][i].Dest = buffer->resource_DX12->GetGPUVirtualAddress() + i * 4;
-		//		params[threadID][i].Value = *reinterpret_cast<UINT32*>((uint8_t*)data + i * 4);
-		//	}
-		//	//static_cast<ID3D12GraphicsCommandList2*>(commandLists[threadID])->WriteBufferImmediate(count, params[threadID], nullptr);
-		//	ID3D12GraphicsCommandList1* cmd;
-		//	HRESULT hr = commandLists[threadID]->QueryInterface(__uuidof(ID3D12GraphicsCommandList1), (void**)&cmd);
-
-		//	{
-		//		D3D12_RESOURCE_STATES currentState = D3D12_RESOURCE_STATE_COPY_DEST;
-		//		D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_GENERIC_READ;
-		//		if (currentState != requiredState)
-		//		{
-		//			D3D12_RESOURCE_BARRIER barrier = {};
-		//			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		//			barrier.Transition.pResource = buffer->resource_DX12;
-		//			barrier.Transition.StateBefore = currentState;
-		//			barrier.Transition.StateAfter = requiredState;
-		//			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		//			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		//			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
-
-		//			buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
-		//		}
-		//	}
-		//}
-
-		//if (buffer->desc.Usage == USAGE_DYNAMIC)
-		//{
-		//	D3D12_MAPPED_SUBRESOURCE mappedResource;
-		//	HRESULT hr = deviceContexts[threadID]->Map(buffer->resource_DX11, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-		//	assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
-		//	memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
-		//	deviceContexts[threadID]->Unmap(buffer->resource_DX11, 0);
-		//}
-		//else if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER || dataSize < 0)
-		//{
-		//	deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, nullptr, data, 0, 0);
-		//}
-		//else
-		//{
-		//	D3D11_BOX box = {};
-		//	box.left = 0;
-		//	box.right = static_cast<UINT>(dataSize);
-		//	box.top = 0;
-		//	box.bottom = 1;
-		//	box.front = 0;
-		//	box.back = 1;
-		//	deviceContexts[threadID]->UpdateSubresource(buffer->resource_DX11, 0, &box, data, 0, 0);
-		//}
-	}
-	void* GraphicsDevice_DX12::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
-	{
-		offsetIntoBuffer = 0;
-		return nullptr;
+		offsetIntoBuffer = (UINT)position;
+		return reinterpret_cast<void*>(dest);
 	}
 	void GraphicsDevice_DX12::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID)
 	{
