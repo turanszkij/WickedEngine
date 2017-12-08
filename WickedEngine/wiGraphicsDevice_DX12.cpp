@@ -3,9 +3,10 @@
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 
-#include "Utility/WicTextureLoader.h"
-#include "Utility/DDSTextureLoader.h"
-#include "Utility/ScreenGrab.h"
+#include "Utility/d3dx12.h"
+#include "Utility/WicTextureLoader12.h"
+#include "Utility/DDSTextureLoader12.h"
+#include "Utility/ScreenGrab12.h"
 
 #include <sstream>
 #include <wincodec.h>
@@ -1136,6 +1137,17 @@ namespace wiGraphicsTypes
 		return static_cast<RESOURCE_STATES>(value);
 	}
 	
+	inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D12_RESOURCE_DESC& desc)
+	{
+		Texture2DDesc retVal;
+
+		retVal.Format = _ConvertFormat_Inv(desc.Format);
+		retVal.Width = (UINT)desc.Width;
+		retVal.Height = desc.Height;
+		retVal.MipLevels = desc.MipLevels;
+
+		return retVal;
+	}
 
 
 	// Local Helpers:
@@ -3730,9 +3742,46 @@ namespace wiGraphicsTypes
 
 	HRESULT GraphicsDevice_DX12::CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
 	{
+		HRESULT hr = E_FAIL;
 		(*ppTexture) = new Texture2D();
 
-		HRESULT hr = E_FAIL;
+		//std::unique_ptr<uint8_t[]> imageData;
+		//std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+
+		//if (!fileName.substr(fileName.length() - 4).compare(string(".dds")))
+		//{
+		//	// Load dds
+		//	hr = LoadDDSTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources);
+		//}
+		//else
+		//{
+		//	subresources.push_back({});
+		//	LoadWICTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources[0]);
+		//}
+
+		//if (FAILED(hr)) {
+		//	SAFE_DELETE(*ppTexture);
+		//}
+		//else { 
+		//	D3D12_RESOURCE_DESC desc = (*ppTexture)->resource_DX12->GetDesc();
+		//	(*ppTexture)->desc = _ConvertTexture2DDesc_Inv(desc);
+
+		//	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+		//	srv_desc.Format = desc.Format;
+		//	srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//	srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		//	srv_desc.Texture2D.MipLevels = -1;
+		//	srv_desc.Texture2D.MostDetailedMip = 0;
+		//	srv_desc.Texture2D.PlaneSlice = 0;
+		//	srv_desc.Texture2D.ResourceMinLODClamp = -1;
+		//	(*ppTexture)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
+		//	(*ppTexture)->SRV_DX12->ptr = ResourceAllocator->allocate();
+		//	device->CreateShaderResourceView((*ppTexture)->resource_DX12, &srv_desc, *(*ppTexture)->SRV_DX12);
+
+
+		//	UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture)->resource_DX12, 
+		//		uploadBuffer->resource, uploadBuffer->calculateOffset(uploadBuffer->dataCur), 0, subresources.size(), subresources.data());
+		//}
 
 		return hr;
 	}

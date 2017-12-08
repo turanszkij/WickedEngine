@@ -229,7 +229,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h" />
@@ -243,6 +242,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
@@ -517,6 +520,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp" />

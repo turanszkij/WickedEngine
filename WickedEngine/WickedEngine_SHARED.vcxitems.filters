@@ -1122,8 +1122,17 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)d3dx12.h">
-      <Filter>ENGINE\Graphics\API</Filter>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.h">
+      <Filter>UTILITY</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1918,6 +1927,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.cpp">
+      <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp">
+      <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.cpp">
+      <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
