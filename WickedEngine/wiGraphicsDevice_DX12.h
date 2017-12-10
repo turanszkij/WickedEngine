@@ -32,9 +32,13 @@ namespace wiGraphicsTypes
 		ID3D12Fence*				commandFences[GRAPHICSTHREAD_COUNT];
 		HANDLE						commandFenceEvents[GRAPHICSTHREAD_COUNT];
 		UINT64						commandFenceValues[GRAPHICSTHREAD_COUNT];
+
 		ID3D12CommandQueue*			copyQueue;
 		ID3D12CommandAllocator*		copyAllocator;
 		ID3D12CommandList*			copyCommandList;
+		ID3D12Fence*				copyFence;
+		HANDLE						copyFenceEvent;
+		UINT64						copyFenceValue;
 
 		ID3D12RootSignature*		graphicsRootSig;
 		ID3D12RootSignature*		computeRootSig;
@@ -123,7 +127,8 @@ namespace wiGraphicsTypes
 			void clear();
 			uint64_t calculateOffset(uint8_t* address);
 		};
-		UploadBuffer* uploadBuffer;
+		UploadBuffer* bufferUploader;
+		UploadBuffer* textureUploader;
 
 		IDXGISwapChain3*			swapChain;
 		ViewPort					viewPort;
