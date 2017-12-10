@@ -2241,9 +2241,12 @@ namespace wiGraphicsTypes
 			UINT NumSubresources = pDesc->ArraySize;
 			UINT FirstSubresource = 0;
 
+			UINT64 RequiredSize = 0;
+			device->GetCopyableFootprints(&desc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &RequiredSize);
+			uint8_t* dest = textureUploader->allocate(RequiredSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+
 			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture2D)->resource_DX12,
-				textureUploader->resource, textureUploader->calculateOffset(textureUploader->dataCur), 0, NumSubresources, data);
-			textureUploader->allocate(dataSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT); // just update the buffer offset
+				textureUploader->resource, textureUploader->calculateOffset(dest), 0, NumSubresources, data);
 		}
 
 
@@ -3784,9 +3787,13 @@ namespace wiGraphicsTypes
 			(*ppTexture)->SRV_DX12->ptr = ResourceAllocator->allocate();
 			device->CreateShaderResourceView((*ppTexture)->resource_DX12, &srv_desc, *(*ppTexture)->SRV_DX12);
 
+
+			UINT64 RequiredSize = 0;
+			device->GetCopyableFootprints(&desc, 0, (UINT)subresources.size(), 0, nullptr, nullptr, nullptr, &RequiredSize);
+			uint8_t* dest = textureUploader->allocate(RequiredSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+
 			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture)->resource_DX12, 
-				textureUploader->resource, textureUploader->calculateOffset(textureUploader->dataCur), 0, (UINT)subresources.size(), subresources.data());
-			textureUploader->allocate(dataSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT); // just update the buffer offset
+				textureUploader->resource, textureUploader->calculateOffset(dest), 0, (UINT)subresources.size(), subresources.data());
 		}
 
 		return hr;
