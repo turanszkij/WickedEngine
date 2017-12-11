@@ -1403,7 +1403,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 		SAFE_INIT(commandLists[i]);
 		SAFE_INIT(deviceContexts[i]);
 		stencilRef[i] = 0;
-		blendFactor[i] = XMFLOAT4(0, 0, 0, 0);
+		blendFactor[i] = XMFLOAT4(1, 1, 1, 1);
 	}
 
 	UINT createDeviceFlags = 0;
