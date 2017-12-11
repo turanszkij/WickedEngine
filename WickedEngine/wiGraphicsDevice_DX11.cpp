@@ -2700,6 +2700,7 @@ void GraphicsDevice_DX11::PresentEnd()
 
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ClearState();
 	BindGraphicsPSO(nullptr, GRAPHICSTHREAD_IMMEDIATE);
+	BindComputePSO(nullptr, GRAPHICSTHREAD_IMMEDIATE);
 
 	D3D11_RECT pRects[8];
 	for (UINT i = 0; i < 8; ++i)

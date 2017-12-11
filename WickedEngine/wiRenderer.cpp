@@ -118,7 +118,7 @@ wiRenderer::wiRenderer()
 void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fullscreen)
 {
 	SAFE_DELETE(graphicsDevice);
-	graphicsDevice = new GraphicsDevice_DX12(window, fullscreen);
+	graphicsDevice = new GraphicsDevice_DX11(window, fullscreen);
 }
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
@@ -1063,21 +1063,6 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			{
 				if (pom)
 				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
-				}
-				else
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD;
-				}
-				if (planarreflection)
-				{
-					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
-				}
-			}
-			else
-			{
-				if (pom)
-				{
 					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM;
 				}
 				else
@@ -1087,6 +1072,21 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 				if (planarreflection)
 				{
 					realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION;
+				}
+			}
+			else
+			{
+				if (pom)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_POM;
+				}
+				else
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD;
+				}
+				if (planarreflection)
+				{
+					realPS = PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION;
 				}
 			}
 		}
