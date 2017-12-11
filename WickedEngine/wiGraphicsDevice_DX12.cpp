@@ -1299,6 +1299,7 @@ namespace wiGraphicsTypes
 				D3D12_CPU_DESCRIPTOR_HANDLE dst = heap_GPU->GetCPUDescriptorHandleForHeapStart();
 				dst.ptr += ringOffset;
 				D3D12_CPU_DESCRIPTOR_HANDLE src = heap_CPU->GetCPUDescriptorHandleForHeapStart();
+				src.ptr += (stage * itemCount) * itemSize;
 				device->CopyDescriptorsSimple(itemCount, dst, src, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 
 				// bind table to root sig
