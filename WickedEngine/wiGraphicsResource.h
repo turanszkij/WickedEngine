@@ -361,7 +361,7 @@ namespace wiGraphicsTypes
 		GPUQuery();
 		virtual ~GPUQuery();
 
-		bool IsValid() { return resource_DX11[0] != nullptr; }
+		bool IsValid() { return !resource_DX11.empty() && resource_DX11[0] != nullptr; }
 		GPUQueryDesc GetDesc() const { return desc; }
 
 		BOOL	result_passed;

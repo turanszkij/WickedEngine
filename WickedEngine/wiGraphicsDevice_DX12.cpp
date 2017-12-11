@@ -2029,7 +2029,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Raw Buffer
 
-				srv_desc.Format = DXGI_FORMAT_R32_UINT;
+				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = 0;
 				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
@@ -2069,7 +2069,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Raw Buffer
 
-				uav_desc.Format = DXGI_FORMAT_R32_UINT;
+				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / 4;
 			}
@@ -3133,7 +3133,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (pTexture != nullptr)
+		if (pTexture != nullptr && pTexture->RTV_DX12 != nullptr)
 		{
 			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(pTexture->resourceState[threadID]);
 			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -3155,7 +3155,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (pTexture != nullptr)
+		if (pTexture != nullptr && pTexture->DSV_DX12 != nullptr)
 		{
 			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(pTexture->resourceState[threadID]);
 			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
