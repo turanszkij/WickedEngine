@@ -152,6 +152,7 @@ void wiImage::LoadShaders()
 			desc.dss = &depthStencilStates[STENCILMODE_LESS];
 			desc.numRTs = 1;
 			desc.RTFormats[0] = wiRenderer::RTFormat_deferred_lightbuffer;
+			desc.DSFormat = wiRenderer::DSFormat_full;
 		}
 		else if (i == POSTPROCESS_SSAO)
 		{

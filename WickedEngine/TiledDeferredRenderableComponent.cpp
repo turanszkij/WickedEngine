@@ -148,6 +148,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.stencilRef = 0;
 			fx.stencilComp = STENCILMODE_DISABLED;
 			fx.presentFullScreen = true;
+			fx.hdr = true;
 			wiImage::Draw(static_cast<Texture2D*>(wiRenderer::textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_LESS;

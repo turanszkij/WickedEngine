@@ -240,6 +240,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.stencilRef = 0;
 			fx.stencilComp = STENCILMODE_DISABLED;
 			fx.presentFullScreen = true;
+			fx.hdr = true;
 			wiImage::Draw(rtLight.GetTexture(0), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_LESS;

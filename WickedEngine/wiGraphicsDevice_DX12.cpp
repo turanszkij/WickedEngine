@@ -2027,10 +2027,11 @@ namespace wiGraphicsTypes
 			{
 				// This is a Structured Buffer
 
-				srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = 0;
 				srv_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
+				srv_desc.Buffer.StructureByteStride = pDesc->StructureByteStride;
 			}
 			else
 			{
@@ -2059,20 +2060,24 @@ namespace wiGraphicsTypes
 
 				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+				uav_desc.Buffer.FirstElement = 0;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / 4;
 			}
 			else if (pDesc->MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
 				// This is a Structured Buffer
 
-				uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+				uav_desc.Buffer.FirstElement = 0;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
+				uav_desc.Buffer.StructureByteStride = pDesc->StructureByteStride;
 			}
 			else
 			{
 				// This is a Typed Buffer
 
 				uav_desc.Format = _ConvertFormat(pDesc->Format);
+				uav_desc.Buffer.FirstElement = 0;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
 			}
 
