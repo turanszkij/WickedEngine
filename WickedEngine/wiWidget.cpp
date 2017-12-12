@@ -1605,6 +1605,8 @@ void wiColorPicker::Render(wiGUI* gui)
 	static bool buffersComplete = false;
 	if (!buffersComplete)
 	{
+		buffersComplete = true;
+
 		HRESULT hr = S_OK;
 		// saturation
 		{
@@ -1716,6 +1718,8 @@ void wiColorPicker::Render(wiGUI* gui)
 			desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
 			desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
 			desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
 			hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO);
 		}
 
@@ -1724,12 +1728,6 @@ void wiColorPicker::Render(wiGUI* gui)
 	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
 	wiRenderer::GetDevice()->BindConstantBufferVS(wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
-	//wiRenderer::GetDevice()->BindRasterizerState(wiRenderer::rasterizers[RSTYPE_DOUBLESIDED], threadID);
-	//wiRenderer::GetDevice()->BindBlendState(wiRenderer::blendStates[BSTYPE_OPAQUE], threadID);
-	//wiRenderer::GetDevice()->BindDepthStencilState(wiRenderer::depthStencils[DSSTYPE_XRAY], 0, threadID);
-	//wiRenderer::GetDevice()->BindVertexLayout(wiRenderer::vertexLayouts[VLTYPE_LINE], threadID);
-	//wiRenderer::GetDevice()->BindVS(wiRenderer::vertexShaders[VSTYPE_LINE], threadID);
-	//wiRenderer::GetDevice()->BindPS(wiRenderer::pixelShaders[PSTYPE_LINE], threadID);
 	wiRenderer::GetDevice()->BindGraphicsPSO(&PSO, threadID);
 	wiRenderer::GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
 

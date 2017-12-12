@@ -149,6 +149,8 @@ namespace wiGraphicsTypes
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
+		virtual void UAVBarrier(GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID) = 0;
+		virtual void TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) = 0;
 
 		virtual HRESULT CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID) = 0;
 		virtual HRESULT SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID) = 0;

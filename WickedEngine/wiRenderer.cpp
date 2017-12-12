@@ -1904,7 +1904,7 @@ void wiRenderer::LoadShaders()
 			desc.ps = pixelShaders[PSTYPE_SKY];
 			desc.numRTs = 2;
 			desc.RTFormats[0] = RTFormat_hdr;
-			desc.RTFormats[0] = RTFormat_gbuffer_1;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_SUN:
@@ -3248,7 +3248,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
 
 					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
-
+					GetDevice()->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer
 				}
 				else if (mesh->hasDynamicVB())
 				{
@@ -5534,7 +5534,10 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	if(!frustumsComplete || _resolutionChanged)
 	{
 		frustumsComplete = true;
-		device->BindUnorderedAccessResourceCS(frustumBuffer, UAVSLOT_TILEFRUSTUMS, threadID);
+
+		GPUResource* uavs[] = { frustumBuffer };
+
+		device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), threadID);
 		device->BindComputePSO(CPSO[CSTYPE_TILEFRUSTUMS], threadID);
 
 		DispatchParamsCB dispatchParams;
@@ -5549,6 +5552,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 		device->UnBindUnorderedAccessResources(UAVSLOT_TILEFRUSTUMS, 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 	}
 
 	if (textures[TEXTYPE_2D_DEBUGUAV] == nullptr || _resolutionChanged)
@@ -5609,6 +5613,9 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 			GetDevice()->BindResourceCS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 			GetDevice()->BindResourceCS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+
+			device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		}
 		else
 		{
@@ -5617,9 +5624,10 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
 			};
 			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
-		}
 
-		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
+			device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		}
 
 		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
 

@@ -54,8 +54,6 @@ namespace wiGraphicsTypes
 	public:
 		VertexShader();
 		~VertexShader();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	class PixelShader
@@ -68,8 +66,6 @@ namespace wiGraphicsTypes
 	public:
 		PixelShader();
 		~PixelShader();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	class GeometryShader
@@ -82,8 +78,6 @@ namespace wiGraphicsTypes
 	public:
 		GeometryShader();
 		~GeometryShader();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	class HullShader
@@ -96,8 +90,6 @@ namespace wiGraphicsTypes
 	public:
 		HullShader();
 		~HullShader();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	class DomainShader
@@ -110,8 +102,6 @@ namespace wiGraphicsTypes
 	public:
 		DomainShader();
 		~DomainShader();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	class ComputeShader
@@ -124,8 +114,6 @@ namespace wiGraphicsTypes
 	public:
 		ComputeShader();
 		~ComputeShader();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	class Sampler
@@ -140,7 +128,7 @@ namespace wiGraphicsTypes
 		Sampler();
 		~Sampler();
 
-		bool IsValid() { return resource_DX11 != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr; }
 		SamplerDesc GetDesc() { return desc; }
 	};
 
@@ -148,7 +136,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
-	private:
+	protected:
 		ID3D11ShaderResourceView*					SRV_DX11;					// main resource SRV
 		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
 		D3D12_CPU_DESCRIPTOR_HANDLE*				SRV_DX12;					// main resource SRV
@@ -163,7 +151,6 @@ namespace wiGraphicsTypes
 
 		RESOURCE_STATES	resourceState[10];
 
-	protected:
 		GPUResource();
 		virtual ~GPUResource();
 	};
@@ -180,7 +167,7 @@ namespace wiGraphicsTypes
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource_DX11 != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr; }
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
@@ -210,8 +197,6 @@ namespace wiGraphicsTypes
 	public:
 		VertexLayout();
 		~VertexLayout();
-
-		bool IsValid() { return resource_DX11 != nullptr; }
 	};
 
 	class BlendState
@@ -225,7 +210,6 @@ namespace wiGraphicsTypes
 		BlendState();
 		~BlendState();
 
-		bool IsValid() { return resource_DX11 != nullptr; }
 		BlendStateDesc GetDesc() { return desc; }
 	};
 
@@ -240,7 +224,6 @@ namespace wiGraphicsTypes
 		DepthStencilState();
 		~DepthStencilState();
 
-		bool IsValid() { return resource_DX11 != nullptr; }
 		DepthStencilStateDesc GetDesc() { return desc; }
 	};
 
@@ -255,7 +238,6 @@ namespace wiGraphicsTypes
 		RasterizerState();
 		~RasterizerState();
 
-		bool IsValid() { return resource_DX11 != nullptr; }
 		RasterizerStateDesc GetDesc() { return desc; }
 	};
 

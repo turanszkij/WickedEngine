@@ -30,7 +30,7 @@ void radix008A(CSFFT512x512_Plan* fft_plan,
 	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 
 	GPUResource* cs_uavs[1] = { pUAV_Dst };
-	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
+	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, ARRAYSIZE(cs_uavs), threadID);
 
 	// Shader
 	if (istride > 1)
@@ -46,6 +46,8 @@ void radix008A(CSFFT512x512_Plan* fft_plan,
 
 	// Execute
 	device->Dispatch(grid, 1, 1, threadID);
+
+	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
 
 	// Unbind resource
 	device->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);

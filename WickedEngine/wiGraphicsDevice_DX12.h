@@ -39,6 +39,7 @@ namespace wiGraphicsTypes
 		ID3D12Fence*				copyFence;
 		HANDLE						copyFenceEvent;
 		UINT64						copyFenceValue;
+		wiSpinLock					copyQueueLock;
 
 		ID3D12RootSignature*		graphicsRootSig;
 		ID3D12RootSignature*		computeRootSig;
@@ -229,6 +230,8 @@ namespace wiGraphicsTypes
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) override;
+		virtual void UAVBarrier(GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID) override;
+		virtual void TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) override;
 
 		virtual HRESULT CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID) override;
 		virtual HRESULT SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID) override;

@@ -326,11 +326,13 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	//device->BindCS(kickoffUpdateCS, threadID);
 	device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
 	device->Dispatch(1, 1, 1, threadID);
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 	// emit the required amount if there are free slots in dead list
 	//device->BindCS(emitCS, threadID);
 	device->BindComputePSO(&CPSO_emit, threadID);
 	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 	// update CURRENT alive list, write NEW alive list
 	if (SORTING)
@@ -360,6 +362,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 	}
 	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 	device->EventEnd(threadID);
 
@@ -371,6 +374,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		//device->BindCS(kickoffSortCS, threadID);
 		device->BindComputePSO(&CPSO_kickoffSort, threadID);
 		device->Dispatch(1, 1, 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 		// initial sorting:
 		bool bDone = true;
@@ -388,6 +392,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		//device->BindCS(sortCS, threadID);
 		device->BindComputePSO(&CPSO_sort, threadID);
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 		int presorted = 512;
 		while (!bDone)
@@ -431,11 +436,13 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				device->UpdateBuffer(sortCB, &sc, threadID);
 				
 				device->Dispatch(numThreadGroups, 1, 1, threadID);
+				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 			}
 
 			//device->BindCS(sortInnerCS, threadID);
 			device->BindComputePSO(&CPSO_sortInner, threadID);
 			device->Dispatch(numThreadGroups, 1, 1, threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 
 			presorted *= 2;

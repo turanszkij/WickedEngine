@@ -1588,8 +1588,8 @@ namespace wiGraphicsTypes
 		}
 
 		// Create resource upload buffer
-		bufferUploader = new UploadBuffer(device, 64 * 1024 * 1024);
-		textureUploader = new UploadBuffer(device, 64 * 1024 * 1024);
+		bufferUploader = new UploadBuffer(device, 256 * 1024 * 1024);
+		textureUploader = new UploadBuffer(device, 256 * 1024 * 1024);
 
 
 		// Create frame-resident resources:
@@ -1604,7 +1604,7 @@ namespace wiGraphicsTypes
 			{
 				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
 				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
-				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
+				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 32);
 			}
 		}
 
@@ -1964,24 +1964,10 @@ namespace wiGraphicsTypes
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-		//desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
-		//if (pDesc->BindFlags & BIND_CONSTANT_BUFFER || pDesc->BindFlags & BIND_VERTEX_BUFFER)
-		//{
-		//	resourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		//}
-		//else if (pDesc->BindFlags & BIND_INDEX_BUFFER)
-		//{
-		//	resourceState = D3D12_RESOURCE_STATE_INDEX_BUFFER;
-		//}
-		//if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
-		//{
-		//	resourceState |= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		//	resourceState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		//}
 	
 		// Issue main resource creation:
 		hr = device->CreateCommittedResource(&heapDesc, heapFlags, &desc, resourceState, 
@@ -2001,9 +1987,11 @@ namespace wiGraphicsTypes
 		if (pInitialData != nullptr)
 		{
 			uint8_t* dest = bufferUploader->allocate(pDesc->ByteWidth, alignment);
-			memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth);
+			memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth); 
+			copyQueueLock.lock();
 			static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->CopyBufferRegion(
 				ppBuffer->resource_DX12, 0, bufferUploader->resource, bufferUploader->calculateOffset(dest), pDesc->ByteWidth);
+			copyQueueLock.unlock();
 		}
 
 
@@ -2039,7 +2027,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Structured Buffer
 
-				srv_desc.Format = DXGI_FORMAT_R32_UINT;
+				srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = 0;
 				srv_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
@@ -2077,7 +2065,7 @@ namespace wiGraphicsTypes
 			{
 				// This is a Structured Buffer
 
-				uav_desc.Format = DXGI_FORMAT_R32_UINT;
+				uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
 			}
 			else
@@ -2223,8 +2211,10 @@ namespace wiGraphicsTypes
 			device->GetCopyableFootprints(&desc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &RequiredSize);
 			uint8_t* dest = textureUploader->allocate(RequiredSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
+			copyQueueLock.lock();
 			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture2D)->resource_DX12,
 				textureUploader->resource, textureUploader->calculateOffset(dest), 0, NumSubresources, data);
+			copyQueueLock.unlock();
 		}
 
 
@@ -2756,6 +2746,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 	{
+		pso->desc = *pDesc;
+
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = {};
 
 		if (pDesc->vs != nullptr)
@@ -2893,6 +2885,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
 	{
+		pso->desc = *pDesc;
+
 		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
 
 		if (pDesc->cs != nullptr)
@@ -2915,6 +2909,7 @@ namespace wiGraphicsTypes
 		LOCK();
 
 		// Sync up copy queue:
+		copyQueueLock.lock();
 		{
 			static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->Close();
 			copyQueue->ExecuteCommandLists(1, &copyCommandList);
@@ -2934,6 +2929,7 @@ namespace wiGraphicsTypes
 			result = copyAllocator->Reset();
 			result = static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->Reset(copyAllocator, nullptr);
 		}
+		copyQueueLock.unlock();
 
 
 		BindViewports(1, &viewPort, GRAPHICSTHREAD_IMMEDIATE);
@@ -3597,8 +3593,6 @@ namespace wiGraphicsTypes
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
-
-			buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 		}
 
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
@@ -3620,16 +3614,18 @@ namespace wiGraphicsTypes
 		//	//static_cast<ID3D12GraphicsCommandList2*>(commandLists[threadID])->WriteBufferImmediate(count, params[threadID], nullptr);
 
 
-		//{
-		//	D3D12_RESOURCE_BARRIER barrier = {};
-		//	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		//	barrier.Transition.pResource = buffer->resource_DX12;
-		//	barrier.Transition.StateBefore = requiredState;
-		//	barrier.Transition.StateAfter = currentState;
-		//	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		//	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		//	static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
-		//}
+		if (currentState != requiredState)
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = buffer->resource_DX12;
+			barrier.Transition.StateBefore = requiredState;
+			barrier.Transition.StateAfter = currentState;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+		}
+
 	}
 	void* GraphicsDevice_DX12::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
 	{
@@ -3663,8 +3659,6 @@ namespace wiGraphicsTypes
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
-
-			buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 		}
 
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
@@ -3675,16 +3669,17 @@ namespace wiGraphicsTypes
 		);
 
 
-		//{
-		//	D3D12_RESOURCE_BARRIER barrier = {};
-		//	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		//	barrier.Transition.pResource = buffer->resource_DX12;
-		//	barrier.Transition.StateBefore = requiredState;
-		//	barrier.Transition.StateAfter = currentState;
-		//	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		//	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		//	static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
-		//}
+		if (currentState != requiredState)
+		{
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = buffer->resource_DX12;
+			barrier.Transition.StateBefore = requiredState;
+			barrier.Transition.StateAfter = currentState;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+		}
 
 		// Thread safety is compromised!
 		buffer->byteOffset = position + dataSize;
@@ -3726,6 +3721,35 @@ namespace wiGraphicsTypes
 		return true;
 	}
 
+	void GraphicsDevice_DX12::UAVBarrier(GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID)
+	{
+		D3D12_RESOURCE_BARRIER barriers[8];
+		for (UINT i = 0; i < NumBarriers; ++i)
+		{
+			barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+			barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barriers[i].UAV.pResource = (uavs == nullptr ? nullptr : uavs[i]->resource_DX12);
+		}
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(NumBarriers, barriers);
+	}
+	void GraphicsDevice_DX12::TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
+	{
+		if (resources != nullptr)
+		{
+			D3D12_RESOURCE_BARRIER barriers[8];
+			for (UINT i = 0; i < NumBarriers; ++i)
+			{
+				barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barriers[i].Transition.pResource = resources[i]->resource_DX12;
+				barriers[i].Transition.StateBefore = _ConvertResourceStates(stateBefore);
+				barriers[i].Transition.StateAfter = _ConvertResourceStates(stateAfter);
+				barriers[i].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			}
+			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(NumBarriers, barriers);
+		}
+	}
+
 
 	HRESULT GraphicsDevice_DX12::CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
 	{
@@ -3734,19 +3758,21 @@ namespace wiGraphicsTypes
 
 		std::unique_ptr<uint8_t[]> imageData;
 		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+		bool isCubeMap = false;
 
 		if (!fileName.substr(fileName.length() - 4).compare(string(".dds")))
 		{
 			// Load dds
-			hr = LoadDDSTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources);
+			hr = LoadDDSTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources, 0, nullptr, &isCubeMap);
 		}
 		else
 		{
 			subresources.push_back({});
-			LoadWICTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources[0]);
+			hr = LoadWICTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources[0]);
 		}
 
 		if (FAILED(hr)) {
+			assert(0);
 			SAFE_DELETE(*ppTexture);
 		}
 		else { 
@@ -3756,11 +3782,21 @@ namespace wiGraphicsTypes
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Format = desc.Format;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = -1;
-			srv_desc.Texture2D.MostDetailedMip = 0;
-			srv_desc.Texture2D.PlaneSlice = 0;
-			srv_desc.Texture2D.ResourceMinLODClamp = -1;
+			if (isCubeMap)
+			{
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+				srv_desc.TextureCube.MipLevels = -1;
+				srv_desc.TextureCube.MostDetailedMip = 0;
+				srv_desc.TextureCube.ResourceMinLODClamp = -1;
+			}
+			else
+			{
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				srv_desc.Texture2D.MipLevels = -1;
+				srv_desc.Texture2D.MostDetailedMip = 0;
+				srv_desc.Texture2D.PlaneSlice = 0;
+				srv_desc.Texture2D.ResourceMinLODClamp = -1;
+			}
 			(*ppTexture)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 			(*ppTexture)->SRV_DX12->ptr = ResourceAllocator->allocate();
 			device->CreateShaderResourceView((*ppTexture)->resource_DX12, &srv_desc, *(*ppTexture)->SRV_DX12);
@@ -3770,8 +3806,10 @@ namespace wiGraphicsTypes
 			device->GetCopyableFootprints(&desc, 0, (UINT)subresources.size(), 0, nullptr, nullptr, nullptr, &RequiredSize);
 			uint8_t* dest = textureUploader->allocate(RequiredSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
+			copyQueueLock.lock();
 			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture)->resource_DX12, 
 				textureUploader->resource, textureUploader->calculateOffset(dest), 0, (UINT)subresources.size(), subresources.data());
+			copyQueueLock.unlock();
 		}
 
 		return hr;
