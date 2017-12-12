@@ -3106,10 +3106,18 @@ namespace wiGraphicsTypes
 					ppRenderTargets[i]->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 				}
 
-				descriptors[i] = *ppRenderTargets[i]->RTV_DX12;
+				if (arrayIndex < 0)
+				{
+					descriptors[i] = *ppRenderTargets[i]->RTV_DX12;
+				}
+				else
+				{
+					descriptors[i] = *ppRenderTargets[i]->additionalRTVs_DX12[arrayIndex];
+				}
 			}
 		}
 
+		D3D12_CPU_DESCRIPTOR_HANDLE* DSV = nullptr;
 		if (depthStencilTexture != nullptr)
 		{
 			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(depthStencilTexture->resourceState[threadID]);
@@ -3127,13 +3135,22 @@ namespace wiGraphicsTypes
 
 				depthStencilTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
+
+			if (arrayIndex < 0)
+			{
+				DSV = depthStencilTexture->DSV_DX12;
+			}
+			else
+			{
+				DSV = depthStencilTexture->additionalDSVs_DX12[arrayIndex];
+			}
 		}
 
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetRenderTargets(NumViews, descriptors, FALSE, depthStencilTexture != nullptr ? depthStencilTexture->DSV_DX12 : nullptr);
+		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetRenderTargets(NumViews, descriptors, FALSE, DSV);
 	}
 	void GraphicsDevice_DX12::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (pTexture != nullptr && pTexture->RTV_DX12 != nullptr)
+		if (pTexture != nullptr)
 		{
 			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(pTexture->resourceState[threadID]);
 			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -3150,12 +3167,20 @@ namespace wiGraphicsTypes
 
 				pTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearRenderTargetView(*pTexture->RTV_DX12, ColorRGBA, 0, nullptr);
+
+			if (arrayIndex < 0)
+			{
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearRenderTargetView(*pTexture->RTV_DX12, ColorRGBA, 0, nullptr);
+			}
+			else
+			{
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearRenderTargetView(*pTexture->additionalRTVs_DX12[arrayIndex], ColorRGBA, 0, nullptr);
+			}
 		}
 	}
 	void GraphicsDevice_DX12::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (pTexture != nullptr && pTexture->DSV_DX12 != nullptr)
+		if (pTexture != nullptr)
 		{
 			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(pTexture->resourceState[threadID]);
 			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
@@ -3179,7 +3204,14 @@ namespace wiGraphicsTypes
 			if (ClearFlags & CLEAR_STENCIL)
 				_flags |= D3D12_CLEAR_FLAG_STENCIL;
 
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearDepthStencilView(*pTexture->DSV_DX12, (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+			if (arrayIndex < 0)
+			{
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearDepthStencilView(*pTexture->DSV_DX12, (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+			}
+			else
+			{
+				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearDepthStencilView(*pTexture->additionalDSVs_DX12[arrayIndex], (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+			}
 		}
 	}
 	void GraphicsDevice_DX12::BindResourcePS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)

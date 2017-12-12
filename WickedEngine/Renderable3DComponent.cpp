@@ -384,11 +384,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		fx.quality = QUALITY_NEAREST;
 		fx.presentFullScreen = true;
 		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
-		if (getVolumeLightsEnabled())
-		{
-			// first draw light volumes to refraction target
-			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
-		}
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
@@ -404,7 +399,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
 		if (getVolumeLightsEnabled())
 		{
-			// second draw volume lights on top of transparent scene
 			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
 		}
 
