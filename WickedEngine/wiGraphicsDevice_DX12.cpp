@@ -1508,6 +1508,11 @@ namespace wiGraphicsTypes
 		commandQueueDesc.NodeMask = 0;
 		hr = device->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&commandQueue);
 
+		// Create fences for command queue:
+		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&commandFence);
+		commandFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
+		commandFenceValue = 1;
+
 
 
 		// Create swapchain
@@ -1624,15 +1629,6 @@ namespace wiGraphicsTypes
 				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
 				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 32);
 			}
-		}
-
-
-		// Create fences, events
-		for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
-		{
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&commandFences[i]);
-			commandFenceEvents[i] = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-			commandFenceValues[i] = 1;
 		}
 
 
@@ -1894,11 +1890,8 @@ namespace wiGraphicsTypes
 			}
 		}
 
-		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
-		{
-			SAFE_RELEASE(commandFences[i]);
-			CloseHandle(commandFenceEvents[i]);
-		}
+		SAFE_RELEASE(commandFence);
+		CloseHandle(commandFenceEvent);
 
 		SAFE_RELEASE(copyQueue);
 		SAFE_RELEASE(copyAllocator);
@@ -3009,15 +3002,15 @@ namespace wiGraphicsTypes
 
 
 		// Signal and increment the fence value.
-		UINT64 fenceToWaitFor = commandFenceValues[GRAPHICSTHREAD_IMMEDIATE];
-		result = commandQueue->Signal(commandFences[GRAPHICSTHREAD_IMMEDIATE], fenceToWaitFor);
-		commandFenceValues[GRAPHICSTHREAD_IMMEDIATE]++;
+		UINT64 fenceToWaitFor = commandFenceValue;
+		result = commandQueue->Signal(commandFence, fenceToWaitFor);
+		commandFenceValue++;
 
 		// Wait until the GPU is done rendering.
-		if (commandFences[GRAPHICSTHREAD_IMMEDIATE]->GetCompletedValue() < fenceToWaitFor)
+		if (commandFence->GetCompletedValue() < fenceToWaitFor)
 		{
-			result = commandFences[GRAPHICSTHREAD_IMMEDIATE]->SetEventOnCompletion(fenceToWaitFor, commandFenceEvents[GRAPHICSTHREAD_IMMEDIATE]);
-			WaitForSingleObject(commandFenceEvents[GRAPHICSTHREAD_IMMEDIATE], INFINITE);
+			result = commandFence->SetEventOnCompletion(fenceToWaitFor, commandFenceEvent);
+			WaitForSingleObject(commandFenceEvent, INFINITE);
 		}
 
 
