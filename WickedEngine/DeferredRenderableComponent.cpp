@@ -131,6 +131,8 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), getHairParticlesEnabled(), true);
 	}
 
+	GPUResource* dsv[] = { rtGBuffer.depth->GetTexture() };
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
 
 	rtLinearDepth.Activate(threadID); {
 		fx.blendFlag = BLENDMODE_OPAQUE;

@@ -34,6 +34,9 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 	wiProfiler::GetInstance().EndRange(threadID);
 
+	GPUResource* dsv[] = { rtMain.depth->GetTexture() };
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
+
 	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
 
 	rtLinearDepth.Activate(threadID); {

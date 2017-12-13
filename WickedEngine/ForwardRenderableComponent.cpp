@@ -110,6 +110,9 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	rtMain.Deactivate(threadID);
 	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 
+	GPUResource* dsv[] = { rtMain.depth->GetTexture() };
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
+
 	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
 
 	rtLinearDepth.Activate(threadID); {
