@@ -35,5 +35,12 @@ inline void SwapPtr(T*& a, T*& b)
 	b = swap;
 }
 
+template<typename T>
+inline void RECREATE(T*& myObject)
+{
+	SAFE_DELETE(myObject);
+	myObject = new T;
+}
+
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H
