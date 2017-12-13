@@ -27,8 +27,6 @@ namespace wiGraphicsTypes
 	private:
 		ID3D12Device*				device;
 		ID3D12CommandQueue*			commandQueue;
-		ID3D12CommandAllocator*		commandAllocators[GRAPHICSTHREAD_COUNT];
-		ID3D12CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
 		ID3D12Fence*				commandFences[GRAPHICSTHREAD_COUNT];
 		HANDLE						commandFenceEvents[GRAPHICSTHREAD_COUNT];
 		UINT64						commandFenceValues[GRAPHICSTHREAD_COUNT];
@@ -66,6 +64,8 @@ namespace wiGraphicsTypes
 		{
 			ID3D12Resource*					backBuffer;
 			D3D12_CPU_DESCRIPTOR_HANDLE*	backBufferRTV;
+			ID3D12CommandAllocator*			commandAllocators[GRAPHICSTHREAD_COUNT];
+			ID3D12CommandList*				commandLists[GRAPHICSTHREAD_COUNT];
 
 			struct DescriptorTableFrameAllocator
 			{
@@ -106,6 +106,7 @@ namespace wiGraphicsTypes
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
+		ID3D12GraphicsCommandList* GetDirectCommandList(GRAPHICSTHREAD threadID);
 
 
 		D3D12_CPU_DESCRIPTOR_HANDLE* nullSampler;

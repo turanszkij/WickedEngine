@@ -1455,6 +1455,7 @@ namespace wiGraphicsTypes
 	}
 
 	// Engine functions
+	ID3D12GraphicsCommandList* GraphicsDevice_DX12::GetDirectCommandList(GRAPHICSTHREAD threadID) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID]); }
 
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
 	{
@@ -1615,6 +1616,10 @@ namespace wiGraphicsTypes
 
 			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 			{
+				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[i]);
+				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[i], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&frames[fr].commandLists[i]);
+				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].commandLists[i])->Close();
+
 				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
 				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
 				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 32);
@@ -1622,15 +1627,9 @@ namespace wiGraphicsTypes
 		}
 
 
-		//Create command lists
+		// Create fences, events
 		for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 		{
-			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&commandAllocators[i]);
-			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[i], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&commandLists[i]);
-			hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[i])->Close();
-			hr = commandAllocators[i]->Reset();
-			hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[i])->Reset(commandAllocators[i], nullptr);
-
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&commandFences[i]);
 			commandFenceEvents[i] = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
 			commandFenceValues[i] = 1;
@@ -1846,19 +1845,23 @@ namespace wiGraphicsTypes
 			SAFE_DELETE_ARRAY(params);
 		}
 
+
+		hr = GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE]->Reset();
+		hr = GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->Reset(GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE], nullptr);
+
 		ID3D12DescriptorHeap* heaps[] = {
 			GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU
 		};
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
 
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootSignature(graphicsRootSig);
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootSignature(computeRootSig);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetGraphicsRootSignature(graphicsRootSig);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetComputeRootSignature(computeRootSig);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
 			*nullSampler,*nullCBV,*nullSRV,*nullUAV
 		};
-		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
-		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
 
 
 		D3D12_RECT pRects[8];
@@ -1869,7 +1872,7 @@ namespace wiGraphicsTypes
 			pRects[i].right = INT32_MAX;
 			pRects[i].top = INT32_MIN;
 		}
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->RSSetScissorRects(8, pRects);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->RSSetScissorRects(8, pRects);
 
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
@@ -1883,6 +1886,8 @@ namespace wiGraphicsTypes
 
 			for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
 			{
+				SAFE_RELEASE(frames[fr].commandLists[i]);
+				SAFE_RELEASE(frames[fr].commandAllocators[i]);
 				SAFE_DELETE(frames[fr].ResourceDescriptorsGPU[i]);
 				SAFE_DELETE(frames[fr].SamplerDescriptorsGPU[i]);
 				SAFE_DELETE(frames[fr].resourceBuffer[i]);
@@ -1891,8 +1896,6 @@ namespace wiGraphicsTypes
 
 		for (int i = 0; i<GRAPHICSTHREAD_COUNT; i++) 
 		{
-			SAFE_RELEASE(commandLists[i]);
-			SAFE_RELEASE(commandAllocators[i]);
 			SAFE_RELEASE(commandFences[i]);
 			CloseHandle(commandFenceEvents[i]);
 		}
@@ -2963,11 +2966,11 @@ namespace wiGraphicsTypes
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ResourceBarrier(1, &barrier);
 
 
 		// Set the back buffer as the render target.
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->OMSetRenderTargets(1, GetFrameResources().backBufferRTV, FALSE, NULL);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->OMSetRenderTargets(1, GetFrameResources().backBufferRTV, FALSE, NULL);
 
 
 		// Then set the color to clear the window to.
@@ -2976,7 +2979,7 @@ namespace wiGraphicsTypes
 		color[1] = 0.0;
 		color[2] = 0.0;
 		color[3] = 1.0;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ClearRenderTargetView(*GetFrameResources().backBufferRTV, color, 0, NULL);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ClearRenderTargetView(*GetFrameResources().backBufferRTV, color, 0, NULL);
 
 
 	}
@@ -2993,13 +2996,13 @@ namespace wiGraphicsTypes
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->ResourceBarrier(1, &barrier);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ResourceBarrier(1, &barrier);
 
 		// Close the list of commands.
-		result = static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->Close();
+		result = GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->Close();
 
 		// Execute the list of commands.
-		commandQueue->ExecuteCommandLists(1, commandLists);
+		commandQueue->ExecuteCommandLists(1, GetFrameResources().commandLists);
 
 
 		swapChain->Present(VSYNC, 0);
@@ -3018,41 +3021,47 @@ namespace wiGraphicsTypes
 		}
 
 
-		// Reset (re-use) the memory associated command allocator.
-		result = commandAllocators[GRAPHICSTHREAD_IMMEDIATE]->Reset();
-
-		// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-		result = static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->Reset(commandAllocators[GRAPHICSTHREAD_IMMEDIATE], nullptr);
-
-
-
+		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
 		FRAMECOUNT++;
 
-		ID3D12DescriptorHeap* heaps[] = {
-			GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU
-		};
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
-
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetGraphicsRootSignature(graphicsRootSig);
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->SetComputeRootSignature(computeRootSig);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-			*nullSampler,*nullCBV,*nullSRV,*nullUAV
-		};
-		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
-		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
-		GetFrameResources().resourceBuffer[GRAPHICSTHREAD_IMMEDIATE]->clear();
 
 
-		D3D12_RECT pRects[8];
-		for (UINT i = 0; i < 8; ++i)
+		for (int threadID = 0; threadID < GRAPHICSTHREAD_IMMEDIATE + 1; ++threadID) // todo: all command lists
 		{
-			pRects[i].bottom = INT32_MAX;
-			pRects[i].left = INT32_MIN;
-			pRects[i].right = INT32_MAX;
-			pRects[i].top = INT32_MIN;
+			// Reset (re-use) the memory associated command allocator.
+			HRESULT hr = result = GetFrameResources().commandAllocators[threadID]->Reset();
+			assert(SUCCEEDED(hr));
+			// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
+			hr = static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID])->Reset(GetFrameResources().commandAllocators[threadID], nullptr);
+			assert(SUCCEEDED(hr));
+
+
+			ID3D12DescriptorHeap* heaps[] = {
+				GetFrameResources().ResourceDescriptorsGPU[threadID]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[threadID]->heap_GPU
+			};
+			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
+
+			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetGraphicsRootSignature(graphicsRootSig);
+			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetComputeRootSignature(computeRootSig);
+
+			D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
+				*nullSampler,*nullCBV,*nullSRV,*nullUAV
+			};
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, GetDirectCommandList((GRAPHICSTHREAD)threadID), nullDescriptors);
+			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device,  GetDirectCommandList((GRAPHICSTHREAD)threadID), nullDescriptors);
+			GetFrameResources().resourceBuffer[threadID]->clear();
+
+
+			D3D12_RECT pRects[8];
+			for (UINT i = 0; i < 8; ++i)
+			{
+				pRects[i].bottom = INT32_MAX;
+				pRects[i].left = INT32_MIN;
+				pRects[i].right = INT32_MAX;
+				pRects[i].top = INT32_MIN;
+			}
+			GetDirectCommandList((GRAPHICSTHREAD)threadID)->RSSetScissorRects(8, pRects);
 		}
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->RSSetScissorRects(8, pRects);
 
 		RESOLUTIONCHANGED = false;
 
@@ -3061,20 +3070,13 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_DX12::ExecuteDeferredContexts()
 	{
-		commandQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &commandLists[1]);
-		for (int i = GRAPHICSTHREAD_IMMEDIATE + 1; i < GRAPHICSTHREAD_COUNT; ++i)
-		{
-			HRESULT hr = commandAllocators[i]->Reset();
-			assert(SUCCEEDED(hr));
-			hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[i])->Reset(commandAllocators[i], nullptr);
-			assert(SUCCEEDED(hr));
-		}
+		commandQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &GetFrameResources().commandLists[1]);
 	}
 	void GraphicsDevice_DX12::FinishCommandList(GRAPHICSTHREAD threadID)
 	{
 		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
 			return;
-		HRESULT hr = static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Close();
+		HRESULT hr = GetDirectCommandList(threadID)->Close();
 		assert(SUCCEEDED(hr));
 	}
 
@@ -3092,7 +3094,7 @@ namespace wiGraphicsTypes
 			d3dViewPorts[i].MinDepth = pViewports[i].MinDepth;
 			d3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
 		}
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->RSSetViewports(NumViewports, d3dViewPorts);
+		GetDirectCommandList(threadID)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
 	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
@@ -3116,7 +3118,7 @@ namespace wiGraphicsTypes
 					barrier.Transition.StateAfter = requiredState;
 					barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 					barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-					static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+					GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 					ppRenderTargets[i]->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 				}
@@ -3146,7 +3148,7 @@ namespace wiGraphicsTypes
 				barrier.Transition.StateAfter = requiredState;
 				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 				depthStencilTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
@@ -3161,7 +3163,7 @@ namespace wiGraphicsTypes
 			}
 		}
 
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetRenderTargets(NumViews, descriptors, FALSE, DSV);
+		GetDirectCommandList(threadID)->OMSetRenderTargets(NumViews, descriptors, FALSE, DSV);
 	}
 	void GraphicsDevice_DX12::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -3178,18 +3180,18 @@ namespace wiGraphicsTypes
 				barrier.Transition.StateAfter = requiredState;
 				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 				pTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
 
 			if (arrayIndex < 0)
 			{
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearRenderTargetView(*pTexture->RTV_DX12, ColorRGBA, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearRenderTargetView(*pTexture->RTV_DX12, ColorRGBA, 0, nullptr);
 			}
 			else
 			{
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearRenderTargetView(*pTexture->additionalRTVs_DX12[arrayIndex], ColorRGBA, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearRenderTargetView(*pTexture->additionalRTVs_DX12[arrayIndex], ColorRGBA, 0, nullptr);
 			}
 		}
 	}
@@ -3208,7 +3210,7 @@ namespace wiGraphicsTypes
 				barrier.Transition.StateAfter = requiredState;
 				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 				pTexture->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
@@ -3221,11 +3223,11 @@ namespace wiGraphicsTypes
 
 			if (arrayIndex < 0)
 			{
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearDepthStencilView(*pTexture->DSV_DX12, (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearDepthStencilView(*pTexture->DSV_DX12, (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 			else
 			{
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ClearDepthStencilView(*pTexture->additionalDSVs_DX12[arrayIndex], (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearDepthStencilView(*pTexture->additionalDSVs_DX12[arrayIndex], (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 		}
 	}
@@ -3328,7 +3330,7 @@ namespace wiGraphicsTypes
 				barrier.Transition.StateAfter = requiredState;
 				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
@@ -3338,14 +3340,14 @@ namespace wiGraphicsTypes
 				if (resource->UAV_DX12 != nullptr)
 				{
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
-						resource->UAV_DX12, device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+						resource->UAV_DX12, device, GetDirectCommandList(threadID));
 				}
 			}
 			else
 			{
 				assert(resource->additionalUAVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
-					resource->additionalUAVs_DX12[arrayIndex], device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+					resource->additionalUAVs_DX12[arrayIndex], device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3366,7 +3368,7 @@ namespace wiGraphicsTypes
 			for (int i = 0; i < num; ++i)
 			{
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i,
-					nullSRV, device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+					nullSRV, device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3377,7 +3379,7 @@ namespace wiGraphicsTypes
 			for (int i = 0; i < num; ++i)
 			{
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i,
-					nullUAV, device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+					nullUAV, device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3448,7 +3450,7 @@ namespace wiGraphicsTypes
 					barrier.Transition.StateAfter = requiredState;
 					barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 					barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-					static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+					GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 					vertexBuffers[i]->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 				}
@@ -3463,7 +3465,7 @@ namespace wiGraphicsTypes
 				res[i].StrideInBytes = strides[i];
 			}
 		}
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res);
+		GetDirectCommandList(threadID)->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res);
 	}
 	void GraphicsDevice_DX12::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{
@@ -3481,7 +3483,7 @@ namespace wiGraphicsTypes
 				barrier.Transition.StateAfter = requiredState;
 				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 				indexBuffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
@@ -3490,7 +3492,7 @@ namespace wiGraphicsTypes
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
 			res.SizeInBytes = indexBuffer->desc.ByteWidth;
 		}
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->IASetIndexBuffer(&res);
+		GetDirectCommandList(threadID)->IASetIndexBuffer(&res);
 	}
 	void GraphicsDevice_DX12::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
 	{
@@ -3515,48 +3517,48 @@ namespace wiGraphicsTypes
 		default:
 			break;
 		};
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->IASetPrimitiveTopology(d3dType);
+		GetDirectCommandList(threadID)->IASetPrimitiveTopology(d3dType);
 	}
 	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 	{
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetStencilRef(value);
+		GetDirectCommandList(threadID)->OMSetStencilRef(value);
 	}
 	void GraphicsDevice_DX12::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
 	{
 		const float blendFactor[4] = { value.x, value.y, value.z, value.w };
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->OMSetBlendFactor(blendFactor);
+		GetDirectCommandList(threadID)->OMSetBlendFactor(blendFactor);
 	}
 	void GraphicsDevice_DX12::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->SetPipelineState(pso->resource_DX12);
+		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
 	}
 	void GraphicsDevice_DX12::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->SetPipelineState(pso->resource_DX12);
+		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
 	}
 	void GraphicsDevice_DX12::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawInstanced((UINT)vertexCount, 1, startVertexLocation, 0);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetDirectCommandList(threadID)->DrawInstanced((UINT)vertexCount, 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, 0);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetDirectCommandList(threadID)->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawInstanced((UINT)vertexCount, (UINT)instanceCount, startVertexLocation, startInstanceLocation);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetDirectCommandList(threadID)->DrawInstanced((UINT)vertexCount, (UINT)instanceCount, startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, startInstanceLocation);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetDirectCommandList(threadID)->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3566,9 +3568,9 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetDirectCommandList(threadID)->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_DX12::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3611,12 +3613,12 @@ namespace wiGraphicsTypes
 			barrier.Transition.StateAfter = requiredState;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+			GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 		}
 
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
 		memcpy(dest, data, dataSize);
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->CopyBufferRegion(
+		GetDirectCommandList(threadID)->CopyBufferRegion(
 			buffer->resource_DX12, 0, 
 			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest), 
 			dataSize
@@ -3642,7 +3644,7 @@ namespace wiGraphicsTypes
 			barrier.Transition.StateAfter = currentState;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+			GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 		}
 
 	}
@@ -3677,11 +3679,11 @@ namespace wiGraphicsTypes
 			barrier.Transition.StateAfter = requiredState;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+			GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 		}
 
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->CopyBufferRegion(
+		GetDirectCommandList(threadID)->CopyBufferRegion(
 			buffer->resource_DX12, (UINT64)position,
 			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest),
 			dataSize
@@ -3697,7 +3699,7 @@ namespace wiGraphicsTypes
 			barrier.Transition.StateAfter = currentState;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+			GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 		}
 
 		// Thread safety is compromised!
@@ -3726,7 +3728,7 @@ namespace wiGraphicsTypes
 			pRects[i].right = rects[i].right;
 			pRects[i].top = rects[i].top;
 		}
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->RSSetScissorRects(numRects, pRects);
+		GetDirectCommandList(threadID)->RSSetScissorRects(numRects, pRects);
 	}
 
 	void GraphicsDevice_DX12::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
@@ -3749,7 +3751,7 @@ namespace wiGraphicsTypes
 			barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			barriers[i].UAV.pResource = (uavs == nullptr ? nullptr : uavs[i]->resource_DX12);
 		}
-		static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(NumBarriers, barriers);
+		GetDirectCommandList(threadID)->ResourceBarrier(NumBarriers, barriers);
 	}
 	void GraphicsDevice_DX12::TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
 	{
@@ -3765,7 +3767,7 @@ namespace wiGraphicsTypes
 				barriers[i].Transition.StateAfter = _ConvertResourceStates(stateAfter);
 				barriers[i].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			}
-			static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(NumBarriers, barriers);
+			GetDirectCommandList(threadID)->ResourceBarrier(NumBarriers, barriers);
 		}
 	}
 
@@ -3869,7 +3871,7 @@ namespace wiGraphicsTypes
 				barrier.Transition.StateAfter = requiredState;
 				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
@@ -3879,14 +3881,14 @@ namespace wiGraphicsTypes
 				if (resource->SRV_DX12 != nullptr)
 				{
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
-						resource->SRV_DX12, device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+						resource->SRV_DX12, device, GetDirectCommandList(threadID));
 				}
 			}
 			else
 			{
 				assert(resource->additionalSRVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
-					resource->additionalSRVs_DX12[arrayIndex], device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+					resource->additionalSRVs_DX12[arrayIndex], device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3895,7 +3897,7 @@ namespace wiGraphicsTypes
 		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
 		{
 			GetFrameResources().SamplerDescriptorsGPU[threadID]->update(stage, slot,
-				sampler->resource_DX12, device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+				sampler->resource_DX12, device, GetDirectCommandList(threadID));
 		}
 	}
 	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
@@ -3913,13 +3915,13 @@ namespace wiGraphicsTypes
 				barrier.Transition.StateAfter = requiredState;
 				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID])->ResourceBarrier(1, &barrier);
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
 
 				buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
 			}
 
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, slot,
-				buffer->CBV_DX12, device, static_cast<ID3D12GraphicsCommandList*>(commandLists[threadID]));
+				buffer->CBV_DX12, device, GetDirectCommandList(threadID));
 		}
 	}
 
