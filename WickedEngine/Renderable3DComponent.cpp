@@ -256,6 +256,9 @@ void Renderable3DComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
 
+	GPUResource* dsv[] = { smallDepth };
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, threadID);
+
 	wiRenderer::OcclusionCulling_Render(threadID);
 }
 void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
@@ -330,6 +333,9 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 		wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
 		// This depth buffer is not cleared because we don't have to (we overwrite it anyway because depthfunc is ALWAYS)
+
+		GPUResource* dsv[] = { smallDepth };
+		wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
 		fx.process.setDepthBufferDownsampling(true);
 		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);

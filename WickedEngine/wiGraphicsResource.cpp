@@ -76,11 +76,6 @@ namespace wiGraphicsTypes
 		SAFE_INIT(UAV_DX11);
 		SAFE_INIT(UAV_DX12);
 		SAFE_INIT(resource_DX12);
-
-		for (int i = 0; i < ARRAYSIZE(resourceState); ++i)
-		{
-			resourceState[i] = RESOURCE_STATE_COMMON;
-		}
 	}
 	GPUResource::~GPUResource()
 	{

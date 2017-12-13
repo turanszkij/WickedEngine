@@ -20,8 +20,10 @@ TiledForwardRenderableComponent::~TiledForwardRenderableComponent()
 
 void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+
+	GPUResource* dsv[] = { rtMain.depth->GetTexture() };
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
 	wiProfiler::GetInstance().BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
@@ -34,10 +36,11 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 	wiProfiler::GetInstance().EndRange(threadID);
 
-	GPUResource* dsv[] = { rtMain.depth->GetTexture() };
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
 
 	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
+
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 	rtLinearDepth.Activate(threadID); {
 		wiImageEffects fx;

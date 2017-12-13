@@ -149,8 +149,6 @@ namespace wiGraphicsTypes
 
 		ID3D12Resource*								resource_DX12;
 
-		RESOURCE_STATES	resourceState[10];
-
 		GPUResource();
 		virtual ~GPUResource();
 	};

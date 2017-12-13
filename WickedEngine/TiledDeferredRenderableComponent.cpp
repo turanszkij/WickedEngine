@@ -32,6 +32,9 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
+	GPUResource* dsv[] = { rtGBuffer.depth->GetTexture() };
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
 		if (getHairParticleAlphaCompositionEnabled())
@@ -42,7 +45,6 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 
-	GPUResource* dsv[] = { rtGBuffer.depth->GetTexture() };
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
 
 	rtLinearDepth.Activate(threadID); {
@@ -55,6 +57,8 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 	rtLinearDepth.Deactivate(threadID);
 	dtDepthCopy.CopyFrom(*rtGBuffer.depth, threadID);
+
+	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 
 	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
