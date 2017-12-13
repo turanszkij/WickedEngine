@@ -316,7 +316,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	assert(text.length() * 4 < 65536 && "The index buffer currently only supports so many characters!");
 	device->BindIndexBuffer(indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
-	device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResourcePS(fontStyles[style].texture, TEXSLOT_ONDEMAND1, threadID);
 
 	wiRenderer::MiscCB cb;
 

@@ -228,3 +228,4 @@ ModelManifest.xml
 /.vs
 /models/Sample/temp
 /models/Emitter/temp
+*.csv

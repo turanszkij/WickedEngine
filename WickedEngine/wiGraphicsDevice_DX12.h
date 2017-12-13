@@ -76,6 +76,7 @@ namespace wiGraphicsTypes
 				UINT itemCount;
 				UINT ringOffset;
 				bool dirty[SHADERSTAGE_COUNT];
+				D3D12_CPU_DESCRIPTOR_HANDLE** boundDescriptors;
 
 				DescriptorTableFrameAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();
@@ -131,6 +132,7 @@ namespace wiGraphicsTypes
 
 		IDXGISwapChain3*			swapChain;
 		ViewPort					viewPort;
+
 
 	public:
 		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false);

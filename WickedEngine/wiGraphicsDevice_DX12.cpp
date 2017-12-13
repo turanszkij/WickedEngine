@@ -1223,14 +1223,19 @@ namespace wiGraphicsTypes
 
 		descriptorType = type;
 		itemSize = device->GetDescriptorHandleIncrementSize(type);
+
+		boundDescriptors = new D3D12_CPU_DESCRIPTOR_HANDLE*[SHADERSTAGE_COUNT * itemCount];
 	}
 	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
 	{
 		SAFE_RELEASE(heap_CPU);
 		SAFE_RELEASE(heap_GPU);
+		SAFE_DELETE_ARRAY(boundDescriptors);
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
 	{
+		memset(boundDescriptors, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE*)*SHADERSTAGE_COUNT*itemCount);
+
 		ringOffset = 0;
 
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
@@ -1281,11 +1286,19 @@ namespace wiGraphicsTypes
 		{
 			return;
 		}
+		UINT idx = stage * itemCount + offset;
+
+		if (boundDescriptors[idx] == descriptor)
+		{
+			return;
+		}
+
+		boundDescriptors[idx] = descriptor;
 
 		dirty[stage] = true;
 
 		D3D12_CPU_DESCRIPTOR_HANDLE dst_staging = heap_CPU->GetCPUDescriptorHandleForHeapStart();
-		dst_staging.ptr += (stage * itemCount + offset) * itemSize;
+		dst_staging.ptr += idx * itemSize;
 
 		device->CopyDescriptorsSimple(1, dst_staging, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 	}
@@ -1857,6 +1870,7 @@ namespace wiGraphicsTypes
 			pRects[i].top = INT32_MIN;
 		}
 		static_cast<ID3D12GraphicsCommandList*>(commandLists[GRAPHICSTHREAD_IMMEDIATE])->RSSetScissorRects(8, pRects);
+
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
