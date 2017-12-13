@@ -11,8 +11,6 @@
 #include <sstream>
 #include <wincodec.h>
 
-#include <unordered_map>
-
 using namespace std;
 
 namespace wiGraphicsTypes

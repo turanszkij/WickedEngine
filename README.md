@@ -18,6 +18,7 @@
 ### Overview:
 
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
+The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer coming.
 
 The interface is designed to be somewhat similar to the widely popular XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers and all together project structure. However, it makes use of the C++ programming language instead of C#, which enables lower level and more performant code in the hand of experienced developers. On the other hand, the developer can also make use of the widely popular Lua scripting language for faster iteration times and more flexible code structure.
 

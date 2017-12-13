@@ -7,9 +7,9 @@ namespace wiVersion
 	// main engine core
 	const int major = 0;
 	// minor features, major updates
-	const int minor = 13;
+	const int minor = 14;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 94;
+	const int revision = 0;
 
 
 	long GetVersion()

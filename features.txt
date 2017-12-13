@@ -1,6 +1,8 @@
 Feature list
 ------------
 
+DirectX 11 renderer
+DirectX 12 renderer
 Image rendering,animation : 2D,3D space
 Font rendering
 TCP Networking
