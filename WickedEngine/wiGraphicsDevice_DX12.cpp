@@ -3340,7 +3340,7 @@ namespace wiGraphicsTypes
 	{
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->DrawIndexedInstanced((UINT)indexCount, 1, startIndexLocation, baseVertexLocation, startInstanceLocation);
+		GetDirectCommandList(threadID)->DrawIndexedInstanced((UINT)indexCount, (UINT)instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
