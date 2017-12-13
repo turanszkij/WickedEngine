@@ -259,7 +259,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 		m_pBuffer_Float2_H0, 
 		m_pBuffer_Float_Omega
 	};
-	device->BindResourcesCS(cs0_srvs, TEXSLOT_ONDEMAND0, ARRAYSIZE(cs0_srvs), threadID);
+	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, ARRAYSIZE(cs0_srvs), threadID);
 
 	GPUResource* cs0_uavs[1] = { m_pBuffer_Float2_Ht };
 	device->BindUnorderedAccessResourcesCS(cs0_uavs, 0, ARRAYSIZE(cs0_uavs), threadID);
@@ -270,8 +270,8 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	perFrameData.g_GridLen = m_param.dmap_dim / m_param.patch_length;
 	device->UpdateBuffer(m_pPerFrameCB, &perFrameData, threadID);
 
-	device->BindConstantBufferCS(m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
-	device->BindConstantBufferCS(m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
+	device->BindConstantBuffer(CS, m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
+	device->BindConstantBuffer(CS, m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
 
 	// Run the CS
 	UINT group_count_x = (m_param.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
@@ -288,8 +288,8 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 
 
 
-	device->BindConstantBufferCS(m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
-	device->BindConstantBufferCS(m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
+	device->BindConstantBuffer(CS, m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
+	device->BindConstantBuffer(CS, m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
 
 
 	// Update displacement map:
@@ -298,7 +298,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	GPUResource* cs_uavs[] = { m_pDisplacementMap };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 	GPUResource* cs_srvs[1] = { m_pBuffer_Float_Dxyz };
-	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
+	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
 
@@ -308,7 +308,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	cs_uavs[0] = { m_pGradientMap };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
 	cs_srvs[0] = m_pDisplacementMap;
-	device->BindResourcesCS(cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
+	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
 
@@ -369,11 +369,11 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	device->UpdateBuffer(g_pShadingCB, &cb, threadID);
 
-	device->BindConstantBufferVS(g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
-	device->BindConstantBufferPS(g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
+	device->BindConstantBuffer(VS, g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
+	device->BindConstantBuffer(PS, g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
 
-	device->BindResourceVS(m_pDisplacementMap, TEXSLOT_ONDEMAND0, threadID);
-	device->BindResourcePS(m_pGradientMap, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResource(VS, m_pDisplacementMap, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResource(PS, m_pGradientMap, TEXSLOT_ONDEMAND0, threadID);
 
 	device->Draw(dim.x*dim.y*6, 0, threadID);
 

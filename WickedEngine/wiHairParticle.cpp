@@ -527,9 +527,9 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 
 #ifdef ENABLE_CULLING
 
-	device->BindConstantBufferCS(cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
+	device->BindConstantBuffer(CS, cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
 
-	device->BindResourceCS(vb, 0, threadID);
+	device->BindResource(CS, vb, 0, threadID);
 
 	const GPUResource* uavs[] = {
 		static_cast<const GPUResource*>(drawargs),
@@ -554,7 +554,7 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT MATRIX_WIDTH = BITONIC_BLOCK_SIZE;
 		const UINT MATRIX_HEIGHT = NUM_ELEMENTS / BITONIC_BLOCK_SIZE;
 
-		device->BindConstantBufferCS(cb_BITONIC, 0, threadID);
+		device->BindConstantBuffer(CS, cb_BITONIC, 0, threadID);
 
 		// Sort the data
 		// First sort the rows for the levels <= to the block size
@@ -581,7 +581,7 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 			// Transpose the data from buffer 1 into buffer 2
 			device->UnBindResources(0, 1, threadID);
 			device->BindUnorderedAccessResourceCS(ib_transposed, 0, threadID);
-			device->BindResourceCS(ib, 0, threadID);
+			device->BindResource(CS, ib, 0, threadID);
 			device->BindCS(cs_TRANSPOSE, threadID);
 			device->Dispatch(MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, 1, threadID);
 
@@ -597,7 +597,7 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 			// Transpose the data from buffer 2 back into buffer 1
 			device->UnBindResources(0, 1, threadID);
 			device->BindUnorderedAccessResourceCS(ib, 0, threadID);
-			device->BindResourceCS(ib_transposed, 0, threadID);
+			device->BindResource(CS, ib_transposed, 0, threadID);
 			device->BindCS(cs_TRANSPOSE, threadID);
 			device->Dispatch(MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, 1, threadID);
 
@@ -634,13 +634,13 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, bool transparen
 
 		if(texture)
 		{
-			device->BindResourcePS(texture,TEXSLOT_ONDEMAND0,threadID);
-			device->BindResourceVS(texture,TEXSLOT_ONDEMAND0,threadID);
+			device->BindResource(PS, texture,TEXSLOT_ONDEMAND0,threadID);
+			device->BindResource(VS, texture,TEXSLOT_ONDEMAND0,threadID);
 		}
 
-		device->BindConstantBufferVS(cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->BindConstantBuffer(VS, cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		device->BindResourceVS(particleBuffer, 0, threadID);
+		device->BindResource(VS, particleBuffer, 0, threadID);
 
 		device->Draw((int)particleCount * 12, 0, threadID);
 

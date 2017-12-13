@@ -45,19 +45,19 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		cb.mScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
 
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
-		device->BindConstantBufferGS(constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->BindConstantBuffer(GS, constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 
 		int i=0;
 		for(Texture2D* x : rims){
 			if(x!=nullptr){
-				device->BindResourcePS(x, TEXSLOT_ONDEMAND0 + i, threadID);
-				device->BindResourceGS(x, TEXSLOT_ONDEMAND0 + i, threadID);
+				device->BindResource(PS, x, TEXSLOT_ONDEMAND0 + i, threadID);
+				device->BindResource(GS, x, TEXSLOT_ONDEMAND0 + i, threadID);
 				i++;
 			}
 		}
 
-		device->BindSamplerGS(samplercmp, SSLOT_ONDEMAND0, threadID);
+		device->BindSampler(GS, samplercmp, SSLOT_ONDEMAND0, threadID);
 
 
 		device->Draw(i, 0, threadID);

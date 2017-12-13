@@ -118,6 +118,7 @@ wiRenderer::wiRenderer()
 void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fullscreen)
 {
 	SAFE_DELETE(graphicsDevice);
+	//graphicsDevice = new GraphicsDevice_DX11(window, fullscreen);
 	graphicsDevice = new GraphicsDevice_DX12(window, fullscreen);
 }
 
@@ -2575,45 +2576,45 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
-		device->BindSamplerPS(samplers[i], i, threadID);
-		device->BindSamplerVS(samplers[i], i, threadID);
-		device->BindSamplerGS(samplers[i], i, threadID);
-		device->BindSamplerDS(samplers[i], i, threadID);
-		device->BindSamplerHS(samplers[i], i, threadID);
-		device->BindSamplerCS(samplers[i], i, threadID);
+		device->BindSampler(PS, samplers[i], i, threadID);
+		device->BindSampler(VS, samplers[i], i, threadID);
+		device->BindSampler(GS, samplers[i], i, threadID);
+		device->BindSampler(DS, samplers[i], i, threadID);
+		device->BindSampler(HS, samplers[i], i, threadID);
+		device->BindSampler(CS, samplers[i], i, threadID);
 	}
 
 
-	device->BindConstantBufferPS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBufferVS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBufferGS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBufferHS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBufferDS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBufferCS(constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
 
-	device->BindConstantBufferPS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBufferVS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBufferGS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBufferHS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBufferDS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBufferCS(constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 
-	device->BindConstantBufferPS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBufferVS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBufferGS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBufferHS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBufferDS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBufferCS(constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
 
-	device->BindConstantBufferVS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBufferPS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBufferGS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBufferDS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBufferHS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBufferCS(constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 
-	device->BindConstantBufferVS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
-	device->BindConstantBufferPS(constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 }
 
 Transform* wiRenderer::getTransformByName(const std::string& get)
@@ -3176,9 +3177,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			resourceBuffers[RBTYPE_ENTITYARRAY],
 			resourceBuffers[RBTYPE_MATRIXARRAY],
 		};
-		GetDevice()->BindResourcesVS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-		GetDevice()->BindResourcesPS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-		GetDevice()->BindResourcesCS(resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		GetDevice()->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		GetDevice()->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		GetDevice()->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
 
 	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
@@ -3232,7 +3233,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						armature->boneData[k].Create(armature->boneCollection[k]->boneRelativity);
 					}
 					GetDevice()->UpdateBuffer(&armature->boneBuffer, armature->boneData.data(), threadID, (int)(sizeof(Armature::ShaderBoneType) * armature->boneCollection.size()));
-					GetDevice()->BindResourceCS(&armature->boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, threadID);
+					GetDevice()->BindResource(CS, &armature->boneBuffer, SKINNINGSLOT_IN_BONEBUFFER, threadID);
 
 					// Do the skinning
 					GPUResource* vbs[] = {
@@ -3244,7 +3245,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 						&mesh->streamoutBuffer_PRE,
 					};
 
-					GetDevice()->BindResourcesCS(vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
+					GetDevice()->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
 					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
 
 					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
@@ -3301,8 +3302,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			globalEnvProbes[0] == nullptr ? enviroMap : globalEnvProbes[0]->cubeMap.GetTexture(),
 			globalEnvProbes[1] == nullptr ? enviroMap : globalEnvProbes[1]->cubeMap.GetTexture(),
 		};
-		GetDevice()->BindResourcesPS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
-		GetDevice()->BindResourcesCS(envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
+		GetDevice()->BindResources(PS, envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
+		GetDevice()->BindResources(CS, envMaps, TEXSLOT_ENV0, ARRAYSIZE(envMaps), threadID);
 	}
 }
 void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
@@ -3774,7 +3775,7 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 			sb.mColor = XMFLOAT4(1, 1, 1, 1);
 			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->BindResourcePS(x->cubeMap.GetTexture(), TEXSLOT_ENV0, threadID);
+			GetDevice()->BindResource(PS, x->cubeMap.GetTexture(), TEXSLOT_ENV0, threadID);
 
 			GetDevice()->Draw(2880, 0, threadID); // uv-sphere
 		}
@@ -3979,15 +3980,15 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 	//GetDevice()->BindPS(pixelShaders[PSTYPE_TRAIL],threadID);
 	//GetDevice()->BindVS(vertexShaders[VSTYPE_TRAIL],threadID);
 	//
-	//GetDevice()->BindResourcePS(refracRes,TEXSLOT_ONDEMAND0,threadID);
+	//GetDevice()->BindResource(PS, refracRes,TEXSLOT_ONDEMAND0,threadID);
 
 	//for (Object* o : objectsWithTrails)
 	//{
 	//	if (o->trail.size() >= 4)
 	//	{
 
-	//		GetDevice()->BindResourcePS(o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
-	//		GetDevice()->BindResourcePS(o->trailTex, TEXSLOT_ONDEMAND2, threadID);
+	//		GetDevice()->BindResource(PS, o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
+	//		GetDevice()->BindResource(PS, o->trailTex, TEXSLOT_ONDEMAND2, threadID);
 
 	//		std::vector<RibbonVertex> trails;
 
@@ -4187,8 +4188,8 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
-		GetDevice()->BindConstantBufferPS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-		GetDevice()->BindConstantBufferVS(constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
 
 		for (int type = Light::POINT; type < Light::LIGHTTYPE_COUNT; ++type)
@@ -4433,7 +4434,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 					vp.MaxDepth = 1.0f;
 					GetDevice()->BindViewports(1, &vp, threadID);
 
-					GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+					GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 					break;
 				}
 				break;
@@ -4582,8 +4583,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 		GetDevice()->EventEnd(threadID);
 	}
 
-	GetDevice()->BindResourcePS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-	GetDevice()->BindResourcePS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	GetDevice()->BindResource(PS, Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+	GetDevice()->BindResource(PS, Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 }
 
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
@@ -4734,12 +4735,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					mesh->impostorTarget.GetTexture(3),
 					mesh->impostorTarget.GetTexture(4),
 				};
-				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
 				if (!impostorGraphicsStateComplete)
 				{
 					device->BindGraphicsPSO(impostorRequest, threadID);
-					device->BindConstantBufferPS(Material::constantBuffer_Impostor, CB_GETBINDSLOT(MaterialCB), threadID);
+					device->BindConstantBuffer(PS, Material::constantBuffer_Impostor, CB_GETBINDSLOT(MaterialCB), threadID);
 					SetAlphaRef(0.75f, threadID);
 					impostorGraphicsStateComplete = true;
 				}
@@ -4773,7 +4774,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				TessellationCB tessCB;
 				tessCB.tessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
 				device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
-				device->BindConstantBufferHS(constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
+				device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
 				realTOPOLOGY = PATCHLIST;
 			}
 
@@ -4992,7 +4993,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				boundVBType_Prev = boundVBType;
 
-				device->BindConstantBufferPS(&material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
+				device->BindConstantBuffer(PS, &material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
 				device->BindStencilRef(material->GetStencilRef(), threadID);
 
@@ -5006,7 +5007,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					material->GetMetalnessMap(),
 					material->GetDisplacementMap(),
 				};
-				device->BindResourcesPS(res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
 				SetAlphaRef(material->alphaRef, threadID);
 
@@ -5031,7 +5032,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
-		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
+		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
 	if (grass)
@@ -5048,7 +5049,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 		{
 			if (refRes != nullptr)
 			{
-				GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6, threadID);
+				GetDevice()->BindResource(PS, refRes, TEXSLOT_ONDEMAND6, threadID);
 			}
 		}
 
@@ -5070,14 +5071,14 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
-		GetDevice()->BindResourcePS(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
+		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
 	if (!wireRender)
 	{
-		GetDevice()->BindResourcePS(refRes, TEXSLOT_ONDEMAND6, threadID);
-		GetDevice()->BindResourcePS(refracRes, TEXSLOT_ONDEMAND7, threadID);
-		GetDevice()->BindResourcePS(waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
+		GetDevice()->BindResource(PS, refRes, TEXSLOT_ONDEMAND6, threadID);
+		GetDevice()->BindResource(PS, refracRes, TEXSLOT_ONDEMAND7, threadID);
+		GetDevice()->BindResource(PS, waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
 	}
 
 	if (ocean != nullptr)
@@ -5118,12 +5119,12 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	
 	if (enviroMap != nullptr)
 	{
-		GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+		GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 	}
 	else
 	{
 		// If control gets here, it means we fill out only a velocity buffer on the background for temporal AA
-		GetDevice()->BindResourcePS(wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ENV_GLOBAL, threadID);
+		GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ENV_GLOBAL, threadID);
 	}
 
 	//GetDevice()->BindVertexLayout(nullptr, threadID);
@@ -5159,7 +5160,7 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 		if (!boundCB)
 		{
 			boundCB = true;
-			device->BindConstantBufferPS(constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
+			device->BindConstantBuffer(PS, constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
 		}
 
 
@@ -5172,8 +5173,8 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 
 			if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
 
-				device->BindResourcePS(decal->texture, TEXSLOT_ONDEMAND0, threadID);
-				device->BindResourcePS(decal->normal, TEXSLOT_ONDEMAND1, threadID);
+				device->BindResource(PS, decal->texture, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(PS, decal->normal, TEXSLOT_ONDEMAND1, threadID);
 
 				XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
 
@@ -5243,7 +5244,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		}
 
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-		GetDevice()->BindConstantBufferGS(constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 
 		CulledList culledObjects;
@@ -5268,7 +5269,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 			GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE], threadID);
 
-			GetDevice()->BindResourcePS(enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+			GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 			GetDevice()->Draw(240, 0, threadID);
 		}
 
@@ -5405,8 +5406,8 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 			// Pre-integrate the voxel texture by creating blurred mip levels:
 			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
 			GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
-			GetDevice()->BindResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-			GetDevice()->BindResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
+			GetDevice()->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
+			GetDevice()->BindResource(CS, resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
 			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
 			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 1024), 1, 1, threadID);
 			GetDevice()->EventEnd(threadID);
@@ -5437,10 +5438,10 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 	if (voxelHelper)
 	{
-		GetDevice()->BindResourceVS(result, TEXSLOT_VOXELRADIANCE, threadID);
+		GetDevice()->BindResource(VS, result, TEXSLOT_VOXELRADIANCE, threadID);
 	}
-	GetDevice()->BindResourcePS(result, TEXSLOT_VOXELRADIANCE, threadID);
-	GetDevice()->BindResourceCS(result, TEXSLOT_VOXELRADIANCE, threadID);
+	GetDevice()->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
+	GetDevice()->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd(threadID);
@@ -5548,7 +5549,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.numThreadGroups[2] = 1;
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
 		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 		device->UnBindUnorderedAccessResources(UAVSLOT_TILEFRUSTUMS, 1, threadID);
@@ -5582,7 +5583,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		device->UnBindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
 
-		device->BindResourceCS(frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
+		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 
 		device->BindComputePSO(CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
 
@@ -5600,7 +5601,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		dispatchParams.numThreads[2] = 1;
 		dispatchParams.value0 = (UINT)(frameCullings[getCamera()].culledLights.size() + frameCullings[getCamera()].culledDecals.size());
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-		device->BindConstantBufferCS(constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
 		if (deferred)
 		{
@@ -5611,8 +5612,8 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 			};
 			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
-			GetDevice()->BindResourceCS(Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-			GetDevice()->BindResourceCS(Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+			GetDevice()->BindResource(CS, Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+			GetDevice()->BindResource(CS, Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 
 			device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -5640,7 +5641,7 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 {
 	GetDevice()->EventBegin("Resolve MSAA DepthBuffer", threadID);
 
-	GetDevice()->BindResourceCS(src, TEXSLOT_ONDEMAND0, threadID);
+	GetDevice()->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
 	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
 
 	Texture2DDesc desc = src->GetDesc();
@@ -5675,17 +5676,17 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 	case wiRenderer::MIPGENFILTER_POINT:
 		GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_LINEAR:
 		GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
 		GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN2D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
@@ -5696,7 +5697,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
 		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
-		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+		GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
 		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
 		GetDevice()->Dispatch(
@@ -5728,17 +5729,17 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	case wiRenderer::MIPGENFILTER_POINT:
 		GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_LINEAR:
 		GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
 		GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER], threadID);
-		GetDevice()->BindSamplerCS(customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case wiRenderer::MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
@@ -5749,7 +5750,7 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
 		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
-		GetDevice()->BindResourceCS(texture, TEXSLOT_UNIQUE0, threadID, i);
+		GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
 		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
 		desc.Depth = max(1, (UINT)ceilf(desc.Depth * 0.5f));
@@ -5850,7 +5851,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 	if (atlasTexture != nullptr)
 	{
-		device->BindResourcePS(atlasTexture, TEXSLOT_DECALATLAS, threadID);
+		device->BindResource(PS, atlasTexture, TEXSLOT_DECALATLAS, threadID);
 	}
 }
 
@@ -5972,29 +5973,29 @@ void wiRenderer::SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->BindResourcePS(slot0, TEXSLOT_GBUFFER0, threadID);
-	GetDevice()->BindResourcePS(slot1, TEXSLOT_GBUFFER1, threadID);
-	GetDevice()->BindResourcePS(slot2, TEXSLOT_GBUFFER2, threadID);
-	GetDevice()->BindResourcePS(slot3, TEXSLOT_GBUFFER3, threadID);
-	GetDevice()->BindResourcePS(slot4, TEXSLOT_GBUFFER4, threadID);
+	GetDevice()->BindResource(PS, slot0, TEXSLOT_GBUFFER0, threadID);
+	GetDevice()->BindResource(PS, slot1, TEXSLOT_GBUFFER1, threadID);
+	GetDevice()->BindResource(PS, slot2, TEXSLOT_GBUFFER2, threadID);
+	GetDevice()->BindResource(PS, slot3, TEXSLOT_GBUFFER3, threadID);
+	GetDevice()->BindResource(PS, slot4, TEXSLOT_GBUFFER4, threadID);
 
-	GetDevice()->BindResourceCS(slot0, TEXSLOT_GBUFFER0, threadID);
-	GetDevice()->BindResourceCS(slot1, TEXSLOT_GBUFFER1, threadID);
-	GetDevice()->BindResourceCS(slot2, TEXSLOT_GBUFFER2, threadID);
-	GetDevice()->BindResourceCS(slot3, TEXSLOT_GBUFFER3, threadID);
-	GetDevice()->BindResourceCS(slot4, TEXSLOT_GBUFFER4, threadID);
+	GetDevice()->BindResource(CS, slot0, TEXSLOT_GBUFFER0, threadID);
+	GetDevice()->BindResource(CS, slot1, TEXSLOT_GBUFFER1, threadID);
+	GetDevice()->BindResource(CS, slot2, TEXSLOT_GBUFFER2, threadID);
+	GetDevice()->BindResource(CS, slot3, TEXSLOT_GBUFFER3, threadID);
+	GetDevice()->BindResource(CS, slot4, TEXSLOT_GBUFFER4, threadID);
 }
 void wiRenderer::UpdateDepthBuffer(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->BindResourcePS(depth, TEXSLOT_DEPTH, threadID);
-	GetDevice()->BindResourceVS(depth, TEXSLOT_DEPTH, threadID);
-	GetDevice()->BindResourceGS(depth, TEXSLOT_DEPTH, threadID);
-	GetDevice()->BindResourceCS(depth, TEXSLOT_DEPTH, threadID);
+	GetDevice()->BindResource(PS, depth, TEXSLOT_DEPTH, threadID);
+	GetDevice()->BindResource(VS, depth, TEXSLOT_DEPTH, threadID);
+	GetDevice()->BindResource(GS, depth, TEXSLOT_DEPTH, threadID);
+	GetDevice()->BindResource(CS, depth, TEXSLOT_DEPTH, threadID);
 
-	GetDevice()->BindResourcePS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	GetDevice()->BindResourceVS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	GetDevice()->BindResourceGS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	GetDevice()->BindResourceCS(linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	GetDevice()->BindResource(PS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	GetDevice()->BindResource(VS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	GetDevice()->BindResource(GS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	GetDevice()->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
 }
 
 void wiRenderer::FinishLoading()
@@ -6052,7 +6053,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		// Pass 1 : Create luminance map from scene tex
 		Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
-		device->BindResourceCS(sourceImage, TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, threadID);
 		device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
@@ -6065,11 +6066,11 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 			device->BindUnorderedAccessResourceCS(luminance_avg[i], 0, threadID);
 			if (i > 0)
 			{
-				device->BindResourceCS(luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(CS, luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
 			}
 			else
 			{
-				device->BindResourceCS(luminance_map, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(CS, luminance_map, TEXSLOT_ONDEMAND0, threadID);
 			}
 			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
 		}
@@ -6733,14 +6734,14 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 			}
 			if (!subset.material->IsTransparent() && !subset.material->isSky && !subset.material->water)
 			{
-				GetDevice()->BindConstantBufferPS(&subset.material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
+				GetDevice()->BindConstantBuffer(PS, &subset.material->constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
-				GetDevice()->BindResourcePS(subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-				GetDevice()->BindResourcePS(subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-				GetDevice()->BindResourcePS(subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
-				GetDevice()->BindResourcePS(subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
-				GetDevice()->BindResourcePS(subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
-				GetDevice()->BindResourcePS(subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
+				GetDevice()->BindResource(PS, subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+				GetDevice()->BindResource(PS, subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+				GetDevice()->BindResource(PS, subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
+				GetDevice()->BindResource(PS, subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
+				GetDevice()->BindResource(PS, subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
+				GetDevice()->BindResource(PS, subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
 
 
 				GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), 1, subset.indexBufferOffset, 0, 0, threadID);

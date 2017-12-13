@@ -1727,7 +1727,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
-	wiRenderer::GetDevice()->BindConstantBufferVS(wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
+	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
 	wiRenderer::GetDevice()->BindGraphicsPSO(&PSO, threadID);
 	wiRenderer::GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
 

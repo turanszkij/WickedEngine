@@ -3224,87 +3224,49 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcePS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		BindResource(PS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_DX12::BindResourceVS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindResource(VS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_DX12::BindResourceGS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindResource(GS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_DX12::BindResourceDS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindResource(DS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_DX12::BindResourceHS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindResource(HS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_DX12::BindResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindResource(CS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_DX12::BindResourcesPS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		if (resources != nullptr)
+		if (resource != nullptr && resource->resource_DX12 != nullptr)
 		{
-			for (int i = 0; i < count; ++i)
+			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(resource->resourceState[threadID]);
+			D3D12_RESOURCE_STATES requiredState = stage == PS ? D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+			if (currentState != requiredState)
 			{
-				BindResource(PS, resources[i], slot + i, threadID, -1);
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = resource->resource_DX12;
+				barrier.Transition.StateBefore = currentState;
+				barrier.Transition.StateAfter = requiredState;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
+
+				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+			}
+
+			if (arrayIndex < 0)
+			{
+				if (resource->SRV_DX12 != nullptr)
+				{
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
+						resource->SRV_DX12, device, GetDirectCommandList(threadID));
+				}
+			}
+			else
+			{
+				assert(resource->additionalSRVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
+					resource->additionalSRVs_DX12[arrayIndex], device, GetDirectCommandList(threadID));
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResourcesVS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
 			for (int i = 0; i < count; ++i)
 			{
-				BindResource(VS, resources[i], slot + i, threadID, -1);
-			}
-		}
-	}
-	void GraphicsDevice_DX12::BindResourcesGS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		if (resources != nullptr)
-		{
-			for (int i = 0; i < count; ++i)
-			{
-				BindResource(GS, resources[i], slot + i, threadID, -1);
-			}
-		}
-	}
-	void GraphicsDevice_DX12::BindResourcesDS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		if (resources != nullptr)
-		{
-			for (int i = 0; i < count; ++i)
-			{
-				BindResource(DS, resources[i], slot + i, threadID, -1);
-			}
-		}
-	}
-	void GraphicsDevice_DX12::BindResourcesHS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		if (resources != nullptr)
-		{
-			for (int i = 0; i < count; ++i)
-			{
-				BindResource(HS, resources[i], slot + i, threadID, -1);
-			}
-		}
-	}
-	void GraphicsDevice_DX12::BindResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		if (resources != nullptr)
-		{
-			for (int i = 0; i < count; ++i)
-			{
-				BindResource(CS, resources[i], slot + i, threadID, -1);
+				BindResource(stage, resources[i], slot + i, threadID, -1);
 			}
 		}
 	}
@@ -3376,53 +3338,37 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindSamplerPS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
-		BindSampler(PS, sampler, slot, threadID);
+		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
+		{
+			GetFrameResources().SamplerDescriptorsGPU[threadID]->update(stage, slot,
+				sampler->resource_DX12, device, GetDirectCommandList(threadID));
+		}
 	}
-	void GraphicsDevice_DX12::BindSamplerVS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
-		BindSampler(VS, sampler, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindSamplerGS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindSampler(GS, sampler, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindSamplerHS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindSampler(HS, sampler, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindSamplerDS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindSampler(DS, sampler, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindSamplerCS(Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindSampler(CS, sampler, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindConstantBufferPS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindConstantBuffer(PS, buffer, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindConstantBufferVS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindConstantBuffer(VS, buffer, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindConstantBufferGS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindConstantBuffer(GS, buffer, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindConstantBufferDS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindConstantBuffer(DS, buffer, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindConstantBufferHS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindConstantBuffer(HS, buffer, slot, threadID);
-	}
-	void GraphicsDevice_DX12::BindConstantBufferCS(GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		BindConstantBuffer(CS, buffer, slot, threadID);
+		if (buffer != nullptr && buffer->CBV_DX12 != nullptr)
+		{
+			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(buffer->resourceState[threadID]);
+			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+			if (currentState != requiredState)
+			{
+				D3D12_RESOURCE_BARRIER barrier = {};
+				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+				barrier.Transition.pResource = buffer->resource_DX12;
+				barrier.Transition.StateBefore = currentState;
+				barrier.Transition.StateAfter = requiredState;
+				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
+
+				buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
+			}
+
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, slot,
+				buffer->CBV_DX12, device, GetDirectCommandList(threadID));
+		}
 	}
 	void GraphicsDevice_DX12::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
 	{
@@ -3847,75 +3793,5 @@ namespace wiGraphicsTypes
 	{
 	}
 
-
-
-	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		if (resource != nullptr && resource->resource_DX12 != nullptr)
-		{
-			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(resource->resourceState[threadID]);
-			D3D12_RESOURCE_STATES requiredState = stage == PS ? D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-			if (currentState != requiredState)
-			{
-				D3D12_RESOURCE_BARRIER barrier = {};
-				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrier.Transition.pResource = resource->resource_DX12;
-				barrier.Transition.StateBefore = currentState;
-				barrier.Transition.StateAfter = requiredState;
-				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
-
-				resource->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
-			}
-
-			if (arrayIndex < 0)
-			{
-				if (resource->SRV_DX12 != nullptr)
-				{
-					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
-						resource->SRV_DX12, device, GetDirectCommandList(threadID));
-				}
-			}
-			else
-			{
-				assert(resource->additionalSRVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
-					resource->additionalSRVs_DX12[arrayIndex], device, GetDirectCommandList(threadID));
-			}
-		}
-	}
-	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
-	{
-		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
-		{
-			GetFrameResources().SamplerDescriptorsGPU[threadID]->update(stage, slot,
-				sampler->resource_DX12, device, GetDirectCommandList(threadID));
-		}
-	}
-	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
-	{
-		if (buffer != nullptr && buffer->CBV_DX12 != nullptr)
-		{
-			D3D12_RESOURCE_STATES currentState = _ConvertResourceStates(buffer->resourceState[threadID]);
-			D3D12_RESOURCE_STATES requiredState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-			if (currentState != requiredState)
-			{
-				D3D12_RESOURCE_BARRIER barrier = {};
-				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrier.Transition.pResource = buffer->resource_DX12;
-				barrier.Transition.StateBefore = currentState;
-				barrier.Transition.StateAfter = requiredState;
-				barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
-
-				buffer->resourceState[threadID] = _ConvertResourceStates_Inv(requiredState);
-			}
-
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, slot,
-				buffer->CBV_DX12, device, GetDirectCommandList(threadID));
-		}
-	}
 
 }

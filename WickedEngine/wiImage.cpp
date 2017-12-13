@@ -318,10 +318,10 @@ void wiImage::SetUpStates()
 
 void wiImage::BindPersistentState(GRAPHICSTHREAD threadID)
 {
-	wiRenderer::GetDevice()->BindConstantBufferVS(&constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
-	wiRenderer::GetDevice()->BindConstantBufferPS(&constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+	wiRenderer::GetDevice()->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+	wiRenderer::GetDevice()->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
 
-	wiRenderer::GetDevice()->BindConstantBufferPS(&processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
+	wiRenderer::GetDevice()->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
 }
 
 void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHREAD threadID)
@@ -333,36 +333,36 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
-	device->BindResourcePS(texture, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
 
 	device->BindStencilRef(effects.stencilRef, threadID);
 
 	if (effects.quality == QUALITY_NEAREST) 
 	{
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_POINT_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_POINT_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 	else if (effects.quality == QUALITY_BILINEAR) 
 	{
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_LINEAR_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_LINEAR_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 	else if (effects.quality == QUALITY_ANISOTROPIC) 
 	{
 		if (effects.sampleFlag == SAMPLEMODE_MIRROR)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_ANISO_MIRROR], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_WRAP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_ANISO_WRAP], SSLOT_ONDEMAND0, threadID);
 		else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
-			device->BindSamplerPS(wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(PS, wiRenderer::samplers[SSLOT_ANISO_CLAMP], SSLOT_ONDEMAND0, threadID);
 	}
 
 	if (effects.presentFullScreen)
@@ -588,9 +588,9 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 
 			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_LIGHTSHAFT], threadID);
 		}
-		device->BindResourcePS(effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
-		device->BindResourcePS(effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
-		device->BindResourcePS(effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
+		device->BindResource(PS, effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
+		device->BindResource(PS, effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
+		device->BindResource(PS, effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
 	}
 	else // BLUR
 	{
@@ -643,9 +643,9 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 
 	device->BindStencilRef(stencilRef, threadID);
 
-	device->BindResourcePS(lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
-	device->BindResourcePS(lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
-	device->BindResourcePS(ao,TEXSLOT_ONDEMAND2,threadID);
+	device->BindResource(PS, lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResource(PS, lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
+	device->BindResource(PS, ao,TEXSLOT_ONDEMAND2,threadID);
 
 	device->BindGraphicsPSO(&deferredPSO, threadID);
 

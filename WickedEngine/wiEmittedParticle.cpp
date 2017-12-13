@@ -301,7 +301,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
 
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
-	device->BindConstantBufferCS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
 	GPUResource* uavs[] = {
 		particleBuffer,
@@ -319,7 +319,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		&object->mesh->indexBuffer,
 		&object->mesh->vertexBuffer_POS,
 	};
-	device->BindResourcesCS(resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+	device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
 
 	// kick off updating, set up state
@@ -487,19 +487,19 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 	//device->BindPS(wiRenderer::IsWireRender() ? simplestPS : pixelShader, threadID);
 	//device->BindVS(vertexShader, threadID);
 
-	device->BindConstantBufferVS(constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
 	//device->BindRasterizerState(wiRenderer::IsWireRender() ? wireFrameRS : rasterizerState, threadID);
 	//device->BindDepthStencilState(depthStencilState, 1, threadID);
 
 	//device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
 
-	device->BindResourceVS(particleBuffer, 0, threadID);
-	device->BindResourceVS(aliveList[0], 1, threadID);
+	device->BindResource(VS, particleBuffer, 0, threadID);
+	device->BindResource(VS, aliveList[0], 1, threadID);
 
 	if (!wiRenderer::IsWireRender() && material->texture)
 	{
-		device->BindResourcePS(material->texture, TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(PS, material->texture, TEXSLOT_ONDEMAND0, threadID);
 	}
 
 	device->DrawInstancedIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, threadID);
