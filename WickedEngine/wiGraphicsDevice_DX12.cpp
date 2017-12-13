@@ -1501,17 +1501,16 @@ namespace wiGraphicsTypes
 		}
 
 		// Create command queue
-		D3D12_COMMAND_QUEUE_DESC commandQueueDesc = {};
-		commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		commandQueueDesc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&commandQueue);
+		D3D12_COMMAND_QUEUE_DESC directQueueDesc = {};
+		directQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		directQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		directQueueDesc.NodeMask = 0;
+		hr = device->CreateCommandQueue(&directQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&directQueue);
 
 		// Create fences for command queue:
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&commandFence);
-		commandFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-		commandFenceValue = 1;
+		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&frameFence);
+		frameFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
 
 
 
@@ -1544,12 +1543,12 @@ namespace wiGraphicsTypes
 		fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
 		fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
 		fullscreenDesc.Windowed = !fullscreen;
-		hr = pIDXGIFactory->CreateSwapChainForHwnd(commandQueue, window, &sd, &fullscreenDesc, nullptr, &_swapChain);
+		hr = pIDXGIFactory->CreateSwapChainForHwnd(directQueue, window, &sd, &fullscreenDesc, nullptr, &_swapChain);
 #else
 		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
 		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		hr = pIDXGIFactory->CreateSwapChainForCoreWindow(commandQueue, reinterpret_cast<IUnknown*>(window), &sd, nullptr, &_swapChain);
+		hr = pIDXGIFactory->CreateSwapChainForCoreWindow(directQueue, reinterpret_cast<IUnknown*>(window), &sd, nullptr, &_swapChain);
 #endif
 
 		if (FAILED(hr))
@@ -1634,12 +1633,12 @@ namespace wiGraphicsTypes
 
 		// Create copy queue:
 		{
-			D3D12_COMMAND_QUEUE_DESC commandQueueDesc = {};
-			commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-			commandQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-			commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			commandQueueDesc.NodeMask = 0;
-			hr = device->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&copyQueue);
+			D3D12_COMMAND_QUEUE_DESC directQueueDesc = {};
+			directQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			directQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			directQueueDesc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&directQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&copyQueue);
 			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, __uuidof(ID3D12CommandAllocator), (void**)&copyAllocator);
 			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, copyAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&copyCommandList);
 		
@@ -1890,8 +1889,8 @@ namespace wiGraphicsTypes
 			}
 		}
 
-		SAFE_RELEASE(commandFence);
-		CloseHandle(commandFenceEvent);
+		SAFE_RELEASE(frameFence);
+		CloseHandle(frameFenceEvent);
 
 		SAFE_RELEASE(copyQueue);
 		SAFE_RELEASE(copyAllocator);
@@ -1915,7 +1914,7 @@ namespace wiGraphicsTypes
 		SAFE_DELETE(bufferUploader);
 		SAFE_DELETE(textureUploader);
 
-		SAFE_RELEASE(commandQueue);
+		SAFE_RELEASE(directQueue);
 		SAFE_RELEASE(device);
 	}
 
@@ -2983,27 +2982,25 @@ namespace wiGraphicsTypes
 		result = GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->Close();
 
 		// Execute the list of commands.
-		commandQueue->ExecuteCommandLists(1, GetFrameResources().commandLists);
+		directQueue->ExecuteCommandLists(1, GetFrameResources().commandLists);
 
 
 		swapChain->Present(VSYNC, 0);
 
 
-		// Signal and increment the fence value.
-		UINT64 fenceToWaitFor = commandFenceValue;
-		result = commandQueue->Signal(commandFence, fenceToWaitFor);
-		commandFenceValue++;
-
-		// Wait until the GPU is done rendering.
-		if (commandFence->GetCompletedValue() < fenceToWaitFor)
-		{
-			result = commandFence->SetEventOnCompletion(fenceToWaitFor, commandFenceEvent);
-			WaitForSingleObject(commandFenceEvent, INFINITE);
-		}
-
 
 		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
 		FRAMECOUNT++;
+
+		// Signal and increment the fence value.
+		result = directQueue->Signal(frameFence, FRAMECOUNT);
+
+		// Wait until the GPU is done rendering.
+		if (frameFence->GetCompletedValue() < FRAMECOUNT - (BACKBUFFER_COUNT - 1))
+		{
+			result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
+			WaitForSingleObject(frameFenceEvent, INFINITE);
+		}
 
 
 
@@ -3051,7 +3048,7 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_DX12::ExecuteDeferredContexts()
 	{
-		commandQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &GetFrameResources().commandLists[1]);
+		directQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &GetFrameResources().commandLists[1]);
 	}
 	void GraphicsDevice_DX12::FinishCommandList(GRAPHICSTHREAD threadID)
 	{

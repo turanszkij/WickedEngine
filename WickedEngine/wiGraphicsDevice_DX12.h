@@ -26,10 +26,9 @@ namespace wiGraphicsTypes
 	{
 	private:
 		ID3D12Device*				device;
-		ID3D12CommandQueue*			commandQueue;
-		ID3D12Fence*				commandFence;
-		HANDLE						commandFenceEvent;
-		UINT64						commandFenceValue;
+		ID3D12CommandQueue*			directQueue;
+		ID3D12Fence*				frameFence;
+		HANDLE						frameFenceEvent;
 
 		ID3D12CommandQueue*			copyQueue;
 		ID3D12CommandAllocator*		copyAllocator;
