@@ -1602,6 +1602,8 @@ void wiColorPicker::Render(wiGUI* gui)
 	static wiGraphicsTypes::GPUBuffer vb_preview;
 	static wiGraphicsTypes::GraphicsPSO PSO;
 
+	static std::vector<Vertex> vertices_saturation(0);
+
 	static bool buffersComplete = false;
 	if (!buffersComplete)
 	{
@@ -1610,30 +1612,21 @@ void wiColorPicker::Render(wiGUI* gui)
 		HRESULT hr = S_OK;
 		// saturation
 		{
-			static std::vector<Vertex> vertices(0);
-			if (vb_saturation.IsValid() && !vertices.empty())
-			{
-				vertices[0].col = hue_color;
-				wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices.data(), threadID, vb_saturation.GetDesc().ByteWidth);
-			}
-			else
-			{
-				vertices.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });	// hue
-				vertices.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,1,1,1) });	// white
-				vertices.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
-				wiMath::ConstructTriangleEquilateral(__colorpicker_radius_triangle, vertices[0].pos, vertices[1].pos, vertices[2].pos);
+			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });	// hue
+			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,1,1,1) });	// white
+			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
+			wiMath::ConstructTriangleEquilateral(__colorpicker_radius_triangle, vertices_saturation[0].pos, vertices_saturation[1].pos, vertices_saturation[2].pos);
 
-				GPUBufferDesc desc;
-				desc.BindFlags = BIND_VERTEX_BUFFER;
-				desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
-				desc.CPUAccessFlags = CPU_ACCESS_WRITE;
-				desc.MiscFlags = 0;
-				desc.StructureByteStride = 0;
-				desc.Usage = USAGE_DYNAMIC;
-				SubresourceData data;
-				data.pSysMem = vertices.data();
-				hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_saturation);
-			}
+			GPUBufferDesc desc;
+			desc.BindFlags = BIND_VERTEX_BUFFER;
+			desc.ByteWidth = (UINT)(vertices_saturation.size() * sizeof(Vertex));
+			desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+			desc.MiscFlags = 0;
+			desc.StructureByteStride = 0;
+			desc.Usage = USAGE_DYNAMIC;
+			SubresourceData data;
+			data.pSysMem = vertices_saturation.data();
+			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_saturation);
 		}
 		// hue
 		{
@@ -1735,6 +1728,12 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	// render saturation triangle
 	{
+		if (vb_saturation.IsValid() && !vertices_saturation.empty())
+		{
+			vertices_saturation[0].col = hue_color;
+			wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices_saturation.data(), threadID, vb_saturation.GetDesc().ByteWidth);
+		}
+
 		cb.mTransform = XMMatrixTranspose(
 			XMMatrixRotationZ(-angle) *
 			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
