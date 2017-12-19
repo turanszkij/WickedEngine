@@ -39,7 +39,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float mod = saturate(0.05*(refDepth - lineardepth));
-	refractiveColor = lerp(refractiveColor, g_xMat_baseColor.rgb * input.instanceColor, mod).rgb;
+	refractiveColor = lerp(refractiveColor, baseColor.rgb, mod).rgb;
 
 	//FRESNEL TERM
 	float NdotV = abs(dot(N, V)) + 1e-5f;

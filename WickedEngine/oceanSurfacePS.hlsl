@@ -4,6 +4,7 @@
 #include "objectHF.hlsli"
 
 #define xGradientMap		texture_0
+TEXTURE1D(g_texFresnel, float4, TEXSLOT_ONDEMAND1);
 
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
@@ -22,7 +23,7 @@ float4 main(PSIn input) : SV_TARGET
 	V /= dist;
 	float emissive = 0;
 	float roughness = 0.001;
-	float reflectance = 0.2;
+	float reflectance = 0.02;
 	float metalness = 0;
 	float ao = 1;
 	float sss = 0;
@@ -48,11 +49,13 @@ float4 main(PSIn input) : SV_TARGET
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float mod = saturate(0.05*(refDepth - lineardepth));
-	refractiveColor = lerp(refractiveColor, xOceanWaterColor, mod).rgb;
+	refractiveColor = lerp(refractiveColor, baseColor.rgb, mod).rgb;
 
 	//FRESNEL TERM
-	float NdotV = abs(dot(N, V)) + 1e-5f;
+	float NdotV = abs(dot(N, V));
 	float3 fresnelTerm = F_Fresnel(f0, NdotV);
+	float ramp = pow(abs(1.0f / (1.0f + NdotV)), 16);
+	reflectiveColor.rgb = lerp(float3(0.38f, 0.45f, 0.56f), reflectiveColor.rgb, ramp); // skycolor hack
 	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 
 	OBJECT_PS_LIGHT_TILED
@@ -66,6 +69,52 @@ float4 main(PSIn input) : SV_TARGET
 	OBJECT_PS_FOG
 
 	OBJECT_PS_OUT_FORWARD_SIMPLE
+
+
+
+	//float3 g_SkyColor = float3(0.38f, 0.45f, 0.56f);
+
+	//float g_Shineness = 400.0f;
+
+
+
+
+
+	//float2 fft_tc = input.uv;
+
+	//// Reflected ray
+	//float3 reflect_vec = -reflect(V, N);
+	//// dot(N, V)
+	//float cos_angle = abs(dot(N, V));
+
+
+	//// --------------- Reflected color
+
+	//// ramp.x for fresnel term. ramp.y for sky blending
+	//float2 ramp;
+	//ramp.x = F_Fresnel(f0, cos_angle).x;
+	//ramp.y = pow(abs(1.0f / (1.0f + cos_angle)), 16);
+
+	//float3 reflection = texture_env_global.Sample(sampler_linear_clamp, reflect_vec).xyz;
+
+	//// Blend with predefined sky color
+	//float3 reflected_color = lerp(g_SkyColor, reflection, ramp.y);
+
+	//// Combine waterbody color and reflected color
+	//float3 water_color = lerp(refractiveColor, reflected_color, ramp.x);
+
+
+	//// --------------- Sun spots
+
+	//float cos_spec = clamp(dot(reflect_vec, GetSunDirection()), 0, 1);
+	//float sun_spot = pow(cos_spec, g_Shineness);
+	//water_color += GetSunColor() * sun_spot;
+
+
+	////SOFT EDGE
+	//float fade = saturate(0.3 * abs(refDepth - lineardepth));
+
+	//return float4(water_color, 1);
 }
 
 
