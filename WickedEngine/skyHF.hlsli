@@ -5,12 +5,10 @@
 
 inline float3 GetSkyColor(in float3 normal)
 {
-	static const float overBright = 1.02f;
-
-	normal = normalize(normal) * overBright;
+	normal = normalize(normal);
 
 	float3 col = DEGAMMA(texture_env_global.SampleLevel(sampler_linear_clamp, normal, 0).rgb);
-	float3 sun = max(pow(abs(dot(GetSunDirection(), normal)), 256)*GetSunColor(), 0) * saturate(dot(GetSunDirection().xyz, normal));
+	float3 sun = max((saturate(dot(GetSunDirection(), normal)) > 0.9998 ? 1 : 0)*GetSunColor(), 0);
 
 	return col + sun;
 }

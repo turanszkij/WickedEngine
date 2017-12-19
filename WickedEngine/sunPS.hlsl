@@ -10,8 +10,6 @@ struct VSOut {
 
 float4 main(VSOut PSIn) : SV_TARGET
 { 
-	static const float overBright = 1.005f;
-	float3 inNor = normalize(PSIn.nor);
-	float3 nor = inNor*overBright;
-	return float4(max(pow(abs(dot(GetSunDirection().xyz,nor)),64)*GetSunColor(), 0),1);
+	float3 nor = normalize(PSIn.nor);
+	return float4(max(pow(saturate(dot(GetSunDirection().xyz,nor) + 0.0001),64)*GetSunColor(), 0),1);
 }
