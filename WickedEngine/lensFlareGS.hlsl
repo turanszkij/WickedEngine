@@ -86,7 +86,7 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 
 	flareSize /= GetScreenResolution();
 
-	float referenceDepth = 1 - xSunPos.z;
+	float referenceDepth = saturate(1 - xSunPos.z);
 
 	// determine the flare opacity:
 	// These values work well for me, but should be tweakable

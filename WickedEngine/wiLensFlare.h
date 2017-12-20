@@ -11,7 +11,6 @@ private:
 	static wiGraphicsTypes::PixelShader			*pixelShader;
 	static wiGraphicsTypes::GeometryShader		*geometryShader;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
-	static wiGraphicsTypes::VertexLayout		*inputLayout;
 	static wiGraphicsTypes::RasterizerState		rasterizerState;
 	static wiGraphicsTypes::DepthStencilState	depthStencilState;
 	static wiGraphicsTypes::BlendState			blendState;

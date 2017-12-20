@@ -9,7 +9,6 @@ GPUBuffer *wiLensFlare::constantBuffer = nullptr;
 PixelShader *wiLensFlare::pixelShader = nullptr;
 GeometryShader *wiLensFlare::geometryShader = nullptr;
 VertexShader *wiLensFlare::vertexShader = nullptr;
-VertexLayout *wiLensFlare::inputLayout = nullptr;
 Sampler *wiLensFlare::samplercmp = nullptr;
 RasterizerState wiLensFlare::rasterizerState;
 DepthStencilState wiLensFlare::depthStencilState;
@@ -26,7 +25,6 @@ void wiLensFlare::CleanUp(){
 	SAFE_DELETE(pixelShader);
 	SAFE_DELETE(geometryShader);
 	SAFE_DELETE(vertexShader);
-	SAFE_DELETE(inputLayout);
 	SAFE_DELETE(samplercmp);
 }
 void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<Texture2D*>& rims){
@@ -49,8 +47,10 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 
 
 		int i=0;
-		for(Texture2D* x : rims){
-			if(x!=nullptr){
+		for(Texture2D* x : rims)
+		{
+			if(x!=nullptr)
+			{
 				device->BindResource(PS, x, TEXSLOT_ONDEMAND0 + i, threadID);
 				device->BindResource(GS, x, TEXSLOT_ONDEMAND0 + i, threadID);
 				i++;
@@ -67,19 +67,12 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 	}
 }
 
-void wiLensFlare::LoadShaders(){
-
-	VertexLayoutDesc layout[] =
-	{
-		{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-	};
-	UINT numElements = ARRAYSIZE(layout);
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
+void wiLensFlare::LoadShaders()
+{
+	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
 	if (vsinfo != nullptr){
 		vertexShader = vsinfo->vertexShader;
-		inputLayout = vsinfo->vertexLayout;
 	}
-
 
 	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
