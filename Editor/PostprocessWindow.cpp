@@ -1,6 +1,13 @@
 #include "stdafx.h"
 #include "PostprocessWindow.h"
 
+#include <thread>
+#include <Commdlg.h> // openfile
+#include <WinBase.h>
+
+using namespace std;
+using namespace wiGraphicsTypes;
+
 
 PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : GUI(gui), component(comp)
 {
@@ -147,6 +154,49 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 		component->setColorGradingEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(colorGradingCheckBox);
+
+	colorGradingButton = new wiButton("Load Color Grading LUT...");
+	colorGradingButton->SetTooltip("Load a color grading lookup texture...");
+	colorGradingButton->SetPos(XMFLOAT2(x + 35, y));
+	colorGradingButton->SetSize(XMFLOAT2(200, 18));
+	colorGradingButton->OnClick([=](wiEventArgs args) {
+		auto x = wiRenderer::GetColorGrading();
+
+		if (x == nullptr)
+		{
+			thread([&] {
+				char szFile[260];
+
+				OPENFILENAMEA ofn;
+				ZeroMemory(&ofn, sizeof(ofn));
+				ofn.lStructSize = sizeof(ofn);
+				ofn.hwndOwner = nullptr;
+				ofn.lpstrFile = szFile;
+				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+				// use the contents of szFile to initialize itself.
+				ofn.lpstrFile[0] = '\0';
+				ofn.nMaxFile = sizeof(szFile);
+				ofn.lpstrFilter = "Color Grading texture\0*.dds;*.png\0";
+				ofn.nFilterIndex = 1;
+				ofn.lpstrFileTitle = NULL;
+				ofn.nMaxFileTitle = 0;
+				ofn.lpstrInitialDir = NULL;
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+				if (GetOpenFileNameA(&ofn) == TRUE) {
+					string fileName = ofn.lpstrFile;
+					wiRenderer::SetColorGrading((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+					colorGradingButton->SetText(fileName);
+				}
+			}).detach();
+		}
+		else
+		{
+			wiRenderer::SetColorGrading(nullptr);
+			colorGradingButton->SetText("Load Color Grading LUT...");
+		}
+
+	});
+	ppWindow->AddWidget(colorGradingButton);
 
 	stereogramCheckBox = new wiCheckBox("Stereogram: ");
 	stereogramCheckBox->SetTooltip("Compute a stereogram from the depth buffer. It produces a 3D sihouette image when viewed cross eyed.");

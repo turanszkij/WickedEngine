@@ -7,6 +7,7 @@ class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
+class wiButton;
 
 class PostprocessWindow
 {
@@ -32,6 +33,7 @@ public:
 	wiCheckBox* fxaaCheckBox;
 	wiCheckBox* stereogramCheckBox;
 	wiCheckBox* colorGradingCheckBox;
+	wiButton*	colorGradingButton;
 	wiCheckBox* sharpenFilterCheckBox;
 	wiSlider*	sharpenFilterAmountSlider;
 

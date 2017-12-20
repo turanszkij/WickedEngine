@@ -1,6 +1,12 @@
 #include "stdafx.h"
 #include "WorldWindow.h"
 
+#include <thread>
+#include <Commdlg.h> // openfile
+#include <WinBase.h>
+
+using namespace std;
+using namespace wiGraphicsTypes;
 
 WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 {
@@ -16,7 +22,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 	float x = 200;
 	float y = 20;
-	float step = 30;
+	float step = 32;
 
 	fogStartSlider = new wiSlider(0, 5000, 0, 100000, "Fog Start: ");
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
@@ -41,6 +47,50 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		wiRenderer::GetScene().worldInfo.fogSEH.z = args.fValue;
 	});
 	worldWindow->AddWidget(fogHeightSlider);
+
+
+	skyButton = new wiButton("Load Sky");
+	skyButton->SetTooltip("Load a skybox cubemap texture...");
+	skyButton->SetSize(XMFLOAT2(240, 30));
+	skyButton->SetPos(XMFLOAT2(x-100, y += step));
+	skyButton->OnClick([=](wiEventArgs args) {
+		auto x = wiRenderer::GetEnviromentMap();
+
+		if (x == nullptr)
+		{
+			thread([&] {
+				char szFile[260];
+
+				OPENFILENAMEA ofn;
+				ZeroMemory(&ofn, sizeof(ofn));
+				ofn.lStructSize = sizeof(ofn);
+				ofn.hwndOwner = nullptr;
+				ofn.lpstrFile = szFile;
+				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+				// use the contents of szFile to initialize itself.
+				ofn.lpstrFile[0] = '\0';
+				ofn.nMaxFile = sizeof(szFile);
+				ofn.lpstrFilter = "Cubemap texture\0*.dds\0";
+				ofn.nFilterIndex = 1;
+				ofn.lpstrFileTitle = NULL;
+				ofn.nMaxFileTitle = 0;
+				ofn.lpstrInitialDir = NULL;
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+				if (GetOpenFileNameA(&ofn) == TRUE) {
+					string fileName = ofn.lpstrFile;
+					wiRenderer::SetEnviromentMap((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+					skyButton->SetText(fileName);
+				}
+			}).detach();
+		}
+		else
+		{
+			wiRenderer::SetEnviromentMap(nullptr);
+			skyButton->SetText("Load Sky");
+		}
+
+	});
+	worldWindow->AddWidget(skyButton);
 
 
 

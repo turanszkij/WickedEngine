@@ -326,7 +326,7 @@ void EditorComponent::Load()
 
 	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
 	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
-	renderPathComboBox->SetPos(XMFLOAT2(screenW - 55 - 940, 0));
+	renderPathComboBox->SetPos(XMFLOAT2(screenW - 55 - 860, 0));
 	renderPathComboBox->AddItem("Forward");
 	renderPathComboBox->AddItem("Deferred");
 	renderPathComboBox->AddItem("Tiled Forward");
@@ -489,7 +489,7 @@ void EditorComponent::Load()
 
 	wiCheckBox* translatorCheckBox = new wiCheckBox("Translator: ");
 	translatorCheckBox->SetTooltip("Enable the translator tool");
-	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25, 0));
+	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 0));
 	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	translatorCheckBox->OnClick([=](wiEventArgs args) {
 		if(!args.bValue)
@@ -503,7 +503,7 @@ void EditorComponent::Load()
 	wiCheckBox* isTranslatorCheckBox = new wiCheckBox("T:");
 	{
 		isScalatorCheckBox->SetTooltip("Scale");
-		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25 - 40 * 2, 22));
+		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 2, 22));
 		isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
 		isScalatorCheckBox->OnClick([=](wiEventArgs args) {
 			translator->isScalator = args.bValue;
@@ -516,7 +516,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(isScalatorCheckBox);
 
 		isRotatorCheckBox->SetTooltip("Rotate");
-		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25 - 40 * 1, 22));
+		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 1, 22));
 		isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
 		isRotatorCheckBox->OnClick([=](wiEventArgs args) {
 			translator->isRotator = args.bValue;
@@ -529,7 +529,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(isRotatorCheckBox);
 
 		isTranslatorCheckBox->SetTooltip("Translate");
-		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6 - 25, 22));
+		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 22));
 		isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
 		isTranslatorCheckBox->OnClick([=](wiEventArgs args) {
 			translator->isTranslator = args.bValue;
@@ -545,7 +545,7 @@ void EditorComponent::Load()
 
 	wiButton* saveButton = new wiButton("Save");
 	saveButton->SetTooltip("Save the current scene as a model");
-	saveButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 6, 0));
+	saveButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
 	saveButton->SetSize(XMFLOAT2(100, 40));
 	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
 	saveButton->SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -613,7 +613,7 @@ void EditorComponent::Load()
 
 	wiButton* modelButton = new wiButton("Load Model");
 	modelButton->SetTooltip("Load a model into the editor...");
-	modelButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
+	modelButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
 	modelButton->SetSize(XMFLOAT2(100, 40));
 	modelButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -663,94 +663,6 @@ void EditorComponent::Load()
 		}).detach();
 	});
 	GetGUI().AddWidget(modelButton);
-
-
-	wiButton* skyButton = new wiButton("Load Sky");
-	skyButton->SetTooltip("Load a skybox cubemap texture...");
-	skyButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
-	skyButton->SetSize(XMFLOAT2(100, 18));
-	skyButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
-	skyButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
-	skyButton->OnClick([=](wiEventArgs args) {
-		auto x = wiRenderer::GetEnviromentMap();
-
-		if (x == nullptr)
-		{
-			thread([&] {
-				char szFile[260];
-
-				OPENFILENAMEA ofn;
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = nullptr;
-				ofn.lpstrFile = szFile;
-				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-				// use the contents of szFile to initialize itself.
-				ofn.lpstrFile[0] = '\0';
-				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = "Cubemap texture\0*.dds\0";
-				ofn.nFilterIndex = 1;
-				ofn.lpstrFileTitle = NULL;
-				ofn.nMaxFileTitle = 0;
-				ofn.lpstrInitialDir = NULL;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-				if (GetOpenFileNameA(&ofn) == TRUE) {
-					string fileName = ofn.lpstrFile;
-					wiRenderer::SetEnviromentMap((Texture2D*)Content.add(fileName));
-				}
-			}).detach();
-		}
-		else
-		{
-			wiRenderer::SetEnviromentMap(nullptr);
-		}
-
-	});
-	GetGUI().AddWidget(skyButton);
-
-
-	wiButton* colorGradingButton = new wiButton("Color Grading");
-	colorGradingButton->SetTooltip("Load a color grading lookup texture...");
-	colorGradingButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 22));
-	colorGradingButton->SetSize(XMFLOAT2(100, 18));
-	colorGradingButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
-	colorGradingButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
-	colorGradingButton->OnClick([=](wiEventArgs args) {
-		auto x = wiRenderer::GetColorGrading();
-
-		if (x == nullptr)
-		{
-			thread([&] {
-				char szFile[260];
-
-				OPENFILENAMEA ofn;
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = nullptr;
-				ofn.lpstrFile = szFile;
-				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-				// use the contents of szFile to initialize itself.
-				ofn.lpstrFile[0] = '\0';
-				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = "Color Grading texture\0*.dds;*.png\0";
-				ofn.nFilterIndex = 1;
-				ofn.lpstrFileTitle = NULL;
-				ofn.nMaxFileTitle = 0;
-				ofn.lpstrInitialDir = NULL;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-				if (GetOpenFileNameA(&ofn) == TRUE) {
-					string fileName = ofn.lpstrFile;
-					wiRenderer::SetColorGrading((Texture2D*)Content.add(fileName));
-				}
-			}).detach();
-		}
-		else
-		{
-			wiRenderer::SetColorGrading(nullptr);
-		}
-
-	});
-	GetGUI().AddWidget(colorGradingButton);
 
 
 	wiButton* scriptButton = new wiButton("Load Script");
