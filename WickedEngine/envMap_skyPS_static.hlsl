@@ -3,5 +3,6 @@
 
 float4 main(PSIn_Sky input) : SV_TARGET
 {
-	return float4(GAMMA(GetSkyColor(input.nor)),1);
+	float3 normal = normalize(input.nor);
+	return float4(GetStaticSkyColor(normal), 1);
 }

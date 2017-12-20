@@ -174,9 +174,6 @@
     <FxCompile Include="dirLightSoftPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="envMap_skyPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="envMapPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -220,9 +217,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="screenPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="skyPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="spotLightPS.hlsl">
@@ -673,6 +667,18 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="oceanSurfacePS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="skyPS_dynamic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="skyPS_static.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMap_skyPS_static.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="envMap_skyPS_dynamic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

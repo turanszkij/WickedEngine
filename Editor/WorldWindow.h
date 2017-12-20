@@ -22,11 +22,8 @@ public:
 	wiSlider*		fogStartSlider;
 	wiSlider*		fogEndSlider;
 	wiSlider*		fogHeightSlider;
-	wiButton*		ambientColorPickerToggleButton;
 	wiColorPicker*	ambientColorPicker;
-	wiButton*		horizonColorPickerToggleButton;
 	wiColorPicker*	horizonColorPicker;
-	wiButton*		zenithColorPickerToggleButton;
 	wiColorPicker*	zenithColorPicker;
 };
 

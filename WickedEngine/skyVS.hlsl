@@ -1,7 +1,8 @@
 #include "globals.hlsli"
 #include "icosphere.hlsli"
+#include "skyHF.hlsli"
 
-struct VSOut{
+struct VSOut {
 	float4 pos : SV_POSITION;
 	float3 nor : TEXCOORD0;
 	float4 pos2D : SCREENPOSITION;

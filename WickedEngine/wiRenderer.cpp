@@ -1164,9 +1164,11 @@ GraphicsPSO* PSO_enviromentallight = nullptr;
 
 enum SKYRENDERING
 {
-	SKYRENDERING_DEFAULT,
+	SKYRENDERING_STATIC,
+	SKYRENDERING_DYNAMIC,
 	SKYRENDERING_SUN,
-	SKYRENDERING_ENVMAPCAPTURE,
+	SKYRENDERING_ENVMAPCAPTURE_STATIC,
+	SKYRENDERING_ENVMAPCAPTURE_DYNAMIC,
 	SKYRENDERING_COUNT
 };
 GraphicsPSO* PSO_sky[SKYRENDERING_COUNT] = {};
@@ -1430,11 +1432,13 @@ void wiRenderer::LoadShaders()
 		pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_ENVMAP_SKY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_ENVMAP_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS_static.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_CAPTUREIMPOSTOR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_CUBEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubemapPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_LINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_SKY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_static.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOW_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
@@ -1915,10 +1919,19 @@ void wiRenderer::LoadShaders()
 
 			switch (type)
 			{
-			case SKYRENDERING_DEFAULT:
+			case SKYRENDERING_STATIC:
 				desc.bs = blendStates[BSTYPE_OPAQUE];
 				desc.vs = vertexShaders[VSTYPE_SKY];
-				desc.ps = pixelShaders[PSTYPE_SKY];
+				desc.ps = pixelShaders[PSTYPE_SKY_STATIC];
+				desc.numRTs = 2;
+				desc.RTFormats[0] = RTFormat_hdr;
+				desc.RTFormats[1] = RTFormat_gbuffer_1;
+				desc.DSFormat = DSFormat_full;
+				break;
+			case SKYRENDERING_DYNAMIC:
+				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.vs = vertexShaders[VSTYPE_SKY];
+				desc.ps = pixelShaders[PSTYPE_SKY_DYNAMIC];
 				desc.numRTs = 2;
 				desc.RTFormats[0] = RTFormat_hdr;
 				desc.RTFormats[1] = RTFormat_gbuffer_1;
@@ -1932,10 +1945,19 @@ void wiRenderer::LoadShaders()
 				desc.RTFormats[0] = RTFormat_hdr;
 				desc.DSFormat = DSFormat_full;
 				break;
-			case SKYRENDERING_ENVMAPCAPTURE:
+			case SKYRENDERING_ENVMAPCAPTURE_STATIC:
 				desc.bs = blendStates[BSTYPE_OPAQUE];
 				desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
-				desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY];
+				desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_STATIC];
+				desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
+				desc.numRTs = 1;
+				desc.RTFormats[0] = RTFormat_hdr;
+				desc.DSFormat = DSFormat_small;
+				break;
+			case SKYRENDERING_ENVMAPCAPTURE_DYNAMIC:
+				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
+				desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC];
 				desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
 				desc.numRTs = 1;
 				desc.RTFormats[0] = RTFormat_hdr;
@@ -5130,29 +5152,20 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 
 void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 {
-	if (!GetTemporalAAEnabled()) // If temporal AA is enabled, we should render a velocity map anyway, so render a black sky as that is the default!
-	{
-		if (enviroMap == nullptr)
-			return;
-	}
-
 	GetDevice()->EventBegin("DrawSky", threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-
-	GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_DEFAULT], threadID);
 	
 	if (enviroMap != nullptr)
 	{
+		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_STATIC], threadID);
 		GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 	}
 	else
 	{
-		// If control gets here, it means we fill out only a velocity buffer on the background for temporal AA
-		GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ENV_GLOBAL, threadID);
+		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_DYNAMIC], threadID);
 	}
 
-	//GetDevice()->BindVertexLayout(nullptr, threadID);
 	GetDevice()->Draw(240, 0, threadID);
 
 	GetDevice()->EventEnd(threadID);
@@ -5292,9 +5305,16 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		{
 			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
-			GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE], threadID);
+			if (enviroMap != nullptr)
+			{
+				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
+				GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+			}
+			else
+			{
+				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
+			}
 
-			GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 			GetDevice()->Draw(240, 0, threadID);
 		}
 
@@ -5908,17 +5928,8 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit
 	{
-		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-		{
-			wiRenderer::GetDevice()->LOCK();
-		}
 		prevcb[threadID] = value;
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &prevcb[threadID], threadID);
-
-		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-		{
-			wiRenderer::GetDevice()->UNLOCK();
-		}
 	}
 }
 void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)

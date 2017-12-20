@@ -11,11 +11,11 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 
 	worldWindow = new wiWindow(GUI, "World Window");
-	worldWindow->SetSize(XMFLOAT2(400, 300));
+	worldWindow->SetSize(XMFLOAT2(760, 820));
 	GUI->AddWidget(worldWindow);
 
 	float x = 200;
-	float y = 0;
+	float y = 20;
 	float step = 30;
 
 	fogStartSlider = new wiSlider(0, 5000, 0, 100000, "Fog Start: ");
@@ -34,7 +34,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	});
 	worldWindow->AddWidget(fogEndSlider);
 
-	fogHeightSlider = new wiSlider(-1000, 1000, 40, 10000, "Fog Height: ");
+	fogHeightSlider = new wiSlider(0, 1, 0, 10000, "Fog Height: ");
 	fogHeightSlider->SetSize(XMFLOAT2(100, 30));
 	fogHeightSlider->SetPos(XMFLOAT2(x, y += step));
 	fogHeightSlider->OnSlide([&](wiEventArgs args) {
@@ -45,57 +45,40 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	ambientColorPickerToggleButton = new wiButton("Ambient Color");
-	ambientColorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
-	ambientColorPickerToggleButton->OnClick([&](wiEventArgs args) {
-		ambientColorPicker->SetVisible(!ambientColorPicker->IsVisible());
-	});
-	worldWindow->AddWidget(ambientColorPickerToggleButton);
 
 
 	ambientColorPicker = new wiColorPicker(GUI, "Ambient Color");
+	ambientColorPicker->SetPos(XMFLOAT2(360, 40));
+	ambientColorPicker->RemoveWidgets();
 	ambientColorPicker->SetVisible(false);
 	ambientColorPicker->SetEnabled(true);
 	ambientColorPicker->OnColorChanged([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
-	GUI->AddWidget(ambientColorPicker);
-
-
-
-	horizonColorPickerToggleButton = new wiButton("Horizon Color");
-	horizonColorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
-	horizonColorPickerToggleButton->OnClick([&](wiEventArgs args) {
-		horizonColorPicker->SetVisible(!horizonColorPicker->IsVisible());
-	});
-	worldWindow->AddWidget(horizonColorPickerToggleButton);
+	worldWindow->AddWidget(ambientColorPicker);
 
 
 	horizonColorPicker = new wiColorPicker(GUI, "Horizon Color");
+	horizonColorPicker->SetPos(XMFLOAT2(360, 300));
+	horizonColorPicker->RemoveWidgets();
 	horizonColorPicker->SetVisible(false);
 	horizonColorPicker->SetEnabled(true);
 	horizonColorPicker->OnColorChanged([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
-	GUI->AddWidget(horizonColorPicker);
+	worldWindow->AddWidget(horizonColorPicker);
 
-
-
-	zenithColorPickerToggleButton = new wiButton("Zenith Color");
-	zenithColorPickerToggleButton->SetPos(XMFLOAT2(x, y += step));
-	zenithColorPickerToggleButton->OnClick([&](wiEventArgs args) {
-		zenithColorPicker->SetVisible(!zenithColorPicker->IsVisible());
-	});
-	worldWindow->AddWidget(zenithColorPickerToggleButton);
 
 
 	zenithColorPicker = new wiColorPicker(GUI, "Zenith Color");
+	zenithColorPicker->SetPos(XMFLOAT2(360, 560));
+	zenithColorPicker->RemoveWidgets();
 	zenithColorPicker->SetVisible(false);
 	zenithColorPicker->SetEnabled(true);
 	zenithColorPicker->OnColorChanged([&](wiEventArgs args) {
 		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
-	GUI->AddWidget(zenithColorPicker);
+	worldWindow->AddWidget(zenithColorPicker);
 
 
 

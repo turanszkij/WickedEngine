@@ -958,7 +958,7 @@ struct WorldInfo{
 
 	WorldInfo(){
 		horizon = XMFLOAT3(0.5f, 0.5f, 0.5f);
-		zenith = XMFLOAT3(0.2f, 0.2f, 0.2f);
+		zenith = XMFLOAT3(0.03f, 0.01f, 0.5f);
 		ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		fogSEH=XMFLOAT3(100,1000,0);
 		water = XMFLOAT4(0, 0, 0, 0);
