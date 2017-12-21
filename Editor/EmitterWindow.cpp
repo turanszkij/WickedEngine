@@ -41,6 +41,24 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(emitterComboBox);
 
 
+	shaderTypeComboBox = new wiComboBox("ShaderType: ");
+	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
+	shaderTypeComboBox->SetSize(XMFLOAT2(200, 25));
+	shaderTypeComboBox->AddItem("SOFT");
+	shaderTypeComboBox->AddItem("SOFT + DISTORTION");
+	shaderTypeComboBox->AddItem("SIMPLEST");
+	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->shaderType = (wiEmittedParticle::PARTICLESHADERTYPE)args.iValue;
+		}
+	});
+	shaderTypeComboBox->SetEnabled(false);
+	shaderTypeComboBox->SetTooltip("Choose a shader type for the particles. This is responsible of how they will be rendered.");
+	emitterWindow->AddWidget(shaderTypeComboBox);
+
+
 	sortCheckBox = new wiCheckBox("Sorting Enabled: ");
 	sortCheckBox->SetPos(XMFLOAT2(x, y += step));
 	sortCheckBox->OnClick([&](wiEventArgs args) {

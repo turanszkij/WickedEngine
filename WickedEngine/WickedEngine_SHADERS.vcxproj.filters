@@ -576,9 +576,6 @@
     <FxCompile Include="emittedparticleVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="emittedparticlePS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="emittedparticlePS_simplest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -679,6 +676,12 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="envMap_skyPS_dynamic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticlePS_soft.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticlePS_soft_distortion.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

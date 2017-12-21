@@ -8,7 +8,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	clip(color.a - 1.0f / 255.0f);
 
 	float2 pTex = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
-	float4 depthScene = (texture_lineardepth.GatherRed(sampler_linear_clamp, pTex));
+	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, pTex);
 	float depthFragment = input.pos2D.w;
 	float fade = saturate(1.0 / input.size*(max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 
@@ -18,8 +18,15 @@ float4 main(VertextoPixel input) : SV_TARGET
 	inputColor.b = ((input.color >> 16) & 0x000000FF) / 255.0f;
 	inputColor.a = ((input.color >> 24) & 0x000000FF) / 255.0f;
 
+	float opacity = saturate(color.a * inputColor.a * fade);
+
 	color.rgb *= inputColor.rgb;
-	color.a = saturate(color.a * inputColor.a * fade);
+	color.a = opacity;
+
+#ifdef DISTORTION
+	// just make normal maps blendable:
+	color.rgb = color.rgb - 0.5f;
+#endif // DISTORTION
 
 	return max(color, 0);
 }

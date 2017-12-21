@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+14: serialize emitter property: shaderType
 13: serialize object property: renderable
 12: serialize emitter property: DEPTHCOLLISIONS
 11: serialize additional emitter properties

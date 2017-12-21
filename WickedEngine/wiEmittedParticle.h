@@ -12,6 +12,15 @@ class wiArchive;
 
 class wiEmittedParticle
 {
+public:
+	enum PARTICLESHADERTYPE
+	{
+		SOFT,
+		SOFT_DISTORTION,
+		SIMPLEST,
+		PARTICLESHADERTYPE_COUNT,
+	};
+
 private:
 	ParticleCounters debugData = {};
 	wiGraphicsTypes::GPUBuffer* debugDataReadbackBuffer;
@@ -29,12 +38,12 @@ private:
 	static wiGraphicsTypes::ComputeShader		*kickoffSortCS, *sortCS, *sortInnerCS, *sortStepCS;
 	static wiGraphicsTypes::GPUBuffer			*sortCB;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
-	static wiGraphicsTypes::PixelShader			*pixelShader, *simplestPS;
+	static wiGraphicsTypes::PixelShader			*pixelShader[PARTICLESHADERTYPE_COUNT];
 	static wiGraphicsTypes::BlendState			blendStates[BLENDMODE_COUNT];
 	static wiGraphicsTypes::RasterizerState		rasterizerState,wireFrameRS;
 	static wiGraphicsTypes::DepthStencilState	depthStencilState;
 
-	static wiGraphicsTypes::GraphicsPSO			PSO[BLENDMODE_COUNT];
+	static wiGraphicsTypes::GraphicsPSO			PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
 	static wiGraphicsTypes::GraphicsPSO			PSO_wire;
 	static wiGraphicsTypes::ComputePSO			CPSO_kickoffUpdate, CPSO_emit, CPSO_simulate, CPSO_simulate_SORTING, CPSO_simulate_DEPTHCOLLISIONS, CPSO_simulate_SORTING_DEPTHCOLLISIONS;
 	static wiGraphicsTypes::ComputePSO			CPSO_kickoffSort, CPSO_sort, CPSO_sortInner, CPSO_sortStep;
@@ -71,6 +80,8 @@ public:
 
 	bool SORTING = false;
 	bool DEPTHCOLLISIONS = false;
+
+	PARTICLESHADERTYPE shaderType = SOFT;
 
 	std::string name;
 	Object* object;

@@ -32,6 +32,7 @@ public:
 	wiWindow*	emitterWindow;
 
 	wiComboBox* emitterComboBox;
+	wiComboBox* shaderTypeComboBox;
 	wiLabel* infoLabel;
 	wiSlider* maxParticlesSlider;
 	wiCheckBox* sortCheckBox;

@@ -2,10 +2,10 @@
 #define _IMAGEHF_
 #include "globals.hlsli"
 
-// texture_0	: texture map
-// texture_1	: mask map
-#define xTexture	texture_0
-#define xMaskTex	texture_1
+
+#define xTexture		texture_0
+#define xMaskTex		texture_1
+#define xDistortionTex	texture_2
 
 SAMPLERSTATE(Sampler, SSLOT_ONDEMAND0);
 

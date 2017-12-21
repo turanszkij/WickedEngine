@@ -42,7 +42,8 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xParticleLifeSpanRandomness;
 
 	float		xParticleMotionBlurAmount;
-	float3		xPadding_EmitterCB;
+	float		xEmitterOpacity;
+	float2		xPadding_EmitterCB;
 };
 
 CBUFFER(SortConstants, 0)

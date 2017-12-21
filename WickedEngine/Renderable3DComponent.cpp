@@ -70,7 +70,7 @@ void Renderable3DComponent::ResizeBuffers()
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, wiRenderer::RTFormat_lineardepth);
 	rtParticle.Initialize(
-		(UINT)(wiRenderer::GetInternalResolution().x*getAlphaParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getAlphaParticleDownSample())
+		(UINT)(wiRenderer::GetInternalResolution().x*getParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getParticleDownSample())
 		, false, wiRenderer::RTFormat_hdr);
 	rtWaterRipple.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
@@ -158,8 +158,7 @@ void Renderable3DComponent::setProperties()
 {
 	setLightShaftQuality(0.4f);
 	setBloomDownSample(4.0f);
-	setAlphaParticleDownSample(1.0f);
-	setAdditiveParticleDownSample(1.0f);
+	setParticleDownSample(1.0f);
 	setReflectionQuality(0.5f);
 	setSSAOQuality(0.5f);
 	setSSAOBlur(2.3f);
@@ -377,7 +376,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	if (getEmittedParticlesEnabled())
 	{
 		rtParticle.Activate(threadID, 0, 0, 0, 0);
-		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), false, threadID);
 	}
 
 	rtWaterRipple.Activate(threadID, 0, 0, 0, 0); {
@@ -470,6 +469,12 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
+	if (getEmittedParticlesEnabled())
+	{
+		rtParticle.Activate(threadID, 0, 0, 0, 0);
+		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), true, threadID);
+	}
+
 	wiProfiler::GetInstance().EndRange(threadID); // Secondary Scene
 }
 void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
@@ -555,6 +560,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	rtFinal[0].Set(threadID);
 	fx.process.setToneMap(true);
+	fx.setDistortionMap(rtParticle.GetTexture());
 	if (getEyeAdaptionEnabled())
 	{
 		fx.setMaskMap(wiRenderer::GetLuminance(shadedSceneRT.GetTextureResolvedMSAA(threadID), threadID));

@@ -3995,7 +3995,7 @@ void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
 	}
 }
 
-void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawSoftParticles(Camera* camera, bool distortion, GRAPHICSTHREAD threadID)
 {
 	// todo: remove allocation of vector
 	vector<wiEmittedParticle*> sortedEmitters(emitterSystems.begin(), emitterSystems.end());
@@ -4005,7 +4005,14 @@ void wiRenderer::DrawSoftParticles(Camera* camera, GRAPHICSTHREAD threadID)
 
 	for (wiEmittedParticle* e : sortedEmitters)
 	{
-		e->Draw(threadID);
+		if (distortion && e->shaderType == wiEmittedParticle::SOFT_DISTORTION)
+		{
+			e->Draw(threadID);
+		}
+		else if (!distortion && (e->shaderType == wiEmittedParticle::SOFT || e->shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
+		{
+			e->Draw(threadID);
+		}
 	}
 }
 void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)

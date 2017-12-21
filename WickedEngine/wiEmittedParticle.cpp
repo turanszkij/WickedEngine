@@ -13,7 +13,7 @@ using namespace std;
 using namespace wiGraphicsTypes;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
-PixelShader   *wiEmittedParticle::pixelShader = nullptr, *wiEmittedParticle::simplestPS = nullptr;
+PixelShader   *wiEmittedParticle::pixelShader[PARTICLESHADERTYPE_COUNT] = {};
 ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::simulateCS = nullptr,
 				 *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
 ComputeShader		*wiEmittedParticle::kickoffSortCS = nullptr, *wiEmittedParticle::sortCS = nullptr, *wiEmittedParticle::sortInnerCS = nullptr, *wiEmittedParticle::sortStepCS = nullptr;
@@ -21,7 +21,7 @@ GPUBuffer		*wiEmittedParticle::sortCB = nullptr;
 BlendState		wiEmittedParticle::blendStates[BLENDMODE_COUNT];
 RasterizerState		wiEmittedParticle::rasterizerState, wiEmittedParticle::wireFrameRS;
 DepthStencilState	wiEmittedParticle::depthStencilState;
-GraphicsPSO wiEmittedParticle::PSO[BLENDMODE_COUNT];
+GraphicsPSO wiEmittedParticle::PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
 GraphicsPSO wiEmittedParticle::PSO_wire;
 ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_simulate, 
 	wiEmittedParticle::CPSO_simulate_SORTING, wiEmittedParticle::CPSO_simulate_DEPTHCOLLISIONS, wiEmittedParticle::CPSO_simulate_SORTING_DEPTHCOLLISIONS;
@@ -248,6 +248,9 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 {
+	if (particleBuffer == nullptr)
+		return 0;
+
 	uint32_t retVal = 0;
 
 	retVal += particleBuffer->GetDesc().ByteWidth;
@@ -299,6 +302,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xParticleMotionBlurAmount = motionBlurAmount;
 	cb.xParticleRotation = rotation * XM_PI * 60;
 	cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
+	cb.xEmitterOpacity = material->alpha;
 
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
@@ -323,13 +327,11 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 
 	// kick off updating, set up state
-	//device->BindCS(kickoffUpdateCS, threadID);
 	device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 	// emit the required amount if there are free slots in dead list
-	//device->BindCS(emitCS, threadID);
 	device->BindComputePSO(&CPSO_emit, threadID);
 	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -339,12 +341,10 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		if (DEPTHCOLLISIONS)
 		{
-			//device->BindCS(simulateCS_SORTING_DEPTHCOLLISIONS, threadID);
 			device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
 		}
 		else
 		{
-			//device->BindCS(simulateCS_SORTING, threadID);
 			device->BindComputePSO(&CPSO_simulate_SORTING, threadID);
 		}
 	}
@@ -352,12 +352,10 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		if (DEPTHCOLLISIONS)
 		{
-			//device->BindCS(simulateCS_DEPTHCOLLISIONS, threadID);
 			device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
 		}
 		else
 		{
-			//device->BindCS(simulateCS, threadID);
 			device->BindComputePSO(&CPSO_simulate, threadID);
 		}
 	}
@@ -371,7 +369,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->EventBegin("SortEmittedParticles", threadID);
 
 		// initialize sorting arguments:
-		//device->BindCS(kickoffSortCS, threadID);
 		device->BindComputePSO(&CPSO_kickoffSort, threadID);
 		device->Dispatch(1, 1, 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -389,7 +386,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		if (numThreadGroups>1) bDone = false;
 
 		// sort all buffers of size 512 (and presort bigger ones)
-		//device->BindCS(sortCS, threadID);
 		device->BindComputePSO(&CPSO_sort, threadID);
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -398,7 +394,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		while (!bDone)
 		{
 			bDone = true;
-			//device->BindCS(sortStepCS, threadID);
 			device->BindComputePSO(&CPSO_sortStep, threadID);
 
 			// prepare thread group description data
@@ -417,7 +412,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			unsigned int nMergeSize = presorted * 2;
 			for (unsigned int nMergeSubSize = nMergeSize >> 1; nMergeSubSize>256; nMergeSubSize = nMergeSubSize >> 1)
-			//	for( int nMergeSubSize=nMergeSize>>1; nMergeSubSize>0; nMergeSubSize=nMergeSubSize>>1 ) 
 			{
 				SortConstants sc;
 				sc.job_params.x = nMergeSubSize;
@@ -439,7 +433,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 			}
 
-			//device->BindCS(sortInnerCS, threadID);
 			device->BindComputePSO(&CPSO_sortInner, threadID);
 			device->Dispatch(numThreadGroups, 1, 1, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -452,7 +445,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 
-	//device->BindCS(nullptr, threadID);
 	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
@@ -471,31 +463,24 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", threadID);
 
-	//bool additive = (material->blendFlag == BLENDMODE_ADDITIVE || material->premultipliedTexture);
-
 	if (wiRenderer::IsWireRender())
 	{
 		device->BindGraphicsPSO(&PSO_wire, threadID);
 	}
 	else
 	{
-		device->BindGraphicsPSO(&PSO[material->blendFlag], threadID);
+		device->BindGraphicsPSO(&PSO[material->blendFlag][shaderType], threadID);
 	}
 
 	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
-	//device->BindVertexLayout(nullptr, threadID);
-	//device->BindPS(wiRenderer::IsWireRender() ? simplestPS : pixelShader, threadID);
-	//device->BindVS(vertexShader, threadID);
 
 	device->BindConstantBuffer(VS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
-	//device->BindRasterizerState(wiRenderer::IsWireRender() ? wireFrameRS : rasterizerState, threadID);
-	//device->BindDepthStencilState(depthStencilState, 1, threadID);
-
-	//device->BindBlendState((additive ? blendStateAdd : blendStateAlpha), threadID);
-
-	device->BindResource(VS, particleBuffer, 0, threadID);
-	device->BindResource(VS, aliveList[0], 1, threadID);
+	GPUResource* res[] = {
+		particleBuffer,
+		aliveList[0]
+	};
+	device->BindResources(VS, res, 0, ARRAYSIZE(res), threadID);
 
 	if (!wiRenderer::IsWireRender() && material->texture)
 	{
@@ -531,8 +516,9 @@ void wiEmittedParticle::LoadShaders()
 	}
 
 
-	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS.cso", wiResourceManager::PIXELSHADER));
-	simplestPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShader[SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_soft.cso", wiResourceManager::PIXELSHADER));
+	pixelShader[SOFT_DISTORTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_soft_distortion.cso", wiResourceManager::PIXELSHADER));
+	pixelShader[SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
 	
 	
 	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
@@ -554,20 +540,24 @@ void wiEmittedParticle::LoadShaders()
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShader;
-		desc.ps = pixelShader;
 		desc.bs = &blendStates[i];
 		desc.rs = &rasterizerState;
 		desc.dss = &depthStencilState;
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-		
-		device->CreateGraphicsPSO(&desc, &PSO[i]);
+
+		desc.ps = pixelShader[SOFT];
+		device->CreateGraphicsPSO(&desc, &PSO[i][SOFT]);
+		desc.ps = pixelShader[SOFT_DISTORTION];
+		device->CreateGraphicsPSO(&desc, &PSO[i][SOFT_DISTORTION]);
+		desc.ps = pixelShader[SIMPLEST];
+		device->CreateGraphicsPSO(&desc, &PSO[i][SIMPLEST]);
 	}
 
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShader;
-		desc.ps = simplestPS;
+		desc.ps = pixelShader[SIMPLEST];
 		desc.bs = &blendStates[BLENDMODE_ALPHA];
 		desc.rs = &wireFrameRS;
 		desc.dss = &depthStencilState;
@@ -705,8 +695,10 @@ void wiEmittedParticle::SetUpStatic()
 void wiEmittedParticle::CleanUpStatic()
 {
 	SAFE_DELETE(vertexShader);
-	SAFE_DELETE(pixelShader);
-	SAFE_DELETE(simplestPS);
+	for (int i = 0; i < ARRAYSIZE(pixelShader); ++i)
+	{
+		SAFE_DELETE(pixelShader[i]);
+	}
 	SAFE_DELETE(emitCS);
 	SAFE_DELETE(simulateCS);
 	SAFE_DELETE(simulateCS_SORTING);
@@ -756,6 +748,12 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		{
 			archive >> DEPTHCOLLISIONS;
 		}
+		if (archive.GetVersion() >= 14)
+		{
+			int tmp;
+			archive >> tmp;
+			shaderType = (PARTICLESHADERTYPE)tmp;
+		}
 
 	}
 	else
@@ -781,6 +779,10 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		if (archive.GetVersion() >= 12)
 		{
 			archive << DEPTHCOLLISIONS;
+		}
+		if (archive.GetVersion() >= 14)
+		{
+			archive << (int)shaderType;
 		}
 	}
 }

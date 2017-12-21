@@ -28,7 +28,7 @@ VertextoPixel main(uint fakeIndex : SV_VERTEXID)
 	// calculate render properties from life:
 	float lifeLerp = 1 - particle.life / particle.maxLife;
 	float size = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
-	float opacity = saturate(lerp(1, 0, lifeLerp));
+	float opacity = saturate(lerp(1, 0, lifeLerp) * xEmitterOpacity);
 	float rotation = lifeLerp * particle.rotationalVelocity;
 
 	// expand the point into a billboard in view space:

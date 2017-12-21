@@ -15,8 +15,7 @@ private:
 	float bloomStren;
 	float bloomThreshold;
 	float bloomSaturation;
-	float particleAlphaDownSample;
-	float particleAdditiveDownSample;
+	float particleDownSample;
 	float reflectionQuality;
 	float ssaoQuality;
 	float ssaoBlur;
@@ -86,8 +85,7 @@ public:
 	inline float getBloomStrength(){ return bloomStren; }
 	inline float getBloomThreshold(){ return bloomThreshold; }
 	inline float getBloomSaturation(){ return bloomSaturation; }
-	inline float getAlphaParticleDownSample(){ return particleAlphaDownSample; }
-	inline float getAdditiveParticleDownSample(){ return particleAdditiveDownSample; }
+	inline float getParticleDownSample(){ return particleDownSample; }
 	inline float getReflectionQuality(){ return reflectionQuality; }
 	inline float getSSAOQuality(){ return ssaoQuality; }
 	inline float getSSAOBlur(){ return ssaoBlur; }
@@ -126,8 +124,7 @@ public:
 	inline void setBloomStrength(float value){ bloomStren = value; }
 	inline void setBloomThreshold(float value){ bloomThreshold = value; }
 	inline void setBloomSaturation(float value){ bloomSaturation = value; }
-	inline void setAlphaParticleDownSample(float value){ particleAlphaDownSample = value; }
-	inline void setAdditiveParticleDownSample(float value){ particleAdditiveDownSample = value; }
+	inline void setParticleDownSample(float value){ particleDownSample = value; }
 	inline void setReflectionQuality(float value){ reflectionQuality = value; }
 	inline void setSSAOQuality(float value){ ssaoQuality = value; }
 	inline void setSSAOBlur(float value){ ssaoBlur = value; }
