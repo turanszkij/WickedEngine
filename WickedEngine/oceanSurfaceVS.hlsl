@@ -19,7 +19,7 @@ float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, 
 	if (dist < 0.0)
 		return rayOrigin + rayDirection * dist;
 	else
-		return float3(rayOrigin.x, planeHeight, rayOrigin.z) - float3(rayDirection.x, planeHeight, rayDirection.z) * infinite;
+		return float3(rayOrigin.x, planeHeight, rayOrigin.z) - normalize(float3(rayDirection.x, 0, rayDirection.z)) * infinite;
 }
 
 PSIn main(uint fakeIndex : SV_VERTEXID)
