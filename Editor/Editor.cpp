@@ -203,6 +203,22 @@ void ClearSelected()
 	selected.clear();
 	savedParents.clear();
 }
+void AddSelected(wiRenderer::Picked* picked)
+{
+	list<wiRenderer::Picked*>::iterator it = selected.begin();
+	for (; it != selected.end(); ++it)
+	{
+		if ((**it) == *picked)
+		{
+			break;
+		}
+	}
+	if (it == selected.end())
+	{
+		selected.push_back(picked);
+		savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
+	}
+}
 
 enum EDITORSTENCILREF
 {
@@ -775,7 +791,8 @@ void EditorComponent::Load()
 			ss << "Place decal/interact: Left mouse button when nothing is selected" << endl;
 			ss << "Camera speed: SHIFT button" << endl;
 			ss << "Camera up: E, down: Q" << endl;
-			ss << "Duplicate object (with instancing): Ctrl + D" << endl;
+			ss << "Duplicate entity (with instancing): Ctrl + D" << endl;
+			ss << "Select All: Ctrl + A" << endl;
 			ss << "Undo: Ctrl + Z" << endl;
 			ss << "Redo: Ctrl + Y" << endl;
 			ss << "Copy: Ctrl + C" << endl;
@@ -792,7 +809,7 @@ void EditorComponent::Load()
 
 			helpLabel = new wiLabel("HelpLabel");
 			helpLabel->SetText(ss.str());
-			helpLabel->SetSize(XMFLOAT2(screenW / 3.0f, screenH / 2.5f));
+			helpLabel->SetSize(XMFLOAT2(screenW / 3.0f, screenH / 2.2f));
 			helpLabel->SetPos(XMFLOAT2(screenW / 2.0f - helpLabel->scale.x / 2.0f, screenH / 2.0f - helpLabel->scale.y / 2.0f));
 			helpLabel->SetVisible(false);
 			GetGUI().AddWidget(helpLabel);
@@ -957,9 +974,9 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Select...
-		if (wiInputManager::GetInstance()->press(VK_RBUTTON))
+		static bool selectAll = false;
+		if (wiInputManager::GetInstance()->press(VK_RBUTTON) || selectAll)
 		{
-			wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
 
 			wiArchive* archive = AdvanceHistory();
 			*archive << HISTORYOP_SELECTION;
@@ -987,23 +1004,51 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
-			if (picked->transform != nullptr)
+			if (selectAll)
 			{
+				// Add everything to selection:
+				selectAll = false;
+
+				EndTranslate();
+				ClearSelected();
+
+				for (Model* model : wiRenderer::GetScene().models)
+				{
+					for (auto& x : model->objects)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->object = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->lights)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->light = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->forces)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->forceField = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+				}
+
+				BeginTranslate();
+			}
+			else if (hovered.transform != nullptr)
+			{
+				// Add the hovered item to the selection:
+				wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
 				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
 				{
-					list<wiRenderer::Picked*>::iterator it = selected.begin();
-					for (; it != selected.end(); ++it)
-					{
-						if ((**it) == *picked)
-						{
-							break;
-						}
-					}
-					if (it == selected.end())
-					{
-						selected.push_back(picked);
-						savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
-					}
+					AddSelected(picked);
 				}
 				else
 				{
@@ -1018,6 +1063,7 @@ void EditorComponent::Update(float dt)
 			}
 			else
 			{
+				// Clear selection:
 				EndTranslate();
 				ClearSelected();
 			}
@@ -1190,6 +1236,11 @@ void EditorComponent::Update(float dt)
 		// Control operations...
 		if (wiInputManager::GetInstance()->down(VK_CONTROL))
 		{
+			// Select All
+			if (wiInputManager::GetInstance()->press('A'))
+			{
+				selectAll = true;
+			}
 			// Copy
 			if (wiInputManager::GetInstance()->press('C'))
 			{
