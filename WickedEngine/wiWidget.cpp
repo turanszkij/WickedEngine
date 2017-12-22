@@ -612,6 +612,7 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 		this->value = args.fValue;
 		this->start = min(this->start, args.fValue);
 		this->end = max(this->end, args.fValue);
+		onSlide(args);
 	});
 	valueInputField->attachTo(this);
 }
