@@ -1418,12 +1418,26 @@ void EditorComponent::Compose()
 {
 	renderPath->Compose();
 
-	//if (wiRenderer::GetOcean())
+	//static Texture2D* clouds = nullptr;
+	//if (clouds == nullptr)
 	//{
-	//	wiImageEffects fx(500, 500, 500, 500);
-	//	fx.blendFlag = BLENDMODE_OPAQUE;
-	//	wiImage::Draw(wiRenderer::GetOcean()->getDisplacementMap(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	//	Texture2DDesc desc;
+	//	desc.ArraySize = 1;
+	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+	//	desc.CPUAccessFlags = 0;
+	//	desc.Format = FORMAT_R8G8B8A8_UNORM;
+	//	desc.Height = 512;
+	//	desc.Width = 512;
+	//	desc.MipLevels = 1;
+	//	desc.MiscFlags = 0;
+	//	desc.Usage = USAGE_DEFAULT;
+
+	//	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &clouds);
 	//}
+	//static float ran = 0;
+	//ran += 0.01f;
+	//wiRenderer::GenerateClouds(clouds, 0, ran, GRAPHICSTHREAD_IMMEDIATE);
+	//wiImage::Draw(clouds, wiImageEffects(200, 200, 256, 256), GRAPHICSTHREAD_IMMEDIATE);
 
 	//__super::Compose();
 

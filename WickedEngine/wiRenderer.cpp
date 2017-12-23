@@ -25,7 +25,8 @@
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
-#include <wiOcean.h>
+#include "wiOcean.h"
+#include "ShaderInterop_CloudGenerator.h"
 
 #include <algorithm>
 
@@ -618,6 +619,9 @@ void wiRenderer::LoadBuffers()
 
 	bd.ByteWidth = sizeof(DispatchParamsCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
+
+	bd.ByteWidth = sizeof(CloudGeneratorCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
 
 
 
@@ -1469,6 +1473,7 @@ void wiRenderer::LoadShaders()
 		computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 		computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 		computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
+		computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 		hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -5815,6 +5820,42 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 
 	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+
+	GetDevice()->EventEnd(threadID);
+}
+
+void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
+{
+	GetDevice()->EventBegin("Cloud Generator", threadID);
+
+	Texture2DDesc src_desc = wiTextureHelper::getInstance()->getRandom64x64()->GetDesc();
+
+	Texture2DDesc dst_desc = dst->GetDesc();
+	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
+
+	GetDevice()->BindResource(CS, wiTextureHelper::getInstance()->getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
+	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
+
+	CloudGeneratorCB cb;
+	cb.xNoiseTexDim = XMFLOAT2((float)src_desc.Width, (float)src_desc.Height);
+	cb.xRandomness = randomness;
+	if (refinementCount == 0)
+	{
+		cb.xRefinementCount = max(1, (UINT)log2(dst_desc.Width));
+	}
+	else
+	{
+		cb.xRefinementCount = refinementCount;
+	}
+	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, threadID);
+	GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), threadID);
+
+	GetDevice()->BindComputePSO(CPSO[CSTYPE_CLOUDGENERATOR], threadID);
+	GetDevice()->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, threadID);
+
+	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+
 
 	GetDevice()->EventEnd(threadID);
 }

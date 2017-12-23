@@ -1134,6 +1134,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

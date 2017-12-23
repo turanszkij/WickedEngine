@@ -684,6 +684,9 @@
     <FxCompile Include="emittedparticlePS_soft_distortion.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="cloudGeneratorCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

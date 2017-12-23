@@ -471,6 +471,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	if (getEmittedParticlesEnabled())
 	{
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		rtParticle.Activate(threadID, 0, 0, 0, 0);
 		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), true, threadID);
 	}
