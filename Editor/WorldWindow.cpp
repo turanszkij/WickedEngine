@@ -48,6 +48,30 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	});
 	worldWindow->AddWidget(fogHeightSlider);
 
+	cloudinessSlider = new wiSlider(0, 1, 0.5f, 10000, "Cloudiness: ");
+	cloudinessSlider->SetSize(XMFLOAT2(100, 30));
+	cloudinessSlider->SetPos(XMFLOAT2(x, y += step));
+	cloudinessSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::GetScene().worldInfo.cloudiness = args.fValue;
+	});
+	worldWindow->AddWidget(cloudinessSlider);
+
+	cloudScaleSlider = new wiSlider(0.00005f, 0.001f, 0.0005f, 10000, "Cloud Scale: ");
+	cloudScaleSlider->SetSize(XMFLOAT2(100, 30));
+	cloudScaleSlider->SetPos(XMFLOAT2(x, y += step));
+	cloudScaleSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::GetScene().worldInfo.cloudScale = args.fValue;
+	});
+	worldWindow->AddWidget(cloudScaleSlider);
+
+	cloudSpeedSlider = new wiSlider(0.001f, 0.2f, 0.1f, 10000, "Cloud Speed: ");
+	cloudSpeedSlider->SetSize(XMFLOAT2(100, 30));
+	cloudSpeedSlider->SetPos(XMFLOAT2(x, y += step));
+	cloudSpeedSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::GetScene().worldInfo.cloudSpeed = args.fValue;
+	});
+	worldWindow->AddWidget(cloudSpeedSlider);
+
 
 	skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");

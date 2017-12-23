@@ -5,6 +5,8 @@
 
 namespace wiMath
 {
+	float Length(const XMFLOAT2& v);
+	float Length(const XMFLOAT3& v);
 	float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2);
 	float Distance(const XMFLOAT3& v1,const XMFLOAT3& v2);
 	float DistanceSquared(const XMFLOAT3& v1,const XMFLOAT3& v2);

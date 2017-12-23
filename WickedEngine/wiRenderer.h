@@ -125,8 +125,10 @@ public:
 		XMFLOAT2 mInternalResolution_Inverse;
 		float	 mGamma;
 		XMFLOAT3 mHorizon;
-		XMFLOAT3 mZenith;				float pad0;
-		XMFLOAT3 mAmbient;				float pad1;
+		XMFLOAT3 mZenith;
+		float mCloudScale;
+		XMFLOAT3 mAmbient;
+		float mCloudiness;
 		XMFLOAT3 mFog;
 		float mSpecularAA;
 		float mVoxelRadianceDataSize;

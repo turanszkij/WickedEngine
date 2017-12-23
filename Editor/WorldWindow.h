@@ -22,6 +22,9 @@ public:
 	wiSlider*		fogStartSlider;
 	wiSlider*		fogEndSlider;
 	wiSlider*		fogHeightSlider;
+	wiSlider*		cloudinessSlider;
+	wiSlider*		cloudScaleSlider;
+	wiSlider*		cloudSpeedSlider;
 	wiButton*		skyButton;
 	wiColorPicker*	ambientColorPicker;
 	wiColorPicker*	horizonColorPicker;

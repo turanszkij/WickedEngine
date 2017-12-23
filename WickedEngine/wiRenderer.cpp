@@ -3345,6 +3345,29 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		ocean->UpdateDisplacementMap(renderTime, threadID);
 	}
 
+	// Generate cloud layer:
+	if(enviroMap == nullptr) // generate only when sky is dynamic
+	{
+		if (textures[TEXTYPE_2D_CLOUDS] == nullptr)
+		{
+			Texture2DDesc desc;
+			desc.ArraySize = 1;
+			desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+			desc.CPUAccessFlags = 0;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.Height = 128;
+			desc.Width = 128;
+			desc.MipLevels = 1;
+			desc.MiscFlags = 0;
+			desc.Usage = USAGE_DEFAULT;
+
+			GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_CLOUDS]);
+		}
+
+		float cloudPhase = renderTime * GetScene().worldInfo.cloudSpeed;
+		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, GRAPHICSTHREAD_IMMEDIATE);
+	}
+
 	// Render out of date environment probes:
 	RefreshEnvProbes(threadID);
 
@@ -5176,6 +5199,7 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	else
 	{
 		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_DYNAMIC], threadID);
+		GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
 	}
 
 	GetDevice()->Draw(240, 0, threadID);
@@ -5189,6 +5213,15 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 	GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_SUN], threadID);
+
+	if (enviroMap != nullptr)
+	{
+		GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getBlack(), TEXSLOT_ONDEMAND0, threadID);
+	}
+	else
+	{
+		GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+	}
 
 	GetDevice()->Draw(240, 0, threadID);
 
@@ -5962,6 +5995,8 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mGamma = GetGamma();
 	auto& world = GetScene().worldInfo;
 	value.mAmbient = world.ambient;
+	value.mCloudiness = world.cloudiness;
+	value.mCloudScale = world.cloudScale;
 	value.mFog = world.fogSEH;
 	value.mHorizon = world.horizon;
 	value.mZenith = world.zenith;

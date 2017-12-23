@@ -12,5 +12,10 @@ struct VSOut {
 float4 main(VSOut PSIn) : SV_TARGET
 { 
 	float3 normal = normalize(PSIn.nor);
-	return float4(normal.y > 0 ? max(pow(saturate(dot(GetSunDirection().xyz, normal) + 0.0001), 64)*GetSunColor(), 0) : 0, 1);
+
+	float4 color = float4(normal.y > 0 ? max(pow(saturate(dot(GetSunDirection().xyz, normal) + 0.0001), 64)*GetSunColor(), 0) : 0, 1);
+
+	AddCloudLayer(color, normal, true);
+
+	return color;
 }

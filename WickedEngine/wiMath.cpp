@@ -2,6 +2,14 @@
 
 namespace wiMath
 {
+	float Length(const XMFLOAT2& v)
+	{
+		return sqrtf(v.x*v.x + v.y*v.y);
+	}
+	float Length(const XMFLOAT3& v)
+	{
+		return sqrtf(v.x*v.x + v.y*v.y + v.z*v.z);
+	}
 	float Distance(const XMFLOAT2& v1, const XMFLOAT2& v2)
 	{
 		XMVECTOR& vector1 = XMLoadFloat2(&v1);

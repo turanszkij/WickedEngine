@@ -54,8 +54,10 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float2		g_xWorld_InternalResolution_Inverse;
 	float		g_xWorld_Gamma;
 	float3		g_xWorld_Horizon;
-	float3		g_xWorld_Zenith;				float xPadding0_WorldCB;
-	float3		g_xWorld_Ambient;				float xPadding1_WorldCB;
+	float3		g_xWorld_Zenith;
+	float		g_xWorld_CloudScale;
+	float3		g_xWorld_Ambient;
+	float		g_xWorld_Cloudiness;
 	float3		g_xWorld_Fog;					// Fog Start,End,Height
 	float		g_xWorld_SpecularAA;
 	float		g_xWorld_VoxelRadianceDataSize;

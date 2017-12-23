@@ -955,6 +955,9 @@ struct WorldInfo{
 	XMFLOAT3 ambient;
 	XMFLOAT3 fogSEH;
 	XMFLOAT4 water;
+	float cloudiness;
+	float cloudScale;
+	float cloudSpeed;
 
 	WorldInfo(){
 		horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -962,6 +965,9 @@ struct WorldInfo{
 		ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		fogSEH = XMFLOAT3(100, 1000, 0);
 		water = XMFLOAT4(0, 0, 0, 0);
+		cloudiness = 0.53f;
+		cloudScale = 0.0003f;
+		cloudSpeed = 0.1f;
 	}
 };
 struct Wind{
