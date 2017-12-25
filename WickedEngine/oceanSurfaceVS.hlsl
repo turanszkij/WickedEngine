@@ -51,8 +51,9 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 
 	// Displace surface:
 	float2 uv = worldPos.xz * xOceanPatchSizeRecip;
-	float3 displacement = xDisplacementMap.SampleLevel(sampler_point_wrap, uv + xOceanMapHalfTexel, 0).xyz;
-	worldPos.xzy += displacement.xyz;
+	float3 displacement = xDisplacementMap.SampleLevel(sampler_linear_wrap, uv + xOceanMapHalfTexel, 0).xzy;
+	displacement *= 1 - saturate(distance(g_xCamera_CamPos, worldPos) * 0.005f);
+	worldPos += displacement;
 
 	// Reproject displaced surface and output:
 	Out.pos = mul(float4(worldPos, 1), g_xFrame_MainCamera_VP);
