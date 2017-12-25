@@ -283,42 +283,45 @@ void wiTranslator::Update()
 			rayDir = XMLoadFloat3(&ray.direction);
 			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
 
-
-			XMFLOAT3 delta;
+			XMVECTOR deltaV;
 			if (state == TRANSLATOR_X)
 			{
 				XMVECTOR A = pos, B = pos + XMVectorSet(1, 0, 0, 0);
 				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
 				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
-				XMStoreFloat3(&delta, P - PPrev);
+				deltaV = P - PPrev;
 			}
 			else if (state == TRANSLATOR_Y)
 			{
 				XMVECTOR A = pos, B = pos + XMVectorSet(0, 1, 0, 0);
 				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
 				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
-				XMStoreFloat3(&delta, P - PPrev);
+				deltaV = P - PPrev;
 			}
 			else if (state == TRANSLATOR_Z)
 			{
 				XMVECTOR A = pos, B = pos + XMVectorSet(0, 0, 1, 0);
 				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
 				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
-				XMStoreFloat3(&delta, P - PPrev);
+				deltaV = P - PPrev;
 			}
 			else
 			{
-				XMVECTOR deltaV = intersection - intersectionPrev;
+				deltaV = intersection - intersectionPrev;
+
 				if (isScalator)
 				{
-					float sca = XMVectorGetY(deltaV);
-					delta = XMFLOAT3(sca, sca, sca);
-				}
-				else
-				{
-					XMStoreFloat3(&delta, deltaV);
+					deltaV = XMVectorSplatY(deltaV);
 				}
 			}
+
+			XMFLOAT3 delta;
+			if (isRotator)
+			{
+				deltaV /= XMVector3Length(intersection - rayOrigin);
+				deltaV *= XM_2PI;
+			}
+			XMStoreFloat3(&delta, deltaV);
 
 
 			XMMATRIX transf = XMMatrixIdentity();
