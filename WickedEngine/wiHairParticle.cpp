@@ -57,7 +57,6 @@ wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int new
 	object = newObject;
 	materialName = newMat;
 	particleCount = 0;
-	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, object->getMatrix()));
 	for (MeshSubset& subset : object->mesh->subsets)
 	{
 		if (!newMat.compare(subset.material->name)) {
@@ -87,7 +86,6 @@ wiHairParticle::wiHairParticle(const wiHairParticle& other)
 	object = other.object;
 	materialName = other.materialName;
 	particleCount = other.particleCount;
-	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, object->getMatrix()));
 	material = other.material;
 
 	if (material)
@@ -302,6 +300,7 @@ void wiHairParticle::Generate()
 	Mesh* mesh = object->mesh;
 
 	XMMATRIX matr = object->getMatrix();
+	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, matr));
 
 	int dVG = -1, lVG = -1;
 	if (densityG.compare("")) {
@@ -659,7 +658,10 @@ void wiHairParticle::Serialize(wiArchive& archive)
 		archive >> densityG;
 		archive >> lenG;
 		archive >> materialName;
-		archive >> OriginalMatrix_Inverse;
+		if (archive.GetVersion() < 15)
+		{
+			archive >> OriginalMatrix_Inverse;
+		}
 	}
 	else
 	{
@@ -669,6 +671,9 @@ void wiHairParticle::Serialize(wiArchive& archive)
 		archive << densityG;
 		archive << lenG;
 		archive << materialName;
-		archive << OriginalMatrix_Inverse;
+		if (archive.GetVersion() < 15)
+		{
+			archive << OriginalMatrix_Inverse;
+		}
 	}
 }
