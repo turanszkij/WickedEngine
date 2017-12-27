@@ -23,7 +23,8 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, f
 {
 	float realDistance = shadowPos.z + bias;
 	float sum = 0;
-	float retVal = 1; 
+	float retVal = 1;
+#ifndef DISABLE_SHADOWMAPS
 #ifdef DIRECTIONALLIGHT_SOFT
 	float samples = 0.0f;
 	static const float range = 1.5f;
@@ -39,6 +40,7 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, f
 #else
 	retVal *= texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex, slice), realDistance).r;
 #endif
+#endif // DISABLE_SHADOWMAPS
 	return retVal;
 }
 
@@ -134,10 +136,12 @@ inline LightingResult PointLight(in ShaderEntityType light, in float3 N, in floa
 		result.specular *= attenuation;
 
 		float sh = max(NdotL, 0);
+#ifndef DISABLE_SHADOWMAPS
 		[branch]
 		if (light.additionalData_index >= 0) {
 			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 		}
+#endif
 		result.diffuse *= sh;
 		result.specular *= sh;
 
@@ -385,10 +389,12 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 	float sinSigmaSqr = min(sqrLightRadius / sqrDist, 0.9999f);
 	float fLight = illuminanceSphereOrDisk(cosTheta, sinSigmaSqr);
 
+#ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
 		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
 	}
+#endif
 
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
@@ -432,10 +438,12 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 	float fLight = illuminanceSphereOrDisk(cosTheta, sinSigmaSqr)
 		* saturate(dot(lightPlaneNormal, -L));
 
+#ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
 		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
 	}
+#endif
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
@@ -500,10 +508,12 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 	}
 	fLight = max(0, fLight);
 
+#ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
 		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (max(light.GetWidth(),light.GetHeight()) * 100) * (1 - light.shadowBias)).r;
 	}
+#endif
 
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
@@ -621,10 +631,12 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 	fLight = max(0, fLight);
 
+#ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
 		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (max(light.GetRadius(),light.GetWidth())*100) * (1 - light.shadowBias)).r;
 	}
+#endif
 
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection

@@ -5,5 +5,7 @@
 float4 main(PSIn_Sky input) : SV_TARGET
 {
 	float3 normal = normalize(input.nor);
-	return float4(GAMMA(GetDynamicSkyColor(normal)),1);
+	float4 color = float4(GetDynamicSkyColor(normal), 1);
+	AddCloudLayer(color, normal, false);
+	return float4(GAMMA(color.rgb),1);
 }

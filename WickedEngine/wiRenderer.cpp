@@ -587,11 +587,12 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(WorldCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_WORLD]);
 
-	// The other constant buffers will be updated frequently (>= per frame) so they should reside in DYNAMIC GPU memory!
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.ByteWidth = sizeof(FrameCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
+
+	// The other constant buffers will be updated frequently (> per frame) so they should reside in DYNAMIC GPU memory!
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
 	bd.ByteWidth = sizeof(CameraCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
@@ -5358,6 +5359,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			else
 			{
 				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
+				GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
 			}
 
 			GetDevice()->Draw(240, 0, threadID);
