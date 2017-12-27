@@ -203,7 +203,7 @@ void ClearSelected()
 	selected.clear();
 	savedParents.clear();
 }
-void AddSelected(wiRenderer::Picked* picked)
+void AddSelected(wiRenderer::Picked* picked, bool deselectIfAlreadySelected = false)
 {
 	list<wiRenderer::Picked*>::iterator it = selected.begin();
 	for (; it != selected.end(); ++it)
@@ -213,10 +213,27 @@ void AddSelected(wiRenderer::Picked* picked)
 			break;
 		}
 	}
+
 	if (it == selected.end())
 	{
 		selected.push_back(picked);
 		savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
+	}
+	else if (deselectIfAlreadySelected)
+	{
+		{
+			picked->transform->detach();
+			std::map<Transform*, Transform*>::iterator it = savedParents.find(picked->transform);
+			if (it != savedParents.end())
+			{
+				picked->transform->attachTo(it->second);
+			}
+		}
+
+		SAFE_DELETE(*it);
+		selected.erase(it);
+		savedParents.erase(picked->transform);
+		SAFE_DELETE(picked);
 	}
 }
 
@@ -1048,7 +1065,7 @@ void EditorComponent::Update(float dt)
 				wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
 				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
 				{
-					AddSelected(picked);
+					AddSelected(picked, true);
 				}
 				else
 				{
