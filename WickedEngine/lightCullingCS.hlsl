@@ -84,12 +84,13 @@ void o_BitonicSort( in uint localIdxFlattened )
 {
 	uint numArray = o_ArrayLength;
 
-	// Round the number of entities up to the nearest power of two
-	uint numArrayPowerOfTwo = 1;
-	while( numArrayPowerOfTwo < numArray )
-		numArrayPowerOfTwo <<= 1;
+	//// Round the number of entities up to the nearest power of two
+	//uint numArrayPowerOfTwo = 1;
+	//while( numArrayPowerOfTwo < numArray )
+	//	numArrayPowerOfTwo <<= 1;
 
-	GroupMemoryBarrierWithGroupSync();
+	// Optimized nearest power of two algorithm:
+	uint numArrayPowerOfTwo = 1 << (firstbithigh(numArray) + 1);
 
 	for( uint nMergeSize = 2; nMergeSize <= numArrayPowerOfTwo; nMergeSize = nMergeSize * 2 )
 	{
@@ -118,12 +119,13 @@ void t_BitonicSort( in uint localIdxFlattened )
 {
 	uint numArray = t_ArrayLength;
 
-	// Round the number of entities up to the nearest power of two
-	uint numArrayPowerOfTwo = 1;
-	while( numArrayPowerOfTwo < numArray )
-		numArrayPowerOfTwo <<= 1;
+	//// Round the number of entities up to the nearest power of two
+	//uint numArrayPowerOfTwo = 1;
+	//while( numArrayPowerOfTwo < numArray )
+	//	numArrayPowerOfTwo <<= 1;
 
-	GroupMemoryBarrierWithGroupSync();
+	// Optimized nearest power of two algorithm:
+	uint numArrayPowerOfTwo = 1 << (firstbithigh(numArray) + 1);
 
 	for( uint nMergeSize = 2; nMergeSize <= numArrayPowerOfTwo; nMergeSize = nMergeSize * 2 )
 	{
@@ -155,16 +157,32 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 	// If we do an OR operation with the depth slices mask, we instantly get if the entity is contributing or not
 	// we do this in view space
 
-	uint uLightMask = 0;
 	const float fMin = bounds.c.z - bounds.r;
 	const float fMax = bounds.c.z + bounds.r;
 	const uint __entitymaskcellindexSTART = max(0, min(32, floor((fMin - depthRangeMin) * depthRangeRecip)));
 	const uint __entitymaskcellindexEND = max(0, min(32, floor((fMax - depthRangeMin) * depthRangeRecip)));
 
-	for (uint c = __entitymaskcellindexSTART; c <= __entitymaskcellindexEND; ++c)
-	{
-		uLightMask |= 1 << c;
-	}
+	//// Unoptimized mask construction with loop:
+	//// Construct mask from START to END:
+	////          END         START
+	////	0000000000111111111110000000000
+	//uint uLightMask = 0;
+	//for (uint c = __entitymaskcellindexSTART; c <= __entitymaskcellindexEND; ++c)
+	//{
+	//	uLightMask |= 1 << c;
+	//}
+
+
+	// Optimized mask construction, without loop:
+	//	- First, fill full mask:
+	//	1111111111111111111111111111111
+	uint uLightMask = 0xFFFFFFFF;
+	//	- Then Shift right with spare amount to keep mask only:
+	//	0000000000000000000011111111111
+	uLightMask >>= 32 - (__entitymaskcellindexEND - __entitymaskcellindexSTART);
+	//	- Last, shift left with START amount to correct mask position:
+	//	0000000000111111111110000000000
+	uLightMask <<= __entitymaskcellindexSTART;
 
 	return uLightMask;
 }
