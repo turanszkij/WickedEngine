@@ -90,7 +90,7 @@ void o_BitonicSort( in uint localIdxFlattened )
 	//	numArrayPowerOfTwo <<= 1;
 
 	// Optimized nearest power of two algorithm:
-	uint numArrayPowerOfTwo = 2 << firstbithigh(numArray);
+	uint numArrayPowerOfTwo = 2 << firstbithigh(numArray - 1); // if numArray is 0, we don't even call this function, but watch out!
 
 	for( uint nMergeSize = 2; nMergeSize <= numArrayPowerOfTwo; nMergeSize = nMergeSize * 2 )
 	{
@@ -125,7 +125,7 @@ void t_BitonicSort( in uint localIdxFlattened )
 	//	numArrayPowerOfTwo <<= 1;
 
 	// Optimized nearest power of two algorithm:
-	uint numArrayPowerOfTwo = 2 << firstbithigh(numArray);
+	uint numArrayPowerOfTwo = 2 << firstbithigh(numArray - 1); // if numArray is 0, we don't even call this function, but watch out!
 
 	for( uint nMergeSize = 2; nMergeSize <= numArrayPowerOfTwo; nMergeSize = nMergeSize * 2 )
 	{
