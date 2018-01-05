@@ -14,7 +14,7 @@ class wiResourceManager : public wiThreadSafeManager
 public:
 	enum Data_Type{
 		DYNAMIC,
-		IMAGE,IMAGE_STAGING,
+		IMAGE,
 		SOUND,MUSIC,
 		VERTEXSHADER,
 		PIXELSHADER,

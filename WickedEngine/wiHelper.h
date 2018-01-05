@@ -8,6 +8,26 @@
 
 namespace wiHelper
 {
+	// Simple binary reader utility
+	struct DataBlob
+	{
+		char* DATA;
+		size_t dataSize;
+		size_t dataPos;
+
+		DataBlob(const std::string& fileName = "");
+		~DataBlob();
+
+		template<typename T>
+		void read(T& data)
+		{
+			assert(DATA != nullptr);
+			assert(dataPos - (size_t)DATA < dataSize);
+			memcpy(&data, reinterpret_cast<void*>(dataPos), sizeof(T));
+			dataPos += sizeof(T);
+		}
+	};
+
 	std::string toUpper(const std::string& s);
 
 	bool readByteData(const std::string& fileName, BYTE** data, size_t& dataSize);

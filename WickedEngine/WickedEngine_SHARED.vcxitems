@@ -363,6 +363,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTaskThread.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTransform.h" />
@@ -704,6 +705,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSPTree.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTransform.cpp" />

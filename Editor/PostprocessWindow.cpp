@@ -176,7 +176,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 				// use the contents of szFile to initialize itself.
 				ofn.lpstrFile[0] = '\0';
 				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = "Color Grading texture\0*.dds;*.png\0";
+				ofn.lpstrFilter = "Color Grading texture\0*.dds;*.png;*.tga\0";
 				ofn.nFilterIndex = 1;
 				ofn.lpstrFileTitle = NULL;
 				ofn.nMaxFileTitle = 0;

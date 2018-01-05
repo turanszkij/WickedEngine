@@ -2,6 +2,8 @@
 #include "wiRenderer.h"
 #include "wiSound.h"
 #include "wiHelper.h"
+#include "wiTGATextureLoader.h"
+#include "wiTextureHelper.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -41,6 +43,7 @@ void wiResourceManager::SetUp()
 	types.insert(pair<string, Data_Type>("JPG", IMAGE));
 	types.insert(pair<string, Data_Type>("PNG", IMAGE));
 	types.insert(pair<string, Data_Type>("DDS", IMAGE));
+	types.insert(pair<string, Data_Type>("TGA", IMAGE));
 	types.insert(pair<string, Data_Type>("WAV", SOUND));
 }
 
@@ -72,7 +75,8 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		string nameStr = name.GetString();
 		string ext = wiHelper::toUpper(nameStr.substr(nameStr.length() - 3, nameStr.length()));
 		Data_Type type;
-#pragma region dynamic type selection
+
+		// dynamic type selection:
 		if(newType==Data_Type::DYNAMIC){
 			filetypes::iterator it = types.find(ext);
 			if(it!=types.end())
@@ -82,7 +86,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		}
 		else 
 			type = newType;
-#pragma endregion
+
 		void* success = nullptr;
 
 		LOCK();
@@ -90,19 +94,25 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		switch(type){
 		case Data_Type::IMAGE:
 		{
-			Texture2D* image=nullptr;
+			Texture2D* image = nullptr;
+
+			if (ext.compare("TGA") == 0)
 			{
-				wiRenderer::GetDevice()->CreateTextureFromFile(name.GetString().c_str(), &image, true, GRAPHICSTHREAD_IMMEDIATE);
+				wiTGATextureLoader loader;
+				loader.load(nameStr);
+				image = new Texture2D;
+				HRESULT hr = wiTextureHelper::CreateTexture(image, loader.texels, (UINT)loader.header.width, (UINT)loader.header.height, 4);
+				if (FAILED(hr))
+				{
+					SAFE_DELETE(image);
+				}
+			}
+			else
+			{
+				wiRenderer::GetDevice()->CreateTextureFromFile(nameStr.c_str(), &image, true, GRAPHICSTHREAD_IMMEDIATE);
 			}
 
-			if(image)
-				success=image;
-		}
-		break;
-		case Data_Type::IMAGE_STAGING:
-		{
-			wiHelper::messageBox("IMAGE_STAGING texture loading not implemented in ResourceManager!", "Warning!");
-			success = nullptr;
+			success = image;
 		}
 		break;
 		case Data_Type::SOUND:
@@ -119,18 +129,21 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		{
 			BYTE* buffer;
 			size_t bufferSize;
-			if (wiHelper::readByteData(name.GetString(), &buffer, bufferSize)){
+			if (wiHelper::readByteData(name.GetString(), &buffer, bufferSize))
+			{
 				VertexShaderInfo* vertexShaderInfo = new VertexShaderInfo;
 				vertexShaderInfo->vertexShader = new VertexShader;
 				vertexShaderInfo->vertexLayout = new VertexLayout;
 				wiRenderer::GetDevice()->CreateVertexShader(buffer, bufferSize, vertexShaderInfo->vertexShader);
-				if (vertexLayoutDesc != nullptr && elementCount > 0){
+				if (vertexLayoutDesc != nullptr && elementCount > 0)
+				{
 					wiRenderer::GetDevice()->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, vertexShaderInfo->vertexLayout);
 				}
 				success = vertexShaderInfo;
 				delete[] buffer;
 			}
-			else{
+			else
+			{
 				success = nullptr;
 			}
 		}
@@ -215,8 +228,8 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 			break;
 		};
 
-		if(success)
-			resources.insert( pair<wiHashString,Resource*>(name,new Resource(success,type)) );
+		if (success)
+			resources.insert(pair<wiHashString, Resource*>(name, new Resource(success, type)));
 
 		UNLOCK();
 
@@ -248,9 +261,6 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 		if(res->data)
 			switch(res->type){
 			case Data_Type::IMAGE:
-			case Data_Type::IMAGE_STAGING:
-				SAFE_DELETE(reinterpret_cast<Texture2D*&>(res->data));
-				break;
 			case Data_Type::VERTEXSHADER:
 				SAFE_DELETE(reinterpret_cast<VertexShaderInfo*&>(res->data));
 				break;

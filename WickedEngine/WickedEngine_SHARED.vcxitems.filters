@@ -1137,6 +1137,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1939,6 +1942,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.cpp">
       <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.cpp">
+      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
