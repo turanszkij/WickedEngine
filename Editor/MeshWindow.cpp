@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "MeshWindow.h"
 
+#include <sstream>
+
+using namespace std;
 
 MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 {
@@ -11,12 +14,19 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
-	meshWindow->SetSize(XMFLOAT2(400, 300));
+	meshWindow->SetSize(XMFLOAT2(800, 600));
 	meshWindow->SetEnabled(false);
 	GUI->AddWidget(meshWindow);
 
 	float x = 200;
 	float y = 0;
+
+	meshInfoLabel = new wiLabel("Mesh Info");
+	meshInfoLabel->SetPos(XMFLOAT2(x, y += 30));
+	meshInfoLabel->SetSize(XMFLOAT2(400, 150));
+	meshWindow->AddWidget(meshInfoLabel);
+
+	y += 160;
 
 	doubleSidedCheckBox = new wiCheckBox("Double Sided: ");
 	doubleSidedCheckBox->SetTooltip("If enabled, the inside of the mesh will be visible.");
@@ -114,6 +124,13 @@ void MeshWindow::SetMesh(Mesh* mesh)
 	this->mesh = mesh;
 	if (mesh != nullptr)
 	{
+		stringstream ss("");
+		ss << "Mesh name: " << mesh->name << endl;
+		ss << "Vertex count: " << mesh->vertices_POS.size() << endl;
+		ss << "Index count: " << mesh->indices.size() << endl;
+		ss << "Subset count: " << mesh->subsets.size() << endl;
+		meshInfoLabel->SetText(ss.str());
+
 		doubleSidedCheckBox->SetCheck(mesh->doubleSided);
 		massSlider->SetValue(mesh->mass);
 		frictionSlider->SetValue(mesh->friction);
@@ -123,6 +140,7 @@ void MeshWindow::SetMesh(Mesh* mesh)
 	}
 	else
 	{
+		meshInfoLabel->SetText("Select a mesh...");
 		meshWindow->SetEnabled(false);
 	}
 }

@@ -4,7 +4,7 @@ debugout("Begin script: test_script.lua");
 
 
 -- Load a model:
-local model = LoadModel("../models/Stormtrooper/", "Stormtrooper");
+local model = LoadModel("../models/Stormtrooper/Stormtrooper.wimf");
 
 -- Load an image:
 local sprite = Sprite("images/HelloWorld.png");

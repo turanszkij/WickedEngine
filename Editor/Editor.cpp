@@ -663,28 +663,18 @@ void EditorComponent::Load()
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Wicked Model Format\0*.wimf;*.wio\0";
+			ofn.lpstrFilter = "Model Formats\0*.wimf;*.wio;*.obj\0";
 			ofn.nFilterIndex = 1;
 			ofn.lpstrFileTitle = NULL;
 			ofn.nMaxFileTitle = 0;
 			ofn.lpstrInitialDir = NULL;
 			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-			if (GetOpenFileNameA(&ofn) == TRUE) {
+			if (GetOpenFileNameA(&ofn) == TRUE) 
+			{
 				string fileName = ofn.lpstrFile;
-				string dir, file;
-				wiHelper::SplitPath(fileName, dir, file);
-
-				if (fileName.substr(fileName.length() - 5).compare(".wimf") == 0)
-				{
-					file = file.substr(0, file.length() - 5);
-				}
-				else
-				{
-					file = file.substr(0, file.length() - 4);
-				}
 
 				loader->addLoadingFunction([=] {
-					wiRenderer::LoadModel(dir, file);
+					wiRenderer::LoadModel(fileName);
 				});
 				loader->onFinished([=] {
 					main->activateComponent(this);

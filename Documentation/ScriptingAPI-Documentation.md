@@ -113,8 +113,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
 - GetCamera() : Camera? result
-- LoadModel(string directory, string name, opt string identifier, opt Matrix transform) : Model? result
-- LoadWorldInfo(string directory, string name)
+- LoadModel(string fileName, opt string identifier, opt Matrix transform) : Model? result
+- LoadWorldInfo(string fileName)
 - FinishLoading()
 - SetEnvironmentMap(Texture cubemap)
 - SetColorGrading(Texture texture2D)

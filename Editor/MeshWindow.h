@@ -23,6 +23,7 @@ public:
 	Mesh* mesh;
 
 	wiWindow*	meshWindow;
+	wiLabel*	meshInfoLabel;
 	wiCheckBox* doubleSidedCheckBox;
 	wiSlider*	massSlider;
 	wiSlider*	frictionSlider;

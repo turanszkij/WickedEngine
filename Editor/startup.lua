@@ -58,8 +58,7 @@ runProcess(function()
 				local row = 16
 				for i = 1, row do
 					for j = 1, row do
-						LoadModel("C:\\PROJECTS\\BLENDER\\Stormtrooper\\", "Stormtrooper", "_"..i..j,matrix.Translation(Vector(i*2-row,0,j*2-row)));
-						--LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\models\\Sample\\", "nosun", "_common",matrix.Translation(Vector(i*500-row*500,0,j*500-row*500)));
+						LoadModel("C:\\PROJECTS\\BLENDER\\Stormtrooper\\Stormtrooper.wimf", "_"..i..j,matrix.Translation(Vector(i*2-row,0,j*2-row)));
 						--waitSeconds(0.05)
 					end
 				end

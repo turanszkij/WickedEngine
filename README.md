@@ -89,8 +89,9 @@ Test model and scene files are now available in the WickedEngine/models director
 
 ### Model import/export:
 
-You can export models from Blender with the provided python script: io_export_wicked_wi_bin.py <br/>
-Common model formats like FBX are not supported currently, only the custom model format which is exportable from Blender.<br/>
+The only common model format supported right now is Wavefront OBJ.<br/>
+
+For advanced model format capabilities, like skeletal animations, particle systems, physics, etc. use the provided Blender exporter python script: io_export_wicked_wi_bin.py <br/>
 
 Notes on exporting:
 - Names should not contain spaces inside Blender<br/>

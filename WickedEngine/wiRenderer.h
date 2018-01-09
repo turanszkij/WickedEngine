@@ -575,8 +575,8 @@ public:
 	static void SetOceanEnabled(bool enabled, const wiOceanParameter& params);
 	static wiOcean* GetOcean() { return ocean; }
 
-	static Model* LoadModel(const std::string& dir, const std::string& name, const XMMATRIX& transform = XMMatrixIdentity(), const std::string& ident = "common");
-	static void LoadWorldInfo(const std::string& dir, const std::string& name);
+	static Model* LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity(), const std::string& ident = "common");
+	static void LoadWorldInfo(const std::string& fileName);
 	static void LoadDefaultLighting();
 
 	static void PutEnvProbe(const XMFLOAT3& position, int resolution = 256);

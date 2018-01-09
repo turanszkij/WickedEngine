@@ -1223,7 +1223,7 @@ struct Model : public Transform
 	Model();
 	virtual ~Model();
 	void CleanUp();
-	void LoadFromDisk(const std::string& dir, const std::string& name, const std::string& identifier);
+	void LoadFromDisk(const std::string& fileName, const std::string& identifier);
 	void FinishLoading();
 	void UpdateModel();
 	void Add(Object* value);
@@ -1267,7 +1267,7 @@ void LoadWiActions(const std::string& directory, const std::string& filename, co
 void LoadWiLights(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Light*>& lights);
 void LoadWiHitSpheres(const std::string& directory, const std::string& name, const std::string& identifier, std::vector<HitSphere*>& spheres
 					  ,const std::list<Armature*>& armatures);
-void LoadWiWorldInfo(const std::string&directory, const std::string& name, WorldInfo& worldInfo, Wind& wind);
+void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind);
 void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::vector<Camera>& cameras
 				   ,const std::list<Armature*>& armatures);
 void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, std::list<Decal*>& decals);

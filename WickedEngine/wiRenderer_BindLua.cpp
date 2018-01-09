@@ -293,50 +293,48 @@ namespace wiRenderer_BindLua
 	int LoadModel(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
+		if (argc > 0)
 		{
-			string dir = wiLua::SGetString(L, 1);
-			string name = wiLua::SGetString(L, 2);
+			string fileName = wiLua::SGetString(L, 1);
 			string identifier = "common";
 			XMMATRIX transform = XMMatrixIdentity();
-			if (argc > 2)
+			if (argc > 1)
 			{
-				identifier = wiLua::SGetString(L, 3);
-				if (argc > 3)
+				identifier = wiLua::SGetString(L, 2);
+				if (argc > 2)
 				{
-					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 4);
+					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 3);
 					if (matrix != nullptr)
 					{
 						transform = matrix->matrix;
 					}
 					else
 					{
-						wiLua::SError(L, "LoadModel(string directory, string name, opt string identifier, opt Matrix transform) argument is not a matrix!");
+						wiLua::SError(L, "LoadModel(string fileName, opt string identifier, opt Matrix transform) argument is not a matrix!");
 					}
 				}
 			}
-			Model* model = wiRenderer::LoadModel(dir, name, transform, identifier);
+			Model* model = wiRenderer::LoadModel(fileName, transform, identifier);
 			Luna<Model_BindLua>::push(L, new Model_BindLua(model));
 			return 1;
 		}
 		else
 		{
-			wiLua::SError(L, "LoadModel(string directory, string name, opt string identifier, opt Matrix transform) not enough arguments!");
+			wiLua::SError(L, "LoadModel(string fileName, opt string identifier, opt Matrix transform) not enough arguments!");
 		}
 		return 0;
 	}
 	int LoadWorldInfo(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
+		if (argc > 0)
 		{
-			string dir = wiLua::SGetString(L, 1);
-			string name = wiLua::SGetString(L, 2);
-			wiRenderer::LoadWorldInfo(dir, name);
+			string fileName = wiLua::SGetString(L, 1);
+			wiRenderer::LoadWorldInfo(fileName);
 		}
 		else
 		{
-			wiLua::SError(L, "LoadWorldInfo(string directory, string name) not enough arguments!");
+			wiLua::SError(L, "LoadWorldInfo(string fileName) not enough arguments!");
 		}
 		return 0;
 	}

@@ -10,12 +10,17 @@
 #include "wiTextureHelper.h"
 #include "wiPHYSICS.h"
 #include "wiArchive.h"
+#include "wiBackLog.h"
 
 #define FORSYTH_IMPLEMENTATION
 #include "wiMeshOptimizer.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "wiObjLoader.h"
+
 #include <algorithm>
 #include <fstream>
+#include <iomanip>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -983,52 +988,71 @@ void LoadWiHitSpheres(const std::string& directory, const std::string& name, con
 	//	}
 	//}
 }
-void LoadWiWorldInfo(const std::string&directory, const std::string& name, WorldInfo& worldInfo, Wind& wind){
-	stringstream filename("");
-	filename<<directory<<name;
+void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind)
+{
+	string extension = wiHelper::GetExtensionFromFileName(fileName);
 
-	ifstream file(filename.str().c_str());
-	if(file){
-		while(!file.eof()){
+	string realName;
+	if (!extension.compare("wiw"))
+	{
+		realName = fileName;
+	}
+	else if (extension.empty())
+	{
+		realName = fileName + ".wiw";
+	}
+	else
+	{
+		realName = fileName;
+		wiHelper::RemoveExtensionFromFileName(realName);
+		realName += ".wiw";
+	}
+
+	ifstream file(realName);
+	if (file)
+	{
+		while (!file.eof())
+		{
 			string read = "";
-			file>>read;
-			switch(read[0]){
+			file >> read;
+			switch (read[0])
+			{
 			case 'h':
-				file>>worldInfo.horizon.x>>worldInfo.horizon.y>>worldInfo.horizon.z;
+				file >> worldInfo.horizon.x >> worldInfo.horizon.y >> worldInfo.horizon.z;
 				// coming from blender, de-apply gamma correction:
 				worldInfo.horizon.x = powf(worldInfo.horizon.x, 1.0f / 2.2f);
 				worldInfo.horizon.y = powf(worldInfo.horizon.y, 1.0f / 2.2f);
 				worldInfo.horizon.z = powf(worldInfo.horizon.z, 1.0f / 2.2f);
 				break;
 			case 'z':
-				file>>worldInfo.zenith.x>>worldInfo.zenith.y>>worldInfo.zenith.z;
+				file >> worldInfo.zenith.x >> worldInfo.zenith.y >> worldInfo.zenith.z;
 				// coming from blender, de-apply gamma correction:
 				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
 				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
 				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
 				break;
 			case 'a':
-				file>>worldInfo.ambient.x>>worldInfo.ambient.y>>worldInfo.ambient.z;
+				file >> worldInfo.ambient.x >> worldInfo.ambient.y >> worldInfo.ambient.z;
 				// coming from blender, de-apply gamma correction:
 				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
 				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
 				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
 				break;
 			case 'W':
-				{
-					XMFLOAT4 r;
-					float s;
-					file>>r.x>>r.y>>r.z>>r.w>>s;
-					XMStoreFloat3(&wind.direction, XMVector3Transform( XMVectorSet(0,s,0,0),XMMatrixRotationQuaternion(XMLoadFloat4(&r)) ));
-				}
-				break;
+			{
+				XMFLOAT4 r;
+				float s;
+				file >> r.x >> r.y >> r.z >> r.w >> s;
+				XMStoreFloat3(&wind.direction, XMVector3Transform(XMVectorSet(0, s, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&r))));
+			}
+			break;
 			case 'm':
-				{
-					float s,e,h;
-					file>>s>>e>>h;
-					worldInfo.fogSEH=XMFLOAT3(s,e,h);
-				}
-				break;
+			{
+				float s, e, h;
+				file >> s >> e >> h;
+				worldInfo.fogSEH = XMFLOAT3(s, e, h);
+			}
+			break;
 			default:break;
 			}
 		}
@@ -2557,21 +2581,201 @@ void Model::CleanUp()
 		SAFE_DELETE(x);
 	}
 }
-void Model::LoadFromDisk(const std::string& dir, const std::string& name, const std::string& identifier)
+void Model::LoadFromDisk(const std::string& fileName, const std::string& identifier)
 {
-	wiArchive archive(dir + name + ".wimf", true);
-	if (archive.IsOpen())
+	string directory, name;
+	wiHelper::SplitPath(fileName, directory, name);
+	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
+	wiHelper::RemoveExtensionFromFileName(name);
+
+	if (!extension.compare("WIMF"))
 	{
-		// New Import if wimf model is available
-		this->Serialize(archive);
+		wiArchive archive(fileName, true);
+		if (archive.IsOpen())
+		{
+			this->Serialize(archive);
+		}
+		else
+		{
+			wiHelper::messageBox("Could not open archive!", "Error!");
+		}
+	}
+	else if (!extension.compare("OBJ"))
+	{
+		tinyobj::attrib_t obj_attrib;
+		vector<tinyobj::shape_t> obj_shapes;
+		vector<tinyobj::material_t> obj_materials;
+		string obj_errors;
+
+		bool success = tinyobj::LoadObj(&obj_attrib, &obj_shapes, &obj_materials, &obj_errors, fileName.c_str(), directory.c_str(), true);
+
+		if (success)
+		{
+			this->name = name + identifier;
+
+			// Load material library:
+			vector<Material*> materialLibrary = {};
+			for (auto& obj_material : obj_materials)
+			{
+				Material* material = new Material(obj_material.name + identifier);
+
+				material->diffuseColor = XMFLOAT3(obj_material.diffuse[0], obj_material.diffuse[1], obj_material.diffuse[2]);
+				material->textureName = obj_material.diffuse_texname;
+				material->displacementMapName = obj_material.displacement_texname;
+				if (material->displacementMapName.empty())
+				{
+					material->displacementMapName = obj_material.bump_texname;
+				}
+				material->emissive = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
+				//obj_material.emissive_texname;
+				material->refractionIndex = obj_material.ior;
+				material->metalness = obj_material.metallic;
+				//obj_material.metallic_texname;
+				material->normalMapName = obj_material.normal_texname;
+				material->refMapName = obj_material.reflection_texname;
+				material->roughness = obj_material.roughness;
+				//obj_material.roughness_texname;
+				material->specular_power = (int)obj_material.shininess;
+				material->specular = XMFLOAT4(obj_material.specular[0], obj_material.specular[1], obj_material.specular[2], 1);
+				material->specularMapName = obj_material.specular_texname;
+
+				if (!material->refMapName.empty())
+				{
+					material->refMapName = directory + material->refMapName;
+					material->refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->refMapName);
+				}
+				if (!material->textureName.empty())
+				{
+					material->textureName = directory + material->textureName;
+					material->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(material->textureName);
+				}
+				if (!material->normalMapName.empty())
+				{
+					material->normalMapName = directory + material->normalMapName;
+					material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->normalMapName);
+				}
+				if (!material->displacementMapName.empty())
+				{
+					material->displacementMapName = directory + material->displacementMapName;
+					material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->displacementMapName);
+				}
+				if (!material->specularMapName.empty())
+				{
+					material->specularMapName = directory + material->specularMapName;
+					material->specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->specularMapName);
+				}
+
+				material->ConvertToPhysicallyBasedMaterial();
+
+				materialLibrary.push_back(material); // for subset-indexing...
+				this->materials.insert(make_pair(material->name, material));
+			}
+
+			// Load objects, meshes:
+			for (auto& shape : obj_shapes)
+			{
+				Object* object = new Object(shape.name + identifier);
+				Mesh* mesh = new Mesh(shape.name + "_mesh" + identifier);
+
+				object->mesh = mesh;
+				mesh->renderable = true;
+
+				XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+				XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+				unordered_map<int, int> registered_materialIndices = {};
+				unordered_map<size_t, uint32_t> uniqueVertices = {};
+
+				for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
+				{
+					// Reorder face-winding to match defaults:
+					tinyobj::index_t reordered_indices[] = {
+						shape.mesh.indices[i + 0],
+						shape.mesh.indices[i + 2],
+						shape.mesh.indices[i + 1],
+					};
+
+					for (auto& index : reordered_indices)
+					{
+						Mesh::Vertex_FULL vert;
+
+						vert.pos = XMFLOAT4(
+							obj_attrib.vertices[index.vertex_index * 3 + 0],
+							obj_attrib.vertices[index.vertex_index * 3 + 1],
+							obj_attrib.vertices[index.vertex_index * 3 + 2],
+							0
+						);
+
+						if (!obj_attrib.normals.empty())
+						{
+							vert.nor = XMFLOAT4(
+								obj_attrib.normals[index.normal_index * 3 + 0],
+								obj_attrib.normals[index.normal_index * 3 + 1],
+								obj_attrib.normals[index.normal_index * 3 + 2],
+								0
+							);
+						}
+
+						if (!obj_attrib.texcoords.empty())
+						{
+							vert.tex = XMFLOAT4(
+								obj_attrib.texcoords[index.texcoord_index * 2 + 0],
+								1 - obj_attrib.texcoords[index.texcoord_index * 2 + 1],
+								0, 0
+							);
+						}
+
+						int materialIndex = shape.mesh.material_ids[i / 3]; // this indexes the material library
+						if (registered_materialIndices.count(materialIndex) == 0)
+						{
+							registered_materialIndices[materialIndex] = (int)mesh->subsets.size();
+							mesh->subsets.push_back(MeshSubset());
+							Material* material = materialLibrary[materialIndex];
+							mesh->subsets.back().material = material;
+							mesh->materialNames.push_back(material->name);
+						}
+						vert.tex.z = (float)registered_materialIndices[materialIndex]; // this indexes a mesh subset
+
+						// eliminate duplicate vertices by means of hashing:
+						size_t hashes[] = {
+							hash<int>{}(index.vertex_index),
+							hash<int>{}(index.normal_index),
+							hash<int>{}(index.texcoord_index),
+						};
+						size_t vertexHash = (hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1);
+
+						if (uniqueVertices.count(vertexHash) == 0)
+						{
+							uniqueVertices[vertexHash] = (uint32_t)mesh->vertices_FULL.size();
+							mesh->vertices_FULL.push_back(vert);
+						}
+						mesh->indices.push_back(uniqueVertices[vertexHash]);
+
+						min = wiMath::Min(min, XMFLOAT3(vert.pos.x, vert.pos.y, vert.pos.z));
+						max = wiMath::Max(max, XMFLOAT3(vert.pos.x, vert.pos.y, vert.pos.z));
+					}
+				}
+				mesh->aabb.create(min, max);
+
+				this->objects.insert(object);
+				this->meshes.insert(make_pair(mesh->name, mesh));
+			}
+
+			this->FinishLoading();
+		}
+
+		if (!obj_errors.empty())
+		{
+			wiBackLog::post(obj_errors.c_str());
+		}
 	}
 	else
 	{
-		// Old Import
-		stringstream directory(""), armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
+		// Old Importer
+
+		stringstream armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
 			, actionsFilePath(""), lightsFilePath(""), decalsFilePath("");
 
-		directory << dir;
 		armatureFilePath << name << ".wia";
 		materialLibFilePath << name << ".wim";
 		meshesFilePath << name << ".wi";
@@ -2580,13 +2784,13 @@ void Model::LoadFromDisk(const std::string& dir, const std::string& name, const 
 		lightsFilePath << name << ".wil";
 		decalsFilePath << name << ".wid";
 
-		LoadWiArmatures(directory.str(), armatureFilePath.str(), identifier, armatures);
-		LoadWiMaterialLibrary(directory.str(), materialLibFilePath.str(), identifier, "textures/", materials);
-		LoadWiMeshes(directory.str(), meshesFilePath.str(), identifier, meshes, armatures, materials);
-		LoadWiObjects(directory.str(), objectsFilePath.str(), identifier, objects, armatures, meshes, materials);
-		LoadWiActions(directory.str(), actionsFilePath.str(), identifier, armatures);
-		LoadWiLights(directory.str(), lightsFilePath.str(), identifier, lights);
-		LoadWiDecals(directory.str(), decalsFilePath.str(), "textures/", decals);
+		LoadWiArmatures(directory, armatureFilePath.str(), identifier, armatures);
+		LoadWiMaterialLibrary(directory, materialLibFilePath.str(), identifier, "textures/", materials);
+		LoadWiMeshes(directory, meshesFilePath.str(), identifier, meshes, armatures, materials);
+		LoadWiObjects(directory, objectsFilePath.str(), identifier, objects, armatures, meshes, materials);
+		LoadWiActions(directory, actionsFilePath.str(), identifier, armatures);
+		LoadWiLights(directory, lightsFilePath.str(), identifier, lights);
+		LoadWiDecals(directory, decalsFilePath.str(), "textures/", decals);
 
 		FinishLoading();
 	}

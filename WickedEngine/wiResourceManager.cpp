@@ -261,6 +261,8 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 		if(res->data)
 			switch(res->type){
 			case Data_Type::IMAGE:
+				SAFE_DELETE(reinterpret_cast<Texture2D*&>(res->data));
+				break;
 			case Data_Type::VERTEXSHADER:
 				SAFE_DELETE(reinterpret_cast<VertexShaderInfo*&>(res->data));
 				break;

@@ -73,16 +73,16 @@ TestsRenderer::TestsRenderer()
 			break;
 		}
 		case 1:
-			wiRenderer::LoadModel("../models/Stormtrooper/", "Stormtrooper");
+			wiRenderer::LoadModel("../models/Stormtrooper/Stormtrooper.wimf");
 			break;
 		case 2:
 			wiLua::GetGlobal()->RunFile("test_script.lua");
 			break;
 		case 3:
-			wiRenderer::LoadModel("../models/SoftBody/", "flag")->Translate(XMFLOAT3(0, -1, 2));
+			wiRenderer::LoadModel("../models/SoftBody/flag.wimf")->Translate(XMFLOAT3(0, -1, 2));
 			break;
 		case 4:
-			wiRenderer::LoadModel("../models/Emitter/", "emitter")->Translate(XMFLOAT3(0, 2, 2));
+			wiRenderer::LoadModel("../models/Emitter/emitter.wimf")->Translate(XMFLOAT3(0, 2, 2));
 			break;
 		}
 

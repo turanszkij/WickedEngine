@@ -217,6 +217,30 @@ namespace wiHelper
 		SplitPath(fullPath, ret, empty);
 		return ret;
 	}
+
+	string GetExtensionFromFileName(const string& filename)
+	{
+		size_t idx = filename.rfind('.');
+
+		if (idx != std::string::npos)
+		{
+			std::string extension = filename.substr(idx + 1);
+			return extension;
+		}
+		
+		// No extension found
+		return "";
+	}
+
+	void RemoveExtensionFromFileName(std::string& filename)
+	{
+		string extension = GetExtensionFromFileName(filename);
+
+		if (!extension.empty())
+		{
+			filename = filename.substr(0, filename.length() - extension.length() - 1);
+		}
+	}
 	
 	void Sleep(float milliseconds)
 	{

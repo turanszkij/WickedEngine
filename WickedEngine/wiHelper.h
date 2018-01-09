@@ -54,6 +54,10 @@ namespace wiHelper
 
 	std::string GetDirectoryFromPath(const std::string& fullPath);
 
+	std::string GetExtensionFromFileName(const std::string& filename);
+
+	void RemoveExtensionFromFileName(std::string& filename);
+
 	void Sleep(float milliseconds);
 };
 

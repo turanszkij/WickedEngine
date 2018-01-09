@@ -343,6 +343,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiOBJLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiOcean.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h" />

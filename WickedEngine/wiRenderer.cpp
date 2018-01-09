@@ -2990,14 +2990,14 @@ void wiRenderer::UpdatePerFrameData(float dt)
 						switch (l->GetType())
 						{
 						case Light::DIRECTIONAL:
-							if ((shadowCounter_2D + 2) < SHADOWCOUNT_2D)
+							if (!l->shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
 							{
 								l->shadowMap_index = shadowCounter_2D;
 								shadowCounter_2D += 3;
 							}
 							break;
 						case Light::SPOT:
-							if (shadowCounter_2D < SHADOWCOUNT_2D)
+							if (!l->shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
 							{
 								l->shadowMap_index = shadowCounter_2D;
 								shadowCounter_2D++;
@@ -3008,7 +3008,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 						case Light::DISC:
 						case Light::RECTANGLE:
 						case Light::TUBE:
-							if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
+							if (!l->shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
 							{
 								l->shadowMap_index = shadowCounter_Cube;
 								shadowCounter_Cube++;
@@ -3124,7 +3124,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				entityArray[entityCounter].directionWS = l->GetDirection();
 				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				if (shadowIndex >= 0)
+				if (l->shadow && shadowIndex >= 0 && !l->shadowCam_dirLight.empty())
 				{
 					matrixArray[shadowIndex + 0] = l->shadowCam_dirLight[0].getVP();
 					matrixArray[shadowIndex + 1] = l->shadowCam_dirLight[1].getVP();
@@ -6443,11 +6443,11 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 		}
 
-		XMMATRIX& objectMat = object->getMatrix();
-		XMMATRIX& objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+		XMMATRIX objectMat = object->getMatrix();
+		XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
-		XMVECTOR& rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
-		XMVECTOR& rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+		XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+		XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
 		Mesh::Vertex_FULL _tmpvert;
 
@@ -6477,14 +6477,11 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		for (size_t i = 0; i < mesh->indices.size(); i += 3)
 		{
 			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-			XMVECTOR& V0 = _vertices[i0];
-			XMVECTOR& V1 = _vertices[i1];
-			XMVECTOR& V2 = _vertices[i2];
-			float distance = 0;
-			if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, V0, V1, V2, distance))
+			float distance;
+			if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
 			{
 				XMVECTOR& pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
-				XMVECTOR& nor = XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(V2, V1), XMVectorSubtract(V1, V0))), objectMat);
+				XMVECTOR& nor = XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat);
 				Picked picked = Picked();
 				picked.transform = object;
 				picked.object = object;
@@ -6569,7 +6566,7 @@ void wiRenderer::CalculateVertexAO(Object* object)
 	//mesh->calculatedAO = true;
 }
 
-Model* wiRenderer::LoadModel(const std::string& dir, const std::string& name, const XMMATRIX& transform, const std::string& ident)
+Model* wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform, const std::string& ident)
 {
 	static int unique_identifier = 0;
 
@@ -6577,21 +6574,21 @@ Model* wiRenderer::LoadModel(const std::string& dir, const std::string& name, co
 	idss<<"_"<<ident;
 
 	Model* model = new Model;
-	model->LoadFromDisk(dir,name,idss.str());
+	model->LoadFromDisk(fileName, idss.str());
 
 	model->transform(transform);
 
 	AddModel(model);
 
-	LoadWorldInfo(dir, name);
+	LoadWorldInfo(fileName);
 
 	unique_identifier++;
 
 	return model;
 }
-void wiRenderer::LoadWorldInfo(const std::string& dir, const std::string& name)
+void wiRenderer::LoadWorldInfo(const std::string& fileName)
 {
-	LoadWiWorldInfo(dir, name+".wiw", GetScene().worldInfo, GetScene().wind);
+	LoadWiWorldInfo(fileName, GetScene().worldInfo, GetScene().wind);
 }
 void wiRenderer::LoadDefaultLighting()
 {
