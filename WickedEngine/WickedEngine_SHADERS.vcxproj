@@ -114,9 +114,6 @@
     <FxCompile Include="dirLightPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="dirLightSoftPS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-    </FxCompile>
     <FxCompile Include="dirLightVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
@@ -362,37 +359,37 @@
     <FxCompile Include="objectPS_deferred_pom.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight.hlsl">
+    <FxCompile Include="objectPS_forward.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_normalmap.hlsl">
+    <FxCompile Include="objectPS_forward_normalmap.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_normalmap_planarreflection.hlsl">
+    <FxCompile Include="objectPS_forward_normalmap_planarreflection.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_normalmap_pom.hlsl">
+    <FxCompile Include="objectPS_forward_normalmap_pom.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_planarreflection.hlsl">
+    <FxCompile Include="objectPS_forward_planarreflection.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_pom.hlsl">
+    <FxCompile Include="objectPS_forward_pom.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent.hlsl">
+    <FxCompile Include="objectPS_forward_transparent.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap_planarreflection.hlsl">
+    <FxCompile Include="objectPS_forward_transparent_normalmap_planarreflection.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap_pom.hlsl">
+    <FxCompile Include="objectPS_forward_transparent_normalmap_pom.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_planarreflection.hlsl">
+    <FxCompile Include="objectPS_forward_transparent_planarreflection.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_pom.hlsl">
+    <FxCompile Include="objectPS_forward_transparent_pom.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="objectPS_simplest.hlsl">
@@ -401,7 +398,7 @@
     <FxCompile Include="objectPS_textureonly.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap.hlsl">
+    <FxCompile Include="objectPS_forward_transparent_normalmap.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="objectPS_tiledforward.hlsl">
@@ -506,7 +503,7 @@
     <FxCompile Include="hairparticlePS_deferred.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="hairparticlePS_forward_dirlight.hlsl">
+    <FxCompile Include="hairparticlePS_forward.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="hairparticlePS_tiledforward.hlsl">
@@ -646,7 +643,7 @@
     <FxCompile Include="vSpotLightVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_water.hlsl">
+    <FxCompile Include="objectPS_forward_water.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="vTubeLightVS.hlsl">

@@ -73,13 +73,20 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
 	float		g_xFrame_DeltaTime;
-	uint		g_xFrame_ForceFieldOffset;
-	uint		g_xFrame_ForceFieldCount;
+	uint		g_xFrame_FrameCount;
+	uint		g_xFrame_LightArrayOffset;			// indexing into entity array
+	uint		g_xFrame_LightArrayCount;			// indexing into entity array
+	uint		g_xFrame_DecalArrayOffset;			// indexing into entity array
+	uint		g_xFrame_DecalArrayCount;			// indexing into entity array
+	uint		g_xFrame_ForceFieldArrayOffset;		// indexing into entity array
+	uint		g_xFrame_ForceFieldArrayCount;		// indexing into entity array
+	uint		g_xFrame_EnvProbeArrayOffset;		// indexing into entity array
+	uint		g_xFrame_EnvProbeArrayCount;		// indexing into entity array
 	float3		g_xFrame_WindDirection;
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
-	uint		g_xFrame_FrameCount;
 	int			g_xFrame_SunEntityArrayIndex;
+	float2		xPadding1_FrameCB;
 	float2		g_xFrame_TemporalAAJitter;
 	float2		g_xFrame_TemporalAAJitterPrev;
 	float3		g_xFrame_GlobalEnvMap0;			float xPadding2_FrameCB;

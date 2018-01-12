@@ -161,6 +161,65 @@ inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0
 }
 
 
+
+inline void ForwardLighting(in float3 N, in float3 V, in float3 P, in float3 f0, inout float3 albedo, in float roughness,
+	inout float3 diffuse, out float3 specular)
+{
+	specular = 0;
+	diffuse = 0;
+
+	[loop]
+	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+	{
+		ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+
+		LightingResult result = (LightingResult)0;
+
+		switch (light.type)
+		{
+		case ENTITY_TYPE_DIRECTIONALLIGHT:
+		{
+			result = DirectionalLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case ENTITY_TYPE_POINTLIGHT:
+		{
+			result = PointLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case ENTITY_TYPE_SPOTLIGHT:
+		{
+			result = SpotLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case ENTITY_TYPE_SPHERELIGHT:
+		{
+			result = SphereLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case ENTITY_TYPE_DISCLIGHT:
+		{
+			result = DiscLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case ENTITY_TYPE_RECTANGLELIGHT:
+		{
+			result = RectangleLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		case ENTITY_TYPE_TUBELIGHT:
+		{
+			result = TubeLight(light, N, V, P, roughness, f0);
+		}
+		break;
+		}
+
+		diffuse += max(0.0f, result.diffuse);
+		specular += max(0.0f, result.specular);
+	}
+}
+
+
 inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P, in float3 f0, inout float3 albedo, in float roughness,
 	inout float3 diffuse, out float3 specular)
 {
@@ -339,8 +398,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #define OBJECT_PS_REFRACTION																						\
 	Refraction(ScreenCoord, input.nor2D, bumpColor, roughness, albedo, color);
 
-#define OBJECT_PS_LIGHT_DIRECTIONAL																					\
-	DirectionalLight(N, V, P, f0, albedo, roughness, diffuse, specular);
+#define OBJECT_PS_LIGHT_FORWARD																					\
+	ForwardLighting(N, V, P, f0, albedo, roughness, diffuse, specular);
 
 #define OBJECT_PS_LIGHT_TILED																						\
 	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);

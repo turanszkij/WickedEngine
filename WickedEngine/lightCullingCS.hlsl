@@ -1,4 +1,3 @@
-#define DIRECTIONALLIGHT_SOFT
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"

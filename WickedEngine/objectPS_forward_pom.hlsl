@@ -1,6 +1,7 @@
 #include "objectHF.hlsli"
 
-float4 main(PixelInputType input) : SV_TARGET
+
+GBUFFEROutputType_Thin main(PixelInputType input)
 {
 	OBJECT_PS_DITHER
 
@@ -18,9 +19,7 @@ float4 main(PixelInputType input) : SV_TARGET
 
 	OBJECT_PS_LIGHT_BEGIN
 
-	OBJECT_PS_REFRACTION
-
-	OBJECT_PS_LIGHT_DIRECTIONAL
+	OBJECT_PS_LIGHT_FORWARD
 
 	OBJECT_PS_ENVIRONMENTREFLECTIONS
 
@@ -30,5 +29,6 @@ float4 main(PixelInputType input) : SV_TARGET
 
 	OBJECT_PS_FOG
 
-	OBJECT_PS_OUT_FORWARD_SIMPLE
+	OBJECT_PS_OUT_FORWARD
 }
+

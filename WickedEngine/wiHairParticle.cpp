@@ -127,7 +127,7 @@ void wiHairParticle::LoadShaders()
 	
 	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
 	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
 	cs_BITONICSORT = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bitonicSort_hairparticleCS.cso", wiResourceManager::COMPUTESHADER));

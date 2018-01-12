@@ -144,13 +144,20 @@ public:
 		float mTime;
 		float mTimePrev;
 		float mDeltaTime;
-		UINT mForceFieldOffset;
-		UINT mForceFieldCount;
+		UINT mFrameCount;
+		UINT mLightArrayOffset;
+		UINT mLightArrayCount;
+		UINT mDecalArrayOffset;
+		UINT mDecalArrayCount;
+		UINT mForceFieldArrayOffset;
+		UINT mForceFieldArrayCount;
+		UINT mEnvProbeArrayOffset;
+		UINT mEnvProbeArrayCount;
 		XMFLOAT3 mWindDirection;
 		float mWindWaveSize;
 		float mWindRandomness;
-		UINT mFrameCount;
 		int mSunEntityArrayIndex;
+		XMFLOAT2 pad1;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
 		XMFLOAT3 mGlobalEnvMap0;		float pad2;
@@ -283,7 +290,10 @@ protected:
 
 	static wiGraphicsTypes::GPUQuery occlusionQueries[256];
 
+	static UINT entityArrayOffset_Lights, entityArrayCount_Lights;
+	static UINT entityArrayOffset_Decals, entityArrayCount_Decals;
 	static UINT entityArrayOffset_ForceFields, entityArrayCount_ForceFields;
+	static UINT entityArrayOffset_EnvProbes, entityArrayCount_EnvProbes;
 
 public:
 	static std::string SHADERPATH;

@@ -29,10 +29,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	uint aliveCount = counterBuffer[0].aliveCount;
 
 	// Load the forcefields into LDS:
-	uint numForceFields = min(g_xFrame_ForceFieldCount, NUM_LDS_FORCEFIELDS);
+	uint numForceFields = min(g_xFrame_ForceFieldArrayCount, NUM_LDS_FORCEFIELDS);
 	if (Gid < numForceFields)
 	{
-		uint forceFieldID = g_xFrame_ForceFieldOffset + Gid;
+		uint forceFieldID = g_xFrame_ForceFieldArrayOffset + Gid;
 		ShaderEntityType forceField = EntityArray[forceFieldID];
 
 		forceFields[Gid].type = (uint)forceField.type;

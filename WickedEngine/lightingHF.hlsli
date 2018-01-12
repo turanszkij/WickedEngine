@@ -19,6 +19,7 @@ struct LightingResult
 	float3 specular;
 };
 
+#define DIRECTIONALLIGHT_SOFT
 inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
 	float realDistance = shadowPos.z + bias;

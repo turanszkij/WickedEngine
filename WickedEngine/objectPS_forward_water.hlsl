@@ -44,7 +44,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	float3 fresnelTerm = F_Fresnel(f0, NdotV);
 	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 
-	OBJECT_PS_LIGHT_DIRECTIONAL
+	OBJECT_PS_LIGHT_FORWARD
 
 	OBJECT_PS_LIGHT_END
 

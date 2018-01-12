@@ -66,7 +66,10 @@ float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::d
 XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
 float wiRenderer::RESOLUTIONSCALE = 1.0f;
 GPUQuery wiRenderer::occlusionQueries[];
+UINT wiRenderer::entityArrayOffset_Lights = 0, wiRenderer::entityArrayCount_Lights = 0;
+UINT wiRenderer::entityArrayOffset_Decals = 0, wiRenderer::entityArrayCount_Decals = 0;
 UINT wiRenderer::entityArrayOffset_ForceFields = 0, wiRenderer::entityArrayCount_ForceFields = 0;
+UINT wiRenderer::entityArrayOffset_EnvProbes = 0, wiRenderer::entityArrayCount_EnvProbes = 0;
 
 Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
 float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
@@ -968,30 +971,30 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			{
 				if (pom)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM;
+					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM;
 				}
 				else
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP;
+					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP;
 				}
 				if (planarreflection)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
+					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION;
 				}
 			}
 			else
 			{
 				if (pom)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM;
+					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM;
 				}
 				else
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT;
+					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT;
 				}
 				if (planarreflection)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION;
+					realPS = PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION;
 				}
 			}
 		}
@@ -1001,30 +1004,30 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			{
 				if (pom)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM;
+					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP_POM;
 				}
 				else
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP;
 				}
 				if (planarreflection)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION;
+					realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION;
 				}
 			}
 			else
 			{
 				if (pom)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM;
+					realPS = PSTYPE_OBJECT_FORWARD_POM;
 				}
 				else
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT;
+					realPS = PSTYPE_OBJECT_FORWARD;
 				}
 				if (planarreflection)
 				{
-					realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION;
+					realPS = PSTYPE_OBJECT_FORWARD_PLANARREFLECTION;
 				}
 			}
 		}
@@ -1389,19 +1392,19 @@ void wiRenderer::LoadShaders()
 		pixelShaders[PSTYPE_OBJECT_DEFERRED_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_pom.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
 
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_planarreflection.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_pom.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_pom.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_dirlight_water.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_normalmap.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_planarreflection.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_pom.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_OBJECT_FORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_water.cso", wiResourceManager::PIXELSHADER));
 
 		pixelShaders[PSTYPE_OBJECT_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_normalmap.cso", wiResourceManager::PIXELSHADER));
@@ -1427,7 +1430,6 @@ void wiRenderer::LoadShaders()
 		pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_DIRLIGHT_SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightSoftPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SPHERELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereLightPS.cso", wiResourceManager::PIXELSHADER));
@@ -1659,7 +1661,7 @@ void wiRenderer::LoadShaders()
 			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			desc.DSFormat = DSFormat_full;
 
-			desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_DIRLIGHT_WATER];
+			desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
 			RECREATE(PSO_object_water[SHADERTYPE_FORWARD]);
 			device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_FORWARD]);
 
@@ -1741,7 +1743,7 @@ void wiRenderer::LoadShaders()
 				desc.RTFormats[3] = RTFormat_gbuffer_3;
 				break;
 			case SHADERTYPE_FORWARD:
-				realPS = PSTYPE_OBJECT_FORWARD_DIRLIGHT_NORMALMAP;
+				realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP;
 				desc.numRTs = 2;
 				desc.RTFormats[0] = RTFormat_hdr;
 				desc.RTFormats[1] = RTFormat_gbuffer_1;
@@ -3089,9 +3091,16 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		UINT entityCounter = 0;
 		UINT matrixCounter = 0;
 
+		entityArrayOffset_Lights = 0;
+		entityArrayCount_Lights = 0;
+		entityArrayOffset_Decals = 0;
+		entityArrayCount_Decals = 0;
 		entityArrayOffset_ForceFields = 0;
 		entityArrayCount_ForceFields = 0;
+		entityArrayOffset_EnvProbes = 0;
+		entityArrayCount_EnvProbes = 0;
 
+		entityArrayOffset_Lights = entityCounter;
 		for (Cullable* c : culledLights)
 		{
 			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
@@ -3169,6 +3178,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			entityCounter++;
 		}
+		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
+
+		entityArrayOffset_Decals = entityCounter;
 		for (Decal* decal : mainCameraCulling.culledDecals)
 		{
 			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
@@ -3197,6 +3209,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			entityCounter++;
 		}
+		entityArrayCount_Decals = entityCounter - entityArrayOffset_Decals;
 
 		entityArrayOffset_ForceFields = entityCounter;
 		for (auto& model : GetScene().models)
@@ -6024,8 +6037,14 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mTime = renderTime;
 	cb.mTimePrev = renderTime_Prev;
 	cb.mDeltaTime = deltaTime;
-	cb.mForceFieldOffset = entityArrayOffset_ForceFields;
-	cb.mForceFieldCount = entityArrayCount_ForceFields;
+	cb.mLightArrayOffset = entityArrayOffset_Lights;
+	cb.mLightArrayCount = entityArrayCount_Lights;
+	cb.mDecalArrayOffset = entityArrayOffset_Decals;
+	cb.mDecalArrayCount = entityArrayCount_Decals;
+	cb.mForceFieldArrayOffset = entityArrayOffset_ForceFields;
+	cb.mForceFieldArrayCount = entityArrayCount_ForceFields;
+	cb.mEnvProbeArrayOffset = entityArrayOffset_EnvProbes;
+	cb.mEnvProbeArrayCount = entityArrayCount_EnvProbes;
 	auto& wind = GetScene().wind;
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;

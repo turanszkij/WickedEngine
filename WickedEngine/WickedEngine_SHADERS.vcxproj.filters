@@ -171,9 +171,6 @@
     <FxCompile Include="dirLightPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="dirLightSoftPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="envMapPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -312,18 +309,6 @@
     <FxCompile Include="objectPS_deferred_normalmap.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_normalmap.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="cubeMapPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -331,30 +316,6 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="environmentalLightPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_normalmap_planarreflection.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_planarreflection.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap_planarreflection.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_planarreflection.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_normalmap_pom.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_pom.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_normalmap_pom.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_transparent_pom.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_deferred_normalmap_pom.hlsl">
@@ -406,9 +367,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_tiledforward_water.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="objectPS_forward_dirlight_water.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_tiledforward_planarreflection.hlsl">
@@ -585,9 +543,6 @@
     <FxCompile Include="hairparticlePS_deferred.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="hairparticlePS_forward_dirlight.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="hairparticlePS_tiledforward.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -686,6 +641,48 @@
     </FxCompile>
     <FxCompile Include="cloudGeneratorCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="hairparticlePS_forward.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_normalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_normalmap_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_normalmap_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_transparent.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_transparent_normalmap.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_transparent_normalmap_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_transparent_normalmap_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_transparent_planarreflection.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_transparent_pom.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="objectPS_forward_water.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -9,7 +9,7 @@ struct PSIn
 
 float4 main(PSIn input) : SV_TARGET
 {
-	uint forceFieldID = g_xFrame_ForceFieldOffset + (uint)g_xColor.w;
+	uint forceFieldID = g_xFrame_ForceFieldArrayOffset + (uint)g_xColor.w;
 	ShaderEntityType forceField = EntityArray[forceFieldID];
 
 	float4 color = forceField.energy < 0 ? float4(0, 0, 1, 1) : float4(1, 0, 0, 1);
