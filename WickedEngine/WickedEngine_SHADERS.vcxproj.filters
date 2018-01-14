@@ -684,6 +684,12 @@
     <FxCompile Include="objectPS_forward_water.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="shadowPS_transparent.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="shadowVS_transparent.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

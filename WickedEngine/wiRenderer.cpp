@@ -731,7 +731,7 @@ GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessella
 	return PSO_object[shaderType][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
 }
 
-VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
+VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool transparent)
 {
 	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
 
@@ -774,7 +774,7 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 		break;
 	case SHADERTYPE_SHADOW:
 	case SHADERTYPE_SHADOWCUBE:
-		if (alphatest)
+		if (alphatest || transparent)
 		{
 			realVL = VLTYPE_OBJECT_POS_TEX;
 		}
@@ -790,7 +790,7 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 
 	return realVL;
 }
-VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
+VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool transparent)
 {
 	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
 
@@ -839,13 +839,20 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest)
 		realVS = VSTYPE_ENVMAP;
 		break;
 	case SHADERTYPE_SHADOW:
-		if (alphatest)
+		if (transparent)
 		{
-			realVS = VSTYPE_SHADOW_ALPHATEST;
+			realVS = VSTYPE_SHADOW_TRANSPARENT;
 		}
 		else
 		{
-			realVS = VSTYPE_SHADOW;
+			if (alphatest)
+			{
+				realVS = VSTYPE_SHADOW_ALPHATEST;
+			}
+			else
+			{
+				realVS = VSTYPE_SHADOW;
+			}
 		}
 		break;
 	case SHADERTYPE_SHADOWCUBE:
@@ -1101,13 +1108,20 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 		}
 		break;
 	case SHADERTYPE_SHADOW:
-		if (alphatest)
+		if (transparent)
 		{
-			realPS = PSTYPE_SHADOW_ALPHATEST;
+			realPS = PSTYPE_SHADOW_TRANSPARENT;
 		}
 		else
 		{
-			realPS = PSTYPE_NULL;
+			if (alphatest)
+			{
+				realPS = PSTYPE_SHADOW_ALPHATEST;
+			}
+			else
+			{
+				realPS = PSTYPE_NULL;
+			}
 		}
 		break;
 	case SHADERTYPE_SHADOWCUBE:
@@ -1327,6 +1341,9 @@ void wiRenderer::LoadShaders()
 				vertexShaders[VSTYPE_SHADOW_ALPHATEST] = vsinfo->vertexShader;
 				vertexLayouts[VLTYPE_SHADOW_POS_TEX] = vsinfo->vertexLayout;
 			}
+
+			vertexShaders[VSTYPE_SHADOW_TRANSPARENT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_transparent.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+
 		}
 
 		{
@@ -1448,6 +1465,7 @@ void wiRenderer::LoadShaders()
 		pixelShaders[PSTYPE_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOW_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_SHADOW_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_transparent.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
@@ -1511,8 +1529,8 @@ void wiRenderer::LoadShaders()
 								{
 									for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
 									{
-										VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest);
-										VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest);
+										VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
+										VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
 										HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
 										DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
 										GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
@@ -1536,7 +1554,7 @@ void wiRenderer::LoadShaders()
 										case SHADERTYPE_DEPTHONLY:
 										case SHADERTYPE_SHADOW:
 										case SHADERTYPE_SHADOWCUBE:
-											desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
+											desc.bs = blendStates[transparency ? BSTYPE_OPAQUE : BSTYPE_COLORWRITEDISABLE];
 											break;
 										default:
 											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_OPAQUE];
@@ -1614,7 +1632,15 @@ void wiRenderer::LoadShaders()
 											desc.DSFormat = DSFormat_small;
 											break;
 										case SHADERTYPE_SHADOW:
-											desc.numRTs = 0;
+											if (transparency)
+											{
+												desc.numRTs = 1;
+												desc.RTFormats[0] = RTFormat_ldr;
+											}
+											else
+											{
+												desc.numRTs = 0;
+											}
 											desc.DSFormat = DSFormat_small;
 											break;
 										case SHADERTYPE_SHADOWCUBE:
@@ -4432,20 +4458,29 @@ void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuali
 	Light::shadowMapArray_2D = new Texture2D;
 	Light::shadowMapArray_2D->RequestIndepententRenderTargetArraySlices(true);
 
+	SAFE_DELETE(Light::shadowMapArray_Transparent);
+	Light::shadowMapArray_Transparent = new Texture2D;
+	Light::shadowMapArray_Transparent->RequestIndepententRenderTargetArraySlices(true);
+
 	Texture2DDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.Width = SHADOWRES_2D;
 	desc.Height = SHADOWRES_2D;
 	desc.MipLevels = 1;
 	desc.ArraySize = SHADOWCOUNT_2D;
-	desc.Format = DSFormat_small_alias;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = USAGE_DEFAULT;
-	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
+
+	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+	desc.Format = DSFormat_small_alias;
 	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_2D);
+
+	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+	desc.Format = RTFormat_ldr;
+	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_Transparent);
 }
 void wiRenderer::SetShadowPropsCube(int resolution, int count)
 {
@@ -4565,24 +4600,43 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								CulledList culledObjects;
 								CulledCollection culledRenderer;
 								spTree->getVisible(boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))), culledObjects);
+								bool transparentShadowsRequested = false;
 								for (Cullable* x : culledObjects)
 								{
 									Object* object = (Object*)x;
 									if (object->IsCastingShadow())
 									{
 										culledRenderer[object->mesh].push_front(object);
+
+										if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+										{
+											transparentShadowsRequested = true;
+										}
 									}
 								}
 								if (!culledRenderer.empty())
 								{
-									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
-									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index + index);
-
 									CameraCB cb;
 									cb.mVP = l->shadowCam_dirLight[index].getVP();
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
+									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index + index);
+
+									// render opaque shadowmap:
+									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
 									RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+
+									//if (transparentShadowsRequested)
+									//{
+									//	// render transparent shadowmap:
+									//	Texture* rts[] = {
+									//		Light::shadowMapArray_Transparent
+									//	};
+									//	GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
+									//	float transparency[4] = { 0,0,0,1 };
+									//	GetDevice()->ClearRenderTarget(rts[0], transparency, threadID, l->shadowMap_index + index);
+									//	RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+									//}
 								}
 							}
 						}
@@ -4601,24 +4655,43 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							CulledList culledObjects;
 							CulledCollection culledRenderer;
 							spTree->getVisible(frustum, culledObjects);
+							bool transparentShadowsRequested = false;
 							for (Cullable* x : culledObjects)
 							{
 								Object* object = (Object*)x;
 								if (object->IsCastingShadow())
 								{
 									culledRenderer[object->mesh].push_front(object);
+
+									if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+									{
+										transparentShadowsRequested = true;
+									}
 								}
 							}
 							if (!culledRenderer.empty())
 							{
-								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
-								GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
-
 								CameraCB cb;
 								cb.mVP = l->shadowCam_spotLight[0].getVP();
 								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
+								GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
+
+								// render opaque shadowmap:
+								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
 								RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+
+								if (transparentShadowsRequested)
+								{
+									// render transparent shadowmap:
+									Texture* rts[] = {
+										Light::shadowMapArray_Transparent
+									};
+									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
+									float transparency[4] = { 0,0,0,1 };
+									GetDevice()->ClearRenderTarget(rts[0], transparency, threadID, l->shadowMap_index);
+									RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+								}
 							}
 						}
 					}
@@ -4681,6 +4754,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 	GetDevice()->BindResource(PS, Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 	GetDevice()->BindResource(PS, Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	GetDevice()->BindResource(PS, Light::shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 }
 
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,

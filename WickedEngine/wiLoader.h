@@ -901,6 +901,7 @@ struct Light : public Cullable , public Transform
 
 	static wiGraphicsTypes::Texture2D* shadowMapArray_2D;
 	static wiGraphicsTypes::Texture2D* shadowMapArray_Cube;
+	static wiGraphicsTypes::Texture2D* shadowMapArray_Transparent;
 	int shadowMap_index;
 	int entityArray_index;
 

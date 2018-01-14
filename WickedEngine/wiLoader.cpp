@@ -4219,6 +4219,7 @@ void Object::Serialize(wiArchive& archive)
 #pragma region LIGHT
 Texture2D* Light::shadowMapArray_2D = nullptr;
 Texture2D* Light::shadowMapArray_Cube = nullptr;
+Texture2D* Light::shadowMapArray_Transparent = nullptr;
 Light::Light():Transform() {
 	color = XMFLOAT4(0, 0, 0, 0);
 	enerDis = XMFLOAT4(0, 0, 0, 0);

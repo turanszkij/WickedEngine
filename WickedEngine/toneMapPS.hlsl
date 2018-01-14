@@ -3,7 +3,7 @@
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
-	float2 distortion = xDistortionTex.SampleLevel(sampler_linear_clamp, PSIn.tex,0);
+	float2 distortion = xDistortionTex.SampleLevel(sampler_linear_clamp, PSIn.tex,0).rg;
 
 	float4 hdr = xTexture.SampleLevel(sampler_linear_clamp, PSIn.tex + distortion, 0);
 	float average_luminance = xMaskTex[uint2(0, 0)].r;

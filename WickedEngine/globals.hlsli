@@ -16,6 +16,7 @@ TEXTURECUBE(texture_env2, float4, TEXSLOT_ENV2)
 TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS)
 TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE)
+TEXTURE2DARRAY(texture_shadowarray_transparent, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT)
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE)
 
 STRUCTUREDBUFFER(EntityIndexList, uint, SBSLOT_ENTITYINDEXLIST);

@@ -20,11 +20,11 @@ struct LightingResult
 };
 
 #define DIRECTIONALLIGHT_SOFT
-inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
+inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
 	float realDistance = shadowPos.z + bias;
 	float sum = 0;
-	float retVal = 1;
+	float3 retVal = 1;
 #ifndef DISABLE_SHADOWMAPS
 #ifdef DIRECTIONALLIGHT_SOFT
 	float samples = 0.0f;
@@ -42,6 +42,10 @@ inline float shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, f
 	retVal *= texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex, slice), realDistance).r;
 #endif
 #endif // DISABLE_SHADOWMAPS
+
+	float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(ShTex, slice), 0).rgba;
+	retVal = lerp(lerp(1, transparent_shadowmap.rgb, transparent_shadowmap.a), 1, retVal);
+
 	return retVal;
 }
 
@@ -56,7 +60,7 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in float3 N, i
 	result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
 	result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
 
-	float sh = max(NdotL, 0);
+	float3 sh = max(NdotL, 0).xxx;
 
 	[branch]
 	if (light.additionalData_index >= 0)
@@ -88,7 +92,7 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in float3 N, i
 		{
 			const float3 cascadeBlend = abs(ShTex[cascade] * 2 - 1);
 			const int2 cascades = uint2(cascade, cascade - 1);
-			float2 shadows = float2(1, 1);
+			float3 shadows[2] = { float3(1,1,1), float3(1,1,1) };
 
 			// main shadow cascade sampling:
 			shadows[0] = shadowCascade(ShPos[cascades[0]], ShTex[cascades[0]].xy, light.shadowKernel, light.shadowBias, light.additionalData_index + cascades[0]);
@@ -183,7 +187,7 @@ inline LightingResult SpotLight(in ShaderEntityType light, in float3 N, in float
 			result.diffuse *= attenuation;
 			result.specular *= attenuation;
 
-			float sh = max(NdotL, 0);
+			float3 sh = max(NdotL, 0).xxx;
 			[branch]
 			if (light.additionalData_index >= 0)
 			{
@@ -191,7 +195,7 @@ inline LightingResult SpotLight(in ShaderEntityType light, in float3 N, in float
 				ShPos.xyz /= ShPos.w;
 				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]
-				if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+				if (!any(ShTex - saturate(ShTex)))
 				{
 					sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.additionalData_index);
 				}
