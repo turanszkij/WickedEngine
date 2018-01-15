@@ -1,3 +1,4 @@
+#define DISABLE_TRANSPARENT_SHADOWMAP
 #include "objectHF.hlsli"
 
 float4 main( PixelInputType input) : SV_TARGET

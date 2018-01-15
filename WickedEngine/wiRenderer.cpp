@@ -1554,7 +1554,7 @@ void wiRenderer::LoadShaders()
 										case SHADERTYPE_DEPTHONLY:
 										case SHADERTYPE_SHADOW:
 										case SHADERTYPE_SHADOWCUBE:
-											desc.bs = blendStates[transparency ? BSTYPE_OPAQUE : BSTYPE_COLORWRITEDISABLE];
+											desc.bs = blendStates[transparency ? BSTYPE_MULTIPLY : BSTYPE_COLORWRITEDISABLE];
 											break;
 										default:
 											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_OPAQUE];
@@ -1565,7 +1565,7 @@ void wiRenderer::LoadShaders()
 										{
 										case SHADERTYPE_SHADOW:
 										case SHADERTYPE_SHADOWCUBE:
-											desc.dss = depthStencils[DSSTYPE_SHADOW];
+											desc.dss = depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
 											break;
 										case SHADERTYPE_TILEDFORWARD:
 											desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
@@ -2649,6 +2649,19 @@ void wiRenderer::SetUpStates()
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = true;
 	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_DECAL]);
+
+
+	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
+	bd.RenderTarget[0].DestBlend = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_DEST_ALPHA;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = false;
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_MULTIPLY]);
 }
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -4626,17 +4639,17 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
 									RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
-									//if (transparentShadowsRequested)
-									//{
-									//	// render transparent shadowmap:
-									//	Texture* rts[] = {
-									//		Light::shadowMapArray_Transparent
-									//	};
-									//	GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
-									//	float transparency[4] = { 0,0,0,1 };
-									//	GetDevice()->ClearRenderTarget(rts[0], transparency, threadID, l->shadowMap_index + index);
-									//	RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
-									//}
+									if (transparentShadowsRequested)
+									{
+										// render transparent shadowmap:
+										Texture* rts[] = {
+											Light::shadowMapArray_Transparent
+										};
+										GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
+										float transparency[4] = { 1,1,1,1 };
+										GetDevice()->ClearRenderTarget(rts[0], transparency, threadID, l->shadowMap_index + index);
+										RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+									}
 								}
 							}
 						}
@@ -4688,7 +4701,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										Light::shadowMapArray_Transparent
 									};
 									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
-									float transparency[4] = { 0,0,0,1 };
+									float transparency[4] = { 1,1,1,1 };
 									GetDevice()->ClearRenderTarget(rts[0], transparency, threadID, l->shadowMap_index);
 									RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 								}
@@ -4803,7 +4816,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
 			{
 				Mesh* mesh = iter->first;
-				if (!mesh->renderable || !mesh->hasImpostor())
+				if (!mesh->renderable || !mesh->hasImpostor() || !(mesh->GetRenderTypes() & renderTypeFlags))
 				{
 					continue;
 				}
@@ -4927,7 +4940,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter) 
 		{
 			Mesh* mesh = iter->first;
-			if (!mesh->renderable)
+			if (!mesh->renderable || !(mesh->GetRenderTypes() & renderTypeFlags))
 			{
 				continue;
 			}
@@ -5068,8 +5081,15 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
 					if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material->IsAlphaTestEnabled() && !forceAlphaTestForDithering)
 					{
-						// bypass texcoord stream for non alphatested shadows and zprepass
-						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
+						if (shaderType == SHADERTYPE_SHADOW && material->IsTransparent())
+						{
+							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+						}
+						else
+						{
+							// bypass texcoord stream for non alphatested shadows and zprepass
+							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
+						}
 					}
 					else
 					{

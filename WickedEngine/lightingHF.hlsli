@@ -43,8 +43,13 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 #endif
 #endif // DISABLE_SHADOWMAPS
 
+#ifndef DISABLE_TRANSPARENT_SHADOWMAP
+	// unfortunately transparents will not receive transparent shadow map
+	// because we cannot distinguish without using secondary depth buffer for transparents
+	// but that would be overkill
 	float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(ShTex, slice), 0).rgba;
-	retVal = lerp(lerp(1, transparent_shadowmap.rgb, transparent_shadowmap.a), 1, retVal);
+	retVal *= transparent_shadowmap.rgb;
+#endif //DISABLE_TRANSPARENT_SHADOWMAP
 
 	return retVal;
 }

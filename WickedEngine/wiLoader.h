@@ -523,6 +523,7 @@ public:
 	bool hasImpostor() const { return impostorTarget.IsInitialized(); }
 	bool hasDynamicVB() const { return softBody; }
 	float getTessellationFactor() { return tessellationFactor; }
+	int GetRenderTypes() const;
 	wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return indexFormat; }
 	void Serialize(wiArchive& archive);
 };

@@ -19,7 +19,14 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	OBJECT_PS_DEGAMMA
 
-	//color.a = 1;
+	// When opacity reaches ZERO, the multiplicative light mask will be ONE:
+	color.rgb = lerp(1, color.rgb, opacity);
+	// When opacity reaches ONE, the light mask will be ZERO (fully occluding):
+	color.rgb *= 1 - opacity;
+	// And what goes in between will be tinted by the object color...
+
+	// Use the alpha channel for something else (todo)
+	color.a = 1;
 
 	OBJECT_PS_OUT_FORWARD_SIMPLE
 }

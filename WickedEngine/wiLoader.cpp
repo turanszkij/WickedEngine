@@ -2326,6 +2326,18 @@ void Mesh::CreateVertexArrays()
 	arraysComplete = true;
 }
 
+int Mesh::GetRenderTypes() const
+{
+	int retVal = RENDERTYPE::RENDERTYPE_VOID;
+	if (renderable)
+	{
+		for (auto& x : subsets)
+		{
+			retVal |= x.material->GetRenderType();
+		}
+	}
+	return retVal;
+}
 void Mesh::Serialize(wiArchive& archive)
 {
 	if (archive.IsReadMode())
