@@ -14,7 +14,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 900));
+	rendererWindow->SetSize(XMFLOAT2(640, 930));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -220,6 +220,15 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 		wiRenderer::SetGameSpeed(args.fValue);
 	});
 	rendererWindow->AddWidget(speedMultiplierSlider);
+
+	transparentShadowsCheckBox = new wiCheckBox("Transparent Shadows: ");
+	transparentShadowsCheckBox->SetTooltip("Enables color tinted shadows and refraction caustics effects for transparent objects and water.");
+	transparentShadowsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	transparentShadowsCheckBox->SetCheck(wiRenderer::GetTransparentShadowsEnabled());
+	transparentShadowsCheckBox->OnClick([=](wiEventArgs args) {
+		wiRenderer::SetTransparentShadowsEnabled(args.bValue);
+	});
+	rendererWindow->AddWidget(transparentShadowsCheckBox);
 
 	shadowProps2DComboBox = new wiComboBox("2D Shadowmap resolution:");
 	shadowProps2DComboBox->SetSize(XMFLOAT2(100, 20));

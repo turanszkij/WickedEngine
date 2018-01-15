@@ -690,6 +690,9 @@
     <FxCompile Include="shadowVS_transparent.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="shadowPS_water.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

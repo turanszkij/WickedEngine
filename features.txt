@@ -74,3 +74,5 @@ Huge draw distance support with reversed Z-buffer
 Force Fields GPU simulation
 Particle - Depth Buffer collisions
 Ocean simulation (FFT)
+Translucent shadows
+Refraction caustics

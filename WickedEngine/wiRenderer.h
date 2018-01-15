@@ -112,6 +112,7 @@ public:
 	static float renderTime, renderTime_Prev, deltaTime;
 	static XMFLOAT2 temporalAAJitter, temporalAAJitterPrev;
 	static float RESOLUTIONSCALE;
+	static bool TRANSPARENTSHADOWSENABLED;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
@@ -138,7 +139,8 @@ public:
 		float mVoxelRadianceDataFalloff;
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		BOOL mAdvancedRefractions;
-		XMUINT3 mEntityCullingTileCount; uint32_t pad2;
+		XMUINT3 mEntityCullingTileCount;
+		BOOL mTransparentShadowsEnabled;
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
@@ -320,6 +322,8 @@ public:
 	static float GetGameSpeed();
 	static void SetResolutionScale(float value) { RESOLUTIONSCALE = value; }
 	static float GetResolutionScale() { return RESOLUTIONSCALE; }
+	static void SetTransparentShadowsEnabled(float value) { TRANSPARENTSHADOWSENABLED = value; }
+	static float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
 	static XMUINT2 GetInternalResolution() { return XMUINT2((UINT)ceilf(GetDevice()->GetScreenWidth()*GetResolutionScale()), (UINT)ceilf(GetDevice()->GetScreenHeight()*GetResolutionScale())); }
 	static bool ResolutionChanged();
 	static void SetGamma(float value) { GAMMA = value; }

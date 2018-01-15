@@ -58,6 +58,7 @@ GPURingBuffer		*wiRenderer::dynamicVertexBufferPool;
 float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
+bool wiRenderer::TRANSPARENTSHADOWSENABLED = true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
 , wiRenderer::advancedRefractions = false;
@@ -1466,6 +1467,7 @@ void wiRenderer::LoadShaders()
 		pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOW_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOW_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_transparent.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_SHADOW_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_water.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
@@ -1554,7 +1556,7 @@ void wiRenderer::LoadShaders()
 										case SHADERTYPE_DEPTHONLY:
 										case SHADERTYPE_SHADOW:
 										case SHADERTYPE_SHADOWCUBE:
-											desc.bs = blendStates[transparency ? BSTYPE_MULTIPLY : BSTYPE_COLORWRITEDISABLE];
+											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
 											break;
 										default:
 											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_OPAQUE];
@@ -1694,6 +1696,14 @@ void wiRenderer::LoadShaders()
 			desc.ps = pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
 			RECREATE(PSO_object_water[SHADERTYPE_TILEDFORWARD]);
 			device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_TILEDFORWARD]);
+
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = rasterizers[RSTYPE_SHADOW];
+			desc.bs = blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
+			desc.vs = vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
+			desc.ps = pixelShaders[PSTYPE_SHADOW_WATER];
+			RECREATE(PSO_object_water[SHADERTYPE_SHADOW]);
+			device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_SHADOW]);
 		}
 		{
 			GraphicsPSODesc desc;
@@ -2662,6 +2672,19 @@ void wiRenderer::SetUpStates()
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
 	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_MULTIPLY]);
+
+
+	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
+	bd.RenderTarget[0].DestBlend = BLEND_ZERO;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = false;
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENTSHADOWMAP]);
 }
 
 void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -4539,6 +4562,9 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 		ViewPort vp;
 
+		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
+		const float transparentShadowClearColor[] = { 1,1,1,0 };
+
 		if (!culledLights.empty())
 		{
 			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
@@ -4635,19 +4661,20 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index + index);
 
+									// unfortunately wi will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+									GetDevice()->ClearRenderTarget(Light::shadowMapArray_Transparent, transparentShadowClearColor, threadID, l->shadowMap_index + index);
+
 									// render opaque shadowmap:
 									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
 									RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
-									if (transparentShadowsRequested)
+									if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 									{
 										// render transparent shadowmap:
 										Texture* rts[] = {
 											Light::shadowMapArray_Transparent
 										};
 										GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
-										float transparency[4] = { 1,1,1,1 };
-										GetDevice()->ClearRenderTarget(rts[0], transparency, threadID, l->shadowMap_index + index);
 										RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 									}
 								}
@@ -4690,19 +4717,20 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 								GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
 
+								// unfortunately wi will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+								GetDevice()->ClearRenderTarget(Light::shadowMapArray_Transparent, transparentShadowClearColor, threadID, l->shadowMap_index);
+
 								// render opaque shadowmap:
 								GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
 								RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
-								if (transparentShadowsRequested)
+								if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 								{
 									// render transparent shadowmap:
 									Texture* rts[] = {
 										Light::shadowMapArray_Transparent
 									};
 									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
-									float transparency[4] = { 1,1,1,1 };
-									GetDevice()->ClearRenderTarget(rts[0], transparency, threadID, l->shadowMap_index);
 									RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 								}
 							}
@@ -4767,7 +4795,10 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 	GetDevice()->BindResource(PS, Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 	GetDevice()->BindResource(PS, Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
-	GetDevice()->BindResource(PS, Light::shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+	if (GetTransparentShadowsEnabled())
+	{
+		GetDevice()->BindResource(PS, Light::shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+	}
 }
 
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
@@ -4799,12 +4830,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			shaderType == SHADERTYPE_DEFERRED ||
 			shaderType == SHADERTYPE_TILEDFORWARD;
 
-		const bool easyTextureBind = 
-			shaderType == SHADERTYPE_TEXTURE || 
-			shaderType == SHADERTYPE_SHADOW || 
-			shaderType == SHADERTYPE_SHADOWCUBE || 
-			shaderType == SHADERTYPE_DEPTHONLY || 
-			shaderType == SHADERTYPE_VOXELIZE;
+		//const bool easyTextureBind = 
+		//	shaderType == SHADERTYPE_TEXTURE || 
+		//	shaderType == SHADERTYPE_SHADOW || 
+		//	shaderType == SHADERTYPE_SHADOWCUBE || 
+		//	shaderType == SHADERTYPE_DEPTHONLY || 
+		//	shaderType == SHADERTYPE_VOXELIZE;
 
 		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
 
@@ -4918,7 +4949,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					mesh->impostorTarget.GetTexture(3),
 					mesh->impostorTarget.GetTexture(4),
 				};
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+				//device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
 				if (!impostorGraphicsStateComplete)
 				{
@@ -5197,7 +5229,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					material->GetMetalnessMap(),
 					material->GetDisplacementMap(),
 				};
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+				//device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
 				SetAlphaRef(material->alphaRef, threadID);
 
@@ -6117,6 +6150,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;
 	value.mAdvancedRefractions = GetAdvancedRefractionsEnabled() ? 1 : 0;
 	value.mEntityCullingTileCount = GetEntityCullingTileCount();
+	value.mTransparentShadowsEnabled = TRANSPARENTSHADOWSENABLED;
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit
 	{

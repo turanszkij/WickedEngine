@@ -21,12 +21,16 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	// When opacity reaches ZERO, the multiplicative light mask will be ONE:
 	color.rgb = lerp(1, color.rgb, opacity);
-	// When opacity reaches ONE, the light mask will be ZERO (fully occluding):
-	color.rgb *= 1 - opacity;
-	// And what goes in between will be tinted by the object color...
 
-	// Use the alpha channel for something else (todo)
-	color.a = 1;
+	// Use the alpha channel for refraction caustics effect:
+	float3 bumpColor;
+	
+	bumpColor = float3(2.0f * xNormalMap.Sample(sampler_objectshader, UV - g_xMat_texMulAdd.ww).rg - 1.0f, 1);
+	bumpColor.rg *= g_xMat_refractionIndex;
+	bumpColor.rg *= g_xMat_normalMapStrength;
+	bumpColor = normalize(max(bumpColor, float3(0, 0, 0.0001f)));
+	
+	color.a = 1 - saturate(dot(bumpColor, float3(0, 0, 1)));
 
 	OBJECT_PS_OUT_FORWARD_SIMPLE
 }

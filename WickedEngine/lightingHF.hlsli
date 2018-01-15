@@ -44,11 +44,18 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 #endif // DISABLE_SHADOWMAPS
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	// unfortunately transparents will not receive transparent shadow map
-	// because we cannot distinguish without using secondary depth buffer for transparents
-	// but that would be overkill
-	float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(ShTex, slice), 0).rgba;
-	retVal *= transparent_shadowmap.rgb;
+	if (g_xWorld_TransparentShadowsEnabled)
+	{
+		// unfortunately transparents will not receive transparent shadow map
+		// because we cannot distinguish without using secondary depth buffer for transparents
+		// but that would be overkill
+		float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(ShTex, slice), 0).rgba;
+		// Tint the shadow:
+		retVal *= transparent_shadowmap.rgb;
+		// Reduce shadow by caustics (caustics can also increase total light above maximum):
+		const float causticsStrength = 20;
+		retVal += transparent_shadowmap.a * causticsStrength;
+	}
 #endif //DISABLE_TRANSPARENT_SHADOWMAP
 
 	return retVal;

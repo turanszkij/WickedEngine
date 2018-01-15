@@ -67,7 +67,8 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float		g_xWorld_VoxelRadianceFalloff;
 	float3		g_xWorld_VoxelRadianceDataCenter;
 	bool		g_xWorld_AdvancedRefractions;
-	uint3		g_xWorld_EntityCullingTileCount; uint xPadding2_WorldCB;
+	uint3		g_xWorld_EntityCullingTileCount;
+	uint		g_xWorld_TransparentShadowsEnabled;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
