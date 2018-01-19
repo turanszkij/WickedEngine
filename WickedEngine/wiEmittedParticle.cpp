@@ -325,11 +325,17 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	};
 	device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
+	GPUResource* indres[] = {
+		indirectBuffers
+	};
+	device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
 
 	// kick off updating, set up state
 	device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
 	device->Dispatch(1, 1, 1, threadID);
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+	device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, threadID);
 
 	// emit the required amount if there are free slots in dead list
 	device->BindComputePSO(&CPSO_emit, threadID);

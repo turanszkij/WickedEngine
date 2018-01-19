@@ -1839,6 +1839,42 @@ namespace wiGraphicsTypes
 		}
 
 
+		// Create common indirect command signatures:
+
+		D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
+
+		D3D12_INDIRECT_ARGUMENT_DESC dispatchArgs;
+		dispatchArgs.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+		D3D12_INDIRECT_ARGUMENT_DESC drawInstancedArgs;
+		drawInstancedArgs.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+
+		D3D12_INDIRECT_ARGUMENT_DESC drawIndexedInstancedArgs;
+		drawIndexedInstancedArgs.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+		cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
+		cmd_desc.NumArgumentDescs = 1;
+		cmd_desc.pArgumentDescs = &dispatchArgs;
+		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&dispatchIndirectCommandSignature);
+		assert(SUCCEEDED(hr));
+
+		cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
+		cmd_desc.NumArgumentDescs = 1;
+		cmd_desc.pArgumentDescs = &drawInstancedArgs;
+		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawInstancedIndirectCommandSignature);
+		assert(SUCCEEDED(hr));
+
+		cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
+		cmd_desc.NumArgumentDescs = 1;
+		cmd_desc.pArgumentDescs = &drawIndexedInstancedArgs;
+		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawIndexedInstancedIndirectCommandSignature);
+		assert(SUCCEEDED(hr));
+
+
+
+
+		// Set the starting device state:
+
 		hr = GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE]->Reset();
 		hr = GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->Reset(GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE], nullptr);
 
@@ -1903,6 +1939,10 @@ namespace wiGraphicsTypes
 
 		SAFE_RELEASE(graphicsRootSig);
 		SAFE_RELEASE(computeRootSig);
+
+		SAFE_RELEASE(dispatchIndirectCommandSignature);
+		SAFE_RELEASE(drawInstancedIndirectCommandSignature);
+		SAFE_RELEASE(drawIndexedInstancedIndirectCommandSignature);
 
 		SAFE_DELETE(RTAllocator);
 		SAFE_DELETE(DSAllocator);
@@ -3342,9 +3382,11 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
+		GetDirectCommandList(threadID)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
+		GetDirectCommandList(threadID)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
@@ -3354,6 +3396,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
+		GetDirectCommandList(threadID)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID)
 	{
