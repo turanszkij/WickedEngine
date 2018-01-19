@@ -4935,7 +4935,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						0,
 						0,
 						0,
-						0,
 						instancesOffset,
 						instancesOffset + sizeof(Instance)
 					};
@@ -5471,6 +5470,11 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 
+		CameraCB camcb;
+		camcb.mCamPos = probe->translation; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+
+
 		CulledList culledObjects;
 		CulledCollection culledRenderer;
 
@@ -5846,6 +5850,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 			GetDevice()->BindResource(CS, Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 			GetDevice()->BindResource(CS, Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+			GetDevice()->BindResource(CS, Light::shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 
 			device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
