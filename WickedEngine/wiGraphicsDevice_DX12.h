@@ -18,6 +18,7 @@ struct ID3D12Fence;
 struct ID3D12DescriptorHeap;
 struct ID3D12CommandQueue;
 struct ID3D12RootSignature;
+struct ID3D12CommandSignature;
 
 namespace wiGraphicsTypes
 {
@@ -40,6 +41,10 @@ namespace wiGraphicsTypes
 
 		ID3D12RootSignature*		graphicsRootSig;
 		ID3D12RootSignature*		computeRootSig;
+
+		ID3D12CommandSignature*		dispatchIndirectCommandSignature;
+		ID3D12CommandSignature*		drawInstancedIndirectCommandSignature;
+		ID3D12CommandSignature*		drawIndexedInstancedIndirectCommandSignature;
 
 		struct DescriptorAllocator
 		{
