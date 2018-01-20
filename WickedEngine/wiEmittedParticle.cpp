@@ -486,6 +486,7 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 		particleBuffer,
 		aliveList[0]
 	};
+	device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
 	device->BindResources(VS, res, 0, ARRAYSIZE(res), threadID);
 
 	if (!wiRenderer::IsWireRender() && material->texture)

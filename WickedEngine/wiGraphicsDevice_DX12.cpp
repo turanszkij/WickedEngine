@@ -1624,7 +1624,7 @@ namespace wiGraphicsTypes
 
 				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
 				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
-				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 256);
+				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 128);
 			}
 		}
 
@@ -1843,30 +1843,30 @@ namespace wiGraphicsTypes
 
 		D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
 
-		D3D12_INDIRECT_ARGUMENT_DESC dispatchArgs;
-		dispatchArgs.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+		D3D12_INDIRECT_ARGUMENT_DESC dispatchArgs[1];
+		dispatchArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
 
-		D3D12_INDIRECT_ARGUMENT_DESC drawInstancedArgs;
-		drawInstancedArgs.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+		D3D12_INDIRECT_ARGUMENT_DESC drawInstancedArgs[1];
+		drawInstancedArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
 
-		D3D12_INDIRECT_ARGUMENT_DESC drawIndexedInstancedArgs;
-		drawIndexedInstancedArgs.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+		D3D12_INDIRECT_ARGUMENT_DESC drawIndexedInstancedArgs[1];
+		drawIndexedInstancedArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 
 		cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
 		cmd_desc.NumArgumentDescs = 1;
-		cmd_desc.pArgumentDescs = &dispatchArgs;
+		cmd_desc.pArgumentDescs = dispatchArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&dispatchIndirectCommandSignature);
 		assert(SUCCEEDED(hr));
 
 		cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
 		cmd_desc.NumArgumentDescs = 1;
-		cmd_desc.pArgumentDescs = &drawInstancedArgs;
+		cmd_desc.pArgumentDescs = drawInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawInstancedIndirectCommandSignature);
 		assert(SUCCEEDED(hr));
 
 		cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
 		cmd_desc.NumArgumentDescs = 1;
-		cmd_desc.pArgumentDescs = &drawIndexedInstancedArgs;
+		cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawIndexedInstancedIndirectCommandSignature);
 		assert(SUCCEEDED(hr));
 
@@ -3382,10 +3382,14 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetDirectCommandList(threadID)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetDirectCommandList(threadID)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
@@ -3396,6 +3400,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetDirectCommandList(threadID)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID)
