@@ -3030,13 +3030,18 @@ namespace wiGraphicsTypes
 		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
 		FRAMECOUNT++;
 
-		// Signal and increment the fence value.
+
+
+		// Record the latest processed framecount in the fence
 		result = directQueue->Signal(frameFence, FRAMECOUNT);
 
-		// Wait until the GPU is done rendering.
-		if (frameFence->GetCompletedValue() < FRAMECOUNT - (BACKBUFFER_COUNT - 1))
+		// Determine the last frame that we should not wait on:
+		const uint64_t lastFrameToAllowLatency = max(BACKBUFFER_COUNT - 1, FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
+
+		// Wait if too many frames are being incomplete:
+		if (frameFence->GetCompletedValue() < lastFrameToAllowLatency)
 		{
-			result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
+			result = frameFence->SetEventOnCompletion(lastFrameToAllowLatency, frameFenceEvent);
 			WaitForSingleObject(frameFenceEvent, INFINITE);
 		}
 
