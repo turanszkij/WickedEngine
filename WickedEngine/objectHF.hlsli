@@ -135,7 +135,7 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	}
 	float2 prevTCoords = currentTextureCoords + dtex;
 	float nextH = heightFromTexture - curLayerHeight;
-	float prevH = xDisplacementMap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
+	float prevH = 1 - xDisplacementMap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
 	float weight = nextH / (nextH - prevH);
 	float2 finalTexCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
 	UV = finalTexCoords;
