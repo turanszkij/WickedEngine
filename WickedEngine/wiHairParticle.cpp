@@ -15,13 +15,12 @@ using namespace wiGraphicsTypes;
 
 VertexShader *wiHairParticle::vs = nullptr;
 PixelShader *wiHairParticle::ps[];
-ComputeShader *wiHairParticle::cs_BITONICSORT = nullptr;
-ComputeShader *wiHairParticle::cs_TRANSPOSE = nullptr;
-GPUBuffer *wiHairParticle::cb_BITONIC = nullptr;
+PixelShader *wiHairParticle::ps_simplest = nullptr;
 DepthStencilState wiHairParticle::dss_default, wiHairParticle::dss_equal, wiHairParticle::dss_rejectopaque_keeptransparent;
-RasterizerState wiHairParticle::rs, wiHairParticle::ncrs;
+RasterizerState wiHairParticle::rs, wiHairParticle::ncrs, wiHairParticle::wirers;
 BlendState wiHairParticle::bs[2]; 
 GraphicsPSO wiHairParticle::PSO[SHADERTYPE_COUNT][2];
+GraphicsPSO wiHairParticle::PSO_wire;
 int wiHairParticle::LOD[3];
 
 wiHairParticle::wiHairParticle()
@@ -109,9 +108,6 @@ void wiHairParticle::CleanUpStatic()
 	{
 		SAFE_DELETE(ps[i]);
 	}
-	SAFE_DELETE(cs_BITONICSORT);
-	SAFE_DELETE(cs_TRANSPOSE);
-	SAFE_DELETE(cb_BITONIC);
 }
 void wiHairParticle::LoadShaders()
 {
@@ -129,9 +125,6 @@ void wiHairParticle::LoadShaders()
 	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
 	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
 	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
-
-	cs_BITONICSORT = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "bitonicSort_hairparticleCS.cso", wiResourceManager::COMPUTESHADER));
-	cs_TRANSPOSE = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "matrixTransposeCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -196,6 +189,19 @@ void wiHairParticle::LoadShaders()
 		}
 	}
 
+	SAFE_DELETE(ps_simplest);
+	ps_simplest = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
+
+	GraphicsPSODesc desc;
+	desc.vs = vs;
+	desc.ps = ps_simplest;
+	desc.bs = &bs[0];
+	desc.rs = &wirers;
+	desc.dss = &dss_default;
+	desc.numRTs = 1;
+	desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+	desc.DSFormat = wiRenderer::DSFormat_full;
+	device->CreateGraphicsPSO(&desc, &PSO_wire);
 }
 void wiHairParticle::SetUpStatic()
 {
@@ -224,6 +230,17 @@ void wiHairParticle::SetUpStatic()
 	rsd.MultisampleEnable=false;
 	rsd.AntialiasedLineEnable=false;
 	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &ncrs);
+
+	rsd.FillMode = FILL_WIREFRAME;
+	rsd.CullMode = CULL_NONE;
+	rsd.FrontCounterClockwise = true;
+	rsd.DepthBias = 0;
+	rsd.DepthBiasClamp = 0;
+	rsd.SlopeScaledDepthBias = 0;
+	rsd.DepthClipEnable = true;
+	rsd.MultisampleEnable = false;
+	rsd.AntialiasedLineEnable = false;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rsd, &wirers);
 
 	
 	DepthStencilStateDesc dsd;
@@ -268,17 +285,6 @@ void wiHairParticle::SetUpStatic()
 	bld.IndependentBlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[1]);
 
-
-
-	GPUBufferDesc bd;
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.ByteWidth = sizeof(BitonicSortConstantBuffer);
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	bd.MiscFlags = 0;
-	bd.StructureByteStride = 0;
-	bd.Usage = USAGE_DYNAMIC;
-	cb_BITONIC = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb_BITONIC);
 
 
 
@@ -505,8 +511,6 @@ void wiHairParticle::Generate()
 
 }
 
-//#define ENABLE_CULLING
-//#define ENABLE_SORTING
 void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -524,95 +528,7 @@ void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
 
 	device->UpdateBuffer(cb, &gcb, threadID);
 
-#ifdef ENABLE_CULLING
-
-	device->BindConstantBuffer(CS, cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
-
-	device->BindResource(CS, vb, 0, threadID);
-
-	const GPUResource* uavs[] = {
-		static_cast<const GPUResource*>(drawargs),
-		static_cast<const GPUResource*>(ib),
-	};
-	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	// First clear the drawarg buffer:
-	device->BindCS(cs_RESET, threadID);
-	device->Dispatch(1, 1, 1, threadID);
-
-	// Then compute frustum culling:
-	device->BindCS(cs_CULLING, threadID);
-	device->Dispatch((UINT)ceilf(static_cast<float>(particleCount) / GRASS_CULLING_THREADCOUNT), 1, 1, threadID);
-
-#ifdef ENABLE_SORTING
-	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-
-	// Then sort the particles:
-	{
-		const UINT NUM_ELEMENTS = wiMath::GetNextPowerOfTwo((UINT)particleCount);
-		const UINT MATRIX_WIDTH = BITONIC_BLOCK_SIZE;
-		const UINT MATRIX_HEIGHT = NUM_ELEMENTS / BITONIC_BLOCK_SIZE;
-
-		device->BindConstantBuffer(CS, cb_BITONIC, 0, threadID);
-
-		// Sort the data
-		// First sort the rows for the levels <= to the block size
-		for (UINT level = 2; level <= BITONIC_BLOCK_SIZE; level = level * 2)
-		{
-			BitonicSortConstantBuffer cb = { level, level, MATRIX_HEIGHT, MATRIX_WIDTH };
-			device->UpdateBuffer(cb_BITONIC, &cb, threadID);
-
-			// Sort the row data
-			device->BindUnorderedAccessResourceCS(ib, 0, threadID);
-			device->BindCS(cs_BITONICSORT, threadID);
-			device->Dispatch(NUM_ELEMENTS / BITONIC_BLOCK_SIZE, 1, 1, threadID);
-		}
-
-		// Then sort the rows and columns for the levels > than the block size
-		// Transpose. Sort the Columns. Transpose. Sort the Rows.
-		for (UINT level = (BITONIC_BLOCK_SIZE * 2); level <= NUM_ELEMENTS; level = level * 2)
-		{
-			{
-				BitonicSortConstantBuffer cb = { (level / BITONIC_BLOCK_SIZE), (level & ~NUM_ELEMENTS) / BITONIC_BLOCK_SIZE, MATRIX_WIDTH, MATRIX_HEIGHT };
-				device->UpdateBuffer(cb_BITONIC, &cb, threadID);
-			}
-
-			// Transpose the data from buffer 1 into buffer 2
-			device->UnBindResources(0, 1, threadID);
-			device->BindUnorderedAccessResourceCS(ib_transposed, 0, threadID);
-			device->BindResource(CS, ib, 0, threadID);
-			device->BindCS(cs_TRANSPOSE, threadID);
-			device->Dispatch(MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, 1, threadID);
-
-			// Sort the transposed column data
-			device->BindCS(cs_BITONICSORT, threadID);
-			device->Dispatch(NUM_ELEMENTS / BITONIC_BLOCK_SIZE, 1, 1, threadID);
-
-			{
-				BitonicSortConstantBuffer cb = { BITONIC_BLOCK_SIZE, level, MATRIX_HEIGHT, MATRIX_WIDTH };
-				device->UpdateBuffer(cb_BITONIC, &cb, threadID);
-			}
-
-			// Transpose the data from buffer 2 back into buffer 1
-			device->UnBindResources(0, 1, threadID);
-			device->BindUnorderedAccessResourceCS(ib, 0, threadID);
-			device->BindResource(CS, ib_transposed, 0, threadID);
-			device->BindCS(cs_TRANSPOSE, threadID);
-			device->Dispatch(MATRIX_HEIGHT / TRANSPOSE_BLOCK_SIZE, MATRIX_WIDTH / TRANSPOSE_BLOCK_SIZE, 1, threadID);
-
-			// Sort the row data
-			device->BindCS(cs_BITONICSORT, threadID);
-			device->Dispatch(NUM_ELEMENTS / BITONIC_BLOCK_SIZE, 1, 1, threadID);
-		}
-	}
-#endif // ENABLE_SORTING
-
-	// Then reset state:
-	device->BindCS(nullptr, threadID);
-	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-	device->UnBindResources(0, 1, threadID);
-
-#endif // ENABLE_CULLING
+	// old solution removed, todo new solution
 
 	device->EventEnd(threadID);
 }
@@ -626,16 +542,28 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, bool transparen
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin("HairParticle - Draw", threadID);
 
-
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
-
-		device->BindGraphicsPSO(&PSO[shaderType][transparent], threadID);
-
-		if(texture)
+		if (wiRenderer::IsWireRender())
 		{
-			device->BindResource(PS, texture,TEXSLOT_ONDEMAND0,threadID);
-			device->BindResource(VS, texture,TEXSLOT_ONDEMAND0,threadID);
+			if (transparent || shaderType == SHADERTYPE_DEPTHONLY)
+			{
+				return;
+			}
+			device->BindGraphicsPSO(&PSO_wire, threadID);
+			device->BindResource(VS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND0, threadID);
+			device->BindConstantBuffer(PS, cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
 		}
+		else
+		{
+			device->BindGraphicsPSO(&PSO[shaderType][transparent], threadID);
+
+			if (texture)
+			{
+				device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(VS, texture, TEXSLOT_ONDEMAND0, threadID);
+			}
+		}
+
+		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
 
 		device->BindConstantBuffer(VS, cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 

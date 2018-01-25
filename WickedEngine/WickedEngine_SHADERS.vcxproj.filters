@@ -510,12 +510,6 @@
     <FxCompile Include="skinningCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="bitonicSort_hairparticleCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="matrixTransposeCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="lightCullingCS_DEFERRED.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -691,6 +685,9 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="shadowPS_water.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="hairparticlePS_simplest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

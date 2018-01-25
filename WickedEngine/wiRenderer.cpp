@@ -1710,8 +1710,8 @@ void wiRenderer::LoadShaders()
 			desc.vs = vertexShaders[VSTYPE_OBJECT_SIMPLE];
 			desc.ps = pixelShaders[PSTYPE_OBJECT_SIMPLEST];
 			desc.rs = rasterizers[RSTYPE_WIRE];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.dss = depthStencils[DSSTYPE_DEFAULT];
 			desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
 			desc.numRTs = 1;
@@ -4826,16 +4826,17 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		};
 
 		const bool advancedVBRequest =
-			shaderType == SHADERTYPE_FORWARD ||
+			!IsWireRender() &&
+			(shaderType == SHADERTYPE_FORWARD ||
 			shaderType == SHADERTYPE_DEFERRED ||
-			shaderType == SHADERTYPE_TILEDFORWARD;
+			shaderType == SHADERTYPE_TILEDFORWARD);
 
-		//const bool easyTextureBind = 
-		//	shaderType == SHADERTYPE_TEXTURE || 
-		//	shaderType == SHADERTYPE_SHADOW || 
-		//	shaderType == SHADERTYPE_SHADOWCUBE || 
-		//	shaderType == SHADERTYPE_DEPTHONLY || 
-		//	shaderType == SHADERTYPE_VOXELIZE;
+		const bool easyTextureBind = 
+			shaderType == SHADERTYPE_TEXTURE || 
+			shaderType == SHADERTYPE_SHADOW || 
+			shaderType == SHADERTYPE_SHADOWCUBE || 
+			shaderType == SHADERTYPE_DEPTHONLY || 
+			shaderType == SHADERTYPE_VOXELIZE;
 
 		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
 
@@ -4948,8 +4949,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					mesh->impostorTarget.GetTexture(3),
 					mesh->impostorTarget.GetTexture(4),
 				};
-				//device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
 				if (!impostorGraphicsStateComplete)
 				{
@@ -5228,8 +5228,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					material->GetMetalnessMap(),
 					material->GetDisplacementMap(),
 				};
-				//device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
 
 				SetAlphaRef(material->alphaRef, threadID);
 

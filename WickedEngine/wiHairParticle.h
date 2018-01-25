@@ -32,13 +32,6 @@ private:
 		float LOD2;
 		float __pad1;
 	};
-	CBUFFER(BitonicSortConstantBuffer, 0)
-	{
-		UINT iLevel;
-		UINT iLevelMask;
-		UINT iWidth;
-		UINT iHeight;
-	};
 
 	wiGraphicsTypes::GPUBuffer *cb;
 	wiGraphicsTypes::GPUBuffer *particleBuffer;
@@ -48,13 +41,12 @@ private:
 
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
-	static wiGraphicsTypes::ComputeShader *cs_BITONICSORT;
-	static wiGraphicsTypes::ComputeShader *cs_TRANSPOSE;
-	static wiGraphicsTypes::GPUBuffer* cb_BITONIC;
+	static wiGraphicsTypes::PixelShader *ps_simplest;
 	static wiGraphicsTypes::DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
-	static wiGraphicsTypes::RasterizerState rs, ncrs;
+	static wiGraphicsTypes::RasterizerState rs, ncrs, wirers;
 	static wiGraphicsTypes::BlendState bs[2]; // opaque, transparent
 	static wiGraphicsTypes::GraphicsPSO PSO[SHADERTYPE_COUNT][2]; // shadertype * transparency
+	static wiGraphicsTypes::GraphicsPSO PSO_wire;
 	static int LOD[3];
 public:
 	static void LoadShaders();

@@ -1,16 +1,6 @@
 #include "globals.hlsli"
 #include "hairparticleHF.hlsli"
 
-CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
-{
-	float4x4 xWorld;
-	float3 xColor; float __pad0;
-	float LOD0;
-	float LOD1;
-	float LOD2;
-	float __pad1;
-}
-
 static const float hairPopDistanceThreshold = 0.9f;
 
 // billboard cross section:
