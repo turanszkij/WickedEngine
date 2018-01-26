@@ -1234,6 +1234,11 @@ void Scene::Update()
 	{
 		x->UpdateModel();
 	}
+
+	for (EnvironmentProbe* probe : environmentProbes)
+	{
+		probe->UpdateEnvProbe();
+	}
 }
 #pragma endregion
 
@@ -4515,5 +4520,13 @@ void ForceField::Serialize(wiArchive& archive)
 		archive << gravity;
 		archive << range;
 	}
+}
+#pragma endregion
+
+#pragma region ENVIRONMENTPROBE
+void EnvironmentProbe::UpdateEnvProbe()
+{
+	bounds.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+	bounds = bounds.get(world);
 }
 #pragma endregion

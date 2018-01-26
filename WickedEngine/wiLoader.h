@@ -1188,13 +1188,15 @@ static const int RESOLUTION = 36;
 	static void CleanUpStatic();
 
 };
-struct EnvironmentProbe : public Transform
+struct EnvironmentProbe : public Transform, public Cullable
 {
-	wiRenderTarget cubeMap;
+	int textureIndex;
 	bool realTime;
 	bool isUpToDate;
 
-	EnvironmentProbe() :realTime(false), isUpToDate(false) {}
+	EnvironmentProbe() : textureIndex(-1), realTime(false), isUpToDate(false) {}
+
+	void UpdateEnvProbe();
 };
 struct ForceField : public Transform
 {

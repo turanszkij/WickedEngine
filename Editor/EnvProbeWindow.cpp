@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "EnvProbeWindow.h"
 
-int resolution = 256;
-
 EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 {
 	probe = nullptr;
@@ -19,15 +17,8 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 
 	float x = 250, y = 0, step = 45;
 
-	resolutionSlider = new wiSlider(1, 4096, 256, 4096, "Resolution");
-	resolutionSlider->SetPos(XMFLOAT2(x, y += step));
-	resolutionSlider->OnSlide([](wiEventArgs args) {
-		resolution = (int)args.fValue;
-	});
-	envProbeWindow->AddWidget(resolutionSlider);
-
 	realTimeCheckBox = new wiCheckBox("RealTime: ");
-	realTimeCheckBox->SetPos(XMFLOAT2(470, y += step));
+	realTimeCheckBox->SetPos(XMFLOAT2(x, y += step));
 	realTimeCheckBox->SetEnabled(false);
 	realTimeCheckBox->OnClick([&](wiEventArgs args) {
 		if (probe != nullptr)
@@ -43,7 +34,7 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 	generateButton->OnClick([](wiEventArgs args) {
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, XMVectorAdd(wiRenderer::getCamera()->GetEye(), wiRenderer::getCamera()->GetAt() * 4));
-		wiRenderer::PutEnvProbe(pos, resolution);
+		wiRenderer::PutEnvProbe(pos);
 	});
 	envProbeWindow->AddWidget(generateButton);
 

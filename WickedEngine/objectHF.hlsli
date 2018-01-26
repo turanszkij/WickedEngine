@@ -226,8 +226,9 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
 	uint startOffset = flatten2D(tileIndex, g_xWorld_EntityCullingTileCount.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
 	uint arrayProperties = EntityIndexList[startOffset];
-	uint arrayLength = arrayProperties & 0x00FFFFFF; // count of every element in the tile
+	uint arrayLength = arrayProperties & 0x000FFFFF; // count of every element in the tile
 	uint decalCount = (arrayProperties & 0xFF000000) >> 24; // count of just the decals in the tile
+	uint envmapCount = (arrayProperties & 0x00F00000) >> 20; // count of just the envmaps in the tile
 	startOffset += 1; // first element was the itemcount
 	uint iterator = 0;
 
@@ -274,8 +275,60 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	}
 
 	albedo.rgb = lerp(albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
-#endif
+#endif // DISABLE_DECALS
 
+
+#ifdef DISABLE_LOCALENVPMAPS
+	// local envmaps are disabled, set iterator to skip:
+	iterator += envmapCount;
+#else
+	// local envmaps are enabled, loop through them and apply:
+	float4 envmapAccumulation = 0;
+	uint envmapArrayEnd = iterator + envmapCount;
+
+	float3 R = -reflect(V, N);
+
+	[loop]
+	for (; iterator < envmapArrayEnd; ++iterator)
+	{
+		ShaderEntityType probe = EntityArray[EntityIndexList[startOffset + iterator]];
+
+		float4x4 probeProjection = MatrixArray[probe.additionalData_index];
+		float3 clipSpace = mul(float4(P, 1), probeProjection).xyz;
+		float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		[branch]
+		if (!any(uvw - saturate(uvw)))
+		{
+			// Perform parallax correction of reflection ray (R):
+			float3 RayLS = mul(R, (float3x3)probeProjection);
+			float3 FirstPlaneIntersect = (float3(1, 1, 1) - clipSpace) / RayLS;
+			float3 SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpace) / RayLS;
+			float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+			float Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
+			float3 IntersectPositionWS = P + R * Distance;
+			float3 R_parallaxCorrected = IntersectPositionWS - probe.positionWS;
+
+			// Sample cubemap texture:
+			float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.shadowBias), roughness * g_xWorld_EnvProbeMipCount).rgb; // shadowBias stores textureIndex here...
+			// blend out if close to any cube edge:
+			float edgeBlend = 1 - pow(saturate(max(abs(clipSpace.x), max(abs(clipSpace.y), abs(clipSpace.z)))), 8);
+			// perform manual blending of probes:
+			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+			envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (edgeBlend*envmapColor) + envmapAccumulation.rgb;
+			envmapAccumulation.a = edgeBlend + (1 - edgeBlend) * envmapAccumulation.a;
+			// if the accumulation reached 1, we skip the rest of the probes:
+			iterator = envmapAccumulation.a < 1 ? iterator : envmapCount - 1;
+		}
+	}
+
+	float f90 = saturate(50.0 * dot(f0, 0.33));
+	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
+
+	specular += max(0, envmapAccumulation.rgb * F);
+#endif // DISABLE_LOCALENVPMAPS
+
+
+	// And finally loop through and apply lights:
 	[loop]
 	for (; iterator < arrayLength; iterator++)
 	{

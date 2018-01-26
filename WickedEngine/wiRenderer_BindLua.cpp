@@ -640,21 +640,16 @@ namespace wiRenderer_BindLua
 			{
 				XMFLOAT3 p;
 				XMStoreFloat3(&p, pos->vector);
-				int res = 256;
-				if (argc > 1)
-				{
-					res = wiLua::SGetInt(L, 2);
-				}
-				wiRenderer::PutEnvProbe(p,res);
+				wiRenderer::PutEnvProbe(p);
 			}
 			else
 			{
-				wiLua::SError(L, "PutEnvProbe(Vector pos, opt int resolution = 256) argument is not a Vector!");
+				wiLua::SError(L, "PutEnvProbe(Vector pos) argument is not a Vector!");
 			}
 		}
 		else
 		{
-			wiLua::SError(L, "PutEnvProbe(Vector pos, opt int resolution = 256) not enough arguments!");
+			wiLua::SError(L, "PutEnvProbe(Vector pos) not enough arguments!");
 		}
 		return 0;
 	}

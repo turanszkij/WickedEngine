@@ -1,4 +1,5 @@
 #define DISABLE_DECALS
+#define DISABLE_LOCALENVPMAPS
 #include "globals.hlsli"
 #include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"

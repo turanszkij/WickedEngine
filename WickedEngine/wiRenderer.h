@@ -141,6 +141,8 @@ public:
 		BOOL mAdvancedRefractions;
 		XMUINT3 mEntityCullingTileCount;
 		BOOL mTransparentShadowsEnabled;
+		UINT mEnvProbeMipCount;
+		XMFLOAT3 pad0;
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
@@ -163,8 +165,6 @@ public:
 		XMFLOAT2 pad1;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
-		XMFLOAT3 mGlobalEnvMap0;		float pad2;
-		XMFLOAT3 mGlobalEnvMap1;		float pad3;
 		XMMATRIX mVP;
 		XMMATRIX mView;
 		XMMATRIX mProj;
@@ -407,6 +407,7 @@ public:
 		std::vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
 		std::list<Decal*> culledDecals;
+		std::list<EnvironmentProbe*> culledEnvProbes;
 
 		void Clear()
 		{
@@ -416,6 +417,7 @@ public:
 			culledHairParticleSystems.clear();
 			culledLights.clear();
 			culledDecals.clear();
+			culledEnvProbes.clear();
 		}
 	};
 	static std::unordered_map<Camera*, FrameCulling> frameCullings;
@@ -594,7 +596,7 @@ public:
 	static void LoadWorldInfo(const std::string& fileName);
 	static void LoadDefaultLighting();
 
-	static void PutEnvProbe(const XMFLOAT3& position, int resolution = 256);
+	static void PutEnvProbe(const XMFLOAT3& position);
 
 	static void CreateImpostor(Mesh* mesh);
 

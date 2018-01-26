@@ -2763,7 +2763,7 @@ void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *p
 	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
-		if (arrayIndex < 0)
+		if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs_DX11.empty())
 		{
 			renderTargetViews[i] = ppRenderTargets[i]->RTV_DX11;
 		}
@@ -2778,7 +2778,7 @@ void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *p
 	ID3D11DepthStencilView* depthStencilView = nullptr;
 	if (depthStencilTexture != nullptr)
 	{
-		if (arrayIndex < 0)
+		if (arrayIndex < 0 || depthStencilTexture->additionalDSVs_DX11.empty())
 		{
 			depthStencilView = depthStencilTexture->DSV_DX11;
 		}
@@ -2807,7 +2807,7 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRen
 	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
-		if (arrayIndex < 0)
+		if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs_DX11.empty())
 		{
 			renderTargetViews[i] = ppRenderTargets[i]->RTV_DX11;
 		}
@@ -2822,7 +2822,7 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRen
 	ID3D11DepthStencilView* depthStencilView = nullptr;
 	if (depthStencilTexture != nullptr)
 	{
-		if (arrayIndex < 0)
+		if (arrayIndex < 0 || depthStencilTexture->additionalDSVs_DX11.empty())
 		{
 			depthStencilView = depthStencilTexture->DSV_DX11;
 		}
