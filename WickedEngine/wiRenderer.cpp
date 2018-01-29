@@ -5374,7 +5374,7 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	if (enviroMap != nullptr)
 	{
 		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_STATIC], threadID);
-		GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+		GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
 	}
 	else
 	{
@@ -5475,6 +5475,131 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	static const UINT envmapCount = 16;
 	bool envmapTaken[envmapCount] = {};
 
+
+	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
+	{
+		Texture2DDesc desc;
+		desc.ArraySize = envmapCount * 6;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Height = envmapRes;
+		desc.Width = envmapRes;
+		desc.MipLevels = 0;
+		desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS | RESOURCE_MISC_TEXTURECUBE;
+		desc.Usage = USAGE_DEFAULT;
+
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndepententRenderTargetArraySlices(true);
+		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
+		assert(SUCCEEDED(hr));
+	}
+
+	static Texture2D* envrenderingDepthBuffer = nullptr;
+	if (envrenderingDepthBuffer == nullptr)
+	{
+		Texture2DDesc desc;
+		desc.ArraySize = 6;
+		desc.BindFlags = BIND_DEPTH_STENCIL;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_D16_UNORM;
+		desc.Height = envmapRes;
+		desc.Width = envmapRes;
+		desc.MipLevels = 1;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+		desc.Usage = USAGE_DEFAULT;
+
+		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+	ViewPort VP;
+	VP.Height = envmapRes;
+	VP.Width = envmapRes;
+	VP.TopLeftX = 0;
+	VP.TopLeftY = 0;
+	VP.MinDepth = 0.0f;
+	VP.MaxDepth = 1.0f;
+	GetDevice()->BindViewports(1, &VP, threadID);
+
+	const float zNearP = getCamera()->zNearP;
+	const float zFarP = getCamera()->zFarP;
+
+	bool renderhappened = false;
+
+
+	GetDevice()->EventBegin("Global Probe", threadID);
+
+	// There can be multiple cases how the global environment map should be updated:
+	//	1.) There are no local probes and no sky texture -> render dynamic sky into cubemap
+	//	2.) There are no local probes but there is a static sky texture -> render skydome with degamma-ed sky texture into cubemap
+	//	3.) TODO: what if we have local probes, probably should use them for globals instead of just sky
+
+	{
+		const int globalEnvMapIndex = 0;
+		envmapTaken[globalEnvMapIndex] = true;
+		GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, globalEnvMapIndex);
+		const float clearColor[4] = { 0,0,0,1 };
+		GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, globalEnvMapIndex);
+		GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
+
+
+		std::vector<SHCAM> cameras;
+		{
+			cameras.clear();
+
+			cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
+			cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
+
+			cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
+			cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
+
+			cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
+			cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
+		}
+
+		XMFLOAT3 center = getCamera()->translation;
+		XMVECTOR vCenter = XMLoadFloat3(&center);
+
+		CubeMapRenderCB cb;
+		for (unsigned int i = 0; i < cameras.size(); ++i)
+		{
+			cameras[i].Update(vCenter);
+			cb.mViewProjection[i] = cameras[i].getVP();
+		}
+
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+
+
+		CameraCB camcb;
+		camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
+
+		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+
+		if (enviroMap != nullptr)
+		{
+			// 2.)
+			GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
+			GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
+		}
+		else
+		{
+			// 1.)
+			GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
+			GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+		}
+		GetDevice()->Draw(240, 0, threadID);
+
+		renderhappened = true;
+	}
+	GetDevice()->EventEnd(threadID); // Global Probe
+
+
+
+	GetDevice()->EventBegin("Local Probes", threadID);
+
 	// reconstruct envmap array status:
 	for (EnvironmentProbe* probe : GetScene().environmentProbes)
 	{
@@ -5484,9 +5609,6 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		}
 	}
 
-
-	GetDevice()->EventBegin("Local Probes", threadID);
-	bool renderhappened = false;
 	for (EnvironmentProbe* probe : GetScene().environmentProbes)
 	{
 		if (probe->textureIndex < 0)
@@ -5518,77 +5640,33 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			probe->isUpToDate = true;
 		}
 
-		if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
-		{
-			Texture2DDesc desc;
-			desc.ArraySize = envmapCount * 6;
-			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-			desc.CPUAccessFlags = 0;
-			desc.Format = FORMAT_R16G16B16A16_FLOAT;
-			desc.Height = envmapRes;
-			desc.Width = envmapRes;
-			desc.MipLevels = 0;
-			desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS | RESOURCE_MISC_TEXTURECUBE;
-			desc.Usage = USAGE_DEFAULT;
-			
-			textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
-			textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndepententRenderTargetArraySlices(true);
-			HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
-			assert(SUCCEEDED(hr));
-		}
-
-		static Texture2D* envrenderingDepthBuffer = nullptr;
-		if (envrenderingDepthBuffer == nullptr)
-		{
-			Texture2DDesc desc;
-			desc.ArraySize = 6;
-			desc.BindFlags = BIND_DEPTH_STENCIL;
-			desc.CPUAccessFlags = 0;
-			desc.Format = FORMAT_D16_UNORM;
-			desc.Height = envmapRes;
-			desc.Width = envmapRes;
-			desc.MipLevels = 1;
-			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-			desc.Usage = USAGE_DEFAULT;
-
-			HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
-			assert(SUCCEEDED(hr));
-		}
-
 		GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
 		const float clearColor[4] = { 0,0,0,1 };
 		GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe->textureIndex);
 		GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
-
-		ViewPort VP;
-		VP.Height = envmapRes;
-		VP.Width = envmapRes;
-		VP.TopLeftX = 0;
-		VP.TopLeftY = 0;
-		VP.MinDepth = 0.0f;
-		VP.MaxDepth = 1.0f;
-		GetDevice()->BindViewports(1, &VP, threadID);
 
 
 		std::vector<SHCAM> cameras;
 		{
 			cameras.clear();
 
-			cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+x
-			cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-x
+			cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
+			cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
 
-			cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+y
-			cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-y
+			cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
+			cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
 
-			cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //+z
-			cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), getCamera()->zNearP, getCamera()->zFarP, XM_PI / 2.0f)); //-z
+			cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
+			cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
 		}
 
+		XMFLOAT3 center = probe->translation;
+		XMVECTOR vCenter = XMLoadFloat3(&center);
 
 		CubeMapRenderCB cb;
 		for (unsigned int i = 0; i < cameras.size(); ++i)
 		{
-			cameras[i].Update(XMLoadFloat3(&probe->translation));
+			cameras[i].Update(vCenter);
 			cb.mViewProjection[i] = cameras[i].getVP();
 		}
 
@@ -5597,14 +5675,14 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 
 		CameraCB camcb;
-		camcb.mCamPos = probe->translation; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
+		camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
 
 
 		CulledList culledObjects;
 		CulledCollection culledRenderer;
 
-		SPHERE culler = SPHERE(probe->translation, getCamera()->zFarP);
+		SPHERE culler = SPHERE(center, getCamera()->zFarP);
 		if (spTree != nullptr)
 		{
 			spTree->getVisible(culler, culledObjects);
@@ -5624,7 +5702,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			if (enviroMap != nullptr)
 			{
 				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
-				GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+				GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
 			}
 			else
 			{
@@ -5637,17 +5715,14 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 		renderhappened = true;
 	}
-
+	GetDevice()->EventEnd(threadID); // Local Probes
 
 	if (renderhappened)
 	{
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID);
 	}
-	GetDevice()->EventEnd(threadID); // Local Probes
 
-	GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
-	GetDevice()->BindResource(CS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
 	GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
 	GetDevice()->BindResource(CS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
 

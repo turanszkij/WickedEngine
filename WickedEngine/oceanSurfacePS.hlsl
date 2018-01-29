@@ -1,6 +1,6 @@
 #define DISABLE_ALPHATEST
 #define DISABLE_DECALS
-#define DISABLE_ENVPMAPS
+#define DISABLE_ENVMAPS
 #include "globals.hlsli"
 #include "oceanSurfaceHF.hlsli"
 #include "objectHF.hlsli"

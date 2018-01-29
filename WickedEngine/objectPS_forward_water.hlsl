@@ -1,5 +1,5 @@
 #define DISABLE_TRANSPARENT_SHADOWMAP
-#define DISABLE_ENVPMAPS
+#define DISABLE_ENVMAPS
 #include "objectHF.hlsli"
 
 float4 main(PixelInputType input) : SV_TARGET
