@@ -5576,6 +5576,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
 
+
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 		if (enviroMap != nullptr)
@@ -5682,7 +5683,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		CulledList culledObjects;
 		CulledCollection culledRenderer;
 
-		SPHERE culler = SPHERE(center, getCamera()->zFarP);
+		SPHERE culler = SPHERE(center, zFarP);
 		if (spTree != nullptr)
 		{
 			spTree->getVisible(culler, culledObjects);
@@ -5692,7 +5693,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
 			}
 
-			RenderMeshes(probe->translation, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
+			RenderMeshes(center, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
 		}
 
 		// sky
