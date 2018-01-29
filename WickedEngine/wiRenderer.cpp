@@ -3470,9 +3470,6 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	// Render out of date environment probes:
 	RefreshEnvProbes(threadID);
-
-	GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
-	GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
 }
 void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {
@@ -5487,6 +5484,8 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		}
 	}
 
+
+	GetDevice()->EventBegin("Local Probes", threadID);
 	bool renderhappened = false;
 	for (EnvironmentProbe* probe : GetScene().environmentProbes)
 	{
@@ -5645,8 +5644,14 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID);
 	}
+	GetDevice()->EventEnd(threadID); // Local Probes
 
-	GetDevice()->EventEnd(threadID);
+	GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+	GetDevice()->BindResource(CS, enviroMap, TEXSLOT_ENV_GLOBAL, threadID);
+	GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+	GetDevice()->BindResource(CS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+
+	GetDevice()->EventEnd(threadID); // EnvironmentProbe Refresh
 }
 
 void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)

@@ -1,5 +1,6 @@
 #define DISABLE_TRANSPARENT_SHADOWMAP
 #define DISABLE_DECALS
+#define DISABLE_ENVPMAPS
 #define DISABLE_ALPHATEST
 #include "objectHF.hlsli"
 

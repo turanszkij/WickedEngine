@@ -1,10 +1,11 @@
 #define DISABLE_ALPHATEST
+#define DISABLE_DECALS
+#define DISABLE_ENVPMAPS
 #include "globals.hlsli"
 #include "oceanSurfaceHF.hlsli"
 #include "objectHF.hlsli"
 
 #define xGradientMap		texture_0
-TEXTURE1D(g_texFresnel, float4, TEXSLOT_ONDEMAND1);
 
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET

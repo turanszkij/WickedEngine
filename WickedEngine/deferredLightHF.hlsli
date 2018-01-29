@@ -43,11 +43,6 @@ struct LightOutputType
 	float3 V = normalize(g_xCamera_CamPos - P);
 
 
-#define DEFERREDLIGHT_ENVIRONMENTALLIGHT												\
-	diffuse = 0;																		\
-	specular = EnvironmentReflection(N, V, P, roughness, f0);							\
-	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
-
 #define DEFERREDLIGHT_DIRECTIONAL														\
 	LightingResult result = DirectionalLight(light, N, V, P, roughness, f0);			\
 	diffuse = result.diffuse;															\

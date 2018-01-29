@@ -168,6 +168,14 @@ inline void ForwardLighting(in float3 N, in float3 V, in float3 P, in float3 f0,
 	specular = 0;
 	diffuse = 0;
 
+#ifndef DISABLE_ENVMAPS
+	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
+	float3 R = -reflect(V, N);
+	float f90 = saturate(50.0 * dot(f0, 0.33));
+	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
+	specular = max(0, texture_env_global.SampleLevel(sampler_linear_clamp, R, envMapMIP).rgb * F);
+#endif // DISABLE_ENVMAPS
+
 	[loop]
 	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 	{
@@ -278,15 +286,19 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #endif // DISABLE_DECALS
 
 
+#ifndef DISABLE_ENVMAPS
+	// Apply environment maps:
+
+	float4 envmapAccumulation = 0;
+	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
+	float3 R = -reflect(V, N);
+
 #ifdef DISABLE_LOCALENVPMAPS
 	// local envmaps are disabled, set iterator to skip:
 	iterator += envmapCount;
 #else
 	// local envmaps are enabled, loop through them and apply:
-	float4 envmapAccumulation = 0;
 	uint envmapArrayEnd = iterator + envmapCount;
-
-	float3 R = -reflect(V, N);
 
 	[loop]
 	for (; iterator < envmapArrayEnd; ++iterator)
@@ -309,7 +321,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			float3 R_parallaxCorrected = IntersectPositionWS - probe.positionWS;
 
 			// Sample cubemap texture:
-			float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.shadowBias), roughness * g_xWorld_EnvProbeMipCount).rgb; // shadowBias stores textureIndex here...
+			float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.shadowBias), envMapMIP).rgb; // shadowBias stores textureIndex here...
 			// blend out if close to any cube edge:
 			float edgeBlend = 1 - pow(saturate(max(abs(clipSpace.x), max(abs(clipSpace.y), abs(clipSpace.z)))), 8);
 			// perform manual blending of probes:
@@ -320,12 +332,16 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			iterator = envmapAccumulation.a < 1 ? iterator : envmapCount - 1;
 		}
 	}
+#endif // DISABLE_LOCALENVPMAPS
+
+	// Apply global envmap where there is no local envmap information:
+	envmapAccumulation.rgb = lerp(texture_env_global.SampleLevel(sampler_linear_clamp, R, envMapMIP).rgb, envmapAccumulation.rgb, envmapAccumulation.a);
 
 	float f90 = saturate(50.0 * dot(f0, 0.33));
 	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-
 	specular += max(0, envmapAccumulation.rgb * F);
-#endif // DISABLE_LOCALENVPMAPS
+
+#endif // DISABLE_ENVMAPS
 
 
 	// And finally loop through and apply lights:
@@ -468,9 +484,6 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 #define OBJECT_PS_PLANARREFLECTIONS																					\
 	specular = max(specular, PlanarReflection(UV, refUV, N, V, roughness, f0));
-
-#define OBJECT_PS_ENVIRONMENTREFLECTIONS																			\
-	specular = max(specular, EnvironmentReflection(N, V, P, roughness, f0));
 
 #define OBJECT_PS_DEGAMMA																							\
 	color = DEGAMMA(color);

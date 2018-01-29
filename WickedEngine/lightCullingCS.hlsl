@@ -477,6 +477,12 @@ void main(ComputeShaderInput IN)
 	float3 P = getPosition((float2)pixel * g_xWorld_InternalResolution_Inverse, depth);
 	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 
+	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
+	float3 R = -reflect(V, N);
+	float f90 = saturate(50.0 * dot(f0, 0.33));
+	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
+	specular = max(0, texture_env_global.SampleLevel(sampler_linear_clamp, R, envMapMIP).rgb * F);
+
 	[loop]
 	for (uint li = 0; li < o_ArrayLength; ++li)
 	{
@@ -529,8 +535,6 @@ void main(ComputeShaderInput IN)
 	}
 
 	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
-
-	specular = max(specular, EnvironmentReflection(N, V, P, roughness, f0));
 
 	deferred_Diffuse[pixel] = float4(diffuse, ao);
 	deferred_Specular[pixel] = float4(specular, 1);
