@@ -163,6 +163,8 @@ public:
 		float mWindRandomness;
 		int mSunEntityArrayIndex;
 		XMFLOAT2 pad1;
+		XMFLOAT4 mGlobalEnvMap0PosIndex;
+		XMFLOAT4 mGlobalEnvMap1PosIndex;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
 		XMMATRIX mVP;
@@ -272,7 +274,7 @@ protected:
 	static bool temporalAA, temporalAADEBUG;
 	static bool freezeCullingCamera;
 
-	static EnvironmentProbe* globalEnvProbes[2];
+	static XMFLOAT4 globalEnvProbes[2];
 
 	struct VoxelizedSceneData
 	{

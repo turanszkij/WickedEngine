@@ -18,7 +18,6 @@
     <None Include="ditherHF.hlsli" />
     <None Include="emittedparticleHF.hlsli" />
     <None Include="envMapHF.hlsli" />
-    <None Include="envReflectionHF.hlsli" />
     <None Include="fogHF.hlsli" />
     <None Include="fullScreenTriangleHF.hlsli" />
     <None Include="fxaa.hlsli" />

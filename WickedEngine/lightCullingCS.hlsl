@@ -1,7 +1,6 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
-#include "envReflectionHF.hlsli"
 #include "packHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
@@ -481,7 +480,7 @@ void main(ComputeShaderInput IN)
 	float3 R = -reflect(V, N);
 	float f90 = saturate(50.0 * dot(f0, 0.33));
 	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-	specular = max(0, texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, 0), envMapMIP).rgb * F);
+	specular = max(0, EnvironmentReflection_Global(P, R, envMapMIP) * F);
 
 	[loop]
 	for (uint li = 0; li < o_ArrayLength; ++li)

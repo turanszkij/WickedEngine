@@ -77,7 +77,7 @@ float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = false;
 bool wiRenderer::temporalAA = false, wiRenderer::temporalAADEBUG = false;
-EnvironmentProbe* wiRenderer::globalEnvProbes[] = { nullptr,nullptr };
+XMFLOAT4 wiRenderer::globalEnvProbes[];
 wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
@@ -5533,8 +5533,9 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	// There can be multiple cases how the global environment map should be updated:
 	//	1.) There are no local probes and no sky texture -> render dynamic sky into cubemap
 	//	2.) There are no local probes but there is a static sky texture -> render skydome with degamma-ed sky texture into cubemap
-	//	3.) TODO: what if we have local probes, probably should use them for globals instead of just sky
+	//	3.) We have local probes -> determine two closest, let shader blend them
 
+	if(GetScene().environmentProbes.empty())
 	{
 		const int globalEnvMapIndex = 0;
 		envmapTaken[globalEnvMapIndex] = true;
@@ -5593,7 +5594,73 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		}
 		GetDevice()->Draw(240, 0, threadID);
 
+		globalEnvProbes[0].x = center.x;
+		globalEnvProbes[0].y = center.y;
+		globalEnvProbes[0].z = center.z;
+		globalEnvProbes[0].w = (float)globalEnvMapIndex;
+
+		globalEnvProbes[1].x = center.x;
+		globalEnvProbes[1].y = center.y;
+		globalEnvProbes[1].z = center.z;
+		globalEnvProbes[1].w = (float)globalEnvMapIndex;
+
 		renderhappened = true;
+	}
+	else
+	{
+		// 3.)
+
+		XMFLOAT3 center = getCamera()->translation;
+
+		// retrieve closest two probes:
+		EnvironmentProbe* probes[] = { nullptr,nullptr };
+		float bestDistances[] = { FLT_MAX, FLT_MAX };
+		for (EnvironmentProbe* probe : GetScene().environmentProbes)
+		{
+			if (probe->textureIndex >= 0)
+			{
+				float dist = wiMath::DistanceSquared(probe->translation, center);
+				if (dist < bestDistances[0])
+				{
+					bestDistances[0] = dist;
+					probes[0] = probe;
+				}
+			}
+		}
+		for (EnvironmentProbe* probe : GetScene().environmentProbes)
+		{
+			if (probe->textureIndex >= 0)
+			{
+				float dist = wiMath::DistanceSquared(probe->translation, center);
+				if (dist < bestDistances[1] && dist > bestDistances[0])
+				{
+					bestDistances[1] = dist;
+					probes[1] = probe;
+				}
+			}
+		}
+		if (probes[1] == nullptr)
+		{
+			probes[1] = probes[0];
+		}
+
+		if (probes[0] == nullptr || probes[1] == nullptr)
+		{
+			globalEnvProbes[0] = XMFLOAT4(0, 0, 0, 0);
+			globalEnvProbes[1] = XMFLOAT4(0, 0, 0, 0);
+		}
+		else
+		{
+			globalEnvProbes[0].x = probes[0]->translation.x;
+			globalEnvProbes[0].y = probes[0]->translation.y;
+			globalEnvProbes[0].z = probes[0]->translation.z;
+			globalEnvProbes[0].w = (float)probes[0]->textureIndex;
+
+			globalEnvProbes[1].x = probes[1]->translation.x;
+			globalEnvProbes[1].y = probes[1]->translation.y;
+			globalEnvProbes[1].z = probes[1]->translation.z;
+			globalEnvProbes[1].w = (float)probes[1]->textureIndex;
+		}
 	}
 	GetDevice()->EventEnd(threadID); // Global Probe
 
@@ -6399,6 +6466,8 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindDirection = wind.direction;
 	cb.mFrameCount = (UINT)GetDevice()->GetFrameCount();
 	cb.mSunEntityArrayIndex = GetSunArrayIndex();
+	cb.mGlobalEnvMap0PosIndex = globalEnvProbes[0];
+	cb.mGlobalEnvMap1PosIndex = globalEnvProbes[1];
 	cb.mTemporalAAJitter = temporalAAJitter;
 	cb.mTemporalAAJitterPrev = temporalAAJitterPrev;
 

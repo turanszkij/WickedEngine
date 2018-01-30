@@ -8,7 +8,6 @@
 #include "depthConvertHF.hlsli"
 #include "fogHF.hlsli"
 #include "brdf.hlsli"
-#include "envReflectionHF.hlsli"
 #include "packHF.hlsli"
 #include "lightingHF.hlsli"
 
@@ -173,7 +172,7 @@ inline void ForwardLighting(in float3 N, in float3 V, in float3 P, in float3 f0,
 	float3 R = -reflect(V, N);
 	float f90 = saturate(50.0 * dot(f0, 0.33));
 	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-	specular = max(0, texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, 0), envMapMIP).rgb * F);
+	specular = max(0, EnvironmentReflection_Global(P, R, envMapMIP) * F);
 #endif // DISABLE_ENVMAPS
 
 	[loop]
@@ -258,8 +257,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator]];
 
 		float4x4 decalProjection = MatrixArray[decal.additionalData_index];
-		float3 clipSpace = mul(float4(P, 1), decalProjection).xyz;
-		float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		float3 clipSpacePos = mul(float4(P, 1), decalProjection).xyz;
+		float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		[branch]
 		if (!any(uvw - saturate(uvw)))
 		{
@@ -268,7 +267,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 			float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
 			float4 decalColor = texture_decalatlas.SampleGrad(sampler_objectshader, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
 			// blend out if close to cube Z:
-			float edgeBlend = 1 - pow(saturate(abs(clipSpace.z)), 8);
+			float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 			decalColor.a *= edgeBlend;
 			decalColor *= decal.GetColor();
 			// apply emissive:
@@ -306,28 +305,16 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		ShaderEntityType probe = EntityArray[EntityIndexList[startOffset + iterator]];
 
 		float4x4 probeProjection = MatrixArray[probe.additionalData_index];
-		float3 clipSpace = mul(float4(P, 1), probeProjection).xyz;
-		float3 uvw = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		float3 clipSpacePos = mul(float4(P, 1), probeProjection).xyz;
+		float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		[branch]
 		if (!any(uvw - saturate(uvw)))
 		{
-			// Perform parallax correction of reflection ray (R):
-			float3 RayLS = mul(R, (float3x3)probeProjection);
-			float3 FirstPlaneIntersect = (float3(1, 1, 1) - clipSpace) / RayLS;
-			float3 SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpace) / RayLS;
-			float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
-			float Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
-			float3 IntersectPositionWS = P + R * Distance;
-			float3 R_parallaxCorrected = IntersectPositionWS - probe.positionWS;
-
-			// Sample cubemap texture:
-			float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.shadowBias), envMapMIP).rgb; // shadowBias stores textureIndex here...
-			// blend out if close to any cube edge:
-			float edgeBlend = 1 - pow(saturate(max(abs(clipSpace.x), max(abs(clipSpace.y), abs(clipSpace.z)))), 8);
+			float4 envmapColor = EnvironmentReflection_Local(probe, probeProjection, clipSpacePos, P, R, envMapMIP);
 			// perform manual blending of probes:
 			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-			envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (edgeBlend*envmapColor) + envmapAccumulation.rgb;
-			envmapAccumulation.a = edgeBlend + (1 - edgeBlend) * envmapAccumulation.a;
+			envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+			envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
 			// if the accumulation reached 1, we skip the rest of the probes:
 			iterator = envmapAccumulation.a < 1 ? iterator : envmapCount - 1;
 		}
@@ -335,7 +322,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #endif // DISABLE_LOCALENVPMAPS
 
 	// Apply global envmap where there is no local envmap information:
-	envmapAccumulation.rgb = lerp(texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, 0), envMapMIP).rgb, envmapAccumulation.rgb, envmapAccumulation.a);
+	envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(P, R, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 
 	float f90 = saturate(50.0 * dot(f0, 0.33));
 	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);

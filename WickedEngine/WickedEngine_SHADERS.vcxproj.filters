@@ -76,9 +76,6 @@
     <None Include="brdf.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="envReflectionHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="uvsphere.hlsli">
       <Filter>HF</Filter>
     </None>

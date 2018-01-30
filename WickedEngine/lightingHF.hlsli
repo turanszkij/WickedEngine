@@ -715,4 +715,49 @@ inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, i
 	}
 }
 
+
+// ENVIRONMENT MAPS
+
+
+// P:					pixel world position
+// R:					reflection ray
+// MIP:					mip level to sample
+// return:				color of the environment map (rgb)
+inline float3 EnvironmentReflection_Global(in float3 P, in float3 R, in float MIP)
+{
+	float dist0 = distance(P, g_xFrame_GlobalEnvMap0PosIndex.xyz);
+	float dist1 = distance(P, g_xFrame_GlobalEnvMap1PosIndex.xyz);
+	float3 envCol0 = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, g_xFrame_GlobalEnvMap0PosIndex.w), MIP).rgb;
+	float3 envCol1 = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, g_xFrame_GlobalEnvMap1PosIndex.w), MIP).rgb;
+	static const float blendStrength = 0.05f;
+	float blend = clamp((dist0 - dist1)*blendStrength, -1, 1)*0.5f + 0.5f;
+	return lerp(envCol0, envCol1, blend);
+}
+
+// probe :				the shader entity holding properties
+// probeProjection:		the inverse OBB transform matrix
+// clipSpacePos:		world space pixel position transformed into OBB space by probeProjection matrix
+// P:					pixel world position
+// R:					reflection ray
+// MIP:					mip level to sample
+// return:				color of the environment map (rgb), blend factor of the environment map (a)
+inline float4 EnvironmentReflection_Local(in ShaderEntityType probe, in float4x4 probeProjection, in float3 clipSpacePos, in float3 P, in float3 R, in float MIP)
+{
+	// Perform parallax correction of reflection ray (R) into OBB:
+	float3 RayLS = mul(R, (float3x3)probeProjection);
+	float3 FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
+	float3 SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
+	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+	float Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
+	float3 IntersectPositionWS = P + R * Distance;
+	float3 R_parallaxCorrected = IntersectPositionWS - probe.positionWS;
+
+	// Sample cubemap texture:
+	float3 envmapColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.shadowBias), MIP).rgb; // shadowBias stores textureIndex here...
+	// blend out if close to any cube edge:
+	float edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);
+
+	return float4(envmapColor, edgeBlend);
+}
+
 #endif // _LIGHTING_HF_
