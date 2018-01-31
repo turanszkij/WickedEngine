@@ -14,8 +14,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float roughness = g3.x;
 	float reflectance = g3.y;
 	float metalness = g3.z;
-	//float ao = g3.a;
-	BRDF_HELPER_MAKEINPUTS(color, reflectance, metalness)
+	float3 albedo = ComputeAlbedo(color, metalness, reflectance);
 
 	float  depth = texture_lineardepth.Load(int3(PSIn.pos.xy, 0)).r;
 

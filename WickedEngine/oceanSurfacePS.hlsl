@@ -11,21 +11,15 @@
 float4 main(PSIn input) : SV_TARGET
 {
 	float2 gradient = xGradientMap.Sample(sampler_aniso_wrap, input.uv).xy;
-	float3 N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 
-	float4 baseColor = float4(xOceanWaterColor, 1);
+	float4 color = float4(xOceanWaterColor, 1);
 	float opacity = 1; // keep edge diffuse shading
-	baseColor = DEGAMMA(baseColor);
-	baseColor.a = 1; // do not blend
-	float4 color = baseColor;
-	float3 P = input.pos3D;
-	float3 V = g_xCamera_CamPos - P;
+	color.rgb = DEGAMMA(color.rgb);
+	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	float roughness = 0.001;
-	float reflectance = 0.02;
-	float metalness = 0;
+	Surface surface = CreateSurface(input.pos3D, normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y)), V, color, 0.02, 0, 0.001);
 	float ao = 1;
 	float sss = 0;
 	float2 pixel = input.pos.xy;
@@ -43,21 +37,21 @@ float4 main(PSIn input) : SV_TARGET
 
 	//REFLECTION
 	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
-	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, RefTex + N.xz * 0.04f, 0);
+	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);
 
 	//REFRACTION 
-	float2 perturbatedRefrTexCoords = ScreenCoord.xy + N.xz * 0.04f;
+	float2 perturbatedRefrTexCoords = ScreenCoord.xy + surface.N.xz * 0.04f;
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float mod = saturate(0.05*(refDepth - lineardepth));
-	refractiveColor = lerp(refractiveColor, baseColor.rgb, mod).rgb;
+	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;
 
 	//FRESNEL TERM
-	float NdotV = abs(dot(N, V));
-	float3 fresnelTerm = F_Fresnel(f0, NdotV);
+	float NdotV = abs(dot(surface.N, surface.V));
+	float3 fresnelTerm = F_Fresnel(surface.f0, NdotV);
 	float ramp = pow(abs(1.0f / (1.0f + NdotV)), 16);
 	reflectiveColor.rgb = lerp(float3(0.38f, 0.45f, 0.56f), reflectiveColor.rgb, ramp); // skycolor hack
-	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
+	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 
 	OBJECT_PS_LIGHT_TILED
 

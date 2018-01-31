@@ -104,12 +104,10 @@ inline void SpecularAA(in float3 N, inout float roughness)
 	}
 }
 
-inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in float3 N, in float3 V, in float roughness, in float3 f0)
+inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in Surface surface)
 {
-	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + N.xz*g_xMat_normalMapStrength, 0);
-	float f90 = saturate(50.0 * dot(f0, 0.33));
-	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-	return colorReflection.rgb * F;
+	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + surface.N.xz*g_xMat_normalMapStrength, 0);
+	return colorReflection.rgb * surface.F;
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
@@ -140,39 +138,35 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	UV = finalTexCoords;
 }
 
-inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, in float roughness, inout float3 albedo, inout float4 color)
+inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, in Surface surface, inout float4 color)
 {
 	float2 size;
 	float mipLevels;
 	xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
-	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xWorld_AdvancedRefractions ? roughness * mipLevels : 0));
-	albedo.rgb = lerp(refractiveColor.rgb, albedo.rgb, color.a);
+	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xWorld_AdvancedRefractions ? surface.roughness * mipLevels : 0));
+	surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
 	color.a = 1;
 }
 
-inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
-	inout float3 diffuse, out float3 specular)
-{
-	LightingResult result = DirectionalLight(EntityArray[g_xFrame_SunEntityArrayIndex], N, V, P, roughness, f0);
-	diffuse = result.diffuse;
-	specular = result.specular;
-}
+//inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
+//	inout float3 diffuse, out float3 specular)
+//{
+//	LightingResult result = DirectionalLight(EntityArray[g_xFrame_SunEntityArrayIndex], N, V, P, roughness, f0);
+//	diffuse = result.diffuse;
+//	specular = result.specular;
+//}
 
 
 
-inline void ForwardLighting(in float3 N, in float3 V, in float3 P, in float3 f0, inout float3 albedo, in float roughness,
-	inout float3 diffuse, out float3 specular)
+inline void ForwardLighting(in Surface surface, inout float3 diffuse, out float3 specular)
 {
 	specular = 0;
 	diffuse = 0;
 
 #ifndef DISABLE_ENVMAPS
-	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
-	float3 R = -reflect(V, N);
-	float f90 = saturate(50.0 * dot(f0, 0.33));
-	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-	specular = max(0, EnvironmentReflection_Global(P, R, envMapMIP) * F);
+	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
+	specular = max(0, EnvironmentReflection_Global(surface.P, surface.R, envMapMIP) * surface.F);
 #endif // DISABLE_ENVMAPS
 
 	[loop]
@@ -186,37 +180,37 @@ inline void ForwardLighting(in float3 N, in float3 V, in float3 P, in float3 f0,
 		{
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
-			result = DirectionalLight(light, N, V, P, roughness, f0);
+			result = DirectionalLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_POINTLIGHT:
 		{
-			result = PointLight(light, N, V, P, roughness, f0);
+			result = PointLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
-			result = SpotLight(light, N, V, P, roughness, f0);
+			result = SpotLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPHERELIGHT:
 		{
-			result = SphereLight(light, N, V, P, roughness, f0);
+			result = SphereLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_DISCLIGHT:
 		{
-			result = DiscLight(light, N, V, P, roughness, f0);
+			result = DiscLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_RECTANGLELIGHT:
 		{
-			result = RectangleLight(light, N, V, P, roughness, f0);
+			result = RectangleLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_TUBELIGHT:
 		{
-			result = TubeLight(light, N, V, P, roughness, f0);
+			result = TubeLight(light, surface);
 		}
 		break;
 		}
@@ -227,8 +221,7 @@ inline void ForwardLighting(in float3 N, in float3 V, in float3 P, in float3 f0,
 }
 
 
-inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P, in float3 f0, inout float3 albedo, in float roughness,
-	inout float3 diffuse, out float3 specular)
+inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diffuse, out float3 specular)
 {
 	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
 	uint startOffset = flatten2D(tileIndex, g_xWorld_EntityCullingTileCount.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
@@ -248,8 +241,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #else
 	// decals are enabled, loop through them first:
 	float4 decalAccumulation = 0;
-	float3 P_dx = ddx_coarse(P);
-	float3 P_dy = ddy_coarse(P);
+	float3 P_dx = ddx_coarse(surface.P);
+	float3 P_dy = ddy_coarse(surface.P);
 
 	[loop]
 	for (; iterator < decalCount; ++iterator)
@@ -257,7 +250,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator]];
 
 		float4x4 decalProjection = MatrixArray[decal.additionalData_index];
-		float3 clipSpacePos = mul(float4(P, 1), decalProjection).xyz;
+		float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
 		float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		[branch]
 		if (!any(uvw - saturate(uvw)))
@@ -281,7 +274,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		}
 	}
 
-	albedo.rgb = lerp(albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
+	surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
 #endif // DISABLE_DECALS
 
 
@@ -289,8 +282,7 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	// Apply environment maps:
 
 	float4 envmapAccumulation = 0;
-	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
-	float3 R = -reflect(V, N);
+	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
 
 #ifdef DISABLE_LOCALENVPMAPS
 	// local envmaps are disabled, set iterator to skip:
@@ -305,12 +297,12 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		ShaderEntityType probe = EntityArray[EntityIndexList[startOffset + iterator]];
 
 		float4x4 probeProjection = MatrixArray[probe.additionalData_index];
-		float3 clipSpacePos = mul(float4(P, 1), probeProjection).xyz;
+		float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
 		float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		[branch]
 		if (!any(uvw - saturate(uvw)))
 		{
-			float4 envmapColor = EnvironmentReflection_Local(probe, probeProjection, clipSpacePos, P, R, envMapMIP);
+			float4 envmapColor = EnvironmentReflection_Local(probe, probeProjection, clipSpacePos, surface.P, surface.R, envMapMIP);
 			// perform manual blending of probes:
 			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
 			envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
@@ -322,11 +314,9 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 #endif // DISABLE_LOCALENVPMAPS
 
 	// Apply global envmap where there is no local envmap information:
-	envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(P, R, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+	envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface.P, surface.R, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 
-	float f90 = saturate(50.0 * dot(f0, 0.33));
-	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-	specular += max(0, envmapAccumulation.rgb * F);
+	specular += max(0, envmapAccumulation.rgb * surface.F);
 
 #endif // DISABLE_ENVMAPS
 
@@ -343,37 +333,37 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 		{
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
-			result = DirectionalLight(light, N, V, P, roughness, f0);
+			result = DirectionalLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_POINTLIGHT:
 		{
-			result = PointLight(light, N, V, P, roughness, f0);
+			result = PointLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
-			result = SpotLight(light, N, V, P, roughness, f0);
+			result = SpotLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPHERELIGHT:
 		{
-			result = SphereLight(light, N, V, P, roughness, f0);
+			result = SphereLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_DISCLIGHT:
 		{
-			result = DiscLight(light, N, V, P, roughness, f0);
+			result = DiscLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_RECTANGLELIGHT:
 		{
-			result = RectangleLight(light, N, V, P, roughness, f0);
+			result = RectangleLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_TUBELIGHT:
 		{
-			result = TubeLight(light, N, V, P, roughness, f0);
+			result = TubeLight(light, surface);
 		}
 		break;
 		}
@@ -389,8 +379,8 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 #define OBJECT_PS_MAKE_SIMPLE												\
 	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
-	float4 baseColor = g_xMat_baseColor * float4(input.instanceColor, 1);	\
-	float4 color = baseColor;												\
+	float4 color = g_xMat_baseColor * float4(input.instanceColor, 1) * xBaseColorMap.Sample(sampler_objectshader, UV);	\
+	ALPHATEST(color.a);													\
 	float opacity = color.a;												\
 	float emissive = g_xMat_emissive;										\
 	float2 pixel = input.pos.xy;
@@ -400,17 +390,10 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	OBJECT_PS_MAKE_SIMPLE													\
 	float3 diffuse = 0;														\
 	float3 specular = 0;													\
-	float3 N = normalize(input.nor);										\
-	float3 P = input.pos3D;													\
-	float3 V = g_xCamera_CamPos - P;										\
+	float3 V = g_xCamera_CamPos - input.pos3D;								\
 	float dist = length(V);													\
 	V /= dist;																\
-	float roughness = g_xMat_roughness;										\
-	roughness = saturate(roughness);										\
-	float metalness = g_xMat_metalness;										\
-	metalness = saturate(metalness);										\
-	float reflectance = g_xMat_reflectance;									\
-	reflectance = saturate(reflectance);									\
+	Surface surface = CreateSurface(input.pos3D, normalize(input.nor), V, color, g_xMat_reflectance, g_xMat_metalness, g_xMat_roughness);	\
 	float sss = g_xMat_subsurfaceScattering;								\
 	float3 bumpColor = 0;													\
 	float depth = input.pos.z;												\
@@ -425,52 +408,52 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 
 #define OBJECT_PS_COMPUTETANGENTSPACE										\
 	float3 T, B;															\
-	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
+	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, UV, T, B);
 
 #define OBJECT_PS_SAMPLETEXTURES_SIMPLE										\
-	baseColor *= xBaseColorMap.Sample(sampler_objectshader, UV);			\
-	ALPHATEST(baseColor.a);													\
-	color = baseColor;														\
-	opacity = color.a;														\
+	/*baseColor *= xBaseColorMap.Sample(sampler_objectshader, UV);*/			\
+	/*ALPHATEST(baseColor.a);*/													\
+	/*color = baseColor;*/														\
+	/*opacity = color.a;*/														\
 
 #define OBJECT_PS_SAMPLETEXTURES											\
 	OBJECT_PS_SAMPLETEXTURES_SIMPLE											\
-	roughness *= xRoughnessMap.Sample(sampler_objectshader, UV).r;			\
-	metalness *= xMetalnessMap.Sample(sampler_objectshader, UV).r;			\
-	reflectance *= xReflectanceMap.Sample(sampler_objectshader, UV).r;
+	surface.roughness *= xRoughnessMap.Sample(sampler_objectshader, UV).r;			\
+	surface.metalness *= xMetalnessMap.Sample(sampler_objectshader, UV).r;			\
+	surface.reflectance *= xReflectanceMap.Sample(sampler_objectshader, UV).r;
 
 #define OBJECT_PS_NORMALMAPPING												\
-	NormalMapping(UV, P, N, TBN, bumpColor);
+	NormalMapping(UV, surface.P, surface.N, TBN, bumpColor);
 
 #define OBJECT_PS_PARALLAXOCCLUSIONMAPPING									\
-	ParallaxOcclusionMapping(UV, V, TBN);
+	ParallaxOcclusionMapping(UV, surface.V, TBN);
 
 #define OBJECT_PS_SPECULARANTIALIASING										\
-	SpecularAA(N, roughness);
+	SpecularAA(surface.N, surface.roughness);
 
 #define OBJECT_PS_LIGHT_BEGIN																						\
-	BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
+	//BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
 
 #define OBJECT_PS_REFRACTION																						\
-	Refraction(ScreenCoord, input.nor2D, bumpColor, roughness, albedo, color);
+	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
 
 #define OBJECT_PS_LIGHT_FORWARD																					\
-	ForwardLighting(N, V, P, f0, albedo, roughness, diffuse, specular);
+	ForwardLighting(surface, diffuse, specular);
 
 #define OBJECT_PS_LIGHT_TILED																						\
-	TiledLighting(pixel, N, V, P, f0, albedo, roughness, diffuse, specular);
+	TiledLighting(pixel, surface, diffuse, specular);
 
 #define OBJECT_PS_VOXELRADIANCE																						\
-	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
+	VoxelRadiance(surface, diffuse, specular, ao);
 
 #define OBJECT_PS_LIGHT_END																							\
-	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * albedo + specular;
+	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * surface.albedo + specular;
 
 #define OBJECT_PS_DITHER																							\
 	clip(dither(input.pos.xy) - input.dither);
 
 #define OBJECT_PS_PLANARREFLECTIONS																					\
-	specular = max(specular, PlanarReflection(UV, refUV, N, V, roughness, f0));
+	specular = max(specular, PlanarReflection(UV, refUV, surface));
 
 #define OBJECT_PS_DEGAMMA																							\
 	color = DEGAMMA(color);
@@ -479,23 +462,23 @@ inline void TiledLighting(in float2 pixel, in float3 N, in float3 V, in float3 P
 	color = GAMMA(color);
 
 #define OBJECT_PS_EMISSIVE																							\
-	color.rgb += baseColor.rgb * GetEmissive(emissive);
+	color.rgb += surface.baseColor.rgb * GetEmissive(emissive);
 
 #define OBJECT_PS_FOG																								\
 	color.rgb = applyFog(color.rgb, getFog(dist));
 
 #define OBJECT_PS_OUT_GBUFFER																						\
-	GBUFFEROutputType Out = (GBUFFEROutputType)0;																	\
+	GBUFFEROutputType Out;																	\
 	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
-	Out.g1 = float4(encode(N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
+	Out.g1 = float4(encode(surface.N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
 	Out.g2 = float4(0, 0, sss, emissive);							/*FORMAT_R8G8B8A8_UNORM*/						\
-	Out.g3 = float4(roughness, reflectance, metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
+	Out.g3 = float4(surface.roughness, surface.reflectance, surface.metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
 	return Out;
 
 #define OBJECT_PS_OUT_FORWARD																						\
-	GBUFFEROutputType_Thin Out = (GBUFFEROutputType_Thin)0;															\
+	GBUFFEROutputType_Thin Out;															\
 	Out.g0 = color;													/*FORMAT_R16G16B16_FLOAT*/						\
-	Out.g1 = float4(encode(N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
+	Out.g1 = float4(encode(surface.N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
 	return Out;
 
 #define OBJECT_PS_OUT_FORWARD_SIMPLE																				\

@@ -63,26 +63,27 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 }
 
 
-inline LightingResult DirectionalLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result;
 	float3 lightColor = light.GetColor().rgb*light.energy;
 
 	float3 L = light.directionWS.xyz;
-	BRDF_MAKE(N, L, V);
-	result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
-	result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
+	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-	float3 sh = max(NdotL, 0).xxx;
+	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+	result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+
+	float3 sh = max(surfaceToLight.NdotL, 0).xxx;
 
 	[branch]
 	if (light.additionalData_index >= 0)
 	{
 		// calculate shadow map texcoords:
 		float4 ShPos[3];
-		ShPos[0] = mul(float4(P, 1), MatrixArray[light.additionalData_index + 0]);
-		ShPos[1] = mul(float4(P, 1), MatrixArray[light.additionalData_index + 1]);
-		ShPos[2] = mul(float4(P, 1), MatrixArray[light.additionalData_index + 2]);
+		ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 0]);
+		ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 1]);
+		ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 2]);
 		ShPos[0].xyz /= ShPos[0].w;
 		ShPos[1].xyz /= ShPos[1].w;
 		ShPos[2].xyz /= ShPos[2].w;
@@ -130,11 +131,11 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in float3 N, i
 	result.specular = max(0.0f, result.specular);
 	return result;
 }
-inline LightingResult PointLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult PointLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result = (LightingResult)0;
 
-	float3 L = light.positionWS - P;
+	float3 L = light.positionWS - surface.P;
 	float dist = length(L);
 
 	[branch]
@@ -144,16 +145,17 @@ inline LightingResult PointLight(in ShaderEntityType light, in float3 N, in floa
 
 		float3 lightColor = light.GetColor().rgb*light.energy;
 
-		BRDF_MAKE(N, L, V);
-		result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
-		result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
+		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+		result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+		result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
 		float att = (light.energy * (light.range / (light.range + 1 + dist)));
 		float attenuation = (att * (light.range - dist) / light.range);
 		result.diffuse *= attenuation;
 		result.specular *= attenuation;
 
-		float sh = max(NdotL, 0);
+		float sh = max(surfaceToLight.NdotL, 0);
 #ifndef DISABLE_SHADOWMAPS
 		[branch]
 		if (light.additionalData_index >= 0) {
@@ -169,11 +171,11 @@ inline LightingResult PointLight(in ShaderEntityType light, in float3 N, in floa
 
 	return result;
 }
-inline LightingResult SpotLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result = (LightingResult)0;
 
-	float3 L = light.positionWS - P;
+	float3 L = light.positionWS - surface.P;
 	float dist = length(L);
 
 	[branch]
@@ -189,10 +191,10 @@ inline LightingResult SpotLight(in ShaderEntityType light, in float3 N, in float
 		[branch]
 		if (SpotFactor > spotCutOff)
 		{
+			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-			BRDF_MAKE(N, L, V);
-			result.specular = lightColor * BRDF_SPECULAR(roughness, f0);
-			result.diffuse = lightColor * BRDF_DIFFUSE(roughness);
+			result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+			result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
 			float att = (light.energy * (light.range / (light.range + 1 + dist)));
 			float attenuation = (att * (light.range - dist) / light.range);
@@ -200,11 +202,11 @@ inline LightingResult SpotLight(in ShaderEntityType light, in float3 N, in float
 			result.diffuse *= attenuation;
 			result.specular *= attenuation;
 
-			float3 sh = max(NdotL, 0).xxx;
+			float3 sh = max(surfaceToLight.NdotL, 0).xxx;
 			[branch]
 			if (light.additionalData_index >= 0)
 			{
-				float4 ShPos = mul(float4(P, 1), MatrixArray[light.additionalData_index + 0]);
+				float4 ShPos = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 0]);
 				ShPos.xyz /= ShPos.w;
 				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]
@@ -390,17 +392,17 @@ float illuminanceSphereOrDisk(float cosTheta, float sinSigmaSqr)
 	return max(illuminance, 0.0f);
 }
 
-inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult SphereLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result = (LightingResult)0;
 
-	float3 Lunormalized = light.positionWS - P;
+	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
 	float3 L = Lunormalized / dist;
 
 	float sqrDist = dot(Lunormalized, Lunormalized);
 
-	float cosTheta = clamp(dot(N, L), -0.999, 0.999); // Clamp to avoid edge case 
+	float cosTheta = clamp(dot(surface.N, L), -0.999, 0.999); // Clamp to avoid edge case 
 															// We need to prevent the object penetrating into the surface 
 															// and we must avoid divide by 0, thus the 0.9999f 
 	float sqrLightRadius = light.GetRadius() * light.GetRadius();
@@ -417,8 +419,8 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
-		float3 r = reflect(-V, N);
-		r = getSpecularDominantDirArea(N, r, roughness);
+		float3 r = surface.R;
+		r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
 
 		float3 centerToRay = dot(Lunormalized, r) * r - Lunormalized;
 		float3 closestPoint = Lunormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
@@ -427,8 +429,10 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 
 	float3 lightColor = light.GetColor().rgb*light.energy;
 
-	BRDF_MAKE(N, L, V);
-	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;
+
+	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
 	result.diffuse = lightColor * fLight / PI;
 
 	result.diffuse = max(0.0f, result.diffuse);
@@ -436,11 +440,11 @@ inline LightingResult SphereLight(in ShaderEntityType light, in float3 N, in flo
 
 	return result;
 }
-inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult DiscLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result = (LightingResult)0;
 
-	float3 Lunormalized = light.positionWS - P;
+	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
 	float3 L = Lunormalized / dist;
 
@@ -448,7 +452,7 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 
 	float3 lightPlaneNormal = light.GetFront();
 
-	float cosTheta = clamp(dot(N, L), -0.999, 0.999);
+	float cosTheta = clamp(dot(surface.N, L), -0.999, 0.999);
 	float sqrLightRadius = light.GetRadius() * light.GetRadius();
 	// Do not let the surface penetrate the light 
 	float sinSigmaSqr = sqrLightRadius / (sqrLightRadius + max(sqrLightRadius, sqrDist));
@@ -465,11 +469,11 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
-		float3 r = reflect(-V, N);
-		r = getSpecularDominantDirArea(N, r, roughness);
+		float3 r = surface.R;
+		r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
 
-		float t = Trace_plane(P, r, light.positionWS, lightPlaneNormal);
-		float3 p = P + r*t;
+		float t = Trace_plane(surface.P, r, light.positionWS, lightPlaneNormal);
+		float3 p = surface.P + r*t;
 		float3 centerToRay = p - light.positionWS;
 		float3 closestPoint = Lunormalized + centerToRay * saturate(light.GetRadius() / length(centerToRay));
 		L = normalize(closestPoint);
@@ -477,8 +481,9 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 
 	float3 lightColor = light.GetColor().rgb*light.energy;
 
-	BRDF_MAKE(N, L, V);
-	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;
+	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
 	result.diffuse = lightColor * fLight / PI;
 
 	result.diffuse = max(0.0f, result.diffuse);
@@ -486,12 +491,12 @@ inline LightingResult DiscLight(in ShaderEntityType light, in float3 N, in float
 
 	return result;
 }
-inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult RectangleLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result = (LightingResult)0;
 
 
-	float3 L = light.positionWS - P;
+	float3 L = light.positionWS - surface.P;
 	float dist = length(L);
 	L /= dist;
 
@@ -501,8 +506,8 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 	float3 lightUp = light.GetUp();
 	float lightWidth = light.GetWidth();
 	float lightHeight = light.GetHeight();
-	float3 worldPos = P;
-	float3 worldNormal = N;
+	float3 worldPos = surface.P;
+	float3 worldNormal = surface.N;
 
 
 	float fLight = 0;
@@ -536,10 +541,10 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
-		float3 r = reflect(-V, N);
-		r = getSpecularDominantDirArea(N, r, roughness);
+		float3 r = surface.R;
+		r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
 
-		float traced = Trace_rectangle(P, r, p0, p1, p2, p3);
+		float traced = Trace_rectangle(surface.P, r, p0, p1, p2, p3);
 
 		[branch]
 		if (traced > 0)
@@ -552,7 +557,7 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 			// The trace didn't succeed, so we need to find the closest point to the ray on the rectangle
 
 			// We find the intersection point on the plane of the rectangle
-			float3 tracedPlane = P + r * Trace_plane(P, r, light.positionWS, lightPlaneNormal);
+			float3 tracedPlane = surface.P + r * Trace_plane(surface.P, r, light.positionWS, lightPlaneNormal);
 
 			// Then find the closest point along the edges of the rectangle (edge = segment)
 			float3 PC[4] = {
@@ -580,15 +585,16 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 				}
 			}
 
-			L = min - P;
+			L = min - surface.P;
 		}
 		L = normalize(L); // TODO: Is it necessary?
 	}
 
 	float3 lightColor = light.GetColor().rgb*light.energy;
 
-	BRDF_MAKE(N, L, V);
-	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;
+	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
 	result.diffuse = lightColor * fLight / PI;
 
 	result.diffuse = max(0.0f, result.diffuse);
@@ -596,11 +602,11 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in float3 N, in 
 
 	return result;
 }
-inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float3 V, in float3 P, in float roughness, in float3 f0)
+inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result = (LightingResult)0;
 
-	float3 Lunormalized = light.positionWS - P;
+	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
 	float3 L = Lunormalized / dist;
 
@@ -608,8 +614,8 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 	float3 lightLeft = light.GetRight();
 	float lightWidth = light.GetWidth();
-	float3 worldPos = P;
-	float3 worldNormal = N;
+	float3 worldPos = surface.P;
+	float3 worldNormal = surface.N;
 
 
 	float3 P0 = light.positionWS - lightLeft*lightWidth*0.5f;
@@ -659,12 +665,12 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 	// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
 	{
-		float3 r = reflect(-V, N);
-		r = getSpecularDominantDirArea(N, r, roughness);
+		float3 r = surface.R;
+		r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
 
 		// First, the closest point to the ray on the segment
-		float3 L0 = P0 - P;
-		float3 L1 = P1 - P;
+		float3 L0 = P0 - surface.P;
+		float3 L1 = P1 - surface.P;
 		float3 Ld = L1 - L0;
 
 		float t = dot(r, L0) * dot(r, Ld) - dot(L0, Ld);
@@ -680,8 +686,9 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 	float3 lightColor = light.GetColor().rgb*light.energy;
 
-	BRDF_MAKE(N, L, V);
-	result.specular = lightColor * BRDF_SPECULAR(roughness, f0) * fLight;
+	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
 	result.diffuse = lightColor * fLight / PI;
 
 	result.diffuse = max(0.0f, result.diffuse);
@@ -693,21 +700,19 @@ inline LightingResult TubeLight(in ShaderEntityType light, in float3 N, in float
 
 // VOXEL RADIANCE
 
-inline void VoxelRadiance(in float3 N, in float3 V, in float3 P, in float3 f0, in float roughness, inout float3 diffuse, inout float3 specular, inout float ao)
+inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3 specular, inout float ao)
 {
 	[branch]if (g_xWorld_VoxelRadianceDataRes != 0)
 	{
-		float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
+		float3 diff = (surface.P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
 		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		diff = abs(diff);
 		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
 
-		float4 radiance = ConeTraceRadiance(texture_voxelradiance, uvw, N);
-		float4 reflection = ConeTraceReflection(texture_voxelradiance, uvw, N, V, roughness);
+		float4 radiance = ConeTraceRadiance(texture_voxelradiance, uvw, surface.N);
+		float4 reflection = ConeTraceReflection(texture_voxelradiance, uvw, surface.N, surface.V, surface.roughness);
 
-		float f90 = saturate(50.0 * dot(f0, 0.33));
-		float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-		reflection.rgb *= F;
+		reflection.rgb *= surface.F;
 
 		diffuse += lerp(radiance.rgb, 0, blend);
 		specular = lerp(lerp(reflection.rgb, specular, blend), specular, (1 - reflection.a));

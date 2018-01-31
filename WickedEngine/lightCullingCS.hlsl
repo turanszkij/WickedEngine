@@ -472,15 +472,12 @@ void main(ComputeShaderInput IN)
 	float reflectance = g3.y;
 	float metalness = g3.z;
 	float ao = g3.w;
-	BRDF_HELPER_MAKEINPUTS(baseColor, reflectance, metalness);
 	float3 P = getPosition((float2)pixel * g_xWorld_InternalResolution_Inverse, depth);
 	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
+	Surface surface = CreateSurface(P, N, V, baseColor, reflectance, metalness, roughness);
 
 	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
-	float3 R = -reflect(V, N);
-	float f90 = saturate(50.0 * dot(f0, 0.33));
-	float3 F = F_Schlick(f0, f90, abs(dot(N, V)) + 1e-5f);
-	specular = max(0, EnvironmentReflection_Global(P, R, envMapMIP) * F);
+	specular = max(0, EnvironmentReflection_Global(surface.P, surface.R, envMapMIP) * surface.F);
 
 	[loop]
 	for (uint li = 0; li < o_ArrayLength; ++li)
@@ -494,37 +491,37 @@ void main(ComputeShaderInput IN)
 		{
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
-			result = DirectionalLight(light, N, V, P, roughness, f0);
+			result = DirectionalLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_POINTLIGHT:
 		{
-			result = PointLight(light, N, V, P, roughness, f0);
+			result = PointLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
-			result = SpotLight(light, N, V, P, roughness, f0);
+			result = SpotLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPHERELIGHT:
 		{
-			result = SphereLight(light, N, V, P, roughness, f0);
+			result = SphereLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_DISCLIGHT:
 		{
-			result = DiscLight(light, N, V, P, roughness, f0);
+			result = DiscLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_RECTANGLELIGHT:
 		{
-			result = RectangleLight(light, N, V, P, roughness, f0);
+			result = RectangleLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_TUBELIGHT:
 		{
-			result = TubeLight(light, N, V, P, roughness, f0);
+			result = TubeLight(light, surface);
 		}
 		break;
 		}
@@ -533,7 +530,7 @@ void main(ComputeShaderInput IN)
 		specular += max(0.0f, result.specular);
 	}
 
-	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
+	VoxelRadiance(surface, diffuse, specular, ao);
 
 	deferred_Diffuse[pixel] = float4(diffuse, ao);
 	deferred_Specular[pixel] = float4(specular, 1);

@@ -9,21 +9,15 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 	clip(dither(input.pos.xy) - input.fade);
 #endif
 
-	float4 baseColor = texture_0.Sample(sampler_linear_clamp, input.tex);
-	ALPHATEST(baseColor.a)
+	float4 color = float4(texture_0.Sample(sampler_linear_clamp, input.tex).rgb, 1);
+	ALPHATEST(color.a)
 	float opacity = 1; // keep edge diffuse shading
-	baseColor = DEGAMMA(baseColor);
-	baseColor.a = 1; // do not blend
-	float4 color = baseColor;
-	float3 P = input.pos3D;
-	float3 V = g_xCamera_CamPos - P;
+	color.rgb = DEGAMMA(color.rgb);
+	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	float3 N = input.nor;
-	float roughness = 1;
-	float reflectance = 0;
-	float metalness = 0;
+	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 0, 0, 1);
 	float ao = 1;
 	float sss = 0;
 	float2 pixel = input.pos.xy;

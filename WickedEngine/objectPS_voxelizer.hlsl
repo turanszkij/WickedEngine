@@ -125,7 +125,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 
 		color.rgb *= diffuse + GetAmbientColor(); // should ambient light bounce?
 		
-		OBJECT_PS_EMISSIVE
+		color.rgb += color.rgb * GetEmissive(emissive);
 
 		uint color_encoded = EncodeColor(color);
 		uint normal_encoded = EncodeNormal(N);

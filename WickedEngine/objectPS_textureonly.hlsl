@@ -12,7 +12,7 @@ float4 main(PixelInputType_Simple input) : SV_TARGET
 
 	OBJECT_PS_DEGAMMA
 
-	OBJECT_PS_EMISSIVE
+	color.rgb += color.rgb * GetEmissive(emissive);
 
 	OBJECT_PS_OUT_FORWARD_SIMPLE
 }

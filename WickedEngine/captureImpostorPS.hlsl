@@ -23,10 +23,10 @@ ImpostorOut main(PixelInputType input)
 
 	ImpostorOut Out = (ImpostorOut)0;
 	Out.color = color;
-	Out.normal = float4(mul(N, transpose(TBN)), 1);
-	Out.roughness = roughness;
-	Out.reflectance = reflectance;
-	Out.metalness = metalness;
+	Out.normal = float4(mul(surface.N, transpose(TBN)), 1);
+	Out.roughness = surface.roughness;
+	Out.reflectance = surface.reflectance;
+	Out.metalness = surface.metalness;
 	return Out;
 }
 

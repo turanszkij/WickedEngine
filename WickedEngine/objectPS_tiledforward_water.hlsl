@@ -27,7 +27,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader,UV + g_xMat_texMulAdd.zw).rg - 1.0f;
 	bumpColor2 = xWaterRipples.Sample(sampler_objectshader,ScreenCoord).rg;
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2,1)  * g_xMat_refractionIndex;
-	N = normalize(lerp(N, mul(normalize(bumpColor), TBN), g_xMat_normalMapStrength));
+	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), g_xMat_normalMapStrength));
 	bumpColor *= g_xMat_normalMapStrength;
 
 	//REFLECTION
@@ -40,12 +40,11 @@ float4 main(PixelInputType input) : SV_TARGET
 	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float mod = saturate(0.05*(refDepth - lineardepth));
-	refractiveColor = lerp(refractiveColor, baseColor.rgb, mod).rgb;
+	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;
 
 	//FRESNEL TERM
-	float NdotV = abs(dot(N, V)) + 1e-5f;
-	float3 fresnelTerm = F_Fresnel(f0, NdotV);
-	albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
+	float3 fresnelTerm = F_Fresnel(surface.f0, surface.NdotV);
+	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 
 	OBJECT_PS_LIGHT_TILED
 

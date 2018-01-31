@@ -8,21 +8,16 @@
 [earlydepthstencil]
 GBUFFEROutputType_Thin main(VertexToPixel input)
 {
-	float4 baseColor = texture_0.Sample(sampler_linear_clamp, input.tex);
-	baseColor.a *= 1.0 - input.fade;
-	clip(baseColor.a - 1.0f / 256.0f); // cancel heaviest overdraw for the alpha composition effect
+	float4 color = texture_0.Sample(sampler_linear_clamp, input.tex);
+	color.a *= 1.0 - input.fade;
+	clip(color.a - 1.0f / 256.0f); // cancel heaviest overdraw for the alpha composition effect
 	float opacity = 1;
-	baseColor = DEGAMMA(baseColor);
-	float4 color = baseColor;
-	float3 P = input.pos3D;
-	float3 V = g_xCamera_CamPos - P;
+	color = DEGAMMA(color);
+	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	float3 N = input.nor;
-	float roughness = 1;
-	float reflectance = 0;
-	float metalness = 0;
+	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 0, 0, 1);
 	float ao = 1;
 	float sss = 0;
 	float2 pixel = input.pos.xy;
