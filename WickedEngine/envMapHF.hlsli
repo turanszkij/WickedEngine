@@ -3,7 +3,7 @@
 
 #include "globals.hlsli"
 
-struct VSOut
+struct VSOut_EnvmapRendering
 {
 	float4 pos : SV_Position;
 	float3 nor : NORMAL;
@@ -12,7 +12,7 @@ struct VSOut
 	float  ao : AMBIENT_OCCLUSION;
 };
 
-struct PSIn
+struct PSIn_EnvmapRendering
 {
 	float4 pos : SV_Position;
 	float3 pos3D : WORLDPOSITION;
@@ -24,13 +24,13 @@ struct PSIn
 };
 
 
-struct VSOut_Sky
+struct VSOut_Sky_EnvmapRendering
 {
 	float4 pos : SV_POSITION;
 	float3 nor : NORMAL;
 };
 
-struct PSIn_Sky
+struct PSIn_Sky_EnvmapRendering
 {
 	float4 pos : SV_POSITION;
 	float3 nor : NORMAL;

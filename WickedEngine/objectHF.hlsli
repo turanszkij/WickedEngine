@@ -1,7 +1,7 @@
 #ifndef _OBJECTSHADER_HF_
 #define _OBJECTSHADER_HF_
 
-#if !(defined(TILEDFORWARD) && !defined(TRANSPARENT))
+#if defined(TILEDFORWARD) && !defined(TRANSPARENT)
 #define DISABLE_ALPHATEST
 #endif
 
@@ -164,7 +164,7 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	UV = finalTexCoords;
 }
 
-inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, in Surface surface, inout float4 color)
+inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout Surface surface, inout float4 color)
 {
 	float2 size;
 	float mipLevels;
@@ -329,13 +329,16 @@ inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diff
 			envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
 			envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
 			// if the accumulation reached 1, we skip the rest of the probes:
-			iterator = envmapAccumulation.a < 1 ? iterator : envmapCount - 1;
+			iterator = envmapAccumulation.a < 1 ? iterator : envmapArrayEnd - 1;
 		}
 	}
 #endif // DISABLE_LOCALENVPMAPS
 
 	// Apply global envmap where there is no local envmap information:
-	envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface.P, surface.R, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+	if (envmapAccumulation.a < 0.99f)
+	{
+		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface.P, surface.R, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+	}
 
 	specular += max(0, envmapAccumulation.rgb * surface.F);
 
@@ -443,7 +446,7 @@ float4 main(PIXELINPUT input) : SV_TARGET
 #elif defined(TRANSPARENT)
 float4 main(PIXELINPUT input) : SV_TARGET
 #elif defined(ENVMAPRENDERING)
-float4 main(PSIn input) : SV_TARGET
+float4 main(PSIn_EnvmapRendering input) : SV_TARGET
 #elif defined(DEFERRED)
 GBUFFEROutputType main(PIXELINPUT input)
 #elif defined(FORWARD)
@@ -594,7 +597,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif
 
 
-	// return point:
+	// end point:
 #if defined(TRANSPARENT) || defined(TEXTUREONLY) || defined(ENVMAPRENDERING)
 	return color;
 #else
@@ -611,96 +614,5 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // COMPILE_OBJECTSHADER_PS
 
 
-
-//// MACROS
-//////////////
-//
-//#define OBJECT_PS_MAKE_SIMPLE												\
-//	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
-//	float4 color = g_xMat_baseColor * float4(input.instanceColor, 1) * xBaseColorMap.Sample(sampler_objectshader, UV);	\
-//	color.rgb = DEGAMMA(color.rgb);											\
-//	ALPHATEST(color.a);														\
-//	float opacity = color.a;												\
-//	float emissive = g_xMat_emissive;										\
-//	float2 pixel = input.pos.xy;
-//
-//
-//#define OBJECT_PS_MAKE_COMMON												\
-//	OBJECT_PS_MAKE_SIMPLE													\
-//	float3 diffuse = 0;														\
-//	float3 specular = 0;													\
-//	float3 V = g_xCamera_CamPos - input.pos3D;								\
-//	float dist = length(V);													\
-//	V /= dist;																\
-//	Surface surface = CreateSurface(input.pos3D, normalize(input.nor), V, color,	\
-//		g_xMat_reflectance * xReflectanceMap.Sample(sampler_objectshader, UV).r,	\
-//		g_xMat_metalness * xMetalnessMap.Sample(sampler_objectshader, UV).r,		\
-//		g_xMat_roughness * xRoughnessMap.Sample(sampler_objectshader, UV).r,		\
-//		emissive, g_xMat_subsurfaceScattering);										\
-//	float3 bumpColor = 0;													\
-//	float depth = input.pos.z;												\
-//	float ao = 1;
-//
-//#define OBJECT_PS_MAKE																								\
-//	OBJECT_PS_MAKE_COMMON																							\
-//	float lineardepth = input.pos2D.w;																				\
-//	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;\
-//	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w * 0.5f + 0.5f;								\
-//	float2 velocity = ((input.pos2DPrev.xy/input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy/input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
-//
-//#define OBJECT_PS_COMPUTETANGENTSPACE										\
-//	float3 T, B;															\
-//	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, UV, T, B);
-//
-//#define OBJECT_PS_NORMALMAPPING												\
-//	NormalMapping(UV, surface.P, surface.N, TBN, bumpColor);				\
-//	surface.Update();
-//
-//#define OBJECT_PS_PARALLAXOCCLUSIONMAPPING									\
-//	ParallaxOcclusionMapping(UV, surface.V, TBN);
-//
-//#define OBJECT_PS_SPECULARANTIALIASING										\
-//	SpecularAA(surface.N, surface.roughness);
-//
-//#define OBJECT_PS_REFRACTION																						\
-//	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
-//
-//#define OBJECT_PS_LIGHT_FORWARD																						\
-//	ForwardLighting(surface, diffuse, specular);
-//
-//#define OBJECT_PS_LIGHT_TILED																						\
-//	TiledLighting(pixel, surface, diffuse, specular);
-//
-//#define OBJECT_PS_VOXELRADIANCE																						\
-//	VoxelRadiance(surface, diffuse, specular, ao);
-//
-//#define OBJECT_PS_LIGHT_END																							\
-//	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * surface.albedo + specular;
-//
-//#define OBJECT_PS_DITHER																							\
-//	clip(dither(input.pos.xy) - input.dither);
-//
-//#define OBJECT_PS_PLANARREFLECTIONS																					\
-//	specular = max(specular, PlanarReflection(UV, refUV, surface));
-//
-//#define OBJECT_PS_FOG																								\
-//	color.rgb = applyFog(color.rgb, getFog(dist));
-//
-//#define OBJECT_PS_OUT_GBUFFER																						\
-//	GBUFFEROutputType Out;																							\
-//	Out.g0 = float4(color.rgb, 1);														/*FORMAT_R8G8B8A8_UNORM*/	\
-//	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/	\
-//	Out.g2 = float4(0, 0, surface.sss, surface.emissive);								/*FORMAT_R8G8B8A8_UNORM*/	\
-//	Out.g3 = float4(surface.roughness, surface.reflectance, surface.metalness, ao);		/*FORMAT_R8G8B8A8_UNORM*/	\
-//	return Out;
-//
-//#define OBJECT_PS_OUT_FORWARD																						\
-//	GBUFFEROutputType_Thin Out;																						\
-//	Out.g0 = color;																		/*FORMAT_R16G16B16_FLOAT*/	\
-//	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/	\
-//	return Out;
-//
-//#define OBJECT_PS_OUT_FORWARD_SIMPLE																				\
-//	return color;
 
 #endif // _OBJECTSHADER_HF_
