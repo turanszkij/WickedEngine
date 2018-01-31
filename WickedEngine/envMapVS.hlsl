@@ -13,6 +13,7 @@ VSOut_EnvmapRendering main(Input_Object_POS_TEX input)
 	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
 	Out.tex = surface.uv;
 	Out.instanceColor = input.instance.color_dither.rgb;
+	Out.ao = 1;
 
 	return Out;
 }
