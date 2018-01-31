@@ -26,11 +26,11 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 	float3 specular = 0;
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
-	OBJECT_PS_LIGHT_FORWARD
+	ForwardLighting(surface, diffuse, specular);
 
-	OBJECT_PS_LIGHT_END
+	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
 
-	OBJECT_PS_FOG
+	ApplyFog(dist, color);
 
-	OBJECT_PS_OUT_FORWARD
+	return CreateGbuffer_Thin(color, surface, velocity);
 }

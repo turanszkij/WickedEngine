@@ -3,6 +3,7 @@
 #include "reconstructPositionHF.hlsli"
 #include "brdf.hlsli"
 #include "packHF.hlsli"
+#include "objectHF.hlsli"
 
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
@@ -25,8 +26,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	color.rgb = (GetAmbientColor() * ao * ssao + diffuse.rgb) * albedo + specular.rgb;
 	color.rgb += color.rgb * GetEmissive(emissive);
 
-	float fog = getFog((depth));
-	color.rgb = applyFog(color.rgb,fog);
+	ApplyFog(depth, color);
 
 	return color;
 }

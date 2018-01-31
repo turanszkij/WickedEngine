@@ -11,18 +11,25 @@ struct ImpostorOut
 
 ImpostorOut main(PixelInputType input)
 {
-	OBJECT_PS_MAKE_COMMON
+	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
 
-	OBJECT_PS_COMPUTETANGENTSPACE
+	float3 N = normalize(input.nor);
+	float3 P = input.pos3D;
 
-	OBJECT_PS_NORMALMAPPING
+	float3 T, B;
+	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
+
+	float4 color = g_xMat_baseColor * float4(input.instanceColor, 1) * xBaseColorMap.Sample(sampler_objectshader, UV);
+
+	float3 bumpColor;
+	NormalMapping(UV, P, N, TBN, bumpColor);
 
 	ImpostorOut Out = (ImpostorOut)0;
 	Out.color = color;
-	Out.normal = float4(mul(surface.N, transpose(TBN)), 1);
-	Out.roughness = surface.roughness;
-	Out.reflectance = surface.reflectance;
-	Out.metalness = surface.metalness;
+	Out.normal = float4(mul(N, transpose(TBN)), 1);
+	Out.roughness = g_xMat_roughness * xRoughnessMap.Sample(sampler_objectshader, UV).r;
+	Out.reflectance = g_xMat_reflectance * xReflectanceMap.Sample(sampler_objectshader, UV).r;
+	Out.metalness = g_xMat_metalness * xMetalnessMap.Sample(sampler_objectshader, UV).r;
 	return Out;
 }
 

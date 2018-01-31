@@ -11,9 +11,16 @@ struct VertextoPixel
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	OBJECT_PS_DITHER
+	float2 pixel = input.pos.xy;
 
-	OBJECT_PS_MAKE_SIMPLE
+	clip(dither(pixel) - input.dither);
+
+	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
+
+	float4 color = g_xMat_baseColor * float4(input.instanceColor, 1) * xBaseColorMap.Sample(sampler_objectshader, UV);
+	color.rgb = DEGAMMA(color.rgb);
+	ALPHATEST(color.a);
+	float opacity = color.a;
 
 	// Water does not generate shadows to not mess up the smooth falloff on geometry intersections:
 	//  This could be resolved if this shader could sample depth, but the depthbuffer is currently bound
@@ -34,5 +41,5 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	color.a = 1 - saturate(abs(dot(bumpColor, float3(0, 0, 1))));
 
-	OBJECT_PS_OUT_FORWARD_SIMPLE
+	return color;
 }

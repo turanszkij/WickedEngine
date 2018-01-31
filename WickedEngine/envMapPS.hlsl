@@ -1,17 +1,7 @@
 #define DISABLE_SHADOWMAPS
+#define COMPILE_OBJECTSHADER_PS
+#define ENVMAPRENDERING
+#define FORWARD
 #include "envMapHF.hlsli"
 #include "objectHF.hlsli"
 
-
-float4 main(PSIn input) : SV_TARGET
-{
-	OBJECT_PS_MAKE_COMMON
-
-	OBJECT_PS_LIGHT_FORWARD
-
-	OBJECT_PS_LIGHT_END
-
-	OBJECT_PS_FOG
-
-	OBJECT_PS_OUT_FORWARD_SIMPLE
-}
