@@ -11,12 +11,6 @@ float4 main(PixelInputType input) : SV_TARGET
 
 	OBJECT_PS_COMPUTETANGENTSPACE
 
-	OBJECT_PS_SAMPLETEXTURES
-
-	OBJECT_PS_DEGAMMA
-
-	OBJECT_PS_LIGHT_BEGIN
-
 	color.a = 1;
 
 	//NORMALMAP
@@ -49,8 +43,6 @@ float4 main(PixelInputType input) : SV_TARGET
 	OBJECT_PS_LIGHT_TILED
 
 	OBJECT_PS_LIGHT_END
-
-	OBJECT_PS_EMISSIVE
 
 	//SOFT EDGE
 	float fade = saturate(0.3 * abs(refDepth - lineardepth));

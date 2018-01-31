@@ -15,10 +15,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	OBJECT_PS_MAKE_SIMPLE
 
-	OBJECT_PS_SAMPLETEXTURES_SIMPLE
-
-	OBJECT_PS_DEGAMMA
-
 	// Water does not generate shadows to not mess up the smooth falloff on geometry intersections:
 	//  This could be resolved if this shader could sample depth, but the depthbuffer is currently bound
 	//  so leave it at this for the moment

@@ -26,8 +26,6 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 	float3 specular = 0;
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
-	OBJECT_PS_LIGHT_BEGIN
-
 	OBJECT_PS_LIGHT_FORWARD
 
 	OBJECT_PS_LIGHT_END

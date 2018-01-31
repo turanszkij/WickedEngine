@@ -33,8 +33,6 @@ float4 main(PSIn input) : SV_TARGET
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w * 0.5f + 0.5f;
 
-	OBJECT_PS_LIGHT_BEGIN
-
 	//REFLECTION
 	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
 	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);

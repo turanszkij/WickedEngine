@@ -62,25 +62,6 @@ float D_GGX(float NdotH, float m)
 
 
 
-
-
-
-struct Surface
-{
-	float3 P;				// world space position
-	float3 N;				// world space normal
-	float3 V;				// world space view vector
-	float4 baseColor;		// base color [0,1] (rgba)
-	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
-	float metalness;		// metalness [0:dielectric -> 1:metal]
-	float roughness;		// roughness: [0:smooth -> 1:rough]
-
-	float NdotV;			// cos(angle between normal and view vector)
-	float3 f0;				// fresnel value (rgb)
-	float3 albedo;			// diffuse light absorbtion value (rgb)
-	float3 R;				// reflection vector
-	float3 F;				// fresnel term computed from f0, N and V
-};
 float3 ComputeAlbedo(in float4 baseColor, in float reflectance, in float metalness)
 {
 	return lerp(lerp(baseColor.rgb, float3(0, 0, 0), reflectance), float3(0, 0, 0), metalness);
@@ -89,7 +70,40 @@ float3 ComputeF0(in float4 baseColor, in float reflectance, in float metalness)
 {
 	return lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
 }
-Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 baseColor, in float reflectance, in float metalness, in float roughness)
+
+
+
+struct Surface
+{
+	float3 P;				// world space position
+	float3 N;				// world space normal
+	float3 V;				// world space view vector
+	float4 baseColor;		// base color [0 -> 1] (rgba)
+	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
+	float metalness;		// metalness [0:dielectric -> 1:metal]
+	float roughness;		// roughness: [0:smooth -> 1:rough]
+	float emissive;			// light emission [0 -> 1]
+	float sss;				// subsurface scattering [0 -> 1]
+
+	float NdotV;			// cos(angle between normal and view vector)
+	float3 f0;				// fresnel value (rgb)
+	float3 albedo;			// diffuse light absorbtion value (rgb)
+	float3 R;				// reflection vector
+	float3 F;				// fresnel term computed from f0, N and V
+
+	inline void Update()
+	{
+		NdotV = abs(dot(N, V)) + 1e-5f;
+
+		albedo = ComputeAlbedo(baseColor, reflectance, metalness);
+		f0 = ComputeF0(baseColor, reflectance, metalness);
+
+		R = -reflect(V, N);
+		float f90 = saturate(50.0 * dot(f0, 0.33));
+		F = F_Schlick(f0, f90, NdotV);
+	}
+};
+inline Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 baseColor, in float reflectance, in float metalness, in float roughness, in float emissive = 0, in float sss = 0)
 {
 	Surface surface;
 
@@ -100,15 +114,10 @@ Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 baseColor
 	surface.reflectance = reflectance;
 	surface.metalness = metalness;
 	surface.roughness = roughness;
+	surface.emissive = emissive;
+	surface.sss = sss;
 
-	surface.NdotV = abs(dot(N, V)) + 1e-5f;
-
-	surface.albedo = ComputeAlbedo(baseColor, reflectance, metalness);
-	surface.f0 = ComputeF0(baseColor, reflectance, metalness);
-
-	surface.R = -reflect(V, N);
-	float f90 = saturate(50.0 * dot(surface.f0, 0.33));
-	surface.F = F_Schlick(surface.f0, f90, surface.NdotV);
+	surface.Update();
 
 	return surface;
 }
@@ -121,7 +130,7 @@ struct SurfaceToLight
 	float HdotV;			// cos(angle between H and V) = HdotL = cos(angle between H and L)
 	float NdotH;			// cos(angle between N and H)
 };
-SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
+inline SurfaceToLight CreateSurfaceToLight(in Surface surface, in float3 L)
 {
 	SurfaceToLight surfaceToLight;
 
@@ -150,52 +159,5 @@ float BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 	float Fd = Fr_DisneyDiffuse(surface.NdotV, surfaceToLight.NdotL, surfaceToLight.HdotV, surface.roughness) / PI;
 	return Fd;
 }
-
-//float3 GetSpecular(float NdotV, float NdotL, float LdotH, float NdotH, float roughness, float3 f0)
-//{
-//	float f90 = saturate(50.0 * dot(f0, 0.33));
-//	float3 F = F_Schlick(f0, f90, LdotH);
-//	float Vis = V_SmithGGXCorrelated(NdotV, NdotL, roughness);
-//	float D = D_GGX(NdotH, roughness);
-//	float3 Fr = D * F * Vis / PI;//
-//	return Fr;
-//}
-//float GetDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughness)
-//{
-//	float Fd = Fr_DisneyDiffuse(NdotV, NdotL, LdotH, linearRoughness) / PI;//	
-//	return Fd;
-//}
-
-//// N:	float3 normal
-//// L:	float3 light vector
-//// V:	float3 view vector
-//#define BRDF_MAKE( N, L, V )								\
-//	const float3	H = normalize(L + V);			  		\
-//	const float		VdotN = abs(dot(N, V)) + 1e-5f;			\
-//	const float		LdotN = saturate(dot(L, N));  			\
-//	const float		HdotV = saturate(dot(H, V));			\
-//	const float		HdotN = saturate(dot(H, N)); 			\
-//	const float		NdotV = VdotN;					  		\
-//	const float		NdotL = LdotN;					  		\
-//	const float		VdotH = HdotV;					  		\
-//	const float		NdotH = HdotN;					  		\
-//	const float		LdotH = HdotV;					  		\
-//	const float		HdotL = LdotH;
-//
-//// ROUGHNESS:	float surface roughness
-//// F0:			float3 surface specular color (fresnel f0)
-//#define BRDF_SPECULAR( ROUGHNESS, F0 )					\
-//	GetSpecular(NdotV, NdotL, LdotH, NdotH, ROUGHNESS, F0)
-//
-//// ROUGHNESS:		float surface roughness
-//#define BRDF_DIFFUSE( ROUGHNESS )							\
-//	GetDiffuse(NdotV, NdotL, LdotH, ROUGHNESS)
-//
-//// BASECOLOR:	float4 surface color
-//// REFLECTANCE:	float surface reflectance value
-//// METALNESS:	float surface metalness value
-//#define BRDF_HELPER_MAKEINPUTS( BASECOLOR, REFLECTANCE, METALNESS )									\
-//	float3 albedo = lerp(lerp(BASECOLOR.rgb, float3(0,0,0), REFLECTANCE), float3(0,0,0), METALNESS);\
-//	float3 f0 = lerp(lerp(float3(0,0,0), float3(1,1,1), REFLECTANCE), BASECOLOR.rgb, METALNESS);
 
 #endif // _BRDF_HF_

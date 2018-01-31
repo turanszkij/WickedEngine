@@ -149,20 +149,13 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	color.a = 1;
 }
 
-//inline void DirectionalLight(in float3 N, in float3 V, in float3 P, in float3 f0, in float3 albedo, in float roughness,
-//	inout float3 diffuse, out float3 specular)
-//{
-//	LightingResult result = DirectionalLight(EntityArray[g_xFrame_SunEntityArrayIndex], N, V, P, roughness, f0);
-//	diffuse = result.diffuse;
-//	specular = result.specular;
-//}
-
-
 
 inline void ForwardLighting(in Surface surface, inout float3 diffuse, out float3 specular)
 {
 	specular = 0;
 	diffuse = 0;
+
+	specular += surface.baseColor.rgb * GetEmissive(surface.emissive);
 
 #ifndef DISABLE_ENVMAPS
 	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
@@ -234,6 +227,8 @@ inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diff
 
 	specular = 0;
 	diffuse = 0;
+
+	specular += surface.baseColor.rgb * GetEmissive(surface.emissive);
 
 #ifdef DISABLE_DECALS
 	// decals are disabled, set the iterator to skip decals:
@@ -380,7 +375,8 @@ inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diff
 #define OBJECT_PS_MAKE_SIMPLE												\
 	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;		\
 	float4 color = g_xMat_baseColor * float4(input.instanceColor, 1) * xBaseColorMap.Sample(sampler_objectshader, UV);	\
-	ALPHATEST(color.a);													\
+	color.rgb = DEGAMMA(color.rgb);											\
+	ALPHATEST(color.a);														\
 	float opacity = color.a;												\
 	float emissive = g_xMat_emissive;										\
 	float2 pixel = input.pos.xy;
@@ -393,8 +389,11 @@ inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diff
 	float3 V = g_xCamera_CamPos - input.pos3D;								\
 	float dist = length(V);													\
 	V /= dist;																\
-	Surface surface = CreateSurface(input.pos3D, normalize(input.nor), V, color, g_xMat_reflectance, g_xMat_metalness, g_xMat_roughness);	\
-	float sss = g_xMat_subsurfaceScattering;								\
+	Surface surface = CreateSurface(input.pos3D, normalize(input.nor), V, color,	\
+		g_xMat_reflectance * xReflectanceMap.Sample(sampler_objectshader, UV).r,	\
+		g_xMat_metalness * xMetalnessMap.Sample(sampler_objectshader, UV).r,		\
+		g_xMat_roughness * xRoughnessMap.Sample(sampler_objectshader, UV).r,		\
+		emissive, g_xMat_subsurfaceScattering);										\
 	float3 bumpColor = 0;													\
 	float depth = input.pos.z;												\
 	float ao = 1;
@@ -410,20 +409,9 @@ inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diff
 	float3 T, B;															\
 	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, UV, T, B);
 
-#define OBJECT_PS_SAMPLETEXTURES_SIMPLE										\
-	/*baseColor *= xBaseColorMap.Sample(sampler_objectshader, UV);*/			\
-	/*ALPHATEST(baseColor.a);*/													\
-	/*color = baseColor;*/														\
-	/*opacity = color.a;*/														\
-
-#define OBJECT_PS_SAMPLETEXTURES											\
-	OBJECT_PS_SAMPLETEXTURES_SIMPLE											\
-	surface.roughness *= xRoughnessMap.Sample(sampler_objectshader, UV).r;			\
-	surface.metalness *= xMetalnessMap.Sample(sampler_objectshader, UV).r;			\
-	surface.reflectance *= xReflectanceMap.Sample(sampler_objectshader, UV).r;
-
 #define OBJECT_PS_NORMALMAPPING												\
-	NormalMapping(UV, surface.P, surface.N, TBN, bumpColor);
+	NormalMapping(UV, surface.P, surface.N, TBN, bumpColor);				\
+	surface.Update();
 
 #define OBJECT_PS_PARALLAXOCCLUSIONMAPPING									\
 	ParallaxOcclusionMapping(UV, surface.V, TBN);
@@ -431,13 +419,10 @@ inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diff
 #define OBJECT_PS_SPECULARANTIALIASING										\
 	SpecularAA(surface.N, surface.roughness);
 
-#define OBJECT_PS_LIGHT_BEGIN																						\
-	//BRDF_HELPER_MAKEINPUTS( color, reflectance, metalness )
-
 #define OBJECT_PS_REFRACTION																						\
 	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
 
-#define OBJECT_PS_LIGHT_FORWARD																					\
+#define OBJECT_PS_LIGHT_FORWARD																						\
 	ForwardLighting(surface, diffuse, specular);
 
 #define OBJECT_PS_LIGHT_TILED																						\
@@ -455,30 +440,21 @@ inline void TiledLighting(in float2 pixel, in Surface surface, inout float3 diff
 #define OBJECT_PS_PLANARREFLECTIONS																					\
 	specular = max(specular, PlanarReflection(UV, refUV, surface));
 
-#define OBJECT_PS_DEGAMMA																							\
-	color = DEGAMMA(color);
-
-#define OBJECT_PS_GAMMA																								\
-	color = GAMMA(color);
-
-#define OBJECT_PS_EMISSIVE																							\
-	color.rgb += surface.baseColor.rgb * GetEmissive(emissive);
-
 #define OBJECT_PS_FOG																								\
 	color.rgb = applyFog(color.rgb, getFog(dist));
 
 #define OBJECT_PS_OUT_GBUFFER																						\
-	GBUFFEROutputType Out;																	\
-	Out.g0 = float4(color.rgb, 1);									/*FORMAT_R8G8B8A8_UNORM*/						\
-	Out.g1 = float4(encode(surface.N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
-	Out.g2 = float4(0, 0, sss, emissive);							/*FORMAT_R8G8B8A8_UNORM*/						\
-	Out.g3 = float4(surface.roughness, surface.reflectance, surface.metalness, ao);			/*FORMAT_R8G8B8A8_UNORM*/						\
+	GBUFFEROutputType Out;																							\
+	Out.g0 = float4(color.rgb, 1);														/*FORMAT_R8G8B8A8_UNORM*/	\
+	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/	\
+	Out.g2 = float4(0, 0, surface.sss, surface.emissive);								/*FORMAT_R8G8B8A8_UNORM*/	\
+	Out.g3 = float4(surface.roughness, surface.reflectance, surface.metalness, ao);		/*FORMAT_R8G8B8A8_UNORM*/	\
 	return Out;
 
 #define OBJECT_PS_OUT_FORWARD																						\
-	GBUFFEROutputType_Thin Out;															\
-	Out.g0 = color;													/*FORMAT_R16G16B16_FLOAT*/						\
-	Out.g1 = float4(encode(surface.N), velocity);							/*FORMAT_R16G16B16_FLOAT*/						\
+	GBUFFEROutputType_Thin Out;																						\
+	Out.g0 = color;																		/*FORMAT_R16G16B16_FLOAT*/	\
+	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/	\
 	return Out;
 
 #define OBJECT_PS_OUT_FORWARD_SIMPLE																				\

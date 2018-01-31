@@ -15,10 +15,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	OBJECT_PS_MAKE_SIMPLE
 
-	OBJECT_PS_SAMPLETEXTURES_SIMPLE
-
-	OBJECT_PS_DEGAMMA
-
 	// When opacity reaches ZERO, the multiplicative light mask will be ONE:
 	color.rgb = lerp(1, color.rgb, opacity);
 
