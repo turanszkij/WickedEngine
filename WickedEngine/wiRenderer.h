@@ -142,7 +142,8 @@ public:
 		XMUINT3 mEntityCullingTileCount;
 		BOOL mTransparentShadowsEnabled;
 		UINT mEnvProbeMipCount;
-		XMFLOAT3 pad0;
+		float mEnvProbeMipCount_Inverse;
+		XMFLOAT2 pad0;
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{

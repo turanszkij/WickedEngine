@@ -6278,9 +6278,11 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mEntityCullingTileCount = GetEntityCullingTileCount();
 	value.mTransparentShadowsEnabled = TRANSPARENTSHADOWSENABLED;
 	value.mEnvProbeMipCount = 0;
+	value.mEnvProbeMipCount_Inverse = 1.0f;
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] != nullptr)
 	{
 		value.mEnvProbeMipCount = static_cast<Texture2D*>(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY])->GetDesc().MipLevels;
+		value.mEnvProbeMipCount_Inverse = 1.0f / (float)value.mEnvProbeMipCount;
 	}
 
 	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit

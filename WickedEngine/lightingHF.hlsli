@@ -727,7 +727,7 @@ inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3
 // P:					pixel world position
 // R:					reflection ray
 // MIP:					mip level to sample
-// return:				color of the environment map (rgb)
+// return:				color of the environment color (rgb)
 inline float3 EnvironmentReflection_Global(in float3 P, in float3 R, in float MIP)
 {
 	float3 envColor;
@@ -735,11 +735,16 @@ inline float3 EnvironmentReflection_Global(in float3 P, in float3 R, in float MI
 	[branch]
 	if (g_xFrame_EnvProbeArrayCount > 0)
 	{
+		// We have envmap information in a texture:
 		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, 0), MIP).rgb;
 	}
 	else
 	{
-		envColor = lerp(GetHorizonColor(), GetZenithColor(), pow(saturate(R.y), 0.25));
+		// There are no envmaps, approximate sky color:
+		float3 realSkyColor = lerp(GetHorizonColor(), GetZenithColor(), pow(saturate(R.y), 0.25f));
+		float3 roughSkyColor = (GetHorizonColor() + GetZenithColor()) * 0.5f;
+		float blendSkyByRoughness = saturate(MIP * g_xWorld_EnvProbeMipCount_Inverse);
+		envColor = lerp(realSkyColor, roughSkyColor, blendSkyByRoughness);
 	}
 
 	return envColor;

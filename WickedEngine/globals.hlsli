@@ -67,7 +67,8 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	uint3		g_xWorld_EntityCullingTileCount;
 	uint		g_xWorld_TransparentShadowsEnabled;
 	uint		g_xWorld_EnvProbeMipCount;
-	float3		xPadding_WorldCB;
+	float		g_xWorld_EnvProbeMipCount_Inverse;
+	float2		xPadding_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
