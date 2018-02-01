@@ -163,8 +163,6 @@ public:
 		float mWindRandomness;
 		int mSunEntityArrayIndex;
 		XMFLOAT2 pad1;
-		XMFLOAT4 mGlobalEnvMap0PosIndex;
-		XMFLOAT4 mGlobalEnvMap1PosIndex;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
 		XMMATRIX mVP;
@@ -273,8 +271,6 @@ protected:
 	static bool occlusionCulling;
 	static bool temporalAA, temporalAADEBUG;
 	static bool freezeCullingCamera;
-
-	static XMFLOAT4 globalEnvProbes[2];
 
 	struct VoxelizedSceneData
 	{
@@ -409,7 +405,6 @@ public:
 		std::vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
 		std::list<Decal*> culledDecals;
-		std::list<EnvironmentProbe*> culledEnvProbes;
 
 		void Clear()
 		{
@@ -419,7 +414,6 @@ public:
 			culledHairParticleSystems.clear();
 			culledLights.clear();
 			culledDecals.clear();
-			culledEnvProbes.clear();
 		}
 	};
 	static std::unordered_map<Camera*, FrameCulling> frameCullings;

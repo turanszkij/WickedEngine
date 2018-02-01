@@ -77,7 +77,6 @@ float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = false;
 bool wiRenderer::temporalAA = false, wiRenderer::temporalAADEBUG = false;
-XMFLOAT4 wiRenderer::globalEnvProbes[];
 wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
 int wiRenderer::visibleCount;
 wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
@@ -3006,14 +3005,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					}
 				}
 
-				for (EnvironmentProbe* probe : GetScene().environmentProbes)
-				{
-					if (culling.frustum.CheckBox(probe->bounds))
-					{
-						x.second.culledEnvProbes.push_back(probe);
-					}
-				}
-
 				spTree_lights->getVisible(culling.frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
 
 				if (GetVoxelRadianceEnabled())
@@ -3233,7 +3224,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
 
 		entityArrayOffset_EnvProbes = entityCounter;
-		for (EnvironmentProbe* probe : mainCameraCulling.culledEnvProbes)
+		for (EnvironmentProbe* probe : GetScene().environmentProbes)
 		{
 			if (probe->textureIndex < 0)
 			{
@@ -4533,11 +4524,11 @@ void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuali
 
 	SAFE_DELETE(Light::shadowMapArray_2D);
 	Light::shadowMapArray_2D = new Texture2D;
-	Light::shadowMapArray_2D->RequestIndepententRenderTargetArraySlices(true);
+	Light::shadowMapArray_2D->RequestIndependentRenderTargetArraySlices(true);
 
 	SAFE_DELETE(Light::shadowMapArray_Transparent);
 	Light::shadowMapArray_Transparent = new Texture2D;
-	Light::shadowMapArray_Transparent->RequestIndepententRenderTargetArraySlices(true);
+	Light::shadowMapArray_Transparent->RequestIndependentRenderTargetArraySlices(true);
 
 	Texture2DDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
@@ -4566,8 +4557,8 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 
 	SAFE_DELETE(Light::shadowMapArray_Cube);
 	Light::shadowMapArray_Cube = new Texture2D;
-	Light::shadowMapArray_Cube->RequestIndepententRenderTargetArraySlices(true);
-	Light::shadowMapArray_Cube->RequestIndepententRenderTargetCubemapFaces(false);
+	Light::shadowMapArray_Cube->RequestIndependentRenderTargetArraySlices(true);
+	Light::shadowMapArray_Cube->RequestIndependentRenderTargetCubemapFaces(false);
 
 	Texture2DDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
@@ -5473,24 +5464,24 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	static const UINT envmapRes = 128;
 	static const UINT envmapCount = 16;
-	bool envmapTaken[envmapCount] = {};
-
+	static const FORMAT envmapFormat = FORMAT_R16G16B16A16_FLOAT;
 
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
 	{
 		Texture2DDesc desc;
 		desc.ArraySize = envmapCount * 6;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Format = envmapFormat;
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
 		desc.MipLevels = 0;
-		desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS | RESOURCE_MISC_TEXTURECUBE;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE | RESOURCE_MISC_GENERATE_MIPS;
 		desc.Usage = USAGE_DEFAULT;
 
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
-		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndepententRenderTargetArraySlices(true);
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentRenderTargetArraySlices(true);
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourceArraySlices(true);
 		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 		assert(SUCCEEDED(hr));
 	}
@@ -5525,150 +5516,9 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	const float zNearP = getCamera()->zNearP;
 	const float zFarP = getCamera()->zFarP;
 
-	bool renderhappened = false;
-
-
-	GetDevice()->EventBegin("Global Probe", threadID);
-
-	// There can be multiple cases how the global environment map should be updated:
-	//	1.) There are no local probes and no sky texture -> render dynamic sky into cubemap
-	//	2.) There are no local probes but there is a static sky texture -> render skydome with degamma-ed sky texture into cubemap
-	//	3.) We have local probes -> determine two closest, let shader blend them
-
-	if(GetScene().environmentProbes.empty())
-	{
-		const int globalEnvMapIndex = 0;
-		envmapTaken[globalEnvMapIndex] = true;
-		GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, globalEnvMapIndex);
-		const float clearColor[4] = { 0,0,0,1 };
-		GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, globalEnvMapIndex);
-		GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
-
-
-		std::vector<SHCAM> cameras;
-		{
-			cameras.clear();
-
-			cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
-			cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
-
-			cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
-			cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
-
-			cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
-			cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
-		}
-
-		XMFLOAT3 center = getCamera()->translation;
-		XMVECTOR vCenter = XMLoadFloat3(&center);
-
-		CubeMapRenderCB cb;
-		for (unsigned int i = 0; i < cameras.size(); ++i)
-		{
-			cameras[i].Update(vCenter);
-			cb.mViewProjection[i] = cameras[i].getVP();
-		}
-
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
-
-
-		CameraCB camcb;
-		camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
-
-
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
-
-		if (enviroMap != nullptr)
-		{
-			// 2.)
-			GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
-			GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
-		}
-		else
-		{
-			// 1.)
-			GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
-			GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
-		}
-		GetDevice()->Draw(240, 0, threadID);
-
-		globalEnvProbes[0].x = center.x;
-		globalEnvProbes[0].y = center.y;
-		globalEnvProbes[0].z = center.z;
-		globalEnvProbes[0].w = (float)globalEnvMapIndex;
-
-		globalEnvProbes[1].x = center.x;
-		globalEnvProbes[1].y = center.y;
-		globalEnvProbes[1].z = center.z;
-		globalEnvProbes[1].w = (float)globalEnvMapIndex;
-
-		renderhappened = true;
-	}
-	else
-	{
-		// 3.)
-
-		XMFLOAT3 center = getCamera()->translation;
-
-		// retrieve closest two probes:
-		EnvironmentProbe* probes[] = { nullptr,nullptr };
-		float bestDistances[] = { FLT_MAX, FLT_MAX };
-		for (EnvironmentProbe* probe : GetScene().environmentProbes)
-		{
-			if (probe->textureIndex >= 0)
-			{
-				float dist = wiMath::DistanceSquared(probe->translation, center);
-				if (dist < bestDistances[0])
-				{
-					bestDistances[0] = dist;
-					probes[0] = probe;
-				}
-			}
-		}
-		for (EnvironmentProbe* probe : GetScene().environmentProbes)
-		{
-			if (probe->textureIndex >= 0)
-			{
-				float dist = wiMath::DistanceSquared(probe->translation, center);
-				if (dist < bestDistances[1] && dist > bestDistances[0])
-				{
-					bestDistances[1] = dist;
-					probes[1] = probe;
-				}
-			}
-		}
-		if (probes[1] == nullptr)
-		{
-			probes[1] = probes[0];
-		}
-
-		if (probes[0] == nullptr || probes[1] == nullptr)
-		{
-			globalEnvProbes[0] = XMFLOAT4(0, 0, 0, 0);
-			globalEnvProbes[1] = XMFLOAT4(0, 0, 0, 0);
-		}
-		else
-		{
-			globalEnvProbes[0].x = probes[0]->translation.x;
-			globalEnvProbes[0].y = probes[0]->translation.y;
-			globalEnvProbes[0].z = probes[0]->translation.z;
-			globalEnvProbes[0].w = (float)probes[0]->textureIndex;
-
-			globalEnvProbes[1].x = probes[1]->translation.x;
-			globalEnvProbes[1].y = probes[1]->translation.y;
-			globalEnvProbes[1].z = probes[1]->translation.z;
-			globalEnvProbes[1].w = (float)probes[1]->textureIndex;
-		}
-	}
-	GetDevice()->EventEnd(threadID); // Global Probe
-
-
-
-	GetDevice()->EventBegin("Local Probes", threadID);
 
 	// reconstruct envmap array status:
+	bool envmapTaken[envmapCount] = {};
 	for (EnvironmentProbe* probe : GetScene().environmentProbes)
 	{
 		if (probe->textureIndex >= 0)
@@ -5781,14 +5631,8 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			GetDevice()->Draw(240, 0, threadID);
 		}
 
-		renderhappened = true;
-	}
-	GetDevice()->EventEnd(threadID); // Local Probes
-
-	if (renderhappened)
-	{
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-		GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID);
+		GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
 	}
 
 	GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
@@ -5823,8 +5667,8 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		desc.MiscFlags = 0;
 
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
-		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententShaderResourcesForMIPs(true);
-		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
 	}
@@ -5832,8 +5676,8 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 	{
 		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententShaderResourcesForMIPs(true);
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 	}
@@ -6112,7 +5956,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		dispatchParams.numThreads[0] = dispatchParams.numThreadGroups[0] * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.numThreads[1] = dispatchParams.numThreadGroups[1] * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.numThreads[2] = 1;
-		dispatchParams.value0 = (UINT)(frameCullings[getCamera()].culledLights.size() + frameCullings[getCamera()].culledEnvProbes.size() + frameCullings[getCamera()].culledDecals.size());
+		dispatchParams.value0 = (UINT)(frameCullings[getCamera()].culledLights.size() + GetScene().environmentProbes.size() + frameCullings[getCamera()].culledDecals.size());
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
 		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
@@ -6466,8 +6310,6 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindDirection = wind.direction;
 	cb.mFrameCount = (UINT)GetDevice()->GetFrameCount();
 	cb.mSunEntityArrayIndex = GetSunArrayIndex();
-	cb.mGlobalEnvMap0PosIndex = globalEnvProbes[0];
-	cb.mGlobalEnvMap1PosIndex = globalEnvProbes[1];
 	cb.mTemporalAAJitter = temporalAAJitter;
 	cb.mTemporalAAJitterPrev = temporalAAJitterPrev;
 

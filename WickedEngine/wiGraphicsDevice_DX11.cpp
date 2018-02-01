@@ -2011,6 +2011,55 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 			}
 			hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
 			assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
+
+			if (pTexture->independentSRVArraySlices)
+			{
+				if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				{
+					UINT slices = arraySize / 6;
+
+					// independent cubemaps
+					for (UINT i = 0; i < slices; ++i)
+					{
+						shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+						shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = i * 6;
+						shaderResourceViewDesc.TextureCubeArray.NumCubes = 1;
+						shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = 0; //from most detailed...
+						shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
+
+						pTexture->additionalSRVs_DX11.push_back(nullptr);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11[i]);
+						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
+					}
+				}
+				else
+				{
+					UINT slices = arraySize;
+
+					// independent slices
+					for (UINT i = 0; i < slices; ++i)
+					{
+						if (multisampled)
+						{
+							shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
+							shaderResourceViewDesc.Texture2DMSArray.FirstArraySlice = i;
+							shaderResourceViewDesc.Texture2DMSArray.ArraySize = 1;
+						}
+						else
+						{
+							shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+							shaderResourceViewDesc.Texture2DArray.FirstArraySlice = i;
+							shaderResourceViewDesc.Texture2DArray.ArraySize = 1;
+							shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0; //from most detailed...
+							shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
+						}
+
+						pTexture->additionalSRVs_DX11.push_back(nullptr);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11[i]);
+						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
+					}
+				}
+			}
 		}
 		else
 		{
@@ -3232,9 +3281,16 @@ void GraphicsDevice_DX11::DispatchIndirect(GPUBuffer* args, UINT args_offset, GR
 {
 	deviceContexts[threadID]->DispatchIndirect(args->resource_DX11, args_offset);
 }
-void GraphicsDevice_DX11::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
-	deviceContexts[threadID]->GenerateMips(texture->SRV_DX11);
+	if (arrayIndex >= 0 && texture->additionalSRVs_DX11.size() > arrayIndex)
+	{
+		deviceContexts[threadID]->GenerateMips(texture->additionalSRVs_DX11[arrayIndex]);
+	}
+	else
+	{
+		deviceContexts[threadID]->GenerateMips(texture->SRV_DX11);
+	}
 }
 void GraphicsDevice_DX11::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 {

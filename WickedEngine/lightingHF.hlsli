@@ -730,13 +730,19 @@ inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3
 // return:				color of the environment map (rgb)
 inline float3 EnvironmentReflection_Global(in float3 P, in float3 R, in float MIP)
 {
-	float dist0 = distance(P, g_xFrame_GlobalEnvMap0PosIndex.xyz);
-	float dist1 = distance(P, g_xFrame_GlobalEnvMap1PosIndex.xyz);
-	float3 envCol0 = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, g_xFrame_GlobalEnvMap0PosIndex.w), MIP).rgb;
-	float3 envCol1 = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, g_xFrame_GlobalEnvMap1PosIndex.w), MIP).rgb;
-	static const float blendStrength = 0.05f;
-	float blend = clamp((dist0 - dist1)*blendStrength, -1, 1)*0.5f + 0.5f;
-	return lerp(envCol0, envCol1, blend);
+	float3 envColor;
+
+	[branch]
+	if (g_xFrame_EnvProbeArrayCount > 0)
+	{
+		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R, 0), MIP).rgb;
+	}
+	else
+	{
+		envColor = lerp(GetHorizonColor(), GetZenithColor(), pow(saturate(R.y), 0.25));
+	}
+
+	return envColor;
 }
 
 // probe :				the shader entity holding properties

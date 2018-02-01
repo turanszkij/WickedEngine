@@ -63,8 +63,8 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 		Texture2D* texture = new Texture2D;
 		if (mipMapLevelCount != 1)
 		{
-			texture->RequestIndepententShaderResourcesForMIPs(true);
-			texture->RequestIndepententUnorderedAccessResourcesForMIPs(true);
+			texture->RequestIndependentShaderResourcesForMIPs(true);
+			texture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 			textureDesc.BindFlags |= BIND_UNORDERED_ACCESS;
 			textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
 		}

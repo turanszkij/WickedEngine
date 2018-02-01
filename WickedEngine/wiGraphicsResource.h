@@ -259,6 +259,7 @@ namespace wiGraphicsTypes
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalRTVs_DX12;
 		bool										independentRTVArraySlices;
 		bool										independentRTVCubemapFaces;
+		bool										independentSRVArraySlices;
 		bool										independentSRVMIPs;
 		bool										independentUAVMIPs;
 	public:
@@ -267,13 +268,15 @@ namespace wiGraphicsTypes
 		virtual ~Texture();
 
 		// if true, then each array slice will get a unique rendertarget
-		void RequestIndepententRenderTargetArraySlices(bool value);
+		void RequestIndependentRenderTargetArraySlices(bool value);
 		// if true, then each face of the cubemap will get a unique rendertarget
-		void RequestIndepententRenderTargetCubemapFaces(bool value);
+		void RequestIndependentRenderTargetCubemapFaces(bool value);
+		// if true, then each array slice will get a unique shader resource
+		void RequestIndependentShaderResourceArraySlices(bool value);
 		// if true, then each miplevel will get unique shader resource
-		void RequestIndepententShaderResourcesForMIPs(bool value);
+		void RequestIndependentShaderResourcesForMIPs(bool value);
 		// if true, then each miplevel will get unique unordered access resource
-		void RequestIndepententUnorderedAccessResourcesForMIPs(bool value);
+		void RequestIndependentUnorderedAccessResourcesForMIPs(bool value);
 	};
 
 	class Texture1D : public Texture
