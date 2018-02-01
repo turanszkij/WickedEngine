@@ -20,11 +20,13 @@ ImpostorOut main(PixelInputType input)
 	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
 
 	float4 color = g_xMat_baseColor * float4(input.instanceColor, 1) * xBaseColorMap.Sample(sampler_objectshader, UV);
+	ALPHATEST(color.a);
+	color.a = 1;
 
 	float3 bumpColor;
 	NormalMapping(UV, P, N, TBN, bumpColor);
 
-	ImpostorOut Out = (ImpostorOut)0;
+	ImpostorOut Out;
 	Out.color = color;
 	Out.normal = float4(mul(N, transpose(TBN)), 1);
 	Out.roughness = g_xMat_roughness * xRoughnessMap.Sample(sampler_objectshader, UV).r;
