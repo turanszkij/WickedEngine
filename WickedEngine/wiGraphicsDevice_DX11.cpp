@@ -2022,7 +2022,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 					for (UINT i = 0; i < slices; ++i)
 					{
 						shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
-						shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = i;
+						shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = i * 6;
 						shaderResourceViewDesc.TextureCubeArray.NumCubes = 1;
 						shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = 0; //from most detailed...
 						shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
