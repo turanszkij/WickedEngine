@@ -82,7 +82,7 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 	float4 g0 = texture_gbuffer0.Load(int3(input.pos.xy, 0));
 	float4 g3 = texture_gbuffer3.Load(int3(input.pos.xy, 0));
 	
-	BRDF_HELPER_MAKEINPUTS(g0, g3.y, g3.z);
+	float3 f0 = ComputeF0(g0, g3.y, g3.z);
 
 	float3 N = decode(texture_gbuffer1.Load(int3(input.pos.xy, 0)).xy);
 

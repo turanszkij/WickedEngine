@@ -3,6 +3,7 @@
 #include "reconstructPositionHF.hlsli"
 #include "brdf.hlsli"
 #include "packHF.hlsli"
+#include "objectHF.hlsli"
 
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
@@ -14,8 +15,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float roughness = g3.x;
 	float reflectance = g3.y;
 	float metalness = g3.z;
-	//float ao = g3.a;
-	BRDF_HELPER_MAKEINPUTS(color, reflectance, metalness)
+	float3 albedo = ComputeAlbedo(color, metalness, reflectance);
 
 	float  depth = texture_lineardepth.Load(int3(PSIn.pos.xy, 0)).r;
 
@@ -26,8 +26,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	color.rgb = (GetAmbientColor() * ao * ssao + diffuse.rgb) * albedo + specular.rgb;
 	color.rgb += color.rgb * GetEmissive(emissive);
 
-	float fog = getFog((depth));
-	color.rgb = applyFog(color.rgb,fog);
+	ApplyFog(depth, color);
 
 	return color;
 }

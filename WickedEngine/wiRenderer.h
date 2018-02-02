@@ -141,6 +141,9 @@ public:
 		BOOL mAdvancedRefractions;
 		XMUINT3 mEntityCullingTileCount;
 		BOOL mTransparentShadowsEnabled;
+		UINT mEnvProbeMipCount;
+		float mEnvProbeMipCount_Inverse;
+		XMFLOAT2 pad0;
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
@@ -163,8 +166,6 @@ public:
 		XMFLOAT2 pad1;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
-		XMFLOAT3 mGlobalEnvMap0;		float pad2;
-		XMFLOAT3 mGlobalEnvMap1;		float pad3;
 		XMMATRIX mVP;
 		XMMATRIX mView;
 		XMMATRIX mProj;
@@ -271,8 +272,6 @@ protected:
 	static bool occlusionCulling;
 	static bool temporalAA, temporalAADEBUG;
 	static bool freezeCullingCamera;
-
-	static EnvironmentProbe* globalEnvProbes[2];
 
 	struct VoxelizedSceneData
 	{
@@ -594,7 +593,7 @@ public:
 	static void LoadWorldInfo(const std::string& fileName);
 	static void LoadDefaultLighting();
 
-	static void PutEnvProbe(const XMFLOAT3& position, int resolution = 256);
+	static void PutEnvProbe(const XMFLOAT3& position);
 
 	static void CreateImpostor(Mesh* mesh);
 

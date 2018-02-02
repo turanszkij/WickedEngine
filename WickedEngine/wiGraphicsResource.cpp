@@ -165,7 +165,7 @@ namespace wiGraphicsTypes
 	}
 
 	Texture::Texture() : GPUResource()
-		, independentRTVArraySlices(false), independentRTVCubemapFaces(false)
+		, independentRTVArraySlices(false), independentRTVCubemapFaces(false), independentSRVArraySlices(false)
 		, independentSRVMIPs(false), independentUAVMIPs(false)
 	{
 		SAFE_INIT(RTV_DX11);
@@ -185,19 +185,23 @@ namespace wiGraphicsTypes
 			SAFE_DELETE(x);
 		}
 	}
-	void Texture::RequestIndepententRenderTargetArraySlices(bool value)
+	void Texture::RequestIndependentRenderTargetArraySlices(bool value)
 	{
 		independentRTVArraySlices = value;
 	}
-	void Texture::RequestIndepententRenderTargetCubemapFaces(bool value)
+	void Texture::RequestIndependentRenderTargetCubemapFaces(bool value)
 	{
 		independentRTVCubemapFaces = value;
 	}
-	void Texture::RequestIndepententShaderResourcesForMIPs(bool value)
+	void Texture::RequestIndependentShaderResourceArraySlices(bool value)
+	{
+		independentSRVArraySlices = value;
+	}
+	void Texture::RequestIndependentShaderResourcesForMIPs(bool value)
 	{
 		independentSRVMIPs = value;
 	}
-	void Texture::RequestIndepententUnorderedAccessResourcesForMIPs(bool value)
+	void Texture::RequestIndependentUnorderedAccessResourcesForMIPs(bool value)
 	{
 		independentUAVMIPs = value;
 	}

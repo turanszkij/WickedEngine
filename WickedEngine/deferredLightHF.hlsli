@@ -26,7 +26,7 @@ struct LightOutputType
 // MACROS
 
 #define DEFERREDLIGHT_MAKEPARAMS														\
-	ShaderEntityType light = EntityArray[PSIn.lightIndex];									\
+	ShaderEntityType light = EntityArray[PSIn.lightIndex];								\
 	float3 diffuse, specular;															\
 	float2 screenPos = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w / 2.0f + 0.5f;		\
 	float depth = texture_depth[PSIn.pos.xy];											\
@@ -38,48 +38,43 @@ struct LightOutputType
 	float reflectance = g3.y;															\
 	float metalness = g3.z;																\
 	float ao = g3.w;																	\
-	BRDF_HELPER_MAKEINPUTS(baseColor, reflectance, metalness)							\
 	float3 P = getPosition(screenPos, depth);											\
-	float3 V = normalize(g_xCamera_CamPos - P);
+	float3 V = normalize(g_xCamera_CamPos - P);											\
+	Surface surface = CreateSurface(P, N, V, baseColor, reflectance, metalness, roughness);
 
-
-#define DEFERREDLIGHT_ENVIRONMENTALLIGHT												\
-	diffuse = 0;																		\
-	specular = EnvironmentReflection(N, V, P, roughness, f0);							\
-	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
 
 #define DEFERREDLIGHT_DIRECTIONAL														\
-	LightingResult result = DirectionalLight(light, N, V, P, roughness, f0);			\
+	LightingResult result = DirectionalLight(light, surface);			\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
 #define DEFERREDLIGHT_SPOT																\
-	LightingResult result = SpotLight(light, N, V, P, roughness, f0);	\
+	LightingResult result = SpotLight(light, surface);	\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
 #define DEFERREDLIGHT_POINT																\
-	LightingResult result = PointLight(light, N, V, P, roughness, f0);\
+	LightingResult result = PointLight(light, surface);\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
 #define DEFERREDLIGHT_SPHERE															\
-	LightingResult result = SphereLight(light, N, V, P, roughness, f0);					\
+	LightingResult result = SphereLight(light, surface);					\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
 #define DEFERREDLIGHT_DISC																\
-	LightingResult result = DiscLight(light, N, V, P, roughness, f0);					\
+	LightingResult result = DiscLight(light, surface);					\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
 #define DEFERREDLIGHT_RECTANGLE															\
-	LightingResult result = RectangleLight(light, N, V, P, roughness, f0);				\
+	LightingResult result = RectangleLight(light, surface);				\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 
 #define DEFERREDLIGHT_TUBE																\
-	LightingResult result = TubeLight(light, N, V, P, roughness, f0);					\
+	LightingResult result = TubeLight(light, surface);					\
 	diffuse = result.diffuse;															\
 	specular = result.specular;
 

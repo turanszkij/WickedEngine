@@ -2589,6 +2589,55 @@ namespace wiGraphicsTypes
 				(*ppTexture2D)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
 				(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
 				device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
+
+				if ((*ppTexture2D)->independentSRVArraySlices)
+				{
+					if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+					{
+						UINT slices = arraySize / 6;
+
+						// independent cubemaps
+						for (UINT i = 0; i < slices; ++i)
+						{
+							shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+							shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = i * 6;
+							shaderResourceViewDesc.TextureCubeArray.NumCubes = 1;
+							shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = 0; //from most detailed...
+							shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
+
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
+							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12[i]);
+						}
+					}
+					else
+					{
+						UINT slices = arraySize;
+
+						// independent slices
+						for (UINT i = 0; i < slices; ++i)
+						{
+							if (multisampled)
+							{
+								shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
+								shaderResourceViewDesc.Texture2DMSArray.FirstArraySlice = i;
+								shaderResourceViewDesc.Texture2DMSArray.ArraySize = 1;
+							}
+							else
+							{
+								shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+								shaderResourceViewDesc.Texture2DArray.FirstArraySlice = i;
+								shaderResourceViewDesc.Texture2DArray.ArraySize = 1;
+								shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0; //from most detailed...
+								shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
+							}
+
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
+							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12[i]);
+						}
+					}
+				}
 			}
 			else
 			{
@@ -3120,8 +3169,15 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		//BindRenderTargets(NumViews, ppRenderTargets, depthStencilTexture, threadID, arrayIndex);
+		BindRenderTargets(NumViews, ppRenderTargets, depthStencilTexture, threadID, arrayIndex);
 
+		if (ppUAVs != nullptr)
+		{
+			for (int i = 0; i < countUAV; ++i)
+			{
+				BindUnorderedAccessResourceCS(ppUAVs[i], slotUAV + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_DX12::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -3130,12 +3186,13 @@ namespace wiGraphicsTypes
 		{
 			if (ppRenderTargets[i] != nullptr)
 			{
-				if (arrayIndex < 0)
+				if (arrayIndex < 0 || depthStencilTexture->additionalRTVs_DX12.empty())
 				{
 					descriptors[i] = *ppRenderTargets[i]->RTV_DX12;
 				}
 				else
 				{
+					assert(depthStencilTexture->additionalRTVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
 					descriptors[i] = *ppRenderTargets[i]->additionalRTVs_DX12[arrayIndex];
 				}
 			}
@@ -3144,12 +3201,13 @@ namespace wiGraphicsTypes
 		D3D12_CPU_DESCRIPTOR_HANDLE* DSV = nullptr;
 		if (depthStencilTexture != nullptr)
 		{
-			if (arrayIndex < 0)
+			if (arrayIndex < 0 || depthStencilTexture->additionalDSVs_DX12.empty())
 			{
 				DSV = depthStencilTexture->DSV_DX12;
 			}
 			else
 			{
+				assert(depthStencilTexture->additionalDSVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
 				DSV = depthStencilTexture->additionalDSVs_DX12[arrayIndex];
 			}
 		}
@@ -3220,7 +3278,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindUnorderedAccessResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		if (resource != nullptr && resource->resource_DX12 != nullptr)
 		{
@@ -3228,27 +3286,35 @@ namespace wiGraphicsTypes
 			{
 				if (resource->UAV_DX12 != nullptr)
 				{
-					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
 						resource->UAV_DX12, device, GetDirectCommandList(threadID));
 				}
 			}
 			else
 			{
 				assert(resource->additionalUAVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
+				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
 					resource->additionalUAVs_DX12[arrayIndex], device, GetDirectCommandList(threadID));
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindUnorderedAccessResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
 			for (int i = 0; i < count; ++i)
 			{
-				BindUnorderedAccessResourceCS(resources[i], slot + i, threadID, -1);
+				BindUnorderedAccessResource(stage, resources[i], slot + i, threadID, -1);
 			}
 		}
+	}
+	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	{
+		BindUnorderedAccessResource(CS, resource, slot, threadID, arrayIndex);
+	}
+	void GraphicsDevice_DX12::BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	{
+		BindUnorderedAccessResources(CS, resources, slot, count, threadID);
 	}
 	void GraphicsDevice_DX12::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
 	{
@@ -3409,8 +3475,9 @@ namespace wiGraphicsTypes
 		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetDirectCommandList(threadID)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
-	void GraphicsDevice_DX12::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		// TODO
 	}
 	void GraphicsDevice_DX12::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 	{

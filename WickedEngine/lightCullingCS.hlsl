@@ -1,7 +1,6 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
-#include "envReflectionHF.hlsli"
 #include "packHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
@@ -50,11 +49,13 @@ groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 groupshared uint o_ArrayLength;
 groupshared uint o_Array[LDS_ENTITYCOUNT];
 groupshared uint o_decalCount;
+groupshared uint o_envmapCount;
 
 // Transparent geometry entity lists.
 groupshared uint t_ArrayLength;
 groupshared uint t_Array[LDS_ENTITYCOUNT];
 groupshared uint t_decalCount;
+groupshared uint t_envmapCount;
 
 // Add the entity to the visible entity list for opaque geometry.
 void o_AppendEntity(uint entityIndex)
@@ -204,6 +205,8 @@ void main(ComputeShaderInput IN)
 		t_ArrayLength = 0;
 		o_decalCount = 0;
 		t_decalCount = 0;
+		o_envmapCount = 0;
+		t_envmapCount = 0;
 
 		uDepthMask = 0;
 
@@ -358,11 +361,20 @@ void main(ComputeShaderInput IN)
 		break;
 #ifndef DEFERRED
 		case ENTITY_TYPE_DECAL:
+		case ENTITY_TYPE_ENVMAP:
 		{
 			Sphere sphere = { entity.positionVS.xyz, entity.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				InterlockedAdd(t_decalCount, 1);
+				if (entity.type == ENTITY_TYPE_DECAL)
+				{
+					InterlockedAdd(t_decalCount, 1);
+				}
+				else
+				{
+					InterlockedAdd(t_envmapCount, 1);
+				}
+
 				t_AppendEntity(i);
 
 				// unit AABB: 
@@ -380,7 +392,15 @@ void main(ComputeShaderInput IN)
 					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
-						InterlockedAdd(o_decalCount, 1);
+						if (entity.type == ENTITY_TYPE_DECAL)
+						{
+							InterlockedAdd(o_decalCount, 1);
+						}
+						else
+						{
+							InterlockedAdd(o_envmapCount, 1);
+						}
+
 						o_AppendEntity(i);
 					}
 				}
@@ -401,22 +421,22 @@ void main(ComputeShaderInput IN)
 #ifndef DEFERRED
 	if (IN.groupIndex == 0)
 	{
-		o_EntityIndexList[exportStartOffset] = uint(min(o_ArrayLength & 0x00FFFFFF, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1) | ((o_decalCount & 0x000000FF) << 24));
+		o_EntityIndexList[exportStartOffset] = uint(min(o_ArrayLength & 0x000FFFFF, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1) | ((o_decalCount & 0x000000FF) << 24) | ((o_envmapCount & 0x0000000F) << 20));
 	}
 	else 
 #endif
 		if(IN.groupIndex == 1)
 	{
-		t_EntityIndexList[exportStartOffset] = uint(min(t_ArrayLength & 0x00FFFFFF, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1) | ((t_decalCount & 0x000000FF) << 24));
+		t_EntityIndexList[exportStartOffset] = uint(min(t_ArrayLength & 0x000FFFFF, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1) | ((t_decalCount & 0x000000FF) << 24) | ((t_envmapCount & 0x0000000F) << 20));
 	}
 
 #ifndef DEFERRED
-	// Decals need sorting!
-	if (o_decalCount > 0)
+	// Decals and envmaps need sorting!
+	if (o_decalCount + o_envmapCount > 0)
 	{
 		o_BitonicSort(IN.groupIndex);
 	}
-	if (t_decalCount > 0)
+	if (t_decalCount + t_envmapCount > 0)
 	{
 		t_BitonicSort(IN.groupIndex);
 	}
@@ -452,9 +472,12 @@ void main(ComputeShaderInput IN)
 	float reflectance = g3.y;
 	float metalness = g3.z;
 	float ao = g3.w;
-	BRDF_HELPER_MAKEINPUTS(baseColor, reflectance, metalness);
 	float3 P = getPosition((float2)pixel * g_xWorld_InternalResolution_Inverse, depth);
 	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
+	Surface surface = CreateSurface(P, N, V, baseColor, reflectance, metalness, roughness);
+
+	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
+	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP) * surface.F);
 
 	[loop]
 	for (uint li = 0; li < o_ArrayLength; ++li)
@@ -468,37 +491,37 @@ void main(ComputeShaderInput IN)
 		{
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
-			result = DirectionalLight(light, N, V, P, roughness, f0);
+			result = DirectionalLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_POINTLIGHT:
 		{
-			result = PointLight(light, N, V, P, roughness, f0);
+			result = PointLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
-			result = SpotLight(light, N, V, P, roughness, f0);
+			result = SpotLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_SPHERELIGHT:
 		{
-			result = SphereLight(light, N, V, P, roughness, f0);
+			result = SphereLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_DISCLIGHT:
 		{
-			result = DiscLight(light, N, V, P, roughness, f0);
+			result = DiscLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_RECTANGLELIGHT:
 		{
-			result = RectangleLight(light, N, V, P, roughness, f0);
+			result = RectangleLight(light, surface);
 		}
 		break;
 		case ENTITY_TYPE_TUBELIGHT:
 		{
-			result = TubeLight(light, N, V, P, roughness, f0);
+			result = TubeLight(light, surface);
 		}
 		break;
 		}
@@ -507,9 +530,7 @@ void main(ComputeShaderInput IN)
 		specular += max(0.0f, result.specular);
 	}
 
-	VoxelRadiance(N, V, P, f0, roughness, diffuse, specular, ao);
-
-	specular = max(specular, EnvironmentReflection(N, V, P, roughness, f0));
+	VoxelRadiance(surface, diffuse, specular, ao);
 
 	deferred_Diffuse[pixel] = float4(diffuse, ao);
 	deferred_Specular[pixel] = float4(specular, 1);

@@ -4,7 +4,7 @@
 RWSTRUCTUREDBUFFER(input_output, VoxelType, 0);
 RWTEXTURE3D(output_emission, float4, 1);
 
-[numthreads(1024, 1, 1)]
+[numthreads(256, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	VoxelType voxel = input_output[DTid.x];

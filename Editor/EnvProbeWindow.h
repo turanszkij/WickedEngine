@@ -20,7 +20,6 @@ public:
 
 	wiWindow*	envProbeWindow;
 
-	wiSlider*	resolutionSlider;
 	wiCheckBox*	realTimeCheckBox;
 	wiButton*	generateButton;
 	wiButton*	refreshButton;

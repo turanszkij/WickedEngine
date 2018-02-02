@@ -9,10 +9,7 @@ TEXTURE2D(texture_gbuffer1, float4, TEXSLOT_GBUFFER1)
 TEXTURE2D(texture_gbuffer2, float4, TEXSLOT_GBUFFER2)
 TEXTURE2D(texture_gbuffer3, float4, TEXSLOT_GBUFFER3)
 TEXTURE2D(texture_gbuffer4, float4, TEXSLOT_GBUFFER4)
-TEXTURECUBE(texture_env_global, float4, TEXSLOT_ENV_GLOBAL)
-TEXTURECUBE(texture_env0, float4, TEXSLOT_ENV0)
-TEXTURECUBE(texture_env1, float4, TEXSLOT_ENV1)
-TEXTURECUBE(texture_env2, float4, TEXSLOT_ENV2)
+TEXTURECUBEARRAY(texture_envmaparray, float4, TEXSLOT_ENVMAPARRAY)
 TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS)
 TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D)
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE)
@@ -69,6 +66,9 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	bool		g_xWorld_AdvancedRefractions;
 	uint3		g_xWorld_EntityCullingTileCount;
 	uint		g_xWorld_TransparentShadowsEnabled;
+	uint		g_xWorld_EnvProbeMipCount;
+	float		g_xWorld_EnvProbeMipCount_Inverse;
+	float2		xPadding_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
@@ -91,8 +91,6 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float2		xPadding1_FrameCB;
 	float2		g_xFrame_TemporalAAJitter;
 	float2		g_xFrame_TemporalAAJitterPrev;
-	float3		g_xFrame_GlobalEnvMap0;			float xPadding2_FrameCB;
-	float3		g_xFrame_GlobalEnvMap1;			float xPadding3_FrameCB;
 	// The following are per frame properties for the main camera:
 	float4x4	g_xFrame_MainCamera_VP;			// View*Projection
 	float4x4	g_xFrame_MainCamera_View;

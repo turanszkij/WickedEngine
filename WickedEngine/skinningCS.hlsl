@@ -19,31 +19,33 @@ RWRAWBUFFER(streamoutBuffer_PRE, SKINNINGSLOT_OUT_VERTEX_PRE);
 
 inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in float4 inWei)
 {
-	float4 p = 0;
-	float3 n = 0;
-	float weisum = 0;
-	bool w = any(inWei);
-
-	// force loop to reduce register pressure
-	// though this way we can not interleave TEX - ALU operations
-	[loop]
-	for (uint i = 0; (w && (i < 4) && (weisum<1.0f)); ++i)
+	if (any(inWei))
 	{
-		float4x4 m = float4x4(
-			boneBuffer[(uint)inBon[i]].pose0,
-			boneBuffer[(uint)inBon[i]].pose1,
-			boneBuffer[(uint)inBon[i]].pose2,
-			float4(0, 0, 0, 1)
-			);
+		float4 p = 0;
+		float3 n = 0;
+		float weisum = 0;
 
-		p += mul(m, float4(pos.xyz, 1))*inWei[i];
-		n += mul((float3x3)m, nor.xyz)*inWei[i];
+		// force loop to reduce register pressure
+		//  also enabled early-exit
+		[loop]
+		for (uint i = 0; ((i < 4) && (weisum < 1.0f)); ++i)
+		{
+			float4x4 m = float4x4(
+				boneBuffer[(uint)inBon[i]].pose0,
+				boneBuffer[(uint)inBon[i]].pose1,
+				boneBuffer[(uint)inBon[i]].pose2,
+				float4(0, 0, 0, 1)
+				);
 
-		weisum += inWei[i];
+			p += mul(m, float4(pos.xyz, 1))*inWei[i];
+			n += mul((float3x3)m, nor.xyz)*inWei[i];
+
+			weisum += inWei[i];
+		}
+
+		pos.xyz = p.xyz;
+		nor.xyz = normalize(n.xyz);
 	}
-
-	pos.xyz = w ? p.xyz : pos.xyz;
-	nor.xyz = w ? normalize(n.xyz) : nor.xyz;
 }
 
 

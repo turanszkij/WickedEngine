@@ -76,3 +76,4 @@ Particle - Depth Buffer collisions
 Ocean simulation (FFT)
 Translucent shadows
 Refraction caustics
+Local parallax-corrected environment maps

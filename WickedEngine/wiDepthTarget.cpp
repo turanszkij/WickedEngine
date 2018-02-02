@@ -72,7 +72,7 @@ void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 	depthGPUBufferDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
 	texture = new Texture2D;
-	texture->RequestIndepententRenderTargetCubemapFaces(independentFaces);
+	texture->RequestIndependentRenderTargetCubemapFaces(independentFaces);
 	wiRenderer::GetDevice()->CreateTexture2D(&depthGPUBufferDesc, nullptr, &texture);
 }
 
