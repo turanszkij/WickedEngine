@@ -687,6 +687,9 @@
     <FxCompile Include="hairparticlePS_simplest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="skinningCS_LDS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

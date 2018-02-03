@@ -1495,6 +1495,7 @@ void wiRenderer::LoadShaders()
 		computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 		computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 		computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
+		computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 		computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
 
 
@@ -3329,6 +3330,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	GetDevice()->EventBegin("Skinning", threadID);
 	{
 		bool streamOutSetUp = false;
+		CSTYPES lastCS = CSTYPE_SKINNING_LDS;
 
 		for (Model* model : GetScene().models)
 		{
@@ -3367,7 +3369,21 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 							0,0,0,0,0,0,0,0
 						};
 						GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-						GetDevice()->BindComputePSO(CPSO[CSTYPE_SKINNING], threadID);
+						GetDevice()->BindComputePSO(CPSO[CSTYPE_SKINNING_LDS], threadID);
+					}
+
+					CSTYPES targetCS = CSTYPE_SKINNING_LDS;
+
+					if (armature->boneCollection.size() > SKINNING_COMPUTE_THREADCOUNT)
+					{
+						// If we have more bones that can fit into LDS, we switch to a skinning shader which loads from device memory:
+						targetCS = CSTYPE_SKINNING;
+					}
+
+					if (targetCS != lastCS)
+					{
+						lastCS = targetCS;
+						GetDevice()->BindComputePSO(CPSO[targetCS], threadID);
 					}
 
 					// Upload bones for skinning to shader

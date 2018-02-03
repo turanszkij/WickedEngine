@@ -1,6 +1,9 @@
 #include "ResourceMapping.h"
 #include "ShaderInterop.h"
 
+// This will make use of LDS to preload bones into local memory:
+// #define USE_LDS
+
 struct Bone
 {
 	float4 pose0;
@@ -8,6 +11,10 @@ struct Bone
 	float4 pose2;
 };
 STRUCTUREDBUFFER(boneBuffer, Bone, SKINNINGSLOT_IN_BONEBUFFER);
+
+#ifdef USE_LDS
+groupshared Bone LDS_BoneList[SKINNING_COMPUTE_THREADCOUNT];
+#endif // USE_LDS
 
 RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
 RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
@@ -31,9 +38,15 @@ inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in flo
 		for (uint i = 0; ((i < 4) && (weisum < 1.0f)); ++i)
 		{
 			float4x4 m = float4x4(
+#ifdef USE_LDS
+				LDS_BoneList[(uint)inBon[i]].pose0,
+				LDS_BoneList[(uint)inBon[i]].pose1,
+				LDS_BoneList[(uint)inBon[i]].pose2,
+#else
 				boneBuffer[(uint)inBon[i]].pose0,
 				boneBuffer[(uint)inBon[i]].pose1,
 				boneBuffer[(uint)inBon[i]].pose2,
+#endif // USE_LDS
 				float4(0, 0, 0, 1)
 				);
 
@@ -50,8 +63,12 @@ inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in flo
 
 
 [numthreads(SKINNING_COMPUTE_THREADCOUNT, 1, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
+#ifdef USE_LDS
+	LDS_BoneList[GTid.x] = boneBuffer[GTid.x];
+#endif // USE_LDS
+
 	const uint stride_POS_NOR = 16;
 	const uint stride_BON_IND = 8;
 	const uint stride_BON_WEI = 8;
@@ -89,6 +106,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		wei.z = (float)((ind_wei_u.w >> 0) & 0x0000FFFF) / 65535.0f;
 		wei.w = (float)((ind_wei_u.w >> 16) & 0x0000FFFF) / 65535.0f;
 	}
+
+#ifdef USE_LDS
+	GroupMemoryBarrierWithGroupSync();
+#endif // USE_LDS
 
 
 	// Perform skinning:

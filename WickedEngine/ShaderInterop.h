@@ -135,7 +135,7 @@ struct ShaderEntityType
 #define GENERATEMIPCHAIN_3D_BLOCK_SIZE 8
 
 // Skinning compute params:
-#define SKINNING_COMPUTE_THREADCOUNT 256
+#define SKINNING_COMPUTE_THREADCOUNT 128
 
 
 #endif
