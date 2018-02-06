@@ -405,7 +405,7 @@ void wiLabel::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)translation.x, (int)translation.y, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, 
+	wiFont(text, wiFontProps((int)translation.x + 2, (int)translation.y + 2, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, 
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -1037,6 +1037,8 @@ void wiComboBox::Update(wiGUI* gui, float dt )
 				if (hovered >= 0)
 				{
 					SetSelected(hovered);
+					gui->DeactivateWidget(this);
+					combostate = COMBOSTATE_INACTIVE;
 				}
 			}
 		}

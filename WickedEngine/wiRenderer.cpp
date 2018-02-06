@@ -27,6 +27,7 @@
 #include "wiProfiler.h"
 #include "wiOcean.h"
 #include "ShaderInterop_CloudGenerator.h"
+#include "ShaderInterop_Skinning.h"
 
 #include <algorithm>
 
@@ -62,6 +63,7 @@ bool wiRenderer::TRANSPARENTSHADOWSENABLED = true;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
 , wiRenderer::advancedRefractions = false;
+bool wiRenderer::ldsSkinningEnabled = true;
 float wiRenderer::SPECULARAA = 0.0f;
 float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
 XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
@@ -3374,7 +3376,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					CSTYPES targetCS = CSTYPE_SKINNING_LDS;
 
-					if (armature->boneCollection.size() > SKINNING_COMPUTE_THREADCOUNT)
+					if (!GetLDSSkinningEnabled() || armature->boneCollection.size() > SKINNING_COMPUTE_THREADCOUNT)
 					{
 						// If we have more bones that can fit into LDS, we switch to a skinning shader which loads from device memory:
 						targetCS = CSTYPE_SKINNING;
@@ -3453,7 +3455,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 	// Generate cloud layer:
-	if(enviroMap == nullptr) // generate only when sky is dynamic
+	if(enviroMap == nullptr && GetScene().worldInfo.cloudiness > 0) // generate only when sky is dynamic
 	{
 		if (textures[TEXTYPE_2D_CLOUDS] == nullptr)
 		{
@@ -5386,7 +5388,14 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 	else
 	{
 		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_DYNAMIC], threadID);
-		GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+		if (GetScene().worldInfo.cloudiness > 0)
+		{
+			GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+		}
+		else
+		{
+			GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getBlack(), TEXSLOT_ONDEMAND0, threadID);
+		}
 	}
 
 	GetDevice()->Draw(240, 0, threadID);

@@ -248,6 +248,7 @@ protected:
 
 
 	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, debugForceFields, gridHelper, voxelHelper, advancedLightCulling, advancedRefractions;
+	static bool ldsSkinningEnabled;
 	static bool requestReflectionRendering;
 
 
@@ -352,6 +353,8 @@ public:
 	static bool GetAdvancedLightCulling() { return advancedLightCulling; }
 	static void SetOcclusionCullingEnabled(bool enabled); // also inits query pool!
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
+	static void SetLDSSkinningEnabled(bool enabled) { ldsSkinningEnabled = enabled; }
+	static bool GetLDSSkinningEnabled() { return ldsSkinningEnabled; }
 	static void SetTemporalAAEnabled(bool enabled) { temporalAA = enabled; }
 	static bool GetTemporalAAEnabled() { return temporalAA; }
 	static void SetTemporalAADebugEnabled(bool enabled) { temporalAADEBUG = enabled; }

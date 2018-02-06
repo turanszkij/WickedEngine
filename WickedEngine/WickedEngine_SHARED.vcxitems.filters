@@ -1143,6 +1143,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiOBJLoader.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
