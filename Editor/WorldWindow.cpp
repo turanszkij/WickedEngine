@@ -48,7 +48,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	});
 	worldWindow->AddWidget(fogHeightSlider);
 
-	cloudinessSlider = new wiSlider(0, 1, 0.5f, 10000, "Cloudiness: ");
+	cloudinessSlider = new wiSlider(0, 1, 0.0f, 10000, "Cloudiness: ");
 	cloudinessSlider->SetSize(XMFLOAT2(100, 30));
 	cloudinessSlider->SetPos(XMFLOAT2(x, y += step));
 	cloudinessSlider->OnSlide([&](wiEventArgs args) {
