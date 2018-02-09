@@ -3430,8 +3430,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		if (streamOutSetUp)
 		{
-			GetDevice()->UnBindUnorderedAccessResources(0, 3, threadID);
-			GetDevice()->UnBindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, threadID);
+			GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+			GetDevice()->UnBindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, threadID);
 		}
 
 	}
@@ -5490,6 +5490,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	static const UINT envmapRes = 128;
 	static const UINT envmapCount = 16;
+	static const UINT envmapMIPs = 6;
 	static const FORMAT envmapFormat = FORMAT_R16G16B16A16_FLOAT;
 
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
@@ -5501,7 +5502,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		desc.Format = envmapFormat;
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
-		desc.MipLevels = 0;
+		desc.MipLevels = envmapMIPs;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE | RESOURCE_MISC_GENERATE_MIPS;
 		desc.Usage = USAGE_DEFAULT;
 

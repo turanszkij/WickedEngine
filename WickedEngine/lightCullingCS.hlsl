@@ -37,7 +37,6 @@ RWSTRUCTUREDBUFFER(o_EntityIndexList, uint, UAVSLOT_ENTITYINDEXLIST_OPAQUE);
 // Group shared variables.
 groupshared uint uMinDepth;
 groupshared uint uMaxDepth;
-groupshared Frustum GroupFrustum;	// precomputed tile frustum
 groupshared AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 groupshared AABB GroupAABB_WS;		// frustum AABB in world space
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
@@ -209,9 +208,6 @@ void main(ComputeShaderInput IN)
 		t_envmapCount = 0;
 
 		uDepthMask = 0;
-
-		// Get frustum from frustum buffer:
-		GroupFrustum = in_Frustums[flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy)];
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -265,7 +261,6 @@ void main(ComputeShaderInput IN)
 		GroupAABB_WS = GroupAABB;
 		GroupAABB_WS.transform(g_xFrame_MainCamera_InvV);
 	}
-	GroupMemoryBarrierWithGroupSync();
 
 	// Convert depth values to view space.
 	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1)).z;
@@ -280,8 +275,13 @@ void main(ComputeShaderInput IN)
 	const float __depthRangeRecip = 32.0f / (maxDepthVS - minDepthVS);
 	const uint __depthmaskcellindex = max(0, min(32, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 	InterlockedOr(uDepthMask, 1 << __depthmaskcellindex);
-	GroupMemoryBarrierWithGroupSync();
 #endif
+
+	GroupMemoryBarrierWithGroupSync();
+
+	// It is better to load the frustum into register than LDS:
+	//	- AMD GCN will load this into SGPR because it is common to the group, VGPR will reduce, occupancy increases
+	Frustum GroupFrustum = in_Frustums[flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy)];
 
 	// Cull entities
 	// Each thread in a group will cull 1 entity until all entities have been culled.
@@ -446,7 +446,7 @@ void main(ComputeShaderInput IN)
 
 	// Now update the entity index list (all threads).
 #ifndef DEFERRED
-	// For opaque goemetry.
+	// For opaque geometry.
 	const uint o_clampedArrayLength = min(o_ArrayLength, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1);
 	for (i = IN.groupIndex; i < o_clampedArrayLength; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
 	{

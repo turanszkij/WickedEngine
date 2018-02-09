@@ -73,19 +73,26 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
 {
 	bool result = true;
 
-	if (sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar)
-	{
-		result = false;
-	}
+	//if (sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar)
+	//{
+	//	result = false;
+	//}
 
-	// Then check frustum planes
-	for (int i = 0; i < 4 && result; i++)
-	{
-		if (SphereInsidePlane(sphere, frustum.planes[i]))
-		{
-			result = false;
-		}
-	}
+	//// Then check frustum planes
+	//for (int i = 0; i < 4 && result; i++)
+	//{
+	//	if (SphereInsidePlane(sphere, frustum.planes[i]))
+	//	{
+	//		result = false;
+	//	}
+	//}
+
+	// Better to just unroll:
+	result = ((sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[0])) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[1])) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[2])) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[3])) ? false : result);
 
 	return result;
 }
@@ -93,13 +100,20 @@ bool SphereInsideFrustum(Sphere sphere, Plane planes[6]) // this can be used in 
 {
 	bool result = true;
 
-	for (int i = 0; i < 6 && result; i++)
-	{
-		if (SphereInsidePlane(sphere, planes[i]))
-		{
-			result = false;
-		}
-	}
+	//for (int i = 0; i < 6 && result; i++)
+	//{
+	//	if (SphereInsidePlane(sphere, planes[i]))
+	//	{
+	//		result = false;
+	//	}
+	//}
+
+	result = (SphereInsidePlane(sphere, planes[0]) ? false : result);
+	result = (SphereInsidePlane(sphere, planes[1]) ? false : result);
+	result = (SphereInsidePlane(sphere, planes[2]) ? false : result);
+	result = (SphereInsidePlane(sphere, planes[3]) ? false : result);
+	result = (SphereInsidePlane(sphere, planes[4]) ? false : result);
+	result = (SphereInsidePlane(sphere, planes[5]) ? false : result);
 
 	return result;
 }

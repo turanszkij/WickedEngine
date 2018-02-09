@@ -1956,7 +1956,7 @@ void Mesh::CreateBuffers(Object* object)
 		GPUBufferDesc bd;
 		SubresourceData InitData;
 
-		if (!hasDynamicVB()) // dynamic vertex buffers will be written to the global pool by the renderer instead!
+		if (!hasDynamicVB())
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
@@ -1965,31 +1965,34 @@ void Mesh::CreateBuffers(Object* object)
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			ZeroMemory(&InitData, sizeof(InitData));
 
-			InitData.pSysMem = vertices_TEX.data();
-			bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
-
 			InitData.pSysMem = vertices_POS.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
+		}
+
+		if (object->isArmatureDeformed())
+		{
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.BindFlags = BIND_SHADER_RESOURCE;
+			bd.CPUAccessFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 			InitData.pSysMem = vertices_BON.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
 
-			if (object->isArmatureDeformed()) {
-				ZeroMemory(&bd, sizeof(bd));
-				bd.Usage = USAGE_DEFAULT;
-				bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
-				bd.CPUAccessFlags = 0;
-				bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_DEFAULT;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
+			bd.CPUAccessFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
-				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
 
-				bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
-			}
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
 		}
 
 		// texture coordinate buffers are always static:

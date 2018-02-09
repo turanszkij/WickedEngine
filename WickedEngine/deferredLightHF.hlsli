@@ -13,8 +13,6 @@ struct VertexToPixel{
 
 #include "reconstructPositionHF.hlsli"
 
-static const float specularMaximumIntensity = 1;
-
 
 struct LightOutputType
 {

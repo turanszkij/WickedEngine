@@ -8,12 +8,12 @@
 #define FXAA_QUALITY__PRESET 39
 #include "fxaa.hlsli"
 
+static const float fxaaSubpix = 0.75;
+static const float fxaaEdgeThreshold = 0.166;
+static const float fxaaEdgeThresholdMin = 0.0833;
+
 float4 main(VertexToPixelPostProcess PSIn): SV_Target
 {
-    static const float fxaaSubpix = 0.75;
-    static const float fxaaEdgeThreshold = 0.166;
-    static const float fxaaEdgeThresholdMin = 0.0833;
-
     float2 fxaaFrame;
     xTexture.GetDimensions(fxaaFrame.x, fxaaFrame.y);
 

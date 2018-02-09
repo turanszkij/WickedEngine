@@ -85,7 +85,7 @@ ConstantOutputType PatchConstantFunction(InputPatch<HullInputType, 3> I)
 {
 	ConstantOutputType O = (ConstantOutputType)0;
     
-	static const float MODIFIER = 0.6f;
+	const float MODIFIER = 0.6f;
 
     float fDistance;
     float3 f3MidPoint;

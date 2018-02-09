@@ -9,6 +9,13 @@
 #define DISABLE_TRANSPARENT_SHADOWMAP
 #endif
 
+
+#ifdef PLANARREFLECTION
+#define DISABLE_ENVMAPS
+#endif
+
+
+
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
 #include "windHF.hlsli"
@@ -77,10 +84,10 @@ struct PixelInputType
 
 struct GBUFFEROutputType
 {
-	float4 g0	: SV_TARGET0;		// texture_gbuffer0
-	float4 g1	: SV_TARGET1;		// texture_gbuffer1
-	float4 g2	: SV_TARGET2;		// texture_gbuffer2
-	float4 g3	: SV_TARGET3;		// texture_gbuffer3
+	float4 g0	: SV_Target0;		// texture_gbuffer0
+	float4 g1	: SV_Target1;		// texture_gbuffer1
+	float4 g2	: SV_Target2;		// texture_gbuffer2
+	float4 g3	: SV_Target3;		// texture_gbuffer3
 };
 inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in float2 velocity)
 {
@@ -94,8 +101,8 @@ inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in f
 
 struct GBUFFEROutputType_Thin
 {
-	float4 g0	: SV_TARGET0;		// texture_gbuffer0
-	float4 g1	: SV_TARGET1;		// texture_gbuffer1
+	float4 g0	: SV_Target0;		// texture_gbuffer0
+	float4 g1	: SV_Target1;		// texture_gbuffer1
 };
 inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface surface, in float2 velocity)
 {
@@ -185,7 +192,7 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out flo
 
 #ifndef DISABLE_ENVMAPS
 	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
-	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP) * surface.F);
+	specular += max(0, EnvironmentReflection_Global(surface, envMapMIP) * surface.F);
 #endif // DISABLE_ENVMAPS
 
 	[loop]
@@ -574,7 +581,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // TILEDFORWARD
 
 #ifdef PLANARREFLECTION
-	specular = max(specular, PlanarReflection(UV, refUV, surface));
+	specular += PlanarReflection(UV, refUV, surface);
 #endif
 
 	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
@@ -622,3 +629,4 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 
 #endif // _OBJECTSHADER_HF_
+

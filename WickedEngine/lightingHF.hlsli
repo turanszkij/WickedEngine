@@ -28,7 +28,7 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 #ifndef DISABLE_SHADOWMAPS
 #ifdef DIRECTIONALLIGHT_SOFT
 	float samples = 0.0f;
-	static const float range = 1.5f;
+	const float range = 1.5f;
 	for (float y = -range; y <= range; y += 1.0f)
 	{
 		for (float x = -range; x <= range; x += 1.0f)
