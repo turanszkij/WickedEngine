@@ -1160,6 +1160,8 @@ struct EnvironmentProbe : public Transform, public Cullable
 	EnvironmentProbe() : textureIndex(-1), realTime(false), isUpToDate(false) {}
 
 	void UpdateEnvProbe();
+
+	void Serialize(wiArchive& archive);
 };
 struct ForceField : public Transform
 {
@@ -1186,6 +1188,7 @@ struct Model : public Transform
 	std::unordered_set<Light*> lights;
 	std::unordered_set<Decal*> decals;
 	std::unordered_set<ForceField*> forces;
+	std::list<EnvironmentProbe*> environmentProbes;
 
 	Model();
 	virtual ~Model();
@@ -1198,6 +1201,7 @@ struct Model : public Transform
 	void Add(Light* value);
 	void Add(Decal* value);
 	void Add(ForceField* value);
+	void Add(EnvironmentProbe* value);
 	// merge
 	void Add(Model* value);
 	void Serialize(wiArchive& archive);
@@ -1209,7 +1213,6 @@ struct Scene
 	std::vector<Model*> models;
 	WorldInfo worldInfo;
 	Wind wind;
-	std::list<EnvironmentProbe*> environmentProbes;
 
 	Scene();
 	~Scene();

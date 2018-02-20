@@ -631,6 +631,7 @@ void EditorComponent::Load()
 				fullModel->materials.clear();
 				fullModel->armatures.clear();
 				fullModel->forces.clear();
+				fullModel->environmentProbes.clear();
 				SAFE_DELETE(fullModel);
 
 				ResetHistory();

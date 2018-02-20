@@ -2963,14 +2963,19 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			{
 				for (Model* model : GetScene().models)
 				{
-					if (model->decals.empty())
-						continue;
-
 					for (Decal* decal : model->decals)
 					{
 						if ((decal->texture || decal->normal) && culling.frustum.CheckBox(decal->bounds))
 						{
 							x.second.culledDecals.push_back(decal);
+						}
+					}
+
+					for (EnvironmentProbe* probe : model->environmentProbes)
+					{
+						if (probe->textureIndex >= 0 && culling.frustum.CheckBox(probe->bounds))
+						{
+							x.second.culledEnvProbes.push_back(probe);
 						}
 					}
 				}
@@ -3084,12 +3089,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
-	UpdateWorldCB(threadID); // only commits when parameters are changed
-	UpdateFrameCB(threadID);
-	BindPersistentState(threadID);
-
-	ManageDecalAtlas(threadID);
-
 	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
 
 	// Fill Light Array with lights + envprobes + decals in the frustum:
@@ -3194,7 +3193,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
 
 		entityArrayOffset_EnvProbes = entityCounter;
-		for (EnvironmentProbe* probe : GetScene().environmentProbes)
+		for (EnvironmentProbe* probe : mainCameraCulling.culledEnvProbes)
 		{
 			if (probe->textureIndex < 0)
 			{
@@ -3294,6 +3293,13 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		GetDevice()->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 		GetDevice()->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
+
+
+	UpdateWorldCB(threadID); // only commits when parameters are changed
+	UpdateFrameCB(threadID);
+	BindPersistentState(threadID);
+
+	ManageDecalAtlas(threadID);
 
 	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
 	GetDevice()->EventBegin("Skinning", threadID);
@@ -3901,7 +3907,7 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	if (debugEnvProbes && !GetScene().environmentProbes.empty()) 
+	if (debugEnvProbes) 
 	{
 		GetDevice()->EventBegin("Debug EnvProbes", threadID);
 
@@ -3913,13 +3919,22 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
 
 		MiscCB sb;
-		for (auto& x : GetScene().environmentProbes)
+		for (Model* model : GetScene().models)
 		{
-			sb.mTransform = XMMatrixTranspose(XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z));
-			sb.mColor = XMFLOAT4((float)x->textureIndex, 1, 1, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			for (auto& x : model->environmentProbes)
+			{
+				if (x->textureIndex < 0)
+				{
+					continue;
+				}
 
-			GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+				sb.mTransform = XMMatrixTranspose(XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z));
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+				GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, x->textureIndex);
+
+				GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+			}
 		}
 
 
@@ -3938,14 +3953,17 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
-		for (auto& x : GetScene().environmentProbes)
+		for (Model* model : GetScene().models)
 		{
-			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->world)*camera->GetViewProjection());
-			sb.mColor = XMFLOAT4(0, 1, 1, 1);
+			for (auto& x : model->environmentProbes)
+			{
+				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->world)*camera->GetViewProjection());
+				sb.mColor = XMFLOAT4(0, 1, 1, 1);
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->DrawIndexed(24, 0, 0, threadID);
+				GetDevice()->DrawIndexed(24, 0, 0, threadID);
+			}
 		}
 
 		GetDevice()->EventEnd(threadID);
@@ -5513,120 +5531,127 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	// reconstruct envmap array status:
 	bool envmapTaken[envmapCount] = {};
-	for (EnvironmentProbe* probe : GetScene().environmentProbes)
+	for (Model* model : GetScene().models)
 	{
-		if (probe->textureIndex >= 0)
+		for (EnvironmentProbe* probe : model->environmentProbes)
 		{
-			envmapTaken[probe->textureIndex] = true;
+			if (probe->textureIndex >= 0)
+			{
+				envmapTaken[probe->textureIndex] = true;
+			}
 		}
 	}
 
-	for (EnvironmentProbe* probe : GetScene().environmentProbes)
+	for (Model* model : GetScene().models)
 	{
-		if (probe->textureIndex < 0)
+		for (EnvironmentProbe* probe : model->environmentProbes)
 		{
-			// need to take a free envmap texture slot:
-			bool found = false;
-			for (int i = 0; i < ARRAYSIZE(envmapTaken); ++i)
+			if (probe->textureIndex < 0)
 			{
-				if (envmapTaken[i] == false)
+				// need to take a free envmap texture slot:
+				bool found = false;
+				for (int i = 0; i < ARRAYSIZE(envmapTaken); ++i)
 				{
-					probe->textureIndex = i;
-					found = true;
-					break;
+					if (envmapTaken[i] == false)
+					{
+						envmapTaken[i] = true;
+						probe->textureIndex = i;
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+				{
+					// could not find free slot in envmap array, so skip this probe:
+					continue;
 				}
 			}
-			if (!found)
+
+			if (probe->isUpToDate)
 			{
-				// could not find free slot in envmap array, so skip this probe:
 				continue;
 			}
-		}
-
-		if (probe->isUpToDate)
-		{
-			continue;
-		}
-		if(!probe->realTime)
-		{
-			probe->isUpToDate = true;
-		}
-
-		GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
-		const float clearColor[4] = { 0,0,0,1 };
-		GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe->textureIndex);
-		GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
-
-
-		std::vector<SHCAM> cameras;
-		{
-			cameras.clear();
-
-			cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
-			cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
-
-			cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
-			cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
-
-			cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
-			cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
-		}
-
-		XMFLOAT3 center = probe->translation;
-		XMVECTOR vCenter = XMLoadFloat3(&center);
-
-		CubeMapRenderCB cb;
-		for (unsigned int i = 0; i < cameras.size(); ++i)
-		{
-			cameras[i].Update(vCenter);
-			cb.mViewProjection[i] = cameras[i].getVP();
-		}
-
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
-
-
-		CameraCB camcb;
-		camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
-
-
-		CulledList culledObjects;
-		CulledCollection culledRenderer;
-
-		SPHERE culler = SPHERE(center, zFarP);
-		if (spTree != nullptr)
-		{
-			spTree->getVisible(culler, culledObjects);
-
-			for (Cullable* object : culledObjects)
+			if (!probe->realTime)
 			{
-				culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
+				probe->isUpToDate = true;
 			}
 
-			RenderMeshes(center, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
-		}
+			GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
+			const float clearColor[4] = { 0,0,0,1 };
+			GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe->textureIndex);
+			GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
 
-		// sky
-		{
-			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
-			if (enviroMap != nullptr)
+			std::vector<SHCAM> cameras;
 			{
-				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
-				GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
+				cameras.clear();
+
+				cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
+				cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
+
+				cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
+				cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
+
+				cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
+				cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
 			}
-			else
+
+			XMFLOAT3 center = probe->translation;
+			XMVECTOR vCenter = XMLoadFloat3(&center);
+
+			CubeMapRenderCB cb;
+			for (unsigned int i = 0; i < cameras.size(); ++i)
 			{
-				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
-				GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+				cameras[i].Update(vCenter);
+				cb.mViewProjection[i] = cameras[i].getVP();
 			}
 
-			GetDevice()->Draw(240, 0, threadID);
-		}
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+			GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
-		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-		GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
+
+			CameraCB camcb;
+			camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
+			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
+
+
+			CulledList culledObjects;
+			CulledCollection culledRenderer;
+
+			SPHERE culler = SPHERE(center, zFarP);
+			if (spTree != nullptr)
+			{
+				spTree->getVisible(culler, culledObjects);
+
+				for (Cullable* object : culledObjects)
+				{
+					culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
+				}
+
+				RenderMeshes(center, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
+			}
+
+			// sky
+			{
+				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+
+				if (enviroMap != nullptr)
+				{
+					GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
+					GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
+				}
+				else
+				{
+					GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
+					GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+				}
+
+				GetDevice()->Draw(240, 0, threadID);
+			}
+
+			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+			GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
+		}
 	}
 
 	GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
@@ -5943,6 +5968,10 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 			device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
 		}
 
+
+		const FrameCulling& frameCulling = frameCullings[getCamera()];
+
+
 		DispatchParamsCB dispatchParams;
 		dispatchParams.numThreadGroups[0] = tileCount.x;
 		dispatchParams.numThreadGroups[1] = tileCount.y;
@@ -5950,7 +5979,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		dispatchParams.numThreads[0] = dispatchParams.numThreadGroups[0] * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.numThreads[1] = dispatchParams.numThreadGroups[1] * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.numThreads[2] = 1;
-		dispatchParams.value0 = (UINT)(frameCullings[getCamera()].culledLights.size() + GetScene().environmentProbes.size() + frameCullings[getCamera()].culledDecals.size());
+		dispatchParams.value0 = (UINT)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
 		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
 		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
@@ -6271,8 +6300,17 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mAdvancedRefractions = GetAdvancedRefractionsEnabled() ? 1 : 0;
 	value.mEntityCullingTileCount = GetEntityCullingTileCount();
 	value.mTransparentShadowsEnabled = TRANSPARENTSHADOWSENABLED;
+	value.mGlobalEnvProbeIndex = -1;
 	value.mEnvProbeMipCount = 0;
 	value.mEnvProbeMipCount_Inverse = 1.0f;
+	for (Model* model : GetScene().models)
+	{
+		if (!model->environmentProbes.empty())
+		{
+			value.mGlobalEnvProbeIndex = 0; // for now, the global envprobe will be the first probe in the array. Easy change later on if required...
+			break;
+		}
+	}
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] != nullptr)
 	{
 		value.mEnvProbeMipCount = static_cast<Texture2D*>(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY])->GetDesc().MipLevels;
@@ -6601,18 +6639,19 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 				}
 			}
 		}
-	}
-	if (pickType & PICK_ENVPROBE)
-	{
-		for (auto& x : GetScene().environmentProbes)
+
+		if (pickType & PICK_ENVPROBE)
 		{
-			if (SPHERE(x->translation, 1).intersects(ray))
+			for (auto& x : model->environmentProbes)
 			{
-				Picked pick = Picked();
-				pick.transform = x;
-				pick.envProbe = x;
-				pick.distance = wiMath::Distance(x->translation, ray.origin);
-				pickPoints.push_back(pick);
+				if (SPHERE(x->translation, 1).intersects(ray))
+				{
+					Picked pick = Picked();
+					pick.transform = x;
+					pick.envProbe = x;
+					pick.distance = wiMath::Distance(x->translation, ray.origin);
+					pickPoints.push_back(pick);
+				}
 			}
 		}
 	}
@@ -6980,7 +7019,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position)
 	EnvironmentProbe* probe = new EnvironmentProbe;
 	probe->transform(position);
 
-	scene->environmentProbes.push_back(probe);
+	GetScene().GetWorldNode()->environmentProbes.push_back(probe);
 }
 
 void wiRenderer::CreateImpostor(Mesh* mesh)
@@ -7287,7 +7326,10 @@ void wiRenderer::Remove(EnvironmentProbe* value)
 {
 	if (value != nullptr)
 	{
-		GetScene().environmentProbes.remove(value);
+		for (auto& x : GetScene().models)
+		{
+			x->environmentProbes.remove(value);
+		}
 		value->detach();
 	}
 }

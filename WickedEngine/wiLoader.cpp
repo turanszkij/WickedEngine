@@ -1108,12 +1108,6 @@ void Scene::ClearWorld()
 	}
 	models.clear();
 
-	for (auto& x : environmentProbes)
-	{
-		SAFE_DELETE(x);
-	}
-	environmentProbes.clear();
-
 	models.push_back(_CreateWorldNode());
 }
 Model* Scene::GetWorldNode()
@@ -1132,11 +1126,6 @@ void Scene::Update()
 	for (Model* x : models)
 	{
 		x->UpdateModel();
-	}
-
-	for (EnvironmentProbe* probe : environmentProbes)
-	{
-		probe->UpdateEnvProbe();
 	}
 }
 #pragma endregion
@@ -2483,22 +2472,32 @@ void Model::CleanUp()
 	{
 		SAFE_DELETE(x);
 	}
+	armatures.clear();
 	for (Object* x : objects)
 	{
 		SAFE_DELETE(x);
 	}
+	objects.clear();
 	for (Light* x : lights)
 	{
 		SAFE_DELETE(x);
 	}
+	lights.clear();
 	for (Decal* x : decals)
 	{
 		SAFE_DELETE(x);
 	}
+	decals.clear();
 	for (ForceField* x : forces)
 	{
 		SAFE_DELETE(x);
 	}
+	forces.clear();
+	for (EnvironmentProbe* x : environmentProbes)
+	{
+		SAFE_DELETE(x);
+	}
+	environmentProbes.clear();
 }
 void Model::LoadFromDisk(const std::string& fileName, const std::string& identifier)
 {
@@ -2827,6 +2826,10 @@ void Model::UpdateModel()
 	{
 		x->UpdateLight();
 	}
+	for (EnvironmentProbe* probe : environmentProbes)
+	{
+		probe->UpdateEnvProbe();
+	}
 	
 	unordered_set<Decal*>::iterator iter = decals.begin();
 	while (iter != decals.end())
@@ -2888,6 +2891,13 @@ void Model::Add(ForceField* value)
 		forces.insert(value);
 	}
 }
+void Model::Add(EnvironmentProbe* value)
+{
+	if (value != nullptr)
+	{
+		environmentProbes.push_back(value);
+	}
+}
 void Model::Add(Model* value)
 {
 	if (value != nullptr)
@@ -2899,6 +2909,7 @@ void Model::Add(Model* value)
 		meshes.insert(value->meshes.begin(), value->meshes.end());
 		materials.insert(value->materials.begin(), value->materials.end());
 		forces.insert(value->forces.begin(), value->forces.end());
+		environmentProbes.insert(environmentProbes.end(), value->environmentProbes.begin(), value->environmentProbes.end());
 	}
 }
 void Model::Serialize(wiArchive& archive)
@@ -2907,7 +2918,7 @@ void Model::Serialize(wiArchive& archive)
 
 	if (archive.IsReadMode())
 	{
-		size_t objectsCount, meshCount, materialCount, armaturesCount, lightsCount, decalsCount, forceCount;
+		size_t objectsCount, meshCount, materialCount, armaturesCount, lightsCount, decalsCount, forceCount, probeCount;
 
 		archive >> objectsCount;
 		for (size_t i = 0; i < objectsCount; ++i)
@@ -2965,6 +2976,17 @@ void Model::Serialize(wiArchive& archive)
 				ForceField* x = new ForceField;
 				x->Serialize(archive);
 				forces.insert(x);
+			}
+		}
+
+		if (archive.GetVersion() >= 16)
+		{
+			archive >> probeCount;
+			for (size_t i = 0; i < probeCount; ++i)
+			{
+				EnvironmentProbe* x = new EnvironmentProbe;
+				x->Serialize(archive);
+				environmentProbes.push_back(x);
 			}
 		}
 
@@ -3075,6 +3097,15 @@ void Model::Serialize(wiArchive& archive)
 		{
 			archive << forces.size();
 			for (auto& x : forces)
+			{
+				x->Serialize(archive);
+			}
+		}
+
+		if (archive.GetVersion() >= 16)
+		{
+			archive << environmentProbes.size();
+			for (auto& x : environmentProbes)
 			{
 				x->Serialize(archive);
 			}
@@ -4392,5 +4423,19 @@ void EnvironmentProbe::UpdateEnvProbe()
 {
 	bounds.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 	bounds = bounds.get(world);
+}
+void EnvironmentProbe::Serialize(wiArchive& archive)
+{
+	Cullable::Serialize(archive);
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> realTime;
+	}
+	else
+	{
+		archive << realTime;
+	}
 }
 #pragma endregion

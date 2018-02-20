@@ -140,9 +140,10 @@ public:
 		BOOL mAdvancedRefractions;
 		XMUINT3 mEntityCullingTileCount;
 		BOOL mTransparentShadowsEnabled;
+		int	mGlobalEnvProbeIndex;
 		UINT mEnvProbeMipCount;
 		float mEnvProbeMipCount_Inverse;
-		XMFLOAT2 pad0;
+		float pad0;
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
@@ -407,6 +408,7 @@ public:
 		std::vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
 		std::list<Decal*> culledDecals;
+		std::list<EnvironmentProbe*> culledEnvProbes;
 
 		void Clear()
 		{
@@ -416,6 +418,7 @@ public:
 			culledHairParticleSystems.clear();
 			culledLights.clear();
 			culledDecals.clear();
+			culledEnvProbes.clear();
 		}
 	};
 	static std::unordered_map<Camera*, FrameCulling> frameCullings;

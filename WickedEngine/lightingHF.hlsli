@@ -732,10 +732,10 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 	float3 envColor;
 
 	[branch]
-	if (g_xFrame_EnvProbeArrayCount > 0)
+	if (g_xWorld_GlobalEnvProbeIndex >= 0)
 	{
 		// We have envmap information in a texture:
-		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, 0), MIP).rgb;
+		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xWorld_GlobalEnvProbeIndex), MIP).rgb;
 	}
 	else
 	{
