@@ -359,7 +359,6 @@ void main(ComputeShaderInput IN)
 			o_AppendEntity(i);
 		}
 		break;
-#ifndef DEFERRED
 		case ENTITY_TYPE_DECAL:
 		case ENTITY_TYPE_ENVMAP:
 		{
@@ -407,7 +406,6 @@ void main(ComputeShaderInput IN)
 			}
 		}
 		break;
-#endif // DEFERRED
 		}
 	}
 
@@ -430,7 +428,6 @@ void main(ComputeShaderInput IN)
 		t_EntityIndexList[exportStartOffset] = uint(min(t_ArrayLength & 0x000FFFFF, MAX_SHADER_ENTITY_COUNT_PER_TILE - 1) | ((t_decalCount & 0x000000FF) << 24) | ((t_envmapCount & 0x0000000F) << 20));
 	}
 
-#ifndef DEFERRED
 	// Decals and envmaps need sorting!
 	if (o_decalCount + o_envmapCount > 0)
 	{
@@ -442,7 +439,6 @@ void main(ComputeShaderInput IN)
 	}
 
 	GroupMemoryBarrierWithGroupSync();
-#endif
 
 	// Now update the entity index list (all threads).
 #ifndef DEFERRED
@@ -463,7 +459,7 @@ void main(ComputeShaderInput IN)
 #ifdef DEFERRED
 	// Light the pixels:
 	
-	float3 diffuse, specular;
+	float3 diffuse = 0, specular = 0;
 	float4 baseColor = texture_gbuffer0[pixel];
 	float4 g1 = texture_gbuffer1[pixel];
 	float4 g3 = texture_gbuffer3[pixel];
@@ -476,13 +472,63 @@ void main(ComputeShaderInput IN)
 	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 	Surface surface = CreateSurface(P, N, V, baseColor, reflectance, metalness, roughness);
 
-	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
-	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP) * surface.F);
+	uint iterator = 0;
+
+	iterator = o_decalCount;
+	// decals are not yet available here (need to r/w albedo), skip them for now...
+
+
+#ifndef DISABLE_ENVMAPS
+	// Apply environment maps:
+
+	float4 envmapAccumulation = 0;
+	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
+
+#ifdef DISABLE_LOCALENVPMAPS
+	// local envmaps are disabled, set iterator to skip:
+	iterator += envmapCount;
+#else
+	// local envmaps are enabled, loop through them and apply:
+	uint envmapArrayEnd = iterator + o_envmapCount;
 
 	[loop]
-	for (uint li = 0; li < o_ArrayLength; ++li)
+	for (; iterator < envmapArrayEnd; ++iterator)
 	{
-		uint entityIndex = o_Array[li];
+		ShaderEntityType probe = EntityArray[o_Array[iterator]];
+
+		float4x4 probeProjection = MatrixArray[probe.additionalData_index];
+		float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+		float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		[branch]
+		if (!any(uvw - saturate(uvw)))
+		{
+			float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+			// perform manual blending of probes:
+			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+			envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+			envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+			// if the accumulation reached 1, we skip the rest of the probes:
+			iterator = envmapAccumulation.a < 1 ? iterator : envmapArrayEnd - 1;
+		}
+	}
+#endif // DISABLE_LOCALENVPMAPS
+
+	// Apply global envmap where there is no local envmap information:
+	if (envmapAccumulation.a < 0.99f)
+	{
+		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+	}
+
+	specular += max(0, envmapAccumulation.rgb * surface.F);
+
+#endif // DISABLE_ENVMAPS
+
+
+
+	[loop]
+	for (; iterator < o_ArrayLength; ++iterator)
+	{
+		uint entityIndex = o_Array[iterator];
 		ShaderEntityType light = EntityArray[entityIndex];
 
 		LightingResult result = (LightingResult)0;
