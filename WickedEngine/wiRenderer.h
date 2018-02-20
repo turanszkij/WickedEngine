@@ -23,7 +23,6 @@ struct Decal;
 struct WorldInfo;
 struct Wind;
 struct Camera;
-struct HitSphere;
 struct RAY;
 struct Camera;
 struct Model;
@@ -239,7 +238,6 @@ public:
 
 protected:
 
-	void UpdateSpheres();
 	static void SetUpBoneLines();
 	static void UpdateBoneLines();
 	static void SetUpCubes();
@@ -508,8 +506,6 @@ public:
 	// The scene holds all models, world information and wind information
 	static Scene& GetScene();
 
-	std::vector<Camera> cameras;
-	std::vector<HitSphere*> spheres;
 	static std::vector<Lines*> boneLines;
 	static std::vector<Lines*> linesTemp;
 	static std::vector<Cube> cubes;
@@ -527,8 +523,6 @@ public:
 	static Camera* cam, *refCam, *prevFrameCam;
 	static Camera* getCamera(){ return cam; }
 	static Camera* getRefCamera(){ return refCam; }
-
-	float getSphereRadius(const int& index);
 
 	std::string DIRECTORY;
 

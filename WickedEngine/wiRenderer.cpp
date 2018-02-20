@@ -152,9 +152,6 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 
 void wiRenderer::CleanUp()
 {
-	for (HitSphere* x : spheres)
-		delete x;
-	spheres.clear();
 }
 
 void wiRenderer::SetUpStaticComponents()
@@ -241,7 +238,6 @@ void wiRenderer::SetUpStaticComponents()
 	GetScene().wind=Wind();
 
 	Cube::LoadStatic();
-	HitSphere::SetUpStatic();
 
 	spTree_lights=nullptr;
 
@@ -277,7 +273,6 @@ void wiRenderer::CleanUpStatic()
 	wiHairParticle::CleanUpStatic();
 	wiEmittedParticle::CleanUpStatic();
 	Cube::CleanUpStatic();
-	HitSphere::CleanUpStatic();
 
 
 	for (int i = 0; i < VSTYPE_LAST; ++i)
@@ -411,28 +406,6 @@ int wiRenderer::GetSunArrayIndex()
 }
 float wiRenderer::GetGameSpeed() { return GameSpeed*overrideGameSpeed; }
 
-void wiRenderer::UpdateSpheres()
-{
-	//for(int i=0;i<spheres.size();i++){
-	//	Armature* armature=spheres[i]->parentArmature;
-	//	Bone* bone=(Bone*)spheres[i]->parent;
-
-	//	//spheres[i]->world = *bone->boneRelativity;
-	//	//XMStoreFloat3( &spheres[i]->translation, XMVector3Transform( XMLoadFloat3(&spheres[i]->translation_rest),XMLoadFloat4x4(bone->boneRelativity) ) );
-	//	XMStoreFloat3( &spheres[i]->translation, 
-	//		XMVector3Transform( XMLoadFloat3(&spheres[i]->translation_rest),XMLoadFloat4x4(&bone->recursiveRestInv)*XMLoadFloat4x4(&bone->world) ) 
-	//		);
-	//}
-
-	//for(HitSphere* s : spheres){
-	//	s->getMatrix();
-	//	s->center=s->translation;
-	//	s->radius=s->radius_saved*s->scale.x;
-	//}
-}
-float wiRenderer::getSphereRadius(const int& index){
-	return spheres[index]->radius;
-}
 void wiRenderer::SetUpBoneLines()
 {
 	boneLines.clear();
@@ -2795,12 +2768,6 @@ Material* wiRenderer::getMaterialByName(const std::string& get)
 			return iter->second;
 	}
 	return NULL;
-}
-HitSphere* wiRenderer::getSphereByName(const std::string& get){
-	for(HitSphere* hs : spheres)
-		if(!hs->name.compare(get))
-			return hs;
-	return nullptr;
 }
 Object* wiRenderer::getObjectByName(const std::string& name)
 {

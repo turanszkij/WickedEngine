@@ -1151,43 +1151,6 @@ struct Camera:public Transform{
 	}
 	virtual void UpdateTransform();
 };
-struct HitSphere:public SPHERE, public Transform{
-	float radius_saved;
-	static wiGraphicsTypes::GPUBuffer vertexBuffer;
-	enum HitSphereType{
-		HITTYPE,
-		ATKTYPE,
-		INVTYPE,
-	};
-	HitSphereType TYPE_SAVED,TYPE;
-
-	HitSphere():Transform(), SPHERE(), radius_saved(0){}
-	HitSphere(const std::string& newName, float newRadius, const XMFLOAT3& location,
-		Transform* newParent, const std::string& newProperty):Transform(),SPHERE(location,newRadius){
-
-			name=newName;
-			radius_saved=newRadius;
-			translation_rest=location;
-			if(newParent!=nullptr){
-				parentName=newParent->name;
-				parent=newParent;
-			}
-			TYPE=HitSphereType::HITTYPE;
-			if(newProperty.find("inv") != std::string::npos) TYPE=HitSphereType::INVTYPE;
-			else if(newProperty.find("atk") != std::string::npos) TYPE=HitSphereType::ATKTYPE;
-			TYPE_SAVED=TYPE;
-	}
-	void Reset(){
-		TYPE=TYPE_SAVED;
-		radius=radius_saved;
-	}
-	virtual void UpdateTransform();
-
-static const int RESOLUTION = 36;
-	static void SetUpStatic();
-	static void CleanUpStatic();
-
-};
 struct EnvironmentProbe : public Transform, public Cullable
 {
 	int textureIndex;
@@ -1269,8 +1232,6 @@ void LoadWiObjects(const std::string& directory, const std::string& filename, co
 void LoadWiMeshes(const std::string& directory, const std::string& filename, const std::string& identifier, MeshCollection& meshes, const std::list<Armature*>& armatures, const MaterialCollection& materials);
 void LoadWiActions(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Armature*>& armatures);
 void LoadWiLights(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Light*>& lights);
-void LoadWiHitSpheres(const std::string& directory, const std::string& name, const std::string& identifier, std::vector<HitSphere*>& spheres
-					  ,const std::list<Armature*>& armatures);
 void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind);
 void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::vector<Camera>& cameras
 				   ,const std::list<Armature*>& armatures);
