@@ -25,7 +25,7 @@ for shader in root.iter(namespace + "FxCompile"):
         
         print profile + ":   " + name
 
-        file.write("dxccompiler\dxc " + name + " -T ")
+        file.write("..\shadercompilers\dxc " + name + " -T ")
         
         if profile == "Vertex":
             file.write("vs")
