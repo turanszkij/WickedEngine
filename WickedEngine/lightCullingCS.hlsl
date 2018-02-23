@@ -255,11 +255,11 @@ void main(ComputeShaderInput IN)
 			maxAABB = max(maxAABB, viewSpace[i]);
 		}
 
-		GroupAABB.fromMinMax(minAABB, maxAABB);
+		AABBfromMinMax(GroupAABB, minAABB, maxAABB);
 
 		// We can perform coarse AABB intersection tests with this:
 		GroupAABB_WS = GroupAABB;
-		GroupAABB_WS.transform(g_xFrame_MainCamera_InvV);
+		AABBtransform(GroupAABB_WS, g_xFrame_MainCamera_InvV);
 	}
 
 	// Convert depth values to view space.
@@ -383,7 +383,7 @@ void main(ComputeShaderInput IN)
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				b.transform(MatrixArray[entity.additionalData_index]);
+				AABBtransform(b, MatrixArray[entity.additionalData_index]);
 
 				if (IntersectAABB(a, b))
 				{

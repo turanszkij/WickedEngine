@@ -1,13 +1,22 @@
 import os
 import xml.etree.ElementTree as ET
 
-tree = ET.parse('WickedEngine_SHADERS.vcxproj')
+tree = ET.parse('WickedEngine/WickedEngine_SHADERS.vcxproj')
 root = tree.getroot()
 
+## Hardcode visual studio namespace for now...
 namespace = "{http://schemas.microsoft.com/developer/msbuild/2003}"
 
-file = open("build_PSSL.bat", "w")
+file = open("build_HLSL6.bat", "w")
 
+outputdir = "hlsl6"
+
+## First, ensure that we have the optuput directory:
+file.write("cd WickedEngine\shaders \n")
+file.write("mkdir " + outputdir + "\n")
+file.write("cd .. \n")
+
+## Then we parse the default shader project and generate build task for an other shader compiler:
 for shader in root.iter(namespace + "FxCompile"):
     for shaderprofile in shader.iter(namespace + "ShaderType"):
 
@@ -33,7 +42,7 @@ for shader in root.iter(namespace + "FxCompile"):
 
         file.write("_6_0 ")
 
-        file.write(" -flegacy-macro-expansion -Fo shaders_hlsl_6/" + os.path.splitext(name)[0] + ".cso \n")
+        file.write(" -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso \n")
 
 
     

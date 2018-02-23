@@ -176,37 +176,6 @@ struct AABB
 
 	float3 getMin() { return c - e; }
 	float3 getMax() { return c + e; }
-	void fromMinMax(float3 _min, float3 _max)
-	{
-		c = (_min + _max) * 0.5f;
-		e = abs(_max - c);
-	}
-	void transform(float4x4 mat)
-	{
-		float3 _min = getMin();
-		float3 _max = getMax();
-		float3 corners[8];
-		corners[0] = _min;
-		corners[1] = float3(_min.x, _max.y, _min.z);
-		corners[2] = float3(_min.x, _max.y, _max.z);
-		corners[3] = float3(_min.x, _min.y, _max.z);
-		corners[4] = float3(_max.x, _min.y, _min.z);
-		corners[5] = float3(_max.x, _max.y, _min.z);
-		corners[6] = _max;
-		corners[7] = float3(_max.x, _min.y, _max.z);
-		_min = 1000000;
-		_max = -1000000;
-
-		[unroll]
-		for (uint i = 0; i < 8; ++i)
-		{
-			corners[i] = mul(float4(corners[i], 1), mat).xyz;
-			_min = min(_min, corners[i]);
-			_max = max(_max, corners[i]);
-		}
-
-		fromMinMax(_min, _max);
-	}
 };
 bool SphereIntersectsAABB(in Sphere sphere, in AABB aabb)
 {
@@ -225,20 +194,36 @@ bool IntersectAABB(AABB a, AABB b)
 
 	return true;
 }
+void AABBfromMinMax(inout AABB aabb, float3 _min, float3 _max)
+{
+	aabb.c = (_min + _max) * 0.5f;
+	aabb.e = abs(_max - aabb.c);
+}
+void AABBtransform(inout AABB aabb, float4x4 mat)
+{
+	float3 _min = aabb.getMin();
+	float3 _max = aabb.getMax();
+	float3 corners[8];
+	corners[0] = _min;
+	corners[1] = float3(_min.x, _max.y, _min.z);
+	corners[2] = float3(_min.x, _max.y, _max.z);
+	corners[3] = float3(_min.x, _min.y, _max.z);
+	corners[4] = float3(_max.x, _min.y, _min.z);
+	corners[5] = float3(_max.x, _max.y, _min.z);
+	corners[6] = _max;
+	corners[7] = float3(_max.x, _min.y, _max.z);
+	_min = 1000000;
+	_max = -1000000;
 
+	[unroll]
+	for (uint i = 0; i < 8; ++i)
+	{
+		corners[i] = mul(float4(corners[i], 1), mat).xyz;
+		_min = min(_min, corners[i]);
+		_max = max(_max, corners[i]);
+	}
 
-
-//static const float4 frustumCorners[4] = {
-//	float4(-1, -1, 1, 1),
-//	float4(1, -1, 1, 1),
-//	float4(-1, 1, 1, 1),
-//	float4(1, 1, 1, 1)
-//};
-//static const Frustum frustum = {
-//	ComputePlane(float3(0,0,0), frustumCorners[2].xyz, frustumCorners[0].xyz),
-//	ComputePlane(float3(0,0,0), frustumCorners[1].xyz, frustumCorners[3].xyz),
-//	ComputePlane(float3(0,0,0), frustumCorners[0].xyz, frustumCorners[1].xyz),
-//	ComputePlane(float3(0,0,0), frustumCorners[3].xyz, frustumCorners[2].xyz)
-//};
+	AABBfromMinMax(aabb, _min, _max);
+}
 
 #endif // _CULLING_SHADER_HF_
