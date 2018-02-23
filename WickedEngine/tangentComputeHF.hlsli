@@ -1,4 +1,4 @@
-#ifndef TANGENT_COMFUTE_HF
+#ifndef TANGENT_COMPUTE_HF
 #define TANGENT_COMPUTE_HF
 
 inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV, out float3 T, out float3 B)
