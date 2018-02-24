@@ -534,22 +534,11 @@ public:
 	AABB bounds;
 	void Serialize(wiArchive& archive);
 };
-struct Streamable : public Cullable
+struct Object : public Cullable, public Transform
 {
-public:
-	Streamable();
-	std::string directory;
-	std::string meshfile;
-	std::string materialfile;
-	bool loaded;
+	std::string meshName;
 	Mesh* mesh;
 
-	void StreamIn();
-	void StreamOut();
-	void Serialize(wiArchive& archive);
-};
-struct Object : public Streamable, public Transform
-{
 	bool renderable;
 
 	//PARTICLE

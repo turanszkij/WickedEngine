@@ -321,7 +321,7 @@ void LoadWiObjects(const std::string& directory, const std::string& name, const 
 						file>>meshName;
 						stringstream identified_mesh("");
 						identified_mesh<<meshName<<identifier;
-						object->meshfile = identified_mesh.str();
+						object->meshName = identified_mesh.str();
 						MeshCollection::iterator iter = meshes.find(identified_mesh.str());
 						
 						if(line[1]=='b')
@@ -1135,35 +1135,6 @@ Cullable::Cullable():bounds(AABB()){}
 void Cullable::Serialize(wiArchive& archive)
 {
 	bounds.Serialize(archive);
-}
-#pragma endregion
-
-#pragma region STREAMABLE
-Streamable::Streamable():directory(""),meshfile(""),materialfile(""),loaded(false),mesh(nullptr){}
-void Streamable::StreamIn()
-{
-}
-void Streamable::StreamOut()
-{
-}
-void Streamable::Serialize(wiArchive& archive)
-{
-	Cullable::Serialize(archive);
-
-	if (archive.IsReadMode())
-	{
-		archive >> directory;
-		archive >> meshfile;
-		archive >> materialfile;
-		archive >> loaded;
-	}
-	else
-	{
-		archive << directory;
-		archive << meshfile;
-		archive << materialfile;
-		archive << loaded;
-	}
 }
 #pragma endregion
 
@@ -2996,7 +2967,7 @@ void Model::Serialize(wiArchive& archive)
 			if (x->mesh == nullptr)
 			{
 				// find mesh
-				MeshCollection::iterator found = meshes.find(x->meshfile);
+				MeshCollection::iterator found = meshes.find(x->meshName);
 				if (found != meshes.end())
 				{
 					x->mesh = found->second;
@@ -3853,7 +3824,7 @@ Object::Object(const std::string& name) :Transform()
 	init();
 
 }
-Object::Object(const Object& other):Streamable(other),Transform(other)
+Object::Object(const Object& other):Cullable(other),Transform(other)
 {
 	init();
 
@@ -3891,6 +3862,7 @@ Object::~Object()
 }
 void Object::init()
 {
+	mesh = nullptr;
 	trail.resize(0);
 	renderable = true;
 	eParticleSystems.resize(0);
@@ -4053,7 +4025,28 @@ XMMATRIX Object::GetOBB() const
 }
 void Object::Serialize(wiArchive& archive)
 {
-	Streamable::Serialize(archive);
+	Cullable::Serialize(archive);
+
+	// backwards-compatibility: serialize [streamable] properties
+	if (archive.IsReadMode())
+	{
+		string tempStr;
+		bool tempBool;
+		archive >> tempStr;
+		archive >> meshName; // this is still needed!
+		archive >> tempStr;
+		archive >> tempBool;
+	}
+	else
+	{
+		string tempStr = "";
+		bool tempBool = false;
+		archive << tempStr;
+		archive << meshName; // this is still needed!
+		archive << tempStr;
+		archive << tempBool;
+	}
+
 	Transform::Serialize(archive);
 
 	if (archive.IsReadMode())
