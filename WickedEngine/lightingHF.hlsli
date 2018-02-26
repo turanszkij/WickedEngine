@@ -710,13 +710,16 @@ inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3
 		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, uvw, surface.N);
-		float4 reflection = ConeTraceReflection(texture_voxelradiance, uvw, surface.N, surface.V, surface.roughness);
-
-		reflection.rgb *= surface.F;
-
 		diffuse += lerp(radiance.rgb, 0, blend);
-		specular = lerp(lerp(reflection.rgb, specular, blend), specular, (1 - reflection.a));
 		ao *= 1 - lerp(radiance.a, 0, blend);
+
+		[branch]
+		if (g_xWorld_VoxelRadianceReflectionsEnabled)
+		{
+			float4 reflection = ConeTraceReflection(texture_voxelradiance, uvw, surface.N, surface.V, surface.roughness);
+			reflection.rgb *= surface.F;
+			specular = lerp(lerp(reflection.rgb, specular, blend), specular, (1 - reflection.a));
+		}
 	}
 }
 

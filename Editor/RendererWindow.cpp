@@ -71,14 +71,14 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 
 	voxelRadianceDebugCheckBox = new wiCheckBox("DEBUG: ");
 	voxelRadianceDebugCheckBox->SetTooltip("Toggle Voxel GI visualization.");
-	voxelRadianceDebugCheckBox->SetPos(XMFLOAT2(x + 100, y));
+	voxelRadianceDebugCheckBox->SetPos(XMFLOAT2(x + 130, y));
 	voxelRadianceDebugCheckBox->OnClick([](wiEventArgs args) {
 		wiRenderer::SetToDrawVoxelHelper(args.bValue);
 	});
 	voxelRadianceDebugCheckBox->SetCheck(wiRenderer::GetToDrawVoxelHelper());
 	rendererWindow->AddWidget(voxelRadianceDebugCheckBox);
 
-	voxelRadianceSecondaryBounceCheckBox = new wiCheckBox("Voxel GI Secondary Light Bounce: ");
+	voxelRadianceSecondaryBounceCheckBox = new wiCheckBox("Secondary Light Bounce: ");
 	voxelRadianceSecondaryBounceCheckBox->SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
 	voxelRadianceSecondaryBounceCheckBox->SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceSecondaryBounceCheckBox->OnClick([](wiEventArgs args) {
@@ -86,6 +86,15 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	voxelRadianceSecondaryBounceCheckBox->SetCheck(wiRenderer::GetVoxelRadianceSecondaryBounceEnabled());
 	rendererWindow->AddWidget(voxelRadianceSecondaryBounceCheckBox);
+
+	voxelRadianceReflectionsCheckBox = new wiCheckBox("Reflections: ");
+	voxelRadianceReflectionsCheckBox->SetTooltip("Toggle specular reflections computation for Voxel GI.");
+	voxelRadianceReflectionsCheckBox->SetPos(XMFLOAT2(x + 130, y));
+	voxelRadianceReflectionsCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
+	});
+	voxelRadianceReflectionsCheckBox->SetCheck(wiRenderer::GetVoxelRadianceReflectionsEnabled());
+	rendererWindow->AddWidget(voxelRadianceReflectionsCheckBox);
 
 	voxelRadianceVoxelSizeSlider = new wiSlider(0.125, 10, 1, 79, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for Voxel GI calculations.");

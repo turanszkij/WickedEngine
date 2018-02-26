@@ -24,6 +24,7 @@ public:
 	wiCheckBox* voxelRadianceCheckBox;
 	wiCheckBox* voxelRadianceDebugCheckBox;
 	wiCheckBox* voxelRadianceSecondaryBounceCheckBox;
+	wiCheckBox* voxelRadianceReflectionsCheckBox;
 	wiSlider*	voxelRadianceVoxelSizeSlider;
 	wiSlider*	voxelRadianceConeTracingSlider;
 	wiSlider*	voxelRadianceFalloffSlider;

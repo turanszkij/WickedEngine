@@ -60,8 +60,13 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float		g_xWorld_SpecularAA;
 	float		g_xWorld_VoxelRadianceDataSize;
 	uint		g_xWorld_VoxelRadianceDataRes;
+	float		g_xWorld_VoxelRadianceDataRes_Inverse;
+	uint		g_xWorld_VoxelRadianceDataMIPs;
 	uint		g_xWorld_VoxelRadianceConeTracingQuality;
+	uint		g_xWorld_VoxelRadianceConeTracingQuality_Inverse;
 	float		g_xWorld_VoxelRadianceFalloff;
+	bool		g_xWorld_VoxelRadianceReflectionsEnabled;
+	float		xPadding1_WorldCB;
 	float3		g_xWorld_VoxelRadianceDataCenter;
 	bool		g_xWorld_AdvancedRefractions;
 	uint3		g_xWorld_EntityCullingTileCount;
@@ -69,7 +74,6 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	int			g_xWorld_GlobalEnvProbeIndex;
 	uint		g_xWorld_EnvProbeMipCount;
 	float		g_xWorld_EnvProbeMipCount_Inverse;
-	float		xPadding_WorldCB;
 };
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {

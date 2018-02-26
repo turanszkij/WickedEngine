@@ -134,8 +134,13 @@ public:
 		float mSpecularAA;
 		float mVoxelRadianceDataSize;
 		UINT mVoxelRadianceDataRes;
+		float mVoxelRadianceDataRes_Inverse;
+		UINT mVoxelRadianceDataMIPs;
 		UINT mVoxelRadianceDataConeTracingQuality;
+		float mVoxelRadianceDataConeTracingQuality_Inverse;
 		float mVoxelRadianceDataFalloff;
+		BOOL mVoxelRadianceReflectionsEnabled;
+		float pad1;
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		BOOL mAdvancedRefractions;
 		XMUINT3 mEntityCullingTileCount;
@@ -143,7 +148,6 @@ public:
 		int	mGlobalEnvProbeIndex;
 		UINT mEnvProbeMipCount;
 		float mEnvProbeMipCount_Inverse;
-		float pad0;
 	};
 	CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	{
@@ -283,10 +287,12 @@ protected:
 		int coneTracingQuality;
 		float falloff;
 		bool secondaryBounceEnabled;
+		bool reflectionsEnabled;
 		bool centerChangedThisFrame;
+		UINT mips;
 
 		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8),
-			falloff(1), secondaryBounceEnabled(true), centerChangedThisFrame(true)
+			falloff(1), secondaryBounceEnabled(true), reflectionsEnabled(false), centerChangedThisFrame(true), mips(8)
 		{}
 	} static voxelSceneData;
 
@@ -364,6 +370,8 @@ public:
 	static bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
 	static void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
 	static bool GetVoxelRadianceSecondaryBounceEnabled() { return voxelSceneData.secondaryBounceEnabled; }
+	static void SetVoxelRadianceReflectionsEnabled(bool enabled) { voxelSceneData.reflectionsEnabled = enabled; }
+	static bool GetVoxelRadianceReflectionsEnabled() { return voxelSceneData.reflectionsEnabled; }
 	static void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.voxelsize = value; }
 	static float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
 	//static void SetVoxelRadianceResolution(int value) { voxelSceneData.res = value; }
