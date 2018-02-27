@@ -133,6 +133,7 @@ public:
 		XMFLOAT3 mFog;
 		float mSpecularAA;
 		float mVoxelRadianceDataSize;
+		float mVoxelRadianceDataSize_Inverse;
 		UINT mVoxelRadianceDataRes;
 		float mVoxelRadianceDataRes_Inverse;
 		UINT mVoxelRadianceDataMIPs;
@@ -140,7 +141,6 @@ public:
 		float mVoxelRadianceDataConeTracingQuality_Inverse;
 		float mVoxelRadianceDataFalloff;
 		BOOL mVoxelRadianceReflectionsEnabled;
-		float pad1;
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		BOOL mAdvancedRefractions;
 		XMUINT3 mEntityCullingTileCount;

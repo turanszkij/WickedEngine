@@ -59,14 +59,14 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float3		g_xWorld_Fog;					// Fog Start,End,Height
 	float		g_xWorld_SpecularAA;
 	float		g_xWorld_VoxelRadianceDataSize;
+	float		g_xWorld_VoxelRadianceDataSize_Inverse;
 	uint		g_xWorld_VoxelRadianceDataRes;
 	float		g_xWorld_VoxelRadianceDataRes_Inverse;
 	uint		g_xWorld_VoxelRadianceDataMIPs;
 	uint		g_xWorld_VoxelRadianceConeTracingQuality;
-	uint		g_xWorld_VoxelRadianceConeTracingQuality_Inverse;
+	float		g_xWorld_VoxelRadianceConeTracingQuality_Inverse;
 	float		g_xWorld_VoxelRadianceFalloff;
 	bool		g_xWorld_VoxelRadianceReflectionsEnabled;
-	float		xPadding1_WorldCB;
 	float3		g_xWorld_VoxelRadianceDataCenter;
 	bool		g_xWorld_AdvancedRefractions;
 	uint3		g_xWorld_EntityCullingTileCount;

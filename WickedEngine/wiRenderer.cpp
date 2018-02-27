@@ -6293,10 +6293,11 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mZenith = world.zenith;
 	value.mSpecularAA = SPECULARAA;
 	value.mVoxelRadianceDataSize = voxelSceneData.voxelsize;
+	value.mVoxelRadianceDataSize_Inverse = 1.0f / (float)value.mVoxelRadianceDataSize;
 	value.mVoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (UINT)voxelSceneData.res : 0;
 	value.mVoxelRadianceDataRes_Inverse = 1.0f / (float)value.mVoxelRadianceDataRes;
 	value.mVoxelRadianceDataMIPs = voxelSceneData.mips;
-	value.mVoxelRadianceDataConeTracingQuality = voxelSceneData.coneTracingQuality;
+	value.mVoxelRadianceDataConeTracingQuality = max(min(voxelSceneData.coneTracingQuality, 16), 1);
 	value.mVoxelRadianceDataConeTracingQuality_Inverse = 1.0f / (float)value.mVoxelRadianceDataConeTracingQuality;
 	value.mVoxelRadianceDataFalloff = voxelSceneData.falloff;
 	value.mVoxelRadianceReflectionsEnabled = voxelSceneData.reflectionsEnabled;

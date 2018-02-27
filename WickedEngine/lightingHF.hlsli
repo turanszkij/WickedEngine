@@ -704,10 +704,19 @@ inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3
 {
 	[branch]if (g_xWorld_VoxelRadianceDataRes != 0)
 	{
-		float3 diff = (surface.P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
-		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-		diff = abs(diff);
-		float blend = pow(saturate(max(diff.x, max(diff.y, diff.z))), 4);
+		// Convert world space surface pos to voxel grid space:
+		float3 voxelSpacePos = surface.P - g_xWorld_VoxelRadianceDataCenter;
+		// offset by half a voxel in the direction of the surface normal (try to avoid self-occlusion)
+		voxelSpacePos += surface.N * 0.5f;
+		// normalize voxel space pos to [-1, 1]:
+		voxelSpacePos *= g_xWorld_VoxelRadianceDataSize_Inverse;
+		voxelSpacePos *= g_xWorld_VoxelRadianceDataRes_Inverse;
+		// calculate uvw coords into voxel texture:
+		float3 uvw = voxelSpacePos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+
+		// determine blending factor (we will blend out voxel GI on grid edges):
+		voxelSpacePos = saturate(abs(voxelSpacePos));
+		float blend = pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, uvw, surface.N);
 		diffuse += lerp(radiance.rgb, 0, blend);
