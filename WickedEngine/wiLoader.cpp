@@ -2646,6 +2646,8 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 				}
 				mesh->aabb.create(min, max);
 
+				object->meshName = mesh->name;
+
 				this->objects.insert(object);
 				this->meshes.insert(make_pair(mesh->name, mesh));
 			}
