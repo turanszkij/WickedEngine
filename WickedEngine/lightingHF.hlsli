@@ -704,30 +704,23 @@ inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3
 {
 	[branch]if (g_xWorld_VoxelRadianceDataRes != 0)
 	{
-		// Convert world space surface pos to voxel grid space:
+		// determine blending factor (we will blend out voxel GI on grid edges):
 		float3 voxelSpacePos = surface.P - g_xWorld_VoxelRadianceDataCenter;
-		// offset by half a voxel in the direction of the surface normal (try to avoid self-occlusion)
-		voxelSpacePos += surface.N * 0.5f;
-		// normalize voxel space pos to [-1, 1]:
 		voxelSpacePos *= g_xWorld_VoxelRadianceDataSize_Inverse;
 		voxelSpacePos *= g_xWorld_VoxelRadianceDataRes_Inverse;
-		// calculate uvw coords into voxel texture:
-		float3 uvw = voxelSpacePos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-
-		// determine blending factor (we will blend out voxel GI on grid edges):
 		voxelSpacePos = saturate(abs(voxelSpacePos));
 		float blend = pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
 
-		float4 radiance = ConeTraceRadiance(texture_voxelradiance, uvw, surface.N);
+		float4 radiance = ConeTraceRadiance(texture_voxelradiance, surface.P, surface.N);
 		diffuse += lerp(radiance.rgb, 0, blend);
 		ao *= 1 - lerp(radiance.a, 0, blend);
 
 		[branch]
 		if (g_xWorld_VoxelRadianceReflectionsEnabled)
 		{
-			float4 reflection = ConeTraceReflection(texture_voxelradiance, uvw, surface.N, surface.V, surface.roughness);
+			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
 			reflection.rgb *= surface.F;
-			specular = lerp(lerp(reflection.rgb, specular, blend), specular, (1 - reflection.a));
+			specular = max(specular, lerp(reflection.rgb * reflection.a, 0, blend));
 		}
 	}
 }

@@ -96,7 +96,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	voxelRadianceReflectionsCheckBox->SetCheck(wiRenderer::GetVoxelRadianceReflectionsEnabled());
 	rendererWindow->AddWidget(voxelRadianceReflectionsCheckBox);
 
-	voxelRadianceVoxelSizeSlider = new wiSlider(0.125, 10, 1, 79, "Voxel GI Voxel Size: ");
+	voxelRadianceVoxelSizeSlider = new wiSlider(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider->SetTooltip("Adjust the voxel size for Voxel GI calculations.");
 	voxelRadianceVoxelSizeSlider->SetSize(XMFLOAT2(100, 30));
 	voxelRadianceVoxelSizeSlider->SetPos(XMFLOAT2(x, y += 30));
@@ -116,15 +116,15 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	rendererWindow->AddWidget(voxelRadianceConeTracingSlider);
 
-	voxelRadianceFalloffSlider = new wiSlider(0.01f, 2, 1, 10000, "Voxel AO Falloff: ");
-	voxelRadianceFalloffSlider->SetTooltip("Adjust the falloff of the Voxel Ambient Occlusion.");
-	voxelRadianceFalloffSlider->SetSize(XMFLOAT2(100, 30));
-	voxelRadianceFalloffSlider->SetPos(XMFLOAT2(x, y += 30));
-	voxelRadianceFalloffSlider->SetValue(wiRenderer::GetVoxelRadianceFalloff());
-	voxelRadianceFalloffSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceFalloff(args.fValue);
+	voxelRadianceRayStepSizeSlider = new wiSlider(0.5f, 2.0f, 0.5f, 10000, "Voxel GI Ray Step Size: ");
+	voxelRadianceRayStepSizeSlider->SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
+	voxelRadianceRayStepSizeSlider->SetSize(XMFLOAT2(100, 30));
+	voxelRadianceRayStepSizeSlider->SetPos(XMFLOAT2(x, y += 30));
+	voxelRadianceRayStepSizeSlider->SetValue(wiRenderer::GetVoxelRadianceRayStepSize());
+	voxelRadianceRayStepSizeSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetVoxelRadianceRayStepSize(args.fValue);
 	});
-	rendererWindow->AddWidget(voxelRadianceFalloffSlider);
+	rendererWindow->AddWidget(voxelRadianceRayStepSizeSlider);
 
 	specularAASlider = new wiSlider(0, 1, 1, 10000, "Specular Antialiasing: ");
 	specularAASlider->SetTooltip("Adjust specular antialiasing strength. This can reduce flickering of specular highlights.");

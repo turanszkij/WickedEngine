@@ -139,7 +139,7 @@ public:
 		UINT mVoxelRadianceDataMIPs;
 		UINT mVoxelRadianceDataConeTracingQuality;
 		float mVoxelRadianceDataConeTracingQuality_Inverse;
-		float mVoxelRadianceDataFalloff;
+		float mVoxelRadianceDataRayStepSize;
 		BOOL mVoxelRadianceReflectionsEnabled;
 		XMFLOAT3 mVoxelRadianceDataCenter;
 		BOOL mAdvancedRefractions;
@@ -285,14 +285,14 @@ protected:
 		XMFLOAT3 center;
 		XMFLOAT3 extents;
 		int coneTracingQuality;
-		float falloff;
+		float rayStepSize;
 		bool secondaryBounceEnabled;
 		bool reflectionsEnabled;
 		bool centerChangedThisFrame;
 		UINT mips;
 
 		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8),
-			falloff(1), secondaryBounceEnabled(true), reflectionsEnabled(false), centerChangedThisFrame(true), mips(8)
+			rayStepSize(0.5f), secondaryBounceEnabled(true), reflectionsEnabled(false), centerChangedThisFrame(true), mips(8)
 		{}
 	} static voxelSceneData;
 
@@ -378,8 +378,8 @@ public:
 	static int GetVoxelRadianceResolution() { return voxelSceneData.res; }
 	static void SetVoxelRadianceConeTracingQuality(int value) { voxelSceneData.coneTracingQuality = value; }
 	static int GetVoxelRadianceConeTracingQuality() { return voxelSceneData.coneTracingQuality; }
-	static float GetVoxelRadianceFalloff() { return voxelSceneData.falloff; }
-	static void SetVoxelRadianceFalloff(float value) { voxelSceneData.falloff = value; }
+	static float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
+	static void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
 	static void SetSpecularAAParam(float value) { SPECULARAA = value; }
 	static float GetSpecularAAParam() { return SPECULARAA; }
 	static void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
