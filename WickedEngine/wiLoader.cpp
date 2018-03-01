@@ -3830,6 +3830,8 @@ Object::Object(const Object& other):Cullable(other),Transform(other)
 {
 	init();
 
+	meshName = other.meshName;
+	mesh = other.mesh;
 	name = other.name;
 	mass = other.mass;
 	collisionShape = other.collisionShape;
