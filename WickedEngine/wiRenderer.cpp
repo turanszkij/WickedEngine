@@ -6297,8 +6297,8 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mVoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (UINT)voxelSceneData.res : 0;
 	value.mVoxelRadianceDataRes_Inverse = 1.0f / (float)value.mVoxelRadianceDataRes;
 	value.mVoxelRadianceDataMIPs = voxelSceneData.mips;
-	value.mVoxelRadianceDataConeTracingQuality = max(min(voxelSceneData.coneTracingQuality, 16), 1);
-	value.mVoxelRadianceDataConeTracingQuality_Inverse = 1.0f / (float)value.mVoxelRadianceDataConeTracingQuality;
+	value.mVoxelRadianceDataNumCones = max(min(voxelSceneData.numCones, 16), 1);
+	value.mVoxelRadianceDataNumCones_Inverse = 1.0f / (float)value.mVoxelRadianceDataNumCones;
 	value.mVoxelRadianceDataRayStepSize = voxelSceneData.rayStepSize;
 	value.mVoxelRadianceReflectionsEnabled = voxelSceneData.reflectionsEnabled;
 	value.mVoxelRadianceDataCenter = voxelSceneData.center;

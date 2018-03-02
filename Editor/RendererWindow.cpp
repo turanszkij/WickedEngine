@@ -106,13 +106,13 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	rendererWindow->AddWidget(voxelRadianceVoxelSizeSlider);
 
-	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel GI Diffuse Cone Tracing Quality: ");
+	voxelRadianceConeTracingSlider = new wiSlider(1, 16, 8, 15, "Voxel GI NumCones: ");
 	voxelRadianceConeTracingSlider->SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
 	voxelRadianceConeTracingSlider->SetSize(XMFLOAT2(100, 30));
 	voxelRadianceConeTracingSlider->SetPos(XMFLOAT2(x, y += 30));
-	voxelRadianceConeTracingSlider->SetValue((float)wiRenderer::GetVoxelRadianceConeTracingQuality());
+	voxelRadianceConeTracingSlider->SetValue((float)wiRenderer::GetVoxelRadianceNumCones());
 	voxelRadianceConeTracingSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceConeTracingQuality(args.iValue);
+		wiRenderer::SetVoxelRadianceNumCones(args.iValue);
 	});
 	rendererWindow->AddWidget(voxelRadianceConeTracingSlider);
 

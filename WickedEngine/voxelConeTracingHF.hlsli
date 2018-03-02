@@ -79,7 +79,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 {
 	float4 radiance = 0;
 
-	for (uint cone = 0; cone < g_xWorld_VoxelRadianceConeTracingQuality; ++cone) // quality is between 1 and 16 cones
+	for (uint cone = 0; cone < g_xWorld_VoxelRadianceNumCones; ++cone) // quality is between 1 and 16 cones
 	{
 		// approximate a hemisphere from random points inside a sphere:
 		float3 coneDirection = CONES[cone];
@@ -90,7 +90,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 	}
 
 	// final radiance is average of all the cones radiances
-	radiance *= g_xWorld_VoxelRadianceConeTracingQuality_Inverse;
+	radiance *= g_xWorld_VoxelRadianceNumCones_Inverse;
 	radiance.a = saturate(radiance.a);
 
 	return max(0, radiance);

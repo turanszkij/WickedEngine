@@ -63,8 +63,8 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	uint		g_xWorld_VoxelRadianceDataRes;
 	float		g_xWorld_VoxelRadianceDataRes_Inverse;
 	uint		g_xWorld_VoxelRadianceDataMIPs;
-	uint		g_xWorld_VoxelRadianceConeTracingQuality;
-	float		g_xWorld_VoxelRadianceConeTracingQuality_Inverse;
+	uint		g_xWorld_VoxelRadianceNumCones;
+	float		g_xWorld_VoxelRadianceNumCones_Inverse;
 	float		g_xWorld_VoxelRadianceRayStepSize;
 	bool		g_xWorld_VoxelRadianceReflectionsEnabled;
 	float3		g_xWorld_VoxelRadianceDataCenter;

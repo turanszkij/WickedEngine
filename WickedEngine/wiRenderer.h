@@ -137,8 +137,8 @@ public:
 		UINT mVoxelRadianceDataRes;
 		float mVoxelRadianceDataRes_Inverse;
 		UINT mVoxelRadianceDataMIPs;
-		UINT mVoxelRadianceDataConeTracingQuality;
-		float mVoxelRadianceDataConeTracingQuality_Inverse;
+		UINT mVoxelRadianceDataNumCones;
+		float mVoxelRadianceDataNumCones_Inverse;
 		float mVoxelRadianceDataRayStepSize;
 		BOOL mVoxelRadianceReflectionsEnabled;
 		XMFLOAT3 mVoxelRadianceDataCenter;
@@ -284,14 +284,14 @@ protected:
 		float voxelsize;
 		XMFLOAT3 center;
 		XMFLOAT3 extents;
-		int coneTracingQuality;
+		int numCones;
 		float rayStepSize;
 		bool secondaryBounceEnabled;
 		bool reflectionsEnabled;
 		bool centerChangedThisFrame;
 		UINT mips;
 
-		VoxelizedSceneData() :enabled(false), res(256), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), coneTracingQuality(8),
+		VoxelizedSceneData() :enabled(false), res(128), voxelsize(1.0f), center(XMFLOAT3(0, 0, 0)), extents(XMFLOAT3(0, 0, 0)), numCones(8),
 			rayStepSize(0.5f), secondaryBounceEnabled(true), reflectionsEnabled(false), centerChangedThisFrame(true), mips(8)
 		{}
 	} static voxelSceneData;
@@ -376,8 +376,8 @@ public:
 	static float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
 	//static void SetVoxelRadianceResolution(int value) { voxelSceneData.res = value; }
 	static int GetVoxelRadianceResolution() { return voxelSceneData.res; }
-	static void SetVoxelRadianceConeTracingQuality(int value) { voxelSceneData.coneTracingQuality = value; }
-	static int GetVoxelRadianceConeTracingQuality() { return voxelSceneData.coneTracingQuality; }
+	static void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
+	static int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
 	static float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 	static void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
 	static void SetSpecularAAParam(float value) { SPECULARAA = value; }
