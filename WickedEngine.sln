@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WickedEngine_SHARED", "WickedEngine\WickedEngine_SHARED.vcxitems", "{45D41ACC-2C3C-43D2-BC10-02AA73FFC7C7}"
 EndProject
@@ -42,8 +42,8 @@ Global
 		{06163DCB-B183-4ED9-9C62-13EF1658E049}.Release|Win32.Build.0 = Release|Win32
 		{06163DCB-B183-4ED9-9C62-13EF1658E049}.Release|x64.ActiveCfg = Release|x64
 		{06163DCB-B183-4ED9-9C62-13EF1658E049}.Release|x64.Build.0 = Release|x64
-		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|ARM.ActiveCfg = Debug|x64
-		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|ARM.Build.0 = Debug|x64
+		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|ARM.ActiveCfg = Debug|ARM
+		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|ARM.Build.0 = Debug|ARM
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|Win32.Build.0 = Debug|Win32
 		{60DA258F-E95F-4CF4-A46B-17D80644464B}.Debug|x64.ActiveCfg = Debug|x64

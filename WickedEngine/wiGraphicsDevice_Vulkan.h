@@ -46,6 +46,8 @@ namespace wiGraphicsTypes
 		VkQueueFamilyProperties *queue_props;
 		VkPhysicalDeviceMemoryProperties memory_properties;
 
+		VkCommandBuffer commandBuffers[GRAPHICSTHREAD_COUNT];
+
 		uint32_t enabled_extension_count;
 		uint32_t enabled_layer_count;
 		char *extension_names[64];
@@ -83,6 +85,26 @@ namespace wiGraphicsTypes
 		VkPresentModeKHR presentMode;
 		VkFence fences[BACKBUFFER_COUNT];
 		int frame_index;
+
+
+
+
+		VkDescriptorPool desc_pool;
+
+		bool quit;
+		int32_t curFrame;
+		int32_t frameCount;
+		bool validate;
+		bool validate_checks_disabled;
+		bool use_break;
+		bool suppress_popups;
+		PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
+		PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
+		VkDebugReportCallbackEXT msg_callback;
+		PFN_vkDebugReportMessageEXT DebugReportMessage;
+
+		uint32_t current_buffer;
+		uint32_t queue_family_count;
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);
