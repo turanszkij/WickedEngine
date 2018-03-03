@@ -82,7 +82,8 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 	for (uint cone = 0; cone < g_xWorld_VoxelRadianceNumCones; ++cone) // quality is between 1 and 16 cones
 	{
 		// approximate a hemisphere from random points inside a sphere:
-		float3 coneDirection = CONES[cone];
+		//  (reflect with normal will make the sphere distribution dependent on normal, less banding this way)
+		float3 coneDirection = reflect(CONES[cone], N);
 		// if point on sphere is facing below normal (so it's located on bottom hemisphere), put it on the opposite hemisphere instead:
 		coneDirection *= dot(coneDirection, N) < 0 ? -1 : 1;
 
