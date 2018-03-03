@@ -1146,6 +1146,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include_Vulkan.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1951,6 +1957,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp">
+      <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
