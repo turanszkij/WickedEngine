@@ -15,96 +15,9 @@ namespace wiGraphicsTypes
 	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
 	private:
-		VkSurfaceKHR surface;
-		bool prepared;
-		bool use_staging_buffer;
-		bool separate_present_queue;
 
-		bool VK_KHR_incremental_present_enabled;
-
-		bool VK_GOOGLE_display_timing_enabled;
-		bool syncd_with_actual_presents;
-		uint64_t refresh_duration;
-		uint64_t refresh_duration_multiplier;
-		uint64_t target_IPD;  // image present duration (inverse of frame rate)
-		uint64_t prev_desired_present_time;
-		uint32_t next_present_id;
-		uint32_t last_early_id;  // 0 if no early images
-		uint32_t last_late_id;   // 0 if no late images
-
-		VkInstance inst;
-		VkPhysicalDevice gpu;
-		VkDevice device;
-		VkQueue graphics_queue;
-		VkQueue present_queue;
-		uint32_t graphics_queue_family_index;
-		uint32_t present_queue_family_index;
-		VkSemaphore image_acquired_semaphores[BACKBUFFER_COUNT];
-		VkSemaphore draw_complete_semaphores[BACKBUFFER_COUNT];
-		VkSemaphore image_ownership_semaphores[BACKBUFFER_COUNT];
-		VkPhysicalDeviceProperties gpu_props;
-		VkQueueFamilyProperties *queue_props;
-		VkPhysicalDeviceMemoryProperties memory_properties;
-
-		VkCommandBuffer commandBuffers[GRAPHICSTHREAD_COUNT];
-
-		uint32_t enabled_extension_count;
-		uint32_t enabled_layer_count;
-		char *extension_names[64];
-		char *enabled_layers[64];
-
-		int width, height;
-		VkFormat format;
-		VkColorSpaceKHR color_space;
-
-		typedef struct {
-			VkImage image;
-			VkCommandBuffer cmd;
-			VkCommandBuffer graphics_to_present_cmd;
-			VkImageView view;
-			VkBuffer uniform_buffer;
-			VkDeviceMemory uniform_memory;
-			VkFramebuffer framebuffer;
-			VkDescriptorSet descriptor_set;
-		} SwapchainImageResources;
-
-		PFN_vkGetPhysicalDeviceSurfaceSupportKHR fpGetPhysicalDeviceSurfaceSupportKHR;
-		PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR;
-		PFN_vkGetPhysicalDeviceSurfaceFormatsKHR fpGetPhysicalDeviceSurfaceFormatsKHR;
-		PFN_vkGetPhysicalDeviceSurfacePresentModesKHR fpGetPhysicalDeviceSurfacePresentModesKHR;
-		PFN_vkCreateSwapchainKHR fpCreateSwapchainKHR;
-		PFN_vkDestroySwapchainKHR fpDestroySwapchainKHR;
-		PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
-		PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
-		PFN_vkQueuePresentKHR fpQueuePresentKHR;
-		PFN_vkGetRefreshCycleDurationGOOGLE fpGetRefreshCycleDurationGOOGLE;
-		PFN_vkGetPastPresentationTimingGOOGLE fpGetPastPresentationTimingGOOGLE;
-		uint32_t swapchainImageCount;
-		VkSwapchainKHR swapchain;
-		SwapchainImageResources *swapchain_image_resources;
-		VkPresentModeKHR presentMode;
-		VkFence fences[BACKBUFFER_COUNT];
-		int frame_index;
-
-
-
-
-		VkDescriptorPool desc_pool;
-
-		bool quit;
-		int32_t curFrame;
-		int32_t frameCount;
-		bool validate;
-		bool validate_checks_disabled;
-		bool use_break;
-		bool suppress_popups;
-		PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
-		PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
-		VkDebugReportCallbackEXT msg_callback;
-		PFN_vkDebugReportMessageEXT DebugReportMessage;
-
-		uint32_t current_buffer;
-		uint32_t queue_family_count;
+		VkInstance instance;
+		VkDebugReportCallbackEXT callback;
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);
