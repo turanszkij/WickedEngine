@@ -5,9 +5,10 @@
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
 
-
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "Include_Vulkan.h"
+
+#include <vector>
 
 namespace wiGraphicsTypes
 {
@@ -18,6 +19,17 @@ namespace wiGraphicsTypes
 
 		VkInstance instance;
 		VkDebugReportCallbackEXT callback;
+		VkSurfaceKHR surface;
+		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+		VkDevice device;
+		VkQueue graphicsQueue; 
+		VkQueue presentQueue;
+
+		VkSwapchainKHR swapChain;
+		std::vector<VkImage> swapChainImages; 
+		std::vector<VkImageView> swapChainImageViews;
+		VkFormat swapChainImageFormat;
+		VkExtent2D swapChainExtent;
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);
