@@ -26,10 +26,14 @@ namespace wiGraphicsTypes
 		VkQueue presentQueue;
 
 		VkSwapchainKHR swapChain;
-		std::vector<VkImage> swapChainImages; 
-		std::vector<VkImageView> swapChainImageViews;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
+		std::vector<VkImage> swapChainImages; 
+		std::vector<VkImageView> swapChainImageViews;
+		std::vector<VkFramebuffer> swapChainFramebuffers;
+
+		VkRenderPass defaultRenderPass;
+		VkPipelineLayout defaultPipelineLayout;
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);
