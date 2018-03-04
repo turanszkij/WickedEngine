@@ -48,6 +48,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11VertexShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -60,6 +61,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11PixelShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -72,6 +74,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11GeometryShader*	resource_DX11;
 		ShaderByteCode			code;
@@ -84,6 +87,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11HullShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -96,6 +100,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11DomainShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -108,6 +113,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11ComputeShader*	resource_DX11;
 		ShaderByteCode			code;
@@ -120,6 +126,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11SamplerState*				resource_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*	resource_DX12;
@@ -136,6 +143,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	protected:
 		ID3D11ShaderResourceView*					SRV_DX11;					// main resource SRV
 		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
@@ -157,6 +165,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Buffer*								resource_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				CBV_DX12;
@@ -173,6 +182,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		size_t byteOffset;
 		uint64_t residentFrame;
@@ -188,6 +198,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11InputLayout*	resource_DX11;
 
@@ -201,6 +212,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11BlendState*	resource_DX11;
 		BlendStateDesc desc;
@@ -215,6 +227,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11DepthStencilState*	resource_DX11;
 		DepthStencilStateDesc desc;
@@ -229,6 +242,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11RasterizerState*	resource_DX11;
 		RasterizerStateDesc desc;
@@ -252,6 +266,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11RenderTargetView*						RTV_DX11;
 		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
@@ -283,6 +298,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Texture1D*			texture1D_DX11;
 
@@ -298,6 +314,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11DepthStencilView*						DSV_DX11;
 		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
@@ -317,6 +334,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Texture3D*			texture3D_DX11;
 
@@ -335,6 +353,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		std::vector<ID3D11Query*>	resource_DX11;
 		std::vector<int>			active;
@@ -359,8 +378,11 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D12PipelineState*			resource_DX12;
+		void*							renderPass_Vulkan;
+		void*							pipeline_Vulkan;
 		GraphicsPSODesc desc;
 
 	public:
@@ -373,8 +395,10 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D12PipelineState*			resource_DX12;
+		void*							pipeline_Vulkan;
 		ComputePSODesc desc;
 
 	public:

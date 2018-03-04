@@ -1,6 +1,7 @@
 #include "wiGraphicsResource.h"
 #include "Include_DX11.h"
 #include "Include_DX12.h"
+#include "Include_Vulkan.h"
 
 namespace wiGraphicsTypes
 {
@@ -262,18 +263,24 @@ namespace wiGraphicsTypes
 	GraphicsPSO::GraphicsPSO()
 	{
 		SAFE_INIT(resource_DX12);
+		SAFE_INIT(pipeline_Vulkan);
+		SAFE_INIT(renderPass_Vulkan);
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
 		SAFE_DELETE(resource_DX12);
+		SAFE_DELETE(pipeline_Vulkan);
+		SAFE_DELETE(renderPass_Vulkan);
 	}
 
 	ComputePSO::ComputePSO()
 	{
 		SAFE_INIT(resource_DX12);
+		SAFE_INIT(pipeline_Vulkan);
 	}
 	ComputePSO::~ComputePSO()
 	{
 		SAFE_DELETE(resource_DX12);
+		SAFE_DELETE(pipeline_Vulkan);
 	}
 }
