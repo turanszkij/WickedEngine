@@ -4,6 +4,7 @@
 #include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiProfiler.h"
+#include "wiTextureHelper.h"
 
 using namespace wiGraphicsTypes;
 
@@ -25,6 +26,8 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	GPUResource* dsv[] = { rtMain.depth->GetTexture() };
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
+	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+
 	wiProfiler::GetInstance().BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
 	{
@@ -32,7 +35,8 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		{
 			wiRenderer::SetAlphaRef(0.25f, threadID);
 		}
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, nullptr, getHairParticlesEnabled(), true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, 
+			nullptr, nullptr, nullptr, getHairParticlesEnabled(), true);
 	}
 	wiProfiler::GetInstance().EndRange(threadID);
 
@@ -43,12 +47,12 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 	rtLinearDepth.Activate(threadID); {
-		wiImageEffects fx;
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
 		fx.process.setLinDepth(true);
 		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
+		fx.process.clear();
 	}
 	rtLinearDepth.Deactivate(threadID);
 
@@ -61,13 +65,65 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Set(threadID);
 	{
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, rtReflection.GetTexture(), true, true);
+		if (getSSAOEnabled()) {
+			wiRenderer::GetDevice()->BindResource(PS, rtSSAO.back().GetTexture(), TEXSLOT_ONDEMAND8, threadID);
+		}
+		if (getSSREnabled()) {
+			wiRenderer::GetDevice()->BindResource(PS, rtSSR.GetTexture(), TEXSLOT_ONDEMAND9, threadID);
+		}
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, 
+			rtReflection.GetTexture(), getSSAOEnabled() ? rtSSAO.back().GetTexture() : nullptr, getSSREnabled() ? rtSSR.GetTexture() : nullptr, true, true);
 		wiRenderer::DrawSky(threadID);
 	}
 	rtMain.Deactivate(threadID);
 	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
+
+
+
+	if (getSSAOEnabled()) {
+		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
+		fx.stencilRef = STENCILREF_DEFAULT;
+		fx.stencilComp = STENCILMODE_LESS;
+		rtSSAO[0].Activate(threadID); {
+			fx.process.setSSAO(true);
+			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
+			fx.quality = QUALITY_BILINEAR;
+			fx.sampleFlag = SAMPLEMODE_MIRROR;
+			wiImage::Draw(nullptr, fx, threadID);
+			fx.process.clear();
+		}
+		rtSSAO[1].Activate(threadID); {
+			fx.blur = getSSAOBlur();
+			fx.blurDir = 0;
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			wiImage::Draw(rtSSAO[0].GetTexture(), fx, threadID);
+		}
+		rtSSAO[2].Activate(threadID); {
+			fx.blur = getSSAOBlur();
+			fx.blurDir = 1;
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			wiImage::Draw(rtSSAO[1].GetTexture(), fx, threadID);
+			fx.blur = 0;
+		}
+		fx.stencilRef = 0;
+		fx.stencilComp = STENCILMODE_DISABLED;
+		wiRenderer::GetDevice()->EventEnd(threadID);
+	}
+
+	if (getSSREnabled()) {
+		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
+		rtSSR.Activate(threadID); {
+			fx.process.clear();
+			fx.presentFullScreen = false;
+			fx.process.setSSR(true);
+			fx.setMaskMap(nullptr);
+			wiImage::Draw(rtMain.GetTexture(), fx, threadID);
+			fx.process.clear();
+		}
+		wiRenderer::GetDevice()->EventEnd(threadID);
+	}
 }
 void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {

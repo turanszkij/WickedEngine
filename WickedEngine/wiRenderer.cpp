@@ -5278,7 +5278,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 	}
 }
 
-void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, Texture2D* refRes, bool grass, bool occlusionCulling)
+void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, 
+	Texture2D* refRes, Texture2D* ssaoRes, Texture2D* ssrRes, bool grass, bool occlusionCulling)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -5306,6 +5307,22 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 			if (refRes != nullptr)
 			{
 				GetDevice()->BindResource(PS, refRes, TEXSLOT_ONDEMAND6, threadID);
+			}
+			if (ssaoRes != nullptr)
+			{
+				GetDevice()->BindResource(PS, ssaoRes, TEXSLOT_ONDEMAND8, threadID);
+			}
+			else
+			{
+				GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND8, threadID);
+			}
+			if (ssrRes != nullptr)
+			{
+				GetDevice()->BindResource(PS, ssrRes, TEXSLOT_ONDEMAND9, threadID);
+			}
+			else
+			{
+				GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_ONDEMAND9, threadID);
 			}
 		}
 

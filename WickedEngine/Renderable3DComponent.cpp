@@ -290,7 +290,8 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 			wiRenderer::SetClipPlane(water, threadID);
 
-			wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, nullptr, getHairParticlesReflectionEnabled(), false);
+			wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, 
+				nullptr, nullptr, nullptr, getHairParticlesReflectionEnabled(), false);
 			wiRenderer::DrawSky(threadID);
 
 			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);

@@ -57,6 +57,8 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 #define xReflection				texture_6
 #define xRefraction				texture_7
 #define	xWaterRipples			texture_8
+#define	xSSAO					texture_8
+#define	xSSR					texture_9
 
 
 struct PixelInputType_Simple
@@ -511,6 +513,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w * 0.5f + 0.5f;
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
@@ -575,14 +578,25 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #ifdef TILEDFORWARD
 	TiledLighting(pixel, surface, diffuse, specular);
-#ifndef WATER
-	VoxelRadiance(surface, diffuse, specular, ao);
-#endif // WATER
 #endif // TILEDFORWARD
+
+
+#ifndef WATER
+#ifndef ENVMAPRENDERING
+
+	VoxelRadiance(surface, diffuse, specular, ao);
 
 #ifdef PLANARREFLECTION
 	specular += PlanarReflection(UV, refUV, surface);
 #endif
+
+	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+	specular += ssr.rgb * ssr.a * surface.F;
+	float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
+	ao *= ssao;
+
+#endif // ENVMAPRENDERING
+#endif // WATER
 
 	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
 
@@ -595,7 +609,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	ApplyFog(dist, color);
 
 
-#endif // SIMPLE_INPUT
+#endif // DEFERRED
 
 
 #ifdef TEXTUREONLY
@@ -607,7 +621,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	color = float4(0, 0, 0, 1);
 #endif
 
-#endif // DEFERRED
+#endif // SIMPLE_INPUT
 
 
 	// end point:

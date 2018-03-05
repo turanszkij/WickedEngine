@@ -131,7 +131,8 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), getHairParticlesEnabled(), true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, 
+			rtReflection.GetTexture(), nullptr, nullptr, getHairParticlesEnabled(), true);
 	}
 
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
@@ -170,6 +171,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	rtLight.Activate(threadID, rtGBuffer.depth); {
 		wiRenderer::DrawLights(wiRenderer::getCamera(), threadID);
 	}
+
 
 	if (getSSAOEnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
@@ -264,7 +266,6 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 
-
 	if (getSSREnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
@@ -285,9 +286,9 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 wiRenderTarget& DeferredRenderableComponent::GetFinalRT()
 {
-	if (getSSREnabled())
-		return rtSSR;
-	else
+	//if (getSSREnabled())
+	//	return rtSSR;
+	//else
 		return rtDeferred;
 }
 

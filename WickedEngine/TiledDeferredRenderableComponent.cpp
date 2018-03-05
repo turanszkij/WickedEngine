@@ -41,7 +41,8 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		{
 			wiRenderer::SetAlphaRef(0.25f, threadID);
 		}
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), getHairParticlesEnabled(), true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, 
+			rtReflection.GetTexture(), nullptr, nullptr, getHairParticlesEnabled(), true);
 	}
 
 
@@ -80,6 +81,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), rtGBuffer.GetTexture(3), nullptr, threadID);
 
 	wiRenderer::ComputeTiledLightCulling(true, threadID);
+
 
 	if (getSSAOEnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
@@ -175,13 +177,11 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 
-
 	if (getSSREnabled()) {
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
 			fx.presentFullScreen = false;
-			wiRenderer::GetDevice()->GenerateMips(rtDeferred.GetTexture(0), threadID);
 			fx.process.setSSR(true);
 			fx.setMaskMap(nullptr);
 			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);

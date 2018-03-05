@@ -79,15 +79,8 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 
 float4 main(VertexToPixelPostProcess input) : SV_Target
 {
-	float4 g0 = texture_gbuffer0.Load(int3(input.pos.xy, 0));
-	float4 g3 = texture_gbuffer3.Load(int3(input.pos.xy, 0));
-	
-	float3 f0 = ComputeF0(g0, g3.y, g3.z);
-
 	float3 N = decode(texture_gbuffer1.Load(int3(input.pos.xy, 0)).xy);
-
 	float depth = texture_lineardepth.Load(int3(input.pos.xy, 0));
-
 	float3 P = getPosition(input.tex, texture_depth.Load(int3(input.pos.xy, 0)));
 
 
@@ -105,22 +98,18 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 	float2 vCoordsEdgeFact = float2(1, 1) - pow(saturate(abs(vCoords.xy - float2(0.5f, 0.5f)) * 2), 8);
 	float fScreenEdgeFactor = saturate(min(vCoordsEdgeFact.x, vCoordsEdgeFact.y));
 
-	//if (!bInsideScreen(vCoords.xy))
-	//	fScreenEdgeFactor = 0;
-
 
 	//Color
 	float reflectionIntensity =
 		saturate(
-			fScreenEdgeFactor *																	// screen fade
-			saturate(vReflectDir.z)																// camera facing fade
-			* vCoords.w																			// rayhit binary fade
+			fScreenEdgeFactor *		// screen fade
+			saturate(vReflectDir.z)	// camera facing fade
+			* vCoords.w				// rayhit binary fade
 			);
 
 
 	float3 reflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
-	float3 sceneColor = xTexture.Load(int3(input.pos.xy,0)).rgb;
 
-	return float4(sceneColor.rgb + reflectionColor.rgb * f0 * reflectionIntensity, 1);
+	return float4(reflectionColor, reflectionIntensity);
 
 }
