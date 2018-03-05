@@ -1016,12 +1016,8 @@ namespace wiGraphicsTypes
 		subpass.colorAttachmentCount = pDesc->numRTs;
 		subpass.pColorAttachments = colorAttachmentRefs.data();
 
-		if (pDesc->DSFormat != FORMAT_UNKNOWN && pDesc->dss != nullptr)
+		if (pDesc->DSFormat != FORMAT_UNKNOWN)
 		{
-			const bool depth_read_only = pDesc->dss->GetDesc().DepthWriteMask == DEPTH_WRITE_MASK_ZERO;
-			const bool stencil_read_only = pDesc->dss->GetDesc().StencilWriteMask == 0;
-			const bool all_read_only = depth_read_only && stencil_read_only;
-
 			VkAttachmentDescription attachment = {};
 			attachment.format = _ConvertFormat(pDesc->DSFormat);
 			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -1036,25 +1032,6 @@ namespace wiGraphicsTypes
 			VkAttachmentReference depthAttachmentRef = {};
 			depthAttachmentRef.attachment = static_cast<uint32_t>(attachments.size() - 1);
 			depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			//if (all_read_only)
-			//{
-			//	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-			//}
-			//else
-			//{
-			//	if (depth_read_only)
-			//	{
-			//		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR;
-			//	}
-			//	else if (stencil_read_only)
-			//	{
-			//		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR;
-			//	}
-			//	else
-			//	{
-			//		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			//	}
-			//}
 
 			subpass.pDepthStencilAttachment = &depthAttachmentRef;
 		}
@@ -1243,6 +1220,20 @@ namespace wiGraphicsTypes
 		rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
 
 		pipelineInfo.pRasterizationState = &rasterizer;
+
+
+		// Depth-Stencil:
+		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
+		depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		if (pDesc->dss != nullptr)
+		{
+			depthstencil.depthTestEnable = pDesc->dss->desc.DepthEnable ? 1 : 0;
+			depthstencil.depthWriteEnable = pDesc->dss->desc.DepthWriteMask != DEPTH_WRITE_MASK_ZERO;
+
+			depthstencil.stencilTestEnable = pDesc->dss->desc.StencilEnable ? 1 : 0;
+		}
+
+		pipelineInfo.pDepthStencilState = &depthstencil;
 
 
 		// MSAA:
