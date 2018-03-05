@@ -460,6 +460,7 @@ void main(ComputeShaderInput IN)
 	// Light the pixels:
 	
 	float3 diffuse = 0, specular = 0;
+	float3 reflection = 0;
 	float4 baseColor = texture_gbuffer0[pixel];
 	float4 g1 = texture_gbuffer1[pixel];
 	float4 g3 = texture_gbuffer3[pixel];
@@ -519,7 +520,7 @@ void main(ComputeShaderInput IN)
 		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
 
-	specular += max(0, envmapAccumulation.rgb * surface.F);
+	reflection = max(0, envmapAccumulation.rgb);
 
 #endif // DISABLE_ENVMAPS
 
@@ -576,7 +577,9 @@ void main(ComputeShaderInput IN)
 		specular += max(0.0f, result.specular);
 	}
 
-	VoxelRadiance(surface, diffuse, specular, ao);
+	VoxelGI(surface, diffuse, reflection, ao);
+
+	specular += reflection * surface.F;
 
 	deferred_Diffuse[pixel] = float4(diffuse, ao);
 	deferred_Specular[pixel] = float4(specular, 1);
