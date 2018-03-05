@@ -63,11 +63,13 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(resource_DX11);
 		SAFE_INIT(resource_DX12);
+		SAFE_INIT(resource_Vulkan);
 	}
 	Sampler::~Sampler()
 	{
 		SAFE_RELEASE(resource_DX11);
 		SAFE_DELETE(resource_DX12);
+		SAFE_DELETE(resource_Vulkan);
 	}
 
 	GPUResource::GPUResource()

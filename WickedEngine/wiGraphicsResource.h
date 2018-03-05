@@ -130,12 +130,13 @@ namespace wiGraphicsTypes
 	private:
 		ID3D11SamplerState*				resource_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*	resource_DX12;
+		void*							resource_Vulkan;
 		SamplerDesc desc;
 	public:
 		Sampler();
 		~Sampler();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != nullptr; }
 		SamplerDesc GetDesc() { return desc; }
 	};
 

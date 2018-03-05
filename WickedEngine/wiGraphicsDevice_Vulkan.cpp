@@ -898,43 +898,80 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 	{
-		return E_FAIL;
+		pVertexShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
+		pVertexShader->code.size = BytecodeLength;
+
+		return (pVertexShader->code.data != nullptr && pVertexShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_Vulkan::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 	{
-		return E_FAIL;
+		pPixelShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
+		pPixelShader->code.size = BytecodeLength;
+
+		return (pPixelShader->code.data != nullptr && pPixelShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 	{
-		return E_FAIL;
+		pGeometryShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
+		pGeometryShader->code.size = BytecodeLength;
+
+		return (pGeometryShader->code.data != nullptr && pGeometryShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 	{
-		return E_FAIL;
+		pHullShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
+		pHullShader->code.size = BytecodeLength;
+
+		return (pHullShader->code.data != nullptr && pHullShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 	{
-		return E_FAIL;
+		pDomainShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
+		pDomainShader->code.size = BytecodeLength;
+
+		return (pDomainShader->code.data != nullptr && pDomainShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 	{
-		return E_FAIL;
+		pComputeShader->code.data = new BYTE[BytecodeLength];
+		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
+		pComputeShader->code.size = BytecodeLength;
+
+		return (pComputeShader->code.data != nullptr && pComputeShader->code.size > 0 ? S_OK : E_FAIL);
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
-		return E_FAIL;
+		pBlendState->desc = *pBlendStateDesc;
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 	{
-		return E_FAIL;
+		pDepthStencilState->desc = *pDepthStencilStateDesc;
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 	{
-		return E_FAIL;
+		pRasterizerState->desc = *pRasterizerStateDesc;
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
-		return E_FAIL;
+		pSamplerState->desc = *pSamplerDesc;
+		pSamplerState->resource_Vulkan = new VkSampler*;
+
+		VkSamplerCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+		if (vkCreateSampler(device, &createInfo, nullptr, static_cast<VkSampler*>(pSamplerState->resource_Vulkan)) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create sampler!");
+		}
+
+		return S_OK;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
@@ -1029,7 +1066,7 @@ namespace wiGraphicsTypes
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
 
-		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &defaultRenderPass) != VK_SUCCESS) {
+		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, static_cast<VkRenderPass*>(pso->renderPass_Vulkan)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create render pass!");
 		}
 
@@ -1042,8 +1079,225 @@ namespace wiGraphicsTypes
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-		// TODO...
-		//pipelineInfo.stageCount;
+
+		// Shaders:
+
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+
+		if (pDesc->vs != nullptr)
+		{
+			VkShaderModuleCreateInfo moduleInfo = {}; 
+			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			moduleInfo.codeSize = pDesc->vs->code.size;
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->vs->code.data);
+			VkShaderModule shaderModule;
+			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create shader module!");
+			}
+
+			VkPipelineShaderStageCreateInfo stageInfo = {}; 
+			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+			stageInfo.module = shaderModule;
+			stageInfo.pName = "main";
+
+			shaderStages.push_back(stageInfo);
+		}
+
+		if (pDesc->hs != nullptr)
+		{
+			VkShaderModuleCreateInfo moduleInfo = {};
+			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			moduleInfo.codeSize = pDesc->hs->code.size;
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->hs->code.data);
+			VkShaderModule shaderModule;
+			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create shader module!");
+			}
+
+			VkPipelineShaderStageCreateInfo stageInfo = {};
+			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+			stageInfo.module = shaderModule;
+			stageInfo.pName = "main";
+
+			shaderStages.push_back(stageInfo);
+		}
+
+		if (pDesc->ds != nullptr)
+		{
+			VkShaderModuleCreateInfo moduleInfo = {};
+			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			moduleInfo.codeSize = pDesc->ds->code.size;
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->ds->code.data);
+			VkShaderModule shaderModule;
+			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create shader module!");
+			}
+
+			VkPipelineShaderStageCreateInfo stageInfo = {};
+			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+			stageInfo.module = shaderModule;
+			stageInfo.pName = "main";
+
+			shaderStages.push_back(stageInfo);
+		}
+
+		if (pDesc->gs != nullptr)
+		{
+			VkShaderModuleCreateInfo moduleInfo = {};
+			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			moduleInfo.codeSize = pDesc->gs->code.size;
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->gs->code.data);
+			VkShaderModule shaderModule;
+			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create shader module!");
+			}
+
+			VkPipelineShaderStageCreateInfo stageInfo = {};
+			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+			stageInfo.module = shaderModule;
+			stageInfo.pName = "main";
+
+			shaderStages.push_back(stageInfo);
+		}
+
+		if (pDesc->ps != nullptr)
+		{
+			VkShaderModuleCreateInfo moduleInfo = {};
+			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			moduleInfo.codeSize = pDesc->ps->code.size;
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->ps->code.data);
+			VkShaderModule shaderModule;
+			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create shader module!");
+			}
+
+			VkPipelineShaderStageCreateInfo stageInfo = {};
+			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+			stageInfo.module = shaderModule;
+			stageInfo.pName = "main";
+
+			shaderStages.push_back(stageInfo);
+		}
+
+		pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
+		pipelineInfo.pStages = shaderStages.data();
+
+
+		// Fixed function states:
+
+		// Input layout:
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		if (pDesc->il != nullptr)
+		{
+			vertexInputInfo.vertexBindingDescriptionCount = 0;
+			vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
+			vertexInputInfo.vertexAttributeDescriptionCount = 0;
+			vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+		}
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+
+		// Primitive type:
+		//		TODO: This doesn't match DX12!
+		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		switch (pDesc->ptt)
+		{
+		case PRIMITIVE_TOPOLOGY_TYPE_POINT:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			break;
+		case PRIMITIVE_TOPOLOGY_TYPE_LINE:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			break;
+		case PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			break;
+		case PRIMITIVE_TOPOLOGY_TYPE_PATCH:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+			break;
+		default:
+			break;
+		}
+		inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+		pipelineInfo.pInputAssemblyState = &inputAssembly;
+
+
+		// Rasterizer:
+		VkPipelineRasterizationStateCreateInfo rasterizer = {};
+		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizer.depthClampEnable = VK_FALSE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizer.lineWidth = 1.0f;
+		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.depthBiasEnable = VK_FALSE;
+		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+		rasterizer.depthBiasClamp = 0.0f; // Optional
+		rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+
+		pipelineInfo.pRasterizationState = &rasterizer;
+
+
+		// MSAA:
+		VkPipelineMultisampleStateCreateInfo multisampling = {};
+		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampling.sampleShadingEnable = VK_FALSE;
+		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampling.minSampleShading = 1.0f; // Optional
+		multisampling.pSampleMask = nullptr; // Optional
+		multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+		multisampling.alphaToOneEnable = VK_FALSE; // Optional
+
+		pipelineInfo.pMultisampleState = &multisampling;
+
+
+		// Blending:
+		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colorBlendAttachment.blendEnable = VK_FALSE;
+		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+
+		VkPipelineColorBlendStateCreateInfo colorBlending = {};
+		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+		colorBlending.attachmentCount = 1;
+		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.blendConstants[0] = 0.0f; // Optional
+		colorBlending.blendConstants[1] = 0.0f; // Optional
+		colorBlending.blendConstants[2] = 0.0f; // Optional
+		colorBlending.blendConstants[3] = 0.0f; // Optional
+
+		pipelineInfo.pColorBlendState = &colorBlending;
+
+
+
+
+		// Dynamic state will be specified at runtime:
+		VkDynamicState dynamicStates[] = {
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_LINE_WIDTH,
+			VK_DYNAMIC_STATE_STENCIL_REFERENCE
+		};
+
+		VkPipelineDynamicStateCreateInfo dynamicState = {};
+		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicState.dynamicStateCount = ARRAYSIZE(dynamicStates);
+		dynamicState.pDynamicStates = dynamicStates;
+
+
 
 		if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, static_cast<VkPipeline*>(pso->pipeline_Vulkan)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create graphics pipeline!");
@@ -1059,6 +1313,28 @@ namespace wiGraphicsTypes
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 		pipelineInfo.layout = defaultPipelineLayout;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+
+		if (pDesc->cs != nullptr)
+		{
+			VkShaderModuleCreateInfo moduleInfo = {};
+			moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			moduleInfo.codeSize = pDesc->cs->code.size;
+			moduleInfo.pCode = reinterpret_cast<const uint32_t*>(pDesc->cs->code.data);
+			VkShaderModule shaderModule;
+			if (vkCreateShaderModule(device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create shader module!");
+			}
+
+			VkPipelineShaderStageCreateInfo stageInfo = {};
+			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+			stageInfo.module = shaderModule;
+			stageInfo.pName = "main";
+
+			pipelineInfo.stage = stageInfo;
+		}
+
 
 		if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, static_cast<VkPipeline*>(pso->pipeline_Vulkan)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create graphics pipeline!");
