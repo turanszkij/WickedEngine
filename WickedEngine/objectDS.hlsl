@@ -114,7 +114,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.pos3D = vertexPosition.xyz;
 	Out.tex = vertexTex.xy;
 	Out.nor = normalize(vertexNormal.xyz);
-	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_VP).xy;
+	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_View).xy;
 
 	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xFrame_MainCamera_ReflVP);
 

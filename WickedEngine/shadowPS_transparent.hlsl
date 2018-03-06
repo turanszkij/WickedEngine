@@ -22,8 +22,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	ALPHATEST(color.a);
 	float opacity = color.a;
 
-	// When opacity reaches ZERO, the multiplicative light mask will be ONE:
-	color.rgb = lerp(1, color.rgb, opacity);
+	color.rgb *= 1 - opacity;
 
 	// Use the alpha channel for refraction caustics effect:
 	float3 bumpColor;

@@ -4,6 +4,8 @@
 #include "packHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
+#define	xSSR texture_9
+
 CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
 {
 	uint3	xDispatchParams_numThreadGroups;
@@ -460,6 +462,7 @@ void main(ComputeShaderInput IN)
 	// Light the pixels:
 	
 	float3 diffuse = 0, specular = 0;
+	float3 reflection = 0;
 	float4 baseColor = texture_gbuffer0[pixel];
 	float4 g1 = texture_gbuffer1[pixel];
 	float4 g3 = texture_gbuffer3[pixel];
@@ -476,7 +479,6 @@ void main(ComputeShaderInput IN)
 
 	iterator = o_decalCount;
 	// decals are not yet available here (need to r/w albedo), skip them for now...
-
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
@@ -519,7 +521,7 @@ void main(ComputeShaderInput IN)
 		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
 
-	specular += max(0, envmapAccumulation.rgb * surface.F);
+	reflection = max(0, envmapAccumulation.rgb);
 
 #endif // DISABLE_ENVMAPS
 
@@ -576,7 +578,15 @@ void main(ComputeShaderInput IN)
 		specular += max(0.0f, result.specular);
 	}
 
-	VoxelRadiance(surface, diffuse, specular, ao);
+	VoxelGI(surface, diffuse, reflection, ao);
+
+	float2 ScreenCoord = (float2)pixel * g_xWorld_ScreenWidthHeight_Inverse;
+	float2 velocity = g1.zw;
+	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
+	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+	reflection = lerp(reflection, ssr.rgb, ssr.a);
+
+	specular += reflection * surface.F;
 
 	deferred_Diffuse[pixel] = float4(diffuse, ao);
 	deferred_Specular[pixel] = float4(specular, 1);

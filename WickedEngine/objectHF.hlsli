@@ -47,6 +47,7 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 // DEFINITIONS
 //////////////////
 
+// These are bound by wiRenderer (based on Material):
 #define xBaseColorMap			texture_0
 #define xNormalMap				texture_1
 #define xRoughnessMap			texture_2
@@ -54,9 +55,12 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 #define xMetalnessMap			texture_4
 #define xDisplacementMap		texture_5
 
+// These are bound by RenderableComponent (based on Render Path):
 #define xReflection				texture_6
 #define xRefraction				texture_7
 #define	xWaterRipples			texture_8
+#define	xSSAO					texture_8
+#define	xSSR					texture_9
 
 
 struct PixelInputType_Simple
@@ -93,7 +97,7 @@ inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in f
 {
 	GBUFFEROutputType Out;
 	Out.g0 = float4(color.rgb, 1);														/*FORMAT_R8G8B8A8_UNORM*/
-	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/
+	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
 	Out.g2 = float4(0, 0, surface.sss, surface.emissive);								/*FORMAT_R8G8B8A8_UNORM*/
 	Out.g3 = float4(surface.roughness, surface.reflectance, surface.metalness, 1);		/*FORMAT_R8G8B8A8_UNORM*/
 	return Out;
@@ -107,8 +111,8 @@ struct GBUFFEROutputType_Thin
 inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface surface, in float2 velocity)
 {
 	GBUFFEROutputType_Thin Out;
-	Out.g0 = color;																		/*FORMAT_R16G16B16_FLOAT*/
-	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/
+	Out.g0 = color;																		/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
 	return Out;
 }
 
@@ -137,10 +141,9 @@ inline void SpecularAA(in float3 N, inout float roughness)
 	}
 }
 
-inline float3 PlanarReflection(in float2 UV, in float2 reflectionUV, in Surface surface)
+inline float3 PlanarReflection(in float2 reflectionUV, in Surface surface)
 {
-	float4 colorReflection = xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + surface.N.xz*g_xMat_normalMapStrength, 0);
-	return colorReflection.rgb * surface.F;
+	return xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + surface.N.xz*g_xMat_normalMapStrength, 0).rgb;
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
@@ -178,21 +181,22 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
 	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xWorld_AdvancedRefractions ? surface.roughness * mipLevels : 0));
-	surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
+	surface.albedo.rgb *= lerp(refractiveColor.rgb, 1, color.a);
 	color.a = 1;
 }
 
 
-inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out float3 specular)
+inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out float3 specular, out float3 reflection)
 {
 	specular = 0;
 	diffuse = 0;
+	reflection = 0;
 
 	specular += surface.baseColor.rgb * GetEmissive(surface.emissive);
 
 #ifndef DISABLE_ENVMAPS
 	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
-	specular += max(0, EnvironmentReflection_Global(surface, envMapMIP) * surface.F);
+	reflection = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 #endif // DISABLE_ENVMAPS
 
 	[loop]
@@ -247,7 +251,7 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out flo
 }
 
 
-inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, out float3 specular)
+inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, out float3 specular, out float3 reflection)
 {
 	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
 	uint startOffset = flatten2D(tileIndex, g_xWorld_EntityCullingTileCount.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
@@ -260,6 +264,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 
 	specular = 0;
 	diffuse = 0;
+	reflection = 0;
 
 	specular += surface.baseColor.rgb * GetEmissive(surface.emissive);
 
@@ -347,7 +352,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
 
-	specular += max(0, envmapAccumulation.rgb * surface.F);
+	reflection = max(0, envmapAccumulation.rgb);
 
 #endif // DISABLE_ENVMAPS
 
@@ -404,9 +409,9 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 	}
 }
 
-inline void ApplyLighting(in Surface surface, in float3 diffuse, in float3 specular, in float ao, in float opacity, inout float4 color)
+inline void ApplyLighting(in Surface surface, in float3 diffuse, in float3 specular, in float ao, inout float4 color)
 {
-	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * surface.albedo + specular;
+	color.rgb = (GetAmbientColor() * ao + diffuse) * surface.albedo + specular;
 }
 
 inline void ApplyFog(in float dist, inout float4 color)
@@ -502,6 +507,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #ifndef SIMPLE_INPUT
 	float3 diffuse = 0;
 	float3 specular = 0;
+	float3 reflection = 0;
 	float3 bumpColor = 0;
 	float opacity = color.a;
 	float depth = input.pos.z;
@@ -511,6 +517,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
 	float2 ScreenCoord = float2(1, -1) * input.pos2D.xy / input.pos2D.w * 0.5f + 0.5f;
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
@@ -565,26 +572,42 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #ifndef DEFERRED
 
-#ifdef TRANSPARENT
-	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
-#endif // TRANSPARENT
-
 #ifdef FORWARD
-	ForwardLighting(surface, diffuse, specular);
+	ForwardLighting(surface, diffuse, specular, reflection);
 #endif // FORWARD
 
 #ifdef TILEDFORWARD
-	TiledLighting(pixel, surface, diffuse, specular);
-#ifndef WATER
-	VoxelRadiance(surface, diffuse, specular, ao);
-#endif // WATER
+	TiledLighting(pixel, surface, diffuse, specular, reflection);
 #endif // TILEDFORWARD
 
+
+#ifndef WATER
+#ifndef ENVMAPRENDERING
+
+	VoxelGI(surface, diffuse, reflection, ao);
+
 #ifdef PLANARREFLECTION
-	specular += PlanarReflection(UV, refUV, surface);
+	reflection = PlanarReflection(refUV, surface);
 #endif
 
-	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
+
+#ifdef TRANSPARENT
+	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
+	diffuse = lerp(1, diffuse, opacity);
+#else
+	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+	reflection = lerp(reflection, ssr.rgb, ssr.a);
+	float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
+	ao *= ssao;
+#endif // TRANSPARENT
+
+
+#endif // ENVMAPRENDERING
+#endif // WATER
+
+	specular += reflection * surface.F;
+
+	ApplyLighting(surface, diffuse, specular, ao, color);
 
 #ifdef WATER
 	// SOFT EDGE
@@ -595,7 +618,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	ApplyFog(dist, color);
 
 
-#endif // SIMPLE_INPUT
+#endif // DEFERRED
 
 
 #ifdef TEXTUREONLY
@@ -607,7 +630,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	color = float4(0, 0, 0, 1);
 #endif
 
-#endif // DEFERRED
+#endif // SIMPLE_INPUT
 
 
 	// end point:

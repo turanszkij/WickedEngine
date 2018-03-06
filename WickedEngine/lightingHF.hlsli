@@ -700,7 +700,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 
 // VOXEL RADIANCE
 
-inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3 specular, inout float ao)
+inline void VoxelGI(in Surface surface, inout float3 diffuse, inout float3 specular, inout float ao)
 {
 	[branch]if (g_xWorld_VoxelRadianceDataRes != 0)
 	{
@@ -709,18 +709,17 @@ inline void VoxelRadiance(in Surface surface, inout float3 diffuse, inout float3
 		voxelSpacePos *= g_xWorld_VoxelRadianceDataSize_Inverse;
 		voxelSpacePos *= g_xWorld_VoxelRadianceDataRes_Inverse;
 		voxelSpacePos = saturate(abs(voxelSpacePos));
-		float blend = pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
+		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, surface.P, surface.N);
-		diffuse += lerp(radiance.rgb, 0, blend);
-		ao *= 1 - lerp(radiance.a, 0, blend);
+		diffuse += lerp(0, radiance.rgb, blend);
+		ao *= 1 - lerp(0, radiance.a, blend);
 
 		[branch]
 		if (g_xWorld_VoxelRadianceReflectionsEnabled)
 		{
 			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
-			reflection.rgb *= surface.F;
-			specular = max(specular, lerp(reflection.rgb * reflection.a, 0, blend));
+			specular = lerp(specular, reflection.rgb, reflection.a * blend);
 		}
 	}
 }

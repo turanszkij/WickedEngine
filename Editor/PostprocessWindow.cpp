@@ -45,7 +45,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 	ppWindow->AddWidget(lightShaftsCheckBox);
 
 	ssaoCheckBox = new wiCheckBox("SSAO: ");
-	ssaoCheckBox->SetTooltip("Enable Screen Space Ambient Occlusion. (Deferred only for now)");
+	ssaoCheckBox->SetTooltip("Enable Screen Space Ambient Occlusion.");
 	ssaoCheckBox->SetScriptTip("Renderable3DComponent::SetSSAOEnabled(bool value)");
 	ssaoCheckBox->SetPos(XMFLOAT2(x, y += 35));
 	ssaoCheckBox->SetCheck(component->getSSAOEnabled());
@@ -55,7 +55,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 	ppWindow->AddWidget(ssaoCheckBox);
 
 	ssrCheckBox = new wiCheckBox("SSR: ");
-	ssrCheckBox->SetTooltip("Enable Screen Space Reflections. (Deferred only for now)");
+	ssrCheckBox->SetTooltip("Enable Screen Space Reflections.");
 	ssrCheckBox->SetScriptTip("Renderable3DComponent::SetSSREnabled(bool value)");
 	ssrCheckBox->SetPos(XMFLOAT2(x, y += 35));
 	ssrCheckBox->SetCheck(component->getSSREnabled());
