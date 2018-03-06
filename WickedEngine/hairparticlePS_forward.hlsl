@@ -29,7 +29,7 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 
 	ForwardLighting(surface, diffuse, specular, reflection);
 
-	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
+	ApplyLighting(surface, diffuse, specular, ao, color);
 
 	ApplyFog(dist, color);
 

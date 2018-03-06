@@ -5278,8 +5278,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 	}
 }
 
-void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, 
-	Texture2D* refRes, Texture2D* ssaoRes, Texture2D* ssrRes, bool grass, bool occlusionCulling)
+void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -5302,30 +5301,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (!culledRenderer.empty() || (grass && culling.culledHairParticleSystems.empty()))
 	{
-		if (!wireRender)
-		{
-			if (refRes != nullptr)
-			{
-				GetDevice()->BindResource(PS, refRes, TEXSLOT_ONDEMAND6, threadID);
-			}
-			if (ssaoRes != nullptr)
-			{
-				GetDevice()->BindResource(PS, ssaoRes, TEXSLOT_ONDEMAND8, threadID);
-			}
-			else
-			{
-				GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND8, threadID);
-			}
-			if (ssrRes != nullptr)
-			{
-				GetDevice()->BindResource(PS, ssrRes, TEXSLOT_ONDEMAND9, threadID);
-			}
-			else
-			{
-				GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_ONDEMAND9, threadID);
-			}
-		}
-
 		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
@@ -5333,8 +5308,7 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 }
 
-void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Texture2D* refracRes, Texture2D* refRes
-	, Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling)
+void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -5345,13 +5319,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, Tex
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
 		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
-	}
-
-	if (!wireRender)
-	{
-		GetDevice()->BindResource(PS, refRes, TEXSLOT_ONDEMAND6, threadID);
-		GetDevice()->BindResource(PS, refracRes, TEXSLOT_ONDEMAND7, threadID);
-		GetDevice()->BindResource(PS, waterRippleNormals, TEXSLOT_ONDEMAND8, threadID);
 	}
 
 	if (ocean != nullptr)

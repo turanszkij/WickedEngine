@@ -55,7 +55,7 @@ float4 main(PSIn input) : SV_TARGET
 
 	specular += reflection * fresnelTerm;
 
-	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
+	ApplyLighting(surface, diffuse, specular, ao, color);
 
 	//SOFT EDGE
 	float fade = saturate(0.3 * abs(refDepth - lineardepth));

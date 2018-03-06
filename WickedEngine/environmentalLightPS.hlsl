@@ -1,5 +1,6 @@
 #include "deferredLightHF.hlsli"
 
+#define	xSSR texture_9
 
 
 LightOutputType main(VertexToPixel PSIn)
@@ -10,6 +11,9 @@ LightOutputType main(VertexToPixel PSIn)
 	float envMapMIP = roughness * g_xWorld_EnvProbeMipCount;
 	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 	VoxelGI(surface, diffuse, specular, ao);
+
+	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+	specular = lerp(specular, ssr.rgb, ssr.a);
 
 	specular *= surface.F;
 

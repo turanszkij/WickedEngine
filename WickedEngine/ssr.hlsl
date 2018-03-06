@@ -110,6 +110,6 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 
 	float3 reflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
 
-	return float4(reflectionColor, reflectionIntensity);
+	return max(0, float4(reflectionColor, reflectionIntensity));
 
 }

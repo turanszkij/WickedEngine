@@ -76,7 +76,7 @@ float4 main(VertexToPixelPostProcess input):SV_Target
 
 	}
 
-	float ao = 1.0 - bl * invSamples*darkness;
+	float ao = 1.0 - bl * invSamples/**darkness*/;
 
 	return saturate(ao.xxxx);
 }

@@ -35,8 +35,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		{
 			wiRenderer::SetAlphaRef(0.25f, threadID);
 		}
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, 
-			nullptr, nullptr, nullptr, getHairParticlesEnabled(), true);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, getHairParticlesEnabled(), true);
 	}
 	wiProfiler::GetInstance().EndRange(threadID);
 
@@ -65,24 +64,19 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Set(threadID);
 	{
-		if (getSSAOEnabled()) {
-			wiRenderer::GetDevice()->BindResource(PS, rtSSAO.back().GetTexture(), TEXSLOT_ONDEMAND8, threadID);
-		}
-		if (getSSREnabled()) {
-			wiRenderer::GetDevice()->BindResource(PS, rtSSR.GetTexture(), TEXSLOT_ONDEMAND9, threadID);
-		}
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, 
-			rtReflection.GetTexture(), getSSAOEnabled() ? rtSSAO.back().GetTexture() : nullptr, getSSREnabled() ? rtSSR.GetTexture() : nullptr, true, true);
+		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, true, true);
 		wiRenderer::DrawSky(threadID);
 	}
 	rtMain.Deactivate(threadID);
 	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 
-	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
-
 
 
 	if (getSSAOEnabled()) {
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
@@ -113,6 +107,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 	if (getSSREnabled()) {
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
@@ -124,13 +119,17 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		}
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
+
+	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
 }
 void TiledForwardRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, refractionRT.GetTexture(), rtReflection.GetTexture()
-		, rtWaterRipple.GetTexture(), threadID, getHairParticlesEnabled() && getHairParticleAlphaCompositionEnabled(), true);
+	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
+	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
+	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, threadID, getHairParticlesEnabled() && getHairParticleAlphaCompositionEnabled(), true);
 
 	wiProfiler::GetInstance().EndRange(threadID); // Transparent Scene
 }

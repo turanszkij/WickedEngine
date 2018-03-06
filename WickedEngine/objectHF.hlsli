@@ -47,6 +47,7 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 // DEFINITIONS
 //////////////////
 
+// These are bound by wiRenderer (based on Material):
 #define xBaseColorMap			texture_0
 #define xNormalMap				texture_1
 #define xRoughnessMap			texture_2
@@ -54,6 +55,7 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 #define xMetalnessMap			texture_4
 #define xDisplacementMap		texture_5
 
+// These are bound by RenderableComponent (based on Render Path):
 #define xReflection				texture_6
 #define xRefraction				texture_7
 #define	xWaterRipples			texture_8
@@ -95,7 +97,7 @@ inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in f
 {
 	GBUFFEROutputType Out;
 	Out.g0 = float4(color.rgb, 1);														/*FORMAT_R8G8B8A8_UNORM*/
-	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/
+	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
 	Out.g2 = float4(0, 0, surface.sss, surface.emissive);								/*FORMAT_R8G8B8A8_UNORM*/
 	Out.g3 = float4(surface.roughness, surface.reflectance, surface.metalness, 1);		/*FORMAT_R8G8B8A8_UNORM*/
 	return Out;
@@ -109,8 +111,8 @@ struct GBUFFEROutputType_Thin
 inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface surface, in float2 velocity)
 {
 	GBUFFEROutputType_Thin Out;
-	Out.g0 = color;																		/*FORMAT_R16G16B16_FLOAT*/
-	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16_FLOAT*/
+	Out.g0 = color;																		/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
 	return Out;
 }
 
@@ -179,7 +181,7 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
 	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xWorld_AdvancedRefractions ? surface.roughness * mipLevels : 0));
-	surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
+	surface.albedo.rgb *= lerp(refractiveColor.rgb, 1, color.a);
 	color.a = 1;
 }
 
@@ -407,9 +409,9 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 	}
 }
 
-inline void ApplyLighting(in Surface surface, in float3 diffuse, in float3 specular, in float ao, in float opacity, inout float4 color)
+inline void ApplyLighting(in Surface surface, in float3 diffuse, in float3 specular, in float ao, inout float4 color)
 {
-	color.rgb = lerp(1, GetAmbientColor() * ao + diffuse, opacity) * surface.albedo + specular;
+	color.rgb = (GetAmbientColor() * ao + diffuse) * surface.albedo + specular;
 }
 
 inline void ApplyFog(in float dist, inout float4 color)
@@ -570,10 +572,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #ifndef DEFERRED
 
-#ifdef TRANSPARENT
-	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
-#endif // TRANSPARENT
-
 #ifdef FORWARD
 	ForwardLighting(surface, diffuse, specular, reflection);
 #endif // FORWARD
@@ -592,17 +590,24 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	reflection = PlanarReflection(refUV, surface);
 #endif
 
+
+#ifdef TRANSPARENT
+	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
+	diffuse = lerp(1, diffuse, opacity);
+#else
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	reflection = lerp(reflection, ssr.rgb, ssr.a);
 	float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
 	ao *= ssao;
+#endif // TRANSPARENT
+
 
 #endif // ENVMAPRENDERING
 #endif // WATER
 
 	specular += reflection * surface.F;
 
-	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
+	ApplyLighting(surface, diffuse, specular, ao, color);
 
 #ifdef WATER
 	// SOFT EDGE

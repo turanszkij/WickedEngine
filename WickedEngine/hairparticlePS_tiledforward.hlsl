@@ -30,7 +30,7 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 	TiledLighting(pixel, surface, diffuse, specular, reflection);
 	VoxelGI(surface, diffuse, reflection, ao);
 
-	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
+	ApplyLighting(surface, diffuse, specular, ao, color);
 
 	ApplyFog(dist, color);
 
