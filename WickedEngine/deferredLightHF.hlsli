@@ -40,7 +40,7 @@ struct LightOutputType
 	float2 ReprojectedScreenCoord = ScreenCoord + velocity;								\
 	float3 P = getPosition(ScreenCoord, depth);											\
 	float3 V = normalize(g_xCamera_CamPos - P);											\
-	Surface surface = CreateSurface(P, N, V, baseColor, reflectance, metalness, roughness);
+	Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness);
 
 
 #define DEFERREDLIGHT_DIRECTIONAL														\

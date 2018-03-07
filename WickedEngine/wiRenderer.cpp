@@ -1792,12 +1792,10 @@ void wiRenderer::LoadShaders()
 			desc.dss = depthStencils[DSSTYPE_DEFAULT];
 			desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
 
-			desc.numRTs = 5;
+			desc.numRTs = 3;
 			desc.RTFormats[0] = RTFormat_impostor_albedo;
 			desc.RTFormats[1] = RTFormat_impostor_normal;
-			desc.RTFormats[2] = RTFormat_impostor_roughness;
-			desc.RTFormats[3] = RTFormat_impostor_metalness;
-			desc.RTFormats[4] = RTFormat_impostor_reflectance;
+			desc.RTFormats[2] = RTFormat_impostor_surface;
 			desc.DSFormat = DSFormat_full;
 
 			RECREATE(PSO_captureimpostor);
@@ -4980,9 +4978,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				GPUResource* res[] = {
 					mesh->impostorTarget.GetTexture(0),
 					mesh->impostorTarget.GetTexture(1),
-					mesh->impostorTarget.GetTexture(2),
-					mesh->impostorTarget.GetTexture(3),
-					mesh->impostorTarget.GetTexture(4),
+					mesh->impostorTarget.GetTexture(2)
 				};
 				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
@@ -5258,9 +5254,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				GPUResource* res[] = {
 					material->GetBaseColorMap(),
 					material->GetNormalMap(),
-					material->GetRoughnessMap(),
-					material->GetReflectanceMap(),
-					material->GetMetalnessMap(),
+					material->GetSurfaceMap(),
 					material->GetDisplacementMap(),
 				};
 				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
@@ -5459,7 +5453,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	static const UINT envmapRes = 128;
 	static const UINT envmapCount = 16;
-	static const UINT envmapMIPs = 6;
+	static const UINT envmapMIPs = 8;
 	static const FORMAT envmapFormat = FORMAT_R16G16B16A16_FLOAT;
 
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
@@ -7023,10 +7017,8 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	if (!mesh->impostorTarget.IsInitialized())
 	{
 		mesh->impostorTarget.Initialize(res * 6, res, true, RTFormat_impostor_albedo, 0);
-		mesh->impostorTarget.Add(RTFormat_impostor_normal);			// normal
-		mesh->impostorTarget.Add(RTFormat_impostor_roughness);		// roughness
-		mesh->impostorTarget.Add(RTFormat_impostor_reflectance);	// reflectance
-		mesh->impostorTarget.Add(RTFormat_impostor_metalness);		// metalness
+		mesh->impostorTarget.Add(RTFormat_impostor_normal);			// normal, roughness
+		mesh->impostorTarget.Add(RTFormat_impostor_surface);		// surface properties
 	}
 
 	Camera savedCam = *cam;
@@ -7155,11 +7147,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 
 				GetDevice()->BindResource(PS, subset.material->GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 				GetDevice()->BindResource(PS, subset.material->GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-				GetDevice()->BindResource(PS, subset.material->GetRoughnessMap(), TEXSLOT_ONDEMAND2, threadID);
-				GetDevice()->BindResource(PS, subset.material->GetReflectanceMap(), TEXSLOT_ONDEMAND3, threadID);
-				GetDevice()->BindResource(PS, subset.material->GetMetalnessMap(), TEXSLOT_ONDEMAND4, threadID);
-				GetDevice()->BindResource(PS, subset.material->GetDisplacementMap(), TEXSLOT_ONDEMAND5, threadID);
-
+				GetDevice()->BindResource(PS, subset.material->GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
 
 				GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), 1, subset.indexBufferOffset, 0, 0, threadID);
 			}

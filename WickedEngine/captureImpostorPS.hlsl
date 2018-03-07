@@ -4,9 +4,7 @@ struct ImpostorOut
 {
 	float4 color		: SV_Target0;
 	float4 normal		: SV_Target1;
-	float4 roughness	: SV_Target2;
-	float4 reflectance	: SV_Target3;
-	float4 metalness	: SV_Target4;
+	float4 surfaceProps	: SV_Target2;
 };
 
 ImpostorOut main(PixelInputType input)
@@ -23,15 +21,20 @@ ImpostorOut main(PixelInputType input)
 	ALPHATEST(color.a);
 	color.a = 1;
 
+	float roughness = g_xMat_roughness;
+
 	float3 bumpColor;
-	NormalMapping(UV, P, N, TBN, bumpColor);
+	NormalMapping(UV, P, N, TBN, bumpColor, roughness);
+
+	float4 surface_ref_met_emi_sss = xSurfaceMap.Sample(sampler_objectshader, UV);
 
 	ImpostorOut Out;
 	Out.color = color;
-	Out.normal = float4(mul(N, transpose(TBN)), 1);
-	Out.roughness = g_xMat_roughness * xRoughnessMap.Sample(sampler_objectshader, UV).r;
-	Out.reflectance = g_xMat_reflectance * xReflectanceMap.Sample(sampler_objectshader, UV).r;
-	Out.metalness = g_xMat_metalness * xMetalnessMap.Sample(sampler_objectshader, UV).r;
+	Out.normal = float4(mul(N, transpose(TBN)), roughness);
+	Out.surfaceProps.r = g_xMat_reflectance * surface_ref_met_emi_sss.r;
+	Out.surfaceProps.g = g_xMat_metalness * surface_ref_met_emi_sss.g;
+	Out.surfaceProps.b = g_xMat_emissive * surface_ref_met_emi_sss.b;
+	Out.surfaceProps.a = g_xMat_subsurfaceScattering * surface_ref_met_emi_sss.a;
 	return Out;
 }
 

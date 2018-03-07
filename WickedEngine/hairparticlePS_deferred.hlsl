@@ -13,7 +13,7 @@ GBUFFEROutputType main(VertexToPixel input)
 	ALPHATEST(color.a)
 	color = DEGAMMA(color);
 	float emissive = 0;
-	Surface surface = CreateSurface(0, input.nor, 0, color, 0, 0, 1);
+	Surface surface = CreateSurface(0, input.nor, 0, color, 1, 0, 0);
 	float ao = 1;
 	float sss = 0;
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);

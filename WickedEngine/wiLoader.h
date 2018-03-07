@@ -138,8 +138,8 @@ public:
 	std::string name;
 	XMFLOAT3 diffuseColor;
 
-	std::string refMapName;
-	wiGraphicsTypes::Texture2D* refMap;
+	std::string surfaceMapName;
+	wiGraphicsTypes::Texture2D* surfaceMap;
 
 	std::string textureName;
 	wiGraphicsTypes::Texture2D* texture;
@@ -229,9 +229,7 @@ public:
 	}
 	wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
 	wiGraphicsTypes::Texture2D* GetNormalMap() const;
-	wiGraphicsTypes::Texture2D* GetRoughnessMap() const;
-	wiGraphicsTypes::Texture2D* GetMetalnessMap() const;
-	wiGraphicsTypes::Texture2D* GetReflectanceMap() const;
+	wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
 	wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 	void Serialize(wiArchive& archive);
 

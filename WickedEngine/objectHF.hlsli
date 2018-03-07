@@ -48,19 +48,17 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 //////////////////
 
 // These are bound by wiRenderer (based on Material):
-#define xBaseColorMap			texture_0
-#define xNormalMap				texture_1
-#define xRoughnessMap			texture_2
-#define xReflectanceMap			texture_3
-#define xMetalnessMap			texture_4
-#define xDisplacementMap		texture_5
+#define xBaseColorMap			texture_0	// rgb: baseColor, a: opacity
+#define xNormalMap				texture_1	// rgb: normal, a: roughness
+#define xSurfaceMap				texture_2	// r: reflectance, g: metalness, b: emissive, a: subsurface scattering
+#define xDisplacementMap		texture_3	// r: heightmap
 
 // These are bound by RenderableComponent (based on Render Path):
-#define xReflection				texture_6
-#define xRefraction				texture_7
-#define	xWaterRipples			texture_8
-#define	xSSAO					texture_8
-#define	xSSR					texture_9
+#define xReflection				texture_6	// rgba: scene color from reflected camera angle
+#define xRefraction				texture_7	// rgba: scene color from primary camera angle
+#define	xWaterRipples			texture_8	// rgb: snorm8 water ripple normal map
+#define	xSSAO					texture_8	// r: screen space ambient occlusion
+#define	xSSR					texture_9	// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
 
 
 struct PixelInputType_Simple
@@ -120,13 +118,13 @@ inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface sur
 // METHODS
 ////////////
 
-inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, inout float3 bumpColor)
+inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, inout float3 bumpColor, inout float roughness)
 {
-	float4 nortex = xNormalMap.Sample(sampler_objectshader, UV);
-	bumpColor = 2.0f * nortex.rgb - 1.0f;
-	bumpColor *= nortex.a;
+	float4 normal_roughness = xNormalMap.Sample(sampler_objectshader, UV);
+	bumpColor = 2.0f * normal_roughness.rgb - 1.0f;
 	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMat_normalMapStrength));
 	bumpColor *= g_xMat_normalMapStrength;
+	roughness *= normal_roughness.a;
 }
 
 inline void SpecularAA(in float3 N, inout float roughness)
@@ -521,15 +519,21 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
+	float roughness = g_xMat_roughness;
+
 #ifdef NORMALMAP
-	NormalMapping(UV, surface.P, surface.N, TBN, bumpColor);
+	NormalMapping(UV, surface.P, surface.N, TBN, bumpColor, roughness);
 #endif // NORMALMAP
 
-	surface = CreateSurface(surface.P, surface.N, surface.V, color,
-		g_xMat_reflectance * xReflectanceMap.Sample(sampler_objectshader, UV).r,
-		g_xMat_metalness * xMetalnessMap.Sample(sampler_objectshader, UV).r,
-		g_xMat_roughness * xRoughnessMap.Sample(sampler_objectshader, UV).r,
-		g_xMat_emissive, g_xMat_subsurfaceScattering);
+	float4 surface_ref_met_emi_sss = xSurfaceMap.Sample(sampler_objectshader, UV);
+
+	surface = CreateSurface(
+		surface.P, surface.N, surface.V, color, roughness,
+		g_xMat_reflectance * surface_ref_met_emi_sss.r,
+		g_xMat_metalness * surface_ref_met_emi_sss.g,
+		g_xMat_emissive * surface_ref_met_emi_sss.b,
+		g_xMat_subsurfaceScattering * surface_ref_met_emi_sss.a
+	);
 
 
 #ifndef SIMPLE_INPUT

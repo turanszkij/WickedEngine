@@ -179,8 +179,8 @@ void LoadWiMaterialLibrary(const std::string& directory, const std::string& name
 						file>>resourceName;
 						stringstream ss("");
 						ss<<directory<<texturesDir<<resourceName.c_str();
-						currentMat->refMapName=ss.str();
-						currentMat->refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
+						currentMat->surfaceMapName = ss.str();
+						currentMat->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
 					}
 					break;
 				case 'n':
@@ -1140,12 +1140,12 @@ void Cullable::Serialize(wiArchive& archive)
 
 #pragma region MATERIAL
 Material::~Material() {
-	wiResourceManager::GetGlobal()->del(refMapName);
+	wiResourceManager::GetGlobal()->del(surfaceMapName);
 	wiResourceManager::GetGlobal()->del(textureName);
 	wiResourceManager::GetGlobal()->del(normalMapName);
 	wiResourceManager::GetGlobal()->del(displacementMapName);
 	wiResourceManager::GetGlobal()->del(specularMapName);
-	refMap = nullptr;
+	surfaceMap = nullptr;
 	texture = nullptr;
 	normalMap = nullptr;
 	displacementMap = nullptr;
@@ -1155,8 +1155,8 @@ void Material::init()
 {
 	diffuseColor = XMFLOAT3(1, 1, 1);
 
-	refMapName = "";
-	refMap = nullptr;
+	surfaceMapName = "";
+	surfaceMap = nullptr;
 
 	textureName = "";
 	texture = nullptr;
@@ -1256,19 +1256,11 @@ Texture2D* Material::GetNormalMap() const
 	//}
 	//return wiTextureHelper::getInstance()->getNormalMapDefault();
 }
-Texture2D* Material::GetRoughnessMap() const
+Texture2D* Material::GetSurfaceMap() const
 {
-	return wiTextureHelper::getInstance()->getWhite();
-}
-Texture2D* Material::GetMetalnessMap() const
-{
-	return wiTextureHelper::getInstance()->getWhite();
-}
-Texture2D* Material::GetReflectanceMap() const
-{
-	if (refMap != nullptr)
+	if (surfaceMap != nullptr)
 	{
-		return refMap;
+		return surfaceMap;
 	}
 	return wiTextureHelper::getInstance()->getWhite();
 }
@@ -1285,7 +1277,7 @@ void Material::Serialize(wiArchive& archive)
 	if (archive.IsReadMode())
 	{
 		archive >> name;
-		archive >> refMapName;
+		archive >> surfaceMapName;
 		archive >> textureName;
 		archive >> premultipliedTexture;
 		int temp;
@@ -1322,10 +1314,10 @@ void Material::Serialize(wiArchive& archive)
 		}
 
 		string texturesDir = archive.GetSourceDirectory() + "textures/";
-		if (!refMapName.empty())
+		if (!surfaceMapName.empty())
 		{
-			refMapName = texturesDir + refMapName;
-			refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(refMapName);
+			surfaceMapName = texturesDir + surfaceMapName;
+			surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(surfaceMapName);
 		}
 		if (!textureName.empty())
 		{
@@ -1351,7 +1343,7 @@ void Material::Serialize(wiArchive& archive)
 	else
 	{
 		archive << name;
-		archive << wiHelper::GetFileNameFromPath(refMapName);
+		archive << wiHelper::GetFileNameFromPath(surfaceMapName);
 		archive << wiHelper::GetFileNameFromPath(textureName);
 		archive << premultipliedTexture;
 		archive << (int)blendFlag;
@@ -2521,17 +2513,17 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 				material->metalness = obj_material.metallic;
 				//obj_material.metallic_texname;
 				material->normalMapName = obj_material.normal_texname;
-				material->refMapName = obj_material.reflection_texname;
+				material->surfaceMapName = obj_material.reflection_texname;
 				material->roughness = obj_material.roughness;
 				//obj_material.roughness_texname;
 				material->specular_power = (int)obj_material.shininess;
 				material->specular = XMFLOAT4(obj_material.specular[0], obj_material.specular[1], obj_material.specular[2], 1);
 				material->specularMapName = obj_material.specular_texname;
 
-				if (!material->refMapName.empty())
+				if (!material->surfaceMapName.empty())
 				{
-					material->refMapName = directory + material->refMapName;
-					material->refMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->refMapName);
+					material->surfaceMapName = directory + material->surfaceMapName;
+					material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->surfaceMapName);
 				}
 				if (!material->textureName.empty())
 				{

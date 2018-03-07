@@ -199,7 +199,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 	ppWindow->AddWidget(colorGradingButton);
 
 	stereogramCheckBox = new wiCheckBox("Stereogram: ");
-	stereogramCheckBox->SetTooltip("Compute a stereogram from the depth buffer. It produces a 3D sihouette image when viewed cross eyed.");
+	stereogramCheckBox->SetTooltip("Compute a stereogram from the depth buffer. It produces a 3D silhouette image when viewed cross eyed.");
 	stereogramCheckBox->SetScriptTip("Renderable3DComponent::SetStereogramEnabled(bool value)");
 	stereogramCheckBox->SetPos(XMFLOAT2(x, y += 35));
 	stereogramCheckBox->SetCheck(component->getStereogramEnabled());

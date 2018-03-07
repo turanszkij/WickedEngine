@@ -473,7 +473,7 @@ void main(ComputeShaderInput IN)
 	float ao = g3.w;
 	float3 P = getPosition((float2)pixel * g_xWorld_InternalResolution_Inverse, depth);
 	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
-	Surface surface = CreateSurface(P, N, V, baseColor, reflectance, metalness, roughness);
+	Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness);
 
 	uint iterator = 0;
 
