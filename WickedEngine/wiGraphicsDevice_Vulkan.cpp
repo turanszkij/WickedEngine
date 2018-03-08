@@ -1,5 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "wiGraphicsDevice_Vulkan.h"
+#include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 
@@ -692,13 +693,99 @@ namespace wiGraphicsTypes
 
 		// Create default pipeline:
 		{
-			VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-			pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			pipelineLayoutInfo.setLayoutCount = 0;
-			pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-			if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &defaultPipelineLayout) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create pipeline layout!");
+			// ??? what about different srv types though?
+
+			for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
+			{
+				VkShaderStageFlags stage;
+
+				switch (i)
+				{
+				case VS:
+					stage = VK_SHADER_STAGE_VERTEX_BIT;
+					break;
+				case GS:
+					stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+					break;
+				case HS:
+					stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+					break;
+				case DS:
+					stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+					break;
+				case PS:
+					stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+					break;
+				}
+
+				std::vector<VkDescriptorSetLayoutBinding> layoutBindings = {};
+				{
+					VkDescriptorSetLayoutBinding layoutBinding = {};
+					layoutBinding.stageFlags = stage;
+					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					layoutBinding.binding = 0;
+					layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
+					layoutBindings.push_back(layoutBinding);
+				}
+				{
+					VkDescriptorSetLayoutBinding layoutBinding = {};
+					layoutBinding.stageFlags = stage;
+					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+					layoutBinding.binding = GPU_RESOURCE_HEAP_CBV_COUNT;
+					layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+					layoutBindings.push_back(layoutBinding);
+				}
+				{
+					VkDescriptorSetLayoutBinding layoutBinding = {};
+					layoutBinding.stageFlags = stage;
+					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+					layoutBinding.binding = GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT;
+					layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+					layoutBindings.push_back(layoutBinding);
+				}
+				{
+					VkDescriptorSetLayoutBinding layoutBinding = {};
+					layoutBinding.stageFlags = stage;
+					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+					layoutBinding.binding = GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT;
+					layoutBinding.descriptorCount = GPU_SAMPLER_HEAP_COUNT;
+					layoutBindings.push_back(layoutBinding);
+				}
+
+				VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
+				descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+				descriptorSetlayoutInfo.pBindings = layoutBindings.data();
+				descriptorSetlayoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
+				if (vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &defaultDescriptorSetlayouts[i]) != VK_SUCCESS) {
+					throw std::runtime_error("failed to create descriptor set layout!");
+				}
+			}
+
+			// Graphics:
+			{
+				VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+				pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+				pipelineLayoutInfo.pSetLayouts = defaultDescriptorSetlayouts;
+				pipelineLayoutInfo.setLayoutCount = 5; // vs, gs, hs, ds, ps
+				pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+				if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &defaultPipelineLayout_Graphics) != VK_SUCCESS) {
+					throw std::runtime_error("failed to create graphics pipeline layout!");
+				}
+			}
+
+			// Compute:
+			{
+				VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+				pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+				pipelineLayoutInfo.pSetLayouts = &defaultDescriptorSetlayouts[CS];
+				pipelineLayoutInfo.setLayoutCount = 1; // cs
+				pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+				if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &defaultPipelineLayout_Compute) != VK_SUCCESS) {
+					throw std::runtime_error("failed to create compute pipeline layout!");
+				}
 			}
 		}
 
@@ -843,11 +930,53 @@ namespace wiGraphicsTypes
 			}
 		}
 
+		// Create command buffers:
+		{
+			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
+
+			VkCommandPoolCreateInfo poolInfo = {};
+			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+			poolInfo.flags = 0; // Optional
+
+			if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create command pool!");
+			}
+
+
+			memset(commandBuffers, 0, sizeof(commandBuffers));
+
+			VkCommandBufferAllocateInfo commandBufferInfo = {};
+			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			commandBufferInfo.commandBufferCount = GRAPHICSTHREAD_COUNT;
+			commandBufferInfo.commandPool = commandPool;
+			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+			if (vkAllocateCommandBuffers(device, &commandBufferInfo, commandBuffers) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create command buffers!");
+			}
+
+			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+			{
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				beginInfo.pInheritanceInfo = nullptr; // Optional
+
+				assert(vkBeginCommandBuffer(commandBuffers[i], &beginInfo) == VK_SUCCESS);
+			}
+		}
 
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
-		vkDestroyPipelineLayout(device, defaultPipelineLayout, nullptr);
+		vkDestroyCommandPool(device, commandPool, nullptr);
+		for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
+		{
+			vkDestroyDescriptorSetLayout(device, defaultDescriptorSetlayouts[i], nullptr);
+		}
+		vkDestroyPipelineLayout(device, defaultPipelineLayout_Graphics, nullptr);
+		vkDestroyPipelineLayout(device, defaultPipelineLayout_Compute, nullptr);
 		vkDestroyRenderPass(device, defaultRenderPass, nullptr);	
 		for (auto framebuffer : swapChainFramebuffers) {
 			vkDestroyFramebuffer(device, framebuffer, nullptr);
@@ -1053,7 +1182,7 @@ namespace wiGraphicsTypes
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.layout = defaultPipelineLayout;
+		pipelineInfo.layout = defaultPipelineLayout_Graphics;
 		pipelineInfo.renderPass = *static_cast<VkRenderPass*>(pso->renderPass_Vulkan);
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -1304,7 +1433,7 @@ namespace wiGraphicsTypes
 
 		VkComputePipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		pipelineInfo.layout = defaultPipelineLayout;
+		pipelineInfo.layout = defaultPipelineLayout_Compute;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 
@@ -1330,7 +1459,7 @@ namespace wiGraphicsTypes
 
 
 		if (vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, static_cast<VkPipeline*>(pso->pipeline_Vulkan)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create graphics pipeline!");
+			throw std::runtime_error("failed to create compute pipeline!");
 		}
 
 		return S_OK;
@@ -1354,18 +1483,18 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID)
 	{
-		//assert(NumViewports <= 6);
-		//VkViewport viewports[6];
-		//for (UINT i = 0; i < NumViewports; ++i)
-		//{
-		//	viewports[i].x = pViewports[i].TopLeftX;
-		//	viewports[i].y = pViewports[i].TopLeftY;
-		//	viewports[i].width = pViewports[i].Width;
-		//	viewports[i].height = pViewports[i].Height;
-		//	viewports[i].minDepth = pViewports[i].MinDepth;
-		//	viewports[i].maxDepth = pViewports[i].MaxDepth;
-		//}
-		//vkCmdSetViewport(commandBuffers[threadID], 0, NumViewports, viewports);
+		assert(NumViewports <= 6);
+		VkViewport viewports[6];
+		for (UINT i = 0; i < NumViewports; ++i)
+		{
+			viewports[i].x = pViewports[i].TopLeftX;
+			viewports[i].y = pViewports[i].TopLeftY;
+			viewports[i].width = pViewports[i].Width;
+			viewports[i].height = pViewports[i].Height;
+			viewports[i].minDepth = pViewports[i].MinDepth;
+			viewports[i].maxDepth = pViewports[i].MaxDepth;
+		}
+		vkCmdSetViewport(commandBuffers[threadID], 0, NumViewports, viewports);
 	}
 	void GraphicsDevice_Vulkan::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
@@ -1427,9 +1556,11 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
+		vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
+		vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
@@ -1484,17 +1615,17 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
 	{
-		//assert(rects != nullptr);
-		//assert(numRects <= 8);
-		//VkRect2D scissors[8];
-		//for (UINT i = 0; i < numRects; ++i)
-		//{
-		//	scissors[i].extent.width = abs(rects[i].right - rects[i].left);
-		//	scissors[i].extent.height = abs(rects[i].bottom - rects[i].top);
-		//	scissors[i].offset.x = rects[i].left;
-		//	scissors[i].offset.y = rects[i].bottom;
-		//}
-		//vkCmdSetScissor(commandBuffers[threadID], 0, numRects, scissors);
+		assert(rects != nullptr);
+		assert(numRects <= 8);
+		VkRect2D scissors[8];
+		for (UINT i = 0; i < numRects; ++i)
+		{
+			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
+			scissors[i].extent.height = abs(rects[i].bottom - rects[i].top);
+			scissors[i].offset.x = rects[i].left;
+			scissors[i].offset.y = rects[i].bottom;
+		}
+		vkCmdSetScissor(commandBuffers[threadID], 0, numRects, scissors);
 	}
 
 	void GraphicsDevice_Vulkan::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)

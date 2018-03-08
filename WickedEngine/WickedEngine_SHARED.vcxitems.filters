@@ -1152,6 +1152,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_Vulkan.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h">
+      <Filter>ENGINE\Graphics\API</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

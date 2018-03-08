@@ -1,5 +1,6 @@
 #include "wiGraphicsDevice_DX12.h"
 #include "Include_DX12.h"
+#include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 
@@ -1187,10 +1188,6 @@ namespace wiGraphicsTypes
 
 
 
-#define GPU_RESOURCE_HEAP_CBV_COUNT		15
-#define GPU_RESOURCE_HEAP_SRV_COUNT		64
-#define GPU_RESOURCE_HEAP_UAV_COUNT		8
-#define GPU_SAMPLER_HEAP_COUNT			16
 	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount)
 	{
 		if (type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)

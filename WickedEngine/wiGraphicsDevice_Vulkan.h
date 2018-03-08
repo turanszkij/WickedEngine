@@ -25,6 +25,9 @@ namespace wiGraphicsTypes
 		VkQueue graphicsQueue; 
 		VkQueue presentQueue;
 
+		VkCommandPool commandPool;
+		VkCommandBuffer commandBuffers[GRAPHICSTHREAD_COUNT];
+
 		VkSwapchainKHR swapChain;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
@@ -33,7 +36,9 @@ namespace wiGraphicsTypes
 		std::vector<VkFramebuffer> swapChainFramebuffers;
 
 		VkRenderPass defaultRenderPass;
-		VkPipelineLayout defaultPipelineLayout;
+		VkPipelineLayout defaultPipelineLayout_Graphics;
+		VkPipelineLayout defaultPipelineLayout_Compute;
+		VkDescriptorSetLayout defaultDescriptorSetlayouts[SHADERSTAGE_COUNT];
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);
