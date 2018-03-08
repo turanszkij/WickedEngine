@@ -22,9 +22,9 @@ namespace wiGraphicsTypes
 		"VK_LAYER_LUNARG_standard_validation"
 	};
 #ifdef NDEBUG
-	const bool enableValidationLayers = false;
+	bool enableValidationLayers = false;
 #else
-	const bool enableValidationLayers = true;
+	bool enableValidationLayers = true;
 #endif
 	bool checkValidationLayerSupport() {
 		uint32_t layerCount;
@@ -567,7 +567,9 @@ namespace wiGraphicsTypes
 		}
 
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
-			throw std::runtime_error("validation layers requested, but not available!");
+			//throw std::runtime_error("validation layers requested, but not available!");
+			wiHelper::messageBox("Vulkan validation layer requested but not available!");
+			enableValidationLayers = false;
 		}
 
 		// Create instance:
