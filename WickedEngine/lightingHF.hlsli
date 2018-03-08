@@ -735,6 +735,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 {
 	float3 envColor;
 
+#ifndef ENVMAPRENDERING
 	[branch]
 	if (g_xWorld_GlobalEnvProbeIndex >= 0)
 	{
@@ -742,6 +743,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xWorld_GlobalEnvProbeIndex), MIP).rgb;
 	}
 	else
+#endif // ENVMAPRENDERING
 	{
 		// There are no envmaps, approximate sky color:
 		float3 realSkyColor = lerp(GetHorizonColor(), GetZenithColor(), pow(saturate(surface.R.y), 0.25f));
