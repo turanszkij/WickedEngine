@@ -17,19 +17,20 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 0, 0, 1);
+	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 1, 0, 0);
 	float ao = 1;
 	float sss = 0;
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;
 	float3 diffuse = 0;
 	float3 specular = 0;
+	float3 reflection = 0;
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
-	TiledLighting(pixel, surface, diffuse, specular);
-	VoxelRadiance(surface, diffuse, specular, ao);
+	TiledLighting(pixel, surface, diffuse, specular, reflection);
+	VoxelGI(surface, diffuse, reflection, ao);
 
-	ApplyLighting(surface, diffuse, specular, ao, opacity, color);
+	ApplyLighting(surface, diffuse, specular, ao, color);
 
 	ApplyFog(dist, color);
 

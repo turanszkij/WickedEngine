@@ -243,7 +243,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	texture_baseColor_Button = new wiButton("BaseColor");
 	texture_baseColor_Button->SetText("");
-	texture_baseColor_Button->SetTooltip("Load the basecolor texture.");
+	texture_baseColor_Button->SetTooltip("Load the basecolor texture. RGB: Albedo Base Color, A: Opacity");
 	texture_baseColor_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_baseColor_Button->SetSize(XMFLOAT2(260, 20));
 	texture_baseColor_Button->OnClick([&](wiEventArgs args) {
@@ -269,7 +269,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;\0";
+			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;*.tga;\0";
 			ofn.nFilterIndex = 1;
 			ofn.lpstrFileTitle = NULL;
 			ofn.nMaxFileTitle = 0;
@@ -294,7 +294,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	texture_normal_Button = new wiButton("NormalMap");
 	texture_normal_Button->SetText("");
-	texture_normal_Button->SetTooltip("Load the normalmap texture.");
+	texture_normal_Button->SetTooltip("Load the normalmap texture. RGB: Normal, A: Roughness");
 	texture_normal_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_normal_Button->SetSize(XMFLOAT2(260, 20));
 	texture_normal_Button->OnClick([&](wiEventArgs args) {
@@ -320,7 +320,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;\0";
+			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;*.tga;\0";
 			ofn.nFilterIndex = 1;
 			ofn.lpstrFileTitle = NULL;
 			ofn.nMaxFileTitle = 0;
@@ -335,6 +335,57 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		}
 	});
 	materialWindow->AddWidget(texture_normal_Button);
+
+
+
+	texture_surface_Label = new wiLabel("SurfaceMap: ");
+	texture_surface_Label->SetPos(XMFLOAT2(x, y += step));
+	texture_surface_Label->SetSize(XMFLOAT2(120, 20));
+	materialWindow->AddWidget(texture_surface_Label);
+
+	texture_surface_Button = new wiButton("SurfaceMap");
+	texture_surface_Button->SetText("");
+	texture_surface_Button->SetTooltip("Load the surface property texture: R: Reflectance, G: Metalness, B: Emissive, A: SSS");
+	texture_surface_Button->SetPos(XMFLOAT2(x + 122, y));
+	texture_surface_Button->SetSize(XMFLOAT2(260, 20));
+	texture_surface_Button->OnClick([&](wiEventArgs args) {
+		if (material == nullptr)
+			return;
+
+		if (material->surfaceMap != nullptr)
+		{
+			material->surfaceMap = nullptr;
+			material->surfaceMapName = "";
+			texture_surface_Button->SetText("");
+		}
+		else
+		{
+			char szFile[260];
+
+			OPENFILENAMEA ofn;
+			ZeroMemory(&ofn, sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = nullptr;
+			ofn.lpstrFile = szFile;
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// use the contents of szFile to initialize itself.
+			ofn.lpstrFile[0] = '\0';
+			ofn.nMaxFile = sizeof(szFile);
+			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;*.tga;\0";
+			ofn.nFilterIndex = 1;
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = NULL;
+			ofn.Flags = 0;
+			if (GetSaveFileNameA(&ofn) == TRUE) {
+				string fileName = ofn.lpstrFile;
+				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
+				material->surfaceMapName = fileName;
+				texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(material->surfaceMapName));
+			}
+		}
+	});
+	materialWindow->AddWidget(texture_surface_Button);
 
 
 
@@ -371,7 +422,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;\0";
+			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;*.tga;\0";
 			ofn.nFilterIndex = 1;
 			ofn.lpstrFileTitle = NULL;
 			ofn.nMaxFileTitle = 0;
@@ -440,6 +491,7 @@ void MaterialWindow::SetMaterial(Material* mat)
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->textureName));
 		texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));
+		texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(material->surfaceMapName));
 		texture_displacement_Button->SetText(wiHelper::GetFileNameFromPath(material->displacementMapName));
 	}
 	else
@@ -450,6 +502,7 @@ void MaterialWindow::SetMaterial(Material* mat)
 
 		texture_baseColor_Button->SetText("");
 		texture_normal_Button->SetText("");
+		texture_surface_Button->SetText("");
 		texture_displacement_Button->SetText("");
 	}
 }

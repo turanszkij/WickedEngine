@@ -95,9 +95,7 @@ public:
 	static const wiGraphicsTypes::FORMAT RTFormat_envprobe = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
 	static const wiGraphicsTypes::FORMAT RTFormat_impostor_albedo = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
 	static const wiGraphicsTypes::FORMAT RTFormat_impostor_normal = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_impostor_roughness = wiGraphicsTypes::FORMAT_R8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_impostor_metalness = wiGraphicsTypes::FORMAT_R8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_impostor_reflectance = wiGraphicsTypes::FORMAT_R8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_impostor_surface = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
 
 	static const wiGraphicsTypes::FORMAT DSFormat_full = wiGraphicsTypes::FORMAT_D32_FLOAT_S8X24_UINT;
 	static const wiGraphicsTypes::FORMAT DSFormat_full_alias = wiGraphicsTypes::FORMAT_R32G8X24_TYPELESS;
@@ -454,10 +452,9 @@ public:
 	static void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false, bool occlusionCulling = false);
 	static void DrawSky(GRAPHICSTHREAD threadID);
 	static void DrawSun(GRAPHICSTHREAD threadID);
-	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refRes, bool grass, bool occlusionCulling);
+	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID);
-	static void DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, wiGraphicsTypes::Texture2D* refracRes, wiGraphicsTypes::Texture2D* refRes
-		, wiGraphicsTypes::Texture2D* waterRippleNormals, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling);
+	static void DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling);
 	void DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);

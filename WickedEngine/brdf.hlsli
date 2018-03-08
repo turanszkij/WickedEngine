@@ -33,7 +33,7 @@ float Fr_DisneyDiffuse(float NdotV, float NdotL, float LdotH, float linearRoughn
 	return lightScatter * viewScatter * energyFactor;
 }
 
-float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG)
+float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG2)
 {
 	// Original formulation of G_SmithGGX Correlated 
 	// lambda_v = (-1 + sqrt(alphaG2 * (1 - NdotL2) / NdotL2 + 1)) * 0.5f; 
@@ -43,7 +43,7 @@ float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG)
 
 
 	// This is the optimized version 
-	float alphaG2 = alphaG * alphaG;
+	//float alphaG2 = alphaG * alphaG;
 
 	// Caution: the "NdotL *" and "NdotV *" are explicitely inversed , this is not a mistake. 
 	float Lambda_GGXV = NdotL * sqrt((-NdotV * alphaG2 + NdotV) * NdotV + alphaG2);
@@ -52,10 +52,10 @@ float V_SmithGGXCorrelated(float NdotL, float NdotV, float alphaG)
 	return 0.5f / (Lambda_GGXV + Lambda_GGXL);
 }
 
-float D_GGX(float NdotH, float m)
+float D_GGX(float NdotH, float m2)
 {
 	// Divide by PI is apply later 
-	float m2 = m * m;
+	//float m2 = m * m;
 	float f = (NdotH * m2 - NdotH) * NdotH + 1;
 	return m2 / (f * f);
 }
@@ -81,7 +81,8 @@ struct Surface
 	float4 baseColor;		// base color [0 -> 1] (rgba)
 	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
 	float metalness;		// metalness [0:dielectric -> 1:metal]
-	float roughness;		// roughness: [0:smooth -> 1:rough]
+	float roughness;		// roughness: [0:smooth -> 1:rough] (linear)
+	float roughness_brdf;	// roughness remapped from linear to BRDF
 	float emissive;			// light emission [0 -> 1]
 	float sss;				// subsurface scattering [0 -> 1]
 
@@ -103,7 +104,7 @@ struct Surface
 		F = F_Schlick(f0, f90, NdotV);
 	}
 };
-inline Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 baseColor, in float reflectance, in float metalness, in float roughness, in float emissive = 0, in float sss = 0)
+inline Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 baseColor, in float roughness, in float reflectance, in float metalness, in float emissive = 0, in float sss = 0)
 {
 	Surface surface;
 
@@ -111,9 +112,10 @@ inline Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 ba
 	surface.N = N;
 	surface.V = V;
 	surface.baseColor = baseColor;
+	surface.roughness = roughness;
+	surface.roughness_brdf = surface.roughness * surface.roughness;
 	surface.reflectance = reflectance;
 	surface.metalness = metalness;
-	surface.roughness = roughness;
 	surface.emissive = emissive;
 	surface.sss = sss;
 
@@ -149,8 +151,8 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 {
 	float f90 = saturate(50.0 * dot(surface.f0, 0.33));
 	float3 F = F_Schlick(surface.f0, f90, surfaceToLight.HdotV);
-	float Vis = V_SmithGGXCorrelated(surface.NdotV, surfaceToLight.NdotL, surface.roughness);
-	float D = D_GGX(surfaceToLight.NdotH, surface.roughness);
+	float Vis = V_SmithGGXCorrelated(surface.NdotV, surfaceToLight.NdotL, surface.roughness_brdf);
+	float D = D_GGX(surfaceToLight.NdotH, surface.roughness_brdf);
 	float3 Fr = D * F * Vis / PI;
 	return Fr;
 }

@@ -131,7 +131,8 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, rtReflection.GetTexture(), getHairParticlesEnabled(), true);
+		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true);
 	}
 
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
@@ -167,11 +168,16 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), rtGBuffer.GetTexture(3), nullptr, threadID);
 
+
+
 	rtLight.Activate(threadID, rtGBuffer.depth); {
+		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 		wiRenderer::DrawLights(wiRenderer::getCamera(), threadID);
 	}
 
+
 	if (getSSAOEnabled()) {
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
@@ -264,8 +270,8 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 
-
 	if (getSSREnabled()) {
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
@@ -279,15 +285,14 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-
 	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
 }
 
 wiRenderTarget& DeferredRenderableComponent::GetFinalRT()
 {
-	if (getSSREnabled())
-		return rtSSR;
-	else
+	//if (getSSREnabled())
+	//	return rtSSR;
+	//else
 		return rtDeferred;
 }
 
