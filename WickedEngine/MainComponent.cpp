@@ -40,6 +40,8 @@ MainComponent::MainComponent()
 
 MainComponent::~MainComponent()
 {
+	wiRenderer::GetDevice()->WaitForGPU();
+
 	if (activeComponent != nullptr)
 	{
 		activeComponent->Unload();

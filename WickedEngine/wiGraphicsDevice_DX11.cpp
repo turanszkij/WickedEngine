@@ -3409,6 +3409,11 @@ void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAP
 	deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
 }
 
+void GraphicsDevice_DX11::WaitForGPU()
+{
+	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->Flush();
+}
+
 void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->Begin(query->resource_DX11[query->async_frameshift]);

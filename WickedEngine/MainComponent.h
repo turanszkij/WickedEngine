@@ -21,7 +21,7 @@ private:
 	wiFadeManager fadeManager;
 public:
 	MainComponent();
-	~MainComponent();
+	virtual ~MainComponent();
 
 	int screenW, screenH;
 	bool fullscreen;

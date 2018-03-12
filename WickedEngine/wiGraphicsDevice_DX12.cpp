@@ -1903,6 +1903,8 @@ namespace wiGraphicsTypes
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
+		WaitForGPU();
+
 		SAFE_RELEASE(swapChain);
 
 		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
@@ -3639,6 +3641,15 @@ namespace wiGraphicsTypes
 			pRects[i].top = rects[i].top;
 		}
 		GetDirectCommandList(threadID)->RSSetScissorRects(numRects, pRects);
+	}
+
+	void GraphicsDevice_DX12::WaitForGPU()
+	{
+		if (frameFence->GetCompletedValue() < FRAMECOUNT)
+		{
+			HRESULT result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
+			WaitForSingleObject(frameFenceEvent, INFINITE);
+		}
 	}
 
 	void GraphicsDevice_DX12::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)

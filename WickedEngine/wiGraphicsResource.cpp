@@ -270,7 +270,7 @@ namespace wiGraphicsTypes
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
-		SAFE_DELETE(resource_DX12);
+		SAFE_RELEASE(resource_DX12);
 		SAFE_DELETE(pipeline_Vulkan);
 		SAFE_DELETE(renderPass_Vulkan);
 	}
@@ -282,7 +282,7 @@ namespace wiGraphicsTypes
 	}
 	ComputePSO::~ComputePSO()
 	{
-		SAFE_DELETE(resource_DX12);
+		SAFE_RELEASE(resource_DX12);
 		SAFE_DELETE(pipeline_Vulkan);
 	}
 }

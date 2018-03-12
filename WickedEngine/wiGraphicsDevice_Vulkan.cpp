@@ -1628,6 +1628,10 @@ namespace wiGraphicsTypes
 		vkCmdSetScissor(commandBuffers[threadID], 0, numRects, scissors);
 	}
 
+	void GraphicsDevice_Vulkan::WaitForGPU()
+	{
+	}
+
 	void GraphicsDevice_Vulkan::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
 	{
 	}
