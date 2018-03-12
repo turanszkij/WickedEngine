@@ -306,6 +306,8 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 
 bool wiResourceManager::CleanUp()
 {
+	wiRenderer::GetDevice()->WaitForGPU();
+
 	std::vector<wiHashString>resNames(0);
 	for (auto& x : resources)
 	{

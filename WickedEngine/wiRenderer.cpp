@@ -269,7 +269,6 @@ void wiRenderer::SetUpStaticComponents()
 void wiRenderer::CleanUpStatic()
 {
 
-
 	wiHairParticle::CleanUpStatic();
 	wiEmittedParticle::CleanUpStatic();
 	Cube::CleanUpStatic();

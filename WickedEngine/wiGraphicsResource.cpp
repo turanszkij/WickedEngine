@@ -265,7 +265,7 @@ namespace wiGraphicsTypes
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
-		SAFE_DELETE(resource_DX12);
+		SAFE_RELEASE(resource_DX12);
 	}
 
 	ComputePSO::ComputePSO()
@@ -274,6 +274,6 @@ namespace wiGraphicsTypes
 	}
 	ComputePSO::~ComputePSO()
 	{
-		SAFE_DELETE(resource_DX12);
+		SAFE_RELEASE(resource_DX12);
 	}
 }
