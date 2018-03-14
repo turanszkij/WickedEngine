@@ -17,7 +17,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(760, 670));
+	materialWindow->SetSize(XMFLOAT2(760, 700));
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
@@ -229,6 +229,32 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	blendModeComboBox->SetEnabled(false);
 	blendModeComboBox->SetTooltip("Set the blend mode of the material.");
 	materialWindow->AddWidget(blendModeComboBox);
+
+
+	shaderTypeComboBox = new wiComboBox("Custom Shader: ");
+	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
+	shaderTypeComboBox->SetSize(XMFLOAT2(100, 25));
+	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
+		if (material != nullptr)
+		{
+			if (args.iValue == 0)
+			{
+				material->customShader = nullptr;
+			}
+			else if (args.iValue > 0)
+			{
+				material->customShader = Material::customShaderPresets[args.iValue - 1];
+			}
+		}
+	});
+	shaderTypeComboBox->AddItem("None");
+	for (auto& x : Material::customShaderPresets)
+	{
+		shaderTypeComboBox->AddItem(x->name);
+	}
+	shaderTypeComboBox->SetEnabled(false);
+	shaderTypeComboBox->SetTooltip("Set the custom shader of the material.");
+	materialWindow->AddWidget(shaderTypeComboBox);
 
 
 	// Textures:

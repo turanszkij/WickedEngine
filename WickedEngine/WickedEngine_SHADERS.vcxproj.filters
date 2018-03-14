@@ -690,6 +690,9 @@
     <FxCompile Include="skinningCS_LDS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="objectPS_hologram.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

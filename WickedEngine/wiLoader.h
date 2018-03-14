@@ -189,6 +189,24 @@ public:
 
 	float alphaRef;
 
+	struct CustomShader
+	{
+		std::string name;
+
+		struct CustomShaderPass
+		{
+			wiGraphicsTypes::GraphicsPSO* pso = nullptr;
+
+			~CustomShaderPass()
+			{
+				SAFE_DELETE(pso);
+			}
+		};
+
+		CustomShaderPass passes[SHADERTYPE_COUNT];
+	};
+	CustomShader* customShader = nullptr;
+	static std::vector<Material::CustomShader*> customShaderPresets;
 
 	Material()
 	{
@@ -203,13 +221,15 @@ public:
 
 	void Update();
 
-	bool IsTransparent() const { return alpha < 1.0f; }
+	bool IsTransparent() const { return alpha < 1.0f || customShader != nullptr; }
 	bool IsWater() const { return water; }
 	bool HasPlanarReflection() const { return planar_reflections || IsWater(); }
 	bool IsCastingShadow() const { return cast_shadow; }
 	bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 	RENDERTYPE GetRenderType() const
 	{
+		if (customShader != nullptr)
+			return RENDERTYPE_TRANSPARENT;
 		if (IsWater())
 			return RENDERTYPE_WATER;
 		if (IsTransparent())

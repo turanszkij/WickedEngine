@@ -1139,6 +1139,9 @@ void Cullable::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region MATERIAL
+
+vector<Material::CustomShader*> Material::customShaderPresets;
+
 Material::~Material() {
 	wiResourceManager::GetGlobal()->del(surfaceMapName);
 	wiResourceManager::GetGlobal()->del(textureName);
@@ -1150,6 +1153,8 @@ Material::~Material() {
 	normalMap = nullptr;
 	displacementMap = nullptr;
 	specularMap = nullptr;
+
+	customShader = nullptr; // do not delete
 }
 void Material::init()
 {
@@ -1198,6 +1203,8 @@ void Material::init()
 	planar_reflections = false;
 
 	alphaRef = 1.0f; // no alpha test by default
+
+	customShader = nullptr;
 
 	engineStencilRef = STENCILREF::STENCILREF_DEFAULT;
 	userStencilRef = 0x00;

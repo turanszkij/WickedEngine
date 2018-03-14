@@ -705,6 +705,7 @@ GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessella
 	return PSO_object[shaderType][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
 }
 
+
 VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool transparent)
 {
 	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
@@ -1410,6 +1411,8 @@ void wiRenderer::LoadShaders()
 		pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_water.cso", wiResourceManager::PIXELSHADER));
+		
+		pixelShaders[PSTYPE_OBJECT_HOLOGRAM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_hologram.cso", wiResourceManager::PIXELSHADER));
 	}));
 
 
@@ -1489,6 +1492,7 @@ void wiRenderer::LoadShaders()
 	GraphicsDevice* device = GetDevice();
 
 	thread_pool.push_back(thread([&] {
+		// default objectshaders:
 		for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
 		{
 			for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
@@ -1646,6 +1650,41 @@ void wiRenderer::LoadShaders()
 					}
 				}
 			}
+		}
+
+		// Custom objectshader presets:
+		for (auto& x : Material::customShaderPresets)
+		{
+			SAFE_DELETE(x);
+		}
+		Material::customShaderPresets.clear();
+
+		// Hologram:
+		{
+			VSTYPES realVS = GetVSTYPE(SHADERTYPE_FORWARD, false, false, true);
+			VLTYPES realVL = GetVLTYPE(SHADERTYPE_FORWARD, false, false, true);
+
+			GraphicsPSODesc desc;
+			desc.vs = vertexShaders[realVS];
+			desc.il = vertexLayouts[realVL];
+			desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
+
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.rs = rasterizers[DSSTYPE_DEFAULT];
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.DSFormat = DSFormat_full;
+
+			Material::CustomShader* customShader = new Material::CustomShader;
+			customShader->name = "Hologram"; 
+			customShader->passes[SHADERTYPE_FORWARD].pso = new GraphicsPSO;
+			device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_FORWARD].pso);
+			customShader->passes[SHADERTYPE_TILEDFORWARD].pso = new GraphicsPSO;
+			device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_TILEDFORWARD].pso);
+			Material::customShaderPresets.push_back(customShader);
 		}
 	}));
 
@@ -5102,7 +5141,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				Material* material = subset.material;
 
-				GraphicsPSO* pso = GetObjectPSO(shaderType, mesh->doubleSided, tessellatorRequested, material, forceAlphaTestForDithering);
+				GraphicsPSO* pso = material->customShader == nullptr ? GetObjectPSO(shaderType, mesh->doubleSided, tessellatorRequested, material, forceAlphaTestForDithering) : material->customShader->passes[shaderType].pso;
 				if (pso == nullptr)
 				{
 					continue;
