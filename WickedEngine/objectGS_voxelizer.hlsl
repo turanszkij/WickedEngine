@@ -33,7 +33,7 @@ void main(
 	for (uint i = 0; i < 3; ++i)
 	{
 		// voxel space pos:
-		output[i].pos = float4((input[i].pos.xyz - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataSize, 1);
+		output[i].pos = float4((input[i].pos.xyz - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceDataSize_Inverse, 1);
 
 		// Project onto dominant axis:
 		[flatten]
@@ -47,7 +47,7 @@ void main(
 		}
 
 		// projected pos:
-		output[i].pos.xy /= g_xWorld_VoxelRadianceDataRes;
+		output[i].pos.xy *= g_xWorld_VoxelRadianceDataRes_Inverse;
 
 		output[i].pos.z = 1;
 
@@ -62,15 +62,16 @@ void main(
 	float2 side0N = normalize(output[1].pos.xy - output[0].pos.xy);
 	float2 side1N = normalize(output[2].pos.xy - output[1].pos.xy);
 	float2 side2N = normalize(output[0].pos.xy - output[2].pos.xy);
-	const float texelSize = 1.0f / g_xWorld_VoxelRadianceDataRes;
-	output[0].pos.xy += normalize(-side0N + side2N)*texelSize;
-	output[1].pos.xy += normalize(side0N - side1N)*texelSize;
-	output[2].pos.xy += normalize(side1N - side2N)*texelSize;
+	output[0].pos.xy += normalize(side2N - side0N) * g_xWorld_VoxelRadianceDataRes_Inverse;
+	output[1].pos.xy += normalize(side0N - side1N) * g_xWorld_VoxelRadianceDataRes_Inverse;
+	output[2].pos.xy += normalize(side1N - side2N) * g_xWorld_VoxelRadianceDataRes_Inverse;
 
 
 	[unroll]
-	for (uint j = 0; j<3; j++)
+	for (uint j = 0; j < 3; j++)
+	{
 		outputStream.Append(output[j]);
+	}
 
 	outputStream.RestartStrip();
 }
