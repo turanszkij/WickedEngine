@@ -5749,17 +5749,6 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 			culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
 		}
 
-		const FrameCulling& culling = frameCullings[getCamera()];
-
-		// Tell the voxelizer about the lights in the light array (exclude decals)
-		MiscCB cb;
-		cb.mColor.x = 0;
-		cb.mColor.y = (float)culling.culledLights.size();
-		// This will tell the copy compute shader to not smooth the voxel texture in this frame (todo: find better way):
-		// The problem with blending the voxel texture is when the grid is repositioned, the results will be incorrect
-		cb.mColor.z = voxelSceneData.centerChangedThisFrame ? 1.0f : 0.0f; 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
-
 		ViewPort VP;
 		VP.TopLeftX = 0;
 		VP.TopLeftY = 0;
@@ -6359,6 +6348,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mForceFieldArrayCount = entityArrayCount_ForceFields;
 	cb.mEnvProbeArrayOffset = entityArrayOffset_EnvProbes;
 	cb.mEnvProbeArrayCount = entityArrayCount_EnvProbes;
+	cb.mVoxelRadianceRetargetted = voxelSceneData.centerChangedThisFrame ? 1 : 0;
 	auto& wind = GetScene().wind;
 	cb.mWindRandomness = wind.randomness;
 	cb.mWindWaveSize = wind.waveSize;

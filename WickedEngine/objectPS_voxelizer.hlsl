@@ -5,26 +5,23 @@ RWSTRUCTUREDBUFFER(output, VoxelType, 0);
 
 void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D, nointerpolation float3 instanceColor : COLOR)
 {
-	N = normalize(N);
-
-	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataRes / g_xWorld_VoxelRadianceDataSize;
+	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceDataRes_Inverse * g_xWorld_VoxelRadianceDataSize_Inverse;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-	uint3 writecoord = floor(uvw * g_xWorld_VoxelRadianceDataRes);
 
 	[branch]
-	if (writecoord.x > 0 && writecoord.x < g_xWorld_VoxelRadianceDataRes
-		&& writecoord.y > 0 && writecoord.y < g_xWorld_VoxelRadianceDataRes
-		&& writecoord.z > 0 && writecoord.z < g_xWorld_VoxelRadianceDataRes)
+	if (!any(uvw - saturate(uvw)))
 	{
 		float4 baseColor = DEGAMMA(g_xMat_baseColor * float4(instanceColor, 1) * xBaseColorMap.Sample(sampler_linear_wrap, tex));
 		float4 color = baseColor;
 		float emissive = g_xMat_emissive;
 
+		// fake normals are good enough because it's only coarse diffuse light, no need to normalize:
+		//	(just uncomment if there are any noticable artifacts)
+		//N = normalize(N);
+
 		float3 diffuse = 0;
 
-		uint lightIndexStart = (uint)g_xColor.x;
-		uint lightCount = (uint)g_xColor.y;
-		for (uint i = lightIndexStart; i < lightCount; ++i)
+		for (uint i = g_xFrame_LightArrayOffset; i < g_xFrame_LightArrayCount; ++i)
 		{
 			ShaderEntityType light = EntityArray[i];
 
@@ -131,6 +128,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		uint normal_encoded = EncodeNormal(N);
 
 		// output:
+		uint3 writecoord = floor(uvw * g_xWorld_VoxelRadianceDataRes);
 		uint id = flatten3D(writecoord, g_xWorld_VoxelRadianceDataRes);
 		InterlockedMax(output[id].colorMask, color_encoded);
 		InterlockedMax(output[id].normalMask, normal_encoded);

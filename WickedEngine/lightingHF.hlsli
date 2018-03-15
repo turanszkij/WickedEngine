@@ -84,9 +84,6 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface sur
 		ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 0]);
 		ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 1]);
 		ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 2]);
-		ShPos[0].xyz /= ShPos[0].w;
-		ShPos[1].xyz /= ShPos[1].w;
-		ShPos[2].xyz /= ShPos[2].w;
 		float3 ShTex[3];
 		ShTex[0] = ShPos[0].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		ShTex[1] = ShPos[1].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
