@@ -1669,7 +1669,7 @@ void wiRenderer::LoadShaders()
 			desc.il = vertexLayouts[realVL];
 			desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
 
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.bs = blendStates[BSTYPE_ADDITIVE];
 			desc.rs = rasterizers[DSSTYPE_DEFAULT];
 			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
 			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
