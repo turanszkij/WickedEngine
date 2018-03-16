@@ -35,7 +35,6 @@ public:
 	int SetEyeAdaptionEnabled(lua_State* L);
 	int SetTessellationEnabled(lua_State* L);
 	int SetMSAASampleCount(lua_State* L);
-	int SetHairParticleAlphaCompositionEnabled(lua_State* L);
 	int SetSharpenFilterEnabled(lua_State* L);
 	int SetSharpenFilterAmount(lua_State* L);
 

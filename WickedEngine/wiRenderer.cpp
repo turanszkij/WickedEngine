@@ -60,6 +60,7 @@ float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::TRANSPARENTSHADOWSENABLED = true;
+bool wiRenderer::ALPHACOMPOSITIONENABLED = false;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
 , wiRenderer::advancedRefractions = false;
@@ -5325,6 +5326,11 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (grass)
 	{
+		if (GetAlphaCompositionEnabled())
+		{
+			// cut off most transparent areas
+			SetAlphaRef(0.25f, threadID);
+		}
 		for (wiHairParticle* hair : culling.culledHairParticleSystems)
 		{
 			hair->Draw(camera, shaderType, false, threadID);
@@ -5358,8 +5364,9 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRA
 		ocean->Render(camera, renderTime, threadID);
 	}
 
-	if (grass)
+	if (grass && GetAlphaCompositionEnabled())
 	{
+		// transparent passes can only render hair when alpha composition is enabled
 		for (wiHairParticle* hair : culling.culledHairParticleSystems)
 		{
 			hair->Draw(camera, shaderType, true, threadID);

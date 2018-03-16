@@ -396,6 +396,15 @@ namespace wiRenderer_BindLua
 		wiHairParticle::Settings(lod0, lod1, lod2);
 		return 0;
 	}
+	int SetAlphaCompositionEnabled(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiRenderer::SetAlphaCompositionEnabled(wiLua::SGetBool(L, 1));
+		}
+		return 0;
+	}
 	int SetShadowProps2D(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -706,6 +715,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
 			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
+			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wiLua::GetGlobal()->RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
 			wiLua::GetGlobal()->RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);

@@ -52,7 +52,6 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetTessellationEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetMSAASampleCount),
-	lunamethod(Renderable3DComponent_BindLua, SetHairParticleAlphaCompositionEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSharpenFilterEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSharpenFilterAmount),
 
@@ -349,21 +348,6 @@ int Renderable3DComponent_BindLua::SetMSAASampleCount(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "SetMSAASampleCount(int value) not enough arguments!");
-	return 0;
-}
-int Renderable3DComponent_BindLua::SetHairParticleAlphaCompositionEnabled(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetHairParticleAlphaCompositionEnabled(bool value) component is null!");
-		return 0;
-	}
-	if (wiLua::SGetArgCount(L) > 0)
-	{
-		((Renderable3DComponent*)component)->setHairParticleAlphaCompositionEnabled(wiLua::SGetBool(L, 1));
-	}
-	else
-		wiLua::SError(L, "SetHairParticleAlphaCompositionEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int Renderable3DComponent_BindLua::SetSharpenFilterEnabled(lua_State* L)

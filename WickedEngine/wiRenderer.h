@@ -110,6 +110,7 @@ public:
 	static XMFLOAT2 temporalAAJitter, temporalAAJitterPrev;
 	static float RESOLUTIONSCALE;
 	static bool TRANSPARENTSHADOWSENABLED;
+	static bool ALPHACOMPOSITIONENABLED;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
@@ -355,6 +356,8 @@ public:
 	static bool GetDebugLightCulling() { return debugLightCulling; }
 	static void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
 	static bool GetAdvancedLightCulling() { return advancedLightCulling; }
+	static void SetAlphaCompositionEnabled(bool enabled) { ALPHACOMPOSITIONENABLED = enabled; }
+	static bool GetAlphaCompositionEnabled() { return ALPHACOMPOSITIONENABLED; }
 	static void SetOcclusionCullingEnabled(bool enabled); // also inits query pool!
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static void SetLDSSkinningEnabled(bool enabled) { ldsSkinningEnabled = enabled; }

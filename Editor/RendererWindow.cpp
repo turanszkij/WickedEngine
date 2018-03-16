@@ -14,7 +14,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	wiRenderer::SetToDrawGridHelper(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 930));
+	rendererWindow->SetSize(XMFLOAT2(640, 960));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -182,6 +182,15 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	advancedRefractionsCheckBox->SetCheck(wiRenderer::GetAdvancedRefractionsEnabled());
 	rendererWindow->AddWidget(advancedRefractionsCheckBox);
 	advancedRefractionsCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT));
+
+	alphaCompositionCheckBox = new wiCheckBox("Alpha Composition: ");
+	alphaCompositionCheckBox->SetTooltip("Enable Alpha Composition. Enables softer alpha blending on partly solid geometry (eg. vegetation) but rendering performance will be slower.");
+	alphaCompositionCheckBox->SetPos(XMFLOAT2(x, y += step));
+	alphaCompositionCheckBox->OnClick([=](wiEventArgs args) {
+		wiRenderer::SetAlphaCompositionEnabled(args.bValue);
+	});
+	alphaCompositionCheckBox->SetCheck(wiRenderer::GetAlphaCompositionEnabled());
+	rendererWindow->AddWidget(alphaCompositionCheckBox);
 
 
 	pickTypeObjectCheckBox = new wiCheckBox("Pick Objects: ");
