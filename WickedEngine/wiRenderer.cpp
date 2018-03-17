@@ -2190,6 +2190,8 @@ void wiRenderer::ReloadShaders(const std::string& path)
 
 	GetDevice()->LOCK();
 
+	GetDevice()->WaitForGPU();
+
 	wiResourceManager::GetShaderManager()->CleanUp();
 	LoadShaders();
 	wiHairParticle::LoadShaders();

@@ -40,8 +40,8 @@ void Editor::Initialize()
 {
 	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
 	// otherwise, shaders will be loaded from the working directory
-	wiRenderer::SHADERPATH = "../WickedEngine/shaders/";
-	wiFont::FONTPATH = "../WickedEngine/fonts/"; // search for fonts elsewhere
+	wiRenderer::SHADERPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
+	wiFont::FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/"; // search for fonts elsewhere
 	MainComponent::Initialize();
 
 	infoDisplay.active = true;
@@ -724,36 +724,38 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(scriptButton);
 
 
-	wiButton* shaderButton = new wiButton("Load Shaders");
-	shaderButton->SetTooltip("Load shaders from the specified directory...");
+	wiButton* shaderButton = new wiButton("Reload Shaders");
+	shaderButton->SetTooltip("Reload shaders from the default directory...");
 	shaderButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 2, 0));
 	shaderButton->SetSize(XMFLOAT2(100, 40));
 	shaderButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
 	shaderButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	shaderButton->OnClick([=](wiEventArgs args) {
-		thread([&] {
-			char szFile[260];
+		//thread([&] {
+		//	char szFile[260];
 
-			OPENFILENAMEA ofn;
-			ZeroMemory(&ofn, sizeof(ofn));
-			ofn.lStructSize = sizeof(ofn);
-			ofn.hwndOwner = nullptr;
-			ofn.lpstrFile = szFile;
-			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-			// use the contents of szFile to initialize itself.
-			ofn.lpstrFile[0] = '\0';
-			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Compiled shader object file\0*.cso\0";
-			ofn.nFilterIndex = 1;
-			ofn.lpstrFileTitle = NULL;
-			ofn.nMaxFileTitle = 0;
-			ofn.lpstrInitialDir = NULL;
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-			if (GetOpenFileNameA(&ofn) == TRUE) {
-				string fileName = ofn.lpstrFile;
-				wiRenderer::ReloadShaders(wiHelper::GetDirectoryFromPath(fileName));
-			}
-		}).detach();
+		//	OPENFILENAMEA ofn;
+		//	ZeroMemory(&ofn, sizeof(ofn));
+		//	ofn.lStructSize = sizeof(ofn);
+		//	ofn.hwndOwner = nullptr;
+		//	ofn.lpstrFile = szFile;
+		//	// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+		//	// use the contents of szFile to initialize itself.
+		//	ofn.lpstrFile[0] = '\0';
+		//	ofn.nMaxFile = sizeof(szFile);
+		//	ofn.lpstrFilter = "Compiled shader object file\0*.cso\0";
+		//	ofn.nFilterIndex = 1;
+		//	ofn.lpstrFileTitle = NULL;
+		//	ofn.nMaxFileTitle = 0;
+		//	ofn.lpstrInitialDir = NULL;
+		//	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+		//	if (GetOpenFileNameA(&ofn) == TRUE) {
+		//		string fileName = ofn.lpstrFile;
+		//		wiRenderer::ReloadShaders(wiHelper::GetDirectoryFromPath(fileName));
+		//	}
+		//}).detach();
+
+		wiRenderer::ReloadShaders();
 
 	});
 	GetGUI().AddWidget(shaderButton);

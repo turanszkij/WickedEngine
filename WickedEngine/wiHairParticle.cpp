@@ -189,7 +189,7 @@ void wiHairParticle::LoadShaders()
 		}
 	}
 
-	SAFE_DELETE(ps_simplest);
+	SAFE_INIT(ps_simplest);
 	ps_simplest = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
 	GraphicsPSODesc desc;
