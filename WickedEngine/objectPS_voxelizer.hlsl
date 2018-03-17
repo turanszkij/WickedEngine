@@ -40,7 +40,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 				{
 					float4 ShPos = mul(float4(P, 1), MatrixArray[light.additionalData_index + 0]);
 					ShPos.xyz /= ShPos.w;
-					float3 ShTex = ShPos.xyz*float3(1, -1, 1) / 2.0f + 0.5f;
+					float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 					[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
 					{

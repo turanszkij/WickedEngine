@@ -56,6 +56,7 @@ protected:
 		, rtWaterRipple
 		, rtLinearDepth
 		, rtParticle
+		, rtVolumetricLights
 		, rtFinal[2]
 		, rtDof[3]
 		, rtTemporalAA[2]

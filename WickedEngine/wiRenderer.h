@@ -476,6 +476,7 @@ public:
 	static void DrawImages(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawImagesNormals(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawLights(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawLightVisualizers(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);

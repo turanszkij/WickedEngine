@@ -121,6 +121,18 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	shadowCheckBox->SetTooltip("Set light as shadow caster. Many shadow casters can affect performance!");
 	lightWindow->AddWidget(shadowCheckBox);
 
+	volumetricsCheckBox = new wiCheckBox("Volumetric Scattering: ");
+	volumetricsCheckBox->SetPos(XMFLOAT2(x, y += step));
+	volumetricsCheckBox->OnClick([&](wiEventArgs args) {
+		if (light != nullptr)
+		{
+			light->volumetrics = args.bValue;
+		}
+	});
+	volumetricsCheckBox->SetEnabled(false);
+	volumetricsCheckBox->SetTooltip("Compute volumetric light scattering effect. The scattering is modulated by fog settings!");
+	lightWindow->AddWidget(volumetricsCheckBox);
+
 	haloCheckBox = new wiCheckBox("Visualizer: ");
 	haloCheckBox->SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox->OnClick([&](wiEventArgs args) {
@@ -217,6 +229,8 @@ void LightWindow::SetLight(Light* light)
 		shadowCheckBox->SetCheck(light->shadow);
 		haloCheckBox->SetEnabled(true);
 		haloCheckBox->SetCheck(!light->noHalo);
+		volumetricsCheckBox->SetEnabled(true);
+		volumetricsCheckBox->SetCheck(light->volumetrics);
 		colorPicker->SetEnabled(true);
 		typeSelectorComboBox->SetEnabled(true);
 		typeSelectorComboBox->SetSelected((int)light->GetType());
@@ -233,6 +247,7 @@ void LightWindow::SetLight(Light* light)
 		biasSlider->SetEnabled(false);
 		shadowCheckBox->SetEnabled(false);
 		haloCheckBox->SetEnabled(false);
+		volumetricsCheckBox->SetEnabled(false);
 		energySlider->SetEnabled(false);
 		colorPicker->SetEnabled(false);
 		typeSelectorComboBox->SetEnabled(false);

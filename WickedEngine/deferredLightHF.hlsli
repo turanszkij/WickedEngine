@@ -26,7 +26,7 @@ struct LightOutputType
 #define DEFERREDLIGHT_MAKEPARAMS														\
 	ShaderEntityType light = EntityArray[PSIn.lightIndex];								\
 	float3 diffuse, specular;															\
-	float2 ScreenCoord = float2(1, -1) * PSIn.pos2D.xy / PSIn.pos2D.w * 0.5f + 0.5f;	\
+	float2 ScreenCoord = PSIn.pos2D.xy / PSIn.pos2D.w * float2(0.5f, -0.5f) + 0.5f;		\
 	float depth = texture_depth[PSIn.pos.xy];											\
 	float4 baseColor = texture_gbuffer0[PSIn.pos.xy];									\
 	float4 g1 = texture_gbuffer1[PSIn.pos.xy];											\

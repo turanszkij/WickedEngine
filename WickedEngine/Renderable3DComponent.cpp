@@ -29,6 +29,7 @@ wiRenderTarget
 	, Renderable3DComponent::rtWaterRipple
 	, Renderable3DComponent::rtLinearDepth
 	, Renderable3DComponent::rtParticle
+	, Renderable3DComponent::rtVolumetricLights
 	, Renderable3DComponent::rtFinal[2]
 	, Renderable3DComponent::rtDof[3]
 	, Renderable3DComponent::rtTemporalAA[2]
@@ -71,6 +72,9 @@ void Renderable3DComponent::ResizeBuffers()
 		, false, wiRenderer::RTFormat_lineardepth);
 	rtParticle.Initialize(
 		(UINT)(wiRenderer::GetInternalResolution().x*getParticleDownSample()), (UINT)(wiRenderer::GetInternalResolution().y*getParticleDownSample())
+		, false, wiRenderer::RTFormat_hdr);
+	rtVolumetricLights.Initialize(
+		(UINT)(wiRenderer::GetInternalResolution().x*0.25f), (UINT)(wiRenderer::GetInternalResolution().y*0.25f)
 		, false, wiRenderer::RTFormat_hdr);
 	rtWaterRipple.Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
@@ -373,6 +377,12 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
+	if (getVolumeLightsEnabled())
+	{
+		rtVolumetricLights.Activate(threadID, 0, 0, 0, 0);
+		wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
+	}
+
 	if (getEmittedParticlesEnabled())
 	{
 		rtParticle.Activate(threadID, 0, 0, 0, 0);
@@ -402,10 +412,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		RenderTransparentScene(rtSceneCopy, threadID);
 
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
-		if (getVolumeLightsEnabled())
-		{
-			wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
-		}
+		wiRenderer::DrawLightVisualizers(wiRenderer::getCamera(), threadID);
 
 		fx.presentFullScreen = true;
 
@@ -413,6 +420,13 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 			wiRenderer::GetDevice()->EventBegin("Contribute Emitters", threadID);
 			fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 			wiImage::Draw(rtParticle.GetTexture(), fx, threadID);
+			wiRenderer::GetDevice()->EventEnd(threadID);
+		}
+
+		if (getVolumeLightsEnabled())
+		{
+			wiRenderer::GetDevice()->EventBegin("Contribute Volumetric Lights", threadID);
+			wiImage::Draw(rtVolumetricLights.GetTexture(), fx, threadID);
 			wiRenderer::GetDevice()->EventEnd(threadID);
 		}
 

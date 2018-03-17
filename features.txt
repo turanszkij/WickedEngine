@@ -77,3 +77,4 @@ Ocean simulation (FFT)
 Translucent shadows
 Refraction caustics
 Local parallax-corrected environment maps
+Volumetric light scattering

@@ -4134,6 +4134,7 @@ Light::Light():Transform() {
 	SetType(LightType::POINT);
 	shadow = false;
 	noHalo = false;
+	volumetrics = false;
 	lensFlareRimTextures.resize(0);
 	lensFlareNames.resize(0);
 	shadowMap_index = -1;
@@ -4369,6 +4370,10 @@ void Light::Serialize(wiArchive& archive)
 			archive >> width;
 			archive >> height;
 		}
+		if (archive.GetVersion() >= 17)
+		{
+			archive >> volumetrics;
+		}
 	}
 	else
 	{
@@ -4389,6 +4394,10 @@ void Light::Serialize(wiArchive& archive)
 			archive << radius;
 			archive << width;
 			archive << height;
+		}
+		if (archive.GetVersion() >= 17)
+		{
+			archive << volumetrics;
 		}
 	}
 }

@@ -240,9 +240,6 @@
     <FxCompile Include="verticalBlurPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="volumeLightPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="fxaa.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -691,6 +688,18 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_hologram.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightVisualizerPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="volumetricLight_PointPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="volumetricLight_SpotPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="volumetricLight_DirectionalPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

@@ -1157,7 +1157,8 @@ GraphicsPSO* GetImpostorPSO(SHADERTYPE shaderType)
 }
 
 GraphicsPSO* PSO_deferredlight[Light::LIGHTTYPE_COUNT] = {};
-GraphicsPSO* PSO_volumelight[Light::LIGHTTYPE_COUNT] = {};
+GraphicsPSO* PSO_lightvisualizer[Light::LIGHTTYPE_COUNT] = {};
+GraphicsPSO* PSO_volumetriclight[Light::LIGHTTYPE_COUNT] = {};
 GraphicsPSO* PSO_enviromentallight = nullptr;
 
 enum SKYRENDERING
@@ -1358,12 +1359,12 @@ void wiRenderer::LoadShaders()
 		vertexShaders[VSTYPE_DIRLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 		vertexShaders[VSTYPE_POINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 		vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-		vertexShaders[VSTYPE_VOLUMESPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-		vertexShaders[VSTYPE_VOLUMEPOINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-		vertexShaders[VSTYPE_VOLUMESPHERELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSphereLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-		vertexShaders[VSTYPE_VOLUMEDISCLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vDiscLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-		vertexShaders[VSTYPE_VOLUMERECTANGLELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vRectangleLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
-		vertexShaders[VSTYPE_VOLUMETUBELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vTubeLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+		vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+		vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+		vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSphereLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+		vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vDiscLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+		vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vRectangleLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
+		vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vTubeLightVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 		vertexShaders[VSTYPE_DECAL] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 		vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
 		vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER))->vertexShader;
@@ -1431,7 +1432,10 @@ void wiRenderer::LoadShaders()
 		pixelShaders[PSTYPE_DISCLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "discLightPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_RECTANGLELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "rectangleLightPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_TUBELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tubeLightPS.cso", wiResourceManager::PIXELSHADER));
-		pixelShaders[PSTYPE_VOLUMELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_LIGHTVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumeLightPS.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumetricLight_DirectionalPS.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumetricLight_PointPS.cso", wiResourceManager::PIXELSHADER));
+		pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumetricLight_SpotPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
 		pixelShaders[PSTYPE_ENVMAP_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS_static.cso", wiResourceManager::PIXELSHADER));
@@ -1901,55 +1905,88 @@ void wiRenderer::LoadShaders()
 
 
 
-			// volume lights:
-			if (type == Light::DIRECTIONAL)
+			// light visualizers:
+			if (type != Light::DIRECTIONAL)
 			{
-				continue;
+
+				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+				desc.ps = pixelShaders[PSTYPE_LIGHTVISUALIZER];
+
+				switch (type)
+				{
+				case Light::POINT:
+					desc.bs = blendStates[BSTYPE_ADDITIVE];
+					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT];
+					desc.rs = rasterizers[RSTYPE_FRONT];
+					break;
+				case Light::SPOT:
+					desc.bs = blendStates[BSTYPE_ADDITIVE];
+					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT];
+					desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+					break;
+				case Light::SPHERE:
+					desc.bs = blendStates[BSTYPE_OPAQUE];
+					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT];
+					desc.rs = rasterizers[RSTYPE_FRONT];
+					break;
+				case Light::DISC:
+					desc.bs = blendStates[BSTYPE_OPAQUE];
+					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT];
+					desc.rs = rasterizers[RSTYPE_FRONT];
+					break;
+				case Light::RECTANGLE:
+					desc.bs = blendStates[BSTYPE_OPAQUE];
+					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT];
+					desc.rs = rasterizers[RSTYPE_BACK];
+					break;
+				case Light::TUBE:
+					desc.bs = blendStates[BSTYPE_OPAQUE];
+					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT];
+					desc.rs = rasterizers[RSTYPE_FRONT];
+					break;
+				}
+
+				desc.numRTs = 1;
+				desc.RTFormats[0] = RTFormat_hdr;
+				desc.DSFormat = DSFormat_full;
+
+				RECREATE(PSO_lightvisualizer[type]);
+				device->CreateGraphicsPSO(&desc, PSO_lightvisualizer[type]);
 			}
 
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-			desc.ps = pixelShaders[PSTYPE_VOLUMELIGHT];
 
-			switch (type)
+			// volumetric lights:
+			if (type <= Light::SPOT)
 			{
-			case Light::POINT:
+				desc.dss = depthStencils[DSSTYPE_XRAY];
 				desc.bs = blendStates[BSTYPE_ADDITIVE];
-				desc.vs = vertexShaders[VSTYPE_VOLUMEPOINTLIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
-				break;
-			case Light::SPOT:
-				desc.bs = blendStates[BSTYPE_ADDITIVE];
-				desc.vs = vertexShaders[VSTYPE_VOLUMESPOTLIGHT];
-				desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-				break;
-			case Light::SPHERE:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_VOLUMESPHERELIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
-				break;
-			case Light::DISC:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_VOLUMEDISCLIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
-				break;
-			case Light::RECTANGLE:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_VOLUMERECTANGLELIGHT];
 				desc.rs = rasterizers[RSTYPE_BACK];
-				break;
-			case Light::TUBE:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_VOLUMETUBELIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
-				break;
+
+				switch (type)
+				{
+				case Light::DIRECTIONAL:
+					desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
+					desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL];
+					break;
+				case Light::POINT:
+					desc.vs = vertexShaders[VSTYPE_POINTLIGHT];
+					desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT];
+					break;
+				case Light::SPOT:
+					desc.vs = vertexShaders[VSTYPE_SPOTLIGHT];
+					desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT];
+					break;
+				}
+
+				desc.numRTs = 1;
+				desc.RTFormats[0] = RTFormat_hdr;
+				desc.DSFormat = FORMAT_UNKNOWN;
+
+				RECREATE(PSO_volumetriclight[type]);
+				device->CreateGraphicsPSO(&desc, PSO_volumetriclight[type]);
 			}
 
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_full;
 
-			RECREATE(PSO_volumelight[type]);
-			device->CreateGraphicsPSO(&desc, PSO_volumelight[type]);
 		}
 		{
 			GraphicsPSODesc desc;
@@ -4409,14 +4446,14 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawLightVisualizers(Camera* camera, GRAPHICSTHREAD threadID)
 {
 	const FrameCulling& culling = frameCullings[camera];
 	const CulledList& culledLights = culling.culledLights;
 
 	if(!culledLights.empty())
 	{
-		GetDevice()->EventBegin("Light Volume Render", threadID);
+		GetDevice()->EventBegin("Light Visualizer Render", threadID);
 
 		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
@@ -4426,7 +4463,7 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 		for (int type = Light::POINT; type < Light::LIGHTTYPE_COUNT; ++type)
 		{
-			GetDevice()->BindGraphicsPSO(PSO_volumelight[type], threadID);
+			GetDevice()->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
 
 			for (Cullable* c : culledLights) 
 			{
@@ -4523,6 +4560,91 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 
 		GetDevice()->EventEnd(threadID);
 	}
+
+
+}
+void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	const FrameCulling& culling = frameCullings[camera];
+	const CulledList& culledLights = culling.culledLights;
+
+	if (!culledLights.empty())
+	{
+		GetDevice()->EventBegin("Volumetric Light Render", threadID);
+
+		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
+
+
+		for (int type = 0; type < Light::LIGHTTYPE_COUNT; ++type)
+		{
+			GraphicsPSO* pso = PSO_volumetriclight[type];
+
+			if (pso == nullptr)
+			{
+				continue;
+			}
+
+			GetDevice()->BindGraphicsPSO(pso, threadID);
+
+			for (Cullable* c : culledLights)
+			{
+				Light* l = (Light*)c;
+				if (l->GetType() == type && l->volumetrics)
+				{
+
+					switch (type)
+					{
+					case Light::DIRECTIONAL:
+					case Light::SPHERE:
+					case Light::DISC:
+					case Light::RECTANGLE:
+					case Light::TUBE:
+					{
+						MiscCB miscCb;
+						miscCb.mColor.x = (float)l->entityArray_index;
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+						GetDevice()->Draw(3, 0, threadID); // full screen triangle
+					}
+					break;
+					case Light::POINT:
+					{
+						MiscCB miscCb;
+						miscCb.mColor.x = (float)l->entityArray_index;
+						float sca = l->enerDis.y + 1;
+						miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z) * camera->GetViewProjection());
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+						GetDevice()->Draw(240, 0, threadID); // icosphere
+					}
+					break;
+					case Light::SPOT:
+					{
+						MiscCB miscCb;
+						miscCb.mColor.x = (float)l->entityArray_index;
+						const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
+						miscCb.mTransform = XMMatrixTranspose(
+							XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) *
+							camera->GetViewProjection()
+						);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+						GetDevice()->Draw(192, 0, threadID); // cone
+					}
+					break;
+					}
+
+				}
+			}
+
+		}
+
+		GetDevice()->EventEnd(threadID);
+	}
+
+
 }
 void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 {

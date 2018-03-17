@@ -902,6 +902,7 @@ struct Light : public Cullable , public Transform
 
 	XMFLOAT4 color;
 	XMFLOAT4 enerDis;
+	bool volumetrics = false;
 	bool noHalo;
 	bool shadow;
 	std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
