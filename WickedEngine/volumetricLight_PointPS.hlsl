@@ -1,3 +1,4 @@
+#define DISABLE_TRANSPARENT_SHADOWMAP
 #include "deferredLightHF.hlsli"
 #include "fogHF.hlsli"
 
@@ -15,18 +16,26 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float marchedDistance = 0;
 	float accumulation = 0;
 
-	float3 L = light.positionWS - P;
-	float dist = length(L);
-	L /= dist;
+	float3 rayEnd = g_xCamera_CamPos;
+	if (length(rayEnd - light.positionWS) > light.range)
+	{
+		// if we are outside the light volume, then rayEnd will be the traced sphere frontface:
+		float t = Trace_sphere(rayEnd, -V, light.positionWS, light.range);
+		rayEnd = rayEnd - t * V;
+	}
 
-	// reposition ray start to be inside light all times:
-	dist = min(dist, light.range);
-	P = light.positionWS - L * dist;
+	const uint sampleCount = 128;
+	const float stepSize = length(P - rayEnd) / sampleCount;
 
 	// Perform ray marching to integrate light volume along view ray:
-	float sum = 0;
-	while (dist <= light.range && marchedDistance < cameraDistance)
+	for(uint i = 0; i < sampleCount; ++i)
 	{
+		marchedDistance += stepSize;
+		P = P + V * stepSize;
+		float3 L = light.positionWS - P;
+		float dist = length(L);
+		L /= dist;
+
 		float att = (light.energy * (light.range / (light.range + 1 + dist)));
 		float attenuation = (att * (light.range - dist) / light.range);
 
@@ -38,18 +47,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 		attenuation *= GetFog(cameraDistance - marchedDistance);
 
 		accumulation += attenuation;
-
-		const float stepSize = 0.1f;
-		marchedDistance += stepSize;
-		P = P + V * stepSize;
-		L = light.positionWS - P;
-		dist = length(L);
-		L /= dist;
-
-		sum += 1.0f;
 	}
 
-	accumulation /= sum;
+	accumulation /= sampleCount;
 
 	return max(0, float4(accumulation.xxx * light.GetColor().rgb * light.energy, 1));
 }

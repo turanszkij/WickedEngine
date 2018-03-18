@@ -1,3 +1,4 @@
+#define DISABLE_TRANSPARENT_SHADOWMAP
 #include "deferredLightHF.hlsli"
 #include "fogHF.hlsli"
 
@@ -19,10 +20,21 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float dist = length(L);
 	L /= dist;
 
+	float3 rayEnd = g_xCamera_CamPos;
+	// todo: when rayEnd (camera) is not inside volume, then the rayEnd should be the traced cone position instead!
+
+	const uint sampleCount = 128;
+	const float stepSize = length(P - rayEnd) / sampleCount;
+
 	// Perform ray marching to integrate light volume along view ray:
-	float sum = 0;
-	while (dist <= light.range && marchedDistance < cameraDistance)
+	for (uint i = 0; i < sampleCount; ++i)
 	{
+		marchedDistance += stepSize;
+		P = P + V * stepSize;
+		float3 L = light.positionWS - P;
+		float dist = length(L);
+		L /= dist;
+
 		float SpotFactor = dot(L, light.directionWS);
 		float spotCutOff = light.coneAngleCos;
 
@@ -51,17 +63,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 			accumulation += attenuation;
 		}
 
-		const float stepSize = 0.1f;
-		marchedDistance += stepSize;
-		P = P + V * stepSize;
-		L = light.positionWS - P;
-		dist = length(L);
-		L /= dist;
-
-		sum += 1.0f;
 	}
 
-	accumulation /= sum;
+	accumulation /= sampleCount;
 
 	return max(0, float4(accumulation * light.GetColor().rgb * light.energy, 1));
 }

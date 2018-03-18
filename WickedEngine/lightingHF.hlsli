@@ -19,14 +19,13 @@ struct LightingResult
 	float3 specular;
 };
 
-#define DIRECTIONALLIGHT_SOFT
 inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
 	float realDistance = shadowPos.z + bias;
 	float sum = 0;
 	float3 retVal = 1;
 #ifndef DISABLE_SHADOWMAPS
-#ifdef DIRECTIONALLIGHT_SOFT
+#ifndef DISABLE_SOFT_SHADOWS
 	float samples = 0.0f;
 	const float range = 1.5f;
 	for (float y = -range; y <= range; y += 1.0f)

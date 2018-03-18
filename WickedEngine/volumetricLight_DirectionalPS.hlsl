@@ -1,3 +1,5 @@
+#define DISABLE_TRANSPARENT_SHADOWMAP
+#define DISABLE_SOFT_SHADOWS
 #include "deferredLightHF.hlsli"
 #include "fogHF.hlsli"
 
@@ -23,10 +25,17 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	const float3 L = light.directionWS;
 
+	float3 rayEnd = g_xCamera_CamPos;
+
+	const uint sampleCount = 128;
+	const float stepSize = length(P - rayEnd) / sampleCount;
+
 	// Perform ray marching to integrate light volume along view ray:
-	float sum = 0;
-	while (marchedDistance < cameraDistance)
+	for (uint i = 0; i < sampleCount; ++i)
 	{
+		marchedDistance += stepSize;
+		P = P + V * stepSize;
+
 		float3 attenuation = 1;
 
 		float4 ShPos = mul(float4(P, 1), MatrixArray[light.additionalData_index + 0]);
@@ -41,15 +50,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 		attenuation *= GetFog(cameraDistance - marchedDistance);
 
 		accumulation += attenuation;
-
-		const float stepSize = 0.5f;
-		marchedDistance += stepSize;
-		P = P + V * stepSize;
-
-		sum += 1.0f;
 	}
 
-	accumulation /= sum;
+	accumulation /= sampleCount;
 
 	return max(0, float4(accumulation * light.GetColor().rgb * light.energy, 1));
 }

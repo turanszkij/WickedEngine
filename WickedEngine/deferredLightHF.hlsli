@@ -8,7 +8,6 @@
 struct VertexToPixel{
 	float4 pos			: SV_POSITION;
 	float4 pos2D		: POSITION2D;
-	nointerpolation int   lightIndex	: LIGHTARRAYINDEX;
 };
 
 #include "reconstructPositionHF.hlsli"
@@ -24,7 +23,7 @@ struct LightOutputType
 // MACROS
 
 #define DEFERREDLIGHT_MAKEPARAMS														\
-	ShaderEntityType light = EntityArray[PSIn.lightIndex];								\
+	ShaderEntityType light = EntityArray[(uint)g_xColor.x];								\
 	float3 diffuse, specular;															\
 	float2 ScreenCoord = PSIn.pos2D.xy / PSIn.pos2D.w * float2(0.5f, -0.5f) + 0.5f;		\
 	float depth = texture_depth[PSIn.pos.xy];											\
