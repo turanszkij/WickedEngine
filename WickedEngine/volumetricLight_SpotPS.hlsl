@@ -16,21 +16,16 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float marchedDistance = 0;
 	float3 accumulation = 0;
 
-	float3 L = light.positionWS - P;
-	float dist = length(L);
-	L /= dist;
-
 	float3 rayEnd = g_xCamera_CamPos;
-	// todo: when rayEnd (camera) is not inside volume, then the rayEnd should be the traced cone position instead!
-
+	// todo: rayEnd should be clamped to the closest cone intersection point when camera is outside volume
+	
 	const uint sampleCount = 128;
 	const float stepSize = length(P - rayEnd) / sampleCount;
 
 	// Perform ray marching to integrate light volume along view ray:
+	[loop]
 	for (uint i = 0; i < sampleCount; ++i)
 	{
-		marchedDistance += stepSize;
-		P = P + V * stepSize;
 		float3 L = light.positionWS - P;
 		float dist = length(L);
 		L /= dist;
@@ -63,6 +58,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 			accumulation += attenuation;
 		}
 
+		marchedDistance += stepSize;
+		P = P + V * stepSize;
 	}
 
 	accumulation /= sampleCount;

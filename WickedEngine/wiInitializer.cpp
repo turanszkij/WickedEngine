@@ -9,6 +9,7 @@
 #include "wiSound.h"
 #include "wiOcean.h"
 #include "wiHelper.h"
+#include "wiWidget.h"
 
 using namespace std;
 
@@ -30,6 +31,8 @@ namespace wiInitializer
 		wiFont::SetUpStaticComponents();
 
 		wiOcean::SetUpStatic();
+
+		wiWidget::LoadShaders();
 
 		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
 		{

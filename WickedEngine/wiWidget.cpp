@@ -13,6 +13,9 @@ using namespace std;
 using namespace wiGraphicsTypes;
 
 
+static wiGraphicsTypes::GraphicsPSO* PSO_colorpicker = nullptr;
+
+
 wiWidget::wiWidget():Transform()
 {
 	state = IDLE;
@@ -200,6 +203,24 @@ void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
 		scissorRect.right -= 1;
 	if (scissorRect.top>0)
 		scissorRect.top += 1;
+}
+void wiWidget::LoadShaders()
+{
+
+	{
+		GraphicsPSODesc desc;
+		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
+		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
+		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
+		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
+		desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
+		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
+		desc.numRTs = 1;
+		desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+		RECREATE(PSO_colorpicker);
+		HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO_colorpicker);
+		assert(SUCCEEDED(hr));
+	}
 }
 
 
@@ -1603,7 +1624,6 @@ void wiColorPicker::Render(wiGUI* gui)
 	static wiGraphicsTypes::GPUBuffer vb_hue;
 	static wiGraphicsTypes::GPUBuffer vb_picker;
 	static wiGraphicsTypes::GPUBuffer vb_preview;
-	static wiGraphicsTypes::GraphicsPSO PSO;
 
 	static std::vector<Vertex> vertices_saturation(0);
 
@@ -1706,25 +1726,13 @@ void wiColorPicker::Render(wiGUI* gui)
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
 		}
 
-		{
-			GraphicsPSODesc desc;
-			desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-			desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-			desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-			desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-			desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
-			desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
-			desc.numRTs = 1;
-			desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
-			hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO);
-		}
 
 	}
 
 	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
 	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
-	wiRenderer::GetDevice()->BindGraphicsPSO(&PSO, threadID);
+	wiRenderer::GetDevice()->BindGraphicsPSO(PSO_colorpicker, threadID);
 	wiRenderer::GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
 
 	wiRenderer::MiscCB cb;

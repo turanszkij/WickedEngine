@@ -28,10 +28,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 	const float stepSize = length(P - rayEnd) / sampleCount;
 
 	// Perform ray marching to integrate light volume along view ray:
+	[loop]
 	for(uint i = 0; i < sampleCount; ++i)
 	{
-		marchedDistance += stepSize;
-		P = P + V * stepSize;
 		float3 L = light.positionWS - P;
 		float dist = length(L);
 		L /= dist;
@@ -47,6 +46,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 		attenuation *= GetFog(cameraDistance - marchedDistance);
 
 		accumulation += attenuation;
+
+		marchedDistance += stepSize;
+		P = P + V * stepSize;
 	}
 
 	accumulation /= sampleCount;

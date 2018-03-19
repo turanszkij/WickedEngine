@@ -89,6 +89,8 @@ public:
 	void RenderTooltip(wiGUI* gui);
 
 	wiWidget* container;
+
+	static void LoadShaders();
 };
 
 // Clickable, draggable box

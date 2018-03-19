@@ -639,6 +639,8 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #endif // SIMPLE_INPUT
 
+	color = max(0, color);
+
 
 	// end point:
 #if defined(TRANSPARENT) || defined(TEXTUREONLY) || defined(ENVMAPRENDERING)
