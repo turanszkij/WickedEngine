@@ -25,6 +25,9 @@ namespace wiGraphicsTypes
 		VkQueue graphicsQueue; 
 		VkQueue presentQueue;
 
+		VkSemaphore imageAvailableSemaphore;
+		VkSemaphore renderFinishedSemaphore;
+
 		VkCommandPool commandPool;
 		VkCommandBuffer commandBuffers[GRAPHICSTHREAD_COUNT];
 
