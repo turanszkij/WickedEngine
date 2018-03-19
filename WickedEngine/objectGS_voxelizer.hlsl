@@ -32,8 +32,8 @@ void main(
 	[unroll]
 	for (uint i = 0; i < 3; ++i)
 	{
-		// voxel space pos:
-		output[i].pos = float4((input[i].pos.xyz - g_xWorld_VoxelRadianceDataCenter) / g_xWorld_VoxelRadianceDataSize, 1);
+		// World space -> Voxel grid space:
+		output[i].pos.xyz = (input[i].pos.xyz - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceDataSize_Inverse;
 
 		// Project onto dominant axis:
 		[flatten]
@@ -45,32 +45,33 @@ void main(
 		{
 			output[i].pos.xyz = output[i].pos.xzy;
 		}
-
-		// projected pos:
-		output[i].pos.xy /= g_xWorld_VoxelRadianceDataRes;
-
-		output[i].pos.z = 1;
-
-		output[i].N = input[i].nor;
-		output[i].tex = input[i].tex;
-		output[i].P = input[i].pos.xyz;
-		output[i].instanceColor = input[i].instanceColor;
 	}
 
 
-	// Conservative Rasterization setup:
+	// Expand triangle to get fake Conservative Rasterization:
 	float2 side0N = normalize(output[1].pos.xy - output[0].pos.xy);
 	float2 side1N = normalize(output[2].pos.xy - output[1].pos.xy);
 	float2 side2N = normalize(output[0].pos.xy - output[2].pos.xy);
-	const float texelSize = 1.0f / g_xWorld_VoxelRadianceDataRes;
-	output[0].pos.xy += normalize(-side0N + side2N)*texelSize;
-	output[1].pos.xy += normalize(side0N - side1N)*texelSize;
-	output[2].pos.xy += normalize(side1N - side2N)*texelSize;
+	output[0].pos.xy += normalize(side2N - side0N);
+	output[1].pos.xy += normalize(side0N - side1N);
+	output[2].pos.xy += normalize(side1N - side2N);
 
 
 	[unroll]
-	for (uint j = 0; j<3; j++)
+	for (uint j = 0; j < 3; j++)
+	{
+		// Voxel grid space -> Clip space
+		output[j].pos.xy *= g_xWorld_VoxelRadianceDataRes_Inverse;
+		output[j].pos.zw = 1;
+
+		// Append the rest of the parameters as is:
+		output[j].N = input[j].nor;
+		output[j].tex = input[j].tex;
+		output[j].P = input[j].pos.xyz;
+		output[j].instanceColor = input[j].instanceColor;
+
 		outputStream.Append(output[j]);
+	}
 
 	outputStream.RestartStrip();
 }

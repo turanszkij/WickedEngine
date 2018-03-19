@@ -110,6 +110,7 @@ public:
 	static XMFLOAT2 temporalAAJitter, temporalAAJitterPrev;
 	static float RESOLUTIONSCALE;
 	static bool TRANSPARENTSHADOWSENABLED;
+	static bool ALPHACOMPOSITIONENABLED;
 
 	static void SetShadowProps2D(int resolution, int count, int softShadowQuality);
 	static void SetShadowPropsCube(int resolution, int count);
@@ -165,7 +166,8 @@ public:
 		float mWindWaveSize;
 		float mWindRandomness;
 		int mSunEntityArrayIndex;
-		XMFLOAT2 pad1;
+		float pad1;
+		BOOL mVoxelRadianceRetargetted;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
 		XMMATRIX mVP;
@@ -354,6 +356,8 @@ public:
 	static bool GetDebugLightCulling() { return debugLightCulling; }
 	static void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
 	static bool GetAdvancedLightCulling() { return advancedLightCulling; }
+	static void SetAlphaCompositionEnabled(bool enabled) { ALPHACOMPOSITIONENABLED = enabled; }
+	static bool GetAlphaCompositionEnabled() { return ALPHACOMPOSITIONENABLED; }
 	static void SetOcclusionCullingEnabled(bool enabled); // also inits query pool!
 	static bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 	static void SetLDSSkinningEnabled(bool enabled) { ldsSkinningEnabled = enabled; }
@@ -472,6 +476,7 @@ public:
 	static void DrawImages(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawImagesNormals(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawLights(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawLightVisualizers(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
 	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);

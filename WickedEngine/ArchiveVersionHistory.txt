@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+17: serialized light scattering property
 16: environment probes are now serialized into Model
 15: removed redundant matrix store from hair paticle serializator
 14: serialize emitter property: shaderType

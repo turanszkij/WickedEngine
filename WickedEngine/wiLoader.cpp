@@ -1139,6 +1139,9 @@ void Cullable::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region MATERIAL
+
+vector<Material::CustomShader*> Material::customShaderPresets;
+
 Material::~Material() {
 	wiResourceManager::GetGlobal()->del(surfaceMapName);
 	wiResourceManager::GetGlobal()->del(textureName);
@@ -1150,6 +1153,8 @@ Material::~Material() {
 	normalMap = nullptr;
 	displacementMap = nullptr;
 	specularMap = nullptr;
+
+	customShader = nullptr; // do not delete
 }
 void Material::init()
 {
@@ -1198,6 +1203,8 @@ void Material::init()
 	planar_reflections = false;
 
 	alphaRef = 1.0f; // no alpha test by default
+
+	customShader = nullptr;
 
 	engineStencilRef = STENCILREF::STENCILREF_DEFAULT;
 	userStencilRef = 0x00;
@@ -4127,6 +4134,7 @@ Light::Light():Transform() {
 	SetType(LightType::POINT);
 	shadow = false;
 	noHalo = false;
+	volumetrics = false;
 	lensFlareRimTextures.resize(0);
 	lensFlareNames.resize(0);
 	shadowMap_index = -1;
@@ -4362,6 +4370,10 @@ void Light::Serialize(wiArchive& archive)
 			archive >> width;
 			archive >> height;
 		}
+		if (archive.GetVersion() >= 17)
+		{
+			archive >> volumetrics;
+		}
 	}
 	else
 	{
@@ -4382,6 +4394,10 @@ void Light::Serialize(wiArchive& archive)
 			archive << radius;
 			archive << width;
 			archive << height;
+		}
+		if (archive.GetVersion() >= 17)
+		{
+			archive << volumetrics;
 		}
 	}
 }

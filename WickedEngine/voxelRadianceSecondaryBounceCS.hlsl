@@ -21,6 +21,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 		float3 P = ((float3)writecoord + 0.5f) * g_xWorld_VoxelRadianceDataRes_Inverse;
 		P = P * 2 - 1;
+		P.y *= -1;
 		P *= g_xWorld_VoxelRadianceDataSize;
 		P *= g_xWorld_VoxelRadianceDataRes;
 		P += g_xWorld_VoxelRadianceDataCenter;

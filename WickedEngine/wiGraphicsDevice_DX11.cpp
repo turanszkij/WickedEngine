@@ -2761,6 +2761,19 @@ void GraphicsDevice_DX11::PresentEnd()
 	}
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->RSSetScissorRects(8, pRects);
 
+	memset(prev_vs, 0, sizeof(prev_vs));
+	memset(prev_ps, 0, sizeof(prev_ps));
+	memset(prev_hs, 0, sizeof(prev_hs));
+	memset(prev_ds, 0, sizeof(prev_ds));
+	memset(prev_gs, 0, sizeof(prev_gs));
+	memset(prev_blendfactor, 0, sizeof(prev_blendfactor));
+	memset(prev_samplemask, 0, sizeof(prev_samplemask));
+	memset(prev_bs, 0, sizeof(prev_bs));
+	memset(prev_rs, 0, sizeof(prev_rs));
+	memset(prev_stencilRef, 0, sizeof(prev_stencilRef));
+	memset(prev_dss, 0, sizeof(prev_dss));
+	memset(prev_il, 0, sizeof(prev_il));
+
 	FRAMECOUNT++;
 
 	RESOLUTIONCHANGED = false;
@@ -3157,35 +3170,30 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 {
 	const GraphicsPSODesc& desc = pso != nullptr ? pso->GetDesc() : GraphicsPSODesc();
 
-	static ID3D11VertexShader* prev_vs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : desc.vs->resource_DX11;
 	if (vs != prev_vs[threadID])
 	{
 		deviceContexts[threadID]->VSSetShader(vs, nullptr, 0);
 		prev_vs[threadID] = vs;
 	}
-	static ID3D11PixelShader* prev_ps[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11PixelShader* ps = desc.ps == nullptr ? nullptr : desc.ps->resource_DX11;
 	if (ps != prev_ps[threadID])
 	{
 		deviceContexts[threadID]->PSSetShader(ps, nullptr, 0);
 		prev_ps[threadID] = ps;
 	}
-	static ID3D11HullShader* prev_hs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11HullShader* hs = desc.hs == nullptr ? nullptr : desc.hs->resource_DX11;
 	if (hs != prev_hs[threadID])
 	{
 		deviceContexts[threadID]->HSSetShader(hs, nullptr, 0);
 		prev_hs[threadID] = hs;
 	}
-	static ID3D11DomainShader* prev_ds[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11DomainShader* ds = desc.ds == nullptr ? nullptr : desc.ds->resource_DX11;
 	if (ds != prev_ds[threadID])
 	{
 		deviceContexts[threadID]->DSSetShader(ds, nullptr, 0);
 		prev_ds[threadID] = ds;
 	}
-	static ID3D11GeometryShader* prev_gs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11GeometryShader* gs = desc.gs == nullptr ? nullptr : desc.gs->resource_DX11;
 	if (gs != prev_gs[threadID])
 	{
@@ -3193,9 +3201,6 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 		prev_gs[threadID] = gs;
 	}
 
-	static XMFLOAT4 prev_blendfactor[GRAPHICSTHREAD_COUNT] = {};
-	static UINT prev_samplemask[GRAPHICSTHREAD_COUNT] = {};
-	static ID3D11BlendState* prev_bs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : desc.bs->resource_DX11;
 	if (bs != prev_bs[threadID] || desc.sampleMask != prev_samplemask[threadID] ||
 		blendFactor[threadID].x != prev_blendfactor[threadID].x ||
@@ -3211,7 +3216,6 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 		prev_samplemask[threadID] = desc.sampleMask;
 	}
 
-	static ID3D11RasterizerState* prev_rs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11RasterizerState* rs = desc.rs == nullptr ? nullptr : desc.rs->resource_DX11;
 	if (rs != prev_rs[threadID])
 	{
@@ -3219,8 +3223,6 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 		prev_rs[threadID] = rs;
 	}
 
-	static UINT prev_stencilRef[GRAPHICSTHREAD_COUNT] = {};
-	static ID3D11DepthStencilState* prev_dss[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11DepthStencilState* dss = desc.dss == nullptr ? nullptr : desc.dss->resource_DX11;
 	if (dss != prev_dss[threadID] || stencilRef[threadID] != prev_stencilRef[threadID])
 	{
@@ -3229,7 +3231,6 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 		prev_stencilRef[threadID] = stencilRef[threadID];
 	}
 
-	static ID3D11InputLayout* prev_il[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11InputLayout* il = desc.il == nullptr ? nullptr : desc.il->resource_DX11;
 	if (il != prev_il[threadID])
 	{

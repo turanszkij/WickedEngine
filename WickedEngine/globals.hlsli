@@ -93,7 +93,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
 	int			g_xFrame_SunEntityArrayIndex;
-	float2		xPadding1_FrameCB;
+	float		xPadding1_FrameCB;
+	bool		g_xFrame_VoxelRadianceRetargetted;
 	float2		g_xFrame_TemporalAAJitter;
 	float2		g_xFrame_TemporalAAJitterPrev;
 	// The following are per frame properties for the main camera:

@@ -13,12 +13,6 @@ using namespace wiGraphicsTypes;
 DeferredRenderableComponent::DeferredRenderableComponent()
 {
 	Renderable3DComponent::setProperties();
-
-	setSSREnabled(false);
-	setSSAOEnabled(false);
-	setHairParticleAlphaCompositionEnabled(false);
-
-	setPreferredThreadingCount(0);
 }
 DeferredRenderableComponent::~DeferredRenderableComponent()
 {

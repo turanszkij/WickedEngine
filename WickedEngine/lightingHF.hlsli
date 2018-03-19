@@ -19,14 +19,13 @@ struct LightingResult
 	float3 specular;
 };
 
-#define DIRECTIONALLIGHT_SOFT
 inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
 	float realDistance = shadowPos.z + bias;
 	float sum = 0;
 	float3 retVal = 1;
 #ifndef DISABLE_SHADOWMAPS
-#ifdef DIRECTIONALLIGHT_SOFT
+#ifndef DISABLE_SOFT_SHADOWS
 	float samples = 0.0f;
 	const float range = 1.5f;
 	for (float y = -range; y <= range; y += 1.0f)
@@ -84,9 +83,6 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface sur
 		ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 0]);
 		ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 1]);
 		ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 2]);
-		ShPos[0].xyz /= ShPos[0].w;
-		ShPos[1].xyz /= ShPos[1].w;
-		ShPos[2].xyz /= ShPos[2].w;
 		float3 ShTex[3];
 		ShTex[0] = ShPos[0].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		ShTex[1] = ShPos[1].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;

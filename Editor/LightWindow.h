@@ -35,6 +35,7 @@ public:
 	wiSlider*	biasSlider;
 	wiCheckBox*	shadowCheckBox;
 	wiCheckBox*	haloCheckBox;
+	wiCheckBox*	volumetricsCheckBox;
 	wiButton*	addLightButton;
 	wiColorPicker*	colorPicker;
 	wiComboBox*	typeSelectorComboBox;

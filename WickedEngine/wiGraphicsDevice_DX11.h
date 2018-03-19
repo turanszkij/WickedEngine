@@ -33,6 +33,19 @@ namespace wiGraphicsTypes
 		UINT		stencilRef[GRAPHICSTHREAD_COUNT];
 		XMFLOAT4	blendFactor[GRAPHICSTHREAD_COUNT];
 
+		ID3D11VertexShader* prev_vs[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11PixelShader* prev_ps[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11HullShader* prev_hs[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11DomainShader* prev_ds[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11GeometryShader* prev_gs[GRAPHICSTHREAD_COUNT] = {};
+		XMFLOAT4 prev_blendfactor[GRAPHICSTHREAD_COUNT] = {};
+		UINT prev_samplemask[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11BlendState* prev_bs[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11RasterizerState* prev_rs[GRAPHICSTHREAD_COUNT] = {};
+		UINT prev_stencilRef[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11DepthStencilState* prev_dss[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11InputLayout* prev_il[GRAPHICSTHREAD_COUNT] = {};
+
 	public:
 		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false);
 
