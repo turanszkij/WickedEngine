@@ -28,20 +28,28 @@ namespace wiGraphicsTypes
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;
 
-		VkCommandPool commandPool;
-		VkCommandBuffer commandBuffers[GRAPHICSTHREAD_COUNT];
-
 		VkSwapchainKHR swapChain;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
-		std::vector<VkImage> swapChainImages; 
-		std::vector<VkImageView> swapChainImageViews;
-		std::vector<VkFramebuffer> swapChainFramebuffers;
+		std::vector<VkImage> swapChainImages;
 
 		VkRenderPass defaultRenderPass;
 		VkPipelineLayout defaultPipelineLayout_Graphics;
 		VkPipelineLayout defaultPipelineLayout_Compute;
 		VkDescriptorSetLayout defaultDescriptorSetlayouts[SHADERSTAGE_COUNT];
+
+
+		struct FrameResources
+		{
+			VkFence frameFence;
+			VkCommandPool commandPools[GRAPHICSTHREAD_COUNT];
+			VkCommandBuffer commandBuffers[GRAPHICSTHREAD_COUNT];
+			VkImageView swapChainImageView;
+			VkFramebuffer swapChainFramebuffer;
+		};
+		FrameResources frames[BACKBUFFER_COUNT];
+		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
+		VkCommandBuffer GetDirectCommandList(GRAPHICSTHREAD threadID);
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);

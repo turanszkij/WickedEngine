@@ -536,6 +536,8 @@ namespace wiGraphicsTypes
 
 
 	// Engine functions
+	VkCommandBuffer GraphicsDevice_Vulkan::GetDirectCommandList(GRAPHICSTHREAD threadID) { return GetFrameResources().commandBuffers[threadID]; }
+
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
 	{
 		FULLSCREEN = fullscreen;
@@ -801,10 +803,12 @@ namespace wiGraphicsTypes
 			swapChainExtent.width = max(swapChainSupport.capabilities.minImageExtent.width, min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
 			swapChainExtent.height = max(swapChainSupport.capabilities.minImageExtent.height, min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
 
-			uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-			if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
-				imageCount = swapChainSupport.capabilities.maxImageCount;
-			}
+			//uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+			//if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+			//	imageCount = swapChainSupport.capabilities.maxImageCount;
+			//}
+
+			uint32_t imageCount = BACKBUFFER_COUNT;
 
 			VkSwapchainCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -841,34 +845,11 @@ namespace wiGraphicsTypes
 			}
 
 			vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+			assert(imageCount == BACKBUFFER_COUNT);
 			swapChainImages.resize(imageCount);
 			vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
-
 			swapChainImageFormat = surfaceFormat.format;
 
-
-			swapChainImageViews.resize(swapChainImages.size());
-			for (size_t i = 0; i < swapChainImages.size(); i++) 
-			{
-				VkImageViewCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-				createInfo.image = swapChainImages[i];
-				createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-				createInfo.format = swapChainImageFormat;
-				createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-				createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				createInfo.subresourceRange.baseMipLevel = 0;
-				createInfo.subresourceRange.levelCount = 1;
-				createInfo.subresourceRange.baseArrayLayer = 0;
-				createInfo.subresourceRange.layerCount = 1;
-
-				if (vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create image views!");
-				}
-			}
 		}
 
 
@@ -918,63 +899,94 @@ namespace wiGraphicsTypes
 			}
 		}
 
-		// Create swapchain render targets:
+		// Create frame resources:
 		{
-			swapChainFramebuffers.resize(swapChainImageViews.size());
-			for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-				VkImageView attachments[] = {
-					swapChainImageViews[i]
-				};
-
-				VkFramebufferCreateInfo framebufferInfo = {};
-				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebufferInfo.renderPass = defaultRenderPass;
-				framebufferInfo.attachmentCount = 1;
-				framebufferInfo.pAttachments = attachments;
-				framebufferInfo.width = swapChainExtent.width;
-				framebufferInfo.height = swapChainExtent.height;
-				framebufferInfo.layers = 1;
-
-				if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create framebuffer!");
-				}
-			}
-		}
-
-		// Create command buffers:
-		{
-			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
-
-			VkCommandPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-			poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
-			poolInfo.flags = 0; // Optional
-
-			if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create command pool!");
-			}
-
-
-			memset(commandBuffers, 0, sizeof(commandBuffers));
-
-			VkCommandBufferAllocateInfo commandBufferInfo = {};
-			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			commandBufferInfo.commandBufferCount = GRAPHICSTHREAD_COUNT;
-			commandBufferInfo.commandPool = commandPool;
-			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-			if (vkAllocateCommandBuffers(device, &commandBufferInfo, commandBuffers) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create command buffers!");
-			}
-
-			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+			int i = 0;
+			for(auto& frame : frames)
 			{
-				VkCommandBufferBeginInfo beginInfo = {};
-				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-				beginInfo.pInheritanceInfo = nullptr; // Optional
+				// Fence:
+				{
+					VkFenceCreateInfo fenceInfo = {};
+					fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+					//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+					vkCreateFence(device, &fenceInfo, nullptr, &frame.frameFence);
+				}
 
-				assert(vkBeginCommandBuffer(commandBuffers[i], &beginInfo) == VK_SUCCESS);
+				// Create swap chain render targets:
+				{
+					VkImageViewCreateInfo createInfo = {};
+					createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+					createInfo.image = swapChainImages[i];
+					createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+					createInfo.format = swapChainImageFormat;
+					createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+					createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+					createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+					createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+					createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					createInfo.subresourceRange.baseMipLevel = 0;
+					createInfo.subresourceRange.levelCount = 1;
+					createInfo.subresourceRange.baseArrayLayer = 0;
+					createInfo.subresourceRange.layerCount = 1;
+
+					if (vkCreateImageView(device, &createInfo, nullptr, &frame.swapChainImageView) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create image views!");
+					}
+
+					VkImageView attachments[] = {
+						frame.swapChainImageView
+					};
+
+					VkFramebufferCreateInfo framebufferInfo = {};
+					framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+					framebufferInfo.renderPass = defaultRenderPass;
+					framebufferInfo.attachmentCount = 1;
+					framebufferInfo.pAttachments = attachments;
+					framebufferInfo.width = swapChainExtent.width;
+					framebufferInfo.height = swapChainExtent.height;
+					framebufferInfo.layers = 1;
+
+					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frame.swapChainFramebuffer) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create framebuffer!");
+					}
+				}
+
+				// Create command buffers:
+				{
+					QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
+
+					for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
+					{
+						VkCommandPoolCreateInfo poolInfo = {};
+						poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+						poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+						poolInfo.flags = 0; // Optional
+
+						if (vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[threadID]) != VK_SUCCESS) {
+							throw std::runtime_error("failed to create command pool!");
+						}
+
+						VkCommandBufferAllocateInfo commandBufferInfo = {};
+						commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+						commandBufferInfo.commandBufferCount = 1;
+						commandBufferInfo.commandPool = frame.commandPools[threadID];
+						commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+						if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[threadID]) != VK_SUCCESS) {
+							throw std::runtime_error("failed to create command buffers!");
+						}
+
+						VkCommandBufferBeginInfo beginInfo = {};
+						beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+						beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+						beginInfo.pInheritanceInfo = nullptr; // Optional
+
+						VkResult res = vkBeginCommandBuffer(frame.commandBuffers[threadID], &beginInfo);
+						assert(res == VK_SUCCESS);
+					}
+				}
+
+				i++;
 			}
 		}
 
@@ -993,21 +1005,32 @@ namespace wiGraphicsTypes
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
+
+		for (auto& frame : frames)
+		{
+			vkDestroyFence(device, frame.frameFence, nullptr);
+			vkDestroyFramebuffer(device, frame.swapChainFramebuffer, nullptr);
+			vkDestroyImageView(device, frame.swapChainImageView, nullptr);
+			for (auto& commandPool : frame.commandPools)
+			{
+				vkDestroyCommandPool(device, commandPool, nullptr);
+			}
+		}
+
 		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
 		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-		vkDestroyCommandPool(device, commandPool, nullptr);
+
 		for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
 		{
 			vkDestroyDescriptorSetLayout(device, defaultDescriptorSetlayouts[i], nullptr);
 		}
 		vkDestroyPipelineLayout(device, defaultPipelineLayout_Graphics, nullptr);
 		vkDestroyPipelineLayout(device, defaultPipelineLayout_Compute, nullptr);
-		vkDestroyRenderPass(device, defaultRenderPass, nullptr);	
-		for (auto framebuffer : swapChainFramebuffers) {
-			vkDestroyFramebuffer(device, framebuffer, nullptr);
-		}
-		for (auto imageView : swapChainImageViews) {
-			vkDestroyImageView(device, imageView, nullptr);
+		vkDestroyRenderPass(device, defaultRenderPass, nullptr);
+
+		for (auto& x : swapChainImages)
+		{
+			vkDestroyImage(device, x, nullptr);
 		}
 		vkDestroySwapchainKHR(device, swapChain, nullptr);
 		vkDestroyDevice(device, nullptr);
@@ -1503,43 +1526,52 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::PresentBegin()
 	{
-		uint64_t currentframe = GetFrameCount() % BACKBUFFER_COUNT;
+		VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
 
-		VkClearValue clearColor = { 1.0f, 0.0f, 0.0f, 1.0f };
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = defaultRenderPass;
+		renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
 
-		//VkRenderPassBeginInfo renderPassInfo = {};
-		//renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		//renderPassInfo.renderPass = defaultRenderPass;
-		//renderPassInfo.framebuffer = swapChainFramebuffers[currentframe];
-		//renderPassInfo.renderArea.offset = { 0, 0 };
-		//renderPassInfo.renderArea.extent = swapChainExtent;
-		//renderPassInfo.clearValueCount = 1;
-		//renderPassInfo.pClearValues = &clearColor;
+		vkCmdBeginRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		//vkCmdBeginRenderPass(commandBuffers[currentframe], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-
-		//vkCmdEndRenderPass(commandBuffers[currentframe]);
 
 		VkClearAttachment clearInfo = {};
 		clearInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		clearInfo.clearValue = clearColor;
 		clearInfo.colorAttachment = 0;
-		vkCmdClearAttachments(commandBuffers[currentframe], 1, &clearInfo, 0, nullptr);
+
+		VkClearRect rect = {};
+		rect.baseArrayLayer = 0;
+		rect.layerCount = 1;
+		rect.rect.offset.x = 0;
+		rect.rect.offset.y = 0;
+		rect.rect.extent.width = SCREENWIDTH;
+		rect.rect.extent.height = SCREENHEIGHT;
+
+		vkCmdClearAttachments(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), 1, &clearInfo, 1, &rect);
+
+
+		vkCmdEndRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 	}
 	void GraphicsDevice_Vulkan::PresentEnd()
 	{
+		VkResult res;
+
 		uint64_t currentframe = GetFrameCount() % BACKBUFFER_COUNT;
 
-		if (vkEndCommandBuffer(commandBuffers[currentframe]) != VK_SUCCESS) {
+		if (vkEndCommandBuffer(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
 		}
 
 
-
-
 		uint32_t imageIndex;
 		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+		assert(imageIndex == currentframe);
 
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1550,13 +1582,13 @@ namespace wiGraphicsTypes
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+		submitInfo.pCommandBuffers = GetFrameResources().commandBuffers;
 
 		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, GetFrameResources().frameFence) != VK_SUCCESS) {
 			throw std::runtime_error("failed to submit draw command buffer!");
 		}
 
@@ -1575,15 +1607,65 @@ namespace wiGraphicsTypes
 
 		vkQueuePresentKHR(presentQueue, &presentInfo);
 
+		//vkQueueWaitIdle(presentQueue);
 
+
+		FRAMECOUNT++;
+
+
+		if (vkGetFenceStatus(device, GetFrameResources().frameFence) == VK_SUCCESS)
+		{
+			res = vkWaitForFences(device, 1, &GetFrameResources().frameFence, true, 0xFFFFFFFFFFFFFFFF);
+			assert(res == VK_SUCCESS);
+
+			vkResetFences(device, 1, &GetFrameResources().frameFence);
+		}
+		
+		for (int threadID = 0; threadID < GRAPHICSTHREAD_IMMEDIATE + 1; ++threadID) // todo: all command lists
+		{
+			res = vkResetCommandPool(device, GetFrameResources().commandPools[threadID], 0);
+			//res = vkResetCommandBuffer(GetFrameResources().commandBuffers[threadID], 0);
+			assert(res == VK_SUCCESS);
+
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[threadID], &beginInfo);
+			assert(res == VK_SUCCESS);
+		}
 
 	}
 
 	void GraphicsDevice_Vulkan::ExecuteDeferredContexts()
 	{
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = GRAPHICSTHREAD_COUNT - 1;
+		submitInfo.pCommandBuffers = &GetFrameResources().commandBuffers[GRAPHICSTHREAD_IMMEDIATE + 1];
+
+		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+			throw std::runtime_error("failed to submit draw command buffer!");
+		}
 	}
 	void GraphicsDevice_Vulkan::FinishCommandList(GRAPHICSTHREAD threadID)
 	{
+		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
+			return;
+		if (vkEndCommandBuffer(GetDirectCommandList(threadID)) != VK_SUCCESS) {
+			throw std::runtime_error("failed to record command buffer!");
+		}
 	}
 
 
@@ -1600,7 +1682,7 @@ namespace wiGraphicsTypes
 			viewports[i].minDepth = pViewports[i].MinDepth;
 			viewports[i].maxDepth = pViewports[i].MaxDepth;
 		}
-		vkCmdSetViewport(commandBuffers[threadID], 0, NumViewports, viewports);
+		vkCmdSetViewport(GetDirectCommandList(threadID), 0, NumViewports, viewports);
 	}
 	void GraphicsDevice_Vulkan::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
@@ -1662,11 +1744,11 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+		//vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+		//vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
@@ -1731,7 +1813,7 @@ namespace wiGraphicsTypes
 			scissors[i].offset.x = rects[i].left;
 			scissors[i].offset.y = rects[i].bottom;
 		}
-		vkCmdSetScissor(commandBuffers[threadID], 0, numRects, scissors);
+		vkCmdSetScissor(GetDirectCommandList(threadID), 0, numRects, scissors);
 	}
 
 	void GraphicsDevice_Vulkan::WaitForGPU()
