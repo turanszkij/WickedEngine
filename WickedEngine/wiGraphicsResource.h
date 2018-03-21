@@ -157,6 +157,7 @@ namespace wiGraphicsTypes
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalUAVs_DX12;		// can be used for sub-resources if requested
 
 		ID3D12Resource*								resource_DX12;
+		void*										resource_Vulkan;
 
 		GPUResource();
 		virtual ~GPUResource();

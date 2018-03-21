@@ -1073,6 +1073,25 @@ namespace wiGraphicsTypes
 
 		HRESULT hr = E_FAIL;
 
+		VkImageCreateInfo imageInfo = {};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.extent.width = pDesc->Width;
+		imageInfo.extent.height = pDesc->Height;
+		imageInfo.extent.depth = 1;
+		imageInfo.format = _ConvertFormat(pDesc->Format);
+		imageInfo.arrayLayers = pDesc->ArraySize;
+		imageInfo.mipLevels = pDesc->MipLevels;
+		imageInfo.samples = static_cast<VkSampleCountFlagBits>(pDesc->SampleDesc.Count);
+		imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT; //
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // or preinitialized?
+
+		VkResult res;
+		(*ppTexture2D)->resource_Vulkan = new VkImage;
+		res = vkCreateImage(device, &imageInfo, nullptr, static_cast<VkImage*>((*ppTexture2D)->resource_Vulkan));
+		hr = res == VK_SUCCESS;
+		assert(SUCCEEDED(hr));
+
 
 		return hr;
 	}
@@ -1526,6 +1545,8 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::PresentBegin()
 	{
+		LOCK();
+
 		VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
 
 		VkRenderPassBeginInfo renderPassInfo = {};
@@ -1610,8 +1631,8 @@ namespace wiGraphicsTypes
 		//vkQueueWaitIdle(presentQueue);
 
 
+		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
 		FRAMECOUNT++;
-
 
 		if (vkGetFenceStatus(device, GetFrameResources().frameFence) == VK_SUCCESS)
 		{
@@ -1636,6 +1657,9 @@ namespace wiGraphicsTypes
 			assert(res == VK_SUCCESS);
 		}
 
+		RESOLUTIONCHANGED = false;
+
+		UNLOCK();
 	}
 
 	void GraphicsDevice_Vulkan::ExecuteDeferredContexts()
