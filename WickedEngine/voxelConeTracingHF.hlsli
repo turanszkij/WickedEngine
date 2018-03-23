@@ -40,7 +40,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	float3 startPos = P + N * g_xWorld_VoxelRadianceDataSize * 2 * SQRT2; // sqrt2 is diagonal voxel half-extent
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
-	const float maxDistance = 100 * g_xWorld_VoxelRadianceDataSize;
+	const float maxDistance = MAX_DIST * g_xWorld_VoxelRadianceDataSize;
 
 	while (dist < maxDistance && alpha < 1)
 	{
@@ -60,7 +60,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 
 		float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
 
-		// this is the correct blending to avoid black-staircase artifact:
+		// this is the correct blending to avoid black-staircase artifact (ray stepped front-to back, so blend front to back):
 		float a = 1 - alpha;
 		color += a * sam.rgb;
 		alpha += a * sam.a;
@@ -82,12 +82,12 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 	for (uint cone = 0; cone < g_xWorld_VoxelRadianceNumCones; ++cone) // quality is between 1 and 16 cones
 	{
 		// approximate a hemisphere from random points inside a sphere:
-		//  (reflect with normal will make the sphere distribution dependent on normal, less banding this way)
-		float3 coneDirection = reflect(CONES[cone], N);
+		//  (and modulate cone with surface normal, no banding this way)
+		float3 coneDirection = normalize(CONES[cone] + N);
 		// if point on sphere is facing below normal (so it's located on bottom hemisphere), put it on the opposite hemisphere instead:
 		coneDirection *= dot(coneDirection, N) < 0 ? -1 : 1;
 
-		radiance += ConeTrace(voxels, P, N, coneDirection, tan(PI * 0.125f));
+		radiance += ConeTrace(voxels, P, N, coneDirection, tan(PI * 0.5f * 0.33f));
 	}
 
 	// final radiance is average of all the cones radiances
@@ -103,7 +103,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 // V:				world-space view-vector (cameraPosition - P)
 inline float4 ConeTraceReflection(in Texture3D<float4> voxels, in float3 P, in float3 N, in float3 V, in float roughness)
 {
-	float aperture = tan(roughness * PI * 0.125f);
+	float aperture = tan(roughness * PI * 0.5f * 0.1f);
 	float3 coneDirection = reflect(-V, N);
 
 	float4 reflection = ConeTrace(voxels, P, N, coneDirection, aperture);

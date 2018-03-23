@@ -65,7 +65,7 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	uint		g_xWorld_VoxelRadianceDataMIPs;				// voxel grid mipmap count
 	uint		g_xWorld_VoxelRadianceNumCones;				// number of diffuse cones to trace
 	float		g_xWorld_VoxelRadianceNumCones_Inverse;		// 1.0 / number of diffuse cones to trace
-	float		g_xWorld_VoxelRadianceRayStepSize;			// raymarch step size in world space units
+	float		g_xWorld_VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
 	bool		g_xWorld_VoxelRadianceReflectionsEnabled;	// are voxel gi reflections enabled or not
 	float3		g_xWorld_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
 	bool		g_xWorld_AdvancedRefractions;
