@@ -36,8 +36,8 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	
 	// We need to offset the cone start position to avoid sampling its own voxel (self-occlusion):
 	//	Unfortunately, it will result in disconnection between nearby surfaces :(
-	float dist = g_xWorld_VoxelRadianceDataSize * 2;
-	float3 startPos = P + N * g_xWorld_VoxelRadianceDataSize * 2;
+	float dist = g_xWorld_VoxelRadianceDataSize; // offset by cone dir so that first sample of all cones are not the same
+	float3 startPos = P + N * g_xWorld_VoxelRadianceDataSize * 2 * SQRT2; // sqrt2 is diagonal voxel half-extent
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
 	const float maxDistance = 100 * g_xWorld_VoxelRadianceDataSize;

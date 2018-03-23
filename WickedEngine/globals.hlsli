@@ -58,16 +58,16 @@ CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
 	float		g_xWorld_Cloudiness;
 	float3		g_xWorld_Fog;					// Fog Start,End,Height
 	float		g_xWorld_SpecularAA;
-	float		g_xWorld_VoxelRadianceDataSize;
-	float		g_xWorld_VoxelRadianceDataSize_Inverse;
-	uint		g_xWorld_VoxelRadianceDataRes;
-	float		g_xWorld_VoxelRadianceDataRes_Inverse;
-	uint		g_xWorld_VoxelRadianceDataMIPs;
-	uint		g_xWorld_VoxelRadianceNumCones;
-	float		g_xWorld_VoxelRadianceNumCones_Inverse;
-	float		g_xWorld_VoxelRadianceRayStepSize;
-	bool		g_xWorld_VoxelRadianceReflectionsEnabled;
-	float3		g_xWorld_VoxelRadianceDataCenter;
+	float		g_xWorld_VoxelRadianceDataSize;				// voxel half-extent in world space units
+	float		g_xWorld_VoxelRadianceDataSize_Inverse;		// 1.0 / voxel-half extent
+	uint		g_xWorld_VoxelRadianceDataRes;				// voxel grid resolution
+	float		g_xWorld_VoxelRadianceDataRes_Inverse;		// 1.0 / voxel grid resolution
+	uint		g_xWorld_VoxelRadianceDataMIPs;				// voxel grid mipmap count
+	uint		g_xWorld_VoxelRadianceNumCones;				// number of diffuse cones to trace
+	float		g_xWorld_VoxelRadianceNumCones_Inverse;		// 1.0 / number of diffuse cones to trace
+	float		g_xWorld_VoxelRadianceRayStepSize;			// raymarch step size in world space units
+	bool		g_xWorld_VoxelRadianceReflectionsEnabled;	// are voxel gi reflections enabled or not
+	float3		g_xWorld_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
 	bool		g_xWorld_AdvancedRefractions;
 	uint3		g_xWorld_EntityCullingTileCount;
 	uint		g_xWorld_TransparentShadowsEnabled;
@@ -139,6 +139,7 @@ CBUFFER(APICB, CBSLOT_API)
 };
 
 static const float		PI = 3.14159265358979323846;
+static const float	 SQRT2 = 1.41421356237309504880;
 
 #define sqr(a)		((a)*(a))
 
