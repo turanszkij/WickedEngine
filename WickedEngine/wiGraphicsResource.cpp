@@ -76,10 +76,13 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(SRV_DX11);
 		SAFE_INIT(SRV_DX12);
+		SAFE_INIT(SRV_Vulkan);
 		SAFE_INIT(UAV_DX11);
 		SAFE_INIT(UAV_DX12);
+		SAFE_INIT(UAV_Vulkan);
 		SAFE_INIT(resource_DX12);
 		SAFE_INIT(resource_Vulkan);
+		SAFE_INIT(resourceMemory_Vulkan);
 	}
 	GPUResource::~GPUResource()
 	{
@@ -91,6 +94,12 @@ namespace wiGraphicsTypes
 
 		SAFE_DELETE(SRV_DX12);
 		for (auto& x : additionalSRVs_DX12)
+		{
+			SAFE_DELETE(x);
+		}
+
+		SAFE_DELETE(SRV_Vulkan);
+		for (auto& x : additionalSRVs_Vulkan)
 		{
 			SAFE_DELETE(x);
 		}
@@ -108,18 +117,27 @@ namespace wiGraphicsTypes
 			SAFE_DELETE(x);
 		}
 
+		SAFE_DELETE(UAV_Vulkan);
+		for (auto& x : additionalUAVs_Vulkan)
+		{
+			SAFE_DELETE(x);
+		}
+
 
 		SAFE_RELEASE(resource_DX12);
 		SAFE_DELETE(resource_Vulkan);
+		SAFE_DELETE(resourceMemory_Vulkan);
 	}
 
 	GPUBuffer::GPUBuffer() : GPUResource()
 	{
 		SAFE_INIT(resource_DX11);
+		SAFE_INIT(CBV_DX12);
 	}
 	GPUBuffer::~GPUBuffer()
 	{
 		SAFE_RELEASE(resource_DX11);
+		SAFE_DELETE(CBV_DX12);
 	}
 
 	VertexLayout::VertexLayout()
@@ -175,6 +193,7 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(RTV_DX11);
 		SAFE_INIT(RTV_DX12);
+		SAFE_INIT(RTV_Vulkan);
 	}
 	Texture::~Texture()
 	{
@@ -186,6 +205,12 @@ namespace wiGraphicsTypes
 
 		SAFE_DELETE(RTV_DX12);
 		for (auto& x : additionalRTVs_DX12)
+		{
+			SAFE_DELETE(x);
+		}
+
+		SAFE_DELETE(RTV_Vulkan);
+		for (auto& x : additionalRTVs_Vulkan)
 		{
 			SAFE_DELETE(x);
 		}
@@ -225,6 +250,7 @@ namespace wiGraphicsTypes
 		SAFE_INIT(texture2D_DX11);
 		SAFE_INIT(DSV_DX11);
 		SAFE_INIT(DSV_DX12);
+		SAFE_INIT(DSV_Vulkan);
 	}
 	Texture2D::~Texture2D()
 	{
@@ -237,6 +263,12 @@ namespace wiGraphicsTypes
 
 		SAFE_DELETE(DSV_DX12);
 		for (auto& x : additionalDSVs_DX12)
+		{
+			SAFE_DELETE(x);
+		}
+
+		SAFE_DELETE(DSV_Vulkan);
+		for (auto& x : additionalDSVs_Vulkan)
 		{
 			SAFE_DELETE(x);
 		}

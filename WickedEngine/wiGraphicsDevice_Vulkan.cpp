@@ -201,6 +201,19 @@ namespace wiGraphicsTypes
 		return bestMode;
 	}
 
+	uint32_t findMemoryType(VkPhysicalDevice device, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(device, &memProperties);
+
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				return i;
+			}
+		}
+
+		throw std::runtime_error("failed to find suitable memory type!");
+	}
+
 	// Device selection helpers:
 	bool isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
 		QueueFamilyIndices indices = findQueueFamilies(device, surface);
@@ -283,7 +296,7 @@ namespace wiGraphicsTypes
 			return VK_FORMAT_R32G32_SINT;
 			break;
 		case FORMAT_R32G8X24_TYPELESS:
-			return VK_FORMAT_R32G32_UINT; // possible mismatch!
+			return VK_FORMAT_D32_SFLOAT_S8_UINT; // possible mismatch!
 			break;
 		case FORMAT_D32_FLOAT_S8X24_UINT:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
@@ -343,7 +356,7 @@ namespace wiGraphicsTypes
 			return VK_FORMAT_R16G16_SINT;
 			break;
 		case FORMAT_R32_TYPELESS:
-			return VK_FORMAT_R32_UINT;
+			return VK_FORMAT_D32_SFLOAT;
 			break;
 		case FORMAT_D32_FLOAT:
 			return VK_FORMAT_D32_SFLOAT;
@@ -358,7 +371,7 @@ namespace wiGraphicsTypes
 			return VK_FORMAT_R32_SINT;
 			break;
 		case FORMAT_R24G8_TYPELESS:
-			return VK_FORMAT_R32_UINT;
+			return VK_FORMAT_D24_UNORM_S8_UINT;
 			break;
 		case FORMAT_D24_UNORM_S8_UINT:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
@@ -385,7 +398,7 @@ namespace wiGraphicsTypes
 			return VK_FORMAT_R8G8_SINT;
 			break;
 		case FORMAT_R16_TYPELESS:
-			return VK_FORMAT_R16_SFLOAT;
+			return VK_FORMAT_D16_UNORM;
 			break;
 		case FORMAT_R16_FLOAT:
 			return VK_FORMAT_R16_SFLOAT;
@@ -1057,7 +1070,112 @@ namespace wiGraphicsTypes
 
 	HRESULT GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
 	{
-		return E_FAIL;
+		HRESULT hr = E_FAIL;
+
+		ppBuffer->desc = *pDesc;
+
+		VkBufferCreateInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = ppBuffer->desc.ByteWidth;
+		bufferInfo.usage = 0;
+		if (ppBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		}
+		if (ppBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		}
+		if (ppBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		}
+		if (ppBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+		{
+			if (ppBuffer->desc.Format == FORMAT_UNKNOWN)
+			{
+				bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			}
+			else
+			{
+				bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+			}
+		}
+		if (ppBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		{
+			if (ppBuffer->desc.Format == FORMAT_UNKNOWN)
+			{
+				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			}
+			else
+			{
+				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+			}
+		}
+
+		bufferInfo.flags = 0;
+
+		VkResult res;
+		ppBuffer->resource_Vulkan = new VkBuffer;
+		res = vkCreateBuffer(device, &bufferInfo, nullptr, static_cast<VkBuffer*>(ppBuffer->resource_Vulkan));
+		hr = res == VK_SUCCESS;
+		assert(SUCCEEDED(hr));
+
+
+
+		// Allocate resource backing memory:
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(device, *static_cast<VkBuffer*>(ppBuffer->resource_Vulkan), &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		ppBuffer->resourceMemory_Vulkan = new VkDeviceMemory;
+		if (vkAllocateMemory(device, &allocInfo, nullptr, static_cast<VkDeviceMemory*>(ppBuffer->resourceMemory_Vulkan)) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate image memory!");
+		}
+
+		res = vkBindBufferMemory(device, *static_cast<VkBuffer*>(ppBuffer->resource_Vulkan), *static_cast<VkDeviceMemory*>(ppBuffer->resourceMemory_Vulkan), 0);
+		hr = res == VK_SUCCESS;
+		assert(SUCCEEDED(hr));
+
+
+
+		if (pDesc->BindFlags & BIND_SHADER_RESOURCE && ppBuffer->desc.Format != FORMAT_UNKNOWN)
+		{
+			VkBufferViewCreateInfo srv_desc = {};
+			srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+			srv_desc.buffer = *static_cast<VkBuffer*>(ppBuffer->resource_Vulkan);
+			srv_desc.flags = 0;
+			srv_desc.format = _ConvertFormat(ppBuffer->desc.Format);
+			srv_desc.offset = 0;
+			srv_desc.range = ppBuffer->desc.ByteWidth;
+
+			ppBuffer->SRV_Vulkan = new VkBufferView;
+			res = vkCreateBufferView(device, &srv_desc, nullptr, static_cast<VkBufferView*>(ppBuffer->SRV_Vulkan));
+			assert(res == VK_SUCCESS);
+		}
+
+		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS && ppBuffer->desc.Format != FORMAT_UNKNOWN)
+		{
+			VkBufferViewCreateInfo uav_desc = {};
+			uav_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+			uav_desc.buffer = *static_cast<VkBuffer*>(ppBuffer->resource_Vulkan);
+			uav_desc.flags = 0;
+			uav_desc.format = _ConvertFormat(ppBuffer->desc.Format);
+			uav_desc.offset = 0;
+			uav_desc.range = ppBuffer->desc.ByteWidth;
+
+			ppBuffer->UAV_Vulkan = new VkBufferView;
+			res = vkCreateBufferView(device, &uav_desc, nullptr, static_cast<VkBufferView*>(ppBuffer->UAV_Vulkan));
+			assert(res == VK_SUCCESS);
+		}
+
+
+
+		return hr;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 	{
@@ -1073,7 +1191,7 @@ namespace wiGraphicsTypes
 
 		if ((*ppTexture2D)->desc.MipLevels == 0)
 		{
-			(*ppTexture2D)->desc.MipLevels = static_cast<UINT>(ceilf(log2f(static_cast<float>(max((*ppTexture2D)->desc.Width, (*ppTexture2D)->desc.Height)))));
+			(*ppTexture2D)->desc.MipLevels = static_cast<UINT>(log2(max((*ppTexture2D)->desc.Width, (*ppTexture2D)->desc.Height)));
 		}
 
 
@@ -1089,14 +1207,196 @@ namespace wiGraphicsTypes
 		imageInfo.arrayLayers = (*ppTexture2D)->desc.ArraySize;
 		imageInfo.mipLevels = (*ppTexture2D)->desc.MipLevels;
 		imageInfo.samples = static_cast<VkSampleCountFlagBits>((*ppTexture2D)->desc.SampleDesc.Count);
-		imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT; //
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // or preinitialized?
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.usage = 0;
+		if ((*ppTexture2D)->desc.BindFlags & BIND_SHADER_RESOURCE)
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+		}
+		if ((*ppTexture2D)->desc.BindFlags & BIND_RENDER_TARGET)
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		}
+		if ((*ppTexture2D)->desc.BindFlags & BIND_DEPTH_STENCIL)
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		}
+
+		imageInfo.flags = 0;
+		if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+		}
 
 		VkResult res;
 		(*ppTexture2D)->resource_Vulkan = new VkImage;
 		res = vkCreateImage(device, &imageInfo, nullptr, static_cast<VkImage*>((*ppTexture2D)->resource_Vulkan));
 		hr = res == VK_SUCCESS;
 		assert(SUCCEEDED(hr));
+
+
+
+		// Allocate resource backing memory:
+		VkMemoryRequirements memRequirements;
+		vkGetImageMemoryRequirements(device, *static_cast<VkImage*>((*ppTexture2D)->resource_Vulkan), &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		(*ppTexture2D)->resourceMemory_Vulkan = new VkDeviceMemory;
+		if (vkAllocateMemory(device, &allocInfo, nullptr, static_cast<VkDeviceMemory*>((*ppTexture2D)->resourceMemory_Vulkan)) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate image memory!");
+		}
+
+		res = vkBindImageMemory(device, *static_cast<VkImage*>((*ppTexture2D)->resource_Vulkan), *static_cast<VkDeviceMemory*>((*ppTexture2D)->resourceMemory_Vulkan), 0);
+		hr = res == VK_SUCCESS; 
+		assert(SUCCEEDED(hr));
+
+
+
+
+		// Issue creation of additional descriptors for the resource:
+
+		if ((*ppTexture2D)->desc.BindFlags & BIND_RENDER_TARGET)
+		{
+		}
+
+
+		if ((*ppTexture2D)->desc.BindFlags & BIND_DEPTH_STENCIL)
+		{
+		}
+
+
+		if ((*ppTexture2D)->desc.BindFlags & BIND_SHADER_RESOURCE)
+		{
+			UINT arraySize = (*ppTexture2D)->desc.ArraySize;
+			UINT sampleCount = (*ppTexture2D)->desc.SampleDesc.Count;
+			bool multisampled = sampleCount > 1;
+
+			VkImageViewCreateInfo srv_desc = {};
+			srv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			srv_desc.flags = 0;
+			srv_desc.image = *static_cast<VkImage*>((*ppTexture2D)->resource_Vulkan);
+			srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			if ((*ppTexture2D)->desc.BindFlags & BIND_DEPTH_STENCIL)
+			{
+				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			}
+
+			srv_desc.subresourceRange.baseArrayLayer = 0;
+			srv_desc.subresourceRange.layerCount = 1;
+			srv_desc.subresourceRange.baseMipLevel = 0;
+			srv_desc.subresourceRange.levelCount = 1;
+
+			srv_desc.format = _ConvertFormat((*ppTexture2D)->desc.Format);
+
+
+			if (arraySize > 1)
+			{
+				if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				{
+					if (arraySize > 6)
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+					}
+					else
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+					}
+				}
+				else
+				{
+					if (multisampled)
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+					}
+					else
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+					}
+				}
+
+				if ((*ppTexture2D)->independentSRVArraySlices)
+				{
+					if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+					{
+						UINT slices = arraySize / 6;
+
+						// independent cubemaps
+						for (UINT i = 0; i < slices; ++i)
+						{
+							srv_desc.subresourceRange.baseArrayLayer = i * 6;
+							srv_desc.subresourceRange.layerCount = 6;
+
+							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(new VkImageView);
+							res = vkCreateImageView(device, &srv_desc, nullptr, static_cast<VkImageView*>((*ppTexture2D)->additionalSRVs_Vulkan.back()));
+							assert(res == VK_SUCCESS);
+						}
+					}
+					else
+					{
+						UINT slices = arraySize;
+
+						// independent slices
+						for (UINT i = 0; i < slices; ++i)
+						{
+							srv_desc.subresourceRange.baseArrayLayer = i;
+							srv_desc.subresourceRange.layerCount = 1;
+
+							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(new VkImageView);
+							res = vkCreateImageView(device, &srv_desc, nullptr, static_cast<VkImageView*>((*ppTexture2D)->additionalSRVs_Vulkan.back()));
+							assert(res == VK_SUCCESS);
+						}
+					}
+				}
+			}
+			else
+			{
+				if (multisampled)
+				{
+					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
+				}
+				else
+				{
+					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+					if ((*ppTexture2D)->independentSRVMIPs)
+					{
+						// Create subresource SRVs:
+						UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+						for (UINT i = 0; i < miplevels; ++i)
+						{
+							srv_desc.subresourceRange.baseMipLevel = i;
+							srv_desc.subresourceRange.levelCount = 1;
+
+							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(new VkImageView);
+							res = vkCreateImageView(device, &srv_desc, nullptr, static_cast<VkImageView*>((*ppTexture2D)->additionalSRVs_Vulkan.back()));
+							assert(res == VK_SUCCESS);
+						}
+					}
+				}
+			}
+
+			// Create full-resource SRV:
+			srv_desc.subresourceRange.baseArrayLayer = 0;
+			srv_desc.subresourceRange.layerCount = (*ppTexture2D)->desc.ArraySize;
+			srv_desc.subresourceRange.baseMipLevel = 0;
+			srv_desc.subresourceRange.levelCount = (*ppTexture2D)->desc.MipLevels;
+
+			(*ppTexture2D)->SRV_Vulkan = new VkImageView;
+			res = vkCreateImageView(device, &srv_desc, nullptr, static_cast<VkImageView*>((*ppTexture2D)->SRV_Vulkan));
+			hr = res == VK_SUCCESS;
+			assert(SUCCEEDED(hr));
+		}
+
+		if ((*ppTexture2D)->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		{
+		}
 
 
 		return hr;

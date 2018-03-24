@@ -2679,7 +2679,7 @@ namespace wiGraphicsTypes
 		}
 
 
-		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+		if ((*ppTexture2D)->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
 			assert((*ppTexture2D)->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
 

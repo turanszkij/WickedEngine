@@ -51,6 +51,7 @@ namespace wiGraphicsTypes
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		VkCommandBuffer GetDirectCommandList(GRAPHICSTHREAD threadID);
 
+
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);
 

@@ -150,14 +150,19 @@ namespace wiGraphicsTypes
 		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
 		D3D12_CPU_DESCRIPTOR_HANDLE*				SRV_DX12;					// main resource SRV
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalSRVs_DX12;		// can be used for sub-resources if requested
+		void*										SRV_Vulkan;					// main resource SRV
+		std::vector<void*>							additionalSRVs_Vulkan;		// can be used for sub-resources if requested
 
 		ID3D11UnorderedAccessView*					UAV_DX11;					// main resource UAV
 		std::vector<ID3D11UnorderedAccessView*>		additionalUAVs_DX11;		// can be used for sub-resources if requested
 		D3D12_CPU_DESCRIPTOR_HANDLE*				UAV_DX12;					// main resource UAV
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalUAVs_DX12;		// can be used for sub-resources if requested
+		void*										UAV_Vulkan;					// main resource UAV
+		std::vector<void*>							additionalUAVs_Vulkan;		// can be used for sub-resources if requested
 
 		ID3D12Resource*								resource_DX12;
 		void*										resource_Vulkan;
+		void*										resourceMemory_Vulkan;
 
 		GPUResource();
 		virtual ~GPUResource();
@@ -176,7 +181,7 @@ namespace wiGraphicsTypes
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != nullptr; }
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
@@ -274,6 +279,8 @@ namespace wiGraphicsTypes
 		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				RTV_DX12;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalRTVs_DX12;
+		void*										RTV_Vulkan;
+		std::vector<void*>							additionalRTVs_Vulkan;
 		bool										independentRTVArraySlices;
 		bool										independentRTVCubemapFaces;
 		bool										independentSRVArraySlices;
@@ -322,6 +329,9 @@ namespace wiGraphicsTypes
 		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				DSV_DX12;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalDSVs_DX12;
+		void*										DSV_Vulkan;
+		std::vector<void*>							additionalDSVs_Vulkan;
+
 		ID3D11Texture2D*							texture2D_DX11;
 
 		Texture2DDesc								desc;
