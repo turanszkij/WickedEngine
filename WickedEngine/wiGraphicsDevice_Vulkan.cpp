@@ -664,6 +664,7 @@ namespace wiGraphicsTypes
 			}
 
 			VkPhysicalDeviceFeatures deviceFeatures = {};
+			vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
 			VkDeviceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -1070,19 +1071,24 @@ namespace wiGraphicsTypes
 		}
 		(*ppTexture2D)->desc = *pDesc;
 
+		if ((*ppTexture2D)->desc.MipLevels == 0)
+		{
+			(*ppTexture2D)->desc.MipLevels = static_cast<UINT>(ceilf(log2f(static_cast<float>(max((*ppTexture2D)->desc.Width, (*ppTexture2D)->desc.Height)))));
+		}
+
 
 		HRESULT hr = E_FAIL;
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
-		imageInfo.extent.width = pDesc->Width;
-		imageInfo.extent.height = pDesc->Height;
+		imageInfo.extent.width = (*ppTexture2D)->desc.Width;
+		imageInfo.extent.height = (*ppTexture2D)->desc.Height;
 		imageInfo.extent.depth = 1;
-		imageInfo.format = _ConvertFormat(pDesc->Format);
-		imageInfo.arrayLayers = pDesc->ArraySize;
-		imageInfo.mipLevels = pDesc->MipLevels;
-		imageInfo.samples = static_cast<VkSampleCountFlagBits>(pDesc->SampleDesc.Count);
+		imageInfo.format = _ConvertFormat((*ppTexture2D)->desc.Format);
+		imageInfo.arrayLayers = (*ppTexture2D)->desc.ArraySize;
+		imageInfo.mipLevels = (*ppTexture2D)->desc.MipLevels;
+		imageInfo.samples = static_cast<VkSampleCountFlagBits>((*ppTexture2D)->desc.SampleDesc.Count);
 		imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT; //
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // or preinitialized?
 
@@ -1634,18 +1640,20 @@ namespace wiGraphicsTypes
 		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
 		FRAMECOUNT++;
 
-		if (vkGetFenceStatus(device, GetFrameResources().frameFence) == VK_SUCCESS)
+
+		// Initiate stalling CPU when GPU is behind by more frames than would fit in the backbuffers:
+		if (FRAMECOUNT >= BACKBUFFER_COUNT && vkGetFenceStatus(device, GetFrameResources().frameFence) == VK_SUCCESS)
 		{
 			res = vkWaitForFences(device, 1, &GetFrameResources().frameFence, true, 0xFFFFFFFFFFFFFFFF);
 			assert(res == VK_SUCCESS);
 
-			vkResetFences(device, 1, &GetFrameResources().frameFence);
+			res = vkResetFences(device, 1, &GetFrameResources().frameFence);
+			assert(res == VK_SUCCESS);
 		}
 		
 		for (int threadID = 0; threadID < GRAPHICSTHREAD_IMMEDIATE + 1; ++threadID) // todo: all command lists
 		{
 			res = vkResetCommandPool(device, GetFrameResources().commandPools[threadID], 0);
-			//res = vkResetCommandBuffer(GetFrameResources().commandBuffers[threadID], 0);
 			assert(res == VK_SUCCESS);
 
 			VkCommandBufferBeginInfo beginInfo = {};
