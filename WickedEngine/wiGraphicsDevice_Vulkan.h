@@ -22,8 +22,14 @@ namespace wiGraphicsTypes
 		VkSurfaceKHR surface;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device;
-		VkQueue graphicsQueue; 
+		VkQueue graphicsQueue;
 		VkQueue presentQueue;
+
+		VkQueue copyQueue;
+		VkCommandPool copyCommandPool;
+		VkCommandBuffer copyCommandBuffer;
+		VkFence copyFence;
+		wiSpinLock copyQueueLock;
 
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;
@@ -50,6 +56,26 @@ namespace wiGraphicsTypes
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		VkCommandBuffer GetDirectCommandList(GRAPHICSTHREAD threadID);
+
+
+		struct UploadBuffer : wiThreadSafeManager
+		{
+			VkDevice				device;
+			VkBuffer				resource;
+			VkDeviceMemory			resourceMemory;
+			uint8_t*				dataBegin;
+			uint8_t*				dataCur;
+			uint8_t*				dataEnd;
+
+			UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, size_t size);
+			~UploadBuffer();
+
+			uint8_t* allocate(size_t dataSize, size_t alignment);
+			void clear();
+			uint64_t calculateOffset(uint8_t* address);
+		};
+		UploadBuffer* bufferUploader;
+		UploadBuffer* textureUploader;
 
 
 	public:

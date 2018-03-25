@@ -89,9 +89,10 @@ namespace wiGraphicsTypes
 	struct QueueFamilyIndices {
 		int graphicsFamily = -1;
 		int presentFamily = -1;
+		int copyFamily = -1;
 
 		bool isComplete() {
-			return graphicsFamily >= 0 && presentFamily >= 0;
+			return graphicsFamily >= 0 && presentFamily >= 0 && copyFamily >= 0;
 		}
 	};
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
@@ -113,6 +114,10 @@ namespace wiGraphicsTypes
 
 			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 				indices.graphicsFamily = i;
+			}
+
+			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+				indices.copyFamily = i;
 			}
 
 			if (indices.isComplete()) {
@@ -227,6 +232,91 @@ namespace wiGraphicsTypes
 		}
 
 		return indices.isComplete() && extensionsSupported && swapChainAdequate;
+	}
+
+
+
+	// Memory tools:
+
+	inline size_t Align(size_t uLocation, size_t uAlign)
+	{
+		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
+		{
+			assert(0);
+		}
+
+		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
+	}
+
+	GraphicsDevice_Vulkan::UploadBuffer::UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, size_t size) : device(device)
+	{
+		VkBufferCreateInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = size;
+		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		bufferInfo.flags = 0;
+
+		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &resource);
+		assert(res == VK_SUCCESS);
+
+
+		// Allocate resource backing memory:
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(device, resource, &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		if (vkAllocateMemory(device, &allocInfo, nullptr, &resourceMemory) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate staging memory!");
+		}
+
+		res = vkBindBufferMemory(device, resource, resourceMemory, 0);
+		assert(res == VK_SUCCESS);
+
+
+
+
+		void* pData;
+		//
+		// No CPU reads will be done from the resource.
+		//
+		vkMapMemory(device, resourceMemory, 0, bufferInfo.size, 0, &pData);
+		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		dataEnd = dataBegin + size;
+	}
+	GraphicsDevice_Vulkan::UploadBuffer::~UploadBuffer()
+	{
+		vkDestroyBuffer(device, resource, nullptr);
+	}
+	uint8_t* GraphicsDevice_Vulkan::UploadBuffer::allocate(size_t dataSize, size_t alignment)
+	{
+		LOCK();
+
+		//dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
+
+		dataSize = Align(dataSize, alignment);
+		assert(dataCur + dataSize <= dataEnd);
+
+		uint8_t* retVal = dataCur;
+
+		dataCur += dataSize;
+
+		UNLOCK();
+
+		return retVal;
+	}
+	void GraphicsDevice_Vulkan::UploadBuffer::clear()
+	{
+		dataCur = dataBegin;
+	}
+	uint64_t GraphicsDevice_Vulkan::UploadBuffer::calculateOffset(uint8_t* address)
+	{
+		assert(address >= dataBegin && address < dataEnd);
+		return static_cast<uint64_t>(address - dataBegin);
 	}
 
 
@@ -704,6 +794,7 @@ namespace wiGraphicsTypes
 
 			vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
 			vkGetDeviceQueue(device, indices.presentFamily, 0, &presentQueue);
+			vkGetDeviceQueue(device, indices.copyFamily, 0, &copyQueue);
 		}
 
 
@@ -1016,9 +1107,59 @@ namespace wiGraphicsTypes
 			}
 		}
 
+
+		// Create resources for copy (transfer) queue:
+		{
+			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface); // redundant!!
+
+
+			VkCommandPoolCreateInfo poolInfo = {};
+			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
+			poolInfo.flags = 0; // Optional
+
+			if (vkCreateCommandPool(device, &poolInfo, nullptr, &copyCommandPool) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create command pool!");
+			}
+
+			VkCommandBufferAllocateInfo commandBufferInfo = {};
+			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			commandBufferInfo.commandBufferCount = 1;
+			commandBufferInfo.commandPool = copyCommandPool;
+			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+			if (vkAllocateCommandBuffers(device, &commandBufferInfo, &copyCommandBuffer) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create command buffers!");
+			}
+
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			VkResult res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
+			assert(res == VK_SUCCESS);
+
+
+			// Fence for copy queue:
+			VkFenceCreateInfo fenceInfo = {};
+			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+			vkCreateFence(device, &fenceInfo, nullptr, &copyFence);
+		}
+
+
+		// Create resource upload buffers
+		bufferUploader = new UploadBuffer(physicalDevice, device, 256 * 1024 * 1024);
+		textureUploader = new UploadBuffer(physicalDevice, device, 256 * 1024 * 1024);
+
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
+		WaitForGPU();
+
+		SAFE_DELETE(bufferUploader);
+		SAFE_DELETE(textureUploader);
 
 		for (auto& frame : frames)
 		{
@@ -1113,6 +1254,8 @@ namespace wiGraphicsTypes
 			}
 		}
 
+		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
 		bufferInfo.flags = 0;
 
 		VkResult res;
@@ -1134,12 +1277,30 @@ namespace wiGraphicsTypes
 
 		ppBuffer->resourceMemory_Vulkan = new VkDeviceMemory;
 		if (vkAllocateMemory(device, &allocInfo, nullptr, static_cast<VkDeviceMemory*>(ppBuffer->resourceMemory_Vulkan)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate image memory!");
+			throw std::runtime_error("failed to allocate buffer memory!");
 		}
 
 		res = vkBindBufferMemory(device, *static_cast<VkBuffer*>(ppBuffer->resource_Vulkan), *static_cast<VkDeviceMemory*>(ppBuffer->resourceMemory_Vulkan), 0);
 		hr = res == VK_SUCCESS;
 		assert(SUCCEEDED(hr));
+
+
+
+		// Issue data copy on request:
+		if (pInitialData != nullptr)
+		{
+			uint8_t* dest = bufferUploader->allocate(pDesc->ByteWidth, 4);
+			memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth);
+
+			VkBufferCopy copyRegion = {};
+			copyRegion.size = pDesc->ByteWidth;
+			copyRegion.srcOffset = 0;
+			copyRegion.dstOffset = bufferUploader->calculateOffset(dest);
+
+			copyQueueLock.lock();
+			vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, *static_cast<VkBuffer*>(ppBuffer->resource_Vulkan), 1, &copyRegion);
+			copyQueueLock.unlock();
+		}
 
 
 
@@ -1852,6 +2013,46 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_Vulkan::PresentBegin()
 	{
 		LOCK();
+
+
+		// Sync up copy queue:
+		copyQueueLock.lock();
+		{
+			if (vkEndCommandBuffer(copyCommandBuffer) != VK_SUCCESS) {
+				throw std::runtime_error("failed to record copy command buffer!");
+			}
+
+			VkSubmitInfo submitInfo = {};
+			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
+				throw std::runtime_error("failed to submit copy command buffer!");
+			}
+
+			VkResult res;
+
+			//vkQueueWaitIdle(copyQueue);
+
+			res = vkWaitForFences(device, 1, &copyFence, true, 0xFFFFFFFFFFFFFFFF);
+			assert(res == VK_SUCCESS);
+
+			res = vkResetFences(device, 1, &copyFence);
+			assert(res == VK_SUCCESS);
+
+
+			res = vkResetCommandPool(device, copyCommandPool, 0);
+			assert(res == VK_SUCCESS);
+
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
+			assert(res == VK_SUCCESS);
+		}
+		copyQueueLock.unlock();
+
+
 
 		VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
 

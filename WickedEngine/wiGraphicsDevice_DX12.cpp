@@ -1151,7 +1151,7 @@ namespace wiGraphicsTypes
 
 	// Local Helpers:
 
-	size_t Align(size_t uLocation, size_t uAlign)
+	inline size_t Align(size_t uLocation, size_t uAlign)
 	{
 		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
 		{
