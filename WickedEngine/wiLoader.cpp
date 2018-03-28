@@ -1798,7 +1798,7 @@ void Mesh::Optimize()
 
 	optimized = true;
 }
-void Mesh::CreateBuffers(Object* object) 
+void Mesh::CreateBuffers() 
 {
 	if (!buffersComplete) 
 	{
@@ -1828,7 +1828,7 @@ void Mesh::CreateBuffers(Object* object)
 			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
 		}
 
-		if (object->isArmatureDeformed())
+		if (!vertices_BON.empty())
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
@@ -2132,10 +2132,14 @@ void Mesh::CreateVertexArrays()
 		return;
 	}
 
+	vertices_POS.clear();
+	vertices_TEX.clear();
+	vertices_BON.clear();
+
 	// De-interleave vertex arrays:
 	vertices_POS.resize(vertices_FULL.size());
 	vertices_TEX.resize(vertices_FULL.size());
-	vertices_BON.resize(vertices_FULL.size());
+	// do not resize vertices_BON just yet!!
 	for (size_t i = 0; i < vertices_FULL.size(); ++i)
 	{
 		// Normalize normals:
@@ -2154,12 +2158,17 @@ void Mesh::CreateVertexArrays()
 			wei.y /= len;
 			wei.z /= len;
 			wei.w /= len;
+
+			if (vertices_BON.empty())
+			{
+				vertices_BON.resize(vertices_FULL.size());
+			}
+			vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
 		}
 
 		// Split and type conversion:
 		vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
 		vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
-		vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
 	}
 
 	// Save original vertices. This will be input for CPU skinning / soft bodies
@@ -2167,6 +2176,10 @@ void Mesh::CreateVertexArrays()
 	vertices_Transformed_PRE = vertices_POS; // pre <- pos!!
 
 	// Map subset indices:
+	for (auto& subset : subsets)
+	{
+		subset.subsetIndices.clear();
+	}
 	for (size_t i = 0; i < indices.size(); ++i)
 	{
 		unsigned int index = indices[i];
@@ -2184,12 +2197,91 @@ void Mesh::CreateVertexArrays()
 		}
 	}
 
-	if (goalVG >= 0) {
+	goalPositions.clear();
+	goalNormals.clear();
+	if (goalVG >= 0) 
+	{
 		goalPositions.resize(vertexGroups[goalVG].vertices.size());
 		goalNormals.resize(vertexGroups[goalVG].vertices.size());
 	}
 
 	arraysComplete = true;
+}
+void Mesh::ComputeNormals(bool smooth)
+{
+	// Start recalculating normals:
+	vector<uint32_t> newIndexBuffer;
+	vector<Vertex_FULL> newVertexBuffer;
+
+	for (size_t face = 0; face < indices.size() / 3; face++)
+	{
+		uint32_t i0 = indices[face * 3 + 0];
+		uint32_t i1 = indices[face * 3 + 1];
+		uint32_t i2 = indices[face * 3 + 2];
+
+		Vertex_FULL& v0 = vertices_FULL[i0];
+		Vertex_FULL& v1 = vertices_FULL[i1];
+		Vertex_FULL& v2 = vertices_FULL[i2];
+
+		XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
+		XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+
+		XMVECTOR N = XMVector3Cross(U, V);
+		N = XMVector3Normalize(N);
+
+		XMFLOAT4 normal;
+		XMStoreFloat4(&normal, N);
+
+		if (smooth)
+		{
+			v0.nor.x += normal.x;
+			v0.nor.y += normal.y;
+			v0.nor.z += normal.z;
+
+			v1.nor.x += normal.x;
+			v1.nor.y += normal.y;
+			v1.nor.z += normal.z;
+
+			v2.nor.x += normal.x;
+			v2.nor.y += normal.y;
+			v2.nor.z += normal.z;
+		}
+		else
+		{
+			v0.nor.x = normal.x;
+			v0.nor.y = normal.y;
+			v0.nor.z = normal.z;
+
+			v1.nor.x = normal.x;
+			v1.nor.y = normal.y;
+			v1.nor.z = normal.z;
+
+			v2.nor.x = normal.x;
+			v2.nor.y = normal.y;
+			v2.nor.z = normal.z;
+
+			newVertexBuffer.push_back(v0);
+			newVertexBuffer.push_back(v1);
+			newVertexBuffer.push_back(v2);
+
+			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+		}
+	}
+
+	if (!smooth)
+	{
+		vertices_FULL = newVertexBuffer;
+		indices = newIndexBuffer;
+	}
+
+	// force recreate:
+	arraysComplete = false;
+	buffersComplete = false;
+
+	CreateVertexArrays();
+	CreateBuffers();
 }
 
 int Mesh::GetRenderTypes() const
@@ -2771,7 +2863,7 @@ void Model::FinishLoading()
 			// Mesh renderdata setup
 			x->mesh->CreateVertexArrays();
 			x->mesh->Optimize();
-			x->mesh->CreateBuffers(x);
+			x->mesh->CreateBuffers();
 
 			if (x->mesh->armature != nullptr)
 			{

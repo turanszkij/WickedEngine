@@ -99,6 +99,30 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	});
 	meshWindow->AddWidget(tessellationFactorSlider);
 
+	computeNormalsSmoothButton = new wiButton("Compute Normals [SMOOTH]");
+	computeNormalsSmoothButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex.");
+	computeNormalsSmoothButton->SetSize(XMFLOAT2(240, 30));
+	computeNormalsSmoothButton->SetPos(XMFLOAT2(x - 50, y += 30));
+	computeNormalsSmoothButton->OnClick([&](wiEventArgs args) {
+		if (mesh != nullptr)
+		{
+			mesh->ComputeNormals(true);
+		}
+	});
+	meshWindow->AddWidget(computeNormalsSmoothButton);
+
+	computeNormalsHardButton = new wiButton("Compute Normals [HARD]");
+	computeNormalsHardButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face.");
+	computeNormalsHardButton->SetSize(XMFLOAT2(240, 30));
+	computeNormalsHardButton->SetPos(XMFLOAT2(x - 50, y += 30));
+	computeNormalsHardButton->OnClick([&](wiEventArgs args) {
+		if (mesh != nullptr)
+		{
+			mesh->ComputeNormals(false);
+		}
+	});
+	meshWindow->AddWidget(computeNormalsHardButton);
+
 
 
 

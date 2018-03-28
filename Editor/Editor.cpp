@@ -1710,7 +1710,7 @@ void ConsumeHistoryOperation(bool undo)
 								object->mesh->subsets[i].material->Serialize(*archive);
 							}
 							object->mesh->CreateVertexArrays();
-							object->mesh->CreateBuffers(object);
+							object->mesh->CreateBuffers();
 							model->Add(object);
 						}
 					}

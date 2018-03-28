@@ -501,11 +501,11 @@ public:
 		, const MaterialCollection& materialColl, const std::unordered_set<Armature*>& armatures, const std::string& identifier="");
 	bool buffersComplete;
 	void Optimize();
-	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
-	void CreateBuffers(Object* object);
+	void CreateBuffers();
 	static void CreateImpostorVB();
 	bool arraysComplete;
 	void CreateVertexArrays();
+	void ComputeNormals(bool smooth = false);
 	void init()
 	{
 		parent="";
