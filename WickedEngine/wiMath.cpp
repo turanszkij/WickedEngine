@@ -90,6 +90,26 @@ namespace wiMath
 		return ++x;
 	}
 
+	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C)
+	{
+		// Heron's formula:
+		XMVECTOR a = XMVector3Length(B - A);
+		XMVECTOR b = XMVector3Length(C - A);
+		XMVECTOR c = XMVector3Length(C - B);
+		XMVECTOR p = (a + b + c) * 0.5f;
+		XMVECTOR areaSq = p * (p - a) * (p - b) * (p - c);
+		float area;
+		XMStoreFloat(&area, areaSq);
+		area = sqrtf(area);
+		return area;
+	}
+	float TriangleArea(float a, float b, float c)
+	{
+		// Heron's formula:
+		float p = (a + b + c) * 0.5f;
+		return sqrtf(p * (p - a) * (p - b) * (p - c));
+	}
+
 
 	float InverseLerp(float value1, float value2, float pos)
 	{

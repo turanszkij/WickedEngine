@@ -20,9 +20,10 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 	float x = 200;
 	float y = 0;
+	float step = 35;
 
 	meshInfoLabel = new wiLabel("Mesh Info");
-	meshInfoLabel->SetPos(XMFLOAT2(x, y += 30));
+	meshInfoLabel->SetPos(XMFLOAT2(x, y += step));
 	meshInfoLabel->SetSize(XMFLOAT2(400, 150));
 	meshWindow->AddWidget(meshInfoLabel);
 
@@ -30,7 +31,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 	doubleSidedCheckBox = new wiCheckBox("Double Sided: ");
 	doubleSidedCheckBox->SetTooltip("If enabled, the inside of the mesh will be visible.");
-	doubleSidedCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	doubleSidedCheckBox->SetPos(XMFLOAT2(x, y += step));
 	doubleSidedCheckBox->OnClick([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
@@ -42,7 +43,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	massSlider = new wiSlider(0, 5000, 0, 100000, "Mass: ");
 	massSlider->SetTooltip("Set the mass amount for the physics engine.");
 	massSlider->SetSize(XMFLOAT2(100, 30));
-	massSlider->SetPos(XMFLOAT2(x, y += 30));
+	massSlider->SetPos(XMFLOAT2(x, y += step));
 	massSlider->OnSlide([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
@@ -54,7 +55,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	frictionSlider = new wiSlider(0, 5000, 0, 100000, "Friction: ");
 	frictionSlider->SetTooltip("Set the friction amount for the physics engine.");
 	frictionSlider->SetSize(XMFLOAT2(100, 30));
-	frictionSlider->SetPos(XMFLOAT2(x, y += 30));
+	frictionSlider->SetPos(XMFLOAT2(x, y += step));
 	frictionSlider->OnSlide([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
@@ -66,7 +67,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorCreateButton = new wiButton("Create Impostor");
 	impostorCreateButton->SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
 	impostorCreateButton->SetSize(XMFLOAT2(240, 30));
-	impostorCreateButton->SetPos(XMFLOAT2(x - 50, y += 30));
+	impostorCreateButton->SetPos(XMFLOAT2(x - 50, y += step));
 	impostorCreateButton->OnClick([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
@@ -78,7 +79,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorDistanceSlider = new wiSlider(0, 1000, 100, 10000, "Impostor Distance: ");
 	impostorDistanceSlider->SetTooltip("Assign the distance where the mesh geometry should be switched to the impostor image.");
 	impostorDistanceSlider->SetSize(XMFLOAT2(100, 30));
-	impostorDistanceSlider->SetPos(XMFLOAT2(x, y += 30));
+	impostorDistanceSlider->SetPos(XMFLOAT2(x, y += step));
 	impostorDistanceSlider->OnSlide([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
@@ -90,7 +91,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	tessellationFactorSlider = new wiSlider(0, 16, 0, 10000, "Tessellation Factor: ");
 	tessellationFactorSlider->SetTooltip("Set the dynamic tessellation amount. Tessellation should be enabled in the Renderer window and your GPU must support it!");
 	tessellationFactorSlider->SetSize(XMFLOAT2(100, 30));
-	tessellationFactorSlider->SetPos(XMFLOAT2(x, y += 30));
+	tessellationFactorSlider->SetPos(XMFLOAT2(x, y += step));
 	tessellationFactorSlider->OnSlide([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
@@ -102,11 +103,12 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	computeNormalsSmoothButton = new wiButton("Compute Normals [SMOOTH]");
 	computeNormalsSmoothButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex.");
 	computeNormalsSmoothButton->SetSize(XMFLOAT2(240, 30));
-	computeNormalsSmoothButton->SetPos(XMFLOAT2(x - 50, y += 30));
+	computeNormalsSmoothButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsSmoothButton->OnClick([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(true);
+			SetMesh(mesh);
 		}
 	});
 	meshWindow->AddWidget(computeNormalsSmoothButton);
@@ -114,11 +116,12 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	computeNormalsHardButton = new wiButton("Compute Normals [HARD]");
 	computeNormalsHardButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face.");
 	computeNormalsHardButton->SetSize(XMFLOAT2(240, 30));
-	computeNormalsHardButton->SetPos(XMFLOAT2(x - 50, y += 30));
+	computeNormalsHardButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsHardButton->OnClick([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(false);
+			SetMesh(mesh);
 		}
 	});
 	meshWindow->AddWidget(computeNormalsHardButton);
@@ -142,9 +145,6 @@ MeshWindow::~MeshWindow()
 
 void MeshWindow::SetMesh(Mesh* mesh)
 {
-	if (this->mesh == mesh)
-		return;
-
 	this->mesh = mesh;
 	if (mesh != nullptr)
 	{

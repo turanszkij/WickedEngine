@@ -1864,24 +1864,6 @@ void Mesh::CreateBuffers()
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
 
 
-		//PHYSICALMAPPING
-		if (!physicsverts.empty() && physicalmapGP.empty())
-		{
-			for (unsigned int i = 0; i < vertices_POS.size(); ++i) {
-				for (unsigned int j = 0; j < physicsverts.size(); ++j) {
-					if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
-						&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
-						&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
-						)
-					{
-						physicalmapGP.push_back(j);
-						break;
-					}
-				}
-			}
-		}
-
-
 		// Remap index buffer to be continuous across subsets and create gpu buffer data:
 		uint32_t counter = 0;
 		uint8_t stride;
@@ -2132,6 +2114,7 @@ void Mesh::CreateVertexArrays()
 		return;
 	}
 
+	// We can call this function anytime to recreate data, so clean up first:
 	vertices_POS.clear();
 	vertices_TEX.clear();
 	vertices_BON.clear();
@@ -2139,7 +2122,7 @@ void Mesh::CreateVertexArrays()
 	// De-interleave vertex arrays:
 	vertices_POS.resize(vertices_FULL.size());
 	vertices_TEX.resize(vertices_FULL.size());
-	// do not resize vertices_BON just yet!!
+	// do not resize vertices_BON just yet, not every mesh will need bone vertex data!
 	for (size_t i = 0; i < vertices_FULL.size(); ++i)
 	{
 		// Normalize normals:
@@ -2161,6 +2144,7 @@ void Mesh::CreateVertexArrays()
 
 			if (vertices_BON.empty())
 			{
+				// Allocate full bone vertex data when we find a correct bone weight.
 				vertices_BON.resize(vertices_FULL.size());
 			}
 			vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
@@ -2173,7 +2157,7 @@ void Mesh::CreateVertexArrays()
 
 	// Save original vertices. This will be input for CPU skinning / soft bodies
 	vertices_Transformed_POS = vertices_POS;
-	vertices_Transformed_PRE = vertices_POS; // pre <- pos!!
+	vertices_Transformed_PRE = vertices_POS; // pre <- pos!! (previous positions will have the current positions initially)
 
 	// Map subset indices:
 	for (auto& subset : subsets)
@@ -2197,6 +2181,8 @@ void Mesh::CreateVertexArrays()
 		}
 	}
 
+
+	// Goal positions, normals are controlling blending between animation and physics states for soft body rendering:
 	goalPositions.clear();
 	goalNormals.clear();
 	if (goalVG >= 0) 
@@ -2205,49 +2191,159 @@ void Mesh::CreateVertexArrays()
 		goalNormals.resize(vertexGroups[goalVG].vertices.size());
 	}
 
+
+	// Mapping render vertices to physics vertex representation:
+	//	the physics vertices contain unique position, not duplicated by texcoord or normals
+	//	this way we can map several renderable vertices to one physics vertex
+	//	but the mapping function will actually be indexed by renderable vertex index for efficient retrieval.
+	if (!physicsverts.empty() && physicalmapGP.empty())
+	{
+		for (size_t i = 0; i < vertices_POS.size(); ++i) 
+		{
+			for (size_t j = 0; j < physicsverts.size(); ++j) 
+			{
+				if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+					&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+					&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+					)
+				{
+					physicalmapGP.push_back(static_cast<int>(j));
+					break;
+				}
+			}
+		}
+	}
+
 	arraysComplete = true;
 }
 void Mesh::ComputeNormals(bool smooth)
 {
 	// Start recalculating normals:
-	vector<uint32_t> newIndexBuffer;
-	vector<Vertex_FULL> newVertexBuffer;
 
-	for (size_t face = 0; face < indices.size() / 3; face++)
+	if (smooth)
 	{
-		uint32_t i0 = indices[face * 3 + 0];
-		uint32_t i1 = indices[face * 3 + 1];
-		uint32_t i2 = indices[face * 3 + 2];
+		// Compute smooth surface normals:
 
-		Vertex_FULL& v0 = vertices_FULL[i0];
-		Vertex_FULL& v1 = vertices_FULL[i1];
-		Vertex_FULL& v2 = vertices_FULL[i2];
-
-		XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
-		XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
-
-		XMVECTOR N = XMVector3Cross(U, V);
-		N = XMVector3Normalize(N);
-
-		XMFLOAT4 normal;
-		XMStoreFloat4(&normal, N);
-
-		if (smooth)
+		// 1.) Zero normals, they will be averaged later
+		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
 		{
-			v0.nor.x += normal.x;
-			v0.nor.y += normal.y;
-			v0.nor.z += normal.z;
-
-			v1.nor.x += normal.x;
-			v1.nor.y += normal.y;
-			v1.nor.z += normal.z;
-
-			v2.nor.x += normal.x;
-			v2.nor.y += normal.y;
-			v2.nor.z += normal.z;
+			vertices_FULL[i].nor = XMFLOAT4(0, 0, 0, 0);
 		}
-		else
+
+		// 2.) Find identical vertices by POSITION, accumulate face normals
+		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
 		{
+			Vertex_FULL& v_search = vertices_FULL[i];
+
+			for (size_t ind = 0; ind < indices.size() / 3; ++ind)
+			{
+				uint32_t i0 = indices[ind * 3 + 0];
+				uint32_t i1 = indices[ind * 3 + 1];
+				uint32_t i2 = indices[ind * 3 + 2];
+
+				Vertex_FULL& v0 = vertices_FULL[i0];
+				Vertex_FULL& v1 = vertices_FULL[i1];
+				Vertex_FULL& v2 = vertices_FULL[i2];
+
+				bool match_pos0 =
+					fabs(v_search.pos.x - v0.pos.x) < FLT_EPSILON &&
+					fabs(v_search.pos.y - v0.pos.y) < FLT_EPSILON &&
+					fabs(v_search.pos.z - v0.pos.z) < FLT_EPSILON;
+
+				bool match_pos1 =
+					fabs(v_search.pos.x - v1.pos.x) < FLT_EPSILON &&
+					fabs(v_search.pos.y - v1.pos.y) < FLT_EPSILON &&
+					fabs(v_search.pos.z - v1.pos.z) < FLT_EPSILON;
+
+				bool match_pos2 =
+					fabs(v_search.pos.x - v2.pos.x) < FLT_EPSILON &&
+					fabs(v_search.pos.y - v2.pos.y) < FLT_EPSILON &&
+					fabs(v_search.pos.z - v2.pos.z) < FLT_EPSILON;
+
+				if (match_pos0 || match_pos1 || match_pos2)
+				{
+					XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
+					XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+
+					XMVECTOR N = XMVector3Cross(U, V);
+					N = XMVector3Normalize(N);
+
+					XMFLOAT3 normal;
+					XMStoreFloat3(&normal, N);
+
+					v_search.nor.x += normal.x;
+					v_search.nor.y += normal.y;
+					v_search.nor.z += normal.z;
+				}
+
+			}
+		}
+
+		// 3.) Find unique vertices by POSITION and TEXCOORD and MATERIAL and remove duplicates
+		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+		{
+			const Vertex_FULL& v0 = vertices_FULL[i];
+
+			for (size_t j = i + 1; j < vertices_FULL.size(); j++)
+			{
+				const Vertex_FULL& v1 = vertices_FULL[j];
+
+				bool unique_pos =
+					fabs(v0.pos.x - v1.pos.x) < FLT_EPSILON &&
+					fabs(v0.pos.y - v1.pos.y) < FLT_EPSILON &&
+					fabs(v0.pos.z - v1.pos.z) < FLT_EPSILON;
+
+				bool unique_tex =
+					fabs(v0.tex.x - v1.tex.x) < FLT_EPSILON &&
+					fabs(v0.tex.y - v1.tex.y) < FLT_EPSILON &&
+					(int)v0.tex.z == (int)v1.tex.z;
+
+				if (unique_pos && unique_tex)
+				{
+					for (size_t ind = 0; ind < indices.size(); ++ind)
+					{
+						if (indices[ind] == j)
+						{
+							indices[ind] = static_cast<uint32_t>(i);
+						}
+						else if (indices[ind] > j && indices[ind] > 0)
+						{
+							indices[ind]--;
+						}
+					}
+
+					vertices_FULL.erase(vertices_FULL.begin() + j);
+				}
+
+			}
+		}
+	}
+	else
+	{
+		// Compute hard surface normals:
+
+		vector<uint32_t> newIndexBuffer;
+		vector<Vertex_FULL> newVertexBuffer;
+
+		for (size_t face = 0; face < indices.size() / 3; face++)
+		{
+			uint32_t i0 = indices[face * 3 + 0];
+			uint32_t i1 = indices[face * 3 + 1];
+			uint32_t i2 = indices[face * 3 + 2];
+
+			Vertex_FULL& v0 = vertices_FULL[i0];
+			Vertex_FULL& v1 = vertices_FULL[i1];
+			Vertex_FULL& v2 = vertices_FULL[i2];
+
+			XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
+			XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+
+			XMVECTOR N = XMVector3Cross(U, V);
+			N = XMVector3Normalize(N);
+
+			XMFLOAT3 normal;
+			XMStoreFloat3(&normal, N);
+
 			v0.nor.x = normal.x;
 			v0.nor.y = normal.y;
 			v0.nor.z = normal.z;
@@ -2268,10 +2364,8 @@ void Mesh::ComputeNormals(bool smooth)
 			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
 			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
 		}
-	}
 
-	if (!smooth)
-	{
+		// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
 		vertices_FULL = newVertexBuffer;
 		indices = newIndexBuffer;
 	}
