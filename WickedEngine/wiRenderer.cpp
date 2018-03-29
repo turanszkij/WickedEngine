@@ -3069,6 +3069,8 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					Light* l = (Light*)c;
 					l->entityArray_index = i;
 
+					l->UpdateLight();
+
 					// Link shadowmaps to lights till there are free slots
 
 					l->shadowMap_index = -1;
