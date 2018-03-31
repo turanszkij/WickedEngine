@@ -3220,7 +3220,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					matrixArray[shadowIndex + 0] = l->shadowCam_dirLight[0].getVP();
 					matrixArray[shadowIndex + 1] = l->shadowCam_dirLight[1].getVP();
 					matrixArray[shadowIndex + 2] = l->shadowCam_dirLight[2].getVP();
-					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 2);
+					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 3);
 				}
 			}
 			break;
@@ -3234,7 +3234,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (l->shadow && shadowIndex >= 0 && !l->shadowCam_spotLight.empty())
 				{
 					matrixArray[shadowIndex + 0] = l->shadowCam_spotLight[0].getVP();
-					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 2);
+					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 1);
 				}
 			}
 			break;

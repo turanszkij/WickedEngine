@@ -2745,6 +2745,14 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 				this->materials.insert(make_pair(material->name, material));
 			}
 
+			if (materialLibrary.empty())
+			{
+				// Create default material if nothing was found:
+				Material* material = new Material("OBJImport_defaultMaterial");
+				materialLibrary.push_back(material);
+				this->materials.insert(make_pair(material->name, material));
+			}
+
 			// Load objects, meshes:
 			for (auto& shape : obj_shapes)
 			{
@@ -2790,7 +2798,7 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 							);
 						}
 
-						if (!obj_attrib.texcoords.empty())
+						if (index.texcoord_index >= 0 && !obj_attrib.texcoords.empty())
 						{
 							vert.tex = XMFLOAT4(
 								obj_attrib.texcoords[index.texcoord_index * 2 + 0],
@@ -2799,7 +2807,7 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 							);
 						}
 
-						int materialIndex = shape.mesh.material_ids[i / 3]; // this indexes the material library
+						int materialIndex = max(0, shape.mesh.material_ids[i / 3]); // this indexes the material library
 						if (registered_materialIndices.count(materialIndex) == 0)
 						{
 							registered_materialIndices[materialIndex] = (int)mesh->subsets.size();
