@@ -16,6 +16,8 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 	fpscamera = true;
 	orbitalCamTarget = new Transform;
+	movespeed = 10.0f;
+	rotationspeed = 1.0f;
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
 	cameraWindow->SetSize(XMFLOAT2(400, 300));
@@ -54,7 +56,25 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	});
 	cameraWindow->AddWidget(fovSlider);
 
-	resetButton = new wiButton("Reset Pos");
+	movespeedSlider = new wiSlider(1, 100, 10, 10000, "Movement Speed: ");
+	movespeedSlider->SetSize(XMFLOAT2(100, 30));
+	movespeedSlider->SetPos(XMFLOAT2(x, y += inc));
+	movespeedSlider->OnSlide([&](wiEventArgs args) {
+		movespeed = args.fValue;
+	});
+	movespeedSlider->SetValue(rotationspeed);
+	cameraWindow->AddWidget(movespeedSlider);
+
+	rotationspeedSlider = new wiSlider(0.1f, 2, 1, 10000, "Rotation Speed: ");
+	rotationspeedSlider->SetSize(XMFLOAT2(100, 30));
+	rotationspeedSlider->SetPos(XMFLOAT2(x, y += inc));
+	rotationspeedSlider->OnSlide([&](wiEventArgs args) {
+		rotationspeed = args.fValue;
+	});
+	rotationspeedSlider->SetValue(rotationspeed);
+	cameraWindow->AddWidget(rotationspeedSlider);
+
+	resetButton = new wiButton("Reset Camera");
 	resetButton->SetSize(XMFLOAT2(140, 30));
 	resetButton->SetPos(XMFLOAT2(x, y += inc));
 	resetButton->OnClick([&](wiEventArgs args) {

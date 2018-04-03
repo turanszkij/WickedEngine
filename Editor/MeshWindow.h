@@ -30,6 +30,8 @@ public:
 	wiButton*	impostorCreateButton;
 	wiSlider*	impostorDistanceSlider;
 	wiSlider*	tessellationFactorSlider;
+	wiButton*	flipCullingButton;
+	wiButton*	flipNormalsButton;
 	wiButton*	computeNormalsSmoothButton;
 	wiButton*	computeNormalsHardButton;
 };

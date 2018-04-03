@@ -1477,6 +1477,56 @@ void VertexGroup::Serialize(wiArchive& archive)
 GPUBuffer Mesh::impostorVB_POS;
 GPUBuffer Mesh::impostorVB_TEX;
 
+Mesh::Mesh(const string& name) : name(name)
+{
+	init();
+}
+Mesh::~Mesh() 
+{
+	SAFE_DELETE(indexBuffer);
+	SAFE_DELETE(vertexBuffer_POS);
+	SAFE_DELETE(vertexBuffer_TEX);
+	SAFE_DELETE(vertexBuffer_BON);
+	SAFE_DELETE(streamoutBuffer_POS);
+	SAFE_DELETE(streamoutBuffer_PRE);
+}
+void Mesh::init()
+{
+	parent = "";
+	indices.resize(0);
+	renderable = false;
+	doubleSided = false;
+	aabb = AABB();
+	trailInfo = RibbonTrail();
+	armature = nullptr;
+	isBillboarded = false;
+	billboardAxis = XMFLOAT3(0, 0, 0);
+	vertexGroups.clear();
+	softBody = false;
+	mass = friction = 1;
+	massVG = -1;
+	goalVG = -1;
+	softVG = -1;
+	goalPositions.clear();
+	goalNormals.clear();
+	renderDataComplete = false;
+	calculatedAO = false;
+	armatureName = "";
+	impostorDistance = 100.0f;
+	tessellationFactor = 0.0f;
+	optimized = false;
+	bufferOffset_POS = 0;
+	bufferOffset_PRE = 0;
+	indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
+
+	SAFE_INIT(indexBuffer);
+	SAFE_INIT(vertexBuffer_POS);
+	SAFE_INIT(vertexBuffer_TEX);
+	SAFE_INIT(vertexBuffer_BON);
+	SAFE_INIT(streamoutBuffer_POS);
+	SAFE_INIT(streamoutBuffer_PRE);
+}
+
 void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 	, const MaterialCollection& materialColl, const unordered_set<Armature*>& armatures, const std::string& identifier) {
 	name = newName;
@@ -1798,18 +1848,122 @@ void Mesh::Optimize()
 
 	optimized = true;
 }
-void Mesh::CreateBuffers() 
+void Mesh::CreateRenderData() 
 {
-	if (!buffersComplete) 
+	if (!renderDataComplete) 
 	{
-		if (vertices_POS.empty())
+		// First, assemble vertex, index arrays:
+
+		// In case of recreate, delete data first:
+		vertices_POS.clear();
+		vertices_TEX.clear();
+		vertices_BON.clear();
+
+		// De-interleave vertex arrays:
+		vertices_POS.resize(vertices_FULL.size());
+		vertices_TEX.resize(vertices_FULL.size());
+		// do not resize vertices_BON just yet, not every mesh will need bone vertex data!
+		for (size_t i = 0; i < vertices_FULL.size(); ++i)
 		{
-			renderable = false;
+			// Normalize normals:
+			float alpha = vertices_FULL[i].nor.w;
+			XMVECTOR nor = XMLoadFloat4(&vertices_FULL[i].nor);
+			nor = XMVector3Normalize(nor);
+			XMStoreFloat4(&vertices_FULL[i].nor, nor);
+			vertices_FULL[i].nor.w = alpha;
+
+			// Normalize bone weights:
+			XMFLOAT4& wei = vertices_FULL[i].wei;
+			float len = wei.x + wei.y + wei.z + wei.w;
+			if (len > 0)
+			{
+				wei.x /= len;
+				wei.y /= len;
+				wei.z /= len;
+				wei.w /= len;
+
+				if (vertices_BON.empty())
+				{
+					// Allocate full bone vertex data when we find a correct bone weight.
+					vertices_BON.resize(vertices_FULL.size());
+				}
+				vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
+			}
+
+			// Split and type conversion:
+			vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
+			vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
 		}
-		if (!renderable)
+
+		// Save original vertices. This will be input for CPU skinning / soft bodies
+		vertices_Transformed_POS = vertices_POS;
+		vertices_Transformed_PRE = vertices_POS; // pre <- pos!! (previous positions will have the current positions initially)
+
+		// Map subset indices:
+		for (auto& subset : subsets)
 		{
-			return;
+			subset.subsetIndices.clear();
 		}
+		for (size_t i = 0; i < indices.size(); ++i)
+		{
+			uint32_t index = indices[i];
+			const XMFLOAT4& tex = vertices_FULL[index].tex;
+			unsigned int materialIndex = (unsigned int)floor(tex.z);
+
+			assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
+
+			MeshSubset& subset = subsets[materialIndex];
+			subset.subsetIndices.push_back(index);
+
+			if (index >= 65536)
+			{
+				indexFormat = INDEXFORMAT_32BIT;
+			}
+		}
+
+
+		// Goal positions, normals are controlling blending between animation and physics states for soft body rendering:
+		goalPositions.clear();
+		goalNormals.clear();
+		if (goalVG >= 0)
+		{
+			goalPositions.resize(vertexGroups[goalVG].vertices.size());
+			goalNormals.resize(vertexGroups[goalVG].vertices.size());
+		}
+
+
+		// Mapping render vertices to physics vertex representation:
+		//	the physics vertices contain unique position, not duplicated by texcoord or normals
+		//	this way we can map several renderable vertices to one physics vertex
+		//	but the mapping function will actually be indexed by renderable vertex index for efficient retrieval.
+		if (!physicsverts.empty() && physicalmapGP.empty())
+		{
+			for (size_t i = 0; i < vertices_POS.size(); ++i)
+			{
+				for (size_t j = 0; j < physicsverts.size(); ++j)
+				{
+					if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+						&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+						&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+						)
+					{
+						physicalmapGP.push_back(static_cast<int>(j));
+						break;
+					}
+				}
+			}
+		}
+
+
+
+		// Create actual GPU data:
+
+		SAFE_DELETE(indexBuffer);
+		SAFE_DELETE(vertexBuffer_POS);
+		SAFE_DELETE(vertexBuffer_TEX);
+		SAFE_DELETE(vertexBuffer_BON);
+		SAFE_DELETE(streamoutBuffer_POS);
+		SAFE_DELETE(streamoutBuffer_PRE);
 
 		GPUBufferDesc bd;
 		SubresourceData InitData;
@@ -1825,7 +1979,8 @@ void Mesh::CreateBuffers()
 
 			InitData.pSysMem = vertices_POS.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
+			vertexBuffer_POS = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_POS);
 		}
 
 		if (!vertices_BON.empty())
@@ -1838,7 +1993,8 @@ void Mesh::CreateBuffers()
 
 			InitData.pSysMem = vertices_BON.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
+			vertexBuffer_BON = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_BON);
 
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DEFAULT;
@@ -1847,10 +2003,12 @@ void Mesh::CreateBuffers()
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
+			streamoutBuffer_POS = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS);
 
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
+			streamoutBuffer_PRE = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_PRE);
 		}
 
 		// texture coordinate buffers are always static:
@@ -1861,7 +2019,8 @@ void Mesh::CreateBuffers()
 		bd.MiscFlags = 0;
 		InitData.pSysMem = vertices_TEX.data();
 		bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
+		vertexBuffer_TEX = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX);
 
 
 		// Remap index buffer to be continuous across subsets and create gpu buffer data:
@@ -1915,12 +2074,13 @@ void Mesh::CreateBuffers()
 		bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
 		InitData.pSysMem = gpuIndexData;
 		bd.ByteWidth = (UINT)(stride * indices.size());
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);
+		indexBuffer = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer);
 
 		SAFE_DELETE_ARRAY(gpuIndexData);
 
 
-		buffersComplete = true;
+		renderDataComplete = true;
 	}
 
 }
@@ -2107,115 +2267,6 @@ void Mesh::CreateImpostorVB()
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
 	}
 }
-void Mesh::CreateVertexArrays()
-{
-	if (arraysComplete)
-	{
-		return;
-	}
-
-	// We can call this function anytime to recreate data, so clean up first:
-	vertices_POS.clear();
-	vertices_TEX.clear();
-	vertices_BON.clear();
-
-	// De-interleave vertex arrays:
-	vertices_POS.resize(vertices_FULL.size());
-	vertices_TEX.resize(vertices_FULL.size());
-	// do not resize vertices_BON just yet, not every mesh will need bone vertex data!
-	for (size_t i = 0; i < vertices_FULL.size(); ++i)
-	{
-		// Normalize normals:
-		float alpha = vertices_FULL[i].nor.w;
-		XMVECTOR nor = XMLoadFloat4(&vertices_FULL[i].nor);
-		nor = XMVector3Normalize(nor);
-		XMStoreFloat4(&vertices_FULL[i].nor, nor);
-		vertices_FULL[i].nor.w = alpha;
-
-		// Normalize bone weights:
-		XMFLOAT4& wei = vertices_FULL[i].wei;
-		float len = wei.x + wei.y + wei.z + wei.w;
-		if (len > 0)
-		{
-			wei.x /= len;
-			wei.y /= len;
-			wei.z /= len;
-			wei.w /= len;
-
-			if (vertices_BON.empty())
-			{
-				// Allocate full bone vertex data when we find a correct bone weight.
-				vertices_BON.resize(vertices_FULL.size());
-			}
-			vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
-		}
-
-		// Split and type conversion:
-		vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
-		vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
-	}
-
-	// Save original vertices. This will be input for CPU skinning / soft bodies
-	vertices_Transformed_POS = vertices_POS;
-	vertices_Transformed_PRE = vertices_POS; // pre <- pos!! (previous positions will have the current positions initially)
-
-	// Map subset indices:
-	for (auto& subset : subsets)
-	{
-		subset.subsetIndices.clear();
-	}
-	for (size_t i = 0; i < indices.size(); ++i)
-	{
-		unsigned int index = indices[i];
-		const XMFLOAT4& tex = vertices_FULL[index].tex;
-		unsigned int materialIndex = (unsigned int)floor(tex.z);
-
-		assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
-
-		MeshSubset& subset = subsets[materialIndex];
-		subset.subsetIndices.push_back(index);
-
-		if (index >= 65536)
-		{
-			indexFormat = INDEXFORMAT_32BIT;
-		}
-	}
-
-
-	// Goal positions, normals are controlling blending between animation and physics states for soft body rendering:
-	goalPositions.clear();
-	goalNormals.clear();
-	if (goalVG >= 0) 
-	{
-		goalPositions.resize(vertexGroups[goalVG].vertices.size());
-		goalNormals.resize(vertexGroups[goalVG].vertices.size());
-	}
-
-
-	// Mapping render vertices to physics vertex representation:
-	//	the physics vertices contain unique position, not duplicated by texcoord or normals
-	//	this way we can map several renderable vertices to one physics vertex
-	//	but the mapping function will actually be indexed by renderable vertex index for efficient retrieval.
-	if (!physicsverts.empty() && physicalmapGP.empty())
-	{
-		for (size_t i = 0; i < vertices_POS.size(); ++i) 
-		{
-			for (size_t j = 0; j < physicsverts.size(); ++j) 
-			{
-				if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
-					&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
-					&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
-					)
-				{
-					physicalmapGP.push_back(static_cast<int>(j));
-					break;
-				}
-			}
-		}
-	}
-
-	arraysComplete = true;
-}
 void Mesh::ComputeNormals(bool smooth)
 {
 	// Start recalculating normals:
@@ -2371,11 +2422,38 @@ void Mesh::ComputeNormals(bool smooth)
 	}
 
 	// force recreate:
-	arraysComplete = false;
-	buffersComplete = false;
+	renderDataComplete = false;
+	CreateRenderData();
+}
+void Mesh::FlipCulling()
+{
+	for (size_t face = 0; face < indices.size() / 3; face++)
+	{
+		uint32_t i0 = indices[face * 3 + 0];
+		uint32_t i1 = indices[face * 3 + 1];
+		uint32_t i2 = indices[face * 3 + 2];
 
-	CreateVertexArrays();
-	CreateBuffers();
+		indices[face * 3 + 0] = i0;
+		indices[face * 3 + 1] = i2;
+		indices[face * 3 + 2] = i1;
+	}
+
+	renderDataComplete = false;
+	CreateRenderData();
+}
+void Mesh::FlipNormals()
+{
+	for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+	{
+		Vertex_FULL& v0 = vertices_FULL[i];
+
+		v0.nor.x *= -1;
+		v0.nor.y *= -1;
+		v0.nor.z *= -1;
+	}
+
+	renderDataComplete = false;
+	CreateRenderData();
 }
 
 int Mesh::GetRenderTypes() const
@@ -2963,9 +3041,8 @@ void Model::FinishLoading()
 			}
 
 			// Mesh renderdata setup
-			x->mesh->CreateVertexArrays();
 			x->mesh->Optimize();
-			x->mesh->CreateBuffers();
+			x->mesh->CreateRenderData();
 
 			if (x->mesh->armature != nullptr)
 			{

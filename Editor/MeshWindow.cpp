@@ -100,6 +100,32 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	});
 	meshWindow->AddWidget(tessellationFactorSlider);
 
+	flipCullingButton = new wiButton("Flip Culling");
+	flipCullingButton->SetTooltip("Flip faces to reverse triangle culling order.");
+	flipCullingButton->SetSize(XMFLOAT2(240, 30));
+	flipCullingButton->SetPos(XMFLOAT2(x - 50, y += step));
+	flipCullingButton->OnClick([&](wiEventArgs args) {
+		if (mesh != nullptr)
+		{
+			mesh->FlipCulling();
+			SetMesh(mesh);
+		}
+	});
+	meshWindow->AddWidget(flipCullingButton);
+
+	flipNormalsButton = new wiButton("Flip Normals");
+	flipNormalsButton->SetTooltip("Flip surface normals.");
+	flipNormalsButton->SetSize(XMFLOAT2(240, 30));
+	flipNormalsButton->SetPos(XMFLOAT2(x - 50, y += step));
+	flipNormalsButton->OnClick([&](wiEventArgs args) {
+		if (mesh != nullptr)
+		{
+			mesh->FlipNormals();
+			SetMesh(mesh);
+		}
+	});
+	meshWindow->AddWidget(flipNormalsButton);
+
 	computeNormalsSmoothButton = new wiButton("Compute Normals [SMOOTH]");
 	computeNormalsSmoothButton->SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex.");
 	computeNormalsSmoothButton->SetSize(XMFLOAT2(240, 30));

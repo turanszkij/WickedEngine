@@ -308,6 +308,8 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(objectWnd);
 	SAFE_DELETE(meshWnd);
 	SAFE_DELETE(cameraWnd);
+	SAFE_DELETE(rendererWnd);
+	SAFE_DELETE(envProbeWnd);
 	SAFE_DELETE(decalWnd);
 	SAFE_DELETE(lightWnd);
 	SAFE_DELETE(animWnd);
@@ -329,6 +331,7 @@ void EditorComponent::Initialize()
 	SAFE_INIT(meshWnd);
 	SAFE_INIT(cameraWnd);
 	SAFE_INIT(rendererWnd);
+	SAFE_INIT(envProbeWnd);
 	SAFE_INIT(decalWnd);
 	SAFE_INIT(lightWnd);
 	SAFE_INIT(animWnd);
@@ -796,7 +799,7 @@ void EditorComponent::Load()
 			stringstream ss("");
 			ss << "Help: " << endl << "############" << endl << endl;
 			ss << "Move camera: WASD" << endl;
-			ss << "Look: Middle mouse button" << endl;
+			ss << "Look: Middle mouse button / arrow keys" << endl;
 			ss << "Select: Right mouse button" << endl;
 			ss << "Place decal/interact: Left mouse button when nothing is selected" << endl;
 			ss << "Camera speed: SHIFT button" << endl;
@@ -811,6 +814,7 @@ void EditorComponent::Load()
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
 			ss << "You can find sample models in the models directory. Try to load one." << endl;
+			ss << "You can also import models from .OBJ files." << endl;
 			ss << "You can also export models from Blender with the io_export_wicked_wi_bin.py script." << endl;
 			ss << "You can find a program configuration file at Editor/config.ini" << endl;
 			ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << endl;
@@ -905,6 +909,9 @@ void EditorComponent::Update(float dt)
 			yDif += buttonrotSpeed;
 		}
 
+		xDif *= cameraWnd->rotationspeed;
+		yDif *= cameraWnd->rotationspeed;
+
 		Camera* cam = wiRenderer::getCamera();
 
 		if (cameraWnd->fpscamera)
@@ -912,7 +919,7 @@ void EditorComponent::Update(float dt)
 			// FPS Camera
 			cam->detach();
 
-			float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 100.0f : 10.0f) * dt;
+			const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeed * dt;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
@@ -1709,8 +1716,7 @@ void ConsumeHistoryOperation(bool undo)
 								object->mesh->subsets[i].material = new Material;
 								object->mesh->subsets[i].material->Serialize(*archive);
 							}
-							object->mesh->CreateVertexArrays();
-							object->mesh->CreateBuffers();
+							object->mesh->CreateRenderData();
 							model->Add(object);
 						}
 					}

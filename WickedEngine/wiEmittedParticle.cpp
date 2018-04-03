@@ -320,8 +320,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	
 	GPUResource* resources[] = {
 		wiTextureHelper::getInstance()->getRandom64x64(),
-		&object->mesh->indexBuffer,
-		&object->mesh->vertexBuffer_POS,
+		object->mesh->indexBuffer,
+		object->mesh->vertexBuffer_POS,
 	};
 	device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 

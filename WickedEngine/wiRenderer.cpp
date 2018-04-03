@@ -3399,7 +3399,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				Mesh* mesh = iter->second;
 
 				if (mesh->hasArmature() && !mesh->hasDynamicVB() && mesh->renderable && !mesh->vertices_POS.empty()
-					&& mesh->streamoutBuffer_POS.IsValid() && mesh->vertexBuffer_POS.IsValid())
+					&& mesh->streamoutBuffer_POS != nullptr && mesh->vertexBuffer_POS != nullptr)
 				{
 					Armature* armature = mesh->armature;
 
@@ -3441,12 +3441,12 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					// Do the skinning
 					GPUResource* vbs[] = {
-						&mesh->vertexBuffer_POS,
-						&mesh->vertexBuffer_BON,
+						mesh->vertexBuffer_POS,
+						mesh->vertexBuffer_BON,
 					};
 					GPUResource* sos[] = {
-						&mesh->streamoutBuffer_POS,
-						&mesh->streamoutBuffer_PRE,
+						mesh->streamoutBuffer_POS,
+						mesh->streamoutBuffer_PRE,
 					};
 
 					GetDevice()->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
@@ -4151,13 +4151,13 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 				GPUBuffer* vbs[] = {
-					&x->object->mesh->vertexBuffer_POS,
+					x->object->mesh->vertexBuffer_POS,
 				};
 				const UINT strides[] = {
 					sizeof(Mesh::Vertex_POS),
 				};
 				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindIndexBuffer(&x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
+				GetDevice()->BindIndexBuffer(x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
 
 				GetDevice()->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
 			}
@@ -5241,7 +5241,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			if (k < 1)
 				continue;
 
-			device->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
+			device->BindIndexBuffer(mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
 
 			enum class BOUNDVERTEXBUFFERTYPE
 			{
@@ -5335,7 +5335,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::POSITION:
 					{
 						GPUBuffer* vbs[] = {
-							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
@@ -5352,8 +5352,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 					{
 						GPUBuffer* vbs[] = {
-							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-							&mesh->vertexBuffer_TEX,
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
+							mesh->vertexBuffer_TEX,
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
@@ -5372,9 +5372,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 					{
 						GPUBuffer* vbs[] = {
-							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-							&mesh->vertexBuffer_TEX,
-							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
+							mesh->vertexBuffer_TEX,
+							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE != nullptr ? mesh->streamoutBuffer_PRE : mesh->vertexBuffer_POS),
 							dynamicVertexBufferPool,
 							dynamicVertexBufferPool
 						};
@@ -7193,9 +7193,9 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
 	GPUBuffer* vbs[] = {
-		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-		&mesh->vertexBuffer_TEX,
-		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE.IsValid() ? &mesh->streamoutBuffer_PRE : &mesh->vertexBuffer_POS),
+		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
+		mesh->vertexBuffer_TEX,
+		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE != nullptr ? mesh->streamoutBuffer_PRE : mesh->vertexBuffer_POS),
 		dynamicVertexBufferPool,
 		dynamicVertexBufferPool
 	};
@@ -7215,7 +7215,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	};
 	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
-	GetDevice()->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
+	GetDevice()->BindIndexBuffer(mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
 
 	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
