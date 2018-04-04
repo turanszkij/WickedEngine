@@ -2901,8 +2901,9 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 							hash<int>{}(index.vertex_index),
 							hash<int>{}(index.normal_index),
 							hash<int>{}(index.texcoord_index),
+							hash<int>{}(materialIndex),
 						};
-						size_t vertexHash = (hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1);
+						size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1) ^ (hashes[3] << 1);
 
 						if (uniqueVertices.count(vertexHash) == 0)
 						{
