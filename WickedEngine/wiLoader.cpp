@@ -2848,12 +2848,19 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 
 				for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
 				{
-					// Reorder face-winding to match defaults:
 					tinyobj::index_t reordered_indices[] = {
 						shape.mesh.indices[i + 0],
-						shape.mesh.indices[i + 2],
 						shape.mesh.indices[i + 1],
+						shape.mesh.indices[i + 2],
 					};
+
+					// todo: option param would be better
+					bool flipCulling = false;
+					if (flipCulling)
+					{
+						reordered_indices[1] = shape.mesh.indices[i + 2];
+						reordered_indices[2] = shape.mesh.indices[i + 1];
+					}
 
 					for (auto& index : reordered_indices)
 					{
@@ -2896,6 +2903,14 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 						}
 						vert.tex.z = (float)registered_materialIndices[materialIndex]; // this indexes a mesh subset
 
+						// todo: option parameter would be better
+						const bool flipZ = true;
+						if (flipZ)
+						{
+							vert.pos.z *= -1;
+							vert.nor.z *= -1;
+						}
+
 						// eliminate duplicate vertices by means of hashing:
 						size_t hashes[] = {
 							hash<int>{}(index.vertex_index),
@@ -2917,6 +2932,19 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 					}
 				}
 				mesh->aabb.create(min, max);
+
+				// We need to eliminate colliding mesh names, because objects can reference them by names:
+				//	Note: in engine, object is decoupled from mesh, for instancing support. OBJ file have only meshes and names can collide there.
+				string meshName = mesh->name;
+				uint32_t unique_counter = 0;
+				bool meshNameCollision = this->meshes.count(meshName) != 0;
+				while (meshNameCollision)
+				{
+					meshName = mesh->name + to_string(unique_counter);
+					meshNameCollision = this->meshes.count(meshName) != 0;
+					unique_counter++;
+				}
+				mesh->name = meshName;
 
 				object->meshName = mesh->name;
 
