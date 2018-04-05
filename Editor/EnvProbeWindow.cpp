@@ -49,6 +49,21 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 	});
 	envProbeWindow->AddWidget(refreshButton);
 
+	refreshAllButton = new wiButton("Refresh All");
+	refreshAllButton->SetPos(XMFLOAT2(x, y += step));
+	refreshAllButton->SetEnabled(true);
+	refreshAllButton->OnClick([&](wiEventArgs args) {
+		const Scene& scene = wiRenderer::GetScene();
+		for (Model* x : scene.models)
+		{
+			for (EnvironmentProbe* probe : x->environmentProbes)
+			{
+				probe->isUpToDate = false;
+			}
+		}
+	});
+	envProbeWindow->AddWidget(refreshAllButton);
+
 
 
 

@@ -1822,31 +1822,33 @@ void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 }
 void Mesh::Optimize()
 {
-	if (optimized)
-	{
-		return;
-	}
+	// The optimizer is crashing for many models, remove for now (todo)
 
-	// Vertex cache optimization:
-	{
-		ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
-		ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
-		for (size_t i = 0; i < indices.size(); ++i)
-		{
-			_indices_in[i] = this->indices[i];
-		}
+	//if (optimized)
+	//{
+	//	return;
+	//}
 
-		ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices_FULL.size()));
+	//// Vertex cache optimization:
+	//{
+	//	ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
+	//	ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
+	//	for (size_t i = 0; i < indices.size(); ++i)
+	//	{
+	//		_indices_in[i] = this->indices[i];
+	//	}
 
-		for (size_t i = 0; i < indices.size(); ++i)
-		{
-			this->indices[i] = _indices_out[i];
-		}
-		SAFE_DELETE_ARRAY(_indices_in);
-		SAFE_DELETE_ARRAY(_indices_out);
-	}
+	//	ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices_FULL.size()));
 
-	optimized = true;
+	//	for (size_t i = 0; i < indices.size(); ++i)
+	//	{
+	//		this->indices[i] = _indices_out[i];
+	//	}
+	//	SAFE_DELETE_ARRAY(_indices_in);
+	//	SAFE_DELETE_ARRAY(_indices_out);
+	//}
+
+	//optimized = true;
 }
 void Mesh::CreateRenderData() 
 {

@@ -82,30 +82,28 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 		if (x == nullptr)
 		{
-			thread([&] {
-				char szFile[260];
+			char szFile[260];
 
-				OPENFILENAMEA ofn;
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = nullptr;
-				ofn.lpstrFile = szFile;
-				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-				// use the contents of szFile to initialize itself.
-				ofn.lpstrFile[0] = '\0';
-				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = "Cubemap texture\0*.dds\0";
-				ofn.nFilterIndex = 1;
-				ofn.lpstrFileTitle = NULL;
-				ofn.nMaxFileTitle = 0;
-				ofn.lpstrInitialDir = NULL;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-				if (GetOpenFileNameA(&ofn) == TRUE) {
-					string fileName = ofn.lpstrFile;
-					wiRenderer::SetEnviromentMap((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
-					skyButton->SetText(fileName);
-				}
-			}).detach();
+			OPENFILENAMEA ofn;
+			ZeroMemory(&ofn, sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = nullptr;
+			ofn.lpstrFile = szFile;
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// use the contents of szFile to initialize itself.
+			ofn.lpstrFile[0] = '\0';
+			ofn.nMaxFile = sizeof(szFile);
+			ofn.lpstrFilter = "Cubemap texture\0*.dds\0";
+			ofn.nFilterIndex = 1;
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = NULL;
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+			if (GetOpenFileNameA(&ofn) == TRUE) {
+				string fileName = ofn.lpstrFile;
+				wiRenderer::SetEnviromentMap((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+				skyButton->SetText(fileName);
+			}
 		}
 		else
 		{
@@ -113,10 +111,65 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 			skyButton->SetText("Load Sky");
 		}
 
+		// Also, we invalidate all environment probes to reflect the sky changes.
+		const Scene& scene = wiRenderer::GetScene();
+		for (Model* x : scene.models)
+		{
+			for (EnvironmentProbe* probe : x->environmentProbes)
+			{
+				probe->isUpToDate = false;
+			}
+		}
+
 	});
 	worldWindow->AddWidget(skyButton);
 
 
+
+	wiButton* convertDDSButton = new wiButton("HELPERSCRIPT - ConvertMaterialsDDS");
+	convertDDSButton->SetTooltip("Every material in the scene will have its textures saved and renamed as DDS into textures_dds folder.");
+	convertDDSButton->SetSize(XMFLOAT2(240, 30));
+	convertDDSButton->SetPos(XMFLOAT2(x - 100, y += step * 3));
+	convertDDSButton->OnClick([=](wiEventArgs args) {
+		
+		const Scene& scene = wiRenderer::GetScene();
+		for (Model* x : scene.models)
+		{
+			for (auto& y : x->materials)
+			{
+				Material* material = y.second;
+
+				CreateDirectory(L"textures_dds", 0);
+
+				if (!material->textureName.empty())
+				{
+					string newName = wiHelper::GetFileNameFromPath(material->textureName.substr(0, material->textureName.length() - 4) + ".dds");
+					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetBaseColorMap(), GRAPHICSTHREAD_IMMEDIATE);
+					material->textureName = newName;
+				}
+				if (!material->normalMapName.empty())
+				{
+					string newName = wiHelper::GetFileNameFromPath(material->normalMapName.substr(0, material->normalMapName.length() - 4) + ".dds");
+					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetNormalMap(), GRAPHICSTHREAD_IMMEDIATE);
+					material->normalMapName = newName;
+				}
+				if (!material->surfaceMapName.empty())
+				{
+					string newName = wiHelper::GetFileNameFromPath(material->surfaceMapName.substr(0, material->surfaceMapName.length() - 4) + ".dds");
+					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetSurfaceMap(), GRAPHICSTHREAD_IMMEDIATE);
+					material->surfaceMapName = newName;
+				}
+				if (!material->displacementMapName.empty())
+				{
+					string newName = wiHelper::GetFileNameFromPath(material->displacementMapName.substr(0, material->displacementMapName.length() - 4) + ".dds");
+					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetDisplacementMap(), GRAPHICSTHREAD_IMMEDIATE);
+					material->displacementMapName = newName;
+				}
+			}
+		}
+
+	});
+	worldWindow->AddWidget(convertDDSButton);
 
 
 
