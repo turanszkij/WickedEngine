@@ -17,6 +17,8 @@ public:
 
 	bool fpscamera; 
 	Transform* orbitalCamTarget;
+	float movespeed;
+	float rotationspeed;
 
 	wiGUI* GUI;
 
@@ -24,6 +26,8 @@ public:
 	wiSlider* farPlaneSlider;
 	wiSlider* nearPlaneSlider;
 	wiSlider* fovSlider;
+	wiSlider* movespeedSlider;
+	wiSlider* rotationspeedSlider;
 	wiButton* resetButton;
 	wiCheckBox* fpsCheckBox;
 };

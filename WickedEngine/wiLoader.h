@@ -446,12 +446,12 @@ public:
 	std::vector<MeshSubset>		subsets;
 	std::vector<std::string>	materialNames;
 
-	wiGraphicsTypes::GPUBuffer	indexBuffer;
-	wiGraphicsTypes::GPUBuffer	vertexBuffer_POS;
-	wiGraphicsTypes::GPUBuffer	vertexBuffer_TEX;
-	wiGraphicsTypes::GPUBuffer	vertexBuffer_BON;
-	wiGraphicsTypes::GPUBuffer	streamoutBuffer_POS;
-	wiGraphicsTypes::GPUBuffer	streamoutBuffer_PRE;
+	wiGraphicsTypes::GPUBuffer*	indexBuffer;
+	wiGraphicsTypes::GPUBuffer*	vertexBuffer_POS;
+	wiGraphicsTypes::GPUBuffer*	vertexBuffer_TEX;
+	wiGraphicsTypes::GPUBuffer*	vertexBuffer_BON;
+	wiGraphicsTypes::GPUBuffer*	streamoutBuffer_POS;
+	wiGraphicsTypes::GPUBuffer*	streamoutBuffer_PRE;
 
 	// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
 	UINT bufferOffset_POS;
@@ -488,54 +488,19 @@ public:
 	float tessellationFactor;
 
 	bool optimized;
+	bool renderDataComplete;
 
-	Mesh(){
-		init();
-	}
-	Mesh(const std::string& newName){
-		name=newName;
-		init();
-	}
-	~Mesh() {}
+	Mesh(const std::string& newName = "");
+	~Mesh();
 	void LoadFromFile(const std::string& newName, const std::string& fname
 		, const MaterialCollection& materialColl, const std::unordered_set<Armature*>& armatures, const std::string& identifier="");
-	bool buffersComplete;
 	void Optimize();
-	// Object is needed in CreateBuffers because how else would we know if the mesh needs to be deformed?
-	void CreateBuffers(Object* object);
+	void CreateRenderData();
 	static void CreateImpostorVB();
-	bool arraysComplete;
-	void CreateVertexArrays();
-	void init()
-	{
-		parent="";
-		indices.resize(0);
-		renderable=false;
-		doubleSided=false;
-		aabb=AABB();
-		trailInfo=RibbonTrail();
-		armature=nullptr;
-		isBillboarded=false;
-		billboardAxis=XMFLOAT3(0,0,0);
-		vertexGroups.clear();
-		softBody=false;
-		mass=friction=1;
-		massVG=-1;
-		goalVG=-1;
-		softVG = -1;
-		goalPositions.clear();
-		goalNormals.clear();
-		buffersComplete = false;
-		arraysComplete = false;
-		calculatedAO = false;
-		armatureName = "";
-		impostorDistance = 100.0f;
-		tessellationFactor = 0.0f;
-		optimized = false;
-		bufferOffset_POS = 0;
-		bufferOffset_PRE = 0;
-		indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
-	}
+	void ComputeNormals(bool smooth = false);
+	void FlipCulling();
+	void FlipNormals();
+	void init();
 	
 	bool hasArmature() const { return armature != nullptr; }
 	bool hasImpostor() const { return impostorTarget.IsInitialized(); }

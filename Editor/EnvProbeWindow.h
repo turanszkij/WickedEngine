@@ -23,5 +23,6 @@ public:
 	wiCheckBox*	realTimeCheckBox;
 	wiButton*	generateButton;
 	wiButton*	refreshButton;
+	wiButton*	refreshAllButton;
 };
 

@@ -27,6 +27,11 @@ namespace wiMath
 	UINT GetNextPowerOfTwo(UINT x);
 	float SmoothStep(float value1, float value2, float amount);
 
+	// A, B, C: trangle vertices
+	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C);
+	// a, b, c: trangle side lengths
+	float TriangleArea(float a, float b, float c);
+
 	XMFLOAT3 getCubicHermiteSplinePos(const XMFLOAT3& startPos, const XMFLOAT3& endPos
 							, const XMFLOAT3& startTangent, const XMFLOAT3& endTangent
 							, float atInterval);

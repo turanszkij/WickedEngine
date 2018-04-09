@@ -1477,6 +1477,56 @@ void VertexGroup::Serialize(wiArchive& archive)
 GPUBuffer Mesh::impostorVB_POS;
 GPUBuffer Mesh::impostorVB_TEX;
 
+Mesh::Mesh(const string& name) : name(name)
+{
+	init();
+}
+Mesh::~Mesh() 
+{
+	SAFE_DELETE(indexBuffer);
+	SAFE_DELETE(vertexBuffer_POS);
+	SAFE_DELETE(vertexBuffer_TEX);
+	SAFE_DELETE(vertexBuffer_BON);
+	SAFE_DELETE(streamoutBuffer_POS);
+	SAFE_DELETE(streamoutBuffer_PRE);
+}
+void Mesh::init()
+{
+	parent = "";
+	indices.resize(0);
+	renderable = false;
+	doubleSided = false;
+	aabb = AABB();
+	trailInfo = RibbonTrail();
+	armature = nullptr;
+	isBillboarded = false;
+	billboardAxis = XMFLOAT3(0, 0, 0);
+	vertexGroups.clear();
+	softBody = false;
+	mass = friction = 1;
+	massVG = -1;
+	goalVG = -1;
+	softVG = -1;
+	goalPositions.clear();
+	goalNormals.clear();
+	renderDataComplete = false;
+	calculatedAO = false;
+	armatureName = "";
+	impostorDistance = 100.0f;
+	tessellationFactor = 0.0f;
+	optimized = false;
+	bufferOffset_POS = 0;
+	bufferOffset_PRE = 0;
+	indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
+
+	SAFE_INIT(indexBuffer);
+	SAFE_INIT(vertexBuffer_POS);
+	SAFE_INIT(vertexBuffer_TEX);
+	SAFE_INIT(vertexBuffer_BON);
+	SAFE_INIT(streamoutBuffer_POS);
+	SAFE_INIT(streamoutBuffer_PRE);
+}
+
 void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 	, const MaterialCollection& materialColl, const unordered_set<Armature*>& armatures, const std::string& identifier) {
 	name = newName;
@@ -1772,44 +1822,150 @@ void Mesh::LoadFromFile(const std::string& newName, const std::string& fname
 }
 void Mesh::Optimize()
 {
-	if (optimized)
-	{
-		return;
-	}
+	// The optimizer is crashing for many models, remove for now (todo)
 
-	// Vertex cache optimization:
-	{
-		ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
-		ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
-		for (size_t i = 0; i < indices.size(); ++i)
-		{
-			_indices_in[i] = this->indices[i];
-		}
+	//if (optimized)
+	//{
+	//	return;
+	//}
 
-		ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices_FULL.size()));
+	//// Vertex cache optimization:
+	//{
+	//	ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
+	//	ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
+	//	for (size_t i = 0; i < indices.size(); ++i)
+	//	{
+	//		_indices_in[i] = this->indices[i];
+	//	}
 
-		for (size_t i = 0; i < indices.size(); ++i)
-		{
-			this->indices[i] = _indices_out[i];
-		}
-		SAFE_DELETE_ARRAY(_indices_in);
-		SAFE_DELETE_ARRAY(_indices_out);
-	}
+	//	ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices_FULL.size()));
 
-	optimized = true;
+	//	for (size_t i = 0; i < indices.size(); ++i)
+	//	{
+	//		this->indices[i] = _indices_out[i];
+	//	}
+	//	SAFE_DELETE_ARRAY(_indices_in);
+	//	SAFE_DELETE_ARRAY(_indices_out);
+	//}
+
+	//optimized = true;
 }
-void Mesh::CreateBuffers(Object* object) 
+void Mesh::CreateRenderData() 
 {
-	if (!buffersComplete) 
+	if (!renderDataComplete) 
 	{
-		if (vertices_POS.empty())
+		// First, assemble vertex, index arrays:
+
+		// In case of recreate, delete data first:
+		vertices_POS.clear();
+		vertices_TEX.clear();
+		vertices_BON.clear();
+
+		// De-interleave vertex arrays:
+		vertices_POS.resize(vertices_FULL.size());
+		vertices_TEX.resize(vertices_FULL.size());
+		// do not resize vertices_BON just yet, not every mesh will need bone vertex data!
+		for (size_t i = 0; i < vertices_FULL.size(); ++i)
 		{
-			renderable = false;
+			// Normalize normals:
+			float alpha = vertices_FULL[i].nor.w;
+			XMVECTOR nor = XMLoadFloat4(&vertices_FULL[i].nor);
+			nor = XMVector3Normalize(nor);
+			XMStoreFloat4(&vertices_FULL[i].nor, nor);
+			vertices_FULL[i].nor.w = alpha;
+
+			// Normalize bone weights:
+			XMFLOAT4& wei = vertices_FULL[i].wei;
+			float len = wei.x + wei.y + wei.z + wei.w;
+			if (len > 0)
+			{
+				wei.x /= len;
+				wei.y /= len;
+				wei.z /= len;
+				wei.w /= len;
+
+				if (vertices_BON.empty())
+				{
+					// Allocate full bone vertex data when we find a correct bone weight.
+					vertices_BON.resize(vertices_FULL.size());
+				}
+				vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
+			}
+
+			// Split and type conversion:
+			vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
+			vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
 		}
-		if (!renderable)
+
+		// Save original vertices. This will be input for CPU skinning / soft bodies
+		vertices_Transformed_POS = vertices_POS;
+		vertices_Transformed_PRE = vertices_POS; // pre <- pos!! (previous positions will have the current positions initially)
+
+		// Map subset indices:
+		for (auto& subset : subsets)
 		{
-			return;
+			subset.subsetIndices.clear();
 		}
+		for (size_t i = 0; i < indices.size(); ++i)
+		{
+			uint32_t index = indices[i];
+			const XMFLOAT4& tex = vertices_FULL[index].tex;
+			unsigned int materialIndex = (unsigned int)floor(tex.z);
+
+			assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
+
+			MeshSubset& subset = subsets[materialIndex];
+			subset.subsetIndices.push_back(index);
+
+			if (index >= 65536)
+			{
+				indexFormat = INDEXFORMAT_32BIT;
+			}
+		}
+
+
+		// Goal positions, normals are controlling blending between animation and physics states for soft body rendering:
+		goalPositions.clear();
+		goalNormals.clear();
+		if (goalVG >= 0)
+		{
+			goalPositions.resize(vertexGroups[goalVG].vertices.size());
+			goalNormals.resize(vertexGroups[goalVG].vertices.size());
+		}
+
+
+		// Mapping render vertices to physics vertex representation:
+		//	the physics vertices contain unique position, not duplicated by texcoord or normals
+		//	this way we can map several renderable vertices to one physics vertex
+		//	but the mapping function will actually be indexed by renderable vertex index for efficient retrieval.
+		if (!physicsverts.empty() && physicalmapGP.empty())
+		{
+			for (size_t i = 0; i < vertices_POS.size(); ++i)
+			{
+				for (size_t j = 0; j < physicsverts.size(); ++j)
+				{
+					if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+						&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+						&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+						)
+					{
+						physicalmapGP.push_back(static_cast<int>(j));
+						break;
+					}
+				}
+			}
+		}
+
+
+
+		// Create actual GPU data:
+
+		SAFE_DELETE(indexBuffer);
+		SAFE_DELETE(vertexBuffer_POS);
+		SAFE_DELETE(vertexBuffer_TEX);
+		SAFE_DELETE(vertexBuffer_BON);
+		SAFE_DELETE(streamoutBuffer_POS);
+		SAFE_DELETE(streamoutBuffer_PRE);
 
 		GPUBufferDesc bd;
 		SubresourceData InitData;
@@ -1825,10 +1981,11 @@ void Mesh::CreateBuffers(Object* object)
 
 			InitData.pSysMem = vertices_POS.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
+			vertexBuffer_POS = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_POS);
 		}
 
-		if (object->isArmatureDeformed())
+		if (!vertices_BON.empty())
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
@@ -1838,7 +1995,8 @@ void Mesh::CreateBuffers(Object* object)
 
 			InitData.pSysMem = vertices_BON.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
+			vertexBuffer_BON = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_BON);
 
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DEFAULT;
@@ -1847,10 +2005,12 @@ void Mesh::CreateBuffers(Object* object)
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
+			streamoutBuffer_POS = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS);
 
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &streamoutBuffer_PRE);
+			streamoutBuffer_PRE = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_PRE);
 		}
 
 		// texture coordinate buffers are always static:
@@ -1861,25 +2021,8 @@ void Mesh::CreateBuffers(Object* object)
 		bd.MiscFlags = 0;
 		InitData.pSysMem = vertices_TEX.data();
 		bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer_TEX);
-
-
-		//PHYSICALMAPPING
-		if (!physicsverts.empty() && physicalmapGP.empty())
-		{
-			for (unsigned int i = 0; i < vertices_POS.size(); ++i) {
-				for (unsigned int j = 0; j < physicsverts.size(); ++j) {
-					if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
-						&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
-						&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
-						)
-					{
-						physicalmapGP.push_back(j);
-						break;
-					}
-				}
-			}
-		}
+		vertexBuffer_TEX = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX);
 
 
 		// Remap index buffer to be continuous across subsets and create gpu buffer data:
@@ -1933,12 +2076,13 @@ void Mesh::CreateBuffers(Object* object)
 		bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
 		InitData.pSysMem = gpuIndexData;
 		bd.ByteWidth = (UINT)(stride * indices.size());
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);
+		indexBuffer = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer);
 
 		SAFE_DELETE_ARRAY(gpuIndexData);
 
 
-		buffersComplete = true;
+		renderDataComplete = true;
 	}
 
 }
@@ -2125,71 +2269,193 @@ void Mesh::CreateImpostorVB()
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
 	}
 }
-void Mesh::CreateVertexArrays()
+void Mesh::ComputeNormals(bool smooth)
 {
-	if (arraysComplete)
-	{
-		return;
-	}
+	// Start recalculating normals:
 
-	// De-interleave vertex arrays:
-	vertices_POS.resize(vertices_FULL.size());
-	vertices_TEX.resize(vertices_FULL.size());
-	vertices_BON.resize(vertices_FULL.size());
-	for (size_t i = 0; i < vertices_FULL.size(); ++i)
+	if (smooth)
 	{
-		// Normalize normals:
-		float alpha = vertices_FULL[i].nor.w;
-		XMVECTOR nor = XMLoadFloat4(&vertices_FULL[i].nor);
-		nor = XMVector3Normalize(nor);
-		XMStoreFloat4(&vertices_FULL[i].nor, nor);
-		vertices_FULL[i].nor.w = alpha;
+		// Compute smooth surface normals:
 
-		// Normalize bone weights:
-		XMFLOAT4& wei = vertices_FULL[i].wei;
-		float len = wei.x + wei.y + wei.z + wei.w;
-		if (len > 0)
+		// 1.) Zero normals, they will be averaged later
+		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
 		{
-			wei.x /= len;
-			wei.y /= len;
-			wei.z /= len;
-			wei.w /= len;
+			vertices_FULL[i].nor = XMFLOAT4(0, 0, 0, 0);
 		}
 
-		// Split and type conversion:
-		vertices_POS[i] = Vertex_POS(vertices_FULL[i]);
-		vertices_TEX[i] = Vertex_TEX(vertices_FULL[i]);
-		vertices_BON[i] = Vertex_BON(vertices_FULL[i]);
-	}
-
-	// Save original vertices. This will be input for CPU skinning / soft bodies
-	vertices_Transformed_POS = vertices_POS;
-	vertices_Transformed_PRE = vertices_POS; // pre <- pos!!
-
-	// Map subset indices:
-	for (size_t i = 0; i < indices.size(); ++i)
-	{
-		unsigned int index = indices[i];
-		const XMFLOAT4& tex = vertices_FULL[index].tex;
-		unsigned int materialIndex = (unsigned int)floor(tex.z);
-
-		assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
-
-		MeshSubset& subset = subsets[materialIndex];
-		subset.subsetIndices.push_back(index);
-
-		if (index >= 65536)
+		// 2.) Find identical vertices by POSITION, accumulate face normals
+		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
 		{
-			indexFormat = INDEXFORMAT_32BIT;
+			Vertex_FULL& v_search = vertices_FULL[i];
+
+			for (size_t ind = 0; ind < indices.size() / 3; ++ind)
+			{
+				uint32_t i0 = indices[ind * 3 + 0];
+				uint32_t i1 = indices[ind * 3 + 1];
+				uint32_t i2 = indices[ind * 3 + 2];
+
+				Vertex_FULL& v0 = vertices_FULL[i0];
+				Vertex_FULL& v1 = vertices_FULL[i1];
+				Vertex_FULL& v2 = vertices_FULL[i2];
+
+				bool match_pos0 =
+					fabs(v_search.pos.x - v0.pos.x) < FLT_EPSILON &&
+					fabs(v_search.pos.y - v0.pos.y) < FLT_EPSILON &&
+					fabs(v_search.pos.z - v0.pos.z) < FLT_EPSILON;
+
+				bool match_pos1 =
+					fabs(v_search.pos.x - v1.pos.x) < FLT_EPSILON &&
+					fabs(v_search.pos.y - v1.pos.y) < FLT_EPSILON &&
+					fabs(v_search.pos.z - v1.pos.z) < FLT_EPSILON;
+
+				bool match_pos2 =
+					fabs(v_search.pos.x - v2.pos.x) < FLT_EPSILON &&
+					fabs(v_search.pos.y - v2.pos.y) < FLT_EPSILON &&
+					fabs(v_search.pos.z - v2.pos.z) < FLT_EPSILON;
+
+				if (match_pos0 || match_pos1 || match_pos2)
+				{
+					XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
+					XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+
+					XMVECTOR N = XMVector3Cross(U, V);
+					N = XMVector3Normalize(N);
+
+					XMFLOAT3 normal;
+					XMStoreFloat3(&normal, N);
+
+					v_search.nor.x += normal.x;
+					v_search.nor.y += normal.y;
+					v_search.nor.z += normal.z;
+				}
+
+			}
+		}
+
+		// 3.) Find unique vertices by POSITION and TEXCOORD and MATERIAL and remove duplicates
+		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+		{
+			const Vertex_FULL& v0 = vertices_FULL[i];
+
+			for (size_t j = i + 1; j < vertices_FULL.size(); j++)
+			{
+				const Vertex_FULL& v1 = vertices_FULL[j];
+
+				bool unique_pos =
+					fabs(v0.pos.x - v1.pos.x) < FLT_EPSILON &&
+					fabs(v0.pos.y - v1.pos.y) < FLT_EPSILON &&
+					fabs(v0.pos.z - v1.pos.z) < FLT_EPSILON;
+
+				bool unique_tex =
+					fabs(v0.tex.x - v1.tex.x) < FLT_EPSILON &&
+					fabs(v0.tex.y - v1.tex.y) < FLT_EPSILON &&
+					(int)v0.tex.z == (int)v1.tex.z;
+
+				if (unique_pos && unique_tex)
+				{
+					for (size_t ind = 0; ind < indices.size(); ++ind)
+					{
+						if (indices[ind] == j)
+						{
+							indices[ind] = static_cast<uint32_t>(i);
+						}
+						else if (indices[ind] > j && indices[ind] > 0)
+						{
+							indices[ind]--;
+						}
+					}
+
+					vertices_FULL.erase(vertices_FULL.begin() + j);
+				}
+
+			}
 		}
 	}
+	else
+	{
+		// Compute hard surface normals:
 
-	if (goalVG >= 0) {
-		goalPositions.resize(vertexGroups[goalVG].vertices.size());
-		goalNormals.resize(vertexGroups[goalVG].vertices.size());
+		vector<uint32_t> newIndexBuffer;
+		vector<Vertex_FULL> newVertexBuffer;
+
+		for (size_t face = 0; face < indices.size() / 3; face++)
+		{
+			uint32_t i0 = indices[face * 3 + 0];
+			uint32_t i1 = indices[face * 3 + 1];
+			uint32_t i2 = indices[face * 3 + 2];
+
+			Vertex_FULL& v0 = vertices_FULL[i0];
+			Vertex_FULL& v1 = vertices_FULL[i1];
+			Vertex_FULL& v2 = vertices_FULL[i2];
+
+			XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
+			XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+
+			XMVECTOR N = XMVector3Cross(U, V);
+			N = XMVector3Normalize(N);
+
+			XMFLOAT3 normal;
+			XMStoreFloat3(&normal, N);
+
+			v0.nor.x = normal.x;
+			v0.nor.y = normal.y;
+			v0.nor.z = normal.z;
+
+			v1.nor.x = normal.x;
+			v1.nor.y = normal.y;
+			v1.nor.z = normal.z;
+
+			v2.nor.x = normal.x;
+			v2.nor.y = normal.y;
+			v2.nor.z = normal.z;
+
+			newVertexBuffer.push_back(v0);
+			newVertexBuffer.push_back(v1);
+			newVertexBuffer.push_back(v2);
+
+			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+			newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+		}
+
+		// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
+		vertices_FULL = newVertexBuffer;
+		indices = newIndexBuffer;
 	}
 
-	arraysComplete = true;
+	// force recreate:
+	renderDataComplete = false;
+	CreateRenderData();
+}
+void Mesh::FlipCulling()
+{
+	for (size_t face = 0; face < indices.size() / 3; face++)
+	{
+		uint32_t i0 = indices[face * 3 + 0];
+		uint32_t i1 = indices[face * 3 + 1];
+		uint32_t i2 = indices[face * 3 + 2];
+
+		indices[face * 3 + 0] = i0;
+		indices[face * 3 + 1] = i2;
+		indices[face * 3 + 2] = i1;
+	}
+
+	renderDataComplete = false;
+	CreateRenderData();
+}
+void Mesh::FlipNormals()
+{
+	for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+	{
+		Vertex_FULL& v0 = vertices_FULL[i];
+
+		v0.nor.x *= -1;
+		v0.nor.y *= -1;
+		v0.nor.z *= -1;
+	}
+
+	renderDataComplete = false;
+	CreateRenderData();
 }
 
 int Mesh::GetRenderTypes() const
@@ -2559,6 +2825,14 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 				this->materials.insert(make_pair(material->name, material));
 			}
 
+			if (materialLibrary.empty())
+			{
+				// Create default material if nothing was found:
+				Material* material = new Material("OBJImport_defaultMaterial");
+				materialLibrary.push_back(material);
+				this->materials.insert(make_pair(material->name, material));
+			}
+
 			// Load objects, meshes:
 			for (auto& shape : obj_shapes)
 			{
@@ -2576,12 +2850,19 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 
 				for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
 				{
-					// Reorder face-winding to match defaults:
 					tinyobj::index_t reordered_indices[] = {
 						shape.mesh.indices[i + 0],
-						shape.mesh.indices[i + 2],
 						shape.mesh.indices[i + 1],
+						shape.mesh.indices[i + 2],
 					};
+
+					// todo: option param would be better
+					bool flipCulling = false;
+					if (flipCulling)
+					{
+						reordered_indices[1] = shape.mesh.indices[i + 2];
+						reordered_indices[2] = shape.mesh.indices[i + 1];
+					}
 
 					for (auto& index : reordered_indices)
 					{
@@ -2604,7 +2885,7 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 							);
 						}
 
-						if (!obj_attrib.texcoords.empty())
+						if (index.texcoord_index >= 0 && !obj_attrib.texcoords.empty())
 						{
 							vert.tex = XMFLOAT4(
 								obj_attrib.texcoords[index.texcoord_index * 2 + 0],
@@ -2613,7 +2894,7 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 							);
 						}
 
-						int materialIndex = shape.mesh.material_ids[i / 3]; // this indexes the material library
+						int materialIndex = max(0, shape.mesh.material_ids[i / 3]); // this indexes the material library
 						if (registered_materialIndices.count(materialIndex) == 0)
 						{
 							registered_materialIndices[materialIndex] = (int)mesh->subsets.size();
@@ -2624,13 +2905,22 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 						}
 						vert.tex.z = (float)registered_materialIndices[materialIndex]; // this indexes a mesh subset
 
+						// todo: option parameter would be better
+						const bool flipZ = true;
+						if (flipZ)
+						{
+							vert.pos.z *= -1;
+							vert.nor.z *= -1;
+						}
+
 						// eliminate duplicate vertices by means of hashing:
 						size_t hashes[] = {
 							hash<int>{}(index.vertex_index),
 							hash<int>{}(index.normal_index),
 							hash<int>{}(index.texcoord_index),
+							hash<int>{}(materialIndex),
 						};
-						size_t vertexHash = (hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1);
+						size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1) ^ (hashes[3] << 1);
 
 						if (uniqueVertices.count(vertexHash) == 0)
 						{
@@ -2644,6 +2934,19 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 					}
 				}
 				mesh->aabb.create(min, max);
+
+				// We need to eliminate colliding mesh names, because objects can reference them by names:
+				//	Note: in engine, object is decoupled from mesh, for instancing support. OBJ file have only meshes and names can collide there.
+				string meshName = mesh->name;
+				uint32_t unique_counter = 0;
+				bool meshNameCollision = this->meshes.count(meshName) != 0;
+				while (meshNameCollision)
+				{
+					meshName = mesh->name + to_string(unique_counter);
+					meshNameCollision = this->meshes.count(meshName) != 0;
+					unique_counter++;
+				}
+				mesh->name = meshName;
 
 				object->meshName = mesh->name;
 
@@ -2769,9 +3072,8 @@ void Model::FinishLoading()
 			}
 
 			// Mesh renderdata setup
-			x->mesh->CreateVertexArrays();
 			x->mesh->Optimize();
-			x->mesh->CreateBuffers(x);
+			x->mesh->CreateRenderData();
 
 			if (x->mesh->armature != nullptr)
 			{
