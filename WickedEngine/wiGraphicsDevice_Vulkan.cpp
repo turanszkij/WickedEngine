@@ -1383,6 +1383,10 @@ namespace wiGraphicsTypes
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		}
+		if (pInitialData != nullptr)
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		}
 
 		imageInfo.flags = 0;
 		if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
@@ -1416,6 +1420,49 @@ namespace wiGraphicsTypes
 		hr = res == VK_SUCCESS; 
 		assert(SUCCEEDED(hr));
 
+
+
+		// Issue data copy on request:
+		if (pInitialData != nullptr)
+		{
+			uint8_t* dest = textureUploader->allocate(memRequirements.size, memRequirements.alignment);
+
+			VkBufferImageCopy copyRegions[16] = {};
+			assert(pDesc->ArraySize < 16);
+
+			uint32_t width = pDesc->Width;
+			uint32_t height = pDesc->Height;
+			for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+			{
+				memcpy(dest, pInitialData[slice].pSysMem, pInitialData[slice].SysMemPitch * height);  // double check!!
+
+				VkBufferImageCopy& copyRegion = copyRegions[slice];
+				copyRegion.bufferOffset = 0;
+				copyRegion.bufferRowLength = 0;
+				copyRegion.bufferImageHeight = 0;
+
+				// for now, only mips can be filled like this:
+				copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				copyRegion.imageSubresource.mipLevel = slice;
+				copyRegion.imageSubresource.baseArrayLayer = 0;
+				copyRegion.imageSubresource.layerCount = 1;
+
+				copyRegion.imageOffset = { 0, 0, 0 };
+				copyRegion.imageExtent = {
+					width,
+					height,
+					1
+				};
+
+				width  = max(1, width / 2);
+				height /= max(1, height / 2);
+			}
+
+			copyQueueLock.lock();
+			vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, *static_cast<VkImage*>((*ppTexture2D)->resource_Vulkan), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
+			copyQueueLock.unlock();
+
+		}
 
 
 
