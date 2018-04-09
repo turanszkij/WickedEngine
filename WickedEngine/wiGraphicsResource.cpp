@@ -69,7 +69,6 @@ namespace wiGraphicsTypes
 	{
 		SAFE_RELEASE(resource_DX11);
 		SAFE_DELETE(resource_DX12);
-		SAFE_DELETE(resource_Vulkan);
 	}
 
 	GPUResource::GPUResource()
@@ -98,12 +97,6 @@ namespace wiGraphicsTypes
 			SAFE_DELETE(x);
 		}
 
-		SAFE_DELETE(SRV_Vulkan);
-		for (auto& x : additionalSRVs_Vulkan)
-		{
-			SAFE_DELETE(x);
-		}
-
 
 		SAFE_RELEASE(UAV_DX11);
 		for (auto& x : additionalUAVs_DX11)
@@ -117,16 +110,8 @@ namespace wiGraphicsTypes
 			SAFE_DELETE(x);
 		}
 
-		SAFE_DELETE(UAV_Vulkan);
-		for (auto& x : additionalUAVs_Vulkan)
-		{
-			SAFE_DELETE(x);
-		}
-
 
 		SAFE_RELEASE(resource_DX12);
-		SAFE_DELETE(resource_Vulkan);
-		SAFE_DELETE(resourceMemory_Vulkan);
 	}
 
 	GPUBuffer::GPUBuffer() : GPUResource()
@@ -208,12 +193,6 @@ namespace wiGraphicsTypes
 		{
 			SAFE_DELETE(x);
 		}
-
-		SAFE_DELETE(RTV_Vulkan);
-		for (auto& x : additionalRTVs_Vulkan)
-		{
-			SAFE_DELETE(x);
-		}
 	}
 	void Texture::RequestIndependentRenderTargetArraySlices(bool value)
 	{
@@ -266,12 +245,6 @@ namespace wiGraphicsTypes
 		{
 			SAFE_DELETE(x);
 		}
-
-		SAFE_DELETE(DSV_Vulkan);
-		for (auto& x : additionalDSVs_Vulkan)
-		{
-			SAFE_DELETE(x);
-		}
 	}
 
 	Texture3D::Texture3D() :Texture()
@@ -305,8 +278,6 @@ namespace wiGraphicsTypes
 	GraphicsPSO::~GraphicsPSO()
 	{
 		SAFE_RELEASE(resource_DX12);
-		SAFE_DELETE(pipeline_Vulkan);
-		SAFE_DELETE(renderPass_Vulkan);
 	}
 
 	ComputePSO::ComputePSO()
@@ -317,6 +288,5 @@ namespace wiGraphicsTypes
 	ComputePSO::~ComputePSO()
 	{
 		SAFE_RELEASE(resource_DX12);
-		SAFE_DELETE(pipeline_Vulkan);
 	}
 }

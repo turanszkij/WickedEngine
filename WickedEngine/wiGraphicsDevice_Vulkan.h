@@ -52,6 +52,10 @@ namespace wiGraphicsTypes
 			VkCommandBuffer commandBuffers[GRAPHICSTHREAD_COUNT];
 			VkImageView swapChainImageView;
 			VkFramebuffer swapChainFramebuffer;
+
+			VkDescriptorPool descriptorPool;
+			VkDescriptorSet descriptorSet_CPU[SHADERSTAGE_COUNT];
+			bool descriptorsDirty[SHADERSTAGE_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
