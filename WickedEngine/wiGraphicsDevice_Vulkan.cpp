@@ -248,6 +248,76 @@ namespace wiGraphicsTypes
 		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
 	}
 
+
+
+
+	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::ResourceFrameAllocator(VkPhysicalDevice physicalDevice, VkDevice device, size_t size) : device(device)
+	{
+		VkBufferCreateInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = size;
+		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		bufferInfo.flags = 0;
+
+		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &resource);
+		assert(res == VK_SUCCESS);
+
+
+		// Allocate resource backing memory:
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(device, resource, &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		if (vkAllocateMemory(device, &allocInfo, nullptr, &resourceMemory) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate staging memory!");
+		}
+
+		res = vkBindBufferMemory(device, resource, resourceMemory, 0);
+		assert(res == VK_SUCCESS);
+
+
+
+
+		void* pData;
+		//
+		// No CPU reads will be done from the resource.
+		//
+		vkMapMemory(device, resourceMemory, 0, bufferInfo.size, 0, &pData);
+		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		dataEnd = dataBegin + size;
+	}
+	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::~ResourceFrameAllocator()
+	{
+		vkDestroyBuffer(device, resource, nullptr);
+	}
+	uint8_t* GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
+	{
+		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
+		assert(dataCur + dataSize <= dataEnd);
+
+		uint8_t* retVal = dataCur;
+
+		dataCur += dataSize;
+
+		return retVal;
+	}
+	void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::clear()
+	{
+		dataCur = dataBegin;
+	}
+	uint64_t GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::calculateOffset(uint8_t* address)
+	{
+		assert(address >= dataBegin && address < dataEnd);
+		return static_cast<uint64_t>(address - dataBegin);
+	}
+
+
+
 	GraphicsDevice_Vulkan::UploadBuffer::UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, size_t size) : device(device)
 	{
 		VkBufferCreateInfo bufferInfo = {};
@@ -317,6 +387,219 @@ namespace wiGraphicsTypes
 	{
 		assert(address >= dataBegin && address < dataEnd);
 		return static_cast<uint64_t>(address - dataBegin);
+	}
+
+
+
+
+
+	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(VkDevice device, UINT maxRenameCount, VkDescriptorSetLayout* defaultDescriptorSetlayouts) : device(device)
+	{
+		// Create CPU descriptor pool:
+		{
+			uint32_t numDescriptors = SHADERSTAGE_COUNT;
+
+			VkDescriptorPoolSize poolSizes[/*4*/1] = {};
+
+			poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			poolSizes[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT * numDescriptors;
+
+			//poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			//poolSizes[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * numDescriptors;
+
+			//poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			//poolSizes[2].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * numDescriptors;
+
+			//poolSizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+			//poolSizes[3].descriptorCount = GPU_SAMPLER_HEAP_COUNT * numDescriptors;
+
+
+			VkDescriptorPoolCreateInfo poolInfo = {};
+			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+			poolInfo.poolSizeCount = ARRAYSIZE(poolSizes);
+			poolInfo.pPoolSizes = poolSizes;
+			poolInfo.maxSets = numDescriptors;
+			//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+			if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool_CPU) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create descriptor pool!");
+			}
+
+			VkDescriptorSetAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = descriptorPool_CPU;
+			allocInfo.descriptorSetCount = SHADERSTAGE_COUNT;
+			allocInfo.pSetLayouts = defaultDescriptorSetlayouts;
+
+			if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSet_CPU) != VK_SUCCESS) {
+				throw std::runtime_error("failed to allocate descriptor set!");
+			}
+		}
+
+
+		// Create GPU descriptor pool:
+		{
+			uint32_t numDescriptors = SHADERSTAGE_COUNT /** maxRenameCount*/;
+
+			VkDescriptorPoolSize poolSizes[/*4*/1] = {};
+
+			poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			poolSizes[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT * numDescriptors;
+
+			//poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			//poolSizes[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * numDescriptors;
+
+			//poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			//poolSizes[2].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * numDescriptors;
+
+			//poolSizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+			//poolSizes[3].descriptorCount = GPU_SAMPLER_HEAP_COUNT * numDescriptors;
+
+
+			VkDescriptorPoolCreateInfo poolInfo = {};
+			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+			poolInfo.poolSizeCount = ARRAYSIZE(poolSizes);
+			poolInfo.pPoolSizes = poolSizes;
+			poolInfo.maxSets = numDescriptors;
+			//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+			if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool_GPU) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create descriptor pool!");
+			}
+
+			VkDescriptorSetAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = descriptorPool_GPU;
+			allocInfo.descriptorSetCount = SHADERSTAGE_COUNT;
+			allocInfo.pSetLayouts = defaultDescriptorSetlayouts;
+
+			if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSet_GPU) != VK_SUCCESS) {
+				throw std::runtime_error("failed to allocate descriptor set!");
+			}
+		}
+
+
+
+		ringOffset = 0;
+
+		// invalidate descriptors in flight:
+		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+		{
+			dirty[stage] = false;
+		}
+
+	}
+	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
+	{
+		vkDestroyDescriptorPool(device, descriptorPool_CPU, nullptr);
+		vkDestroyDescriptorPool(device, descriptorPool_GPU, nullptr);
+	}
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset(VkDevice device, VkCommandBuffer commandList)
+	{
+		ringOffset = 0;
+
+		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+		{
+			dirty[stage] = false;
+		}
+	}
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, VkBuffer descriptor, VkDevice device, VkCommandBuffer commandList)
+	{
+		//if (descriptor == nullptr)
+		//{
+		//	return;
+		//}
+		//UINT idx = stage * itemCount + offset;
+
+		dirty[stage] = true;
+
+
+		//D3D12_CPU_DESCRIPTOR_HANDLE dst_staging = heap_CPU->GetCPUDescriptorHandleForHeapStart();
+		//dst_staging.ptr += idx * itemSize;
+
+		//device->CopyDescriptorsSimple(1, dst_staging, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+	}
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::validate(VkDevice device, VkCommandBuffer commandList, VkPipelineLayout pipelineLayout_Graphics, VkPipelineLayout pipelineLayout_Compute)
+	{
+		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+		{
+			if (dirty[stage])
+			{
+
+				//// copy prev table contents to new dest
+				//D3D12_CPU_DESCRIPTOR_HANDLE dst = heap_GPU->GetCPUDescriptorHandleForHeapStart();
+				//dst.ptr += ringOffset;
+				//D3D12_CPU_DESCRIPTOR_HANDLE src = heap_CPU->GetCPUDescriptorHandleForHeapStart();
+				//src.ptr += (stage * itemCount) * itemSize;
+				//device->CopyDescriptorsSimple(itemCount, dst, src, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+
+				//// bind table to root sig
+				//D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
+				//table.ptr += ringOffset;
+
+				//if (stage == CS)
+				//{
+				//	// compute descriptor heap:
+
+				//	if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+				//	{
+				//		commandList->SetComputeRootDescriptorTable(0, table);
+				//	}
+				//	else
+				//	{
+				//		commandList->SetComputeRootDescriptorTable(1, table);
+				//	}
+				//}
+				//else
+				//{
+				//	// graphics descriptor heap:
+
+				//	if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+				//	{
+				//		commandList->SetGraphicsRootDescriptorTable(stage * 2 + 0, table);
+				//	}
+				//	else
+				//	{
+				//		commandList->SetGraphicsRootDescriptorTable(stage * 2 + 1, table);
+				//	}
+				//}
+
+				VkCopyDescriptorSet copyDescriptors[GPU_RESOURCE_HEAP_CBV_COUNT /*+ GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT + GPU_SAMPLER_HEAP_COUNT*/] = {};
+
+				for (int i = 0; i < ARRAYSIZE(copyDescriptors); ++i)
+				{
+					copyDescriptors[i].sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+					copyDescriptors[i].descriptorCount = 1;
+
+					copyDescriptors[i].srcSet = descriptorSet_CPU[stage];
+					copyDescriptors[i].srcBinding = i;
+					copyDescriptors[i].srcArrayElement = 0;
+
+					copyDescriptors[i].dstSet = descriptorSet_GPU[stage];
+					copyDescriptors[i].dstBinding = i;
+					copyDescriptors[i].dstArrayElement = 0;
+				}
+
+				//vkUpdateDescriptorSets(device, 0, nullptr, ARRAYSIZE(copyDescriptors), copyDescriptors);
+
+
+				if (stage == CS)
+				{
+					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout_Compute, 0, 1, &descriptorSet_CPU[stage], 0, nullptr);
+				}
+				else
+				{
+					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_Graphics, stage, 1, &descriptorSet_CPU[stage], 0, nullptr);
+				}
+
+
+				// mark this as up to date
+				dirty[stage] = false;
+
+				//// allocate next chunk
+				//ringOffset += itemCount * itemSize;
+			}
+		}
 	}
 
 
@@ -810,29 +1093,29 @@ namespace wiGraphicsTypes
 
 			// ??? what about different srv types though?
 
-			for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
+			for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 			{
-				VkShaderStageFlags stage;
+				VkShaderStageFlags vkstage;
 
-				switch (i)
+				switch (stage)
 				{
 				case VS:
-					stage = VK_SHADER_STAGE_VERTEX_BIT;
+					vkstage = VK_SHADER_STAGE_VERTEX_BIT;
 					break;
 				case GS:
-					stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+					vkstage = VK_SHADER_STAGE_GEOMETRY_BIT;
 					break;
 				case HS:
-					stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+					vkstage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
 					break;
 				case DS:
-					stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+					vkstage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
 					break;
 				case PS:
-					stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+					vkstage = VK_SHADER_STAGE_FRAGMENT_BIT;
 					break;
 				case CS:
-					stage = VK_SHADER_STAGE_COMPUTE_BIT;
+					vkstage = VK_SHADER_STAGE_COMPUTE_BIT;
 					break;
 				}
 
@@ -843,48 +1126,48 @@ namespace wiGraphicsTypes
 				for(; j < GPU_RESOURCE_HEAP_CBV_COUNT; ++j)
 				{
 					VkDescriptorSetLayoutBinding layoutBinding = {};
-					layoutBinding.stageFlags = stage;
+					layoutBinding.stageFlags = vkstage;
 					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					layoutBinding.binding = j;
 					layoutBinding.descriptorCount = 1;
 					layoutBindings.push_back(layoutBinding);
 				}
 
-				for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
-				{
-					VkDescriptorSetLayoutBinding layoutBinding = {};
-					layoutBinding.stageFlags = stage;
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-					layoutBinding.binding = j;
-					layoutBinding.descriptorCount = 1;
-					layoutBindings.push_back(layoutBinding);
-				}
+				//for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
+				//{
+				//	VkDescriptorSetLayoutBinding layoutBinding = {};
+				//	layoutBinding.stageFlags = vkstage;
+				//	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				//	layoutBinding.binding = j;
+				//	layoutBinding.descriptorCount = 1;
+				//	layoutBindings.push_back(layoutBinding);
+				//}
 
-				for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
-				{
-					VkDescriptorSetLayoutBinding layoutBinding = {};
-					layoutBinding.stageFlags = stage;
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-					layoutBinding.binding = j;
-					layoutBinding.descriptorCount = 1;
-					layoutBindings.push_back(layoutBinding);
-				}
+				//for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
+				//{
+				//	VkDescriptorSetLayoutBinding layoutBinding = {};
+				//	layoutBinding.stageFlags = vkstage;
+				//	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				//	layoutBinding.binding = j;
+				//	layoutBinding.descriptorCount = 1;
+				//	layoutBindings.push_back(layoutBinding);
+				//}
 
-				for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT + GPU_SAMPLER_HEAP_COUNT; ++j)
-				{
-					VkDescriptorSetLayoutBinding layoutBinding = {};
-					layoutBinding.stageFlags = stage;
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-					layoutBinding.binding = j;
-					layoutBinding.descriptorCount = 1;
-					layoutBindings.push_back(layoutBinding);
-				}
+				//for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT + GPU_SAMPLER_HEAP_COUNT; ++j)
+				//{
+				//	VkDescriptorSetLayoutBinding layoutBinding = {};
+				//	layoutBinding.stageFlags = vkstage;
+				//	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+				//	layoutBinding.binding = j;
+				//	layoutBinding.descriptorCount = 1;
+				//	layoutBindings.push_back(layoutBinding);
+				//}
 
 				VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
 				descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 				descriptorSetlayoutInfo.pBindings = layoutBindings.data();
 				descriptorSetlayoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-				if (vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &defaultDescriptorSetlayouts[i]) != VK_SUCCESS) {
+				if (vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &defaultDescriptorSetlayouts[stage]) != VK_SUCCESS) {
 					throw std::runtime_error("failed to create descriptor set layout!");
 				}
 			}
@@ -1111,47 +1394,14 @@ namespace wiGraphicsTypes
 					}
 				}
 
-				// Create descriptor pool:
+
+				// Create immediate resource allocators:
+				for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 				{
-					uint32_t numDescriptors = SHADERSTAGE_COUNT * 1024;
-
-					VkDescriptorPoolSize poolSizes[4] = {};
-
-					poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-					poolSizes[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT * numDescriptors;
-
-					poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-					poolSizes[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * numDescriptors;
-
-					poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-					poolSizes[2].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * numDescriptors;
-
-					poolSizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-					poolSizes[3].descriptorCount = GPU_SAMPLER_HEAP_COUNT * numDescriptors;
-
-
-					VkDescriptorPoolCreateInfo poolInfo = {};
-					poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-					poolInfo.poolSizeCount = ARRAYSIZE(poolSizes);
-					poolInfo.pPoolSizes = poolSizes;
-					poolInfo.maxSets = numDescriptors;
-					//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-					if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &frame.descriptorPool) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create descriptor pool!");
-					}
-
-					VkDescriptorSetAllocateInfo allocInfo = {};
-					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-					allocInfo.descriptorPool = frame.descriptorPool;
-					allocInfo.descriptorSetCount = SHADERSTAGE_COUNT;
-					allocInfo.pSetLayouts = defaultDescriptorSetlayouts;
-
-					if (vkAllocateDescriptorSets(device, &allocInfo, frame.descriptorSet_CPU) != VK_SUCCESS) {
-						throw std::runtime_error("failed to allocate descriptor set!");
-					}
-
+					frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(device, 1024, defaultDescriptorSetlayouts);
+					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
 				}
+
 
 				i++;
 			}
@@ -1232,7 +1482,12 @@ namespace wiGraphicsTypes
 			{
 				vkDestroyCommandPool(device, commandPool, nullptr);
 			}
-			vkDestroyDescriptorPool(device, frame.descriptorPool, nullptr);
+
+			for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
+			{
+				SAFE_DELETE(frame.ResourceDescriptorsGPU[threadID]);
+				SAFE_DELETE(frame.resourceBuffer[threadID]);
+			}
 		}
 
 		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
@@ -2267,6 +2522,13 @@ namespace wiGraphicsTypes
 
 			res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[threadID], &beginInfo);
 			assert(res == VK_SUCCESS);
+
+
+			// reset descriptor allocators:
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, GetFrameResources().commandBuffers[threadID]);
+
+			// reset immediate resource allocators:
+			GetFrameResources().resourceBuffer[threadID]->clear();
 		}
 
 		RESOLUTIONCHANGED = false;
@@ -2371,7 +2633,7 @@ namespace wiGraphicsTypes
 
 			VkWriteDescriptorSet descriptorWrite = {};
 			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = GetFrameResources().descriptorSet_CPU[stage];
+			descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
 			descriptorWrite.dstBinding = slot;
 			descriptorWrite.dstArrayElement = 0;
 			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2381,7 +2643,7 @@ namespace wiGraphicsTypes
 			descriptorWrite.pTexelBufferView = nullptr; // Optional
 
 			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-			GetFrameResources().descriptorsDirty[stage] = true;
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
@@ -2420,14 +2682,16 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		//vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+		//vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-		//vkCmdBindPipeline(commandBuffers[threadID], VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+		//vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID), defaultPipelineLayout_Graphics, defaultPipelineLayout_Compute);
+		//vkCmdDraw(GetDirectCommandList(threadID), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 	{
@@ -2446,6 +2710,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID), defaultPipelineLayout_Graphics, defaultPipelineLayout_Compute);
+		//vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -2464,11 +2730,70 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 	{
+		assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
+		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
+
+		if (dataSize == 0)
+		{
+			return;
+		}
+
+		dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
+
+		// issue data copy:
+		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 4);
+		memcpy(dest, data, dataSize);
+
+		VkBufferCopy copyRegion = {};
+		copyRegion.size = dataSize;
+		copyRegion.srcOffset = 0;
+		copyRegion.dstOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
+
+		copyQueueLock.lock();
+		vkCmdCopyBuffer(copyCommandBuffer, GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
+		copyQueueLock.unlock();
+
 	}
 	void* GraphicsDevice_Vulkan::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
 	{
-		offsetIntoBuffer = 0;
-		return nullptr;
+		assert(buffer->desc.Usage == USAGE_DYNAMIC && (buffer->desc.CPUAccessFlags & CPU_ACCESS_WRITE) && "Ringbuffer must be writable by the CPU!");
+		assert(buffer->desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
+
+		if (dataSize == 0)
+		{
+			return nullptr;
+		}
+
+		dataSize = min(buffer->desc.ByteWidth, dataSize);
+
+		size_t position = buffer->byteOffset;
+		bool wrap = position + dataSize > buffer->desc.ByteWidth || buffer->residentFrame != FRAMECOUNT;
+		position = wrap ? 0 : position;
+
+		// TODO: realloc on wrap or something
+
+
+		// provide immediate buffer allocation address and issue deferred data copy:
+		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 4);
+
+		VkBufferCopy copyRegion = {};
+		copyRegion.size = dataSize;
+		copyRegion.srcOffset = 0;
+		copyRegion.dstOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
+
+		copyQueueLock.lock();
+		vkCmdCopyBuffer(copyCommandBuffer, GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
+		copyQueueLock.unlock();
+
+
+
+		// Thread safety is compromised!
+		buffer->byteOffset = position + dataSize;
+		buffer->residentFrame = FRAMECOUNT;
+
+		offsetIntoBuffer = (UINT)position;
+		return reinterpret_cast<void*>(dest);
 	}
 	void GraphicsDevice_Vulkan::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID)
 	{

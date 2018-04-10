@@ -53,9 +53,43 @@ namespace wiGraphicsTypes
 			VkImageView swapChainImageView;
 			VkFramebuffer swapChainFramebuffer;
 
-			VkDescriptorPool descriptorPool;
-			VkDescriptorSet descriptorSet_CPU[SHADERSTAGE_COUNT];
-			bool descriptorsDirty[SHADERSTAGE_COUNT];
+			struct DescriptorTableFrameAllocator
+			{
+				VkDevice device;
+				VkDescriptorPool descriptorPool_CPU;
+				VkDescriptorSet descriptorSet_CPU[SHADERSTAGE_COUNT];
+				VkDescriptorPool descriptorPool_GPU;
+				VkDescriptorSet descriptorSet_GPU[SHADERSTAGE_COUNT];
+				UINT ringOffset;
+				bool dirty[SHADERSTAGE_COUNT];
+
+				DescriptorTableFrameAllocator(VkDevice device, UINT maxRenameCount, VkDescriptorSetLayout* defaultDescriptorSetlayouts);
+				~DescriptorTableFrameAllocator();
+
+				void reset(VkDevice device, VkCommandBuffer commandList);
+				void update(SHADERSTAGE stage, UINT slot, VkBuffer descriptor, VkDevice device, VkCommandBuffer commandList);
+				void validate(VkDevice device, VkCommandBuffer commandList, VkPipelineLayout pipelineLayout_Graphics, VkPipelineLayout pipelineLayout_Compute);
+			};
+			DescriptorTableFrameAllocator*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT];
+
+
+			struct ResourceFrameAllocator
+			{
+				VkDevice				device;
+				VkBuffer				resource;
+				VkDeviceMemory			resourceMemory;
+				uint8_t*				dataBegin;
+				uint8_t*				dataCur;
+				uint8_t*				dataEnd;
+
+				ResourceFrameAllocator(VkPhysicalDevice physicalDevice, VkDevice device, size_t size);
+				~ResourceFrameAllocator();
+
+				uint8_t* allocate(size_t dataSize, size_t alignment);
+				void clear();
+				uint64_t calculateOffset(uint8_t* address);
+			};
+			ResourceFrameAllocator* resourceBuffer[GRAPHICSTHREAD_COUNT];
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
