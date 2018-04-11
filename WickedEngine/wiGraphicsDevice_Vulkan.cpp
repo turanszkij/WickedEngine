@@ -494,7 +494,7 @@ namespace wiGraphicsTypes
 			VkDescriptorBufferInfo bufferInfo = {};
 			bufferInfo.buffer = nullBuffer;
 			bufferInfo.offset = 0;
-			bufferInfo.range = 4;
+			bufferInfo.range = VK_WHOLE_SIZE;
 
 			VkWriteDescriptorSet writeDescriptors[GPU_RESOURCE_HEAP_CBV_COUNT /*+ GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT + GPU_SAMPLER_HEAP_COUNT*/] = {};
 
