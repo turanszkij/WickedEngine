@@ -44,6 +44,7 @@ namespace wiGraphicsTypes
 		VkPipelineLayout defaultPipelineLayout_Compute;
 		VkDescriptorSetLayout defaultDescriptorSetlayouts[SHADERSTAGE_COUNT];
 
+		VkBuffer nullBuffer;
 
 		struct FrameResources
 		{
@@ -56,17 +57,16 @@ namespace wiGraphicsTypes
 			struct DescriptorTableFrameAllocator
 			{
 				VkDevice device;
-				VkDescriptorPool descriptorPool_CPU;
+				VkDescriptorPool descriptorPool;
 				VkDescriptorSet descriptorSet_CPU[SHADERSTAGE_COUNT];
-				VkDescriptorPool descriptorPool_GPU;
-				VkDescriptorSet descriptorSet_GPU[SHADERSTAGE_COUNT];
-				UINT ringOffset;
+				std::vector<VkDescriptorSet> descriptorSet_GPU[SHADERSTAGE_COUNT];
+				UINT ringOffset[SHADERSTAGE_COUNT];
 				bool dirty[SHADERSTAGE_COUNT];
 
 				DescriptorTableFrameAllocator(VkDevice device, UINT maxRenameCount, VkDescriptorSetLayout* defaultDescriptorSetlayouts);
 				~DescriptorTableFrameAllocator();
 
-				void reset(VkDevice device, VkCommandBuffer commandList);
+				void reset(VkDevice device, VkBuffer nullBuffer);
 				void update(SHADERSTAGE stage, UINT slot, VkBuffer descriptor, VkDevice device, VkCommandBuffer commandList);
 				void validate(VkDevice device, VkCommandBuffer commandList, VkPipelineLayout pipelineLayout_Graphics, VkPipelineLayout pipelineLayout_Compute);
 			};

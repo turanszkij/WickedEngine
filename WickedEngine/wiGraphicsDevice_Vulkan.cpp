@@ -395,39 +395,46 @@ namespace wiGraphicsTypes
 
 	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(VkDevice device, UINT maxRenameCount, VkDescriptorSetLayout* defaultDescriptorSetlayouts) : device(device)
 	{
-		// Create CPU descriptor pool:
+		// Create descriptor pool:
 		{
-			uint32_t numDescriptors = SHADERSTAGE_COUNT;
+			uint32_t numTables = SHADERSTAGE_COUNT * (maxRenameCount + 1); // (gpu * maxRenameCount) + (1 * cpu staging table)
 
-			VkDescriptorPoolSize poolSizes[/*4*/1] = {};
+			VkDescriptorPoolSize tableLayout[1] = {};
 
-			poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			poolSizes[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT * numDescriptors;
+			tableLayout[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			tableLayout[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
 
-			//poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-			//poolSizes[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * numDescriptors;
 
-			//poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			//poolSizes[2].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * numDescriptors;
-
-			//poolSizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-			//poolSizes[3].descriptorCount = GPU_SAMPLER_HEAP_COUNT * numDescriptors;
+			std::vector<VkDescriptorPoolSize> poolSizes;
+			poolSizes.reserve(ARRAYSIZE(tableLayout) * numTables);
+			for (uint32_t i = 0; i < numTables; ++i)
+			{
+				for (int j = 0; j < ARRAYSIZE(tableLayout); ++j)
+				{
+					poolSizes.push_back(tableLayout[j]);
+				}
+			}
 
 
 			VkDescriptorPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			poolInfo.poolSizeCount = ARRAYSIZE(poolSizes);
-			poolInfo.pPoolSizes = poolSizes;
-			poolInfo.maxSets = numDescriptors;
+			poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+			poolInfo.pPoolSizes = poolSizes.data();
+			poolInfo.maxSets = numTables;
 			//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-			if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool_CPU) != VK_SUCCESS) {
+			if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 				throw std::runtime_error("failed to create descriptor pool!");
 			}
 
+		}
+
+
+		// Create staging descriptor table:
+		{
 			VkDescriptorSetAllocateInfo allocInfo = {};
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = descriptorPool_CPU;
+			allocInfo.descriptorPool = descriptorPool;
 			allocInfo.descriptorSetCount = SHADERSTAGE_COUNT;
 			allocInfo.pSetLayouts = defaultDescriptorSetlayouts;
 
@@ -436,71 +443,75 @@ namespace wiGraphicsTypes
 			}
 		}
 
-
-		// Create GPU descriptor pool:
+		// Create GPU-visible descriptor tables:
 		{
-			uint32_t numDescriptors = SHADERSTAGE_COUNT /** maxRenameCount*/;
-
-			VkDescriptorPoolSize poolSizes[/*4*/1] = {};
-
-			poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			poolSizes[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT * numDescriptors;
-
-			//poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-			//poolSizes[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * numDescriptors;
-
-			//poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			//poolSizes[2].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * numDescriptors;
-
-			//poolSizes[3].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-			//poolSizes[3].descriptorCount = GPU_SAMPLER_HEAP_COUNT * numDescriptors;
-
-
-			VkDescriptorPoolCreateInfo poolInfo = {};
-			poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			poolInfo.poolSizeCount = ARRAYSIZE(poolSizes);
-			poolInfo.pPoolSizes = poolSizes;
-			poolInfo.maxSets = numDescriptors;
-			//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-			if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool_GPU) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create descriptor pool!");
-			}
-
 			VkDescriptorSetAllocateInfo allocInfo = {};
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = descriptorPool_GPU;
-			allocInfo.descriptorSetCount = SHADERSTAGE_COUNT;
-			allocInfo.pSetLayouts = defaultDescriptorSetlayouts;
+			allocInfo.descriptorPool = descriptorPool;
+			allocInfo.descriptorSetCount = 1;
 
-			if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSet_GPU) != VK_SUCCESS) {
-				throw std::runtime_error("failed to allocate descriptor set!");
+
+			for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+			{
+				allocInfo.pSetLayouts = &defaultDescriptorSetlayouts[stage];
+				descriptorSet_GPU[stage].resize(SHADERSTAGE_COUNT * maxRenameCount);
+
+				for (uint32_t i = 0; i < maxRenameCount; ++i)
+				{
+					if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet_GPU[stage][i]) != VK_SUCCESS) {
+						throw std::runtime_error("failed to allocate descriptor set!");
+					}
+				}
 			}
+
 		}
 
 
 
-		ringOffset = 0;
 
 		// invalidate descriptors in flight:
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
+			ringOffset[stage] = 0;
 			dirty[stage] = false;
 		}
 
 	}
 	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
 	{
-		vkDestroyDescriptorPool(device, descriptorPool_CPU, nullptr);
-		vkDestroyDescriptorPool(device, descriptorPool_GPU, nullptr);
+		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset(VkDevice device, VkCommandBuffer commandList)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset(VkDevice device, VkBuffer nullBuffer)
 	{
-		ringOffset = 0;
-
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
-			dirty[stage] = false;
+			ringOffset[stage] = 0;
+			dirty[stage] = true; 
+			
+
+			// STAGING CPU descriptor table needs to be initialized:
+
+			VkDescriptorBufferInfo bufferInfo = {};
+			bufferInfo.buffer = nullBuffer;
+			bufferInfo.offset = 0;
+			bufferInfo.range = 4;
+
+			VkWriteDescriptorSet writeDescriptors[GPU_RESOURCE_HEAP_CBV_COUNT /*+ GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT + GPU_SAMPLER_HEAP_COUNT*/] = {};
+
+			for (uint32_t i = 0; i < ARRAYSIZE(writeDescriptors); ++i)
+			{
+				writeDescriptors[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors[i].dstSet = descriptorSet_CPU[stage];
+				writeDescriptors[i].dstBinding = i;
+				writeDescriptors[i].dstArrayElement = 0;
+				writeDescriptors[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				writeDescriptors[i].descriptorCount = 1;
+				writeDescriptors[i].pBufferInfo = &bufferInfo;
+				writeDescriptors[i].pImageInfo = nullptr; // Optional
+				writeDescriptors[i].pTexelBufferView = nullptr; // Optional
+			}
+
+			vkUpdateDescriptorSets(device, ARRAYSIZE(writeDescriptors), writeDescriptors, 0, nullptr);
 		}
 	}
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, VkBuffer descriptor, VkDevice device, VkCommandBuffer commandList)
@@ -526,43 +537,7 @@ namespace wiGraphicsTypes
 			if (dirty[stage])
 			{
 
-				//// copy prev table contents to new dest
-				//D3D12_CPU_DESCRIPTOR_HANDLE dst = heap_GPU->GetCPUDescriptorHandleForHeapStart();
-				//dst.ptr += ringOffset;
-				//D3D12_CPU_DESCRIPTOR_HANDLE src = heap_CPU->GetCPUDescriptorHandleForHeapStart();
-				//src.ptr += (stage * itemCount) * itemSize;
-				//device->CopyDescriptorsSimple(itemCount, dst, src, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
-
-				//// bind table to root sig
-				//D3D12_GPU_DESCRIPTOR_HANDLE table = heap_GPU->GetGPUDescriptorHandleForHeapStart();
-				//table.ptr += ringOffset;
-
-				//if (stage == CS)
-				//{
-				//	// compute descriptor heap:
-
-				//	if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-				//	{
-				//		commandList->SetComputeRootDescriptorTable(0, table);
-				//	}
-				//	else
-				//	{
-				//		commandList->SetComputeRootDescriptorTable(1, table);
-				//	}
-				//}
-				//else
-				//{
-				//	// graphics descriptor heap:
-
-				//	if (descriptorType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
-				//	{
-				//		commandList->SetGraphicsRootDescriptorTable(stage * 2 + 0, table);
-				//	}
-				//	else
-				//	{
-				//		commandList->SetGraphicsRootDescriptorTable(stage * 2 + 1, table);
-				//	}
-				//}
+				// 1.) Copy descriptors from STAGING -> to GPU visible table:
 
 				VkCopyDescriptorSet copyDescriptors[GPU_RESOURCE_HEAP_CBV_COUNT /*+ GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT + GPU_SAMPLER_HEAP_COUNT*/] = {};
 
@@ -575,29 +550,38 @@ namespace wiGraphicsTypes
 					copyDescriptors[i].srcBinding = i;
 					copyDescriptors[i].srcArrayElement = 0;
 
-					copyDescriptors[i].dstSet = descriptorSet_GPU[stage];
+					copyDescriptors[i].dstSet = descriptorSet_GPU[stage][ringOffset[stage]];
 					copyDescriptors[i].dstBinding = i;
 					copyDescriptors[i].dstArrayElement = 0;
 				}
 
-				//vkUpdateDescriptorSets(device, 0, nullptr, ARRAYSIZE(copyDescriptors), copyDescriptors);
+				vkUpdateDescriptorSets(device, 0, nullptr, ARRAYSIZE(copyDescriptors), copyDescriptors);
 
 
+				// 2.) Bind GPU visible descriptor table which we just updated:
 				if (stage == CS)
 				{
-					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout_Compute, 0, 1, &descriptorSet_CPU[stage], 0, nullptr);
+					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout_Compute, 0, 1, &descriptorSet_GPU[stage][ringOffset[stage]], 0, nullptr);
 				}
 				else
 				{
-					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_Graphics, stage, 1, &descriptorSet_CPU[stage], 0, nullptr);
+					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_Graphics, stage, 1, &descriptorSet_GPU[stage][ringOffset[stage]], 0, nullptr);
 				}
 
 
-				// mark this as up to date
+				// mark the descriptors of this stage as up to date
 				dirty[stage] = false;
 
-				//// allocate next chunk
-				//ringOffset += itemCount * itemSize;
+				// allocate next chunk for GPU visible descriptor table:
+				ringOffset[stage]++;
+
+				if (ringOffset[stage] >= descriptorSet_GPU[stage].size())
+				{
+					// ran out of descriptor allocation space, stall CPU and wrap the ring buffer:
+					assert(0 && "TODO Stall");
+					ringOffset[stage] = 0;
+				}
+
 			}
 		}
 	}
@@ -1464,6 +1448,47 @@ namespace wiGraphicsTypes
 		// Create resource upload buffers
 		bufferUploader = new UploadBuffer(physicalDevice, device, 256 * 1024 * 1024);
 		textureUploader = new UploadBuffer(physicalDevice, device, 256 * 1024 * 1024);
+
+
+		// Create default null descriptors:
+		{
+			VkBufferCreateInfo bufferInfo = {};
+			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			bufferInfo.size = 4;
+			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			bufferInfo.flags = 0;
+
+			VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &nullBuffer);
+			assert(res == VK_SUCCESS);
+
+
+			// Allocate resource backing memory:
+			VkMemoryRequirements memRequirements;
+			vkGetBufferMemoryRequirements(device, nullBuffer, &memRequirements);
+
+			VkMemoryAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			allocInfo.allocationSize = memRequirements.size;
+			allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+			VkDeviceMemory mem;
+			if (vkAllocateMemory(device, &allocInfo, nullptr, &mem) != VK_SUCCESS) {
+				throw std::runtime_error("failed to allocate buffer memory!");
+			}
+
+			res = vkBindBufferMemory(device, nullBuffer, mem, 0);
+			assert(res == VK_SUCCESS);
+		}
+
+
+		// Preinitialize staging descriptor tables:
+		for (auto& frame : frames)
+		{
+			for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
+			{
+				frame.ResourceDescriptorsGPU[threadID]->reset(device, nullBuffer);
+			}
+		}
 
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
@@ -2525,7 +2550,7 @@ namespace wiGraphicsTypes
 
 
 			// reset descriptor allocators:
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, GetFrameResources().commandBuffers[threadID]);
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullBuffer);
 
 			// reset immediate resource allocators:
 			GetFrameResources().resourceBuffer[threadID]->clear();

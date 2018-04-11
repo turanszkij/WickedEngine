@@ -1227,7 +1227,7 @@ namespace wiGraphicsTypes
 		SAFE_RELEASE(heap_GPU);
 		SAFE_DELETE_ARRAY(boundDescriptors);
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
 	{
 		memset(boundDescriptors, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE*)*SHADERSTAGE_COUNT*itemCount);
 
@@ -1886,8 +1886,8 @@ namespace wiGraphicsTypes
 		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
 			*nullSampler,*nullCBV,*nullSRV,*nullUAV
 		};
-		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
-		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
+		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
 
 
 		D3D12_RECT pRects[8];
@@ -3116,8 +3116,8 @@ namespace wiGraphicsTypes
 			D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
 				*nullSampler,*nullCBV,*nullSRV,*nullUAV
 			};
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, GetDirectCommandList((GRAPHICSTHREAD)threadID), nullDescriptors);
-			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device,  GetDirectCommandList((GRAPHICSTHREAD)threadID), nullDescriptors);
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullDescriptors);
+			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device, nullDescriptors);
 			GetFrameResources().resourceBuffer[threadID]->clear();
 
 
