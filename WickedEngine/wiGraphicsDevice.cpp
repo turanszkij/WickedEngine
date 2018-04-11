@@ -34,3 +34,33 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
 	}
 	return false;
 }
+
+uint32_t GraphicsDevice::GetFormatStride(FORMAT value)
+{
+	switch (value)
+	{
+	case FORMAT_R32G32B32A32_FLOAT:
+		return 16;
+		break;
+	case FORMAT_R32G32_FLOAT:
+		return 8;
+		break;
+	case FORMAT_R16G16_FLOAT:
+	case FORMAT_R32_FLOAT:
+	case FORMAT_R32_UINT:
+	case FORMAT_R8G8B8A8_UINT:
+	case FORMAT_R8G8B8A8_SINT:
+	case FORMAT_R8G8B8A8_UNORM:
+	case FORMAT_R8G8B8A8_SNORM:
+		return 4;
+		break;
+	case FORMAT_R16_FLOAT:
+		return 2;
+		break;
+	}
+
+	// TODO more formats
+
+	return 16;
+}
+

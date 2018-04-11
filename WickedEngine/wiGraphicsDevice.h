@@ -63,7 +63,6 @@ namespace wiGraphicsTypes
 
 
 		virtual void SetResolution(int width, int height) = 0;
-		
 
 		virtual Texture2D GetBackBuffer() = 0;
 
@@ -77,6 +76,8 @@ namespace wiGraphicsTypes
 			GRAPHICSDEVICE_CAPABILITY_COUNT,
 		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability);
+
+		uint32_t GetFormatStride(FORMAT value);
 
 		XMMATRIX GetScreenProjection()
 		{
